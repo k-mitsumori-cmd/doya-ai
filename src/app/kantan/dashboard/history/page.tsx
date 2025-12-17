@@ -7,9 +7,9 @@ import toast from 'react-hot-toast'
 export default function KantanHistoryPage() {
   // モックデータ
   const history = [
-    { id: '1', template: 'ビジネスメール', content: 'いつもお世話になっております。株式会社〇〇の田中です。', createdAt: '2024-12-17 14:30' },
-    { id: '2', template: 'ブログ記事', content: '【2024年最新】おすすめのAIツール10選をご紹介します。', createdAt: '2024-12-16 10:15' },
-    { id: '3', template: 'キャッチコピー', content: '未来を変える、たった一つの決断。', createdAt: '2024-12-15 16:45' },
+    { id: '1', template: 'ビジネスメール', content: 'いつもお世話になっております。株式会社〇〇の田中です。', createdAt: '2025-01-15 14:30' },
+    { id: '2', template: 'ブログ記事', content: '【2025年最新】おすすめのAIツール10選をご紹介します。', createdAt: '2025-01-14 10:15' },
+    { id: '3', template: 'キャッチコピー', content: '未来を変える、たった一つの決断。', createdAt: '2025-01-13 16:45' },
   ]
 
   const handleCopy = (content: string) => {
