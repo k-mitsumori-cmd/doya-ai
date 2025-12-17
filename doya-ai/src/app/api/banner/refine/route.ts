@@ -5,15 +5,15 @@ import { NextRequest, NextResponse } from 'next/server'
 // ========================================
 // POST /api/banner/refine
 // 修正指示に基づいて新しいバナーを生成
-// Vertex AI Imagen 3 を使用
+// Vertex AI Imagen 3 + サービスアカウント認証
 
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'your-project-id'
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || ''
 const LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
 const IMAGEN_MODEL = 'imagen-3.0-generate-002'
 
 interface RefineRequest {
-  originalImage: string  // 参考用
-  instruction: string    // 修正指示
+  originalImage: string
+  instruction: string
   category?: string
   size?: string
 }
@@ -23,6 +23,80 @@ interface RefineResponse {
   refinedImage?: string
   error?: string
   message?: string
+}
+
+// サービスアカウント認証情報からアクセストークンを取得
+async function getAccessToken(): Promise<string> {
+  const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+  if (!credentialsJson) {
+    throw new Error('GOOGLE_APPLICATION_CREDENTIALS_JSON が設定されていません')
+  }
+  
+  let credentials: { client_email: string; private_key: string }
+  try {
+    credentials = JSON.parse(credentialsJson)
+  } catch (e) {
+    throw new Error('認証情報のパースに失敗しました')
+  }
+  
+  const { client_email, private_key } = credentials
+  
+  // JWT を作成
+  const now = Math.floor(Date.now() / 1000)
+  const header = { alg: 'RS256', typ: 'JWT' }
+  const payload = {
+    iss: client_email,
+    scope: 'https://www.googleapis.com/auth/cloud-platform',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  }
+  
+  const base64UrlEncode = (obj: object) => {
+    const json = JSON.stringify(obj)
+    const base64 = Buffer.from(json).toString('base64')
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  }
+  
+  const headerEncoded = base64UrlEncode(header)
+  const payloadEncoded = base64UrlEncode(payload)
+  const signatureInput = `${headerEncoded}.${payloadEncoded}`
+  
+  const crypto = await import('crypto')
+  const sign = crypto.createSign('RSA-SHA256')
+  sign.update(signatureInput)
+  const signature = sign.sign(private_key, 'base64')
+  const signatureEncoded = signature.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  
+  const jwt = `${signatureInput}.${signatureEncoded}`
+  
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
+  })
+  
+  if (!tokenResponse.ok) {
+    throw new Error('アクセストークンの取得に失敗しました')
+  }
+  
+  const tokenData = await tokenResponse.json()
+  return tokenData.access_token
+}
+
+function getAspectRatio(size?: string): string {
+  if (!size) return '1:1'
+  const [width, height] = size.split('x').map(Number)
+  if (!width || !height) return '1:1'
+  
+  const ratio = width / height
+  if (ratio > 1.7) return '16:9'
+  if (ratio > 1.4) return '3:2'
+  if (ratio > 1.1) return '4:3'
+  if (ratio < 0.6) return '9:16'
+  if (ratio < 0.75) return '2:3'
+  if (ratio < 0.9) return '3:4'
+  return '1:1'
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<RefineResponse>> {
@@ -37,27 +111,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
       }, { status: 400 })
     }
 
-    // プロジェクトIDチェック
-    if (!PROJECT_ID || PROJECT_ID === 'your-project-id') {
+    if (!PROJECT_ID) {
       return NextResponse.json({
         success: false,
         error: 'GOOGLE_CLOUD_PROJECT_ID が設定されていません',
       }, { status: 500 })
     }
 
+    // アクセストークンを取得
+    const accessToken = await getAccessToken()
+    
     // プロンプト生成
     const prompt = createRegeneratePrompt(instruction, category, size)
     const aspectRatio = getAspectRatio(size)
-    
-    // Vertex AI REST API 呼び出し
-    const accessToken = process.env.GOOGLE_CLOUD_ACCESS_TOKEN
-    
-    if (!accessToken) {
-      return NextResponse.json({
-        success: false,
-        error: 'GOOGLE_CLOUD_ACCESS_TOKEN が設定されていません',
-      }, { status: 500 })
-    }
     
     const endpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${IMAGEN_MODEL}:predict`
     
@@ -88,9 +154,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
 
     const data = await response.json()
 
-    // 画像を抽出
     if (!data.predictions?.[0]?.bytesBase64Encoded) {
-      throw new Error('No image in response')
+      throw new Error('画像が生成されませんでした')
     }
 
     const refinedImage = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`
@@ -98,7 +163,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
     return NextResponse.json({
       success: true,
       refinedImage,
-      message: 'Vertex AI Imagen 3 で新しいバナーを生成しました',
+      message: 'Imagen 3 で新しいバナーを生成しました',
     })
 
   } catch (error: any) {
@@ -108,21 +173,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
       error: error.message || 'バナーの再生成に失敗しました',
     }, { status: 500 })
   }
-}
-
-function getAspectRatio(size?: string): string {
-  if (!size) return '1:1'
-  const [width, height] = size.split('x').map(Number)
-  if (!width || !height) return '1:1'
-  
-  const ratio = width / height
-  if (ratio > 1.7) return '16:9'
-  if (ratio > 1.4) return '3:2'
-  if (ratio > 1.1) return '4:3'
-  if (ratio < 0.6) return '9:16'
-  if (ratio < 0.75) return '2:3'
-  if (ratio < 0.9) return '3:4'
-  return '1:1'
 }
 
 function createRegeneratePrompt(instruction: string, category?: string, size?: string): string {

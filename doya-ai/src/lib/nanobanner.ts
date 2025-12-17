@@ -1,21 +1,92 @@
 // Vertex AI Imagen 3 を使用したバナー画像生成
 // Imagen 3 (imagen-3.0-generate-002) で高品質な画像を生成
-
-import { VertexAI } from '@google-cloud/vertexai'
+// サービスアカウント認証で本番環境対応
 
 // ========================================
 // Vertex AI 設定
 // ========================================
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'your-project-id'
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || ''
 const LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
 const IMAGEN_MODEL = 'imagen-3.0-generate-002'
 
-// Vertex AI クライアント初期化
-function getVertexAI() {
-  return new VertexAI({
-    project: PROJECT_ID,
-    location: LOCATION,
+// サービスアカウント認証情報（JSON文字列を環境変数から取得）
+function getCredentials(): { client_email: string; private_key: string } | null {
+  const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+  if (!credentialsJson) {
+    console.error('GOOGLE_APPLICATION_CREDENTIALS_JSON is not set')
+    return null
+  }
+  
+  try {
+    const credentials = JSON.parse(credentialsJson)
+    return {
+      client_email: credentials.client_email,
+      private_key: credentials.private_key,
+    }
+  } catch (e) {
+    console.error('Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON:', e)
+    return null
+  }
+}
+
+// Google OAuth2 アクセストークンを取得
+async function getAccessToken(): Promise<string> {
+  const credentials = getCredentials()
+  if (!credentials) {
+    throw new Error('サービスアカウント認証情報が設定されていません')
+  }
+  
+  const { client_email, private_key } = credentials
+  
+  // JWT を作成
+  const now = Math.floor(Date.now() / 1000)
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT',
+  }
+  const payload = {
+    iss: client_email,
+    scope: 'https://www.googleapis.com/auth/cloud-platform',
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+  }
+  
+  // Base64URL エンコード
+  const base64UrlEncode = (obj: object) => {
+    const json = JSON.stringify(obj)
+    const base64 = Buffer.from(json).toString('base64')
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  }
+  
+  const headerEncoded = base64UrlEncode(header)
+  const payloadEncoded = base64UrlEncode(payload)
+  const signatureInput = `${headerEncoded}.${payloadEncoded}`
+  
+  // RSA-SHA256 で署名
+  const crypto = await import('crypto')
+  const sign = crypto.createSign('RSA-SHA256')
+  sign.update(signatureInput)
+  const signature = sign.sign(private_key, 'base64')
+  const signatureEncoded = signature.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  
+  const jwt = `${signatureInput}.${signatureEncoded}`
+  
+  // トークンを取得
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
   })
+  
+  if (!tokenResponse.ok) {
+    const error = await tokenResponse.text()
+    console.error('Failed to get access token:', error)
+    throw new Error('アクセストークンの取得に失敗しました')
+  }
+  
+  const tokenData = await tokenResponse.json()
+  return tokenData.access_token
 }
 
 // 業種カテゴリ別のデザインガイドライン
@@ -486,7 +557,7 @@ Generate a HIGH-QUALITY banner with PERFECT Japanese text rendering now.`
 
 // ========================================
 // Vertex AI Imagen 3 を使った画像生成
-// 高品質な広告バナー画像を生成
+// サービスアカウント認証で本番環境対応
 // ========================================
 async function generateSingleBanner(
   prompt: string,
@@ -497,58 +568,14 @@ async function generateSingleBanner(
   console.log('Project:', PROJECT_ID)
   console.log('Location:', LOCATION)
   
-  // サイズからアスペクト比を計算
-  const aspectRatio = getAspectRatio(size)
-  
-  try {
-    const vertexai = getVertexAI()
-    
-    // Imagen 3 モデルを取得
-    const generativeModel = vertexai.getGenerativeModel({
-      model: IMAGEN_MODEL,
-    })
-    
-    // 画像生成リクエスト
-    const request = {
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        candidateCount: 1,
-        // Imagen 3の設定
-      },
-    }
-    
-    console.log('Sending request to Imagen 3...')
-    const response = await generativeModel.generateContent(request)
-    const result = response.response
-    
-    // レスポンスから画像を抽出
-    if (result.candidates && result.candidates[0]?.content?.parts) {
-      for (const part of result.candidates[0].content.parts) {
-        if ((part as any).inlineData?.mimeType?.startsWith('image/')) {
-          const inlineData = (part as any).inlineData
-          console.log('Image found in Imagen 3 response!')
-          return `data:${inlineData.mimeType};base64,${inlineData.data}`
-        }
-      }
-    }
-    
-    throw new Error('画像が生成されませんでした')
-  } catch (error: any) {
-    console.error('Vertex AI Imagen 3 error:', error.message)
-    
-    // フォールバック: REST APIを直接呼び出す
-    console.log('Falling back to REST API...')
-    return await generateWithRestAPI(prompt, size)
+  // プロジェクトIDの確認
+  if (!PROJECT_ID) {
+    throw new Error('GOOGLE_CLOUD_PROJECT_ID が設定されていません')
   }
-}
-
-// REST API直接呼び出し（フォールバック）
-async function generateWithRestAPI(prompt: string, size: string): Promise<string> {
-  const accessToken = process.env.GOOGLE_CLOUD_ACCESS_TOKEN
   
-  if (!accessToken) {
-    throw new Error('GOOGLE_CLOUD_ACCESS_TOKEN が設定されていません')
-  }
+  // アクセストークンを取得（サービスアカウント認証）
+  const accessToken = await getAccessToken()
+  console.log('Access token obtained successfully')
   
   const aspectRatio = getAspectRatio(size)
   const endpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${IMAGEN_MODEL}:predict`
