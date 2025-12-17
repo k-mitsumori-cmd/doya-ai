@@ -217,12 +217,49 @@ export default function KantanTopPage() {
         </div>
       </section>
 
-      {/* フッター */}
-      <footer className="py-8 px-4 border-t border-gray-200">
-        <div className="max-w-3xl mx-auto text-center">
-          <Link href="/" className="text-gray-500 hover:text-gray-700 text-sm">
-            ← ドヤAIポータルに戻る
+      {/* 他サービスへの誘導 */}
+      <section className="py-12 px-4 bg-gradient-to-br from-purple-50 to-pink-50">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
+            🎨 他のサービスもチェック
+          </h2>
+          
+          <Link href="/banner">
+            <div className="bg-white rounded-2xl p-6 border-2 border-purple-200 hover:border-purple-400 hover:shadow-lg transition-all cursor-pointer">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <span className="text-3xl">🎨</span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900">ドヤバナーAI</h3>
+                  <p className="text-gray-600">プロ品質のバナーをワンボタンで自動生成。A/B/Cの3案を同時に作成。</p>
+                </div>
+                <ArrowRight className="w-6 h-6 text-purple-500" />
+              </div>
+            </div>
           </Link>
+        </div>
+      </section>
+
+      {/* フッター */}
+      <footer className="py-8 px-4 border-t border-gray-200 bg-white">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center justify-center gap-6 mb-4">
+            <Link href="/" className="text-gray-500 hover:text-gray-700 text-sm">
+              ポータルに戻る
+            </Link>
+            <span className="text-gray-300">|</span>
+            <Link href="/banner" className="text-purple-500 hover:text-purple-700 text-sm">
+              ドヤバナーAI
+            </Link>
+            <span className="text-gray-300">|</span>
+            <Link href="/admin" className="text-gray-500 hover:text-gray-700 text-sm">
+              管理画面
+            </Link>
+          </div>
+          <p className="text-center text-xs text-gray-400">
+            © 2024 ドヤAI. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>
