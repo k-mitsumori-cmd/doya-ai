@@ -183,6 +183,26 @@ ${appealType.style}
 === MAIN TEXT (MUST BE DISPLAYED IN JAPANESE) ===
 "${keyword}"
 This Japanese text MUST be the focal point, large, clear, and readable.
+
+=== ⚠️ CRITICAL: JAPANESE TEXT RENDERING RULES ⚠️ ===
+1. **MINIMUM FONT SIZE**: All text must be at least 24px equivalent (relative to 1080px width)
+2. **NO SMALL TEXT**: Do NOT include any text smaller than 5% of the banner width
+3. **JAPANESE FONT INTEGRITY**: 
+   - Use clean, simple Japanese fonts (Gothic/Sans-serif style)
+   - Each Japanese character must be complete and undistorted
+   - Avoid decorative fonts that may corrupt kanji/hiragana/katakana
+   - Ensure proper stroke rendering for all characters
+4. **TEXT CLARITY**: 
+   - High contrast between text and background (minimum 4.5:1 ratio)
+   - Add subtle text shadow or outline for readability
+   - No text on complex backgrounds without solid backing
+5. **CHARACTER SPACING**: Maintain proper kerning for Japanese text
+6. **AVOID TEXT CORRUPTION**:
+   - Do NOT stretch or compress Japanese characters
+   - Do NOT apply extreme perspective transforms to text
+   - Keep text horizontal (no extreme rotations)
+   - Avoid overlapping text elements
+7. **LIMIT TEXT ELEMENTS**: Maximum 3 text elements total (headline, subtext, CTA)
 `
 
   // 会社名がある場合
@@ -239,10 +259,15 @@ The person should match the banner's professional tone and target audience
   prompt += `
 === FINAL REQUIREMENTS ===
 1. Professional commercial advertisement quality
-2. Japanese text "${keyword}" must be clearly visible and readable
-3. Good contrast between text and background
+2. Japanese text "${keyword}" must be clearly visible, LARGE, and readable
+3. Good contrast between text and background (use solid color backing if needed)
 4. Modern, clean, high-quality design
-5. Include the specified CTA button
+5. Include the specified CTA button (with readable text)
+6. **NO SMALL TEXT** - All text must be easily readable at a glance
+7. **CLEAN JAPANESE CHARACTERS** - Every kanji, hiragana, katakana must be perfectly formed
+8. **SIMPLE TEXT LAYOUT** - Maximum 3 text layers (main headline, subtitle optional, CTA)
+9. Keep text areas simple with solid backgrounds for maximum readability
+10. If in doubt, make text LARGER not smaller
 
 Generate the banner image now.`
 
