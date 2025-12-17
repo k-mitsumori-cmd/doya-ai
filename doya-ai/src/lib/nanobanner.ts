@@ -3,8 +3,8 @@
 
 // Google Gemini API エンドポイント
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-// Nano Banana Pro モデルID
-const MODEL_ID = 'gemini-2.0-flash-exp-image-generation'
+// Gemini 3 Pro Image (Nano Banana Pro) モデルID
+const MODEL_ID = 'gemini-3-pro-image-preview'
 
 // カテゴリ別のデザインガイドライン
 const CATEGORY_STYLES: Record<string, { style: string; colors: string; elements: string }> = {
