@@ -501,7 +501,7 @@ Generate a HIGH-QUALITY banner with PERFECT Japanese text rendering now.`
 }
 
 // ========================================
-// Gemini 2.5 Flash Image (Nano Banana) で画像生成
+// Imagen 4 で画像生成
 // 公式ドキュメント: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
 // ========================================
 async function generateSingleBanner(
@@ -510,27 +510,27 @@ async function generateSingleBanner(
 ): Promise<string> {
   const apiKey = getApiKey()
   
-  console.log('Calling Gemini 2.5 Flash Image (Nano Banana)...')
-  console.log('Model:', GEMINI_IMAGE_MODEL)
+  console.log('Calling Imagen 4...')
+  console.log('Model:', IMAGEN_MODEL)
   
-  // Gemini generateContent API エンドポイント
-  const endpoint = `${GEMINI_API_BASE}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${apiKey}`
+  const aspectRatio = getAspectRatio(size)
   
-  // 公式ドキュメントに従ったリクエスト形式
+  // Imagen 4 generateImages エンドポイント
+  const endpoint = `${GEMINI_API_BASE}/models/${IMAGEN_MODEL}:generateImages?key=${apiKey}`
+  
+  // Imagen 4 リクエスト形式
   const requestBody = {
-    contents: [
-      {
-        parts: [
-          { text: prompt }
-        ]
-      }
-    ],
-    generationConfig: {
-      responseModalities: ["TEXT", "IMAGE"]
-    }
+    prompt: prompt,
+    config: {
+      numberOfImages: 1,
+      aspectRatio: aspectRatio,
+      safetyFilterLevel: 'BLOCK_LOW_AND_ABOVE',
+      personGeneration: 'ALLOW_ADULT',
+    },
   }
   
-  console.log('Calling Gemini API...')
+  console.log('Calling Imagen 4 API...')
+  console.log('Aspect Ratio:', aspectRatio)
   
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -542,26 +542,27 @@ async function generateSingleBanner(
   
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('Gemini API error:', response.status, errorText)
+    console.error('Imagen 4 API error:', response.status, errorText)
     throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 300)}`)
   }
   
   const result = await response.json()
-  console.log('Gemini API Response received')
+  console.log('Imagen 4 API Response received')
   
-  // レスポンスから画像を抽出（公式ドキュメントの形式）
-  if (result.candidates && result.candidates[0]?.content?.parts) {
-    for (const part of result.candidates[0].content.parts) {
-      if (part.inlineData) {
-        console.log('Image found in Gemini response!')
-        const mimeType = part.inlineData.mimeType || 'image/png'
-        return `data:${mimeType};base64,${part.inlineData.data}`
-      }
-    }
+  // レスポンスから画像を抽出（Imagen形式）
+  if (result.generatedImages && result.generatedImages[0]?.image?.imageBytes) {
+    console.log('Image found in Imagen 4 response!')
+    return `data:image/png;base64,${result.generatedImages[0].image.imageBytes}`
+  }
+  
+  // 別のレスポンス形式も試す
+  if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
+    console.log('Image found in predictions format!')
+    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`
   }
   
   console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 500))
-  throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
+  throw new Error('画像が生成されませんでした')
 }
 
 // サイズからアスペクト比を計算
