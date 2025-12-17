@@ -1,40 +1,42 @@
-// Google Gemini API を使用したバナー画像生成
-// Imagen 3 モデルで画像を生成
+// Nano Banana Pro API (Gemini 3 Pro Image) を使用したバナー画像生成
+// 参考: https://apidog.com/jp/blog/nano-banana-pro-api-jp/
 
-// Google AI Studio Gemini API エンドポイント
+// Google Gemini API エンドポイント
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+// Nano Banana Pro モデルID
+const MODEL_ID = 'gemini-2.0-flash-exp-image-generation'
 
 // カテゴリ別のデザインガイドライン
 const CATEGORY_STYLES: Record<string, { style: string; colors: string; elements: string }> = {
   telecom: {
-    style: 'モダンでテクノロジー感のある、クリーンでプロフェッショナルな',
-    colors: '鮮やかな青、シアン、白を基調とした、グラデーション背景の',
-    elements: 'スマートフォンのアイコン、電波マーク、クラウドアイコン',
+    style: 'modern technology, clean professional',
+    colors: 'vibrant blue, cyan, white gradient background',
+    elements: 'smartphone icon, signal waves, cloud icon',
   },
   marketing: {
-    style: '洗練されていて信頼感のある、ビジネス向けの高級感ある',
-    colors: '紫、ピンク、白を基調とした、美しいグラデーション背景の',
-    elements: '上昇するグラフ、成長を示す矢印、チャートアイコン',
+    style: 'sophisticated business, premium look',
+    colors: 'purple, pink, white beautiful gradient',
+    elements: 'rising graph, growth arrows, chart icons',
   },
   ec: {
-    style: '華やかで購買意欲を刺激する、セール感のある',
-    colors: 'オレンジ、赤、金色を基調とした、目を引く鮮やかな',
-    elements: 'ショッピングカート、ギフトボックス、セールタグ',
+    style: 'vibrant sale, urgency feeling',
+    colors: 'orange, red, gold eye-catching',
+    elements: 'shopping cart, gift box, sale tag, percent sign',
   },
   recruit: {
-    style: '明るく前向きで希望に満ちた、プロフェッショナルな',
-    colors: '緑、青、白を基調とした、クリーンで明るい',
-    elements: 'オフィスビル、握手するシルエット、チームワーク',
+    style: 'bright hopeful professional friendly',
+    colors: 'green, blue, white clean bright',
+    elements: 'office building, handshake silhouette, teamwork',
   },
   beauty: {
-    style: 'エレガントで洗練された、女性向けの高級感ある',
-    colors: 'ピンク、ローズゴールド、白を基調とした、柔らかい',
-    elements: '花のイラスト、化粧品ボトル、きらめきエフェクト',
+    style: 'elegant refined feminine premium',
+    colors: 'pink, rose gold, white soft',
+    elements: 'flower illustration, cosmetic bottle, sparkle effects',
   },
   food: {
-    style: '美味しそうで食欲をそそる、温かみのある',
-    colors: '赤、オレンジ、茶色を基調とした',
-    elements: '料理のイラスト、湯気エフェクト、新鮮な食材',
+    style: 'delicious appetizing warm',
+    colors: 'red, orange, brown',
+    elements: 'food illustration, steam effect, fresh ingredients',
   },
 }
 
@@ -42,18 +44,18 @@ const CATEGORY_STYLES: Record<string, { style: string; colors: string; elements:
 const APPEAL_TYPES = [
   { 
     type: 'A', 
-    focus: 'ベネフィット重視', 
-    style: 'ユーザーのメリットを大きく強調し、ポジティブで明るいデザイン',
+    focus: 'Benefits focused', 
+    style: 'Emphasize user benefits, positive bright design, main copy prominently displayed in center',
   },
   { 
     type: 'B', 
-    focus: '緊急性・限定性', 
-    style: '「今すぐ」「限定」などの緊急性を演出、赤や黄色のアクセント',
+    focus: 'Urgency and scarcity', 
+    style: 'Create urgency with "now" "limited" messaging, red and yellow accents, eye-catching design',
   },
   { 
     type: 'C', 
-    focus: '信頼性・実績', 
-    style: '実績を強調、落ち着いた配色で信頼感を演出',
+    focus: 'Trust and credibility', 
+    style: 'Emphasize achievements like "No.1" "used by millions", calm colors for trust',
   },
 ]
 
@@ -66,37 +68,41 @@ function createBannerPrompt(
 ): string {
   const categoryStyle = CATEGORY_STYLES[category] || CATEGORY_STYLES.marketing
   const [width, height] = size.split('x')
-  const aspectRatio = parseInt(width) > parseInt(height) ? '横長' : 
-                      parseInt(width) < parseInt(height) ? '縦長' : '正方形'
+  const aspectRatio = parseInt(width) > parseInt(height) ? 'landscape (horizontal)' : 
+                      parseInt(width) < parseInt(height) ? 'portrait (vertical)' : 'square'
 
   return `Create a professional Japanese advertisement banner image.
 
-Size: ${aspectRatio} format (${width}x${height} pixels)
-Style: ${categoryStyle.style} design
-Colors: ${categoryStyle.colors} color scheme
-Elements: ${categoryStyle.elements}
+SPECIFICATIONS:
+- Format: ${aspectRatio} banner (${width}x${height} pixels aspect ratio)
+- Style: ${categoryStyle.style} design
+- Colors: ${categoryStyle.colors}
+- Visual elements: ${categoryStyle.elements}
+- Appeal type: ${appealType.focus} - ${appealType.style}
 
-Appeal type: ${appealType.focus} - ${appealType.style}
+IMPORTANT - TEXT TO DISPLAY ON BANNER:
+The following Japanese text MUST be clearly visible and readable on the banner:
+"${keyword}"
 
-Main copy text to display on the banner (in Japanese): "${keyword}"
+DESIGN REQUIREMENTS:
+1. Professional commercial advertisement quality
+2. The Japanese text must be the focal point, large and clear
+3. Include a CTA button (like "詳しくはこちら" or "今すぐチェック")
+4. High quality, sharp, modern design
+5. Good contrast between text and background
+6. Clean layout with proper spacing
 
-Requirements:
-- Professional commercial advertisement quality
-- The Japanese text "${keyword}" must be clearly visible and readable
-- Include a CTA button
-- High quality, sharp image
-- Modern and clean design
-
-Generate only the image, no explanation needed.`
+Generate the banner image now.`
 }
 
-// Gemini APIを使って画像を生成
-async function generateImageWithGemini(
+// Nano Banana Pro APIを呼び出してバナーを生成
+async function generateSingleBanner(
   apiKey: string,
   prompt: string
 ): Promise<string> {
-  // Gemini 2.0 Flash で画像生成
-  const endpoint = `${GEMINI_API_BASE}/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`
+  const endpoint = `${GEMINI_API_BASE}/models/${MODEL_ID}:generateContent?key=${apiKey}`
+  
+  console.log('Calling Nano Banana Pro API...')
   
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -108,94 +114,42 @@ async function generateImageWithGemini(
         parts: [{ text: prompt }]
       }],
       generationConfig: {
-        responseModalities: ["TEXT", "IMAGE"],
+        responseModalities: ["IMAGE", "TEXT"],
+        temperature: 1.0,
+        topP: 0.95,
+        topK: 40,
       },
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+      ],
     }),
   })
 
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('Gemini API error:', response.status, errorText)
-    throw new Error(`API Error: ${response.status}`)
+    console.error('Nano Banana Pro API error:', response.status, errorText)
+    throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 200)}`)
   }
 
   const result = await response.json()
+  console.log('API Response received')
   
   // レスポンスから画像データを抽出
   if (result.candidates && result.candidates[0]?.content?.parts) {
     for (const part of result.candidates[0].content.parts) {
       if (part.inlineData?.mimeType?.startsWith('image/')) {
+        console.log('Image found in response!')
         return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
       }
     }
   }
 
-  // 画像が生成されなかった場合、テキストレスポンスを確認
-  console.log('Gemini response:', JSON.stringify(result, null, 2))
-  throw new Error('画像が生成されませんでした')
-}
-
-// Imagen 3 APIを使って画像を生成（代替）
-async function generateImageWithImagen(
-  apiKey: string,
-  prompt: string,
-  size: string
-): Promise<string> {
-  const [width, height] = size.split('x').map(Number)
-  const aspectRatio = width > height ? '16:9' : width < height ? '9:16' : '1:1'
-  
-  const endpoint = `${GEMINI_API_BASE}/models/imagen-3.0-generate-002:predict?key=${apiKey}`
-  
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      instances: [{
-        prompt: prompt
-      }],
-      parameters: {
-        sampleCount: 1,
-        aspectRatio: aspectRatio,
-      }
-    }),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('Imagen API error:', response.status, errorText)
-    throw new Error(`Imagen API Error: ${response.status}`)
-  }
-
-  const result = await response.json()
-  
-  if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
-    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`
-  }
-
-  throw new Error('Imagen: 画像が生成されませんでした')
-}
-
-// 単一のバナーを生成
-async function generateSingleBanner(
-  apiKey: string,
-  prompt: string,
-  size: string
-): Promise<string> {
-  try {
-    // まずGemini 2.0で試す
-    return await generateImageWithGemini(apiKey, prompt)
-  } catch (error: any) {
-    console.log('Gemini failed, trying Imagen...', error.message)
-    try {
-      // Imagenで再試行
-      return await generateImageWithImagen(apiKey, prompt, size)
-    } catch (imagenError: any) {
-      console.error('Both APIs failed:', imagenError.message)
-      throw error
-    }
-  }
+  // 画像が見つからない場合の詳細ログ
+  console.error('No image in response. Full response:', JSON.stringify(result, null, 2).substring(0, 500))
+  throw new Error('画像が生成されませんでした。モデルがテキストのみを返しました。')
 }
 
 // A/B/C 3パターンのバナーを生成
@@ -214,8 +168,11 @@ export async function generateBanners(
     }
   }
 
+  console.log(`Starting banner generation - Category: ${category}, Keyword: ${keyword}, Size: ${size}`)
+
   try {
     const banners: string[] = []
+    const errors: string[] = []
     
     // 3パターン順次生成
     for (const appealType of APPEAL_TYPES) {
@@ -223,25 +180,28 @@ export async function generateBanners(
         const prompt = createBannerPrompt(category, keyword, size, appealType)
         console.log(`Generating banner type ${appealType.type}...`)
         
-        const banner = await generateSingleBanner(apiKey, prompt, size)
+        const banner = await generateSingleBanner(apiKey, prompt)
         banners.push(banner)
+        console.log(`Banner ${appealType.type} generated successfully!`)
         
         // レート制限を避けるため待機
         if (APPEAL_TYPES.indexOf(appealType) < APPEAL_TYPES.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 2000))
         }
       } catch (error: any) {
-        console.error(`Banner ${appealType.type} generation failed:`, error)
+        console.error(`Banner ${appealType.type} generation failed:`, error.message)
+        errors.push(`${appealType.type}: ${error.message}`)
         // エラーの場合はプレースホルダー
         const [w, h] = size.split('x')
         banners.push(`https://placehold.co/${w}x${h}/8B5CF6/FFFFFF?text=Pattern+${appealType.type}`)
       }
     }
 
+    // 全て失敗した場合
     if (banners.every(b => b.startsWith('https://placehold'))) {
       return {
         banners,
-        error: 'バナー生成に失敗しました。APIキーを確認してください。'
+        error: `バナー生成に失敗しました: ${errors.join(', ')}`
       }
     }
 
