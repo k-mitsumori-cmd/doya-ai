@@ -9,7 +9,8 @@ import {
   Download, Clock, Zap, Layout, X, Image as ImageIcon, 
   User, Building2, Video, Mail, Gift, Megaphone, Target,
   ChevronDown, Check, Star, Eye, Copy, 
-  Layers, Play, Crown, ArrowUpRight, Palette, BarChart3
+  Layers, Play, Crown, ArrowUpRight, Palette, BarChart3,
+  MessageSquare, Send, RotateCcw, Pencil
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, getGuestUsage, setGuestUsage } from '@/lib/pricing'
@@ -128,6 +129,12 @@ export default function BannerDashboard() {
   const [progress, setProgress] = useState(0)
   const [phaseIndex, setPhaseIndex] = useState(0)
   const [selectedBanner, setSelectedBanner] = useState<number | null>(null)
+  
+  // 修正機能
+  const [refineInstruction, setRefineInstruction] = useState('')
+  const [isRefining, setIsRefining] = useState(false)
+  const [showRefineInput, setShowRefineInput] = useState(false)
+  const [refineHistory, setRefineHistory] = useState<{ instruction: string; image: string }[]>([])
   
   const [guestUsageCount, setGuestUsageCount] = useState(0)
   
@@ -254,6 +261,64 @@ export default function BannerDashboard() {
     } catch {
       toast.error('アップロードに失敗しました')
     }
+  }
+
+  // 画像修正ハンドラー
+  const handleRefine = async () => {
+    if (selectedBanner === null || !refineInstruction.trim()) return
+    
+    const originalImage = generatedBanners[selectedBanner]
+    
+    setIsRefining(true)
+    try {
+      const response = await fetch('/api/banner/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          originalImage,
+          instruction: refineInstruction.trim(),
+          category,
+          size,
+        }),
+      })
+
+      const data = await response.json()
+      
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || '修正に失敗しました')
+      }
+
+      // 履歴に追加
+      setRefineHistory(prev => [...prev, { 
+        instruction: refineInstruction, 
+        image: originalImage 
+      }])
+      
+      // バナーを更新
+      const newBanners = [...generatedBanners]
+      newBanners[selectedBanner] = data.refinedImage
+      setGeneratedBanners(newBanners)
+      
+      setRefineInstruction('')
+      setShowRefineInput(false)
+      toast.success('バナーを修正しました！', { icon: '✨' })
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setIsRefining(false)
+    }
+  }
+
+  // 修正を元に戻す
+  const handleUndoRefine = () => {
+    if (selectedBanner === null || refineHistory.length === 0) return
+    
+    const lastHistory = refineHistory[refineHistory.length - 1]
+    const newBanners = [...generatedBanners]
+    newBanners[selectedBanner] = lastHistory.image
+    setGeneratedBanners(newBanners)
+    setRefineHistory(prev => prev.slice(0, -1))
+    toast.success('元に戻しました')
   }
 
   // ========================================
@@ -754,22 +819,108 @@ export default function BannerDashboard() {
                               {['A', 'B', 'C'][selectedBanner]}案 プレビュー
                             </h3>
                             <div className="flex gap-2">
+                              {refineHistory.length > 0 && (
+                                <button
+                                  onClick={handleUndoRefine}
+                                  className="flex items-center gap-1 px-2 py-1.5 bg-white/5 text-white/50 rounded-lg text-xs hover:bg-white/10 hover:text-white transition-colors"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                  戻す
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setShowRefineInput(!showRefineInput)}
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                                  showRefineInput 
+                                    ? 'bg-fuchsia-500/20 text-fuchsia-300' 
+                                    : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
+                                }`}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                                修正
+                              </button>
                               <button
                                 onClick={() => handleDownload(generatedBanners[selectedBanner], selectedBanner)}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-violet-500/20 text-violet-300 rounded-lg text-sm hover:bg-violet-500/30 transition-colors"
                               >
                                 <Download className="w-4 h-4" />
-                                ダウンロード
+                                DL
                               </button>
                             </div>
                           </div>
-                          <div className="rounded-xl overflow-hidden">
+                          
+                          {/* プレビュー画像 */}
+                          <div className="rounded-xl overflow-hidden mb-3">
                             <img 
                               src={generatedBanners[selectedBanner]} 
                               alt="Selected Banner" 
                               className="w-full"
                             />
                           </div>
+
+                          {/* 修正入力フォーム */}
+                          <AnimatePresence>
+                            {showRefineInput && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="pt-3 border-t border-white/5">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <MessageSquare className="w-4 h-4 text-fuchsia-400" />
+                                    <span className="text-sm font-medium text-white">AIに修正指示</span>
+                                  </div>
+                                  <div className="relative">
+                                    <textarea
+                                      value={refineInstruction}
+                                      onChange={(e) => setRefineInstruction(e.target.value)}
+                                      placeholder="例: 背景を青に変更して、文字をもっと大きくして"
+                                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:border-fuchsia-500/50 focus:ring-2 focus:ring-fuchsia-500/20 outline-none transition-all resize-none text-sm pr-12"
+                                      rows={2}
+                                      maxLength={200}
+                                      disabled={isRefining}
+                                    />
+                                    <button
+                                      onClick={handleRefine}
+                                      disabled={isRefining || !refineInstruction.trim()}
+                                      className="absolute right-2 bottom-2 w-8 h-8 bg-gradient-to-r from-fuchsia-500 to-violet-500 rounded-lg flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {isRefining ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                      ) : (
+                                        <Send className="w-4 h-4" />
+                                      )}
+                                    </button>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {[
+                                      '背景を変更',
+                                      '文字を大きく',
+                                      '色を鮮やかに',
+                                      'CTAを目立たせて',
+                                      'シンプルに',
+                                    ].map((suggestion) => (
+                                      <button
+                                        key={suggestion}
+                                        onClick={() => setRefineInstruction(suggestion)}
+                                        className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-xs rounded-md transition-colors"
+                                      >
+                                        {suggestion}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {isRefining && (
+                                    <div className="mt-3 flex items-center gap-2 text-fuchsia-400 text-sm">
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                      <span>AIが修正中...</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </motion.div>
                       )}
                     </>
