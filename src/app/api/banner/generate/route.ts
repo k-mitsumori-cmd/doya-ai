@@ -48,7 +48,15 @@ export async function POST(request: NextRequest) {
 
     // リクエストボディを取得
     const body = await request.json()
-    const { category, keyword, size } = body
+    const { 
+      category, 
+      keyword, 
+      size, 
+      purpose,
+      companyName,
+      logoImage,
+      personImage 
+    } = body
 
     // バリデーション
     if (!category || typeof category !== 'string') {
@@ -81,13 +89,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Banner generation request - Category: ${category}, Size: ${size}, Guest: ${isGuest}`)
+    console.log(`Banner generation request - Category: ${category}, Purpose: ${purpose}, Size: ${size}, Guest: ${isGuest}`)
+    if (companyName) console.log(`Company: ${companyName}`)
+    if (logoImage) console.log('Logo image provided')
+    if (personImage) console.log('Person image provided')
+
+    // バナー生成オプション
+    const options = {
+      purpose: purpose || 'sns_ad',
+      companyName: companyName?.trim() || undefined,
+      hasLogo: !!logoImage,
+      hasPerson: !!personImage,
+    }
 
     // バナー生成
     const result = await generateBanners(
       category,
       keyword.trim(),
-      size || '1080x1080'
+      size || '1080x1080',
+      options
     )
 
     if (result.error && result.banners.length === 0) {
