@@ -1,16 +1,22 @@
-// Nano Banana Pro API (Gemini Imagen 3) を使用したバナー画像生成
-// 参考: https://apidog.com/jp/blog/nano-banana-pro-api-jp/
+// Vertex AI Imagen 3 を使用したバナー画像生成
+// Imagen 3 (imagen-3.0-generate-002) で高品質な画像を生成
 
-// Google Gemini API エンドポイント
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+import { VertexAI } from '@google-cloud/vertexai'
 
 // ========================================
-// Imagen 3 (Nano Banana Pro / Gemini 3.0)
-// これが画像生成に使用される唯一のモデル
-// 高品質な画像生成に特化
-// ※ Gemini 2.0は使用しない
+// Vertex AI 設定
 // ========================================
-const IMAGE_MODEL_ID = 'imagen-3.0-generate-002'
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'your-project-id'
+const LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
+const IMAGEN_MODEL = 'imagen-3.0-generate-002'
+
+// Vertex AI クライアント初期化
+function getVertexAI() {
+  return new VertexAI({
+    project: PROJECT_ID,
+    location: LOCATION,
+  })
+}
 
 // 業種カテゴリ別のデザインガイドライン
 const CATEGORY_STYLES: Record<string, { style: string; colors: string; elements: string }> = {
@@ -479,67 +485,128 @@ Generate a HIGH-QUALITY banner with PERFECT Japanese text rendering now.`
 }
 
 // ========================================
-// Imagen 3 (Nano Banana Pro / Gemini 3.0) APIを使った画像生成
-// ※ これが唯一使用するモデル - Gemini 2.0は使用しない
+// Vertex AI Imagen 3 を使った画像生成
+// 高品質な広告バナー画像を生成
 // ========================================
 async function generateSingleBanner(
-  apiKey: string,
   prompt: string,
-  inputImages?: { logo?: string; person?: string }
+  size: string = '1080x1080'
 ): Promise<string> {
-  // Imagen 3 API用のエンドポイント
-  const endpoint = `${GEMINI_API_BASE}/models/${IMAGE_MODEL_ID}:predict?key=${apiKey}`
+  console.log('Calling Vertex AI Imagen 3...')
+  console.log('Model:', IMAGEN_MODEL)
+  console.log('Project:', PROJECT_ID)
+  console.log('Location:', LOCATION)
   
-  console.log('Calling Imagen 3 API...')
-  console.log('Model:', IMAGE_MODEL_ID)
+  // サイズからアスペクト比を計算
+  const aspectRatio = getAspectRatio(size)
   
-  // Imagen 3 API用のリクエストボディ
-  // 参考: https://cloud.google.com/vertex-ai/generative-ai/docs/image/generate-images
-  const requestBody = {
-    instances: [
-      {
-        prompt: prompt
-      }
-    ],
-    parameters: {
-      sampleCount: 1,
-      aspectRatio: "1:1",
-      safetyFilterLevel: "block_few",
-      personGeneration: "allow_adult",
-      outputOptions: {
-        mimeType: "image/png"
+  try {
+    const vertexai = getVertexAI()
+    
+    // Imagen 3 モデルを取得
+    const generativeModel = vertexai.getGenerativeModel({
+      model: IMAGEN_MODEL,
+    })
+    
+    // 画像生成リクエスト
+    const request = {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        candidateCount: 1,
+        // Imagen 3の設定
+      },
+    }
+    
+    console.log('Sending request to Imagen 3...')
+    const response = await generativeModel.generateContent(request)
+    const result = response.response
+    
+    // レスポンスから画像を抽出
+    if (result.candidates && result.candidates[0]?.content?.parts) {
+      for (const part of result.candidates[0].content.parts) {
+        if ((part as any).inlineData?.mimeType?.startsWith('image/')) {
+          const inlineData = (part as any).inlineData
+          console.log('Image found in Imagen 3 response!')
+          return `data:${inlineData.mimeType};base64,${inlineData.data}`
+        }
       }
     }
+    
+    throw new Error('画像が生成されませんでした')
+  } catch (error: any) {
+    console.error('Vertex AI Imagen 3 error:', error.message)
+    
+    // フォールバック: REST APIを直接呼び出す
+    console.log('Falling back to REST API...')
+    return await generateWithRestAPI(prompt, size)
   }
+}
+
+// REST API直接呼び出し（フォールバック）
+async function generateWithRestAPI(prompt: string, size: string): Promise<string> {
+  const accessToken = process.env.GOOGLE_CLOUD_ACCESS_TOKEN
+  
+  if (!accessToken) {
+    throw new Error('GOOGLE_CLOUD_ACCESS_TOKEN が設定されていません')
+  }
+  
+  const aspectRatio = getAspectRatio(size)
+  const endpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${IMAGEN_MODEL}:predict`
+  
+  const requestBody = {
+    instances: [{ prompt }],
+    parameters: {
+      sampleCount: 1,
+      aspectRatio: aspectRatio,
+      safetyFilterLevel: 'block_few',
+      personGeneration: 'allow_adult',
+    },
+  }
+  
+  console.log('Calling Imagen 3 REST API...')
+  console.log('Endpoint:', endpoint)
   
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
+      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(requestBody),
   })
-
+  
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('Imagen 3 API error:', response.status, errorText)
-    throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 200)}`)
+    console.error('Imagen 3 REST API error:', response.status, errorText)
+    throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 300)}`)
   }
-
+  
   const result = await response.json()
-  console.log('Imagen 3 API Response received')
+  console.log('Imagen 3 REST API Response received')
   
-  // Imagen 3のレスポンス形式から画像を抽出
-  if (result.predictions && result.predictions[0]) {
-    const prediction = result.predictions[0]
-    if (prediction.bytesBase64Encoded) {
-      console.log('Image found in Imagen 3 response!')
-      return `data:image/png;base64,${prediction.bytesBase64Encoded}`
-    }
+  // レスポンスから画像を抽出
+  if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
+    console.log('Image found in Imagen 3 REST response!')
+    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`
   }
   
-  console.error('No image in Imagen 3 response. Full response:', JSON.stringify(result, null, 2).substring(0, 500))
-  throw new Error('画像が生成されませんでした。')
+  console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 500))
+  throw new Error('画像が生成されませんでした')
+}
+
+// サイズからアスペクト比を計算
+function getAspectRatio(size: string): string {
+  const [width, height] = size.split('x').map(Number)
+  if (!width || !height) return '1:1'
+  
+  const ratio = width / height
+  if (ratio > 1.7) return '16:9'
+  if (ratio > 1.4) return '3:2'
+  if (ratio > 1.1) return '4:3'
+  if (ratio < 0.6) return '9:16'
+  if (ratio < 0.75) return '2:3'
+  if (ratio < 0.9) return '3:4'
+  return '1:1'
 }
 
 // A/B/C 3パターンのバナーを生成
@@ -549,47 +616,34 @@ export async function generateBanners(
   size: string = '1080x1080',
   options: GenerateOptions = {}
 ): Promise<{ banners: string[]; error?: string }> {
-  const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.NANOBANNER_API_KEY
-  
-  if (!apiKey) {
-    console.error('API key not configured')
+  // Vertex AI の設定確認
+  if (!PROJECT_ID || PROJECT_ID === 'your-project-id') {
+    console.error('GOOGLE_CLOUD_PROJECT_ID not configured')
     return { 
       banners: [], 
-      error: 'APIキーが設定されていません。環境変数 GOOGLE_GENAI_API_KEY を設定してください。' 
+      error: 'Vertex AI プロジェクトIDが設定されていません。環境変数 GOOGLE_CLOUD_PROJECT_ID を設定してください。' 
     }
   }
 
   const isYouTube = options.purpose === 'youtube'
   const appealTypes = isYouTube ? YOUTUBE_APPEAL_TYPES : APPEAL_TYPES
 
-  console.log(`Starting ${isYouTube ? 'YouTube thumbnail' : 'banner'} generation - Category: ${category}, Purpose: ${options.purpose}, Size: ${size}`)
-  
-  // 入力画像を準備
-  const inputImages = {
-    logo: options.logoImage,
-    person: options.personImage,
-  }
-  const hasInputImages = !!(inputImages.logo || inputImages.person)
-  if (hasInputImages) {
-    console.log(`Input images: logo=${!!inputImages.logo}, person=${!!inputImages.person}`)
-  }
+  console.log(`Starting ${isYouTube ? 'YouTube thumbnail' : 'banner'} generation with Imagen 3`)
+  console.log(`Category: ${category}, Purpose: ${options.purpose}, Size: ${size}`)
+  console.log(`Project: ${PROJECT_ID}, Location: ${LOCATION}`)
 
   try {
     const banners: string[] = []
     const errors: string[] = []
     
-    // 3パターン順次生成（Gemini 3 Pro Image使用）
+    // 3パターン順次生成（Vertex AI Imagen 3 使用）
     for (const appealType of appealTypes) {
       try {
         const prompt = createBannerPrompt(category, keyword, size, appealType, options)
         console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} type ${appealType.type} (${appealType.japanese})...`)
         
-        // Gemini 3 Pro Image で生成
-        const banner = await generateSingleBanner(
-          apiKey, 
-          prompt, 
-          hasInputImages ? inputImages : undefined
-        )
+        // Vertex AI Imagen 3 で生成
+        const banner = await generateSingleBanner(prompt, size)
         
         banners.push(banner)
         console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generated successfully!`)
@@ -613,7 +667,7 @@ export async function generateBanners(
     if (banners.every(b => b.startsWith('https://placehold'))) {
       return {
         banners,
-        error: `⚠️ Imagen 3 (Gemini 3.0) で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・APIキーが正しいか確認してください\n・しばらく待ってから再試行してください\n・プロンプトを変更してお試しください`
+        error: `⚠️ Vertex AI Imagen 3 で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・GOOGLE_CLOUD_PROJECT_ID が正しいか確認\n・GOOGLE_CLOUD_ACCESS_TOKEN が有効か確認\n・Vertex AI APIが有効になっているか確認`
       }
     }
 
