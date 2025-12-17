@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { getAllServices } from '@/lib/services'
+import { KANTAN_PRICING, BANNER_PRICING, BUNDLE_PRICING } from '@/lib/pricing'
 
 export default function PortalPage() {
   const { data: session } = useSession()
@@ -132,7 +133,7 @@ export default function PortalPage() {
                   
                   <div className="flex items-center gap-4 mb-6">
                     <div className="px-3 py-1.5 bg-white/20 backdrop-blur rounded-lg text-white text-sm font-medium">
-                      無料で1日3回
+                      ゲスト1日{KANTAN_PRICING.guestLimit}回無料
                     </div>
                     <div className="px-3 py-1.5 bg-white/20 backdrop-blur rounded-lg text-white text-sm font-medium">
                       68テンプレート
@@ -171,7 +172,7 @@ export default function PortalPage() {
                   
                   <div className="flex items-center gap-4 mb-6">
                     <div className="px-3 py-1.5 bg-white/20 backdrop-blur rounded-lg text-white text-sm font-medium">
-                      無料で1日1枚
+                      ゲスト1日{BANNER_PRICING.guestLimit}回無料
                     </div>
                     <div className="px-3 py-1.5 bg-white/20 backdrop-blur rounded-lg text-white text-sm font-medium">
                       A/B/C 3案
@@ -220,39 +221,27 @@ export default function PortalPage() {
       </section>
 
       {/* ============================================
-          Reviews - シンプル
+          Use Cases - 利用シーン紹介
           ============================================ */}
       <section className="py-16 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-900 mb-4">
-            ユーザーの声
+            こんなシーンで活躍
           </h2>
           <p className="text-center text-gray-600 mb-12">
-            実際に使っている方からの評価
+            ドヤAIで効率化できる業務例
           </p>
           
           <div className="grid sm:grid-cols-3 gap-6">
             {[
-              { text: 'メール作成が10分→30秒に！毎日使ってます', name: 'T.S', role: '営業', rating: 5 },
-              { text: 'バナー作成の外注費が月10万円削減できた', name: 'M.K', role: 'マーケター', rating: 5 },
-              { text: 'ブログ記事のネタ切れがなくなった', name: 'Y.T', role: 'ライター', rating: 5 },
-            ].map((review, i) => (
-              <div key={i} className="bg-gray-50 rounded-2xl p-6">
-                <div className="flex gap-0.5 mb-3">
-                  {[...Array(review.rating)].map((_, j) => (
-                    <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-gray-700 mb-4 text-sm leading-relaxed">"{review.text}"</p>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                    {review.name[0]}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{review.name}</p>
-                    <p className="text-xs text-gray-500">{review.role}</p>
-                  </div>
-                </div>
+              { icon: '📧', title: 'ビジネスメール作成', desc: 'お礼・謝罪・依頼など、シーンに合わせた文章を数秒で生成' },
+              { icon: '🎨', title: 'SNS広告バナー', desc: 'A/B/C 3パターンを同時生成、広告運用の効率化に' },
+              { icon: '📝', title: 'ブログ・記事作成', desc: 'SEOを意識した構成案から本文まで、執筆をサポート' },
+            ].map((item, i) => (
+              <div key={i} className="bg-gray-50 rounded-2xl p-6 text-center">
+                <div className="text-4xl mb-4">{item.icon}</div>
+                <h3 className="font-bold text-gray-900 mb-2">{item.title}</h3>
+                <p className="text-gray-600 text-sm">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -277,7 +266,11 @@ export default function PortalPage() {
               <h3 className="text-lg font-bold text-gray-900 mb-2">無料プラン</h3>
               <div className="text-3xl font-extrabold text-gray-900 mb-4">¥0</div>
               <ul className="space-y-3 mb-6">
-                {['登録なしで使える', '文章: 1日3回', 'バナー: 1日1枚'].map((item, i) => (
+                {[
+                  '登録なしで使える',
+                  `文章: ゲスト1日${KANTAN_PRICING.guestLimit}回`,
+                  `バナー: ゲスト1日${BANNER_PRICING.guestLimit}回`,
+                ].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-gray-600 text-sm">
                     <span className="text-emerald-500">✓</span>
                     {item}
@@ -291,21 +284,21 @@ export default function PortalPage() {
               </Link>
             </div>
             
-            {/* プロ */}
+            {/* セットプラン */}
             <div className="bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl p-6 text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full blur-xl" />
               <div className="relative">
                 <div className="inline-block px-2 py-1 bg-white/20 rounded text-xs font-bold mb-3">
-                  おすすめ
+                  {BUNDLE_PRICING.discount}
                 </div>
-                <h3 className="text-lg font-bold mb-2">プロプラン</h3>
-                <div className="text-3xl font-extrabold mb-1">¥2,980〜</div>
-                <p className="text-white/70 text-sm mb-4">/月・サービス別</p>
+                <h3 className="text-lg font-bold mb-2">{BUNDLE_PRICING.name}</h3>
+                <div className="text-3xl font-extrabold mb-1">{BUNDLE_PRICING.priceLabel}</div>
+                <p className="text-white/70 text-sm mb-4">{BUNDLE_PRICING.period}</p>
                 <ul className="space-y-3 mb-6">
-                  {['使い放題 or 大幅増量', '履歴無制限保存', '優先サポート'].map((item, i) => (
+                  {BUNDLE_PRICING.features.map((item, i) => (
                     <li key={i} className="flex items-center gap-2 text-white/90 text-sm">
                       <span>✓</span>
-                      {item}
+                      {item.text}
                     </li>
                   ))}
                 </ul>

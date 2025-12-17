@@ -142,6 +142,10 @@ interface GenerateOptions {
   companyName?: string
   hasLogo?: boolean
   hasPerson?: boolean
+  logoDescription?: string  // ロゴの説明（例: "青い円形のロゴ"）
+  personDescription?: string  // 人物の説明（例: "30代女性ビジネスパーソン"）
+  logoImage?: string  // ロゴ画像のBase64データ（data:image/...;base64,...形式）
+  personImage?: string  // 人物画像のBase64データ
 }
 
 // バナー生成用プロンプトを作成
@@ -189,21 +193,47 @@ Display "${options.companyName}" as the brand name (smaller than main text, but 
 `
   }
 
-  // ロゴがある場合のプレースホルダー指示
+  // ロゴがある場合
   if (options.hasLogo) {
-    prompt += `
-=== LOGO PLACEMENT ===
-Leave space for a company logo in the corner (top-left or bottom-right recommended)
+    if (options.logoImage) {
+      // 実際のロゴ画像が提供されている場合
+      prompt += `
+=== LOGO PLACEMENT (PROVIDED) ===
+I am providing the company logo image. Please incorporate this logo into the banner design.
+Place the logo in a visible corner (top-left or bottom-right recommended).
+Maintain the logo's original colors and shape, blending it naturally with the banner design.
 `
+    } else {
+      // ロゴ画像がない場合はプレースホルダー
+      prompt += `
+=== LOGO PLACEHOLDER ===
+Include a company logo placeholder in the corner (top-left or bottom-right recommended)
+${options.logoDescription ? `Logo style: ${options.logoDescription}` : 'Create a simple, professional logo placeholder'}
+`
+    }
   }
 
-  // 人物がある場合のプレースホルダー指示
+  // 人物がある場合
   if (options.hasPerson) {
-    prompt += `
-=== PERSON IMAGE ===
-Include a professional-looking person (business professional, friendly expression)
-Position them on one side of the banner, leaving space for text on the other side
+    if (options.personImage) {
+      // 実際の人物画像が提供されている場合
+      prompt += `
+=== PERSON IMAGE (PROVIDED) ===
+I am providing a person's photo. Please incorporate this person into the banner design.
+Position them on one side of the banner (left or right), leaving space for text on the other side.
+Blend the person naturally with the banner background and style.
+The person should look professional and trustworthy in the context of the advertisement.
 `
+    } else {
+      // 人物画像がない場合は生成
+      prompt += `
+=== PERSON IMAGE (GENERATE) ===
+Include a professional-looking person in the banner design
+${options.personDescription ? `Person appearance: ${options.personDescription}` : 'A friendly business professional with welcoming expression'}
+Position them on one side of the banner, leaving space for text on the other side
+The person should match the banner's professional tone and target audience
+`
+    }
   }
 
   prompt += `
@@ -219,14 +249,53 @@ Generate the banner image now.`
   return prompt
 }
 
+// Base64データからmimeTypeとデータを抽出
+function parseBase64Image(base64: string): { mimeType: string; data: string } | null {
+  const match = base64.match(/^data:([^;]+);base64,(.+)$/)
+  if (!match) return null
+  return { mimeType: match[1], data: match[2] }
+}
+
 // Gemini APIを使って画像を生成
 async function generateSingleBanner(
   apiKey: string,
-  prompt: string
+  prompt: string,
+  inputImages?: { logo?: string; person?: string }
 ): Promise<string> {
   const endpoint = `${GEMINI_API_BASE}/models/${MODEL_ID}:generateContent?key=${apiKey}`
   
   console.log('Calling Gemini Image API...')
+  
+  // partsを構築（テキスト + 入力画像）
+  const parts: any[] = [{ text: prompt }]
+  
+  // ロゴ画像を追加
+  if (inputImages?.logo) {
+    const parsed = parseBase64Image(inputImages.logo)
+    if (parsed) {
+      parts.push({
+        inline_data: {
+          mime_type: parsed.mimeType,
+          data: parsed.data
+        }
+      })
+      console.log('Logo image added to request')
+    }
+  }
+  
+  // 人物画像を追加
+  if (inputImages?.person) {
+    const parsed = parseBase64Image(inputImages.person)
+    if (parsed) {
+      parts.push({
+        inline_data: {
+          mime_type: parsed.mimeType,
+          data: parsed.data
+        }
+      })
+      console.log('Person image added to request')
+    }
+  }
   
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -234,9 +303,7 @@ async function generateSingleBanner(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      contents: [{
-        parts: [{ text: prompt }]
-      }],
+      contents: [{ parts }],
       generationConfig: {
         responseModalities: ["IMAGE", "TEXT"],
         temperature: 1.0,
@@ -293,6 +360,16 @@ export async function generateBanners(
   }
 
   console.log(`Starting banner generation - Category: ${category}, Purpose: ${options.purpose}, Size: ${size}`)
+  
+  // 入力画像を準備
+  const inputImages = {
+    logo: options.logoImage,
+    person: options.personImage,
+  }
+  const hasInputImages = !!(inputImages.logo || inputImages.person)
+  if (hasInputImages) {
+    console.log(`Input images: logo=${!!inputImages.logo}, person=${!!inputImages.person}`)
+  }
 
   try {
     const banners: string[] = []
@@ -304,7 +381,7 @@ export async function generateBanners(
         const prompt = createBannerPrompt(category, keyword, size, appealType, options)
         console.log(`Generating banner type ${appealType.type} (${appealType.japanese})...`)
         
-        const banner = await generateSingleBanner(apiKey, prompt)
+        const banner = await generateSingleBanner(apiKey, prompt, hasInputImages ? inputImages : undefined)
         banners.push(banner)
         console.log(`Banner ${appealType.type} generated successfully!`)
         

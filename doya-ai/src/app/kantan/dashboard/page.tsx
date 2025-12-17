@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { ArrowRight, ArrowLeft, Sparkles, LogIn, Wand2 } from 'lucide-react'
+import { GUEST_LIMITS, getGuestUsage, getGuestRemainingCount } from '@/lib/pricing'
 
 // テンプレート一覧（人気順）
 const POPULAR_TEMPLATES = [
@@ -15,24 +16,9 @@ const POPULAR_TEMPLATES = [
   { id: 'proposal-document', name: '提案書', icon: '📑', desc: '企画提案書を作成', gradient: 'from-indigo-500 to-violet-500' },
 ]
 
-// ゲスト使用状況管理
-const GUEST_DAILY_LIMIT = 3
-const GUEST_STORAGE_KEY = 'kantan_guest_usage'
-
-function getGuestUsage(): { count: number; date: string } {
-  if (typeof window === 'undefined') return { count: 0, date: '' }
-  const stored = localStorage.getItem(GUEST_STORAGE_KEY)
-  if (!stored) return { count: 0, date: '' }
-  try {
-    return JSON.parse(stored)
-  } catch {
-    return { count: 0, date: '' }
-  }
-}
-
 export default function KantanDashboardPage() {
   const { data: session, status } = useSession()
-  const [guestUsageCount, setGuestUsageCount] = useState(0)
+  const [guestRemainingCount, setGuestRemainingCount] = useState(GUEST_LIMITS.kantan.dailyLimit)
   
   const isGuest = !session
   const userName = session?.user?.name?.split(' ')[0] || 'ゲスト'
@@ -40,17 +26,9 @@ export default function KantanDashboardPage() {
   // ゲスト使用状況を読み込み
   useEffect(() => {
     if (isGuest && typeof window !== 'undefined') {
-      const usage = getGuestUsage()
-      const today = new Date().toISOString().split('T')[0]
-      if (usage.date === today) {
-        setGuestUsageCount(usage.count)
-      } else {
-        setGuestUsageCount(0)
-      }
+      setGuestRemainingCount(getGuestRemainingCount('kantan'))
     }
   }, [isGuest])
-
-  const guestRemainingCount = GUEST_DAILY_LIMIT - guestUsageCount
 
   if (status === 'loading') {
     return (
@@ -109,7 +87,7 @@ export default function KantanDashboardPage() {
                 <div>
                   <p className="font-bold text-gray-900">🆓 お試しモード</p>
                   <p className="text-sm text-gray-600">
-                    残り <span className="font-bold text-blue-600">{guestRemainingCount}回</span>（1日{GUEST_DAILY_LIMIT}回まで）
+                    残り <span className="font-bold text-blue-600">{guestRemainingCount}回</span>（1日{GUEST_LIMITS.kantan.dailyLimit}回まで）
                   </p>
                 </div>
               </div>
