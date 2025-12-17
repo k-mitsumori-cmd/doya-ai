@@ -36,7 +36,8 @@ const CATEGORIES = [
 
 const PURPOSES = [
   { value: 'sns_ad', label: 'SNS広告', icon: Target, desc: 'FB/IG/X', hot: true },
-  { value: 'display', label: 'ディスプレイ', icon: Layout, desc: 'GDN/YDA', hot: true },
+  { value: 'youtube', label: 'YouTube', icon: Play, desc: 'サムネイル', hot: true },
+  { value: 'display', label: 'ディスプレイ', icon: Layout, desc: 'GDN/YDA', hot: false },
   { value: 'webinar', label: 'ウェビナー', icon: Video, desc: 'セミナー', hot: false },
   { value: 'lp_hero', label: 'LP', icon: Megaphone, desc: 'ヒーロー', hot: false },
   { value: 'email', label: 'メール', icon: Mail, desc: 'ヘッダー', hot: false },
@@ -53,6 +54,10 @@ const SIZE_PRESETS: Record<string, Array<{ value: string; label: string; ratio: 
     { value: '1080x1080', label: 'フィード', ratio: '1:1' },
     { value: '1200x628', label: 'リンク', ratio: '1.91:1' },
     { value: '1080x1920', label: 'ストーリー', ratio: '9:16' },
+  ],
+  youtube: [
+    { value: '1280x720', label: 'HD標準', ratio: '16:9' },
+    { value: '1920x1080', label: 'フルHD', ratio: '16:9' },
   ],
   display: [
     { value: '300x250', label: 'レクタングル', ratio: '300×250' },
@@ -79,6 +84,7 @@ const SIZE_PRESETS: Record<string, Array<{ value: string; label: string; ratio: 
 
 const SAMPLES: Record<string, { category: string; keyword: string; company?: string }> = {
   sns_ad: { category: 'marketing', keyword: '成果報酬型広告運用 初月無料キャンペーン実施中', company: 'マーケAI' },
+  youtube: { category: 'it', keyword: '【衝撃】ChatGPT活用術 知らないと損する5つの裏技', company: 'AI解説チャンネル' },
   display: { category: 'ec', keyword: '決算セール MAX70%OFF 本日限り！' },
   webinar: { category: 'it', keyword: '【無料ウェビナー】AI時代のマーケティング完全攻略', company: 'TechCorp' },
   lp_hero: { category: 'it', keyword: '業務効率を10倍に。次世代AIプラットフォーム' },

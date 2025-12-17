@@ -77,6 +77,11 @@ const PURPOSE_STYLES: Record<string, { layout: string; emphasis: string; cta: st
     emphasis: 'bold headline centered, clear value proposition',
     cta: 'prominent CTA button like "詳しくはこちら" or "今すぐチェック"',
   },
+  youtube: {
+    layout: 'YouTube thumbnail, 16:9 aspect ratio, maximum visual impact, designed to get clicks in search results and recommendations',
+    emphasis: 'HUGE bold text that fills most of the frame, expressive face/reaction shot area, bright contrasting colors, dramatic lighting effects',
+    cta: 'NO CTA button needed - focus on emotional hook and curiosity gap, use arrows or circles to draw attention if needed',
+  },
   display: {
     layout: 'web display banner, clean layout respecting ad dimensions',
     emphasis: 'brand visibility, clear message hierarchy',
@@ -136,6 +141,28 @@ const APPEAL_TYPES = [
   },
 ]
 
+// YouTube専用のA/B/Cパターン
+const YOUTUBE_APPEAL_TYPES = [
+  { 
+    type: 'A', 
+    focus: 'Curiosity & Shock', 
+    style: 'Create extreme curiosity with shocking revelation, use words like "衝撃" "まさか" "信じられない", dramatic facial expression area, red/yellow highlight on key words, split background (before/after style)',
+    japanese: '衝撃・驚き',
+  },
+  { 
+    type: 'B', 
+    focus: 'Educational & Value', 
+    style: 'Promise valuable knowledge with "〜の方法" "〜のコツ" "完全解説", clean numbered list feel (3つ, 5選, 10個), professional but approachable, blue/green trustworthy colors, include visual icons or symbols',
+    japanese: '教育・価値提供',
+  },
+  { 
+    type: 'C', 
+    focus: 'Emotional & Story', 
+    style: 'Tell a story hook with "〜した結果" "〜してみた" "密着", personal/relatable feel, warm colors, include space for expressive human face, journey/transformation imagery hints',
+    japanese: '体験・ストーリー',
+  },
+]
+
 // 生成オプションの型定義
 interface GenerateOptions {
   purpose?: string
@@ -146,6 +173,115 @@ interface GenerateOptions {
   personDescription?: string  // 人物の説明（例: "30代女性ビジネスパーソン"）
   logoImage?: string  // ロゴ画像のBase64データ（data:image/...;base64,...形式）
   personImage?: string  // 人物画像のBase64データ
+}
+
+// YouTubeサムネイル専用プロンプト生成
+function createYouTubeThumbnailPrompt(
+  keyword: string,
+  size: string,
+  appealType: typeof YOUTUBE_APPEAL_TYPES[0],
+  options: GenerateOptions = {}
+): string {
+  const [width, height] = size.split('x')
+
+  let prompt = `Create a highly clickable YouTube thumbnail image that will stand out in search results and recommendations.
+
+=== YOUTUBE THUMBNAIL SPECIFICATIONS ===
+Format: 16:9 landscape thumbnail (${width}x${height} pixels)
+Platform: YouTube - must compete for attention among many thumbnails
+Goal: MAXIMIZE click-through rate (CTR)
+
+=== THUMBNAIL TITLE/HOOK ===
+"${keyword}"
+
+=== STYLE: ${appealType.focus} ===
+${appealType.style}
+
+=== YOUTUBE THUMBNAIL BEST PRACTICES ===
+1. **HUGE, BOLD TEXT**: 
+   - Main text should fill 40-60% of the thumbnail area
+   - Use thick, bold fonts with strong outlines
+   - Maximum 2-3 lines of text, preferably less
+   - Text must be readable at 120x67px (mobile preview size)
+
+2. **HIGH CONTRAST & SATURATION**:
+   - Use bright, saturated colors (no muted tones)
+   - Strong contrast between text and background
+   - Consider using complementary color schemes
+   - Add glow, shadow, or stroke to text for pop
+
+3. **VISUAL HIERARCHY**:
+   - One clear focal point (text OR face, not competing)
+   - Use arrows, circles, or lines to direct attention
+   - Left side often performs better for human faces
+   - Right side good for key text or product
+
+4. **EMOTIONAL IMPACT**:
+   - Include space for expressive human face if relevant
+   - Show emotion: surprise, excitement, curiosity
+   - Use visual metaphors (explosions, fire, arrows, etc.)
+   - Create before/after or contrast visuals if applicable
+
+5. **AVOID**:
+   - Small or decorative fonts
+   - Too much text (keep it punchy)
+   - Cluttered backgrounds
+   - Low contrast elements
+   - Generic stock photo feel
+
+=== ⚠️ CRITICAL: JAPANESE TEXT RULES ⚠️ ===
+1. **EXTRA LARGE FONT**: Japanese text must be at least 30% of thumbnail height
+2. **BOLD GOTHIC FONT**: Use thick, bold Japanese Gothic/Sans-serif
+3. **STRONG OUTLINE**: Add 3-5px stroke/outline around Japanese text
+4. **NO CORRUPTION**: 
+   - Each kanji/hiragana/katakana must be perfect
+   - No stretching, no distortion
+   - Keep text strictly horizontal
+5. **LIMIT TEXT**: Maximum 10-15 Japanese characters total
+6. **SOLID BACKING**: Always place text on solid or gradient background, not on busy images
+`
+
+  // チャンネル名がある場合
+  if (options.companyName) {
+    prompt += `
+=== CHANNEL BRANDING ===
+Include "${options.companyName}" as small channel branding in corner (optional, subtle)
+`
+  }
+
+  // 人物画像がある場合
+  if (options.hasPerson) {
+    if (options.personImage) {
+      prompt += `
+=== PERSON IMAGE (PROVIDED) ===
+I am providing a person's photo to include in this thumbnail.
+Position them on the left or right third of the frame.
+The person should have an engaging, expressive pose suitable for YouTube.
+Leave the opposite side for the main title text.
+`
+    } else {
+      prompt += `
+=== PERSON PLACEHOLDER ===
+Include space for an expressive human face on one side of the thumbnail.
+${options.personDescription ? `Person appearance: ${options.personDescription}` : 'A YouTuber with an engaging, expressive reaction face'}
+Position on left side, with text on right side.
+`
+    }
+  }
+
+  prompt += `
+=== FINAL OUTPUT ===
+Generate a YouTube thumbnail that would make viewers WANT to click.
+The thumbnail must:
+1. Be instantly eye-catching at any size
+2. Clearly communicate the video's hook/value
+3. Have perfectly readable Japanese text
+4. Look professional yet exciting
+5. Stand out against competitors
+
+Create the thumbnail now.`
+
+  return prompt
 }
 
 // バナー生成用プロンプトを作成
@@ -161,6 +297,13 @@ function createBannerPrompt(
   const [width, height] = size.split('x')
   const aspectRatio = parseInt(width) > parseInt(height) ? 'landscape (horizontal)' : 
                       parseInt(width) < parseInt(height) ? 'portrait (vertical)' : 'square'
+  
+  const isYouTube = options.purpose === 'youtube'
+
+  // YouTube専用プロンプト
+  if (isYouTube) {
+    return createYouTubeThumbnailPrompt(keyword, size, appealType, options)
+  }
 
   let prompt = `Create a professional Japanese advertisement banner image.
 
@@ -384,7 +527,10 @@ export async function generateBanners(
     }
   }
 
-  console.log(`Starting banner generation - Category: ${category}, Purpose: ${options.purpose}, Size: ${size}`)
+  const isYouTube = options.purpose === 'youtube'
+  const appealTypes = isYouTube ? YOUTUBE_APPEAL_TYPES : APPEAL_TYPES
+
+  console.log(`Starting ${isYouTube ? 'YouTube thumbnail' : 'banner'} generation - Category: ${category}, Purpose: ${options.purpose}, Size: ${size}`)
   
   // 入力画像を準備
   const inputImages = {
@@ -401,21 +547,21 @@ export async function generateBanners(
     const errors: string[] = []
     
     // 3パターン順次生成
-    for (const appealType of APPEAL_TYPES) {
+    for (const appealType of appealTypes) {
       try {
         const prompt = createBannerPrompt(category, keyword, size, appealType, options)
-        console.log(`Generating banner type ${appealType.type} (${appealType.japanese})...`)
+        console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} type ${appealType.type} (${appealType.japanese})...`)
         
         const banner = await generateSingleBanner(apiKey, prompt, hasInputImages ? inputImages : undefined)
         banners.push(banner)
-        console.log(`Banner ${appealType.type} generated successfully!`)
+        console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generated successfully!`)
         
         // レート制限を避けるため待機
-        if (APPEAL_TYPES.indexOf(appealType) < APPEAL_TYPES.length - 1) {
+        if (appealTypes.indexOf(appealType) < appealTypes.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 2000))
         }
       } catch (error: any) {
-        console.error(`Banner ${appealType.type} generation failed:`, error.message)
+        console.error(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generation failed:`, error.message)
         errors.push(`${appealType.type}: ${error.message}`)
         // エラーの場合はプレースホルダー
         const [w, h] = size.split('x')
@@ -427,7 +573,7 @@ export async function generateBanners(
     if (banners.every(b => b.startsWith('https://placehold'))) {
       return {
         banners,
-        error: `バナー生成に失敗しました: ${errors.join(', ')}`
+        error: `${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました: ${errors.join(', ')}`
       }
     }
 
@@ -436,7 +582,7 @@ export async function generateBanners(
     console.error('generateBanners error:', error)
     return { 
       banners: [], 
-      error: error.message || 'バナー生成中にエラーが発生しました' 
+      error: error.message || `${isYouTube ? 'サムネイル' : 'バナー'}生成中にエラーが発生しました` 
     }
   }
 }
