@@ -119,17 +119,32 @@ export default function BannerDashboardPage() {
     setIsGenerating(true)
 
     try {
-      // モック生成
-      await new Promise(resolve => setTimeout(resolve, 2500))
+      // API呼び出し
+      const response = await fetch('/api/banner/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          category,
+          keyword: keyword.trim(),
+          size,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'バナー生成に失敗しました')
+      }
+
+      setGeneratedBanners(data.banners)
       
-      const mockBanners = [
-        `https://via.placeholder.com/${size.replace('x', '/')}/8B5CF6/FFFFFF?text=A`,
-        `https://via.placeholder.com/${size.replace('x', '/')}/EC4899/FFFFFF?text=B`,
-        `https://via.placeholder.com/${size.replace('x', '/')}/10B981/FFFFFF?text=C`,
-      ]
-      
-      setGeneratedBanners(mockBanners)
-      toast.success('バナー生成完了！', { icon: '🎨' })
+      if (data.isMock) {
+        toast.success('デモ用のサンプルを表示中', { icon: '📋' })
+      } else {
+        toast.success('バナー生成完了！', { icon: '🎨' })
+      }
 
       // ゲストの使用回数を更新
       if (isGuest) {
@@ -137,8 +152,9 @@ export default function BannerDashboardPage() {
         setGuestUsageCount(newCount)
         setGuestUsage(newCount)
       }
-    } catch (err) {
-      setError('エラーが発生しました。')
+    } catch (err: any) {
+      setError(err.message || 'エラーが発生しました。')
+      toast.error(err.message || 'エラーが発生しました')
     } finally {
       setIsGenerating(false)
     }
