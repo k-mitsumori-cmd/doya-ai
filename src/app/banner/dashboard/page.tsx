@@ -123,6 +123,9 @@ export default function BannerDashboard() {
   const [category, setCategory] = useState('')
   const [keyword, setKeyword] = useState('')
   const [size, setSize] = useState('1080x1080')
+  const [useCustomSize, setUseCustomSize] = useState(false)
+  const [customWidth, setCustomWidth] = useState('1080')
+  const [customHeight, setCustomHeight] = useState('1080')
   const [companyName, setCompanyName] = useState('')
   const [logoImage, setLogoImage] = useState<string | null>(null)
   const [personImage, setPersonImage] = useState<string | null>(null)
@@ -147,7 +150,14 @@ export default function BannerDashboard() {
   const isGuest = !session
   const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
   const guestRemaining = BANNER_PRICING.guestLimit - guestUsageCount
-  const canGenerate = category && keyword.trim() && (session || guestRemaining > 0)
+  
+  // カスタムサイズの場合は入力値を使用
+  const effectiveSize = useCustomSize ? `${customWidth}x${customHeight}` : size
+  const isValidCustomSize = !useCustomSize || (
+    parseInt(customWidth) >= 100 && parseInt(customWidth) <= 4096 &&
+    parseInt(customHeight) >= 100 && parseInt(customHeight) <= 4096
+  )
+  const canGenerate = category && keyword.trim() && (session || guestRemaining > 0) && isValidCustomSize
 
   // Effects
   useEffect(() => {
@@ -211,7 +221,7 @@ export default function BannerDashboard() {
         body: JSON.stringify({
           category,
           keyword: keyword.trim(),
-          size,
+          size: effectiveSize,
           purpose,
           companyName: companyName.trim() || undefined,
           logoImage: logoImage || undefined,
@@ -525,26 +535,156 @@ export default function BannerDashboard() {
                 <span className="w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs flex items-center justify-center">3</span>
                 サイズ
               </h2>
-              <div className="flex flex-wrap gap-2">
-                {currentSizes.map((s) => {
-                  const isSelected = size === s.value
-                  return (
-                    <button
-                      key={s.value}
-                      onClick={() => setSize(s.value)}
-                      className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 ${
-                        isSelected 
-                          ? 'bg-violet-500/20 border-2 border-violet-500/50 text-white' 
-                          : 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      {isSelected && <Check className="w-4 h-4 text-violet-400" />}
-                      <span className="font-medium text-sm">{s.label}</span>
-                      <span className="text-xs text-white/40">{s.ratio}</span>
-                    </button>
-                  )
-                })}
+              
+              {/* プリセット or カスタム 切り替え */}
+              <div className="flex gap-2 mb-3">
+                <button
+                  onClick={() => setUseCustomSize(false)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    !useCustomSize 
+                      ? 'bg-violet-500/20 text-violet-300 border border-violet-500/50' 
+                      : 'bg-white/5 text-white/50 border border-white/10 hover:text-white'
+                  }`}
+                >
+                  プリセット
+                </button>
+                <button
+                  onClick={() => setUseCustomSize(true)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    useCustomSize 
+                      ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/50' 
+                      : 'bg-white/5 text-white/50 border border-white/10 hover:text-white'
+                  }`}
+                >
+                  カスタムサイズ
+                </button>
               </div>
+
+              <AnimatePresence mode="wait">
+                {useCustomSize ? (
+                  <motion.div
+                    key="custom"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <label className="text-xs text-white/40 mb-1 block">幅 (px)</label>
+                        <input
+                          type="number"
+                          value={customWidth}
+                          onChange={(e) => setCustomWidth(e.target.value)}
+                          min={100}
+                          max={4096}
+                          className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-center text-lg font-bold focus:border-fuchsia-500/50 focus:ring-2 focus:ring-fuchsia-500/20 outline-none transition-all"
+                          placeholder="1080"
+                        />
+                      </div>
+                      <span className="text-white/30 text-xl mt-5">×</span>
+                      <div className="flex-1">
+                        <label className="text-xs text-white/40 mb-1 block">高さ (px)</label>
+                        <input
+                          type="number"
+                          value={customHeight}
+                          onChange={(e) => setCustomHeight(e.target.value)}
+                          min={100}
+                          max={4096}
+                          className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-center text-lg font-bold focus:border-fuchsia-500/50 focus:ring-2 focus:ring-fuchsia-500/20 outline-none transition-all"
+                          placeholder="1080"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* アスペクト比プレビュー */}
+                    <div className="flex items-center justify-between p-3 bg-white/[0.02] rounded-xl border border-white/5">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="bg-gradient-to-br from-fuchsia-500/30 to-violet-500/30 border border-fuchsia-500/50 rounded"
+                          style={{
+                            width: `${Math.min(40, 40 * (parseInt(customWidth) || 1) / (parseInt(customHeight) || 1))}px`,
+                            height: `${Math.min(40, 40 * (parseInt(customHeight) || 1) / (parseInt(customWidth) || 1))}px`,
+                            minWidth: '16px',
+                            minHeight: '16px',
+                          }}
+                        />
+                        <span className="text-sm text-white/60">
+                          {customWidth} × {customHeight}
+                        </span>
+                      </div>
+                      <span className="text-xs text-white/40">
+                        {(() => {
+                          const w = parseInt(customWidth) || 1
+                          const h = parseInt(customHeight) || 1
+                          const gcd = (a: number, b: number): number => b ? gcd(b, a % b) : a
+                          const g = gcd(w, h)
+                          return `${w/g}:${h/g}`
+                        })()}
+                      </span>
+                    </div>
+                    
+                    {/* よく使うサイズ */}
+                    <div>
+                      <p className="text-xs text-white/30 mb-2">よく使うサイズ</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { w: 1080, h: 1080, label: 'インスタ' },
+                          { w: 1200, h: 628, label: 'OGP' },
+                          { w: 1280, h: 720, label: 'YouTube' },
+                          { w: 1920, h: 1080, label: 'FHD' },
+                          { w: 800, h: 418, label: 'X/Twitter' },
+                          { w: 1200, h: 900, label: 'note' },
+                        ].map((preset) => (
+                          <button
+                            key={`${preset.w}x${preset.h}`}
+                            onClick={() => {
+                              setCustomWidth(preset.w.toString())
+                              setCustomHeight(preset.h.toString())
+                            }}
+                            className="px-2 py-1 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white text-xs rounded-md transition-colors"
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {!isValidCustomSize && (
+                      <p className="text-red-400 text-xs">
+                        サイズは100〜4096pxの範囲で指定してください
+                      </p>
+                    )}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="preset"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="flex flex-wrap gap-2"
+                  >
+                    {currentSizes.map((s) => {
+                      const isSelected = size === s.value
+                      return (
+                        <button
+                          key={s.value}
+                          onClick={() => setSize(s.value)}
+                          className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 ${
+                            isSelected 
+                              ? 'bg-violet-500/20 border-2 border-violet-500/50 text-white' 
+                              : 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white'
+                          }`}
+                        >
+                          {isSelected && <Check className="w-4 h-4 text-violet-400" />}
+                          <span className="font-medium text-sm">{s.label}</span>
+                          <span className="text-xs text-white/40">{s.ratio}</span>
+                        </button>
+                      )
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
 
             {/* Step 4: Keyword */}
