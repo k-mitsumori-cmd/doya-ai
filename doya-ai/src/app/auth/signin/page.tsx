@@ -100,7 +100,7 @@ function SignInContent() {
         {/* ログインせずに使う */}
         <div className="mt-6 text-center">
           <Link 
-            href="/dashboard" 
+            href="/kantan/dashboard" 
             className="text-blue-600 hover:underline text-base"
           >
             ログインせずに試す（1日3回まで）→
