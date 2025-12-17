@@ -8,9 +8,10 @@ import { signOut } from 'next-auth/react'
 import { 
   Sparkles, Loader2, AlertCircle, ChevronRight, 
   Crown, ArrowRight, CheckCircle, Star, Wand2,
-  Home, Clock, Palette, LogOut, Menu, X
+  Home, Clock, Palette, LogOut, Menu, X, ExternalLink
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ServiceNav, { OtherServicesCard } from '@/components/ServiceNav'
 
 // カテゴリ
 const CATEGORIES = [
@@ -147,7 +148,7 @@ export default function BannerDashboardPage() {
           </div>
 
           {/* ナビゲーション */}
-          <nav className="flex-1 p-3 space-y-1">
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             <Link href="/banner/dashboard">
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-purple-50 text-purple-600 font-medium">
                 <Home className="w-5 h-5" />
@@ -166,6 +167,11 @@ export default function BannerDashboardPage() {
                 <span>ブランド設定</span>
               </div>
             </Link>
+
+            {/* サービス間リンク */}
+            <div className="pt-4">
+              <OtherServicesCard currentService="banner" />
+            </div>
           </nav>
 
           {/* プラン表示 */}
@@ -210,14 +216,23 @@ export default function BannerDashboardPage() {
       {/* メインコンテンツ */}
       <main className="flex-1">
         {/* モバイルヘッダー */}
-        <header className="lg:hidden sticky top-0 z-30 h-16 bg-white border-b border-gray-200 flex items-center px-4">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2">
-            <Menu className="w-6 h-6 text-gray-600" />
-          </button>
-          <div className="flex items-center gap-2 ml-2">
-            <span className="text-xl">🎨</span>
-            <span className="font-bold text-gray-800">ドヤバナーAI</span>
+        <header className="lg:hidden sticky top-0 z-30 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+          <div className="flex items-center">
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2">
+              <Menu className="w-6 h-6 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-2 ml-2">
+              <span className="text-xl">🎨</span>
+              <span className="font-bold text-gray-800">ドヤバナーAI</span>
+            </div>
           </div>
+          {/* サービス切替ボタン */}
+          <ServiceNav currentService="banner" />
+        </header>
+
+        {/* PCヘッダー（サービス切替） */}
+        <header className="hidden lg:flex sticky top-0 z-30 h-14 bg-white/80 backdrop-blur-md border-b border-gray-200 items-center justify-end px-6">
+          <ServiceNav currentService="banner" />
         </header>
 
         <div className="max-w-3xl mx-auto px-4 py-6">

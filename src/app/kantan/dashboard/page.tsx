@@ -4,8 +4,9 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { ArrowRight, HelpCircle, Crown, Clock, Home, FileText, LogOut, Menu, X, Sparkles } from 'lucide-react'
+import { ArrowRight, HelpCircle, Crown, Clock, Home, FileText, LogOut, Menu, X, Sparkles, ExternalLink } from 'lucide-react'
 import { signOut } from 'next-auth/react'
+import ServiceNav, { OtherServicesCard } from '@/components/ServiceNav'
 
 // テンプレート一覧
 const templates = [
@@ -69,7 +70,7 @@ export default function KantanDashboardPage() {
           </div>
 
           {/* ナビゲーション */}
-          <nav className="flex-1 p-3 space-y-1">
+          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             <Link href="/kantan/dashboard">
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-medium">
                 <Home className="w-5 h-5" />
@@ -88,6 +89,11 @@ export default function KantanDashboardPage() {
                 <span>作成履歴</span>
               </div>
             </Link>
+
+            {/* サービス間リンク */}
+            <div className="pt-4">
+              <OtherServicesCard currentService="kantan" />
+            </div>
           </nav>
 
           {/* プラン表示 */}
@@ -132,14 +138,23 @@ export default function KantanDashboardPage() {
       {/* メインコンテンツ */}
       <main className="flex-1">
         {/* モバイルヘッダー */}
-        <header className="lg:hidden sticky top-0 z-30 h-16 bg-white border-b border-gray-200 flex items-center px-4">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2">
-            <Menu className="w-6 h-6 text-gray-600" />
-          </button>
-          <div className="flex items-center gap-2 ml-2">
-            <span className="text-xl">📝</span>
-            <span className="font-bold text-gray-800">カンタンドヤAI</span>
+        <header className="lg:hidden sticky top-0 z-30 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4">
+          <div className="flex items-center">
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2">
+              <Menu className="w-6 h-6 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-2 ml-2">
+              <span className="text-xl">📝</span>
+              <span className="font-bold text-gray-800">カンタンドヤAI</span>
+            </div>
           </div>
+          {/* サービス切替ボタン */}
+          <ServiceNav currentService="kantan" />
+        </header>
+
+        {/* PCヘッダー（サービス切替） */}
+        <header className="hidden lg:flex sticky top-0 z-30 h-14 bg-white/80 backdrop-blur-md border-b border-gray-200 items-center justify-end px-6">
+          <ServiceNav currentService="kantan" />
         </header>
 
         <div className="max-w-2xl mx-auto px-4 py-6">
@@ -184,7 +199,7 @@ export default function KantanDashboardPage() {
           </div>
 
           {/* 使い方ガイド */}
-          <div className="bg-blue-50 rounded-2xl p-5 border-2 border-blue-100">
+          <div className="bg-blue-50 rounded-2xl p-5 border-2 border-blue-100 mb-8">
             <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
               <HelpCircle className="w-6 h-6" />
               使い方
@@ -202,9 +217,28 @@ export default function KantanDashboardPage() {
               ))}
             </div>
           </div>
+
+          {/* 他サービスへの誘導（モバイル向け） */}
+          <div className="lg:hidden bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5 border-2 border-purple-100">
+            <h3 className="text-lg font-bold text-purple-900 mb-3 flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              他のサービスも使ってみよう
+            </h3>
+            <Link href="/banner">
+              <div className="flex items-center gap-4 p-4 bg-white rounded-xl border-2 border-purple-200 hover:border-purple-400 transition-all">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <span className="text-2xl">🎨</span>
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-gray-900">ドヤバナーAI</h4>
+                  <p className="text-sm text-gray-600">プロ品質のバナーを自動生成</p>
+                </div>
+                <ExternalLink className="w-5 h-5 text-purple-500" />
+              </div>
+            </Link>
+          </div>
         </div>
       </main>
     </div>
   )
 }
-
