@@ -1,92 +1,37 @@
-// Vertex AI Imagen 3 を使用したバナー画像生成
-// Imagen 3 (imagen-3.0-generate-002) で高品質な画像を生成
-// サービスアカウント認証で本番環境対応
-
 // ========================================
-// Vertex AI 設定
+// Imagen 4 でバナー画像生成
 // ========================================
-const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || ''
-const LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
-const IMAGEN_MODEL = 'imagen-3.0-generate-002'
+// 
+// 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
+// 
+// 【必要な環境変数】
+// GOOGLE_GENAI_API_KEY: Google AI Studio で取得したAPIキー
+//
+// 【APIキー取得手順】
+// 1. Google AI Studio (https://aistudio.google.com/) にアクセス
+// 2. 「Get API key」をクリック
+// 3. 「Create API key」でキーを作成
+// 4. 生成されたAPIキーをコピー
+//
+// 【使用モデル】
+// - imagen-4.0-generate-preview-05-20: Imagen 4 最新モデル
+// - 高品質な画像生成、フォトリアリズム
+// - ロゴや商品デザイン、タイポグラフィに最適
+//
+// ========================================
 
-// サービスアカウント認証情報（JSON文字列を環境変数から取得）
-function getCredentials(): { client_email: string; private_key: string } | null {
-  const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
-  if (!credentialsJson) {
-    console.error('GOOGLE_APPLICATION_CREDENTIALS_JSON is not set')
-    return null
-  }
-  
-  try {
-    const credentials = JSON.parse(credentialsJson)
-    return {
-      client_email: credentials.client_email,
-      private_key: credentials.private_key,
-    }
-  } catch (e) {
-    console.error('Failed to parse GOOGLE_APPLICATION_CREDENTIALS_JSON:', e)
-    return null
-  }
-}
+// Google AI Studio API 設定
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+// Imagen 4 最新モデル
+const IMAGEN_MODEL = 'imagen-4.0-generate-preview-05-20'
 
-// Google OAuth2 アクセストークンを取得
-async function getAccessToken(): Promise<string> {
-  const credentials = getCredentials()
-  if (!credentials) {
-    throw new Error('サービスアカウント認証情報が設定されていません')
+// APIキーを取得
+function getApiKey(): string {
+  const apiKey = process.env.GOOGLE_GENAI_API_KEY
+  if (!apiKey) {
+    throw new Error('GOOGLE_GENAI_API_KEY が設定されていません')
   }
-  
-  const { client_email, private_key } = credentials
-  
-  // JWT を作成
-  const now = Math.floor(Date.now() / 1000)
-  const header = {
-    alg: 'RS256',
-    typ: 'JWT',
-  }
-  const payload = {
-    iss: client_email,
-    scope: 'https://www.googleapis.com/auth/cloud-platform',
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600,
-  }
-  
-  // Base64URL エンコード
-  const base64UrlEncode = (obj: object) => {
-    const json = JSON.stringify(obj)
-    const base64 = Buffer.from(json).toString('base64')
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  }
-  
-  const headerEncoded = base64UrlEncode(header)
-  const payloadEncoded = base64UrlEncode(payload)
-  const signatureInput = `${headerEncoded}.${payloadEncoded}`
-  
-  // RSA-SHA256 で署名
-  const crypto = await import('crypto')
-  const sign = crypto.createSign('RSA-SHA256')
-  sign.update(signatureInput)
-  const signature = sign.sign(private_key, 'base64')
-  const signatureEncoded = signature.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  
-  const jwt = `${signatureInput}.${signatureEncoded}`
-  
-  // トークンを取得
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
-  })
-  
-  if (!tokenResponse.ok) {
-    const error = await tokenResponse.text()
-    console.error('Failed to get access token:', error)
-    throw new Error('アクセストークンの取得に失敗しました')
-  }
-  
-  const tokenData = await tokenResponse.json()
-  return tokenData.access_token
+  return apiKey
 }
 
 // 業種カテゴリ別のデザインガイドライン
@@ -556,47 +501,40 @@ Generate a HIGH-QUALITY banner with PERFECT Japanese text rendering now.`
 }
 
 // ========================================
-// Vertex AI Imagen 3 を使った画像生成
-// サービスアカウント認証で本番環境対応
+// Gemini 2.5 Flash Image (Nano Banana) で画像生成
+// 公式ドキュメント: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
 // ========================================
 async function generateSingleBanner(
   prompt: string,
   size: string = '1080x1080'
 ): Promise<string> {
-  console.log('Calling Vertex AI Imagen 3...')
-  console.log('Model:', IMAGEN_MODEL)
-  console.log('Project:', PROJECT_ID)
-  console.log('Location:', LOCATION)
+  const apiKey = getApiKey()
   
-  // プロジェクトIDの確認
-  if (!PROJECT_ID) {
-    throw new Error('GOOGLE_CLOUD_PROJECT_ID が設定されていません')
-  }
+  console.log('Calling Gemini 2.5 Flash Image (Nano Banana)...')
+  console.log('Model:', GEMINI_IMAGE_MODEL)
   
-  // アクセストークンを取得（サービスアカウント認証）
-  const accessToken = await getAccessToken()
-  console.log('Access token obtained successfully')
+  // Gemini generateContent API エンドポイント
+  const endpoint = `${GEMINI_API_BASE}/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${apiKey}`
   
-  const aspectRatio = getAspectRatio(size)
-  const endpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${IMAGEN_MODEL}:predict`
-  
+  // 公式ドキュメントに従ったリクエスト形式
   const requestBody = {
-    instances: [{ prompt }],
-    parameters: {
-      sampleCount: 1,
-      aspectRatio: aspectRatio,
-      safetyFilterLevel: 'block_few',
-      personGeneration: 'allow_adult',
-    },
+    contents: [
+      {
+        parts: [
+          { text: prompt }
+        ]
+      }
+    ],
+    generationConfig: {
+      responseModalities: ["TEXT", "IMAGE"]
+    }
   }
   
-  console.log('Calling Imagen 3 REST API...')
-  console.log('Endpoint:', endpoint)
+  console.log('Calling Gemini API...')
   
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(requestBody),
@@ -604,21 +542,26 @@ async function generateSingleBanner(
   
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('Imagen 3 REST API error:', response.status, errorText)
+    console.error('Gemini API error:', response.status, errorText)
     throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 300)}`)
   }
   
   const result = await response.json()
-  console.log('Imagen 3 REST API Response received')
+  console.log('Gemini API Response received')
   
-  // レスポンスから画像を抽出
-  if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
-    console.log('Image found in Imagen 3 REST response!')
-    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`
+  // レスポンスから画像を抽出（公式ドキュメントの形式）
+  if (result.candidates && result.candidates[0]?.content?.parts) {
+    for (const part of result.candidates[0].content.parts) {
+      if (part.inlineData) {
+        console.log('Image found in Gemini response!')
+        const mimeType = part.inlineData.mimeType || 'image/png'
+        return `data:${mimeType};base64,${part.inlineData.data}`
+      }
+    }
   }
   
   console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 500))
-  throw new Error('画像が生成されませんでした')
+  throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
 }
 
 // サイズからアスペクト比を計算
@@ -643,33 +586,34 @@ export async function generateBanners(
   size: string = '1080x1080',
   options: GenerateOptions = {}
 ): Promise<{ banners: string[]; error?: string }> {
-  // Vertex AI の設定確認
-  if (!PROJECT_ID || PROJECT_ID === 'your-project-id') {
-    console.error('GOOGLE_CLOUD_PROJECT_ID not configured')
+  // APIキーの確認
+  const apiKey = process.env.GOOGLE_GENAI_API_KEY
+  if (!apiKey) {
+    console.error('GOOGLE_GENAI_API_KEY not configured')
     return { 
       banners: [], 
-      error: 'Vertex AI プロジェクトIDが設定されていません。環境変数 GOOGLE_CLOUD_PROJECT_ID を設定してください。' 
+      error: 'APIキーが設定されていません。環境変数 GOOGLE_GENAI_API_KEY を設定してください。' 
     }
   }
 
   const isYouTube = options.purpose === 'youtube'
   const appealTypes = isYouTube ? YOUTUBE_APPEAL_TYPES : APPEAL_TYPES
 
-  console.log(`Starting ${isYouTube ? 'YouTube thumbnail' : 'banner'} generation with Imagen 3`)
+  console.log(`Starting ${isYouTube ? 'YouTube thumbnail' : 'banner'} generation with Imagen 4`)
   console.log(`Category: ${category}, Purpose: ${options.purpose}, Size: ${size}`)
-  console.log(`Project: ${PROJECT_ID}, Location: ${LOCATION}`)
+  console.log(`Model: ${IMAGEN_MODEL}`)
 
   try {
     const banners: string[] = []
     const errors: string[] = []
     
-    // 3パターン順次生成（Vertex AI Imagen 3 使用）
+    // 3パターン順次生成（Imagen 4 使用）
     for (const appealType of appealTypes) {
       try {
         const prompt = createBannerPrompt(category, keyword, size, appealType, options)
         console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} type ${appealType.type} (${appealType.japanese})...`)
         
-        // Vertex AI Imagen 3 で生成
+        // Imagen 4 で生成
         const banner = await generateSingleBanner(prompt, size)
         
         banners.push(banner)
@@ -694,7 +638,7 @@ export async function generateBanners(
     if (banners.every(b => b.startsWith('https://placehold'))) {
       return {
         banners,
-        error: `⚠️ Vertex AI Imagen 3 で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・GOOGLE_CLOUD_PROJECT_ID が正しいか確認\n・GOOGLE_CLOUD_ACCESS_TOKEN が有効か確認\n・Vertex AI APIが有効になっているか確認`
+        error: `⚠️ Gemini 2.5 Flash Image で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・GOOGLE_GENAI_API_KEY が正しいか確認\n・APIキーが有効になっているか確認\n・Google AI Studio でAPIキーを再発行してみてください`
       }
     }
 
@@ -703,7 +647,7 @@ export async function generateBanners(
     if (failedCount > 0) {
       return { 
         banners,
-        error: `⚠️ ${failedCount}件のパターンでImagen 3生成に失敗しました。赤いプレースホルダーが表示されているパターンは再試行してください。`
+        error: `⚠️ ${failedCount}件のパターンで生成に失敗しました。赤いプレースホルダーが表示されているパターンは再試行してください。`
       }
     }
 
