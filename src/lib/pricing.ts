@@ -279,3 +279,61 @@ export function getPlanById(planId: string): Plan | null {
   const allPlans = [...KANTAN_PRICING.plans, ...BANNER_PRICING.plans]
   return allPlans.find(p => p.id === planId) || null
 }
+
+// ========================================
+// ゲスト使用状況管理（ローカルストレージ）
+// ========================================
+export interface GuestUsage {
+  date: string
+  count: number
+}
+
+export function getGuestUsage(serviceId: string): GuestUsage {
+  if (typeof window === 'undefined') return { date: '', count: 0 }
+  
+  try {
+    const key = `doya_guest_usage_${serviceId}`
+    const stored = localStorage.getItem(key)
+    if (!stored) return { date: '', count: 0 }
+    return JSON.parse(stored)
+  } catch {
+    return { date: '', count: 0 }
+  }
+}
+
+export function setGuestUsage(serviceId: string, count: number): void {
+  if (typeof window === 'undefined') return
+  
+  const key = `doya_guest_usage_${serviceId}`
+  const today = new Date().toISOString().split('T')[0]
+  localStorage.setItem(key, JSON.stringify({ date: today, count }))
+}
+
+export function getGuestRemainingCount(serviceId: string): number {
+  const pricing = getPricingByService(serviceId)
+  if (!pricing) return 0
+  
+  const usage = getGuestUsage(serviceId)
+  const today = new Date().toISOString().split('T')[0]
+  
+  if (usage.date !== today) {
+    return pricing.guestLimit
+  }
+  
+  return Math.max(0, pricing.guestLimit - usage.count)
+}
+
+export function incrementGuestUsage(serviceId: string): number {
+  const usage = getGuestUsage(serviceId)
+  const today = new Date().toISOString().split('T')[0]
+  
+  let newCount: number
+  if (usage.date === today) {
+    newCount = usage.count + 1
+  } else {
+    newCount = 1
+  }
+  
+  setGuestUsage(serviceId, newCount)
+  return newCount
+}

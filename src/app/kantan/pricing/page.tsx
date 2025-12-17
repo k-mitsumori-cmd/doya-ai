@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Check, ArrowLeft, Sparkles, Crown, Zap, Star } from 'lucide-react'
 import { KANTAN_PRICING, getAnnualMonthlyPrice } from '@/lib/pricing'
+import { CheckoutButton } from '@/components/CheckoutButton'
 
 export default function KantanPricingPage() {
   const { data: session } = useSession()
@@ -101,14 +102,17 @@ export default function KantanPricingPage() {
                     </button>
                   </Link>
                 ) : (
-                  <button className={`w-full py-3 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 ${
-                    isPopular
-                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
-                      : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
-                  }`}>
-                    <Zap className="w-4 h-4" />
+                  <CheckoutButton
+                    planId={plan.id}
+                    className={`w-full py-3 ${
+                      isPopular
+                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
+                        : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+                    }`}
+                    variant={isPopular ? 'primary' : 'secondary'}
+                  >
                     {plan.cta}
-                  </button>
+                  </CheckoutButton>
                 )}
               </div>
             )

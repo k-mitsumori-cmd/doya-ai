@@ -1,38 +1,56 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { createCustomerPortalSession } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
-import { stripe } from '@/lib/stripe'
 
-export async function POST() {
+// ========================================
+// カスタマーポータルAPI
+// ========================================
+// POST /api/stripe/portal
+// サブスクリプション管理画面へのリンクを生成
+
+export async function POST(request: NextRequest) {
   try {
+    // 認証チェック
     const session = await getServerSession(authOptions)
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { error: 'ログインが必要です' },
+        { status: 401 }
+      )
     }
 
+    // ユーザーのStripe Customer IDを取得
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { email: session.user.email },
+      select: { stripeCustomerId: true },
     })
 
     if (!user?.stripeCustomerId) {
-      return NextResponse.json({ error: 'サブスクリプションが見つかりません' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'サブスクリプションが見つかりません' },
+        { status: 404 }
+      )
     }
 
-    const portalSession = await stripe.billingPortal.sessions.create({
-      customer: user.stripeCustomerId,
-      return_url: `${process.env.NEXTAUTH_URL}/dashboard`,
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.vercel.app'
+
+    // カスタマーポータルセッション作成
+    const portalSession = await createCustomerPortalSession({
+      customerId: user.stripeCustomerId,
+      returnUrl: `${baseUrl}/settings`,
     })
 
-    return NextResponse.json({ url: portalSession.url })
-  } catch (error) {
+    return NextResponse.json({
+      url: portalSession.url,
+    })
+
+  } catch (error: any) {
     console.error('Portal session error:', error)
     return NextResponse.json(
-      { error: 'ポータルセッションの作成に失敗しました' },
+      { error: error.message || 'ポータルセッションの作成に失敗しました' },
       { status: 500 }
     )
   }
 }
-
-

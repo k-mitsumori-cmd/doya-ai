@@ -10,7 +10,8 @@ import {
   Upload, X, Image as ImageIcon, User, Building2, Video, Mail, Gift, Megaphone, Target, Calendar
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
-import { GUEST_LIMITS, getGuestUsage, setGuestUsage as saveGuestUsage, getGuestRemainingCount } from '@/lib/pricing'
+import { BANNER_PRICING, getGuestUsage, setGuestUsage, getGuestRemainingCount } from '@/lib/pricing'
+import BannerCoach from '@/components/BannerCoach'
 
 // カテゴリ（業種）
 const CATEGORIES = [
@@ -450,7 +451,7 @@ export default function BannerDashboardPage() {
     }
   }, [elapsedTime, isGenerating, currentStep])
 
-  const guestRemainingCount = GUEST_LIMITS.banner.dailyLimit - guestUsageCount
+  const guestRemainingCount = BANNER_PRICING.guestLimit - guestUsageCount
   const canGuestGenerate = guestRemainingCount > 0
   const canGenerate = category !== '' && keyword.trim() !== '' && (session || canGuestGenerate)
 
@@ -597,7 +598,7 @@ export default function BannerDashboardPage() {
                 <div>
                   <p className="font-bold text-gray-900">🆓 お試しモード</p>
                   <p className="text-sm text-gray-600">
-                    残り <span className="font-bold text-violet-600">{guestRemainingCount}回</span>（1日{GUEST_LIMITS.banner.dailyLimit}回まで）
+                    残り <span className="font-bold text-violet-600">{guestRemainingCount}回</span>（1日{BANNER_PRICING.guestLimit}回まで）
                   </p>
                 </div>
               </div>
@@ -863,6 +864,16 @@ export default function BannerDashboardPage() {
                   </p>
                 </div>
               )}
+            </div>
+
+            {/* AIバナーコーチ */}
+            <div className="mb-6">
+              <BannerCoach
+                keyword={keyword}
+                category={category}
+                useCase={purpose}
+                onApplyCopy={(copy) => setKeyword(copy)}
+              />
             </div>
 
             {/* 生成ボタン */}
