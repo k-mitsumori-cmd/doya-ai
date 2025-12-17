@@ -180,6 +180,26 @@ ${instruction}
 ${category ? `**INDUSTRY:** ${category}` : ''}
 ${size ? `**TARGET SIZE:** ${size}` : ''}
 
-Apply the requested changes while maintaining the banner's effectiveness as an advertisement.`
+=== ⚠️ CRITICAL: JAPANESE TEXT RENDERING RULES ⚠️ ===
+1. **MINIMUM FONT SIZE**: All text must be at least 24px equivalent (minimum 5% of banner width)
+2. **NO SMALL TEXT ALLOWED**: Do NOT create any text smaller than 5% of the banner width
+3. **JAPANESE FONT INTEGRITY**: 
+   - Use clean, simple Japanese fonts (Gothic/Sans-serif style)
+   - Each Japanese character (kanji, hiragana, katakana) must be complete and undistorted
+   - Avoid decorative fonts that may corrupt character rendering
+   - Ensure proper stroke rendering for all characters
+4. **TEXT CLARITY**: 
+   - High contrast between text and background
+   - Add solid color backing behind text if needed
+   - No text on complex/busy backgrounds without solid backing
+5. **AVOID TEXT CORRUPTION**:
+   - Do NOT stretch or compress Japanese characters
+   - Do NOT apply extreme perspective transforms to text
+   - Keep text horizontal (no extreme rotations)
+   - Avoid overlapping text elements
+6. **LIMIT TEXT ELEMENTS**: Maximum 3 text elements (headline, subtext, CTA)
+7. **WHEN IN DOUBT**: Make text LARGER, not smaller
+
+Apply the requested changes while maintaining the banner's effectiveness and ensuring all Japanese text is perfectly readable.`
 }
 
