@@ -166,61 +166,58 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
 }
 
 function createRefinePrompt(instruction: string, category?: string, size?: string): string {
-  return `You are an expert advertising banner designer specializing in Japanese text rendering.
-Edit this banner image according to the following instruction:
+  // 指示にテキスト変更が含まれているかチェック
+  const hasTextInstruction = /テキスト|文字|文言|タイトル|キャッチ|コピー|text|title/i.test(instruction)
+  
+  return `You are an expert advertising banner designer. Edit this banner according to the instruction.
 
-**EDIT INSTRUCTION:**
-${instruction}
+**EDIT INSTRUCTION:** ${instruction}
 
 ${category ? `**INDUSTRY:** ${category}` : ''}
 ${size ? `**TARGET SIZE:** ${size}` : ''}
 
-=== ⚠️⚠️⚠️ ABSOLUTE REQUIREMENTS FOR JAPANESE TEXT ⚠️⚠️⚠️ ===
+=== ⚠️⚠️⚠️ CRITICAL: TEXT HANDLING RULES ⚠️⚠️⚠️ ===
 
-**JAPANESE TEXT MUST BE PERFECT - THIS IS THE HIGHEST PRIORITY**
+${hasTextInstruction ? `
+**TEXT CHANGE REQUESTED - SPECIAL HANDLING:**
 
-MANDATORY TEXT RULES:
-1. **FONT CHOICE**: Use ONLY clean, modern Japanese Gothic/Sans-serif fonts
-   - Examples: Noto Sans JP, Hiragino Kaku Gothic, Meiryo Gothic
-   - DO NOT use decorative, handwritten, or stylized fonts
-   
-2. **TEXT SIZE**: Main text must be at least 30% of banner width
-   - All text must be clearly readable even when thumbnail-sized
-   - CTA button text must be at least 20% of banner width
-   
-3. **TEXT RENDERING**:
-   - Render each Japanese character PERFECTLY with all strokes visible
-   - Kanji (漢字) must have all radicals and strokes complete
-   - Hiragana (ひらがな) must have smooth, unbroken curves
-   - Katakana (カタカナ) must have sharp, clean angles
-   - DO NOT generate corrupted, broken, or partial characters
-   
-4. **TEXT PLACEMENT**:
-   - Place text on SOLID COLOR backgrounds (not on photos/gradients)
-   - Add a semi-transparent solid rectangle behind text if needed
-   - Never place text where it overlaps with complex imagery
-   - Keep at least 10% padding around text edges
-   
-5. **TEXT EFFECTS**:
-   - Add thick (3-5px) white or dark outline/stroke around text
-   - Use drop shadow for depth (offset: 2-4px, blur: 4-8px)
-   - Maintain at least 7:1 contrast ratio between text and background
-   
-6. **FORBIDDEN**:
-   ❌ Text smaller than 5% of image height
-   ❌ Stretched or compressed characters  
-   ❌ Rotated or perspective-transformed text
-   ❌ Overlapping text elements
-   ❌ Text on busy/noisy backgrounds without backing
-   ❌ More than 3 separate text elements
-   ❌ Decorative fonts that sacrifice readability
+Since text changes are requested, follow these rules:
 
-=== OUTPUT REQUIREMENTS ===
-- Apply the requested edit while maintaining banner effectiveness
-- Ensure ALL Japanese text is crystal clear and perfectly readable
-- Every single Japanese character must be 100% correct and complete
-- Quality over complexity - make text larger and simpler if needed
+1. **DO NOT render Japanese text directly**
+2. Instead, create a **SOLID COLOR TEXT PLACEHOLDER AREA**
+   - Clean rectangular area with solid background
+   - High contrast from surrounding design
+   - Clearly designated space for text overlay
 
-Generate the refined banner image now.`
+3. **FOR ANY EXISTING TEXT:**
+   - Remove it or replace with solid color block
+   - The text will be added in post-production
+
+4. **DESIGN IMPROVEMENTS:**
+   - Improve colors, layout, visual elements as requested
+   - Keep the placeholder area visible and clean
+` : `
+**DESIGN-ONLY EDIT:**
+
+Make the requested design changes but:
+
+1. **DO NOT modify, add, or remove any text**
+2. If existing text is corrupted/unclear:
+   - Replace text area with solid color block
+   - This creates space for proper text overlay
+
+3. **FOCUS ON:**
+   - Colors, gradients, backgrounds
+   - Visual elements and composition
+   - Overall aesthetic improvements
+`}
+
+=== GENERAL RULES ===
+- Maintain professional advertisement quality
+- Keep the overall theme and purpose
+- Improve visual appeal and impact
+- Ensure clean, modern design
+
+Apply the edit now.`
 }
 
