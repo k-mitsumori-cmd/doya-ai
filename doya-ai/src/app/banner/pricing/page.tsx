@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Check, ArrowLeft, Sparkles, Crown, Zap, Star, Building } from 'lucide-react'
 import { BANNER_PRICING, getAnnualMonthlyPrice } from '@/lib/pricing'
+import { CheckoutButton } from '@/components/CheckoutButton'
 
 export default function BannerPricingPage() {
   const { data: session } = useSession()
@@ -108,14 +109,17 @@ export default function BannerPricingPage() {
                     </button>
                   </a>
                 ) : (
-                  <button className={`w-full py-2.5 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 ${
-                    isPopular
-                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
-                      : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
-                  }`}>
-                    <Zap className="w-3.5 h-3.5" />
+                  <CheckoutButton
+                    planId={plan.id}
+                    className={`w-full py-2.5 text-sm ${
+                      isPopular
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
+                        : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
+                    }`}
+                    variant={isPopular ? 'primary' : 'secondary'}
+                  >
                     {plan.cta}
-                  </button>
+                  </CheckoutButton>
                 )}
               </div>
             )

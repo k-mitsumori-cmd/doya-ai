@@ -68,11 +68,18 @@ model User {
   // サービス別のプラン・使用状況（1対多）
   serviceSubscriptions UserServiceSubscription[]
   
+  // Stripeサブスクリプション
+  subscriptions Subscription[]
+  
   // 生成履歴
   generations   Generation[]
   
   // Stripe関連（ポータル全体の顧客情報）
   stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  plan                   String    @default("FREE")  // FREE | STARTER | PRO | BUSINESS | BUNDLE
   
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -107,6 +114,34 @@ model UserServiceSubscription {
 
   @@unique([userId, serviceId])  // ユーザー×サービスでユニーク
   @@index([serviceId])
+}
+
+// ============================================
+// Stripeサブスクリプション管理
+// ============================================
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Stripe情報
+  stripeSubscriptionId String   @unique
+  stripeCustomerId     String
+  priceId              String?
+  planId               String?  // 'kantan-pro', 'banner-starter' など
+  
+  // ステータス
+  status               String   // active, canceled, past_due, etc.
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean  @default(false)
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([stripeCustomerId])
 }
 
 // ============================================
