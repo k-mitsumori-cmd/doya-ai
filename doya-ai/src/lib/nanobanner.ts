@@ -601,9 +601,9 @@ export async function generateBanners(
       } catch (error: any) {
         console.error(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generation failed:`, error.message)
         errors.push(`${appealType.type}: ${error.message}`)
-        // エラーの場合はプレースホルダー
+        // エラーの場合はプレースホルダー（エラー内容を表示）
         const [w, h] = size.split('x')
-        banners.push(`https://placehold.co/${w}x${h}/8B5CF6/FFFFFF?text=Pattern+${appealType.type}`)
+        banners.push(`https://placehold.co/${w}x${h}/EF4444/FFFFFF?text=Error:+Pattern+${appealType.type}`)
       }
     }
 
@@ -613,7 +613,16 @@ export async function generateBanners(
     if (banners.every(b => b.startsWith('https://placehold'))) {
       return {
         banners,
-        error: `${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました: ${errors.join(', ')}`
+        error: `⚠️ Imagen 3 (Gemini 3.0) で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・APIキーが正しいか確認してください\n・しばらく待ってから再試行してください\n・プロンプトを変更してお試しください`
+      }
+    }
+
+    // 一部失敗した場合
+    const failedCount = banners.filter(b => b.startsWith('https://placehold')).length
+    if (failedCount > 0) {
+      return { 
+        banners,
+        error: `⚠️ ${failedCount}件のパターンでImagen 3生成に失敗しました。赤いプレースホルダーが表示されているパターンは再試行してください。`
       }
     }
 

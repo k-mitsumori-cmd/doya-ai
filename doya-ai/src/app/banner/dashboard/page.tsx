@@ -347,10 +347,19 @@ export default function BannerDashboard() {
         setGuestUsage('banner', newCount)
       }
       
-      toast.success('バナーが完成しました！', { icon: '🎉' })
+      // 部分的にエラーがあった場合は警告表示
+      if (data.error) {
+        setError(data.error)
+        toast.error('一部のバナー生成に失敗しました', { 
+          icon: '⚠️',
+          duration: 5000,
+        })
+      } else {
+        toast.success('バナーが完成しました！', { icon: '🎉' })
+      }
     } catch (err: any) {
       setError(err.message)
-      toast.error(err.message)
+      toast.error('生成に失敗しました', { icon: '❌', duration: 5000 })
     } finally {
       setIsGenerating(false)
     }
