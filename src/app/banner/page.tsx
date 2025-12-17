@@ -159,13 +159,13 @@ export default function BannerTopPage() {
               <h3 className="text-xl font-bold text-gray-900 mb-2">無料プラン</h3>
               <p className="text-3xl font-bold text-gray-900 mb-4">¥0<span className="text-base font-normal text-gray-500">/月</span></p>
               <ul className="space-y-2 text-gray-600 mb-6">
-                <li>✓ 1日1枚まで生成</li>
+                <li>✓ 1日1枚まで生成（ゲスト）</li>
+                <li>✓ 1日3枚まで生成（ログイン）</li>
                 <li>✓ 全カテゴリ利用可能</li>
-                <li>✓ 標準解像度出力</li>
               </ul>
-              <Link href="/auth/signin?service=banner">
+              <Link href="/banner/dashboard">
                 <button className="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors">
-                  無料で始める
+                  ログインせずに試す
                 </button>
               </Link>
             </div>

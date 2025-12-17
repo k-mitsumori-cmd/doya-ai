@@ -162,7 +162,7 @@ export const SERVICES: Service[] = [
     status: 'active',
     category: 'image',
     order: 2,
-    requiresAuth: true,
+    requiresAuth: false,  // ゲストも1日1回まで利用可
     isNew: true,
   },
   
