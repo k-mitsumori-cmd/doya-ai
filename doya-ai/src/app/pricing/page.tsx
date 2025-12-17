@@ -74,7 +74,7 @@ function PricingContent() {
       <header className="bg-white border-b-2 border-gray-100">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link
-            href={session ? '/dashboard' : '/'}
+            href={session ? '/kantan/dashboard' : '/'}
             className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -167,13 +167,13 @@ function PricingContent() {
                 </ul>
                 {!session ? (
                   <button
-                    onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                    onClick={() => signIn('google', { callbackUrl: '/kantan/dashboard' })}
                     className="w-full py-4 bg-white border-2 border-gray-300 hover:bg-gray-100 text-gray-900 font-bold rounded-xl transition-colors text-lg"
                   >
                     無料で登録する
                   </button>
                 ) : (
-                  <Link href="/dashboard">
+                  <Link href="/kantan/dashboard">
                     <button className="w-full py-4 bg-white border-2 border-gray-300 hover:bg-gray-100 text-gray-900 font-bold rounded-xl transition-colors text-lg">
                       ダッシュボードへ
                     </button>
@@ -263,7 +263,7 @@ function PricingContent() {
                 まずは無料で試してみませんか？
               </p>
               <button
-                onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                onClick={() => signIn('google', { callbackUrl: '/kantan/dashboard' })}
                 className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-xl transition-colors text-lg"
               >
                 <Sparkles className="w-5 h-5" />

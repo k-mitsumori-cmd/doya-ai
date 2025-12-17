@@ -6,8 +6,8 @@ import { ArrowLeft, Clock, Download, Trash2 } from 'lucide-react'
 export default function BannerHistoryPage() {
   // モックデータ
   const history = [
-    { id: '1', category: '通信向け', keyword: '月額990円〜', size: '1080x1080', createdAt: '2024-12-17 14:30', thumbnail: 'https://via.placeholder.com/200/8B5CF6/FFFFFF?text=Banner' },
-    { id: '2', category: 'EC向け', keyword: '決算セール MAX70%OFF', size: '1200x628', createdAt: '2024-12-16 10:15', thumbnail: 'https://via.placeholder.com/200/EC4899/FFFFFF?text=Banner' },
+    { id: '1', category: '通信向け', keyword: '月額990円〜', size: '1080x1080', createdAt: '2025-01-15 14:30', thumbnail: 'https://via.placeholder.com/200/8B5CF6/FFFFFF?text=Banner' },
+    { id: '2', category: 'EC向け', keyword: '決算セール MAX70%OFF', size: '1200x628', createdAt: '2025-01-14 10:15', thumbnail: 'https://via.placeholder.com/200/EC4899/FFFFFF?text=Banner' },
   ]
 
   return (
