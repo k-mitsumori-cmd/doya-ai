@@ -19,7 +19,7 @@ const errorMessages: Record<string, string> = {
 
 function SignInContent() {
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+  const callbackUrl = searchParams.get('callbackUrl') || '/kantan/dashboard'
   const error = searchParams.get('error')
   const [isLoading, setIsLoading] = useState(false)
 

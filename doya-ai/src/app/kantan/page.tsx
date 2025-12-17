@@ -258,7 +258,7 @@ export default function KantanTopPage() {
             </Link>
           </div>
           <p className="text-center text-xs text-gray-400">
-            © 2024 ドヤAI. All rights reserved.
+            © 2025 ドヤAI. All rights reserved.
           </p>
         </div>
       </footer>

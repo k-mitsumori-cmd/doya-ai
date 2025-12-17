@@ -1,5 +1,5 @@
-// カンタンドヤAI ツール一覧
-// 新しいツールはここに追加するだけで自動的にダッシュボードとサイドバーに表示されます
+// ドヤAI ツール一覧
+// services.ts と連携して使用
 
 export interface Tool {
   id: string
@@ -14,47 +14,47 @@ export interface Tool {
 
 export const TOOLS: Tool[] = [
   {
-    id: 'text',
-    name: '文章生成',
+    id: 'kantan',
+    name: 'カンタンドヤAI',
     description: 'メール、ブログ、SNS投稿など68種類のテンプレート',
     icon: '📝',
-    color: 'from-blue-500 to-blue-600',
-    href: '/dashboard/text',
+    color: 'from-blue-500 to-cyan-500',
+    href: '/kantan/dashboard',
   },
   {
     id: 'banner',
-    name: 'バナー生成',
+    name: 'ドヤバナーAI',
     description: 'プロ品質のバナーをワンボタンで自動生成',
     icon: '🎨',
     color: 'from-purple-500 to-pink-500',
-    href: '/dashboard/banner',
+    href: '/banner/dashboard',
     isNew: true,
   },
   {
     id: 'lp',
-    name: 'LP作成',
+    name: 'ドヤLP AI',
     description: 'ランディングページを簡単に作成',
     icon: '🖥️',
     color: 'from-green-500 to-emerald-500',
-    href: '/dashboard/lp',
+    href: '/lp/dashboard',
     comingSoon: true,
   },
   {
     id: 'video',
-    name: '動画台本',
+    name: 'ドヤ動画AI',
     description: 'YouTube・TikTok用の台本を自動生成',
     icon: '🎬',
     color: 'from-red-500 to-orange-500',
-    href: '/dashboard/video',
+    href: '/video/dashboard',
     comingSoon: true,
   },
   {
     id: 'presentation',
-    name: 'プレゼン資料',
+    name: 'ドヤプレゼンAI',
     description: 'パワーポイント用の構成を自動生成',
     icon: '📊',
     color: 'from-yellow-500 to-amber-500',
-    href: '/dashboard/presentation',
+    href: '/presentation/dashboard',
     comingSoon: true,
   },
 ]
@@ -70,4 +70,3 @@ export function getActiveTools(): Tool[] {
 export function getComingSoonTools(): Tool[] {
   return TOOLS.filter(tool => tool.comingSoon)
 }
-
