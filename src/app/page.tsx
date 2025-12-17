@@ -370,7 +370,7 @@ export default function PortalPage() {
             </div>
             
             <p className="text-sm text-gray-400">
-              © 2024 ドヤAI
+              © 2025 ドヤAI
             </p>
           </div>
         </div>
