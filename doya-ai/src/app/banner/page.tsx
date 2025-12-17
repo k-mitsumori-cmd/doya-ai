@@ -222,6 +222,43 @@ export default function BannerTopPage() {
         </div>
       </section>
 
+      {/* ドヤマーケ CTA */}
+      <section className="py-12 px-4 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500">
+        <div className="max-w-3xl mx-auto">
+          <a 
+            href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block"
+          >
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 hover:bg-white/20 transition-all cursor-pointer">
+              <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+                <div className="w-20 h-20 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <span className="text-4xl">💬</span>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                    <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold text-white">無料相談</span>
+                    <span className="text-white/80 text-sm">by ドヤマーケ</span>
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">
+                    マーケティングのお悩み、いつでも相談OK！
+                  </h3>
+                  <p className="text-white/80">
+                    バナー制作・広告運用・SNS戦略・LP制作など、マーケティングに関することなら何でもご相談ください。プロがあなたのビジネスをサポートします。
+                  </p>
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                    <ArrowRight className="w-6 h-6 text-emerald-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
+
       {/* 他サービスへの誘導 */}
       <section className="py-12 px-4 bg-gradient-to-br from-blue-50 to-cyan-50">
         <div className="max-w-3xl mx-auto">
