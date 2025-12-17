@@ -1,5 +1,5 @@
 // ========================================
-// Nano Banana Pro (Gemini 3 Pro Image) でバナー画像生成
+// Nano Banana Pro でバナー画像生成
 // ========================================
 // 
 // 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
@@ -14,17 +14,16 @@
 // 4. 生成されたAPIキーをコピー
 //
 // 【使用モデル】
-// - gemini-2.0-flash-exp-image-generation: Nano Banana Pro
-// - プロフェッショナルなアセット制作と複雑な指示に対応
-// - 高忠実度のテキストレンダリング
-// - 最大4K解像度の画像生成
+// - gemini-2.0-flash-exp: Nano Banana Pro（画像生成対応）
+// - テキストと画像の両方を出力可能
+// - 高品質な画像生成
 //
 // ========================================
 
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-// Nano Banana Pro (Gemini 2.0 Flash Exp Image Generation)
-const NANO_BANANA_PRO_MODEL = 'gemini-2.0-flash-exp-image-generation'
+// Nano Banana Pro (gemini-2.0-flash-exp)
+const NANO_BANANA_PRO_MODEL = 'gemini-2.0-flash-exp'
 
 // APIキーを取得
 function getApiKey(): string {
@@ -502,7 +501,7 @@ Generate a HIGH-QUALITY banner with PERFECT Japanese text rendering now.`
 }
 
 // ========================================
-// Nano Banana Pro (Gemini 2.0 Flash Exp) で画像生成
+// Nano Banana Pro で画像生成
 // 公式ドキュメント: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
 // ========================================
 async function generateSingleBanner(
@@ -513,25 +512,30 @@ async function generateSingleBanner(
   
   console.log('Calling Nano Banana Pro...')
   console.log('Model:', NANO_BANANA_PRO_MODEL)
+  console.log('Prompt length:', prompt.length)
   
   // Nano Banana Pro generateContent エンドポイント
   const endpoint = `${GEMINI_API_BASE}/models/${NANO_BANANA_PRO_MODEL}:generateContent?key=${apiKey}`
+  
+  // 画像生成用のプロンプト（シンプルに）
+  const imagePrompt = `Generate an image: ${prompt}`
   
   // Gemini generateContent リクエスト形式（公式ドキュメント準拠）
   const requestBody = {
     contents: [
       {
         parts: [
-          { text: prompt }
+          { text: imagePrompt }
         ]
       }
     ],
     generationConfig: {
-      responseModalities: ["TEXT", "IMAGE"]
+      responseModalities: ["IMAGE", "TEXT"]
     }
   }
   
   console.log('Calling Nano Banana Pro API...')
+  console.log('Endpoint:', endpoint.replace(apiKey, 'API_KEY_HIDDEN'))
   
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -544,24 +548,39 @@ async function generateSingleBanner(
   if (!response.ok) {
     const errorText = await response.text()
     console.error('Nano Banana Pro API error:', response.status, errorText)
-    throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 300)}`)
+    throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 500)}`)
   }
   
   const result = await response.json()
   console.log('Nano Banana Pro API Response received')
+  console.log('Response structure:', Object.keys(result))
   
   // レスポンスから画像を抽出（Gemini generateContent形式）
   if (result.candidates && result.candidates[0]?.content?.parts) {
+    console.log('Parts count:', result.candidates[0].content.parts.length)
     for (const part of result.candidates[0].content.parts) {
+      console.log('Part type:', Object.keys(part))
       if (part.inlineData) {
         console.log('Image found in Nano Banana Pro response!')
+        console.log('MIME type:', part.inlineData.mimeType)
         const mimeType = part.inlineData.mimeType || 'image/png'
         return `data:${mimeType};base64,${part.inlineData.data}`
       }
     }
   }
   
-  console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 500))
+  // デバッグ用：レスポンス全体をログ
+  console.error('No image in response. Full response:', JSON.stringify(result, null, 2).substring(0, 1000))
+  
+  // テキストレスポンスがある場合はそれを表示
+  if (result.candidates && result.candidates[0]?.content?.parts) {
+    for (const part of result.candidates[0].content.parts) {
+      if (part.text) {
+        console.log('Text response:', part.text.substring(0, 200))
+      }
+    }
+  }
+  
   throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
 }
 
