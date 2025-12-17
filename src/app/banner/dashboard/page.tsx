@@ -1,129 +1,101 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Sparkles, Loader2, AlertCircle,
-  ArrowRight, CheckCircle, Wand2,
-  ArrowLeft, LogIn, Download, Clock, Zap, Palette, Layout,
-  Upload, X, Image as ImageIcon, User, Building2, Video, Mail, Gift, Megaphone, Target, Calendar
+  Sparkles, Loader2, ArrowRight, Wand2, LogIn, 
+  Download, Clock, Zap, Layout, X, Image as ImageIcon, 
+  User, Building2, Video, Mail, Gift, Megaphone, Target,
+  ChevronDown, Check, Star, Eye, Copy, 
+  Layers, Play, Crown, ArrowUpRight, Palette, BarChart3
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
-import { BANNER_PRICING, getGuestUsage, setGuestUsage, getGuestRemainingCount } from '@/lib/pricing'
+import { BANNER_PRICING, getGuestUsage, setGuestUsage } from '@/lib/pricing'
 import BannerCoach from '@/components/BannerCoach'
 
-// カテゴリ（業種）
+// ========================================
+// 定数
+// ========================================
 const CATEGORIES = [
-  { value: 'telecom', label: '通信・SIM', icon: '📱', gradient: 'from-blue-500 to-cyan-500' },
-  { value: 'marketing', label: 'マーケ', icon: '📊', gradient: 'from-purple-500 to-pink-500' },
-  { value: 'ec', label: 'EC・セール', icon: '🛒', gradient: 'from-amber-500 to-orange-500' },
-  { value: 'recruit', label: '採用', icon: '👥', gradient: 'from-emerald-500 to-green-500' },
-  { value: 'beauty', label: '美容', icon: '💄', gradient: 'from-pink-500 to-rose-500' },
-  { value: 'food', label: '飲食', icon: '🍽️', gradient: 'from-red-500 to-orange-500' },
-  { value: 'realestate', label: '不動産', icon: '🏠', gradient: 'from-teal-500 to-emerald-500' },
-  { value: 'education', label: '教育', icon: '📚', gradient: 'from-indigo-500 to-blue-500' },
-  { value: 'finance', label: '金融', icon: '💰', gradient: 'from-yellow-500 to-amber-500' },
-  { value: 'health', label: '医療', icon: '🏥', gradient: 'from-cyan-500 to-teal-500' },
-  { value: 'it', label: 'IT・SaaS', icon: '💻', gradient: 'from-violet-500 to-purple-500' },
-  { value: 'other', label: 'その他', icon: '✨', gradient: 'from-gray-500 to-slate-500' },
+  { value: 'telecom', label: '通信', icon: '📱', color: '#3B82F6', bg: 'from-blue-500/20 to-cyan-500/20' },
+  { value: 'marketing', label: 'マーケ', icon: '📊', color: '#8B5CF6', bg: 'from-violet-500/20 to-purple-500/20' },
+  { value: 'ec', label: 'EC', icon: '🛒', color: '#F97316', bg: 'from-orange-500/20 to-amber-500/20' },
+  { value: 'recruit', label: '採用', icon: '👥', color: '#22C55E', bg: 'from-green-500/20 to-emerald-500/20' },
+  { value: 'beauty', label: '美容', icon: '💄', color: '#EC4899', bg: 'from-pink-500/20 to-rose-500/20' },
+  { value: 'food', label: '飲食', icon: '🍽️', color: '#EF4444', bg: 'from-red-500/20 to-orange-500/20' },
+  { value: 'realestate', label: '不動産', icon: '🏠', color: '#14B8A6', bg: 'from-teal-500/20 to-cyan-500/20' },
+  { value: 'education', label: '教育', icon: '📚', color: '#6366F1', bg: 'from-indigo-500/20 to-blue-500/20' },
+  { value: 'finance', label: '金融', icon: '💰', color: '#EAB308', bg: 'from-yellow-500/20 to-amber-500/20' },
+  { value: 'health', label: '医療', icon: '🏥', color: '#06B6D4', bg: 'from-cyan-500/20 to-teal-500/20' },
+  { value: 'it', label: 'IT', icon: '💻', color: '#A855F7', bg: 'from-purple-500/20 to-violet-500/20' },
+  { value: 'other', label: 'その他', icon: '✨', color: '#64748B', bg: 'from-slate-500/20 to-gray-500/20' },
 ]
 
-// 用途（マーケティング施策）
 const PURPOSES = [
-  { value: 'sns_ad', label: 'SNS広告', icon: Target, desc: 'Facebook/Instagram/X広告', popular: true },
-  { value: 'display', label: 'ディスプレイ広告', icon: Layout, desc: 'GDN/YDAバナー', popular: true },
-  { value: 'webinar', label: 'ウェビナー告知', icon: Video, desc: 'セミナー・ウェビナー集客', popular: true },
-  { value: 'lp_hero', label: 'LPヒーロー', icon: Megaphone, desc: 'ランディングページ用', popular: false },
-  { value: 'email', label: 'メルマガ', icon: Mail, desc: 'メールヘッダー画像', popular: false },
-  { value: 'campaign', label: 'キャンペーン', icon: Gift, desc: 'セール・キャンペーン告知', popular: false },
-  { value: 'event', label: 'イベント', icon: Calendar, desc: '展示会・イベント告知', popular: false },
-  { value: 'product', label: '商品紹介', icon: ImageIcon, desc: '商品・サービス紹介', popular: false },
+  { value: 'sns_ad', label: 'SNS広告', icon: Target, desc: 'FB/IG/X', hot: true },
+  { value: 'display', label: 'ディスプレイ', icon: Layout, desc: 'GDN/YDA', hot: true },
+  { value: 'webinar', label: 'ウェビナー', icon: Video, desc: 'セミナー', hot: false },
+  { value: 'lp_hero', label: 'LP', icon: Megaphone, desc: 'ヒーロー', hot: false },
+  { value: 'email', label: 'メール', icon: Mail, desc: 'ヘッダー', hot: false },
+  { value: 'campaign', label: 'セール', icon: Gift, desc: 'キャンペーン', hot: false },
 ]
 
-// サイズプリセット（用途別に最適化）
-const SIZE_PRESETS: Record<string, Array<{ value: string; label: string; desc: string; popular?: boolean }>> = {
+const SIZE_PRESETS: Record<string, Array<{ value: string; label: string; ratio: string }>> = {
   default: [
-    { value: '1080x1080', label: 'スクエア', desc: 'Instagram/Facebook', popular: true },
-    { value: '1200x628', label: '横長', desc: 'Facebook広告/OGP', popular: true },
-    { value: '1080x1920', label: '縦長', desc: 'ストーリーズ/リール', popular: false },
+    { value: '1080x1080', label: 'スクエア', ratio: '1:1' },
+    { value: '1200x628', label: '横長', ratio: '1.91:1' },
+    { value: '1080x1920', label: '縦長', ratio: '9:16' },
   ],
   sns_ad: [
-    { value: '1080x1080', label: 'フィード', desc: 'Instagram/Facebook', popular: true },
-    { value: '1200x628', label: 'リンク広告', desc: 'Facebook広告', popular: true },
-    { value: '1080x1920', label: 'ストーリーズ', desc: 'Instagram/Facebook', popular: false },
+    { value: '1080x1080', label: 'フィード', ratio: '1:1' },
+    { value: '1200x628', label: 'リンク', ratio: '1.91:1' },
+    { value: '1080x1920', label: 'ストーリー', ratio: '9:16' },
   ],
   display: [
-    { value: '300x250', label: 'ミディアムレクタングル', desc: '最も一般的', popular: true },
-    { value: '728x90', label: 'リーダーボード', desc: 'ヘッダー・フッター', popular: true },
-    { value: '160x600', label: 'ワイドスカイスクレイパー', desc: 'サイドバー', popular: false },
-    { value: '320x50', label: 'モバイルバナー', desc: 'スマホ用', popular: false },
+    { value: '300x250', label: 'レクタングル', ratio: '300×250' },
+    { value: '728x90', label: 'リーダーボード', ratio: '728×90' },
+    { value: '320x50', label: 'モバイル', ratio: '320×50' },
   ],
   webinar: [
-    { value: '1920x1080', label: 'FHD', desc: 'ウェビナー告知用', popular: true },
-    { value: '1200x628', label: 'OGP', desc: 'SNSシェア用', popular: true },
-    { value: '1080x1080', label: 'スクエア', desc: 'SNS投稿用', popular: false },
+    { value: '1920x1080', label: 'FHD', ratio: '16:9' },
+    { value: '1200x628', label: 'OGP', ratio: '1.91:1' },
   ],
   lp_hero: [
-    { value: '1920x600', label: 'ヒーローワイド', desc: 'PC向けLP', popular: true },
-    { value: '1200x800', label: 'ヒーロー標準', desc: '汎用LP', popular: true },
-    { value: '750x1334', label: 'スマホファースト', desc: 'モバイルLP', popular: false },
+    { value: '1920x600', label: 'ワイド', ratio: '1920×600' },
+    { value: '1200x800', label: '標準', ratio: '3:2' },
   ],
   email: [
-    { value: '600x200', label: 'メールヘッダー', desc: '標準幅', popular: true },
-    { value: '600x300', label: 'メールバナー', desc: '目立つサイズ', popular: true },
+    { value: '600x200', label: 'ヘッダー', ratio: '600×200' },
+    { value: '600x300', label: 'バナー', ratio: '600×300' },
   ],
   campaign: [
-    { value: '1200x628', label: '横長', desc: 'SNS・Web用', popular: true },
-    { value: '1080x1080', label: 'スクエア', desc: 'Instagram用', popular: true },
-    { value: '800x800', label: 'ポップアップ', desc: 'サイト内告知', popular: false },
-  ],
-  event: [
-    { value: '1920x1080', label: 'FHD', desc: '大型スクリーン', popular: true },
-    { value: '1200x628', label: 'OGP', desc: 'SNSシェア用', popular: true },
-    { value: 'A4', label: 'A4チラシ', desc: '印刷用（2480x3508）', popular: false },
-  ],
-  product: [
-    { value: '1080x1080', label: 'スクエア', desc: 'EC・SNS用', popular: true },
-    { value: '1200x628', label: '横長', desc: '広告用', popular: true },
-    { value: '800x1200', label: '縦長', desc: 'Pinterest用', popular: false },
+    { value: '1200x628', label: '横長', ratio: '1.91:1' },
+    { value: '1080x1080', label: 'スクエア', ratio: '1:1' },
   ],
 }
 
-// サンプルデータ（用途別）
-const SAMPLE_INPUTS: Record<string, { category: string; keyword: string; companyName?: string }> = {
-  sns_ad: { category: 'marketing', keyword: '成果報酬型広告運用 初月無料キャンペーン実施中', companyName: 'マーケAI株式会社' },
-  display: { category: 'ec', keyword: '決算セール MAX70%OFF 本日限り！', companyName: 'ECショップ' },
-  webinar: { category: 'marketing', keyword: '【無料ウェビナー】AI時代のマーケティング戦略 〜ChatGPT活用術〜', companyName: 'テックカンパニー' },
-  lp_hero: { category: 'it', keyword: '業務効率を10倍に。次世代AIツール', companyName: 'SaaS Inc.' },
-  email: { category: 'ec', keyword: '会員様限定 ポイント5倍キャンペーン開催中', companyName: 'オンラインストア' },
-  campaign: { category: 'telecom', keyword: '乗り換えで最大2万円キャッシュバック 月額990円〜', companyName: 'モバイルキャリア' },
-  event: { category: 'it', keyword: 'Tech Summit 2025 〜未来を創るテクノロジー〜', companyName: 'イベント運営会社' },
-  product: { category: 'beauty', keyword: '肌に優しいオーガニック美容液 今だけ初回50%OFF', companyName: 'ビューティーブランド' },
+const SAMPLES: Record<string, { category: string; keyword: string; company?: string }> = {
+  sns_ad: { category: 'marketing', keyword: '成果報酬型広告運用 初月無料キャンペーン実施中', company: 'マーケAI' },
+  display: { category: 'ec', keyword: '決算セール MAX70%OFF 本日限り！' },
+  webinar: { category: 'it', keyword: '【無料ウェビナー】AI時代のマーケティング完全攻略', company: 'TechCorp' },
+  lp_hero: { category: 'it', keyword: '業務効率を10倍に。次世代AIプラットフォーム' },
+  email: { category: 'ec', keyword: '会員様限定 ポイント5倍キャンペーン開催中' },
+  campaign: { category: 'telecom', keyword: '乗り換えで最大2万円キャッシュバック 月額990円〜' },
 }
 
-// 生成ステップ
-const GENERATION_STEPS = [
-  { id: 1, label: 'プロンプト分析中', icon: Zap, duration: 3 },
-  { id: 2, label: 'A案（ベネフィット重視）を生成中', icon: Palette, duration: 8 },
-  { id: 3, label: 'B案（緊急性・限定性）を生成中', icon: Palette, duration: 8 },
-  { id: 4, label: 'C案（信頼性・実績）を生成中', icon: Palette, duration: 8 },
-  { id: 5, label: '仕上げ処理中', icon: Layout, duration: 3 },
+const GENERATION_PHASES = [
+  { label: 'プロンプト最適化', icon: '🎯' },
+  { label: 'A案生成中', icon: '🎨' },
+  { label: 'B案生成中', icon: '✨' },
+  { label: 'C案生成中', icon: '🚀' },
+  { label: '最終調整', icon: '💎' },
 ]
 
-// 生成中のTips
-const GENERATION_TIPS = [
-  '💡 A/B/Cの3パターンで最適なバナーを見つけましょう',
-  '🎯 ベネフィット訴求は購買意欲を高めます',
-  '⚡ 緊急性のあるバナーはCTRが2倍になることも',
-  '🏆 実績や数字は信頼感を高めます',
-  '✨ プロのデザイナーが作ったような仕上がりに',
-  '📊 複数パターンでA/Bテストがおすすめ',
-  '🎨 ロゴや人物画像で独自性をアップ',
-  '📱 用途に合わせたサイズで最適化',
-]
-
-// 画像をBase64に変換
+// ========================================
+// ヘルパー
+// ========================================
 async function imageToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -133,365 +105,96 @@ async function imageToBase64(file: File): Promise<string> {
   })
 }
 
-// 画像ダウンロード関数
-async function downloadImage(url: string, filename: string) {
-  try {
-    if (url.startsWith('data:')) {
-      const link = document.createElement('a')
-      link.href = url
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      return true
-    }
-    
-    const response = await fetch(url)
-    const blob = await response.blob()
-    const blobUrl = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = blobUrl
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(blobUrl)
-    return true
-  } catch (error) {
-    console.error('Download error:', error)
-    return false
-  }
-}
-
-
-// 画像アップロードコンポーネント
-function ImageUploader({ 
-  label, 
-  icon: Icon, 
-  value, 
-  onChange, 
-  placeholder 
-}: { 
-  label: string
-  icon: any
-  value: string | null
-  onChange: (value: string | null) => void
-  placeholder: string
-}) {
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // 許可されるMIMEタイプを明確に指定
-    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      toast.error('JPEG、PNG、GIF、WebP形式の画像を選択してください')
-      return
-    }
-
-    // ファイル拡張子チェック
-    const ext = file.name.split('.').pop()?.toLowerCase()
-    const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-    if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
-      toast.error('不正なファイル形式です')
-      return
-    }
-
-    // ファイルサイズ制限（2MBに縮小してパフォーマンス向上）
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('2MB以下の画像を選択してください')
-      return
-    }
-
-    try {
-      const base64 = await imageToBase64(file)
-      onChange(base64)
-      toast.success(`${label}をアップロードしました`)
-    } catch (error) {
-      toast.error('アップロードに失敗しました')
-    }
-  }
-
-  return (
-    <div className="relative">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileChange}
-        className="hidden"
-      />
-      
-      {value ? (
-        <div className="relative group">
-          <img 
-            src={value} 
-            alt={label}
-            className="w-full h-24 object-contain bg-gray-50 rounded-xl border-2 border-gray-200"
-          />
-          <button
-            onClick={() => onChange(null)}
-            className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => inputRef.current?.click()}
-          className="w-full h-24 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-violet-400 hover:bg-violet-50 transition-all"
-        >
-          <Icon className="w-6 h-6 text-gray-400" />
-          <span className="text-xs text-gray-500">{placeholder}</span>
-        </button>
-      )}
-    </div>
-  )
-}
-
-// 生成中オーバーレイコンポーネント
-function GeneratingOverlay({ 
-  currentStep, 
-  elapsedTime, 
-  estimatedTotal 
-}: { 
-  currentStep: number
-  elapsedTime: number
-  estimatedTotal: number
-}) {
-  const [tipIndex, setTipIndex] = useState(0)
-  const progress = Math.min((elapsedTime / estimatedTotal) * 100, 95)
-  const remainingTime = Math.max(estimatedTotal - elapsedTime, 5)
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTipIndex(prev => (prev + 1) % GENERATION_TIPS.length)
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [])
-
-  return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-violet-900/95 via-purple-900/95 to-fuchsia-900/95 flex items-center justify-center">
-      <div className="max-w-md w-full mx-4">
-        {/* メインアニメーション */}
-        <div className="text-center mb-8">
-          <div className="relative w-32 h-32 mx-auto mb-6">
-            <div className="absolute inset-0 rounded-full border-4 border-white/10"></div>
-            <svg className="absolute inset-0 w-full h-full -rotate-90">
-              <circle
-                cx="64"
-                cy="64"
-                r="60"
-                fill="none"
-                stroke="url(#gradient)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeDasharray={`${progress * 3.77} 377`}
-                className="transition-all duration-500"
-              />
-              <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#8B5CF6" />
-                  <stop offset="100%" stopColor="#EC4899" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center animate-pulse shadow-2xl shadow-violet-500/50">
-                <span className="text-4xl">🎨</span>
-              </div>
-            </div>
-          </div>
-
-          <h2 className="text-2xl font-bold text-white mb-2">
-            AIがバナーを生成中...
-          </h2>
-          
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur rounded-full text-white/90 mb-4">
-            <Clock className="w-4 h-4" />
-            <span className="font-medium">あと約 {remainingTime} 秒</span>
-          </div>
-        </div>
-
-        {/* ステップ表示 */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 mb-6">
-          <div className="space-y-3">
-            {GENERATION_STEPS.map((step, index) => {
-              const StepIcon = step.icon
-              const isActive = index + 1 === currentStep
-              const isCompleted = index + 1 < currentStep
-              
-              return (
-                <div 
-                  key={step.id}
-                  className={`flex items-center gap-3 transition-all duration-300 ${
-                    isActive ? 'opacity-100' : isCompleted ? 'opacity-60' : 'opacity-30'
-                  }`}
-                >
-                  <div className={`
-                    w-8 h-8 rounded-full flex items-center justify-center transition-all
-                    ${isCompleted ? 'bg-emerald-500' : isActive ? 'bg-violet-500 animate-pulse' : 'bg-white/20'}
-                  `}>
-                    {isCompleted ? (
-                      <CheckCircle className="w-5 h-5 text-white" />
-                    ) : (
-                      <StepIcon className={`w-4 h-4 text-white ${isActive ? 'animate-spin' : ''}`} />
-                    )}
-                  </div>
-                  <span className={`text-sm font-medium ${isActive ? 'text-white' : 'text-white/70'}`}>
-                    {step.label}
-                    {isActive && <span className="ml-2 animate-pulse">●</span>}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Tips */}
-        <div className="text-center">
-          <div className="inline-block px-6 py-3 bg-white/5 backdrop-blur rounded-xl">
-            <p className="text-white/80 text-sm transition-all duration-500">
-              {GENERATION_TIPS[tipIndex]}
-            </p>
-          </div>
-        </div>
-
-        {/* 進捗バー */}
-        <div className="mt-6">
-          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500 rounded-full"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="text-center text-white/50 text-xs mt-2">
-            {Math.round(progress)}% 完了
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-export default function BannerDashboardPage() {
-  const { data: session, status } = useSession()
+// ========================================
+// メインコンポーネント
+// ========================================
+export default function BannerDashboard() {
+  const { data: session } = useSession()
   
-  // フォーム状態
+  // State
   const [purpose, setPurpose] = useState('sns_ad')
   const [category, setCategory] = useState('')
-  const [size, setSize] = useState('1080x1080')
   const [keyword, setKeyword] = useState('')
+  const [size, setSize] = useState('1080x1080')
   const [companyName, setCompanyName] = useState('')
   const [logoImage, setLogoImage] = useState<string | null>(null)
   const [personImage, setPersonImage] = useState<string | null>(null)
-  
-  // UI状態
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [error, setError] = useState('')
-  const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
-  const [guestUsageCount, setGuestUsageCount] = useState(0)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showCoach, setShowCoach] = useState(false)
   
-  // 生成進捗状態
-  const [currentStep, setCurrentStep] = useState(1)
-  const [elapsedTime, setElapsedTime] = useState(0)
-  const estimatedTotal = 30
-
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
+  const [error, setError] = useState('')
+  const [progress, setProgress] = useState(0)
+  const [phaseIndex, setPhaseIndex] = useState(0)
+  const [selectedBanner, setSelectedBanner] = useState<number | null>(null)
+  
+  const [guestUsageCount, setGuestUsageCount] = useState(0)
+  
   const isGuest = !session
-  const userName = session?.user?.name?.split(' ')[0] || 'ゲスト'
+  const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
+  const guestRemaining = BANNER_PRICING.guestLimit - guestUsageCount
+  const canGenerate = category && keyword.trim() && (session || guestRemaining > 0)
 
-  // 用途に応じたサイズプリセットを取得
-  const currentSizePresets = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
-
-  // ゲスト使用状況を読み込み
+  // Effects
   useEffect(() => {
     if (isGuest && typeof window !== 'undefined') {
       const usage = getGuestUsage('banner')
       const today = new Date().toISOString().split('T')[0]
-      if (usage.date === today) {
-        setGuestUsageCount(usage.count)
-      } else {
-        setGuestUsageCount(0)
-      }
+      setGuestUsageCount(usage.date === today ? usage.count : 0)
     }
   }, [isGuest])
 
-  // 用途が変更されたらサイズをリセット
   useEffect(() => {
-    const presets = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
-    setSize(presets[0].value)
+    const sizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
+    setSize(sizes[0].value)
   }, [purpose])
 
-  // 生成中のタイマー
   useEffect(() => {
     if (!isGenerating) {
-      setElapsedTime(0)
-      setCurrentStep(1)
+      setProgress(0)
+      setPhaseIndex(0)
       return
     }
-
-    const timer = setInterval(() => {
-      setElapsedTime(prev => prev + 1)
-    }, 1000)
-
-    return () => clearInterval(timer)
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 100) return 100
+        const increment = Math.random() * 3 + 1
+        return Math.min(prev + increment, 98)
+      })
+    }, 500)
+    return () => clearInterval(interval)
   }, [isGenerating])
 
-  // ステップ更新
   useEffect(() => {
     if (!isGenerating) return
+    const phaseInterval = setInterval(() => {
+      setPhaseIndex(prev => (prev + 1) % GENERATION_PHASES.length)
+    }, 6000)
+    return () => clearInterval(phaseInterval)
+  }, [isGenerating])
 
-    const stepTimes = [3, 11, 19, 27, 30]
-    const newStep = stepTimes.findIndex(time => elapsedTime < time) + 1
-    if (newStep > 0 && newStep !== currentStep) {
-      setCurrentStep(newStep)
-    }
-  }, [elapsedTime, isGenerating, currentStep])
-
-  const guestRemainingCount = BANNER_PRICING.guestLimit - guestUsageCount
-  const canGuestGenerate = guestRemainingCount > 0
-  const canGenerate = category !== '' && keyword.trim() !== '' && (session || canGuestGenerate)
-
-  // サンプル入力
-  const handleSampleInput = () => {
-    const sample = SAMPLE_INPUTS[purpose] || SAMPLE_INPUTS.sns_ad
+  // Handlers
+  const handleSample = () => {
+    const sample = SAMPLES[purpose] || SAMPLES.sns_ad
     setCategory(sample.category)
     setKeyword(sample.keyword)
-    if (sample.companyName) setCompanyName(sample.companyName)
-    toast.success('サンプルを入力しました！', { icon: '✨' })
+    if (sample.company) setCompanyName(sample.company)
+    toast.success('サンプルを入力しました', { icon: '✨' })
   }
 
   const handleGenerate = async () => {
+    if (!canGenerate) return
+    
     setError('')
-
-    if (!category) {
-      setError('業種カテゴリを選択してください')
-      return
-    }
-
-    if (!keyword.trim()) {
-      setError('訴求内容を入力してください')
-      return
-    }
-
-    if (isGuest && !canGuestGenerate) {
-      setError('本日の無料お試しは上限に達しました。ログインでもっと使えます！')
-      return
-    }
-
     setIsGenerating(true)
-    setElapsedTime(0)
-    setCurrentStep(1)
+    setGeneratedBanners([])
+    setSelectedBanner(null)
 
     try {
       const response = await fetch('/api/banner/generate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           category,
           keyword: keyword.trim(),
@@ -504,434 +207,642 @@ export default function BannerDashboardPage() {
       })
 
       const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'バナー生成に失敗しました')
-      }
-
-      setGeneratedBanners(data.banners)
       
-      if (data.isMock) {
-        toast.success('デモ用のサンプルを表示中', { icon: '📋' })
-      } else {
-        toast.success('バナー生成完了！', { icon: '🎨' })
-      }
-
+      if (!response.ok) throw new Error(data.error || '生成に失敗しました')
+      
+      setProgress(100)
+      await new Promise(r => setTimeout(r, 500))
+      setGeneratedBanners(data.banners || [])
+      
       if (isGuest) {
         const newCount = guestUsageCount + 1
         setGuestUsageCount(newCount)
-        saveGuestUsage('banner', newCount)
+        setGuestUsage('banner', newCount)
       }
+      
+      toast.success('バナーが完成しました！', { icon: '🎉' })
     } catch (err: any) {
-      setError(err.message || 'エラーが発生しました。')
-      toast.error(err.message || 'エラーが発生しました')
+      setError(err.message)
+      toast.error(err.message)
     } finally {
       setIsGenerating(false)
     }
   }
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-violet-50 to-fuchsia-50">
-        <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <span className="text-3xl">🎨</span>
-          </div>
-          <p className="text-gray-600">読み込み中...</p>
-        </div>
-      </div>
-    )
+  const handleDownload = (url: string, index: number) => {
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `doya-banner-${['A', 'B', 'C'][index]}-${Date.now()}.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('ダウンロード開始')
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'person') => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('5MB以下の画像を選択してください')
+      return
+    }
+    try {
+      const base64 = await imageToBase64(file)
+      if (type === 'logo') setLogoImage(base64)
+      else setPersonImage(base64)
+      toast.success('画像をアップロードしました')
+    } catch {
+      toast.error('アップロードに失敗しました')
+    }
+  }
+
+  // ========================================
+  // Render
+  // ========================================
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#0A0A0F] text-white">
       <Toaster position="top-center" />
       
-      {/* 生成中オーバーレイ */}
-      {isGenerating && (
-        <GeneratingOverlay 
-          currentStep={currentStep}
-          elapsedTime={elapsedTime}
-          estimatedTotal={estimatedTotal}
-        />
-      )}
-      
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm hidden sm:inline">ポータル</span>
-          </Link>
-          
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
-              <span className="text-lg">🎨</span>
+      {/* ========================================
+          Header
+          ======================================== */}
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0A0A0F]/80 border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="h-16 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="flex items-center gap-3 group">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/25 group-hover:shadow-violet-500/40 transition-shadow">
+                  <span className="text-xl">🎨</span>
+                </div>
+                <div>
+                  <span className="font-bold text-lg bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                    ドヤバナーAI
+                  </span>
+                  <span className="hidden sm:inline text-xs text-white/40 ml-2">by ドヤAI</span>
+                </div>
+              </Link>
             </div>
-            <span className="font-bold text-gray-800">ドヤバナーAI</span>
+            
+            <div className="flex items-center gap-3">
+              {isGuest ? (
+                <>
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 text-sm">
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    <span className="text-white/60">残り</span>
+                    <span className="font-bold text-amber-400">{guestRemaining}</span>
+                    <span className="text-white/40">回</span>
+                  </div>
+                  <Link href="/auth/signin?callbackUrl=/banner/dashboard">
+                    <button className="flex items-center gap-2 px-4 py-2 bg-white text-black font-bold rounded-full hover:bg-white/90 transition-all text-sm">
+                      <LogIn className="w-4 h-4" />
+                      ログイン
+                    </button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/banner/dashboard/history">
+                    <button className="flex items-center gap-2 px-3 py-2 text-white/60 hover:text-white transition-colors text-sm">
+                      <Clock className="w-4 h-4" />
+                      履歴
+                    </button>
+                  </Link>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-500/20 to-fuchsia-500/20 border border-violet-500/30">
+                    <Crown className="w-4 h-4 text-violet-400" />
+                    <span className="text-sm font-medium">{session.user?.name?.split(' ')[0]}</span>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
-          
-          {session ? (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
-                <span className="text-violet-600 text-sm font-bold">{userName[0]}</span>
-              </div>
-            </div>
-          ) : (
-            <Link href="/auth/signin?service=banner" className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white text-sm font-medium rounded-full hover:bg-violet-700 transition-colors">
-              <LogIn className="w-4 h-4" />
-              <span className="hidden sm:inline">ログイン</span>
-            </Link>
-          )}
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6">
-        {/* ゲストバナー */}
-        {isGuest && !isGenerating && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200 rounded-2xl">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-violet-600" />
-                </div>
-                <div>
-                  <p className="font-bold text-gray-900">🆓 お試しモード</p>
-                  <p className="text-sm text-gray-600">
-                    残り <span className="font-bold text-violet-600">{guestRemainingCount}回</span>（1日{BANNER_PRICING.guestLimit}回まで）
-                  </p>
-                </div>
-              </div>
-              <Link href="/auth/signin?service=banner">
-                <button className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-full transition-colors flex items-center gap-2">
-                  <LogIn className="w-4 h-4" />
-                  ログインで無制限に！
-                </button>
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* 生成結果 */}
-        {generatedBanners.length > 0 ? (
-          <div className="animate-fade-in">
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium mb-4">
-                <CheckCircle className="w-4 h-4" />
-                生成完了！
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900">A/B/C 3案できました！</h1>
-              <p className="text-gray-500 text-sm mt-1">気に入ったバナーをダウンロードしてご利用ください</p>
-            </div>
-
-            <div className="space-y-4 mb-6">
-              {generatedBanners.map((url, index) => (
-                <div key={index} className="bg-gray-50 rounded-2xl p-4 hover:shadow-lg transition-shadow">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`
-                        w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm
-                        ${index === 0 ? 'bg-blue-500' : index === 1 ? 'bg-orange-500' : 'bg-green-500'}
-                      `}>
-                        {['A', 'B', 'C'][index]}
-                      </span>
-                      <span className="font-bold text-gray-700">
-                        {['ベネフィット重視', '緊急性・限定性', '信頼性・実績'][index]}
-                      </span>
-                    </div>
-                    <button 
-                      onClick={async () => {
-                        const success = await downloadImage(url, `banner_${['A', 'B', 'C'][index]}_${Date.now()}.png`)
-                        if (success) {
-                          toast.success('ダウンロードしました！', { icon: '📥' })
-                        } else {
-                          toast.error('ダウンロードに失敗しました')
-                        }
-                      }}
-                      className="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors flex items-center gap-1.5"
-                    >
-                      <Download className="w-4 h-4" />
-                      ダウンロード
-                    </button>
+      {/* ========================================
+          Main Content
+          ======================================== */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="grid lg:grid-cols-[1fr,400px] gap-8">
+          
+          {/* ========================================
+              Left Column - Input Form
+              ======================================== */}
+          <div className="space-y-6">
+            
+            {/* Hero Section */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-600/20 via-fuchsia-600/10 to-transparent border border-white/10 p-6 sm:p-8"
+            >
+              <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/20 rounded-full blur-3xl" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-fuchsia-500/20 rounded-full blur-3xl" />
+              
+              <div className="relative">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/20 border border-violet-500/30 text-violet-300 text-sm">
+                    <Sparkles className="w-4 h-4" />
+                    A/B/C 3案同時生成
                   </div>
-                  <img 
-                    src={url} 
-                    alt={`Banner ${String.fromCharCode(65 + index)}`} 
-                    className="w-full rounded-xl shadow-md"
-                    loading="lazy"
-                  />
+                  {isGuest && (
+                    <div className="sm:hidden flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs">
+                      <Zap className="w-3 h-3" />
+                      残り{guestRemaining}回
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setGeneratedBanners([])}
-              className="w-full py-4 bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white font-bold rounded-2xl transition-all shadow-lg"
-            >
-              ✨ 新しいバナーを作成
-            </button>
-          </div>
-        ) : (
-          <>
-            {/* タイトル */}
-            <div className="text-center mb-6">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">
-                プロ品質のバナーを作ろう！ 🎨
-              </h1>
-              <p className="text-gray-600">
-                用途・業種・訴求内容を入力するだけでA/B/C 3案を自動生成
-              </p>
-              <p className="text-violet-600 text-sm mt-1 flex items-center justify-center gap-1">
-                <Clock className="w-4 h-4" />
-                約30秒で完成
-              </p>
-            </div>
-
-            {/* サンプルボタン */}
-            <button
-              onClick={handleSampleInput}
-              className="w-full mb-6 py-3 px-4 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 hover:shadow-xl transition-all"
-            >
-              <Wand2 className="w-5 h-5" />
-              ワンボタンでサンプル入力
-            </button>
-
-            {/* エラー */}
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-red-700 text-sm">{error}</p>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+                  プロ品質のバナーを<br />
+                  <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+                    AIが自動生成
+                  </span>
+                </h1>
+                <p className="text-white/50 text-sm sm:text-base">
+                  カテゴリとキーワードを入力するだけ。30秒で3案完成。
+                </p>
               </div>
-            )}
+            </motion.div>
 
-            {/* Step 1: 用途を選択 */}
-            <div className="mb-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-3">① 用途を選択</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {/* Step 1: Purpose */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-5"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs flex items-center justify-center">1</span>
+                  用途
+                </h2>
+                <button 
+                  onClick={handleSample}
+                  className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1"
+                >
+                  <Wand2 className="w-3 h-3" />
+                  サンプル入力
+                </button>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                 {PURPOSES.map((p) => {
                   const Icon = p.icon
+                  const isSelected = purpose === p.value
                   return (
                     <button
                       key={p.value}
                       onClick={() => setPurpose(p.value)}
-                      className={`
-                        p-3 rounded-xl text-left transition-all relative
-                        ${purpose === p.value 
-                          ? 'bg-violet-100 border-2 border-violet-500 text-violet-700' 
-                          : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-2 border-transparent'
-                        }
-                      `}
+                      className={`relative p-3 rounded-xl text-center transition-all ${
+                        isSelected 
+                          ? 'bg-violet-500/20 border-violet-500/50 border-2 text-white' 
+                          : 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white'
+                      }`}
                     >
-                      {p.popular && (
-                        <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full">
-                          人気
-                        </span>
+                      {p.hot && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full" />
                       )}
-                      <Icon className={`w-5 h-5 mb-1 ${purpose === p.value ? 'text-violet-600' : 'text-gray-400'}`} />
-                      <span className="font-bold text-sm block">{p.label}</span>
-                      <span className="text-xs text-gray-500">{p.desc}</span>
+                      <Icon className={`w-5 h-5 mx-auto mb-1 ${isSelected ? 'text-violet-400' : ''}`} />
+                      <span className="text-xs font-medium block">{p.label}</span>
                     </button>
                   )
                 })}
               </div>
-            </div>
+            </motion.div>
 
-            {/* Step 2: 業種カテゴリ */}
-            <div className="mb-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-3">② 業種カテゴリを選択</h2>
+            {/* Step 2: Category */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-5"
+            >
+              <h2 className="font-bold flex items-center gap-2 mb-4">
+                <span className="w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs flex items-center justify-center">2</span>
+                業種
+              </h2>
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.value}
-                    onClick={() => setCategory(cat.value)}
-                    className={`
-                      p-2 sm:p-3 rounded-xl text-center transition-all
-                      ${category === cat.value 
-                        ? `bg-gradient-to-br ${cat.gradient} text-white shadow-lg scale-105` 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                      }
-                    `}
-                  >
-                    <span className="text-xl sm:text-2xl block mb-1">{cat.icon}</span>
-                    <span className="text-[10px] sm:text-xs font-medium">{cat.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Step 3: サイズ */}
-            <div className="mb-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-3">③ サイズを選択</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {currentSizePresets.map((preset) => (
-                  <button
-                    key={preset.value}
-                    onClick={() => setSize(preset.value)}
-                    className={`
-                      p-3 rounded-xl text-center transition-all relative
-                      ${size === preset.value 
-                        ? 'bg-violet-100 border-2 border-violet-500 text-violet-700' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-2 border-transparent'
-                      }
-                    `}
-                  >
-                    {preset.popular && (
-                      <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full">
-                        人気
+                {CATEGORIES.map((cat) => {
+                  const isSelected = category === cat.value
+                  return (
+                    <button
+                      key={cat.value}
+                      onClick={() => setCategory(cat.value)}
+                      className={`p-2.5 rounded-xl text-center transition-all ${
+                        isSelected 
+                          ? `bg-gradient-to-br ${cat.bg} border-2` 
+                          : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                      }`}
+                      style={{ borderColor: isSelected ? cat.color : undefined }}
+                    >
+                      <span className="text-xl block mb-0.5">{cat.icon}</span>
+                      <span className={`text-[10px] font-medium ${isSelected ? 'text-white' : 'text-white/60'}`}>
+                        {cat.label}
                       </span>
-                    )}
-                    <span className="font-bold text-sm block">{preset.label}</span>
-                    <span className="text-xs text-gray-500">{preset.desc}</span>
-                  </button>
-                ))}
+                    </button>
+                  )
+                })}
               </div>
-            </div>
+            </motion.div>
 
-            {/* Step 4: 訴求内容 */}
-            <div className="mb-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-3">④ 訴求内容を入力</h2>
-              <textarea
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                placeholder="例: 月額990円〜 乗り換えで最大2万円キャッシュバック"
-                className="w-full px-4 py-4 text-lg border-2 border-gray-200 rounded-xl focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all resize-none"
-                rows={3}
-                maxLength={200}
-              />
-              <p className="text-right text-xs text-gray-400 mt-1">{keyword.length}/200</p>
-            </div>
+            {/* Step 3: Size */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-5"
+            >
+              <h2 className="font-bold flex items-center gap-2 mb-4">
+                <span className="w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs flex items-center justify-center">3</span>
+                サイズ
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {currentSizes.map((s) => {
+                  const isSelected = size === s.value
+                  return (
+                    <button
+                      key={s.value}
+                      onClick={() => setSize(s.value)}
+                      className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 ${
+                        isSelected 
+                          ? 'bg-violet-500/20 border-2 border-violet-500/50 text-white' 
+                          : 'bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      {isSelected && <Check className="w-4 h-4 text-violet-400" />}
+                      <span className="font-medium text-sm">{s.label}</span>
+                      <span className="text-xs text-white/40">{s.ratio}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </motion.div>
 
-            {/* 詳細設定（トグル） */}
-            <div className="mb-6">
+            {/* Step 4: Keyword */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-5"
+            >
+              <h2 className="font-bold flex items-center gap-2 mb-4">
+                <span className="w-6 h-6 rounded-full bg-violet-500/20 text-violet-400 text-xs flex items-center justify-center">4</span>
+                キャッチコピー
+              </h2>
+              <div className="relative">
+                <textarea
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                  placeholder="例: 月額990円〜 乗り換えで最大2万円キャッシュバック"
+                  className="w-full px-4 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 outline-none transition-all resize-none text-base"
+                  rows={3}
+                  maxLength={200}
+                />
+                <div className="absolute bottom-3 right-3 text-xs text-white/30">
+                  {keyword.length}/200
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Advanced Options */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-violet-600 hover:text-violet-700 font-medium text-sm"
+                className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm mb-3"
               >
-                <span>{showAdvanced ? '▼' : '▶'}</span>
-                詳細設定（会社名・ロゴ・人物画像）
+                <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                詳細設定（会社名・ロゴ・人物）
               </button>
               
-              {showAdvanced && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-xl space-y-4">
-                  {/* 会社名 */}
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                      <Building2 className="w-4 h-4" />
-                      会社名・ブランド名（任意）
-                    </label>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="例: 株式会社〇〇"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-violet-500 focus:ring-2 focus:ring-violet-200 outline-none transition-all"
-                      maxLength={50}
-                    />
-                  </div>
+              <AnimatePresence>
+                {showAdvanced && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-5 space-y-4"
+                  >
+                    {/* Company Name */}
+                    <div>
+                      <label className="flex items-center gap-2 text-sm text-white/60 mb-2">
+                        <Building2 className="w-4 h-4" />
+                        会社名・ブランド名
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="例: 株式会社〇〇"
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:border-violet-500/50 outline-none transition-all"
+                      />
+                    </div>
+                    
+                    {/* Image Uploads */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Logo */}
+                      <div>
+                        <label className="flex items-center gap-2 text-sm text-white/60 mb-2">
+                          <ImageIcon className="w-4 h-4" />
+                          ロゴ
+                        </label>
+                        <div className="relative">
+                          {logoImage ? (
+                            <div className="relative aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10">
+                              <img src={logoImage} alt="Logo" className="w-full h-full object-contain p-2" />
+                              <button
+                                onClick={() => setLogoImage(null)}
+                                className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center hover:bg-black/70"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-white/10 hover:border-violet-500/50 cursor-pointer transition-colors bg-white/[0.02]">
+                              <Building2 className="w-8 h-8 text-white/20 mb-2" />
+                              <span className="text-xs text-white/40">アップロード</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleImageUpload(e, 'logo')}
+                                className="hidden"
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Person */}
+                      <div>
+                        <label className="flex items-center gap-2 text-sm text-white/60 mb-2">
+                          <User className="w-4 h-4" />
+                          人物
+                        </label>
+                        <div className="relative">
+                          {personImage ? (
+                            <div className="relative aspect-square rounded-xl overflow-hidden bg-white/5 border border-white/10">
+                              <img src={personImage} alt="Person" className="w-full h-full object-cover" />
+                              <button
+                                onClick={() => setPersonImage(null)}
+                                className="absolute top-2 right-2 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center hover:bg-black/70"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-white/10 hover:border-violet-500/50 cursor-pointer transition-colors bg-white/[0.02]">
+                              <User className="w-8 h-8 text-white/20 mb-2" />
+                              <span className="text-xs text-white/40">アップロード</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleImageUpload(e, 'person')}
+                                className="hidden"
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
 
-                  {/* ロゴ・人物画像 */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <ImageIcon className="w-4 h-4" />
-                        ロゴ画像（任意）
-                      </label>
-                      <ImageUploader
-                        label="ロゴ"
-                        icon={Building2}
-                        value={logoImage}
-                        onChange={setLogoImage}
-                        placeholder="ロゴをアップロード"
-                      />
+            {/* Generate Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
+            >
+              <button
+                onClick={handleGenerate}
+                disabled={isGenerating || !canGenerate}
+                className={`w-full py-5 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3 relative overflow-hidden ${
+                  canGenerate && !isGenerating
+                    ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-2xl shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.02]'
+                    : 'bg-white/10 text-white/40 cursor-not-allowed'
+                }`}
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="absolute inset-0 bg-gradient-to-r from-violet-600 to-fuchsia-600" />
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-r from-fuchsia-600 to-violet-600 transition-all duration-500"
+                      style={{ clipPath: `inset(0 ${100 - progress}% 0 0)` }}
+                    />
+                    <div className="relative flex items-center gap-3">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <span>{GENERATION_PHASES[phaseIndex].icon} {GENERATION_PHASES[phaseIndex].label}</span>
+                      <span className="text-white/60">{Math.round(progress)}%</span>
                     </div>
-                    <div>
-                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
-                        <User className="w-4 h-4" />
-                        人物画像（任意）
-                      </label>
-                      <ImageUploader
-                        label="人物"
-                        icon={User}
-                        value={personImage}
-                        onChange={setPersonImage}
-                        placeholder="人物をアップロード"
-                      />
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-6 h-6" />
+                    バナーを生成する
+                    <span className="text-white/60 text-sm">（A/B/C 3案）</span>
+                  </>
+                )}
+              </button>
+              
+              {error && (
+                <p className="mt-3 text-red-400 text-sm text-center">{error}</p>
+              )}
+            </motion.div>
+          </div>
+
+          {/* ========================================
+              Right Column - Results & Coach
+              ======================================== */}
+          <div className="space-y-6">
+            
+            {/* AI Coach Toggle */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowCoach(false)}
+                className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 ${
+                  !showCoach 
+                    ? 'bg-violet-500/20 border border-violet-500/50 text-white' 
+                    : 'bg-white/5 border border-white/10 text-white/60 hover:text-white'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                生成結果
+              </button>
+              <button
+                onClick={() => setShowCoach(true)}
+                className={`flex-1 py-3 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 ${
+                  showCoach 
+                    ? 'bg-violet-500/20 border border-violet-500/50 text-white' 
+                    : 'bg-white/5 border border-white/10 text-white/60 hover:text-white'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                AIコーチ
+              </button>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {showCoach ? (
+                <motion.div
+                  key="coach"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                >
+                  <BannerCoach
+                    keyword={keyword}
+                    category={category}
+                    useCase={purpose}
+                    onApplyCopy={(copy) => setKeyword(copy)}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="results"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-4"
+                >
+                  {generatedBanners.length > 0 ? (
+                    <>
+                      {/* Banner Grid */}
+                      <div className="grid grid-cols-3 gap-3">
+                        {generatedBanners.map((banner, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.1 }}
+                            onClick={() => setSelectedBanner(i)}
+                            className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group ${
+                              selectedBanner === i 
+                                ? 'ring-2 ring-violet-500 ring-offset-2 ring-offset-[#0A0A0F]' 
+                                : ''
+                            }`}
+                          >
+                            <img src={banner} alt={`Banner ${i + 1}`} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur rounded-lg text-xs font-bold">
+                              {['A', 'B', 'C'][i]}案
+                            </div>
+                            <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDownload(banner, i) }}
+                                className="w-8 h-8 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center hover:bg-white/30"
+                              >
+                                <Download className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      {/* Selected Banner Preview */}
+                      {selectedBanner !== null && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-4"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-bold flex items-center gap-2">
+                              <Star className="w-4 h-4 text-amber-400" />
+                              {['A', 'B', 'C'][selectedBanner]}案 プレビュー
+                            </h3>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleDownload(generatedBanners[selectedBanner], selectedBanner)}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-violet-500/20 text-violet-300 rounded-lg text-sm hover:bg-violet-500/30 transition-colors"
+                              >
+                                <Download className="w-4 h-4" />
+                                ダウンロード
+                              </button>
+                            </div>
+                          </div>
+                          <div className="rounded-xl overflow-hidden">
+                            <img 
+                              src={generatedBanners[selectedBanner]} 
+                              alt="Selected Banner" 
+                              className="w-full"
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-8 text-center">
+                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mx-auto mb-4">
+                        <ImageIcon className="w-10 h-10 text-violet-400" />
+                      </div>
+                      <h3 className="font-bold text-lg mb-2">生成結果がここに表示されます</h3>
+                      <p className="text-white/50 text-sm mb-4">
+                        カテゴリとキーワードを入力して<br />
+                        「バナーを生成する」をクリック
+                      </p>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {['A案', 'B案', 'C案'].map((label) => (
+                          <span key={label} className="px-3 py-1 bg-white/5 rounded-full text-xs text-white/40">
+                            {label}
+                          </span>
+                        ))}
+                      </div>
                     </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Quick Links */}
+            <div className="grid grid-cols-2 gap-3">
+              <Link href="/kantan/dashboard">
+                <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl p-4 hover:border-blue-500/40 transition-colors group">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl">📝</span>
+                    <span className="font-bold text-sm">カンタンドヤAI</span>
                   </div>
-                  
-                  <p className="text-xs text-gray-500">
-                    ※ ロゴや人物画像をアップロードすると、バナーに組み込まれます（5MB以下のJPG/PNG）
+                  <p className="text-xs text-white/50 group-hover:text-white/70 transition-colors">
+                    文章も作成する →
                   </p>
                 </div>
-              )}
-            </div>
-
-            {/* AIバナーコーチ */}
-            <div className="mb-6">
-              <BannerCoach
-                keyword={keyword}
-                category={category}
-                useCase={purpose}
-                onApplyCopy={(copy) => setKeyword(copy)}
-              />
-            </div>
-
-            {/* 生成ボタン */}
-            <button
-              onClick={handleGenerate}
-              disabled={isGenerating || !canGenerate}
-              className={`
-                w-full py-5 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3
-                ${canGenerate && !isGenerating
-                  ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-xl shadow-violet-500/25 hover:shadow-2xl hover:scale-[1.02]'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }
-              `}
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  AIが生成中...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-6 h-6" />
-                  バナーを生成する（A/B/C 3案）
-                </>
-              )}
-            </button>
-          </>
-        )}
-
-        {/* 文章作成への誘導 */}
-        {generatedBanners.length === 0 && !isGenerating && (
-          <Link href="/kantan/dashboard" className="block mt-8">
-            <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl p-5 flex items-center gap-4 hover:shadow-xl transition-all">
-              <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center flex-shrink-0">
-                <span className="text-3xl">📝</span>
-              </div>
-              <div className="flex-1">
-                <p className="text-white/80 text-sm">文章も作れる！</p>
-                <h3 className="text-lg font-bold text-white">カンタンドヤAI</h3>
-              </div>
-              <ArrowRight className="w-5 h-5 text-white/70" />
-            </div>
-          </Link>
-        )}
-      </main>
-
-      {/* フッター */}
-      {!isGenerating && (
-        <footer className="py-6 px-4 border-t border-gray-100 mt-8">
-          <div className="max-w-4xl mx-auto flex items-center justify-between text-sm text-gray-500">
-            <Link href="/" className="hover:text-gray-700">ドヤAI</Link>
-            <div className="flex items-center gap-4">
-              <Link href="/banner/dashboard/history" className="hover:text-gray-700">履歴</Link>
-              <Link href="/banner/pricing" className="hover:text-gray-700">料金</Link>
+              </Link>
+              <Link href="/banner/pricing">
+                <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl p-4 hover:border-amber-500/40 transition-colors group">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Crown className="w-6 h-6 text-amber-400" />
+                    <span className="font-bold text-sm">プランを見る</span>
+                  </div>
+                  <p className="text-xs text-white/50 group-hover:text-white/70 transition-colors">
+                    もっと使いたい方へ →
+                  </p>
+                </div>
+              </Link>
             </div>
           </div>
-        </footer>
-      )}
+        </div>
+      </main>
+
+      {/* ========================================
+          Footer
+          ======================================== */}
+      <footer className="border-t border-white/5 mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-sm text-white/40">
+              <Link href="/" className="hover:text-white transition-colors">ポータル</Link>
+              <Link href="/kantan" className="hover:text-white transition-colors">カンタンドヤAI</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">利用規約</Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">プライバシー</Link>
+            </div>
+            <p className="text-xs text-white/30">
+              © 2025 ドヤAI. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
