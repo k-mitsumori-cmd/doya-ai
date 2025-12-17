@@ -1,14 +1,15 @@
-// Nano Banana Pro API (Gemini 3 Pro Image) を使用したバナー画像生成
+// Nano Banana Pro API (Gemini Imagen 3) を使用したバナー画像生成
 // 参考: https://apidog.com/jp/blog/nano-banana-pro-api-jp/
 
 // Google Gemini API エンドポイント
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 // ========================================
-// Gemini 3 Pro Image (Nano Banana Pro)
+// Imagen 3 (Nano Banana Pro)
 // これが画像生成に使用される唯一のモデル
+// 高品質な画像生成とテキストレンダリングに優れている
 // ========================================
-const IMAGE_MODEL_ID = 'gemini-2.0-flash-exp-image-generation'
+const IMAGE_MODEL_ID = 'imagen-3.0-generate-002'
 
 // リトライ設定（テキスト崩れ時の再生成用）
 const MAX_RETRIES = 2
@@ -474,16 +475,81 @@ function parseBase64Image(base64: string): { mimeType: string; data: string } | 
 }
 
 // ========================================
-// Gemini 3 Pro Image (Nano Banana Pro) APIを使った画像生成
+// Imagen 3 (Nano Banana Pro) APIを使った画像生成
 // ========================================
 async function generateSingleBanner(
   apiKey: string,
   prompt: string,
   inputImages?: { logo?: string; person?: string }
 ): Promise<string> {
-  const endpoint = `${GEMINI_API_BASE}/models/${IMAGE_MODEL_ID}:generateContent?key=${apiKey}`
+  // Imagen 3 API用のエンドポイント
+  const endpoint = `${GEMINI_API_BASE}/models/${IMAGE_MODEL_ID}:predict?key=${apiKey}`
   
-  console.log('Calling Gemini Image API...')
+  console.log('Calling Imagen 3 API...')
+  console.log('Model:', IMAGE_MODEL_ID)
+  
+  // Imagen 3 API用のリクエストボディ
+  // 参考: https://cloud.google.com/vertex-ai/generative-ai/docs/image/generate-images
+  const requestBody = {
+    instances: [
+      {
+        prompt: prompt
+      }
+    ],
+    parameters: {
+      sampleCount: 1,
+      aspectRatio: "1:1",
+      safetyFilterLevel: "block_few",
+      personGeneration: "allow_adult",
+      outputOptions: {
+        mimeType: "image/png"
+      }
+    }
+  }
+  
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Imagen 3 API error:', response.status, errorText)
+    
+    // Imagen 3がエラーの場合、Gemini 2.0 Flash Exp Image Generationにフォールバック
+    console.log('Falling back to Gemini 2.0 Flash Exp Image Generation...')
+    return await generateWithGeminiFlash(apiKey, prompt, inputImages)
+  }
+
+  const result = await response.json()
+  console.log('Imagen 3 API Response received')
+  
+  // Imagen 3のレスポンス形式から画像を抽出
+  if (result.predictions && result.predictions[0]) {
+    const prediction = result.predictions[0]
+    if (prediction.bytesBase64Encoded) {
+      console.log('Image found in Imagen 3 response!')
+      return `data:image/png;base64,${prediction.bytesBase64Encoded}`
+    }
+  }
+  
+  console.error('No image in Imagen 3 response. Full response:', JSON.stringify(result, null, 2).substring(0, 500))
+  throw new Error('画像が生成されませんでした。')
+}
+
+// Gemini 2.0 Flash Exp Image Generation（フォールバック用）
+async function generateWithGeminiFlash(
+  apiKey: string,
+  prompt: string,
+  inputImages?: { logo?: string; person?: string }
+): Promise<string> {
+  const FALLBACK_MODEL = 'gemini-2.0-flash-exp-image-generation'
+  const endpoint = `${GEMINI_API_BASE}/models/${FALLBACK_MODEL}:generateContent?key=${apiKey}`
+  
+  console.log('Using Gemini 2.0 Flash Exp Image Generation...')
   
   // partsを構築（テキスト + 入力画像）
   const parts: any[] = [{ text: prompt }]
@@ -540,18 +606,18 @@ async function generateSingleBanner(
 
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('Gemini API error:', response.status, errorText)
+    console.error('Gemini Flash API error:', response.status, errorText)
     throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 200)}`)
   }
 
   const result = await response.json()
-  console.log('API Response received')
+  console.log('Gemini Flash API Response received')
   
   // レスポンスから画像データを抽出
   if (result.candidates && result.candidates[0]?.content?.parts) {
     for (const part of result.candidates[0].content.parts) {
       if (part.inlineData?.mimeType?.startsWith('image/')) {
-        console.log('Image found in response!')
+        console.log('Image found in Gemini Flash response!')
         return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
       }
     }
