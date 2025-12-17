@@ -11,7 +11,7 @@ import {
 
 const newsItems = [
   { id: '1', title: 'OpenAI GPT-5発表 - 2025年リリース予定', category: 'AI', isNew: true },
-  { id: '2', title: 'Google Gemini 2.0 - AIエージェント搭載', category: 'AI', isNew: true },
+  { id: '2', title: 'Google Imagen 3 - 高品質AI画像生成', category: 'AI', isNew: true },
   { id: '3', title: '日本企業のAI導入率が50%突破', category: 'ビジネス' },
   { id: '4', title: 'Claude 3.5、ベンチマーク最高スコア', category: 'AI' },
   { id: '5', title: 'AIマーケ市場、100億ドル規模へ', category: 'マーケ' },
