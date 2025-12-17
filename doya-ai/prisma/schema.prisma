@@ -1,0 +1,169 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("USER")      // enum -> String に変更
+  plan          String    @default("FREE")      // enum -> String に変更
+  accounts      Account[]
+  sessions      Session[]
+  generations   Generation[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Stripe関連
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  
+  // 使用制限
+  dailyGenerations      Int       @default(0)
+  lastGenerationReset   DateTime  @default(now())
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Template {
+  id          String      @id @default(cuid())
+  name        String
+  description String      @db.Text
+  category    Category    @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  prompt      String      @db.Text
+  inputFields Json        // [{name: string, label: string, type: string, required: boolean}]
+  outputType  String      @default("TEXT")   // enum -> String に変更
+  isPremium   Boolean     @default(false)
+  isActive    Boolean     @default(true)
+  usageCount  Int         @default(0)
+  generations Generation[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  icon        String?
+  color       String?
+  order       Int        @default(0)
+  templates   Template[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Generation {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  template   Template @relation(fields: [templateId], references: [id])
+  templateId String
+  input      Json
+  output     String   @db.Text
+  outputType String   @default("TEXT")   // enum -> String に変更
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String @db.Text
+}
+
+model AdminUser {
+  id              String   @id @default(cuid())
+  username        String   @unique
+  passwordHash    String   // bcryptハッシュ
+  email           String?  @unique
+  name            String?
+  isActive        Boolean  @default(true)
+  lastLoginAt     DateTime?
+  loginAttempts   AdminLoginAttempt[]
+  sessions        AdminSession[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model AdminLoginAttempt {
+  id            String   @id @default(cuid())
+  adminUser     AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUserId   String?
+  username      String   // ログイン試行時のユーザー名
+  ipAddress     String?
+  userAgent     String?
+  success       Boolean
+  failureReason String?
+  createdAt     DateTime @default(now())
+  
+  @@index([adminUserId, createdAt])
+  @@index([username, createdAt])
+  @@index([ipAddress, createdAt])
+}
+
+model AdminSession {
+  id            String   @id @default(cuid())
+  token         String   @unique
+  adminUser     AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUserId   String
+  ipAddress     String?
+  userAgent     String?
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  
+  @@index([adminUserId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// enum型は互換性問題のためStringに変更
+// 値は "USER" | "ADMIN", "FREE" | "PREMIUM", "TEXT" | "IMAGE" を使用
+

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交流会タスク管理ツール - イベント運営を簡単に</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">🎯</div>
+                </div>
+                <div class="header-text">
+                    <h1>交流会タスク管理ツール</h1>
+                    <p>イベント運営のタスクとスケジュールを自動生成</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main">
+        <div class="container">
+            <!-- イベント情報入力フォーム -->
+            <div id="form-section" class="card">
+                <div class="form-header">
+                    <h2>イベント情報を入力</h2>
+                </div>
+
+                <form id="event-form" class="event-form">
+                    <div class="form-group">
+                        <label for="event-name">
+                            イベント名 <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="event-name" 
+                            name="event-name" 
+                            placeholder="例: 第2回赤坂マーケティング交流会"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="event-date">
+                                開催日 <span class="required">*</span>
+                            </label>
+                            <input 
+                                type="date" 
+                                id="event-date" 
+                                name="event-date" 
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="event-type">
+                                イベントタイプ <span class="required">*</span>
+                            </label>
+                            <select id="event-type" name="event-type" required>
+                                <option value="real">リアルイベント</option>
+                                <option value="online">オンラインイベント</option>
+                                <option value="hybrid">ハイブリッド</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="venue">
+                            会場名・場所
+                        </label>
+                        <input 
+                            type="text" 
+                            id="venue" 
+                            name="venue" 
+                            placeholder="例: 赤坂グランドホール"
+                        >
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="start-time">
+                                開始時刻
+                            </label>
+                            <input 
+                                type="time" 
+                                id="start-time" 
+                                name="start-time" 
+                                value="19:00"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="end-time">
+                                終了時刻
+                            </label>
+                            <input 
+                                type="time" 
+                                id="end-time" 
+                                name="end-time" 
+                                value="21:00"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">
+                            イベント説明
+                        </label>
+                        <textarea 
+                            id="description" 
+                            name="description" 
+                            rows="4"
+                            placeholder="イベントの詳細や特徴を入力してください（任意）"
+                        ></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="generate-btn">
+                        ✨ タスクとスケジュールを生成する
+                    </button>
+                </form>
+            </div>
+
+            <!-- タスク一覧 -->
+            <div id="tasks-section" class="card" style="display: none;">
+                <div class="tasks-header">
+                    <h2>タスク一覧</h2>
+                    <div class="tasks-actions">
+                        <button id="export-btn" class="btn-secondary">📥 エクスポート</button>
+                        <button id="reset-btn" class="btn-secondary">🔄 新規作成</button>
+                    </div>
+                </div>
+
+                <div id="tasks-container" class="tasks-container">
+                    <!-- タスクがここに動的に追加されます -->
+                </div>
+            </div>
+
+            <!-- スケジュール表示 -->
+            <div id="schedule-section" class="card" style="display: none;">
+                <div class="schedule-header">
+                    <h2>スケジュール</h2>
+                    <button id="toggle-schedule-btn" class="btn-secondary">📅 表示切替</button>
+                </div>
+                <div id="schedule-container" class="schedule-container">
+                    <!-- スケジュールがここに動的に追加されます -->
+                </div>
+            </div>
+
+            <!-- 使い方ガイド -->
+            <div id="guide-section" class="card guide-card">
+                <h3>📖 使い方</h3>
+                <ol class="guide-list">
+                    <li>イベント名、開催日、イベントタイプを入力してください</li>
+                    <li>「タスクとスケジュールを生成する」ボタンをクリックすると、自動的にタスクが生成されます</li>
+                    <li>各タスクのチェックボックスをクリックして、進捗を管理できます</li>
+                    <li>スケジュールタブで、日付ごとのタスクを確認できます</li>
+                    <li>「エクスポート」ボタンで、タスク一覧をCSV形式でダウンロードできます</li>
+                </ol>
+            </div>
+        </div>
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer">
+        <div class="container">
+            <p>交流会タスク管理ツール - イベント運営を簡単に</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
