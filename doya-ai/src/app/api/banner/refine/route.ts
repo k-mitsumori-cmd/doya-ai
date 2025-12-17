@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // ========================================
-// バナー修正API（再生成方式）
+// バナー修正API
 // ========================================
 // POST /api/banner/refine
-// 生成済みバナーの修正指示を受け、新たにバナーを再生成
-// 
-// ※ Imagen 3 (Gemini 3.0) は画像入力に対応していないため、
-//   画像編集ではなく、指示に基づいて新規生成を行います
+// 修正指示に基づいて新しいバナーを生成
+// Vertex AI Imagen 3 を使用
 
-const GEMINI_API_KEY = process.env.GOOGLE_GENAI_API_KEY
-
-// Imagen 3 (Gemini 3.0) - 唯一使用するモデル
-const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict'
+const PROJECT_ID = process.env.GOOGLE_CLOUD_PROJECT_ID || 'your-project-id'
+const LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1'
+const IMAGEN_MODEL = 'imagen-3.0-generate-002'
 
 interface RefineRequest {
-  originalImage: string  // 参考用（実際には使用しない）
+  originalImage: string  // 参考用
   instruction: string    // 修正指示
   category?: string
   size?: string
-  originalPrompt?: string  // 元のプロンプト情報
 }
 
 interface RefineResponse {
@@ -41,33 +37,46 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
       }, { status: 400 })
     }
 
-    // APIキーチェック
-    if (!GEMINI_API_KEY) {
-      console.warn('GOOGLE_GENAI_API_KEY not set, returning error')
+    // プロジェクトIDチェック
+    if (!PROJECT_ID || PROJECT_ID === 'your-project-id') {
       return NextResponse.json({
         success: false,
-        error: 'APIキーが設定されていません',
+        error: 'GOOGLE_CLOUD_PROJECT_ID が設定されていません',
       }, { status: 500 })
     }
 
-    // Imagen 3で新規生成
+    // プロンプト生成
     const prompt = createRegeneratePrompt(instruction, category, size)
+    const aspectRatio = getAspectRatio(size)
     
-    const apiUrl = `${API_ENDPOINT}?key=${GEMINI_API_KEY}`
+    // Vertex AI REST API 呼び出し
+    const accessToken = process.env.GOOGLE_CLOUD_ACCESS_TOKEN
+    
+    if (!accessToken) {
+      return NextResponse.json({
+        success: false,
+        error: 'GOOGLE_CLOUD_ACCESS_TOKEN が設定されていません',
+      }, { status: 500 })
+    }
+    
+    const endpoint = `https://${LOCATION}-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${IMAGEN_MODEL}:predict`
     
     const requestBody = {
       instances: [{ prompt }],
       parameters: {
         sampleCount: 1,
-        aspectRatio: getAspectRatio(size),
-        safetyFilterLevel: 'block_only_high',
+        aspectRatio: aspectRatio,
+        safetyFilterLevel: 'block_few',
         personGeneration: 'allow_adult',
       },
     }
 
-    const response = await fetch(apiUrl, {
+    const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(requestBody),
     })
 
@@ -80,17 +89,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
     const data = await response.json()
 
     // 画像を抽出
-    const predictions = data.predictions || []
-    if (predictions.length === 0 || !predictions[0].bytesBase64Encoded) {
+    if (!data.predictions?.[0]?.bytesBase64Encoded) {
       throw new Error('No image in response')
     }
 
-    const refinedImage = `data:image/png;base64,${predictions[0].bytesBase64Encoded}`
+    const refinedImage = `data:image/png;base64,${data.predictions[0].bytesBase64Encoded}`
 
     return NextResponse.json({
       success: true,
       refinedImage,
-      message: '指示に基づいて新しいバナーを生成しました',
+      message: 'Vertex AI Imagen 3 で新しいバナーを生成しました',
     })
 
   } catch (error: any) {
@@ -108,10 +116,12 @@ function getAspectRatio(size?: string): string {
   if (!width || !height) return '1:1'
   
   const ratio = width / height
-  if (ratio > 1.5) return '16:9'
-  if (ratio > 1.2) return '4:3'
-  if (ratio < 0.67) return '9:16'
-  if (ratio < 0.8) return '3:4'
+  if (ratio > 1.7) return '16:9'
+  if (ratio > 1.4) return '3:2'
+  if (ratio > 1.1) return '4:3'
+  if (ratio < 0.6) return '9:16'
+  if (ratio < 0.75) return '2:3'
+  if (ratio < 0.9) return '3:4'
   return '1:1'
 }
 
@@ -147,4 +157,3 @@ ${size ? `**TARGET SIZE:** ${size}` : ''}
 
 Generate the banner now with NO TEXT.`
 }
-
