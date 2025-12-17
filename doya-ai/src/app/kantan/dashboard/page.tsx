@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { ArrowRight, ArrowLeft, Sparkles, LogIn, Wand2 } from 'lucide-react'
-import { GUEST_LIMITS, getGuestUsage, getGuestRemainingCount } from '@/lib/pricing'
+import { KANTAN_PRICING, getGuestRemainingCount } from '@/lib/pricing'
 
 // テンプレート一覧（人気順）
 const POPULAR_TEMPLATES = [
@@ -18,7 +18,7 @@ const POPULAR_TEMPLATES = [
 
 export default function KantanDashboardPage() {
   const { data: session, status } = useSession()
-  const [guestRemainingCount, setGuestRemainingCount] = useState(GUEST_LIMITS.kantan.dailyLimit)
+  const [guestRemainingCount, setGuestRemainingCount] = useState(KANTAN_PRICING.guestLimit)
   
   const isGuest = !session
   const userName = session?.user?.name?.split(' ')[0] || 'ゲスト'
@@ -87,7 +87,7 @@ export default function KantanDashboardPage() {
                 <div>
                   <p className="font-bold text-gray-900">🆓 お試しモード</p>
                   <p className="text-sm text-gray-600">
-                    残り <span className="font-bold text-blue-600">{guestRemainingCount}回</span>（1日{GUEST_LIMITS.kantan.dailyLimit}回まで）
+                    残り <span className="font-bold text-blue-600">{guestRemainingCount}回</span>（1日{KANTAN_PRICING.guestLimit}回まで）
                   </p>
                 </div>
               </div>
