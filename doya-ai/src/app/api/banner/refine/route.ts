@@ -7,7 +7,8 @@ import { NextRequest, NextResponse } from 'next/server'
 // 生成済みバナーに対してテキスト指示で修正を行う
 
 const GEMINI_API_KEY = process.env.GOOGLE_GENAI_API_KEY
-// Gemini 3 Pro Image (Nano Banana Pro) - 画像生成に使用する唯一のモデル
+// 画像修正にはGemini 2.0 Flash Exp Image Generationを使用
+// （Imagen 3は画像入力に対応していないため）
 const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent'
 
 interface RefineRequest {
