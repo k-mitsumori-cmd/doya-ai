@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { 
   Sparkles, Loader2, AlertCircle,
   ArrowRight, CheckCircle, Wand2,
-  ArrowLeft, LogIn
+  ArrowLeft, LogIn, Download
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -36,8 +36,40 @@ const SAMPLE_INPUTS = [
 ]
 
 // ゲストの1日の上限
-const GUEST_DAILY_LIMIT = 1
+const GUEST_DAILY_LIMIT = 3
 const GUEST_STORAGE_KEY = 'banner_guest_usage'
+
+// 画像ダウンロード関数
+async function downloadImage(url: string, filename: string) {
+  try {
+    // Data URLの場合
+    if (url.startsWith('data:')) {
+      const link = document.createElement('a')
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      return true
+    }
+    
+    // 通常のURLの場合
+    const response = await fetch(url)
+    const blob = await response.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(blobUrl)
+    return true
+  } catch (error) {
+    console.error('Download error:', error)
+    return false
+  }
+}
 
 function getGuestUsage(): { count: number; date: string } {
   if (typeof window === 'undefined') return { count: 0, date: '' }
@@ -226,7 +258,7 @@ export default function BannerDashboardPage() {
               <Link href="/auth/signin?service=banner">
                 <button className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-full transition-colors flex items-center gap-2">
                   <LogIn className="w-4 h-4" />
-                  ログインで3回に！
+                  ログインで無制限に！
                 </button>
               </Link>
             </div>
@@ -248,14 +280,32 @@ export default function BannerDashboardPage() {
               {generatedBanners.map((url, index) => (
                 <div key={index} className="bg-gray-50 rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <span className="font-bold text-gray-700">
-                      {['A案', 'B案', 'C案'][index]}
-                    </span>
-                    <button className="px-3 py-1.5 bg-violet-100 text-violet-700 text-sm font-medium rounded-lg hover:bg-violet-200 transition-colors">
+                    <div>
+                      <span className="font-bold text-gray-700">
+                        {['A案（ベネフィット重視）', 'B案（緊急性・限定性）', 'C案（信頼性・実績）'][index]}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={async () => {
+                        const success = await downloadImage(url, `banner_${['A', 'B', 'C'][index]}_${Date.now()}.png`)
+                        if (success) {
+                          toast.success('ダウンロードしました！', { icon: '📥' })
+                        } else {
+                          toast.error('ダウンロードに失敗しました')
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-violet-100 text-violet-700 text-sm font-medium rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-1.5"
+                    >
+                      <Download className="w-4 h-4" />
                       ダウンロード
                     </button>
                   </div>
-                  <img src={url} alt={`Banner ${String.fromCharCode(65 + index)}`} className="w-full rounded-xl" />
+                  <img 
+                    src={url} 
+                    alt={`Banner ${String.fromCharCode(65 + index)}`} 
+                    className="w-full rounded-xl shadow-md"
+                    loading="lazy"
+                  />
                 </div>
               ))}
             </div>
