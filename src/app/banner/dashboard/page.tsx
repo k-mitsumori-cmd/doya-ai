@@ -241,6 +241,14 @@ export default function BannerDashboard() {
   const [showRefineInput, setShowRefineInput] = useState(false)
   const [refineHistory, setRefineHistory] = useState<{ instruction: string; image: string }[]>([])
   
+  // テキストオーバーレイ機能
+  const [overlayText, setOverlayText] = useState('')
+  const [overlayFontSize, setOverlayFontSize] = useState(48)
+  const [overlayColor, setOverlayColor] = useState('#FFFFFF')
+  const [overlayBgColor, setOverlayBgColor] = useState('#000000')
+  const [overlayBgOpacity, setOverlayBgOpacity] = useState(70)
+  const [showTextOverlay, setShowTextOverlay] = useState(false)
+  
   const [guestUsageCount, setGuestUsageCount] = useState(0)
   
   const isGuest = !session
@@ -1022,6 +1030,17 @@ export default function BannerDashboard() {
                 >
                   {generatedBanners.length > 0 ? (
                     <>
+                      {/* Text Overlay Notice */}
+                      <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/30 rounded-lg p-3 mb-3">
+                        <div className="flex items-start gap-2">
+                          <Pencil className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-gray-300">
+                            <span className="font-medium text-blue-300">💡 ヒント：</span>
+                            生成されたバナーはテキスト用のスペースが確保されています。Canvaなどの編集ツールでテキストを追加してください。
+                          </div>
+                        </div>
+                      </div>
+                      
                       {/* Banner Grid */}
                       <div className="grid grid-cols-3 gap-2 sm:gap-3">
                         {generatedBanners.map((banner, i) => {

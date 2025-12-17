@@ -193,70 +193,62 @@ function createYouTubeThumbnailPrompt(
 ): string {
   const [width, height] = size.split('x')
 
-  let prompt = `Create a highly clickable YouTube thumbnail image that will stand out in search results and recommendations.
+  let prompt = `Create a highly clickable YouTube thumbnail image (NO TEXT - visual design only).
 
 === YOUTUBE THUMBNAIL SPECIFICATIONS ===
 Format: 16:9 landscape thumbnail (${width}x${height} pixels)
 Platform: YouTube - must compete for attention among many thumbnails
-Goal: MAXIMIZE click-through rate (CTR)
+Goal: MAXIMIZE click-through rate (CTR) through VISUALS ONLY
 
-=== THUMBNAIL TITLE/HOOK ===
+=== THUMBNAIL CONCEPT/THEME ===
 "${keyword}"
+Express this concept through visuals, NOT through text.
 
 === STYLE: ${appealType.focus} ===
 ${appealType.style}
 
-=== YOUTUBE THUMBNAIL BEST PRACTICES ===
-1. **HUGE, BOLD TEXT**: 
-   - Main text should fill 40-60% of the thumbnail area
-   - Use thick, bold fonts with strong outlines
-   - Maximum 2-3 lines of text, preferably less
-   - Text must be readable at 120x67px (mobile preview size)
+=== ⚠️⚠️⚠️ CRITICAL: NO TEXT RULE ⚠️⚠️⚠️ ===
+**ABSOLUTELY DO NOT INCLUDE ANY TEXT**
+- NO Japanese characters
+- NO English text  
+- NO numbers
+- NO letters of any kind
+- Text will be overlaid separately in post-production
 
-2. **HIGH CONTRAST & SATURATION**:
+Instead, create PURE VISUAL DESIGN with:
+1. **LARGE TEXT PLACEHOLDER AREA** (40% of thumbnail)
+   - Solid color block or gradient area
+   - Position on right side or bottom
+   - High contrast background for text overlay later
+
+2. **VISUAL STORYTELLING**
+   - Express the concept through imagery only
+   - Use colors, shapes, and composition
+   - Include visual metaphors (arrows, icons, expressions)
+
+=== YOUTUBE THUMBNAIL DESIGN PRINCIPLES ===
+1. **HIGH CONTRAST & SATURATION**:
    - Use bright, saturated colors (no muted tones)
-   - Strong contrast between text and background
-   - Consider using complementary color schemes
-   - Add glow, shadow, or stroke to text for pop
+   - Bold color blocking
+   - Consider complementary color schemes
 
-3. **VISUAL HIERARCHY**:
-   - One clear focal point (text OR face, not competing)
+2. **VISUAL HIERARCHY**:
+   - One clear visual focal point
    - Use arrows, circles, or lines to direct attention
-   - Left side often performs better for human faces
-   - Right side good for key text or product
+   - Left side for human faces
+   - Right side reserved for text overlay area
 
-4. **EMOTIONAL IMPACT**:
+3. **EMOTIONAL IMPACT**:
    - Include space for expressive human face if relevant
-   - Show emotion: surprise, excitement, curiosity
-   - Use visual metaphors (explosions, fire, arrows, etc.)
-   - Create before/after or contrast visuals if applicable
+   - Show emotion through visuals: surprise, excitement
+   - Use visual metaphors (glow effects, dramatic lighting)
 
-5. **AVOID**:
-   - Small or decorative fonts
-   - Too much text (keep it punchy)
+4. **AVOID**:
+   - Any text or characters
    - Cluttered backgrounds
-   - Low contrast elements
    - Generic stock photo feel
-
-=== ⚠️ CRITICAL: JAPANESE TEXT RULES ⚠️ ===
-1. **EXTRA LARGE FONT**: Japanese text must be at least 30% of thumbnail height
-2. **BOLD GOTHIC FONT**: Use thick, bold Japanese Gothic/Sans-serif
-3. **STRONG OUTLINE**: Add 3-5px stroke/outline around Japanese text
-4. **NO CORRUPTION**: 
-   - Each kanji/hiragana/katakana must be perfect
-   - No stretching, no distortion
-   - Keep text strictly horizontal
-5. **LIMIT TEXT**: Maximum 10-15 Japanese characters total
-6. **SOLID BACKING**: Always place text on solid or gradient background, not on busy images
+   - Too many competing elements
 `
-
-  // チャンネル名がある場合
-  if (options.companyName) {
-    prompt += `
-=== CHANNEL BRANDING ===
-Include "${options.companyName}" as small channel branding in corner (optional, subtle)
-`
-  }
 
   // 人物画像がある場合
   if (options.hasPerson) {
@@ -264,31 +256,30 @@ Include "${options.companyName}" as small channel branding in corner (optional, 
       prompt += `
 === PERSON IMAGE (PROVIDED) ===
 I am providing a person's photo to include in this thumbnail.
-Position them on the left or right third of the frame.
-The person should have an engaging, expressive pose suitable for YouTube.
-Leave the opposite side for the main title text.
+Position them on the left third of the frame.
+The person should have an engaging, expressive pose.
+Leave the right side completely clear for text overlay.
 `
     } else {
       prompt += `
 === PERSON PLACEHOLDER ===
-Include space for an expressive human face on one side of the thumbnail.
-${options.personDescription ? `Person appearance: ${options.personDescription}` : 'A YouTuber with an engaging, expressive reaction face'}
-Position on left side, with text on right side.
+Include space for an expressive human face on the left side.
+${options.personDescription ? `Person appearance: ${options.personDescription}` : 'A person with an engaging, expressive reaction'}
+The right side must remain clear for text overlay.
 `
     }
   }
 
   prompt += `
 === FINAL OUTPUT ===
-Generate a YouTube thumbnail that would make viewers WANT to click.
-The thumbnail must:
-1. Be instantly eye-catching at any size
-2. Clearly communicate the video's hook/value
-3. Have perfectly readable Japanese text
-4. Look professional yet exciting
-5. Stand out against competitors
+Generate a YouTube thumbnail that:
+1. Is instantly eye-catching with PURE VISUAL design
+2. Has NO text, NO characters, NO letters whatsoever
+3. Has a clear area reserved for text overlay (solid/gradient block)
+4. Conveys the emotion and theme through visuals only
+5. Would make viewers curious to click
 
-Create the thumbnail now.`
+Create the thumbnail now - REMEMBER: NO TEXT AT ALL.`
 
   return prompt
 }
@@ -314,10 +305,17 @@ function createBannerPrompt(
     return createYouTubeThumbnailPrompt(keyword, size, appealType, options)
   }
 
-  let prompt = `Create a professional Japanese advertisement banner image.
+  // テキストの複雑さに基づいて戦略を決定
+  const hasComplexJapanese = /[一-龯]/.test(keyword) // 漢字を含む
+  const textLength = keyword.length
+  
+  // 短いテキストのみ直接レンダリング、それ以外はテキストエリアを確保
+  const shouldRenderText = textLength <= 8 && !hasComplexJapanese
+
+  let prompt = `Create a professional advertisement banner image for Japanese market.
 
 === BANNER SPECIFICATIONS ===
-Format: ${aspectRatio} banner (${width}x${height} pixels aspect ratio)
+Format: ${aspectRatio} banner (${width}x${height} pixels)
 Purpose: ${options.purpose || 'sns_ad'} - ${purposeStyle.layout}
 
 === DESIGN STYLE ===
@@ -327,34 +325,50 @@ Visual elements: ${categoryStyle.elements}
 
 === LAYOUT & EMPHASIS ===
 ${purposeStyle.emphasis}
-CTA: ${purposeStyle.cta}
 
 === APPEAL TYPE: ${appealType.focus} ===
 ${appealType.style}
 
-=== MAIN TEXT (MUST BE DISPLAYED IN JAPANESE) ===
-"${keyword}"
-This Japanese text MUST be the focal point, large, clear, and readable.
+=== ⚠️⚠️⚠️ TEXT HANDLING - VERY IMPORTANT ⚠️⚠️⚠️ ===
 
-=== ⚠️ CRITICAL: JAPANESE TEXT RENDERING RULES ⚠️ ===
-1. **MINIMUM FONT SIZE**: All text must be at least 24px equivalent (relative to 1080px width)
-2. **NO SMALL TEXT**: Do NOT include any text smaller than 5% of the banner width
-3. **JAPANESE FONT INTEGRITY**: 
-   - Use clean, simple Japanese fonts (Gothic/Sans-serif style)
-   - Each Japanese character must be complete and undistorted
-   - Avoid decorative fonts that may corrupt kanji/hiragana/katakana
-   - Ensure proper stroke rendering for all characters
-4. **TEXT CLARITY**: 
-   - High contrast between text and background (minimum 4.5:1 ratio)
-   - Add subtle text shadow or outline for readability
-   - No text on complex backgrounds without solid backing
-5. **CHARACTER SPACING**: Maintain proper kerning for Japanese text
-6. **AVOID TEXT CORRUPTION**:
-   - Do NOT stretch or compress Japanese characters
-   - Do NOT apply extreme perspective transforms to text
-   - Keep text horizontal (no extreme rotations)
-   - Avoid overlapping text elements
-7. **LIMIT TEXT ELEMENTS**: Maximum 3 text elements total (headline, subtext, CTA)
+${shouldRenderText ? `
+**SHORT TEXT MODE**: Render this short text directly:
+"${keyword}"
+- Use VERY LARGE, BOLD sans-serif font
+- Place on solid color background
+- Maximum contrast
+` : `
+**DESIGN-FOCUSED MODE**: 
+DO NOT render any Japanese text or complex characters.
+Instead, create a visually striking banner with:
+
+1. **LARGE SOLID COLOR AREA** for text overlay (40% of banner)
+   - Clean, flat color area at center or bottom
+   - Semi-transparent gradient acceptable
+   - This is where text will be added later
+
+2. **VISUAL STORYTELLING**
+   - Use imagery, icons, and graphics to convey the message
+   - Theme/concept: "${keyword}"
+   - Express the emotion and appeal through visuals, not text
+
+3. **SIMPLE CTA BUTTON PLACEHOLDER**
+   - Include a colorful button shape (no text inside)
+   - Contrasting color from background
+   - Positioned at bottom-right or center-bottom
+
+4. **ABSOLUTELY NO TEXT**
+   - No Japanese characters
+   - No English text
+   - No numbers
+   - Just pure visual design with text placeholder areas
+`}
+
+=== DESIGN REQUIREMENTS ===
+- Professional, modern, clean design
+- High contrast and vibrant colors
+- Clear visual hierarchy
+- Mobile-friendly (elements not too small)
 `
 
   // 会社名がある場合
@@ -409,60 +423,60 @@ The person should match the banner's professional tone and target audience
   }
 
   prompt += `
-=== ⚠️⚠️⚠️ ABSOLUTE REQUIREMENTS FOR JAPANESE TEXT ⚠️⚠️⚠️ ===
+=== 🔴🔴🔴 MOST IMPORTANT: JAPANESE TEXT QUALITY 🔴🔴🔴 ===
 
-**THIS IS THE MOST IMPORTANT PART - JAPANESE TEXT MUST BE PERFECT**
+**THE TEXT QUALITY IS THE #1 PRIORITY - MORE IMPORTANT THAN DESIGN**
 
-TEXT TO DISPLAY: "${keyword}"
+REQUIRED TEXT: "${keyword}"
 
-MANDATORY TEXT RULES:
-1. **FONT CHOICE**: Use ONLY clean, modern Japanese Gothic/Sans-serif fonts
-   - Examples: Noto Sans JP, Hiragino Kaku Gothic, Meiryo Gothic
-   - DO NOT use decorative, handwritten, or stylized fonts
-   
-2. **TEXT SIZE**: Main headline must occupy at least 30% of banner width
-   - All text must be clearly readable even when thumbnail-sized
-   - CTA button text must be at least 20% of banner width
-   
-3. **TEXT RENDERING**:
-   - Render each Japanese character PERFECTLY with all strokes visible
-   - Kanji (漢字) must have all radicals and strokes complete
-   - Hiragana (ひらがな) must have smooth, unbroken curves
-   - Katakana (カタカナ) must have sharp, clean angles
-   - DO NOT generate corrupted, broken, or partial characters
-   
-4. **TEXT PLACEMENT**:
-   - Place text on SOLID COLOR backgrounds (not on photos/gradients)
-   - Add a semi-transparent solid rectangle behind text if needed
-   - Never place text where it overlaps with complex imagery
-   - Keep at least 10% padding around text edges
-   
-5. **TEXT EFFECTS**:
-   - Add thick (3-5px) white or dark outline/stroke around text
-   - Use drop shadow for depth (offset: 2-4px, blur: 4-8px)
-   - Maintain at least 7:1 contrast ratio between text and background
-   
+ABSOLUTE RULES FOR TEXT (MUST FOLLOW):
+
+1. **TEXT STYLE**:
+   - Use ONLY simple, clean BLOCK letters/characters
+   - Japanese: Use thick, bold ゴシック (Gothic) style ONLY
+   - NO cursive, NO handwriting, NO decorative fonts
+   - Each character must be a simple, geometric shape
+
+2. **TEXT SIZE**:
+   - Main text: At least 15% of image HEIGHT
+   - Each character must be clearly visible even at thumbnail size
+   - If text is long, split into 2 lines maximum
+
+3. **TEXT BACKGROUND**:
+   - ALWAYS place text on a SOLID COLOR rectangle
+   - The rectangle should have 90-100% opacity
+   - Color contrast: White text on dark bg, OR dark text on light bg
+   - Add 20px+ padding around all text
+
+4. **TEXT RENDERING**:
+   - Each Japanese character must be PERFECT and COMPLETE
+   - 漢字 (Kanji): Every stroke must be visible and correct
+   - ひらがな (Hiragana): Smooth, complete curves
+   - カタカナ (Katakana): Sharp, complete angles
+   - NO blurry, distorted, or partial characters
+
+5. **TEXT POSITION**:
+   - Center the main text horizontally
+   - Keep text HORIZONTAL only (no rotation)
+   - Never place text on busy/complex backgrounds without solid backing
+
 6. **FORBIDDEN**:
-   ❌ Text smaller than 5% of image height
-   ❌ Stretched or compressed characters
-   ❌ Rotated or perspective-transformed text
-   ❌ Overlapping text elements
-   ❌ Text on busy/noisy backgrounds without backing
-   ❌ More than 3 separate text elements
-   ❌ Decorative or artistic fonts that sacrifice readability
+   ❌ Decorative or stylized fonts
+   ❌ Text smaller than 10% of image height
+   ❌ Rotated or tilted text
+   ❌ Text on transparent or semi-transparent backgrounds
+   ❌ Overlapping text
+   ❌ More than 3 text elements total
+   ❌ Any text without solid color backing
 
-=== FINAL OUTPUT ===
-Generate a professional Japanese advertisement banner.
-The text "${keyword}" must be:
-- Crystal clear and perfectly readable
-- Large and prominent
-- On a solid or semi-solid background
-- With proper outline/shadow for visibility
+=== FINAL CHECK ===
+Before generating, verify:
+1. Main text "${keyword}" will be large and perfectly readable
+2. Text has solid color background
+3. No decorative fonts
+4. Maximum 3 text elements
 
-Every single Japanese character must be 100% correct and complete.
-Quality over complexity - if unsure, make it simpler and text larger.
-
-Generate the banner image now.`
+Generate a HIGH-QUALITY banner with PERFECT Japanese text rendering now.`
 
   return prompt
 }
