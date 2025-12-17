@@ -92,6 +92,86 @@ const SAMPLES: Record<string, { category: string; keyword: string; company?: str
   campaign: { category: 'telecom', keyword: '乗り換えで最大2万円キャッシュバック 月額990円〜' },
 }
 
+// A/B/Cパターンの工夫点・特徴
+const BANNER_INSIGHTS: Record<string, { 
+  type: string
+  title: string
+  features: string[]
+  color: string
+  icon: string
+}[]> = {
+  default: [
+    {
+      type: 'A',
+      title: 'ベネフィット訴求',
+      features: [
+        'ユーザーメリットを前面に',
+        'ポジティブな明るいデザイン',
+        '価値提案を強調したコピー',
+      ],
+      color: 'from-blue-500 to-cyan-500',
+      icon: '💡',
+    },
+    {
+      type: 'B',
+      title: '緊急性・限定訴求',
+      features: [
+        '「今だけ」「限定」の訴求',
+        '赤・黄のアクセントカラー',
+        '行動を促すダイナミックデザイン',
+      ],
+      color: 'from-amber-500 to-orange-500',
+      icon: '⚡',
+    },
+    {
+      type: 'C',
+      title: '信頼性・実績訴求',
+      features: [
+        '「No.1」「〇万人利用」など実績',
+        '落ち着いたプロフェッショナルカラー',
+        '安心感を与えるレイアウト',
+      ],
+      color: 'from-emerald-500 to-teal-500',
+      icon: '🏆',
+    },
+  ],
+  youtube: [
+    {
+      type: 'A',
+      title: '衝撃・驚きフック',
+      features: [
+        '「衝撃」「まさか」の好奇心喚起',
+        'ドラマチックな表情エリア',
+        '赤・黄の強調ハイライト',
+      ],
+      color: 'from-red-500 to-pink-500',
+      icon: '😱',
+    },
+    {
+      type: 'B',
+      title: '教育・価値提供',
+      features: [
+        '「〜の方法」「完全解説」の学び訴求',
+        'ナンバリング（3つ、5選）で具体性',
+        '青・緑の信頼感カラー',
+      ],
+      color: 'from-blue-500 to-violet-500',
+      icon: '📚',
+    },
+    {
+      type: 'C',
+      title: '体験・ストーリー',
+      features: [
+        '「〜した結果」「密着」の物語性',
+        '個人的で共感しやすいテイスト',
+        '暖かみのあるカラー',
+      ],
+      color: 'from-orange-500 to-amber-500',
+      icon: '📖',
+    },
+  ],
+}
+
 const GENERATION_PHASES = [
   { label: 'プロンプト最適化', icon: '🎯' },
   { label: 'A案生成中', icon: '🎨' },
@@ -928,34 +1008,47 @@ export default function BannerDashboard() {
                     <>
                       {/* Banner Grid */}
                       <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                        {generatedBanners.map((banner, i) => (
-                          <motion.div
-                            key={i}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: i * 0.1 }}
-                            onClick={() => setSelectedBanner(i)}
-                            className={`relative aspect-square rounded-lg sm:rounded-xl overflow-hidden cursor-pointer group ${
-                              selectedBanner === i 
-                                ? 'ring-2 ring-violet-500 ring-offset-1 sm:ring-offset-2 ring-offset-[#0A0A0F]' 
-                                : ''
-                            }`}
-                          >
-                            <img src={banner} alt={`Banner ${i + 1}`} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur rounded-lg text-xs font-bold">
-                              {['A', 'B', 'C'][i]}案
-                            </div>
-                            <div className="absolute bottom-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDownload(banner, i) }}
-                                className="w-8 h-8 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center hover:bg-white/30"
-                              >
-                                <Download className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </motion.div>
-                        ))}
+                        {generatedBanners.map((banner, i) => {
+                          const insights = BANNER_INSIGHTS[purpose] || BANNER_INSIGHTS.default
+                          const insight = insights[i]
+                          return (
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: i * 0.1 }}
+                              onClick={() => setSelectedBanner(i)}
+                              className={`relative aspect-square rounded-lg sm:rounded-xl overflow-hidden cursor-pointer group ${
+                                selectedBanner === i 
+                                  ? 'ring-2 ring-violet-500 ring-offset-1 sm:ring-offset-2 ring-offset-[#0A0A0F]' 
+                                  : ''
+                              }`}
+                            >
+                              <img src={banner} alt={`Banner ${i + 1}`} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                              {/* バッジ：A/B/C + アイコン */}
+                              <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-black/60 backdrop-blur rounded-md sm:rounded-lg">
+                                <span className="text-sm sm:text-base">{insight.icon}</span>
+                                <span className="text-[10px] sm:text-xs font-bold">{insight.type}案</span>
+                              </div>
+                              {/* ホバー時：訴求タイプ名 */}
+                              <div className="absolute bottom-0 inset-x-0 p-2 sm:p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <p className="text-[10px] sm:text-xs font-medium text-white/90 truncate">
+                                  {insight.title}
+                                </p>
+                              </div>
+                              {/* ダウンロードボタン */}
+                              <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDownload(banner, i) }}
+                                  className="w-7 h-7 sm:w-8 sm:h-8 bg-white/20 backdrop-blur rounded-md sm:rounded-lg flex items-center justify-center hover:bg-white/30"
+                                >
+                                  <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                </button>
+                              </div>
+                            </motion.div>
+                          )
+                        })}
                       </div>
 
                       {/* Selected Banner Preview */}
@@ -963,11 +1056,58 @@ export default function BannerDashboard() {
                         <motion.div
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-4"
+                          className="space-y-3 sm:space-y-4"
                         >
-                          <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-bold flex items-center gap-2">
-                              <Star className="w-4 h-4 text-amber-400" />
+                          {/* バナー工夫点カード */}
+                          {(() => {
+                            const insights = BANNER_INSIGHTS[purpose] || BANNER_INSIGHTS.default
+                            const insight = insights[selectedBanner]
+                            return (
+                              <motion.div
+                                key={selectedBanner}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className={`relative overflow-hidden bg-gradient-to-br ${insight.color} rounded-xl sm:rounded-2xl p-4 sm:p-5`}
+                              >
+                                <div className="absolute top-0 right-0 w-20 h-20 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-2xl" />
+                                <div className="absolute bottom-0 left-0 w-16 h-16 sm:w-24 sm:h-24 bg-white/10 rounded-full blur-xl" />
+                                
+                                <div className="relative">
+                                  <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                                    <span className="text-xl sm:text-2xl">{insight.icon}</span>
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="px-2 py-0.5 bg-white/20 rounded text-[10px] sm:text-xs font-bold">
+                                          {insight.type}案
+                                        </span>
+                                        <span className="text-white/80 text-xs sm:text-sm font-medium">
+                                          {insight.title}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <h4 className="font-bold text-white text-xs sm:text-sm mb-2">
+                                    💡 このバナーの工夫点
+                                  </h4>
+                                  <ul className="space-y-1.5 sm:space-y-2">
+                                    {insight.features.map((feature, idx) => (
+                                      <li key={idx} className="flex items-start gap-2 text-white/90 text-[11px] sm:text-xs">
+                                        <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white/70 flex-shrink-0 mt-0.5" />
+                                        <span>{feature}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </motion.div>
+                            )
+                          })()}
+                          
+                          {/* 画像プレビュー・操作エリア */}
+                          <div className="bg-white/[0.02] backdrop-blur rounded-xl sm:rounded-2xl border border-white/5 p-3 sm:p-4">
+                          <div className="flex items-center justify-between mb-2 sm:mb-3">
+                            <h3 className="font-bold flex items-center gap-2 text-sm sm:text-base">
+                              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400" />
                               {['A', 'B', 'C'][selectedBanner]}案 プレビュー
                             </h3>
                             <div className="flex gap-2">
@@ -1068,11 +1208,12 @@ export default function BannerDashboard() {
                                       <Loader2 className="w-4 h-4 animate-spin" />
                                       <span>AIが修正中...</span>
                                     </div>
-                                  )}
-                                </div>
+)}
+                                  </div>
                               </motion.div>
                             )}
                           </AnimatePresence>
+                          </div>
                         </motion.div>
                       )}
                     </>
