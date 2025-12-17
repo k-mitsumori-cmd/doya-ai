@@ -947,6 +947,44 @@ export default function BannerDashboard() {
               )}
             </AnimatePresence>
 
+            {/* ドヤマーケ CV Banner */}
+            <a 
+              href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1" 
+              target="_blank" 
+              rel="noopener noreferrer"
+            >
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                className="relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl p-5 shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 transition-all cursor-pointer"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-xl" />
+                
+                <div className="relative flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">💬</span>
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-2 py-0.5 bg-white/20 rounded text-[10px] font-bold">無料相談</span>
+                      <span className="text-white/80 text-xs">by ドヤマーケ</span>
+                    </div>
+                    <h4 className="font-bold text-white text-sm mb-0.5">
+                      マーケティングのお悩み、いつでも相談OK！
+                    </h4>
+                    <p className="text-white/70 text-xs">
+                      バナー制作・広告運用・SNS戦略なんでも →
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <ArrowUpRight className="w-5 h-5 text-emerald-600" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </a>
+
             {/* Quick Links */}
             <div className="grid grid-cols-2 gap-3">
               <Link href="/kantan/dashboard">
