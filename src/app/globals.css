@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* スクロールバーを非表示にするユーティリティ */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased text-gray-800;
+    font-family: 'Noto Sans JP', sans-serif;
+    background-color: #f9fafb;
+    min-height: 100vh;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+  }
+}
+
+@layer components {
+  /* プライマリボタン */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-all;
+  }
+  
+  /* セカンダリボタン */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-6 py-3 rounded-xl transition-all;
+  }
+  
+  /* カード */
+  .card {
+    @apply bg-white rounded-2xl p-6 shadow-sm border border-gray-100;
+  }
+  
+  /* 入力フィールド */
+  .input {
+    @apply w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-lg;
+  }
+}
+
+/* フォーカス時のアウトライン */
+*:focus {
+  outline: none;
+}
+
+/* スムーズスクロール */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 選択時のハイライト */
+::selection {
+  background-color: #3b82f6;
+  color: white;
+}
