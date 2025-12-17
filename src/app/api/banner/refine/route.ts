@@ -1,40 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // ========================================
-// バナー修正API
+// バナー修正API（再生成方式）
 // ========================================
 // POST /api/banner/refine
-// 生成済みバナーに対してテキスト指示で修正を行う
+// 生成済みバナーの修正指示を受け、新たにバナーを再生成
+// 
+// ※ Imagen 3 (Gemini 3.0) は画像入力に対応していないため、
+//   画像編集ではなく、指示に基づいて新規生成を行います
 
 const GEMINI_API_KEY = process.env.GOOGLE_GENAI_API_KEY
-// 画像修正にはGemini 2.0 Flash Exp Image Generationを使用
-// （Imagen 3は画像入力に対応していないため）
-const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent'
+
+// Imagen 3 (Gemini 3.0) - 唯一使用するモデル
+const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict'
 
 interface RefineRequest {
-  originalImage: string  // Base64画像 or URL
+  originalImage: string  // 参考用（実際には使用しない）
   instruction: string    // 修正指示
   category?: string
   size?: string
+  originalPrompt?: string  // 元のプロンプト情報
 }
 
 interface RefineResponse {
   success: boolean
   refinedImage?: string
   error?: string
+  message?: string
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<RefineResponse>> {
   try {
     const body: RefineRequest = await request.json()
-    const { originalImage, instruction, category, size } = body
-
-    if (!originalImage) {
-      return NextResponse.json({
-        success: false,
-        error: '元画像が必要です',
-      }, { status: 400 })
-    }
+    const { instruction, category, size } = body
 
     if (!instruction || instruction.trim().length < 3) {
       return NextResponse.json({
@@ -45,81 +43,26 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
 
     // APIキーチェック
     if (!GEMINI_API_KEY) {
-      console.warn('GOOGLE_GENAI_API_KEY not set, returning mock data')
-      // モック: 元画像をそのまま返す
-      return NextResponse.json({
-        success: true,
-        refinedImage: originalImage,
-      })
-    }
-
-    // プロンプト生成
-    const prompt = createRefinePrompt(instruction, category, size)
-
-    // 画像データを準備
-    let imageData: { inlineData: { mimeType: string; data: string } } | null = null
-    
-    if (originalImage.startsWith('data:')) {
-      // Base64形式の場合
-      const matches = originalImage.match(/^data:(.+);base64,(.+)$/)
-      if (matches) {
-        imageData = {
-          inlineData: {
-            mimeType: matches[1],
-            data: matches[2],
-          },
-        }
-      }
-    } else if (originalImage.startsWith('http')) {
-      // URL形式の場合は画像をダウンロードしてBase64に変換
-      try {
-        const imageResponse = await fetch(originalImage)
-        const arrayBuffer = await imageResponse.arrayBuffer()
-        const base64 = Buffer.from(arrayBuffer).toString('base64')
-        const contentType = imageResponse.headers.get('content-type') || 'image/png'
-        imageData = {
-          inlineData: {
-            mimeType: contentType,
-            data: base64,
-          },
-        }
-      } catch (fetchError) {
-        console.error('Failed to fetch original image:', fetchError)
-        return NextResponse.json({
-          success: false,
-          error: '元画像の取得に失敗しました',
-        }, { status: 400 })
-      }
-    }
-
-    if (!imageData) {
+      console.warn('GOOGLE_GENAI_API_KEY not set, returning error')
       return NextResponse.json({
         success: false,
-        error: '画像形式が不正です',
-      }, { status: 400 })
+        error: 'APIキーが設定されていません',
+      }, { status: 500 })
     }
 
-    // Gemini API呼び出し
+    // Imagen 3で新規生成
+    const prompt = createRegeneratePrompt(instruction, category, size)
+    
     const apiUrl = `${API_ENDPOINT}?key=${GEMINI_API_KEY}`
     
     const requestBody = {
-      contents: [
-        {
-          parts: [
-            imageData,
-            { text: prompt },
-          ],
-        },
-      ],
-      generationConfig: {
-        responseModalities: ['TEXT', 'IMAGE'],
+      instances: [{ prompt }],
+      parameters: {
+        sampleCount: 1,
+        aspectRatio: getAspectRatio(size),
+        safetyFilterLevel: 'block_only_high',
+        personGeneration: 'allow_adult',
       },
-      safetySettings: [
-        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-      ],
     }
 
     const response = await fetch(apiUrl, {
@@ -130,94 +73,78 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
 
     if (!response.ok) {
       const errorText = await response.text()
-      console.error('Gemini API error:', response.status, errorText)
+      console.error('Imagen 3 API error:', response.status, errorText)
       throw new Error(`API Error: ${response.status}`)
     }
 
     const data = await response.json()
 
     // 画像を抽出
-    const candidates = data.candidates || []
-    if (candidates.length === 0) {
-      throw new Error('No candidates returned')
-    }
-
-    const parts = candidates[0].content?.parts || []
-    const imagePart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith('image/'))
-
-    if (!imagePart?.inlineData) {
+    const predictions = data.predictions || []
+    if (predictions.length === 0 || !predictions[0].bytesBase64Encoded) {
       throw new Error('No image in response')
     }
 
-    const refinedImage = `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`
+    const refinedImage = `data:image/png;base64,${predictions[0].bytesBase64Encoded}`
 
     return NextResponse.json({
       success: true,
       refinedImage,
+      message: '指示に基づいて新しいバナーを生成しました',
     })
 
   } catch (error: any) {
     console.error('Banner refine error:', error)
     return NextResponse.json({
       success: false,
-      error: error.message || 'バナーの修正に失敗しました',
+      error: error.message || 'バナーの再生成に失敗しました',
     }, { status: 500 })
   }
 }
 
-function createRefinePrompt(instruction: string, category?: string, size?: string): string {
-  // 指示にテキスト変更が含まれているかチェック
-  const hasTextInstruction = /テキスト|文字|文言|タイトル|キャッチ|コピー|text|title/i.test(instruction)
+function getAspectRatio(size?: string): string {
+  if (!size) return '1:1'
+  const [width, height] = size.split('x').map(Number)
+  if (!width || !height) return '1:1'
   
-  return `You are an expert advertising banner designer. Edit this banner according to the instruction.
+  const ratio = width / height
+  if (ratio > 1.5) return '16:9'
+  if (ratio > 1.2) return '4:3'
+  if (ratio < 0.67) return '9:16'
+  if (ratio < 0.8) return '3:4'
+  return '1:1'
+}
 
-**EDIT INSTRUCTION:** ${instruction}
+function createRegeneratePrompt(instruction: string, category?: string, size?: string): string {
+  return `Create a professional advertisement banner based on these requirements:
+
+**USER'S REQUEST:** ${instruction}
 
 ${category ? `**INDUSTRY:** ${category}` : ''}
 ${size ? `**TARGET SIZE:** ${size}` : ''}
 
-=== ⚠️⚠️⚠️ CRITICAL: TEXT HANDLING RULES ⚠️⚠️⚠️ ===
+=== DESIGN REQUIREMENTS ===
 
-${hasTextInstruction ? `
-**TEXT CHANGE REQUESTED - SPECIAL HANDLING:**
+1. **VISUAL-FOCUSED DESIGN**
+   - Create a visually striking banner
+   - Express the concept through imagery and colors
+   - Reserve 40% of the space as a solid color area for text overlay
 
-Since text changes are requested, follow these rules:
+2. **NO TEXT RULE**
+   - DO NOT include any text, characters, or letters
+   - All text will be added in post-production
+   - Create visual placeholder areas with solid colors
 
-1. **DO NOT render Japanese text directly**
-2. Instead, create a **SOLID COLOR TEXT PLACEHOLDER AREA**
-   - Clean rectangular area with solid background
-   - High contrast from surrounding design
-   - Clearly designated space for text overlay
+3. **PROFESSIONAL QUALITY**
+   - Modern, clean, high-quality design
+   - Vibrant colors with high contrast
+   - Mobile-friendly with clear visual hierarchy
 
-3. **FOR ANY EXISTING TEXT:**
-   - Remove it or replace with solid color block
-   - The text will be added in post-production
+4. **LAYOUT**
+   - Clear focal point
+   - Balanced composition
+   - Space for text overlay (solid color block)
 
-4. **DESIGN IMPROVEMENTS:**
-   - Improve colors, layout, visual elements as requested
-   - Keep the placeholder area visible and clean
-` : `
-**DESIGN-ONLY EDIT:**
-
-Make the requested design changes but:
-
-1. **DO NOT modify, add, or remove any text**
-2. If existing text is corrupted/unclear:
-   - Replace text area with solid color block
-   - This creates space for proper text overlay
-
-3. **FOCUS ON:**
-   - Colors, gradients, backgrounds
-   - Visual elements and composition
-   - Overall aesthetic improvements
-`}
-
-=== GENERAL RULES ===
-- Maintain professional advertisement quality
-- Keep the overall theme and purpose
-- Improve visual appeal and impact
-- Ensure clean, modern design
-
-Apply the edit now.`
+Generate the banner now with NO TEXT.`
 }
 

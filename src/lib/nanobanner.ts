@@ -5,15 +5,12 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 // ========================================
-// Imagen 3 (Nano Banana Pro)
+// Imagen 3 (Nano Banana Pro / Gemini 3.0)
 // これが画像生成に使用される唯一のモデル
-// 高品質な画像生成とテキストレンダリングに優れている
+// 高品質な画像生成に特化
+// ※ Gemini 2.0は使用しない
 // ========================================
 const IMAGE_MODEL_ID = 'imagen-3.0-generate-002'
-
-// リトライ設定（テキスト崩れ時の再生成用）
-const MAX_RETRIES = 2
-const RETRY_DELAY_MS = 1000
 
 // 業種カテゴリ別のデザインガイドライン
 const CATEGORY_STYLES: Record<string, { style: string; colors: string; elements: string }> = {
@@ -481,15 +478,9 @@ Generate a HIGH-QUALITY banner with PERFECT Japanese text rendering now.`
   return prompt
 }
 
-// Base64データからmimeTypeとデータを抽出
-function parseBase64Image(base64: string): { mimeType: string; data: string } | null {
-  const match = base64.match(/^data:([^;]+);base64,(.+)$/)
-  if (!match) return null
-  return { mimeType: match[1], data: match[2] }
-}
-
 // ========================================
-// Imagen 3 (Nano Banana Pro) APIを使った画像生成
+// Imagen 3 (Nano Banana Pro / Gemini 3.0) APIを使った画像生成
+// ※ これが唯一使用するモデル - Gemini 2.0は使用しない
 // ========================================
 async function generateSingleBanner(
   apiKey: string,
@@ -532,10 +523,7 @@ async function generateSingleBanner(
   if (!response.ok) {
     const errorText = await response.text()
     console.error('Imagen 3 API error:', response.status, errorText)
-    
-    // Imagen 3がエラーの場合、Gemini 2.0 Flash Exp Image Generationにフォールバック
-    console.log('Falling back to Gemini 2.0 Flash Exp Image Generation...')
-    return await generateWithGeminiFlash(apiKey, prompt, inputImages)
+    throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 200)}`)
   }
 
   const result = await response.json()
@@ -552,93 +540,6 @@ async function generateSingleBanner(
   
   console.error('No image in Imagen 3 response. Full response:', JSON.stringify(result, null, 2).substring(0, 500))
   throw new Error('画像が生成されませんでした。')
-}
-
-// Gemini 2.0 Flash Exp Image Generation（フォールバック用）
-async function generateWithGeminiFlash(
-  apiKey: string,
-  prompt: string,
-  inputImages?: { logo?: string; person?: string }
-): Promise<string> {
-  const FALLBACK_MODEL = 'gemini-2.0-flash-exp-image-generation'
-  const endpoint = `${GEMINI_API_BASE}/models/${FALLBACK_MODEL}:generateContent?key=${apiKey}`
-  
-  console.log('Using Gemini 2.0 Flash Exp Image Generation...')
-  
-  // partsを構築（テキスト + 入力画像）
-  const parts: any[] = [{ text: prompt }]
-  
-  // ロゴ画像を追加
-  if (inputImages?.logo) {
-    const parsed = parseBase64Image(inputImages.logo)
-    if (parsed) {
-      parts.push({
-        inline_data: {
-          mime_type: parsed.mimeType,
-          data: parsed.data
-        }
-      })
-      console.log('Logo image added to request')
-    }
-  }
-  
-  // 人物画像を追加
-  if (inputImages?.person) {
-    const parsed = parseBase64Image(inputImages.person)
-    if (parsed) {
-      parts.push({
-        inline_data: {
-          mime_type: parsed.mimeType,
-          data: parsed.data
-        }
-      })
-      console.log('Person image added to request')
-    }
-  }
-  
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: {
-        responseModalities: ["IMAGE", "TEXT"],
-        temperature: 1.0,
-        topP: 0.95,
-        topK: 40,
-      },
-      safetySettings: [
-        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-      ],
-    }),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('Gemini Flash API error:', response.status, errorText)
-    throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 200)}`)
-  }
-
-  const result = await response.json()
-  console.log('Gemini Flash API Response received')
-  
-  // レスポンスから画像データを抽出
-  if (result.candidates && result.candidates[0]?.content?.parts) {
-    for (const part of result.candidates[0].content.parts) {
-      if (part.inlineData?.mimeType?.startsWith('image/')) {
-        console.log('Image found in Gemini Flash response!')
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-      }
-    }
-  }
-
-  console.error('No image in response. Full response:', JSON.stringify(result, null, 2).substring(0, 500))
-  throw new Error('画像が生成されませんでした。モデルがテキストのみを返しました。')
 }
 
 // A/B/C 3パターンのバナーを生成
