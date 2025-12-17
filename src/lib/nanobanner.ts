@@ -1,56 +1,59 @@
 // Nanobanner Pro API を使用したバナー画像生成
-// Google Generative AI SDK (@google/generative-ai) を使用
+// https://nanobanana.co/ - Gemini 3 Pro Image 搭載
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
-
-// APIクライアントの初期化
-function getClient() {
-  const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.NANOBANNER_API_KEY
-  if (!apiKey) {
-    throw new Error('GOOGLE_GENAI_API_KEY または NANOBANNER_API_KEY が設定されていません')
-  }
-  return new GoogleGenerativeAI(apiKey)
-}
+const NANOBANNER_API_ENDPOINT = 'https://api.nanobananai.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent'
 
 // カテゴリ別のデザインガイドライン
 const CATEGORY_STYLES: Record<string, { style: string; colors: string; elements: string }> = {
   telecom: {
-    style: 'モダンでテクノロジー感のある',
-    colors: '青、シアン、白を基調とした',
-    elements: 'スマートフォン、電波アイコン、クラウド',
+    style: 'モダンでテクノロジー感のある、クリーンでプロフェッショナルな',
+    colors: '鮮やかな青（#3B82F6）、シアン（#06B6D4）、白を基調とした、グラデーション背景の',
+    elements: 'スマートフォンのアイコン、電波マーク、クラウドアイコン、速度を表す矢印',
   },
   marketing: {
-    style: 'プロフェッショナルで信頼感のある',
-    colors: '紫、ピンク、白を基調とした',
-    elements: 'グラフ、チャート、上昇矢印',
+    style: '洗練されていて信頼感のある、ビジネス向けの高級感ある',
+    colors: '紫（#8B5CF6）、ピンク（#EC4899）、白を基調とした、美しいグラデーション背景の',
+    elements: '上昇するグラフ、成長を示す矢印、チャートアイコン',
   },
   ec: {
-    style: '華やかで購買意欲を刺激する',
-    colors: 'オレンジ、赤、金色を基調とした',
-    elements: 'ショッピングカート、ギフトボックス、セールタグ',
+    style: '華やかで購買意欲を刺激する、セール感のある緊急性を感じる',
+    colors: 'オレンジ（#F97316）、赤（#EF4444）、金色を基調とした、目を引く鮮やかな',
+    elements: 'ショッピングカート、ギフトボックス、セールタグ、パーセントマーク',
   },
   recruit: {
-    style: '明るく前向きな',
-    colors: '緑、白、青を基調とした',
-    elements: 'オフィス、チーム、握手',
+    style: '明るく前向きで希望に満ちた、プロフェッショナルかつ親しみやすい',
+    colors: '緑（#22C55E）、青（#3B82F6）、白を基調とした、クリーンで明るい',
+    elements: 'オフィスビル、握手するシルエット、チームワークを示すアイコン',
   },
   beauty: {
-    style: 'エレガントで洗練された',
-    colors: 'ピンク、ゴールド、白を基調とした',
-    elements: '花、化粧品ボトル、きらめき',
+    style: 'エレガントで洗練された、女性向けの高級感ある',
+    colors: 'ピンク（#EC4899）、ローズゴールド、白を基調とした、柔らかくフェミニンな',
+    elements: '花のイラスト、化粧品ボトル、きらめきエフェクト、リボン',
   },
   food: {
-    style: '美味しそうで食欲をそそる',
-    colors: '赤、オレンジ、茶色を基調とした',
-    elements: '料理写真、湯気、食材',
+    style: '美味しそうで食欲をそそる、温かみのある',
+    colors: '赤（#EF4444）、オレンジ（#F97316）、茶色を基調とした、食欲を刺激する',
+    elements: '料理のイラスト、湯気エフェクト、新鮮な食材、レストランの雰囲気',
   },
 }
 
 // A/B/Cパターンの訴求タイプ
 const APPEAL_TYPES = [
-  { type: 'A', focus: 'ベネフィット重視', description: 'ユーザーが得られるメリットを強調' },
-  { type: 'B', focus: '緊急性・限定性', description: '今すぐ行動すべき理由を強調' },
-  { type: 'C', focus: '社会的証明', description: '実績や信頼性を強調' },
+  { 
+    type: 'A', 
+    focus: 'ベネフィット重視', 
+    style: 'ユーザーのメリットを大きく強調し、ポジティブで明るいデザイン。メインコピーを画面中央に大きく配置。',
+  },
+  { 
+    type: 'B', 
+    focus: '緊急性・限定性', 
+    style: '「今すぐ」「限定」「残りわずか」などの緊急性を演出。赤や黄色のアクセントを使い、目を引くデザイン。',
+  },
+  { 
+    type: 'C', 
+    focus: '信頼性・実績', 
+    style: '「No.1」「○万人が利用」などの実績を強調。落ち着いた配色で信頼感を演出。',
+  },
 ]
 
 // バナー生成用プロンプトを作成
@@ -62,85 +65,88 @@ function createBannerPrompt(
 ): string {
   const categoryStyle = CATEGORY_STYLES[category] || CATEGORY_STYLES.marketing
   const [width, height] = size.split('x')
-  const aspectRatio = parseInt(width) > parseInt(height) ? '横長' : 
-                      parseInt(width) < parseInt(height) ? '縦長' : '正方形'
+  const aspectRatio = parseInt(width) > parseInt(height) ? '横長（ランドスケープ）' : 
+                      parseInt(width) < parseInt(height) ? '縦長（ポートレート）' : '正方形（スクエア）'
 
   return `
-広告バナー画像を生成してください。
+あなたは日本のトップクリエイティブディレクターです。以下の要件で、日本市場向けの高品質な広告バナー画像を1枚生成してください。
 
-【サイズ】${aspectRatio}（${size}px）
-【スタイル】${categoryStyle.style}デザイン
-【配色】${categoryStyle.colors}配色
-【装飾要素】${categoryStyle.elements}
+【バナー仕様】
+- サイズ: ${aspectRatio}形式（${width}×${height}ピクセル）
+- 用途: デジタル広告バナー（SNS広告、ディスプレイ広告）
 
-【訴求タイプ】${appealType.focus}（${appealType.description}）
+【デザインスタイル】
+${categoryStyle.style}デザインで作成してください。
 
-【メインコピー】"${keyword}"
-※上記テキストをバナー内に読みやすく配置してください
+【配色】
+${categoryStyle.colors}配色を使用してください。
 
-【デザイン要件】
-- 商用広告として使用できるプロフェッショナルなデザイン
-- テキストは読みやすいフォントとサイズで配置
-- 背景とテキストのコントラストを確保
-- CTA（行動喚起）ボタンを含める
-- 高品質でシャープな画像
+【装飾要素】
+${categoryStyle.elements}などのグラフィック要素を適切に配置してください。
+
+【訴求タイプ: ${appealType.focus}】
+${appealType.style}
+
+【メインコピー（必須・日本語で大きく配置）】
+「${keyword}」
+※このテキストをバナーの中央または目立つ位置に、読みやすいフォントサイズで必ず配置してください。
+
+【必須デザイン要件】
+1. 商用広告として使用できるプロフェッショナルなデザイン
+2. 日本語テキストは読みやすく、背景とのコントラストを確保
+3. CTAボタン（「詳しくはこちら」「今すぐチェック」など）を右下または下部に配置
+4. 余白を適切に取り、情報を詰め込みすぎない
+5. 高解像度でシャープな画像
+6. ブランドイメージを損なわないクリーンなデザイン
+
+画像のみを生成してください。説明は不要です。
 `.trim()
 }
 
-// 単一のバナーを生成（テキストベースの説明を生成）
+// Nanobanner Pro APIを呼び出してバナーを生成
 async function generateSingleBanner(
-  genAI: GoogleGenerativeAI,
-  prompt: string,
-  size: string,
-  appealType: string
+  apiKey: string,
+  prompt: string
 ): Promise<string> {
   try {
-    // gemini-1.5-flash は画像生成には対応していないため、
-    // テキストプロンプトを生成し、プレースホルダー画像を返す
-    // 実際の画像生成には Imagen API または別のサービスが必要
-    
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-    
-    const enhancedPrompt = `
-以下のバナー広告のコピーとデザイン提案を日本語で作成してください：
+    const response = await fetch(NANOBANNER_API_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: prompt }]
+        }],
+        generationConfig: {
+          responseModalities: ["TEXT", "IMAGE"],
+        },
+      }),
+    })
 
-${prompt}
-
-回答形式：
-1. キャッチコピー（20文字以内）
-2. サブコピー（40文字以内）
-3. CTAボタンテキスト（8文字以内）
-4. 推奨配色（HEXコード3色）
-`
-
-    const result = await model.generateContent(enhancedPrompt)
-    const response = await result.response
-    const text = response.text()
-    
-    // レスポンスからコピーを抽出し、プレースホルダー画像を生成
-    const lines = text.split('\n').filter(line => line.trim())
-    const catchCopy = lines[0]?.replace(/^[0-9.、：:]+/, '').trim().slice(0, 20) || keyword
-    
-    // カテゴリに応じた色を選択
-    const colors: Record<string, string> = {
-      telecom: '3B82F6',
-      marketing: '8B5CF6',
-      ec: 'F97316',
-      recruit: '22C55E',
-      beauty: 'EC4899',
-      food: 'EF4444',
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Nanobanner API error:', response.status, errorText)
+      throw new Error(`API Error: ${response.status}`)
     }
-    const color = colors[appealType === 'A' ? 'marketing' : appealType === 'B' ? 'ec' : 'telecom'] || '8B5CF6'
+
+    const result = await response.json()
     
-    // SVGベースのプレースホルダー画像を生成
-    const [width, height] = size.split('x').map(Number)
-    const encodedText = encodeURIComponent(catchCopy || keyword)
-    
-    return `https://via.placeholder.com/${width}x${height}/${color}/FFFFFF?text=${encodedText}`
+    // レスポンスから画像データを抽出
+    if (result.candidates && result.candidates[0]?.content?.parts) {
+      for (const part of result.candidates[0].content.parts) {
+        if (part.inlineData?.mimeType?.startsWith('image/')) {
+          // Base64画像データをData URLに変換
+          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
+        }
+      }
+    }
+
+    throw new Error('画像が生成されませんでした')
   } catch (error: any) {
     console.error('Banner generation error:', error)
-    // エラー時はプレースホルダーを返す
-    return `https://via.placeholder.com/${size.replace('x', '/')}/8B5CF6/FFFFFF?text=Banner`
+    throw error
   }
 }
 
@@ -150,24 +156,44 @@ export async function generateBanners(
   keyword: string,
   size: string = '1080x1080'
 ): Promise<{ banners: string[]; error?: string }> {
+  const apiKey = process.env.GOOGLE_GENAI_API_KEY || process.env.NANOBANNER_API_KEY
+  
+  if (!apiKey) {
+    console.error('API key not configured')
+    return { 
+      banners: [], 
+      error: 'APIキーが設定されていません。環境変数 GOOGLE_GENAI_API_KEY を設定してください。' 
+    }
+  }
+
   try {
-    const genAI = getClient()
-    
     const banners: string[] = []
     
-    // 3パターン順次生成（API制限を考慮）
+    // 3パターン順次生成（レート制限を考慮）
     for (const appealType of APPEAL_TYPES) {
       try {
         const prompt = createBannerPrompt(category, keyword, size, appealType)
-        const banner = await generateSingleBanner(genAI, prompt, size, appealType.type)
+        console.log(`Generating banner type ${appealType.type}...`)
+        
+        const banner = await generateSingleBanner(apiKey, prompt)
         banners.push(banner)
         
         // レート制限を避けるため少し待機
-        await new Promise(resolve => setTimeout(resolve, 500))
-      } catch (error) {
-        console.error('Banner generation failed:', error)
+        if (APPEAL_TYPES.indexOf(appealType) < APPEAL_TYPES.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
+      } catch (error: any) {
+        console.error(`Banner ${appealType.type} generation failed:`, error)
         // エラーの場合はプレースホルダーを追加
-        banners.push(`https://via.placeholder.com/${size.replace('x', '/')}/8B5CF6/FFFFFF?text=Pattern${appealType.type}`)
+        const [w, h] = size.split('x')
+        banners.push(`https://placehold.co/${w}x${h}/8B5CF6/FFFFFF?text=Pattern+${appealType.type}`)
+      }
+    }
+
+    if (banners.every(b => b.startsWith('https://placehold'))) {
+      return {
+        banners,
+        error: 'すべてのバナー生成に失敗しました。APIキーを確認してください。'
       }
     }
 

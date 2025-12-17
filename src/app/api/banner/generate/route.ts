@@ -6,18 +6,20 @@ import { generateBanners, isNanobannerConfigured } from '@/lib/nanobanner'
 // レート制限用（簡易的な実装）
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 const RATE_LIMIT_WINDOW = 60 * 1000 // 1分
-const RATE_LIMIT_MAX = 5 // 1分あたり5リクエストまで
+const RATE_LIMIT_MAX_GUEST = 3 // ゲストは1分あたり3リクエストまで
+const RATE_LIMIT_MAX_USER = 10 // ログインユーザーは1分あたり10リクエストまで
 
-function checkRateLimit(ip: string): boolean {
+function checkRateLimit(ip: string, isGuest: boolean): boolean {
   const now = Date.now()
   const record = rateLimitMap.get(ip)
+  const maxRequests = isGuest ? RATE_LIMIT_MAX_GUEST : RATE_LIMIT_MAX_USER
   
   if (!record || record.resetTime < now) {
     rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
     return true
   }
   
-  if (record.count >= RATE_LIMIT_MAX) {
+  if (record.count >= maxRequests) {
     return false
   }
   
@@ -27,34 +29,21 @@ function checkRateLimit(ip: string): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    // セッションチェック
+    const session = await getServerSession(authOptions)
+    const isGuest = !session
+
     // IPアドレスを取得
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
                request.headers.get('x-real-ip') || 
                'unknown'
 
     // レート制限チェック
-    if (!checkRateLimit(ip)) {
+    if (!checkRateLimit(ip, isGuest)) {
       return NextResponse.json(
-        { error: 'リクエストが多すぎます。しばらく待ってから再試行してください。' },
+        { error: 'リクエストが多すぎます。1分ほど待ってから再試行してください。' },
         { status: 429 }
       )
-    }
-
-    // API設定チェック
-    if (!isNanobannerConfigured()) {
-      console.warn('Nanobanner API is not configured, using mock data')
-      // モックデータを返す（API未設定時）
-      const { category, size } = await request.json()
-      const mockBanners = [
-        `https://via.placeholder.com/${size?.replace('x', '/') || '1080/1080'}/8B5CF6/FFFFFF?text=A`,
-        `https://via.placeholder.com/${size?.replace('x', '/') || '1080/1080'}/EC4899/FFFFFF?text=B`,
-        `https://via.placeholder.com/${size?.replace('x', '/') || '1080/1080'}/10B981/FFFFFF?text=C`,
-      ]
-      return NextResponse.json({ 
-        banners: mockBanners,
-        isMock: true,
-        message: 'API未設定のためモックデータを返しています'
-      })
     }
 
     // リクエストボディを取得
@@ -83,15 +72,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // セッションチェック（ゲストも許可、ただしログインユーザーは優先）
-    const session = await getServerSession(authOptions)
-    const isGuest = !session
-
-    // ゲストの場合のチェック（フロントエンドでも制御しているが念のため）
-    if (isGuest) {
-      // 本番環境ではここでゲストの使用回数をサーバーサイドでも管理することを推奨
-      console.log(`Guest banner generation request from IP: ${ip}`)
+    // API設定チェック
+    if (!isNanobannerConfigured()) {
+      console.warn('Nanobanner API is not configured')
+      return NextResponse.json(
+        { error: 'バナー生成APIが設定されていません。管理者にお問い合わせください。' },
+        { status: 503 }
+      )
     }
+
+    console.log(`Banner generation request - Category: ${category}, Size: ${size}, Guest: ${isGuest}`)
 
     // バナー生成
     const result = await generateBanners(
@@ -100,7 +90,7 @@ export async function POST(request: NextRequest) {
       size || '1080x1080'
     )
 
-    if (result.error) {
+    if (result.error && result.banners.length === 0) {
       return NextResponse.json(
         { error: result.error },
         { status: 500 }
@@ -110,6 +100,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       banners: result.banners,
       isGuest,
+      warning: result.error, // 一部失敗した場合の警告
     })
 
   } catch (error: any) {
@@ -129,4 +120,3 @@ export async function GET() {
     { status: 405 }
   )
 }
-
