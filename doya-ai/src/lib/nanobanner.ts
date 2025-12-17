@@ -1,5 +1,5 @@
 // ========================================
-// Imagen 4 でバナー画像生成
+// Nano Banana Pro (Gemini 3 Pro Image) でバナー画像生成
 // ========================================
 // 
 // 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
@@ -14,16 +14,17 @@
 // 4. 生成されたAPIキーをコピー
 //
 // 【使用モデル】
-// - imagen-4.0-generate-preview-05-20: Imagen 4 最新モデル
-// - 高品質な画像生成、フォトリアリズム
-// - ロゴや商品デザイン、タイポグラフィに最適
+// - gemini-2.0-flash-exp-image-generation: Nano Banana Pro
+// - プロフェッショナルなアセット制作と複雑な指示に対応
+// - 高忠実度のテキストレンダリング
+// - 最大4K解像度の画像生成
 //
 // ========================================
 
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-// Imagen 4 最新モデル
-const IMAGEN_MODEL = 'imagen-4.0-generate-preview-05-20'
+// Nano Banana Pro (Gemini 2.0 Flash Exp Image Generation)
+const NANO_BANANA_PRO_MODEL = 'gemini-2.0-flash-exp-image-generation'
 
 // APIキーを取得
 function getApiKey(): string {
@@ -501,7 +502,7 @@ Generate a HIGH-QUALITY banner with PERFECT Japanese text rendering now.`
 }
 
 // ========================================
-// Imagen 4 で画像生成
+// Nano Banana Pro (Gemini 2.0 Flash Exp) で画像生成
 // 公式ドキュメント: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
 // ========================================
 async function generateSingleBanner(
@@ -510,27 +511,27 @@ async function generateSingleBanner(
 ): Promise<string> {
   const apiKey = getApiKey()
   
-  console.log('Calling Imagen 4...')
-  console.log('Model:', IMAGEN_MODEL)
+  console.log('Calling Nano Banana Pro...')
+  console.log('Model:', NANO_BANANA_PRO_MODEL)
   
-  const aspectRatio = getAspectRatio(size)
+  // Nano Banana Pro generateContent エンドポイント
+  const endpoint = `${GEMINI_API_BASE}/models/${NANO_BANANA_PRO_MODEL}:generateContent?key=${apiKey}`
   
-  // Imagen 4 generateImages エンドポイント
-  const endpoint = `${GEMINI_API_BASE}/models/${IMAGEN_MODEL}:generateImages?key=${apiKey}`
-  
-  // Imagen 4 リクエスト形式
+  // Gemini generateContent リクエスト形式（公式ドキュメント準拠）
   const requestBody = {
-    prompt: prompt,
-    config: {
-      numberOfImages: 1,
-      aspectRatio: aspectRatio,
-      safetyFilterLevel: 'BLOCK_LOW_AND_ABOVE',
-      personGeneration: 'ALLOW_ADULT',
-    },
+    contents: [
+      {
+        parts: [
+          { text: prompt }
+        ]
+      }
+    ],
+    generationConfig: {
+      responseModalities: ["TEXT", "IMAGE"]
+    }
   }
   
-  console.log('Calling Imagen 4 API...')
-  console.log('Aspect Ratio:', aspectRatio)
+  console.log('Calling Nano Banana Pro API...')
   
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -542,27 +543,26 @@ async function generateSingleBanner(
   
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('Imagen 4 API error:', response.status, errorText)
+    console.error('Nano Banana Pro API error:', response.status, errorText)
     throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 300)}`)
   }
   
   const result = await response.json()
-  console.log('Imagen 4 API Response received')
+  console.log('Nano Banana Pro API Response received')
   
-  // レスポンスから画像を抽出（Imagen形式）
-  if (result.generatedImages && result.generatedImages[0]?.image?.imageBytes) {
-    console.log('Image found in Imagen 4 response!')
-    return `data:image/png;base64,${result.generatedImages[0].image.imageBytes}`
-  }
-  
-  // 別のレスポンス形式も試す
-  if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
-    console.log('Image found in predictions format!')
-    return `data:image/png;base64,${result.predictions[0].bytesBase64Encoded}`
+  // レスポンスから画像を抽出（Gemini generateContent形式）
+  if (result.candidates && result.candidates[0]?.content?.parts) {
+    for (const part of result.candidates[0].content.parts) {
+      if (part.inlineData) {
+        console.log('Image found in Nano Banana Pro response!')
+        const mimeType = part.inlineData.mimeType || 'image/png'
+        return `data:${mimeType};base64,${part.inlineData.data}`
+      }
+    }
   }
   
   console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 500))
-  throw new Error('画像が生成されませんでした')
+  throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
 }
 
 // サイズからアスペクト比を計算
@@ -600,21 +600,21 @@ export async function generateBanners(
   const isYouTube = options.purpose === 'youtube'
   const appealTypes = isYouTube ? YOUTUBE_APPEAL_TYPES : APPEAL_TYPES
 
-  console.log(`Starting ${isYouTube ? 'YouTube thumbnail' : 'banner'} generation with Imagen 4`)
+  console.log(`Starting ${isYouTube ? 'YouTube thumbnail' : 'banner'} generation with Nano Banana Pro`)
   console.log(`Category: ${category}, Purpose: ${options.purpose}, Size: ${size}`)
-  console.log(`Model: ${IMAGEN_MODEL}`)
+  console.log(`Model: ${NANO_BANANA_PRO_MODEL}`)
 
   try {
     const banners: string[] = []
     const errors: string[] = []
     
-    // 3パターン順次生成（Imagen 4 使用）
+    // 3パターン順次生成（Nano Banana Pro のみ使用）
     for (const appealType of appealTypes) {
       try {
         const prompt = createBannerPrompt(category, keyword, size, appealType, options)
         console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} type ${appealType.type} (${appealType.japanese})...`)
         
-        // Imagen 4 で生成
+        // Nano Banana Pro で生成（他のモデルは使用しない）
         const banner = await generateSingleBanner(prompt, size)
         
         banners.push(banner)
@@ -639,7 +639,7 @@ export async function generateBanners(
     if (banners.every(b => b.startsWith('https://placehold'))) {
       return {
         banners,
-        error: `⚠️ Gemini 2.5 Flash Image で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・GOOGLE_GENAI_API_KEY が正しいか確認\n・APIキーが有効になっているか確認\n・Google AI Studio でAPIキーを再発行してみてください`
+        error: `⚠️ Nano Banana Pro で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・GOOGLE_GENAI_API_KEY が正しいか確認\n・APIキーが有効になっているか確認\n・Google AI Studio でAPIキーを再発行してみてください`
       }
     }
 
