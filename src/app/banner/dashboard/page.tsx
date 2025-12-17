@@ -10,6 +10,7 @@ import {
   Upload, X, Image as ImageIcon, User, Building2, Video, Mail, Gift, Megaphone, Target, Calendar
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
+import { GUEST_LIMITS, getGuestUsage, setGuestUsage as saveGuestUsage, getGuestRemainingCount } from '@/lib/pricing'
 
 // カテゴリ（業種）
 const CATEGORIES = [
@@ -121,10 +122,6 @@ const GENERATION_TIPS = [
   '📱 用途に合わせたサイズで最適化',
 ]
 
-// ゲストの1日の上限
-const GUEST_DAILY_LIMIT = 3
-const GUEST_STORAGE_KEY = 'banner_guest_usage'
-
 // 画像をBase64に変換
 async function imageToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -165,22 +162,6 @@ async function downloadImage(url: string, filename: string) {
   }
 }
 
-function getGuestUsage(): { count: number; date: string } {
-  if (typeof window === 'undefined') return { count: 0, date: '' }
-  const stored = localStorage.getItem(GUEST_STORAGE_KEY)
-  if (!stored) return { count: 0, date: '' }
-  try {
-    return JSON.parse(stored)
-  } catch {
-    return { count: 0, date: '' }
-  }
-}
-
-function setGuestUsage(count: number) {
-  if (typeof window === 'undefined') return
-  const today = new Date().toISOString().split('T')[0]
-  localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify({ count, date: today }))
-}
 
 // 画像アップロードコンポーネント
 function ImageUploader({ 
@@ -202,13 +183,24 @@ function ImageUploader({
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!file.type.startsWith('image/')) {
-      toast.error('画像ファイルを選択してください')
+    // 許可されるMIMEタイプを明確に指定
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error('JPEG、PNG、GIF、WebP形式の画像を選択してください')
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('5MB以下の画像を選択してください')
+    // ファイル拡張子チェック
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+    if (!ext || !ALLOWED_EXTENSIONS.includes(ext)) {
+      toast.error('不正なファイル形式です')
+      return
+    }
+
+    // ファイルサイズ制限（2MBに縮小してパフォーマンス向上）
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('2MB以下の画像を選択してください')
       return
     }
 
@@ -416,7 +408,7 @@ export default function BannerDashboardPage() {
   // ゲスト使用状況を読み込み
   useEffect(() => {
     if (isGuest && typeof window !== 'undefined') {
-      const usage = getGuestUsage()
+      const usage = getGuestUsage('banner')
       const today = new Date().toISOString().split('T')[0]
       if (usage.date === today) {
         setGuestUsageCount(usage.count)
@@ -458,7 +450,7 @@ export default function BannerDashboardPage() {
     }
   }, [elapsedTime, isGenerating, currentStep])
 
-  const guestRemainingCount = GUEST_DAILY_LIMIT - guestUsageCount
+  const guestRemainingCount = GUEST_LIMITS.banner.dailyLimit - guestUsageCount
   const canGuestGenerate = guestRemainingCount > 0
   const canGenerate = category !== '' && keyword.trim() !== '' && (session || canGuestGenerate)
 
@@ -527,7 +519,7 @@ export default function BannerDashboardPage() {
       if (isGuest) {
         const newCount = guestUsageCount + 1
         setGuestUsageCount(newCount)
-        setGuestUsage(newCount)
+        saveGuestUsage('banner', newCount)
       }
     } catch (err: any) {
       setError(err.message || 'エラーが発生しました。')
@@ -605,7 +597,7 @@ export default function BannerDashboardPage() {
                 <div>
                   <p className="font-bold text-gray-900">🆓 お試しモード</p>
                   <p className="text-sm text-gray-600">
-                    残り <span className="font-bold text-violet-600">{guestRemainingCount}回</span>（1日{GUEST_DAILY_LIMIT}回まで）
+                    残り <span className="font-bold text-violet-600">{guestRemainingCount}回</span>（1日{GUEST_LIMITS.banner.dailyLimit}回まで）
                   </p>
                 </div>
               </div>

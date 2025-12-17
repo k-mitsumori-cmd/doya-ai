@@ -2,6 +2,8 @@
 // SEO設定
 // ============================================
 
+import { KANTAN_PRICING, BANNER_PRICING } from './pricing'
+
 export const SITE_CONFIG = {
   name: 'ドヤAI',
   tagline: 'ビジネスを加速するAIツール群',
@@ -40,7 +42,7 @@ export const SERVICE_SEO = {
       },
       pricing: {
         title: '料金プラン | カンタンドヤAI',
-        description: '無料プランは1日3回まで。プロプランは1日100回まで生成可能。月額2,980円。',
+        description: `無料プランはゲスト1日${KANTAN_PRICING.guestLimit}回、ログイン後1日${KANTAN_PRICING.freeLimit}回まで。プロプランは1日${KANTAN_PRICING.proLimit}回まで生成可能。月額${KANTAN_PRICING.plans[1].priceLabel}。`,
       },
       guide: {
         title: '使い方ガイド | カンタンドヤAI',
@@ -70,7 +72,7 @@ export const SERVICE_SEO = {
       },
       pricing: {
         title: '料金プラン | ドヤバナーAI',
-        description: '無料プランは1日1枚まで。プロプランは無制限に生成可能。月額9,980円。',
+        description: `無料プランはゲスト1日${BANNER_PRICING.guestLimit}回、ログイン後1日${BANNER_PRICING.freeLimit}回まで。プロプランは無制限に生成可能。月額${BANNER_PRICING.plans[1].priceLabel}。`,
       },
       guide: {
         title: '使い方ガイド | ドヤバナーAI',
@@ -112,6 +114,8 @@ export function generateOrganizationSchema() {
 
 export function generateSoftwareApplicationSchema(service: 'kantan' | 'banner') {
   const seo = SERVICE_SEO[service]
+  const pricing = service === 'kantan' ? KANTAN_PRICING : BANNER_PRICING
+  
   const serviceData = {
     kantan: {
       name: 'カンタンドヤAI',
@@ -120,7 +124,7 @@ export function generateSoftwareApplicationSchema(service: 'kantan' | 'banner') 
         '@type': 'Offer',
         price: '0',
         priceCurrency: 'JPY',
-        description: '無料プラン（1日3回まで）',
+        description: `無料プラン（ゲスト1日${pricing.guestLimit}回まで）`,
       },
     },
     banner: {
@@ -130,7 +134,7 @@ export function generateSoftwareApplicationSchema(service: 'kantan' | 'banner') 
         '@type': 'Offer',
         price: '0',
         priceCurrency: 'JPY',
-        description: '無料プラン（1日1枚まで）',
+        description: `無料プラン（ゲスト1日${pricing.guestLimit}回まで）`,
       },
     },
   }
@@ -160,4 +164,3 @@ export function generatePageTitle(title: string, suffix = true): string {
   }
   return title
 }
-

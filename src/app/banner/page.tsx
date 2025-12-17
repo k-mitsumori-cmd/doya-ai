@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { ArrowRight, Sparkles, Crown, LogIn, Check } from 'lucide-react'
 import { getServiceById } from '@/lib/services'
+import { BANNER_PRICING } from '@/lib/pricing'
 
 // カテゴリ一覧
 const categories = [
@@ -155,36 +156,37 @@ export default function BannerTopPage() {
           </h2>
           
           <div className="grid sm:grid-cols-2 gap-6">
+            {/* 無料プラン */}
             <div className="p-6 bg-white rounded-2xl border-2 border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">無料プラン</h3>
-              <p className="text-3xl font-bold text-gray-900 mb-4">¥0<span className="text-base font-normal text-gray-500">/月</span></p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{BANNER_PRICING.plans[0].name}</h3>
+              <p className="text-3xl font-bold text-gray-900 mb-4">{BANNER_PRICING.plans[0].priceLabel}</p>
               <ul className="space-y-2 text-gray-600 mb-6">
-                <li>✓ 1日1枚まで生成（ゲスト）</li>
-                <li>✓ 1日3枚まで生成（ログイン）</li>
-                <li>✓ 全カテゴリ利用可能</li>
+                {BANNER_PRICING.plans[0].features.map((feature, i) => (
+                  <li key={i}>✓ {feature.text}</li>
+                ))}
               </ul>
               <Link href="/banner/dashboard">
                 <button className="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors">
-                  ログインせずに試す
+                  {BANNER_PRICING.plans[0].cta}
                 </button>
               </Link>
             </div>
             
+            {/* プロプラン */}
             <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border-2 border-purple-300 relative">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-purple-600 text-white text-sm font-bold rounded-full">
-                おすすめ
+                人気
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">プロプラン</h3>
-              <p className="text-3xl font-bold text-purple-600 mb-4">¥9,980<span className="text-base font-normal text-gray-500">/月</span></p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{BANNER_PRICING.plans[1].name}</h3>
+              <p className="text-3xl font-bold text-purple-600 mb-4">{BANNER_PRICING.plans[1].priceLabel}<span className="text-base font-normal text-gray-500">{BANNER_PRICING.plans[1].period}</span></p>
               <ul className="space-y-2 text-gray-600 mb-6">
-                <li>✓ 無制限に生成</li>
-                <li>✓ 全カテゴリ利用可能</li>
-                <li>✓ 高解像度出力</li>
-                <li>✓ ブランドカラー設定</li>
+                {BANNER_PRICING.plans[1].features.map((feature, i) => (
+                  <li key={i}>✓ {feature.text}</li>
+                ))}
               </ul>
               <Link href="/banner/pricing">
                 <button className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-xl transition-colors">
-                  プロプランに登録
+                  {BANNER_PRICING.plans[1].cta}
                 </button>
               </Link>
             </div>

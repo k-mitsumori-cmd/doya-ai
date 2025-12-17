@@ -3,9 +3,12 @@
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Check, ArrowLeft, Sparkles, Crown, Zap } from 'lucide-react'
+import { BANNER_PRICING } from '@/lib/pricing'
 
 export default function BannerPricingPage() {
   const { data: session } = useSession()
+  const freePlan = BANNER_PRICING.plans[0]
+  const proPlan = BANNER_PRICING.plans[1]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
@@ -43,23 +46,17 @@ export default function BannerPricingPage() {
               <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Sparkles className="w-7 h-7 text-gray-600" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">無料プラン</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{freePlan.name}</h2>
               <div className="mt-4">
-                <span className="text-4xl font-bold text-gray-900">¥0</span>
-                <span className="text-gray-500">/月</span>
+                <span className="text-4xl font-bold text-gray-900">{freePlan.priceLabel}</span>
               </div>
             </div>
             
             <ul className="space-y-4 mb-8">
-              {[
-                '1日1枚まで生成（ゲスト）',
-                '1日3枚まで生成（ログイン）',
-                '全カテゴリ利用可能',
-                '標準解像度出力',
-              ].map((item, i) => (
+              {freePlan.features.map((feature, i) => (
                 <li key={i} className="flex items-center gap-3 text-gray-700">
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>{item}</span>
+                  <span>{feature.text}</span>
                 </li>
               ))}
             </ul>
@@ -67,13 +64,13 @@ export default function BannerPricingPage() {
             {session ? (
               <Link href="/banner/dashboard">
                 <button className="w-full py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
-                  現在のプラン
+                  ダッシュボードへ
                 </button>
               </Link>
             ) : (
               <Link href="/banner/dashboard">
                 <button className="w-full py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
-                  無料で試す
+                  {freePlan.cta}
                 </button>
               </Link>
             )}
@@ -91,31 +88,25 @@ export default function BannerPricingPage() {
               <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Crown className="w-7 h-7 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">プロプラン</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{proPlan.name}</h2>
               <div className="mt-4">
-                <span className="text-4xl font-bold text-purple-600">¥9,980</span>
-                <span className="text-gray-500">/月</span>
+                <span className="text-4xl font-bold text-purple-600">{proPlan.priceLabel}</span>
+                <span className="text-gray-500">{proPlan.period}</span>
               </div>
             </div>
             
             <ul className="space-y-4 mb-8">
-              {[
-                '無制限に生成',
-                '全カテゴリ利用可能',
-                '高解像度出力',
-                'ブランドカラー設定',
-                '優先サポート',
-              ].map((item, i) => (
+              {proPlan.features.map((feature, i) => (
                 <li key={i} className="flex items-center gap-3 text-gray-700">
                   <Check className="w-5 h-5 text-purple-500 flex-shrink-0" />
-                  <span>{item}</span>
+                  <span>{feature.text}</span>
                 </li>
               ))}
             </ul>
 
             <button className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
               <Zap className="w-5 h-5" />
-              プロプランに登録
+              {proPlan.cta}
             </button>
             
             <p className="text-center text-sm text-gray-500 mt-4">
@@ -129,7 +120,7 @@ export default function BannerPricingPage() {
           <h3 className="text-xl font-bold text-gray-900 text-center mb-8">よくある質問</h3>
           <div className="space-y-4">
             {[
-              { q: '無料プランでどこまで使えますか？', a: 'ゲストは1日1枚、ログインすると1日3枚まで生成できます。' },
+              { q: '無料プランでどこまで使えますか？', a: `全カテゴリをゲストは1日${BANNER_PRICING.guestLimit}回、ログイン後は1日${BANNER_PRICING.freeLimit}回まで生成できます。` },
               { q: 'プロプランはいつでも解約できますか？', a: 'はい、いつでも解約可能です。解約後も期間終了まで利用できます。' },
               { q: '支払い方法は？', a: 'クレジットカード（Visa, Mastercard, JCB, AMEX）に対応しています。' },
             ].map((faq, i) => (
@@ -144,4 +135,3 @@ export default function BannerPricingPage() {
     </div>
   )
 }
-

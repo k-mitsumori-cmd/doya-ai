@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { ArrowRight, Sparkles, Crown, LogIn } from 'lucide-react'
 import { getServiceById } from '@/lib/services'
+import { KANTAN_PRICING } from '@/lib/pricing'
 
 // 人気テンプレート
 const templates = [
@@ -180,36 +181,37 @@ export default function KantanTopPage() {
           </h2>
           
           <div className="grid sm:grid-cols-2 gap-6">
+            {/* 無料プラン */}
             <div className="p-6 bg-gray-50 rounded-2xl border-2 border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">無料プラン</h3>
-              <p className="text-3xl font-bold text-gray-900 mb-4">¥0<span className="text-base font-normal text-gray-500">/月</span></p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{KANTAN_PRICING.plans[0].name}</h3>
+              <p className="text-3xl font-bold text-gray-900 mb-4">{KANTAN_PRICING.plans[0].priceLabel}</p>
               <ul className="space-y-2 text-gray-600 mb-6">
-                <li>✓ 1日3回まで生成</li>
-                <li>✓ 全68テンプレート利用可能</li>
-                <li>✓ 履歴保存（7日間）</li>
+                {KANTAN_PRICING.plans[0].features.map((feature, i) => (
+                  <li key={i}>✓ {feature.text}</li>
+                ))}
               </ul>
-              <Link href="/auth/signin?service=kantan">
+              <Link href="/kantan/dashboard">
                 <button className="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors">
-                  無料で始める
+                  {KANTAN_PRICING.plans[0].cta}
                 </button>
               </Link>
             </div>
             
+            {/* プロプラン */}
             <div className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-300 relative">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-blue-600 text-white text-sm font-bold rounded-full">
-                おすすめ
+                人気
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">プロプラン</h3>
-              <p className="text-3xl font-bold text-blue-600 mb-4">¥2,980<span className="text-base font-normal text-gray-500">/月</span></p>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{KANTAN_PRICING.plans[1].name}</h3>
+              <p className="text-3xl font-bold text-blue-600 mb-4">{KANTAN_PRICING.plans[1].priceLabel}<span className="text-base font-normal text-gray-500">{KANTAN_PRICING.plans[1].period}</span></p>
               <ul className="space-y-2 text-gray-600 mb-6">
-                <li>✓ 1日100回まで生成</li>
-                <li>✓ 全68テンプレート利用可能</li>
-                <li>✓ 履歴保存（無制限）</li>
-                <li>✓ 優先サポート</li>
+                {KANTAN_PRICING.plans[1].features.map((feature, i) => (
+                  <li key={i}>✓ {feature.text}</li>
+                ))}
               </ul>
               <Link href="/kantan/pricing">
                 <button className="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold rounded-xl transition-colors">
-                  プロプランに登録
+                  {KANTAN_PRICING.plans[1].cta}
                 </button>
               </Link>
             </div>
