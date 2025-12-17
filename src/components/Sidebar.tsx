@@ -6,14 +6,15 @@ import { signOut, useSession } from 'next-auth/react'
 import {
   Home,
   Sparkles,
-  FileText,
   Clock,
   LogOut,
   Menu,
   X,
   User,
+  Settings,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { TOOLS } from '@/lib/tools'
 
 // モバイルヘッダーコンポーネント（高さ60px固定）
 export function MobileHeader({ onMenuClick }: { onMenuClick: () => void }) {
@@ -21,7 +22,7 @@ export function MobileHeader({ onMenuClick }: { onMenuClick: () => void }) {
     <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 h-[60px] flex items-center px-4">
       <div className="flex items-center justify-between w-full">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-blue-500 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <span className="font-bold text-base text-gray-800">カンタンドヤAI</span>
@@ -60,18 +61,14 @@ export function Sidebar() {
     }
   }, [isMobileMenuOpen])
 
-  const menuItems = [
-    { icon: Home, label: 'ホーム', href: '/dashboard' },
-    { icon: FileText, label: 'テンプレート一覧', href: '/dashboard/text' },
-    { icon: Clock, label: '作成履歴', href: '/dashboard/history' },
-  ]
-
   const isActive = (href: string) => {
     if (href === '/dashboard') {
       return pathname === '/dashboard'
     }
     return pathname.startsWith(href)
   }
+
+  const activeTools = TOOLS.filter(tool => !tool.comingSoon)
 
   return (
     <>
@@ -97,7 +94,7 @@ export function Sidebar() {
         <div className="h-16 flex items-center px-4 border-b border-gray-100">
           <div className="flex items-center justify-between w-full">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <span className="font-bold text-lg text-gray-800">カンタンドヤAI</span>
@@ -115,30 +112,89 @@ export function Sidebar() {
         </div>
 
         {/* ナビゲーション */}
-        <nav className="flex-1 p-3 space-y-1">
-          {menuItems.map((item) => (
-            <Link key={item.href} href={item.href}>
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          {/* ホーム */}
+          <Link href="/dashboard">
+            <div
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-base font-medium ${
+                isActive('/dashboard') && pathname === '/dashboard'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Home className="w-5 h-5" />
+              <span>ホーム</span>
+            </div>
+          </Link>
+
+          {/* ツール一覧 */}
+          <div className="pt-4 pb-2">
+            <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+              ツール
+            </p>
+          </div>
+          
+          {activeTools.map((tool) => (
+            <Link key={tool.id} href={tool.href}>
               <div
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-base font-medium ${
-                  isActive(item.href)
+                  isActive(tool.href)
                     ? 'bg-blue-50 text-blue-600'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <span className="text-xl">{tool.icon}</span>
+                <span className="flex-1">{tool.name}</span>
+                {tool.isNew && (
+                  <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded">
+                    NEW
+                  </span>
+                )}
               </div>
             </Link>
           ))}
+
+          {/* その他 */}
+          <div className="pt-4 pb-2">
+            <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
+              その他
+            </p>
+          </div>
+          
+          <Link href="/dashboard/history">
+            <div
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-base font-medium ${
+                isActive('/dashboard/history')
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Clock className="w-5 h-5" />
+              <span>作成履歴</span>
+            </div>
+          </Link>
+
+          <Link href="/admin">
+            <div
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-base font-medium ${
+                isActive('/admin')
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Settings className="w-5 h-5" />
+              <span>管理画面</span>
+            </div>
+          </Link>
         </nav>
 
         {/* プレミアムバナー */}
         {session?.user && (session?.user as any)?.plan !== 'PREMIUM' && (
           <div className="p-3 border-t border-gray-100">
             <Link href="/pricing">
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl p-3 text-center hover:opacity-90 transition-opacity">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl p-3 text-center hover:opacity-90 transition-opacity">
                 <p className="font-bold text-sm">✨ プレミアムにアップグレード</p>
-                <p className="text-xs opacity-80">1日100回まで生成可能</p>
+                <p className="text-xs opacity-80">全ツール無制限で利用可能</p>
               </div>
             </Link>
           </div>
