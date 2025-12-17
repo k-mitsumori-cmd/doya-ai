@@ -3,8 +3,16 @@
 
 // Google Gemini API エンドポイント
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-// Gemini 3 Pro Image (Nano Banana Pro) モデルID
-const MODEL_ID = 'gemini-2.0-flash-exp-image-generation'
+
+// ========================================
+// Gemini 3 Pro Image (Nano Banana Pro)
+// これが画像生成に使用される唯一のモデル
+// ========================================
+const IMAGE_MODEL_ID = 'gemini-2.0-flash-exp-image-generation'
+
+// リトライ設定（テキスト崩れ時の再生成用）
+const MAX_RETRIES = 2
+const RETRY_DELAY_MS = 1000
 
 // 業種カテゴリ別のデザインガイドライン
 const CATEGORY_STYLES: Record<string, { style: string; colors: string; elements: string }> = {
@@ -400,17 +408,58 @@ The person should match the banner's professional tone and target audience
   }
 
   prompt += `
-=== FINAL REQUIREMENTS ===
-1. Professional commercial advertisement quality
-2. Japanese text "${keyword}" must be clearly visible, LARGE, and readable
-3. Good contrast between text and background (use solid color backing if needed)
-4. Modern, clean, high-quality design
-5. Include the specified CTA button (with readable text)
-6. **NO SMALL TEXT** - All text must be easily readable at a glance
-7. **CLEAN JAPANESE CHARACTERS** - Every kanji, hiragana, katakana must be perfectly formed
-8. **SIMPLE TEXT LAYOUT** - Maximum 3 text layers (main headline, subtitle optional, CTA)
-9. Keep text areas simple with solid backgrounds for maximum readability
-10. If in doubt, make text LARGER not smaller
+=== ⚠️⚠️⚠️ ABSOLUTE REQUIREMENTS FOR JAPANESE TEXT ⚠️⚠️⚠️ ===
+
+**THIS IS THE MOST IMPORTANT PART - JAPANESE TEXT MUST BE PERFECT**
+
+TEXT TO DISPLAY: "${keyword}"
+
+MANDATORY TEXT RULES:
+1. **FONT CHOICE**: Use ONLY clean, modern Japanese Gothic/Sans-serif fonts
+   - Examples: Noto Sans JP, Hiragino Kaku Gothic, Meiryo Gothic
+   - DO NOT use decorative, handwritten, or stylized fonts
+   
+2. **TEXT SIZE**: Main headline must occupy at least 30% of banner width
+   - All text must be clearly readable even when thumbnail-sized
+   - CTA button text must be at least 20% of banner width
+   
+3. **TEXT RENDERING**:
+   - Render each Japanese character PERFECTLY with all strokes visible
+   - Kanji (漢字) must have all radicals and strokes complete
+   - Hiragana (ひらがな) must have smooth, unbroken curves
+   - Katakana (カタカナ) must have sharp, clean angles
+   - DO NOT generate corrupted, broken, or partial characters
+   
+4. **TEXT PLACEMENT**:
+   - Place text on SOLID COLOR backgrounds (not on photos/gradients)
+   - Add a semi-transparent solid rectangle behind text if needed
+   - Never place text where it overlaps with complex imagery
+   - Keep at least 10% padding around text edges
+   
+5. **TEXT EFFECTS**:
+   - Add thick (3-5px) white or dark outline/stroke around text
+   - Use drop shadow for depth (offset: 2-4px, blur: 4-8px)
+   - Maintain at least 7:1 contrast ratio between text and background
+   
+6. **FORBIDDEN**:
+   ❌ Text smaller than 5% of image height
+   ❌ Stretched or compressed characters
+   ❌ Rotated or perspective-transformed text
+   ❌ Overlapping text elements
+   ❌ Text on busy/noisy backgrounds without backing
+   ❌ More than 3 separate text elements
+   ❌ Decorative or artistic fonts that sacrifice readability
+
+=== FINAL OUTPUT ===
+Generate a professional Japanese advertisement banner.
+The text "${keyword}" must be:
+- Crystal clear and perfectly readable
+- Large and prominent
+- On a solid or semi-solid background
+- With proper outline/shadow for visibility
+
+Every single Japanese character must be 100% correct and complete.
+Quality over complexity - if unsure, make it simpler and text larger.
 
 Generate the banner image now.`
 
@@ -424,13 +473,15 @@ function parseBase64Image(base64: string): { mimeType: string; data: string } | 
   return { mimeType: match[1], data: match[2] }
 }
 
-// Gemini APIを使って画像を生成
+// ========================================
+// Gemini 3 Pro Image (Nano Banana Pro) APIを使った画像生成
+// ========================================
 async function generateSingleBanner(
   apiKey: string,
   prompt: string,
   inputImages?: { logo?: string; person?: string }
 ): Promise<string> {
-  const endpoint = `${GEMINI_API_BASE}/models/${MODEL_ID}:generateContent?key=${apiKey}`
+  const endpoint = `${GEMINI_API_BASE}/models/${IMAGE_MODEL_ID}:generateContent?key=${apiKey}`
   
   console.log('Calling Gemini Image API...')
   
@@ -546,13 +597,19 @@ export async function generateBanners(
     const banners: string[] = []
     const errors: string[] = []
     
-    // 3パターン順次生成
+    // 3パターン順次生成（Gemini 3 Pro Image使用）
     for (const appealType of appealTypes) {
       try {
         const prompt = createBannerPrompt(category, keyword, size, appealType, options)
         console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} type ${appealType.type} (${appealType.japanese})...`)
         
-        const banner = await generateSingleBanner(apiKey, prompt, hasInputImages ? inputImages : undefined)
+        // Gemini 3 Pro Image で生成
+        const banner = await generateSingleBanner(
+          apiKey, 
+          prompt, 
+          hasInputImages ? inputImages : undefined
+        )
+        
         banners.push(banner)
         console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generated successfully!`)
         
@@ -568,6 +625,8 @@ export async function generateBanners(
         banners.push(`https://placehold.co/${w}x${h}/8B5CF6/FFFFFF?text=Pattern+${appealType.type}`)
       }
     }
+
+    console.log(`Generation complete.`)
 
     // 全て失敗した場合
     if (banners.every(b => b.startsWith('https://placehold'))) {
