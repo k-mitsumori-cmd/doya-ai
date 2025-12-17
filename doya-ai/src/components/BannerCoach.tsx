@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Sparkles, Loader2, TrendingUp, Lightbulb, Target, 
+  Sparkles, Loader2, TrendingUp, Lightbulb, 
   Palette, BarChart3, Copy, Check, ChevronRight,
-  Star, Zap, Award
+  Star, Zap, Award, Target
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -58,6 +59,14 @@ interface IndustryBenchmark {
   }
 }
 
+const TYPE_LABELS: Record<string, { label: string; icon: string; gradient: string }> = {
+  benefit: { label: 'ベネフィット', icon: '💎', gradient: 'from-blue-500/20 to-cyan-500/20' },
+  urgency: { label: '緊急性', icon: '⚡', gradient: 'from-red-500/20 to-orange-500/20' },
+  social_proof: { label: '社会的証明', icon: '👥', gradient: 'from-purple-500/20 to-violet-500/20' },
+  question: { label: '質問形式', icon: '❓', gradient: 'from-amber-500/20 to-yellow-500/20' },
+  emotional: { label: '感情訴求', icon: '❤️', gradient: 'from-pink-500/20 to-rose-500/20' },
+}
+
 export default function BannerCoach({ keyword, category, useCase, onApplyCopy }: BannerCoachProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'score' | 'copy' | 'benchmark'>('score')
@@ -91,7 +100,7 @@ export default function BannerCoach({ keyword, category, useCase, onApplyCopy }:
         setScore(result.data.score)
         setCopyVariations(result.data.copyVariations)
         setBenchmark(result.data.benchmark)
-        toast.success('AI分析が完了しました！')
+        toast.success('AI分析が完了しました！', { icon: '✨' })
       } else {
         toast.error(result.error || '分析に失敗しました')
       }
@@ -117,43 +126,36 @@ export default function BannerCoach({ keyword, category, useCase, onApplyCopy }:
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600'
-    if (score >= 60) return 'text-yellow-600'
-    return 'text-red-600'
+    if (score >= 80) return 'text-emerald-400'
+    if (score >= 60) return 'text-amber-400'
+    return 'text-red-400'
   }
 
-  const getScoreBg = (score: number) => {
-    if (score >= 80) return 'bg-green-100'
-    if (score >= 60) return 'bg-yellow-100'
-    return 'bg-red-100'
-  }
-
-  const TYPE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
-    benefit: { label: 'ベネフィット', icon: '💎', color: 'bg-blue-100 text-blue-700' },
-    urgency: { label: '緊急性', icon: '⚡', color: 'bg-red-100 text-red-700' },
-    social_proof: { label: '社会的証明', icon: '👥', color: 'bg-purple-100 text-purple-700' },
-    question: { label: '質問形式', icon: '❓', color: 'bg-amber-100 text-amber-700' },
-    emotional: { label: '感情訴求', icon: '❤️', color: 'bg-pink-100 text-pink-700' },
+  const getScoreGradient = (score: number) => {
+    if (score >= 80) return 'from-emerald-500 to-green-500'
+    if (score >= 60) return 'from-amber-500 to-yellow-500'
+    return 'from-red-500 to-orange-500'
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      {/* ヘッダー */}
-      <div className="bg-gradient-to-r from-violet-500 to-purple-600 p-4">
-        <div className="flex items-center justify-between">
+    <div className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 overflow-hidden">
+      {/* Header */}
+      <div className="relative p-5 border-b border-white/5">
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-violet-500/10" />
+        <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/25">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-white font-bold">AIバナーコーチ</h3>
-              <p className="text-white/70 text-sm">プロの視点で分析・改善提案</p>
+              <h3 className="font-bold text-white">AIバナーコーチ</h3>
+              <p className="text-xs text-white/50">プロの視点で分析・改善提案</p>
             </div>
           </div>
           <button
             onClick={analyzeWithCoach}
             disabled={isLoading || !keyword.trim()}
-            className="px-4 py-2 bg-white text-violet-600 font-bold rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-4 py-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm shadow-lg shadow-violet-500/25"
           >
             {isLoading ? (
               <>
@@ -170,180 +172,232 @@ export default function BannerCoach({ keyword, category, useCase, onApplyCopy }:
         </div>
       </div>
 
-      {/* タブ */}
+      {/* Tabs */}
       {(score || copyVariations || benchmark) && (
-        <div className="border-b border-gray-200">
-          <div className="flex">
-            {[
-              { id: 'score', label: '品質スコア', icon: BarChart3 },
-              { id: 'copy', label: 'コピー改善', icon: Lightbulb },
-              { id: 'benchmark', label: '業界データ', icon: TrendingUp },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex-1 px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'text-violet-600 border-b-2 border-violet-600 bg-violet-50'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        <div className="flex border-b border-white/5">
+          {[
+            { id: 'score', label: 'スコア', icon: BarChart3 },
+            { id: 'copy', label: 'コピー改善', icon: Lightbulb },
+            { id: 'benchmark', label: '業界データ', icon: TrendingUp },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex-1 px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-all relative ${
+                activeTab === tab.id
+                  ? 'text-violet-400'
+                  : 'text-white/40 hover:text-white/60'
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+              {activeTab === tab.id && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                />
+              )}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* コンテンツ */}
-      <div className="p-4">
+      {/* Content */}
+      <div className="p-5">
         {!score && !copyVariations && !benchmark ? (
           <div className="text-center py-8">
-            <div className="w-16 h-16 bg-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="w-8 h-8 text-violet-500" />
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mx-auto mb-4">
+              <Target className="w-8 h-8 text-violet-400" />
             </div>
-            <h4 className="font-bold text-gray-900 mb-2">AIがバナーを分析</h4>
-            <p className="text-gray-500 text-sm mb-4">
-              キーワードを入力して「AI分析」をクリックすると、<br />
-              品質スコア・改善提案・業界データが表示されます
+            <h4 className="font-bold text-white mb-2">AIがバナーを分析</h4>
+            <p className="text-white/40 text-sm mb-4">
+              キーワードを入力して「AI分析」をクリック
             </p>
             <div className="flex flex-wrap justify-center gap-2">
-              {['品質スコアリング', 'コピー改善5案', 'CTR予測', '業界ベンチマーク'].map((feature) => (
-                <span key={feature} className="px-3 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+              {['品質スコア', 'コピー5案', 'CTR予測', '業界データ'].map((feature) => (
+                <span key={feature} className="px-3 py-1 bg-white/5 rounded-full text-xs text-white/40">
                   {feature}
                 </span>
               ))}
             </div>
           </div>
         ) : (
-          <>
-            {/* 品質スコアタブ */}
+          <AnimatePresence mode="wait">
+            {/* Score Tab */}
             {activeTab === 'score' && score && (
-              <div className="space-y-4">
-                {/* 総合スコア */}
+              <motion.div
+                key="score"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-4"
+              >
+                {/* Overall Score */}
                 <div className="text-center py-4">
-                  <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full ${getScoreBg(score.overall)}`}>
-                    <span className={`text-4xl font-bold ${getScoreColor(score.overall)}`}>
-                      {score.overall}
-                    </span>
+                  <div className="relative inline-flex items-center justify-center">
+                    <svg className="w-28 h-28 transform -rotate-90">
+                      <circle
+                        cx="56"
+                        cy="56"
+                        r="48"
+                        stroke="currentColor"
+                        strokeWidth="8"
+                        fill="none"
+                        className="text-white/10"
+                      />
+                      <circle
+                        cx="56"
+                        cy="56"
+                        r="48"
+                        stroke="url(#scoreGradient)"
+                        strokeWidth="8"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={`${score.overall * 3.01} 301`}
+                      />
+                      <defs>
+                        <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#8B5CF6" />
+                          <stop offset="100%" stopColor="#D946EF" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className={`text-3xl font-bold ${getScoreColor(score.overall)}`}>
+                        {score.overall}
+                      </span>
+                      <span className="text-xs text-white/40">/ 100</span>
+                    </div>
                   </div>
-                  <p className="text-gray-500 text-sm mt-2">総合スコア</p>
-                  <p className="text-violet-600 font-medium mt-1">
+                  <p className="text-violet-400 font-medium mt-2">
                     予測CTR: {score.predictedCTR}
                   </p>
                 </div>
 
-                {/* 内訳 */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Breakdown */}
+                <div className="space-y-2">
                   {[
-                    { key: 'visualImpact', label: '視覚的インパクト' },
-                    { key: 'messageClarity', label: 'メッセージ明確さ' },
-                    { key: 'ctaEffectiveness', label: 'CTA効果' },
-                    { key: 'targetRelevance', label: 'ターゲット適合' },
-                  ].map((item) => (
-                    <div key={item.key} className="bg-gray-50 rounded-xl p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-500">{item.label}</span>
-                        <span className={`text-sm font-bold ${getScoreColor(score.breakdown[item.key as keyof typeof score.breakdown])}`}>
-                          {score.breakdown[item.key as keyof typeof score.breakdown]}
-                        </span>
+                    { key: 'visualImpact', label: '視覚的インパクト', icon: '👁️' },
+                    { key: 'messageClarity', label: 'メッセージ明確さ', icon: '💬' },
+                    { key: 'ctaEffectiveness', label: 'CTA効果', icon: '🎯' },
+                    { key: 'targetRelevance', label: 'ターゲット適合', icon: '👥' },
+                  ].map((item) => {
+                    const value = score.breakdown[item.key as keyof typeof score.breakdown]
+                    return (
+                      <div key={item.key} className="bg-white/5 rounded-xl p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-white/60 flex items-center gap-1">
+                            <span>{item.icon}</span>
+                            {item.label}
+                          </span>
+                          <span className={`text-sm font-bold ${getScoreColor(value)}`}>
+                            {value}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${value}%` }}
+                            className={`h-full rounded-full bg-gradient-to-r ${getScoreGradient(value)}`}
+                          />
+                        </div>
                       </div>
-                      <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full ${
-                            score.breakdown[item.key as keyof typeof score.breakdown] >= 80 ? 'bg-green-500' :
-                            score.breakdown[item.key as keyof typeof score.breakdown] >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${score.breakdown[item.key as keyof typeof score.breakdown]}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
-                {/* 強み・改善点 */}
+                {/* Strengths & Improvements */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-green-50 rounded-xl p-3">
-                    <h5 className="font-bold text-green-700 text-sm mb-2 flex items-center gap-1">
-                      <Star className="w-4 h-4" /> 強み
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+                    <h5 className="font-bold text-emerald-400 text-xs mb-2 flex items-center gap-1">
+                      <Star className="w-3 h-3" /> 強み
                     </h5>
                     <ul className="space-y-1">
-                      {score.strengths.map((s, i) => (
-                        <li key={i} className="text-xs text-green-700">• {s}</li>
+                      {score.strengths.slice(0, 2).map((s, i) => (
+                        <li key={i} className="text-[11px] text-white/60">• {s}</li>
                       ))}
                     </ul>
                   </div>
-                  <div className="bg-amber-50 rounded-xl p-3">
-                    <h5 className="font-bold text-amber-700 text-sm mb-2 flex items-center gap-1">
-                      <Lightbulb className="w-4 h-4" /> 改善点
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                    <h5 className="font-bold text-amber-400 text-xs mb-2 flex items-center gap-1">
+                      <Lightbulb className="w-3 h-3" /> 改善点
                     </h5>
                     <ul className="space-y-1">
-                      {score.improvements.map((s, i) => (
-                        <li key={i} className="text-xs text-amber-700">• {s}</li>
+                      {score.improvements.slice(0, 2).map((s, i) => (
+                        <li key={i} className="text-[11px] text-white/60">• {s}</li>
                       ))}
                     </ul>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )}
 
-            {/* コピー改善タブ */}
+            {/* Copy Tab */}
             {activeTab === 'copy' && copyVariations && (
-              <div className="space-y-3">
-                {/* ベストピック */}
-                <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-4 border border-violet-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Award className="w-5 h-5 text-violet-600" />
-                    <span className="font-bold text-violet-700">AIおすすめ</span>
+              <motion.div
+                key="copy"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-3"
+              >
+                {/* Best Pick */}
+                <div className="relative bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border border-violet-500/30 rounded-xl p-4">
+                  <div className="absolute -top-2 -right-2">
+                    <span className="px-2 py-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-[10px] font-bold rounded-full">
+                      AIおすすめ
+                    </span>
                   </div>
-                  <p className="text-gray-900 font-medium mb-2">{copyVariations.bestPick.copy}</p>
-                  <p className="text-sm text-gray-600 mb-3">{copyVariations.bestPick.reason}</p>
+                  <p className="text-white font-medium text-sm mb-2">{copyVariations.bestPick.copy}</p>
+                  <p className="text-xs text-white/50 mb-3">{copyVariations.bestPick.reason}</p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleCopyCopy(copyVariations.bestPick.copy, -1)}
-                      className="px-3 py-1.5 bg-white text-violet-600 text-sm font-medium rounded-lg hover:bg-violet-100 transition-colors flex items-center gap-1"
+                      className="px-3 py-1.5 bg-white/10 text-white/80 text-xs font-medium rounded-lg hover:bg-white/20 transition-colors flex items-center gap-1"
                     >
-                      {copiedIndex === -1 ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copiedIndex === -1 ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                       コピー
                     </button>
                     <button
                       onClick={() => handleApplyCopy(copyVariations.bestPick.copy)}
-                      className="px-3 py-1.5 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition-colors flex items-center gap-1"
+                      className="px-3 py-1.5 bg-violet-500/20 text-violet-300 text-xs font-medium rounded-lg hover:bg-violet-500/30 transition-colors flex items-center gap-1"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-3 h-3" />
                       適用
                     </button>
                   </div>
                 </div>
 
-                {/* バリエーション */}
-                <div className="space-y-2">
+                {/* Variations */}
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
                   {copyVariations.variations.map((v, i) => {
-                    const typeInfo = TYPE_LABELS[v.type] || { label: v.type, icon: '📝', color: 'bg-gray-100 text-gray-700' }
+                    const typeInfo = TYPE_LABELS[v.type] || { label: v.type, icon: '📝', gradient: 'from-gray-500/20 to-slate-500/20' }
                     return (
-                      <div key={i} className="bg-gray-50 rounded-xl p-3">
+                      <div key={i} className={`bg-gradient-to-br ${typeInfo.gradient} border border-white/5 rounded-xl p-3`}>
                         <div className="flex items-center justify-between mb-2">
-                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeInfo.color}`}>
-                            {typeInfo.icon} {typeInfo.label}
+                          <span className="text-xs font-medium text-white/60 flex items-center gap-1">
+                            <span>{typeInfo.icon}</span>
+                            {typeInfo.label}
                           </span>
-                          <span className="text-xs text-green-600 font-medium">{v.expectedLift}</span>
+                          <span className="text-[10px] text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                            {v.expectedLift}
+                          </span>
                         </div>
-                        <p className="text-sm text-gray-900 mb-2">{v.copy}</p>
+                        <p className="text-sm text-white mb-2">{v.copy}</p>
                         <div className="flex items-center justify-between">
-                          <p className="text-xs text-gray-500">{v.reason}</p>
-                          <div className="flex gap-1">
+                          <p className="text-[10px] text-white/40 flex-1">{v.reason}</p>
+                          <div className="flex gap-1 ml-2">
                             <button
                               onClick={() => handleCopyCopy(v.copy, i)}
-                              className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                              className="p-1.5 text-white/40 hover:text-white transition-colors"
                             >
-                              {copiedIndex === i ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                              {copiedIndex === i ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                             </button>
                             <button
                               onClick={() => handleApplyCopy(v.copy)}
-                              className="p-1.5 text-violet-400 hover:text-violet-600 transition-colors"
+                              className="p-1.5 text-violet-400 hover:text-violet-300 transition-colors"
                             >
-                              <ChevronRight className="w-4 h-4" />
+                              <ChevronRight className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
@@ -351,74 +405,77 @@ export default function BannerCoach({ keyword, category, useCase, onApplyCopy }:
                     )
                   })}
                 </div>
-              </div>
+              </motion.div>
             )}
 
-            {/* 業界データタブ */}
+            {/* Benchmark Tab */}
             {activeTab === 'benchmark' && benchmark && (
-              <div className="space-y-4">
-                {/* CTR情報 */}
-                <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4">
-                  <h5 className="font-bold text-blue-700 mb-3">{benchmark.category} 業界データ</h5>
+              <motion.div
+                key="benchmark"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-4"
+              >
+                {/* CTR Data */}
+                <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-xl p-4">
+                  <h5 className="font-bold text-blue-400 text-sm mb-3">{benchmark.category}</h5>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-gray-500">平均CTR</p>
-                      <p className="text-2xl font-bold text-blue-600">{benchmark.averageCTR}</p>
+                      <p className="text-[10px] text-white/40 uppercase tracking-wide">平均CTR</p>
+                      <p className="text-2xl font-bold text-white">{benchmark.averageCTR}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">トップパフォーマー</p>
-                      <p className="text-2xl font-bold text-green-600">{benchmark.topPerformerCTR}</p>
+                      <p className="text-[10px] text-white/40 uppercase tracking-wide">トップ</p>
+                      <p className="text-2xl font-bold text-emerald-400">{benchmark.topPerformerCTR}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* 成功パターン */}
-                <div className="bg-green-50 rounded-xl p-4">
-                  <h5 className="font-bold text-green-700 text-sm mb-2">✓ 成功パターン</h5>
-                  <ul className="space-y-1">
-                    {benchmark.commonPatterns.map((p, i) => (
-                      <li key={i} className="text-xs text-green-700">• {p}</li>
-                    ))}
-                  </ul>
+                {/* Patterns */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+                    <h5 className="font-bold text-emerald-400 text-xs mb-2">✓ 成功パターン</h5>
+                    <ul className="space-y-1">
+                      {benchmark.commonPatterns.slice(0, 3).map((p, i) => (
+                        <li key={i} className="text-[10px] text-white/60">• {p}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+                    <h5 className="font-bold text-red-400 text-xs mb-2">✗ 避けるべき</h5>
+                    <ul className="space-y-1">
+                      {benchmark.avoidPatterns.slice(0, 3).map((p, i) => (
+                        <li key={i} className="text-[10px] text-white/60">• {p}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
 
-                {/* 避けるべきパターン */}
-                <div className="bg-red-50 rounded-xl p-4">
-                  <h5 className="font-bold text-red-700 text-sm mb-2">✗ 避けるべきパターン</h5>
-                  <ul className="space-y-1">
-                    {benchmark.avoidPatterns.map((p, i) => (
-                      <li key={i} className="text-xs text-red-700">• {p}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* カラー推奨 */}
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h5 className="font-bold text-gray-700 text-sm mb-2 flex items-center gap-1">
-                    <Palette className="w-4 h-4" /> 推奨カラー
+                {/* Color Recommendations */}
+                <div className="bg-white/5 rounded-xl p-3">
+                  <h5 className="font-bold text-white/80 text-xs mb-2 flex items-center gap-1">
+                    <Palette className="w-3 h-3" /> 推奨カラー
                   </h5>
                   <div className="flex items-center gap-3 mb-2">
                     <div 
-                      className="w-10 h-10 rounded-lg shadow-inner" 
+                      className="w-8 h-8 rounded-lg shadow-inner border border-white/10" 
                       style={{ backgroundColor: benchmark.colorRecommendations.primary.split(' ')[0] }}
                     />
                     <div 
-                      className="w-10 h-10 rounded-lg shadow-inner" 
+                      className="w-8 h-8 rounded-lg shadow-inner border border-white/10" 
                       style={{ backgroundColor: benchmark.colorRecommendations.accent.split(' ')[0] }}
                     />
-                    <div className="text-xs text-gray-600">
-                      <p>メイン: {benchmark.colorRecommendations.primary}</p>
-                      <p>アクセント: {benchmark.colorRecommendations.accent}</p>
+                    <div className="text-[10px] text-white/50 flex-1">
+                      {benchmark.colorRecommendations.reason}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500">{benchmark.colorRecommendations.reason}</p>
                 </div>
-              </div>
+              </motion.div>
             )}
-          </>
+          </AnimatePresence>
         )}
       </div>
     </div>
   )
 }
-
