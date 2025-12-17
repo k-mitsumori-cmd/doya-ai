@@ -1,41 +1,60 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { ArrowRight, HelpCircle, Crown, Clock, Home, FileText, LogOut, Menu, X, Sparkles, ExternalLink } from 'lucide-react'
-import { signOut } from 'next-auth/react'
-import ServiceNav, { OtherServicesCard } from '@/components/ServiceNav'
+import { useState, useEffect } from 'react'
+import { ArrowRight, ArrowLeft, Sparkles, LogIn, Wand2 } from 'lucide-react'
 
-// テンプレート一覧
-const templates = [
-  { id: 'business-email', name: 'ビジネスメール', icon: '📧', desc: '丁寧なメールを作成', color: 'bg-blue-50 border-blue-200 hover:border-blue-400' },
-  { id: 'blog-article', name: 'ブログ記事', icon: '📝', desc: '読みやすい記事を作成', color: 'bg-green-50 border-green-200 hover:border-green-400' },
-  { id: 'instagram-caption', name: 'SNS投稿', icon: '📱', desc: 'SNS用の投稿文を作成', color: 'bg-purple-50 border-purple-200 hover:border-purple-400' },
-  { id: 'catchcopy', name: 'キャッチコピー', icon: '✨', desc: '魅力的なキャッチコピー', color: 'bg-yellow-50 border-yellow-200 hover:border-yellow-400' },
-  { id: 'meeting-minutes', name: '議事録', icon: '📋', desc: '会議の議事録を作成', color: 'bg-orange-50 border-orange-200 hover:border-orange-400' },
-  { id: 'proposal-document', name: '提案書', icon: '📑', desc: '企画提案書を作成', color: 'bg-pink-50 border-pink-200 hover:border-pink-400' },
+// テンプレート一覧（人気順）
+const POPULAR_TEMPLATES = [
+  { id: 'business-email', name: 'ビジネスメール', icon: '📧', desc: '丁寧なメールを作成', gradient: 'from-blue-500 to-cyan-500' },
+  { id: 'blog-article', name: 'ブログ記事', icon: '📝', desc: '読みやすい記事を作成', gradient: 'from-emerald-500 to-green-500' },
+  { id: 'instagram-caption', name: 'SNS投稿', icon: '📱', desc: 'SNS用の投稿文を作成', gradient: 'from-purple-500 to-pink-500' },
+  { id: 'catchcopy', name: 'キャッチコピー', icon: '✨', desc: '魅力的なキャッチコピー', gradient: 'from-amber-500 to-orange-500' },
+  { id: 'meeting-minutes', name: '議事録', icon: '📋', desc: '会議の議事録を作成', gradient: 'from-rose-500 to-red-500' },
+  { id: 'proposal-document', name: '提案書', icon: '📑', desc: '企画提案書を作成', gradient: 'from-indigo-500 to-violet-500' },
 ]
+
+// ゲスト使用状況管理
+const GUEST_DAILY_LIMIT = 3
+const GUEST_STORAGE_KEY = 'kantan_guest_usage'
+
+function getGuestUsage(): { count: number; date: string } {
+  if (typeof window === 'undefined') return { count: 0, date: '' }
+  const stored = localStorage.getItem(GUEST_STORAGE_KEY)
+  if (!stored) return { count: 0, date: '' }
+  try {
+    return JSON.parse(stored)
+  } catch {
+    return { count: 0, date: '' }
+  }
+}
 
 export default function KantanDashboardPage() {
   const { data: session, status } = useSession()
-  const router = useRouter()
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [guestUsageCount, setGuestUsageCount] = useState(0)
   
+  const isGuest = !session
   const userName = session?.user?.name?.split(' ')[0] || 'ゲスト'
-  const plan = (session?.user as any)?.kantanPlan || 'FREE'
-  const isPro = plan === 'PRO'
 
+  // ゲスト使用状況を読み込み
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin?service=kantan')
+    if (isGuest && typeof window !== 'undefined') {
+      const usage = getGuestUsage()
+      const today = new Date().toISOString().split('T')[0]
+      if (usage.date === today) {
+        setGuestUsageCount(usage.count)
+      } else {
+        setGuestUsageCount(0)
+      }
     }
-  }, [status, router])
+  }, [isGuest])
+
+  const guestRemainingCount = GUEST_DAILY_LIMIT - guestUsageCount
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-blue-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50">
         <div className="text-center">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mx-auto mb-4 animate-pulse">
             <span className="text-3xl">📝</span>
@@ -47,198 +66,156 @@ export default function KantanDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* サイドバー */}
-      <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50
-        w-64 bg-white border-r border-gray-200
-        transform transition-transform duration-300
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        <div className="h-full flex flex-col">
-          {/* ロゴ */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-gray-100">
-            <Link href="/kantan" className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                <span className="text-xl">📝</span>
-              </div>
-              <span className="font-bold text-gray-800">カンタンドヤAI</span>
-            </Link>
-            <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden p-2">
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+    <div className="min-h-screen bg-white">
+      {/* ヘッダー */}
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 text-gray-500 hover:text-gray-700">
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm hidden sm:inline">ポータル</span>
+          </Link>
+          
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+              <span className="text-lg">📝</span>
+            </div>
+            <span className="font-bold text-gray-800">カンタンドヤAI</span>
           </div>
-
-          {/* ナビゲーション */}
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            <Link href="/kantan/dashboard">
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-medium">
-                <Home className="w-5 h-5" />
-                <span>ホーム</span>
+          
+          {session ? (
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <span className="text-blue-600 text-sm font-bold">{userName[0]}</span>
               </div>
-            </Link>
-            <Link href="/kantan/dashboard/text">
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 font-medium">
-                <FileText className="w-5 h-5" />
-                <span>全テンプレート</span>
-              </div>
-            </Link>
-            <Link href="/kantan/dashboard/history">
-              <div className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 font-medium">
-                <Clock className="w-5 h-5" />
-                <span>作成履歴</span>
-              </div>
-            </Link>
-
-            {/* サービス間リンク */}
-            <div className="pt-4">
-              <OtherServicesCard currentService="kantan" />
             </div>
-          </nav>
-
-          {/* プラン表示 */}
-          {!isPro && (
-            <div className="p-3">
-              <Link href="/kantan/pricing">
-                <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl p-3 text-center hover:opacity-90 transition-opacity">
-                  <p className="font-bold text-sm">✨ プロプランにアップグレード</p>
-                  <p className="text-xs opacity-80">1日100回まで生成可能</p>
-                </div>
-              </Link>
-            </div>
+          ) : (
+            <Link href="/auth/signin?service=kantan" className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-full hover:bg-blue-700 transition-colors">
+              <LogIn className="w-4 h-4" />
+              <span className="hidden sm:inline">ログイン</span>
+            </Link>
           )}
-
-          {/* ユーザー情報 */}
-          <div className="p-3 border-t border-gray-100">
-            <div className="flex items-center gap-3 px-3 py-2 mb-2">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-blue-600 font-bold">{userName[0]}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 truncate text-sm">{session?.user?.name}</p>
-                <p className="text-xs text-gray-500">{isPro ? 'プロプラン' : '無料プラン'}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => signOut({ callbackUrl: '/kantan' })}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors text-sm"
-            >
-              <LogOut className="w-4 h-4" />
-              ログアウト
-            </button>
-          </div>
         </div>
-      </aside>
+      </header>
 
-      {/* オーバーレイ */}
-      {isSidebarOpen && (
-        <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setIsSidebarOpen(false)} />
-      )}
-
-      {/* メインコンテンツ */}
-      <main className="flex-1">
-        {/* モバイルヘッダー */}
-        <header className="lg:hidden sticky top-0 z-30 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4">
-          <div className="flex items-center">
-            <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2">
-              <Menu className="w-6 h-6 text-gray-600" />
-            </button>
-            <div className="flex items-center gap-2 ml-2">
-              <span className="text-xl">📝</span>
-              <span className="font-bold text-gray-800">カンタンドヤAI</span>
+      <main className="max-w-3xl mx-auto px-4 py-6">
+        {/* ゲストバナー */}
+        {isGuest && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-2xl">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">🆓 お試しモード</p>
+                  <p className="text-sm text-gray-600">
+                    残り <span className="font-bold text-blue-600">{guestRemainingCount}回</span>（1日{GUEST_DAILY_LIMIT}回まで）
+                  </p>
+                </div>
+              </div>
+              <Link href="/auth/signin?service=kantan">
+                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-full transition-colors flex items-center gap-2">
+                  <LogIn className="w-4 h-4" />
+                  ログインで10回に！
+                </button>
+              </Link>
             </div>
           </div>
-          {/* サービス切替ボタン */}
-          <ServiceNav currentService="kantan" />
-        </header>
+        )}
 
-        {/* PCヘッダー（サービス切替） */}
-        <header className="hidden lg:flex sticky top-0 z-30 h-14 bg-white/80 backdrop-blur-md border-b border-gray-200 items-center justify-end px-6">
-          <ServiceNav currentService="kantan" />
-        </header>
+        {/* タイトル */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">
+            作りたい文章を選んでね 👇
+          </h1>
+          <p className="text-gray-600">
+            テンプレートを選んで、情報を入力するだけ！
+          </p>
+        </div>
 
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          {/* あいさつ */}
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              こんにちは、{userName}さん 👋
-            </h1>
-            <p className="text-lg text-gray-600">
-              作りたい文章を選んでください
-            </p>
-          </div>
-
-          {/* テンプレート一覧 */}
-          <div className="space-y-3 mb-8">
-            {templates.map((template) => (
-              <Link key={template.id} href={`/kantan/dashboard/text/${template.id}`}>
-                <div className={`${template.color} rounded-2xl p-5 border-2 transition-all cursor-pointer`}>
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <span className="text-3xl">{template.icon}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-gray-900">{template.name}</h3>
-                      <p className="text-base text-gray-600">{template.desc}</p>
-                    </div>
-                    <ArrowRight className="w-6 h-6 text-gray-400 flex-shrink-0" />
+        {/* テンプレートカード */}
+        <div className="grid sm:grid-cols-2 gap-4 mb-8">
+          {POPULAR_TEMPLATES.map((template) => (
+            <Link key={template.id} href={`/kantan/dashboard/text/${template.id}`} className="group">
+              <div className={`
+                relative h-full p-5 rounded-2xl overflow-hidden
+                bg-gradient-to-br ${template.gradient}
+                transition-all duration-300
+                hover:scale-[1.02] hover:shadow-xl
+                cursor-pointer
+              `}>
+                {/* Decoration */}
+                <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full blur-xl" />
+                
+                <div className="relative flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span className="text-3xl">{template.icon}</span>
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-lg font-bold text-white mb-0.5">{template.name}</h3>
+                    <p className="text-sm text-white/80">{template.desc}</p>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-white/70 group-hover:translate-x-1 transition-transform flex-shrink-0" />
                 </div>
-              </Link>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* 全テンプレートへのリンク */}
+        <div className="mb-10">
+          <Link href="/kantan/dashboard/text">
+            <button className="w-full py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-bold rounded-2xl transition-all flex items-center justify-center gap-3">
+              全68種類のテンプレートを見る
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </Link>
+        </div>
+
+        {/* 使い方（超シンプル） */}
+        <div className="bg-gray-50 rounded-2xl p-6 mb-8">
+          <h2 className="text-lg font-bold text-gray-900 mb-4 text-center">使い方はカンタン！</h2>
+          <div className="flex items-center justify-center gap-4 sm:gap-8 text-center">
+            {[
+              { step: '1', text: '選ぶ', icon: '👆' },
+              { step: '2', text: '入力', icon: '✍️' },
+              { step: '3', text: '完成！', icon: '🎉' },
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-2">
+                  <span className="text-2xl">{item.icon}</span>
+                </div>
+                <span className="text-sm font-bold text-gray-700">{item.text}</span>
+              </div>
             ))}
           </div>
+        </div>
 
-          {/* もっと見るボタン */}
-          <div className="mb-8">
-            <Link href="/kantan/dashboard/text">
-              <button className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold px-6 py-4 rounded-2xl transition-all">
-                他のテンプレートを見る（68種類）
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </Link>
-          </div>
-
-          {/* 使い方ガイド */}
-          <div className="bg-blue-50 rounded-2xl p-5 border-2 border-blue-100 mb-8">
-            <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2">
-              <HelpCircle className="w-6 h-6" />
-              使い方
-            </h3>
-            <div className="space-y-3">
-              {[
-                { num: '①', text: '上から作りたい文章を選ぶ' },
-                { num: '②', text: '必要な情報を入力する' },
-                { num: '③', text: '「作成する」ボタンを押す' },
-              ].map((step, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <span className="text-xl font-bold text-blue-600 w-8">{step.num}</span>
-                  <p className="text-base text-blue-800">{step.text}</p>
-                </div>
-              ))}
+        {/* バナー作成への誘導 */}
+        <Link href="/banner/dashboard" className="block">
+          <div className="bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-2xl p-5 flex items-center gap-4 hover:shadow-xl transition-all">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-xl flex items-center justify-center flex-shrink-0">
+              <span className="text-3xl">🎨</span>
             </div>
+            <div className="flex-1">
+              <p className="text-white/80 text-sm">バナーも作れる！</p>
+              <h3 className="text-lg font-bold text-white">ドヤバナーAI</h3>
+            </div>
+            <ArrowRight className="w-5 h-5 text-white/70" />
           </div>
+        </Link>
+      </main>
 
-          {/* 他サービスへの誘導（モバイル向け） */}
-          <div className="lg:hidden bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5 border-2 border-purple-100">
-            <h3 className="text-lg font-bold text-purple-900 mb-3 flex items-center gap-2">
-              <Sparkles className="w-5 h-5" />
-              他のサービスも使ってみよう
-            </h3>
-            <Link href="/banner">
-              <div className="flex items-center gap-4 p-4 bg-white rounded-xl border-2 border-purple-200 hover:border-purple-400 transition-all">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <span className="text-2xl">🎨</span>
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-gray-900">ドヤバナーAI</h4>
-                  <p className="text-sm text-gray-600">プロ品質のバナーを自動生成</p>
-                </div>
-                <ExternalLink className="w-5 h-5 text-purple-500" />
-              </div>
-            </Link>
+      {/* フッター */}
+      <footer className="py-6 px-4 border-t border-gray-100 mt-8">
+        <div className="max-w-3xl mx-auto flex items-center justify-between text-sm text-gray-500">
+          <Link href="/" className="hover:text-gray-700">ドヤAI</Link>
+          <div className="flex items-center gap-4">
+            <Link href="/kantan/dashboard/history" className="hover:text-gray-700">履歴</Link>
+            <Link href="/kantan/pricing" className="hover:text-gray-700">料金</Link>
           </div>
         </div>
-      </main>
+      </footer>
     </div>
   )
 }
