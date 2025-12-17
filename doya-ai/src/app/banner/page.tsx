@@ -150,47 +150,75 @@ export default function BannerTopPage() {
 
       {/* 料金 */}
       <section className="py-12 px-4">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
+        <div className="max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900 text-center mb-4">
             💰 料金プラン
           </h2>
+          <p className="text-center text-gray-600 mb-8">
+            まずは無料でお試し。ビジネス規模に合わせてアップグレード。
+          </p>
           
-          <div className="grid sm:grid-cols-2 gap-6">
-            {/* 無料プラン */}
-            <div className="p-6 bg-white rounded-2xl border-2 border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{BANNER_PRICING.plans[0].name}</h3>
-              <p className="text-3xl font-bold text-gray-900 mb-4">{BANNER_PRICING.plans[0].priceLabel}</p>
-              <ul className="space-y-2 text-gray-600 mb-6">
-                {BANNER_PRICING.plans[0].features.map((feature, i) => (
-                  <li key={i}>✓ {feature.text}</li>
-                ))}
-              </ul>
-              <Link href="/banner/dashboard">
-                <button className="w-full py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors">
-                  {BANNER_PRICING.plans[0].cta}
-                </button>
-              </Link>
-            </div>
-            
-            {/* プロプラン */}
-            <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border-2 border-purple-300 relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-purple-600 text-white text-sm font-bold rounded-full">
-                人気
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {BANNER_PRICING.plans.map((plan) => (
+              <div 
+                key={plan.id}
+                className={`p-4 rounded-2xl relative ${
+                  plan.popular 
+                    ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-300' 
+                    : 'bg-white border-2 border-gray-200'
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-purple-600 text-white text-xs font-bold rounded-full">
+                    人気
+                  </div>
+                )}
+                <h3 className="text-base font-bold text-gray-900 mb-1">{plan.name}</h3>
+                <p className="text-xs text-gray-500 mb-2">{plan.description}</p>
+                <p className={`text-xl font-bold mb-1 ${plan.popular ? 'text-purple-600' : 'text-gray-900'}`}>
+                  {plan.priceLabel}
+                </p>
+                {plan.period && <p className="text-xs text-gray-500 mb-3">{plan.period}</p>}
+                <ul className="space-y-1 text-gray-600 text-xs mb-4">
+                  {plan.features.slice(0, 3).map((feature, i) => (
+                    <li key={i} className="flex items-start gap-1.5">
+                      <span className={plan.popular ? 'text-purple-500' : 'text-green-500'}>✓</span>
+                      <span>{feature.text}</span>
+                    </li>
+                  ))}
+                </ul>
+                {plan.price === 0 ? (
+                  <Link href="/banner/dashboard">
+                    <button className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg transition-colors">
+                      {plan.cta}
+                    </button>
+                  </Link>
+                ) : plan.id === 'banner-business' ? (
+                  <a href="mailto:support@doya-ai.com">
+                    <button className="w-full py-2 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold rounded-lg transition-colors">
+                      お問い合わせ
+                    </button>
+                  </a>
+                ) : (
+                  <Link href="/banner/pricing">
+                    <button className={`w-full py-2 text-xs font-bold rounded-lg transition-colors ${
+                      plan.popular 
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white' 
+                        : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
+                    }`}>
+                      {plan.cta}
+                    </button>
+                  </Link>
+                )}
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{BANNER_PRICING.plans[1].name}</h3>
-              <p className="text-3xl font-bold text-purple-600 mb-4">{BANNER_PRICING.plans[1].priceLabel}<span className="text-base font-normal text-gray-500">{BANNER_PRICING.plans[1].period}</span></p>
-              <ul className="space-y-2 text-gray-600 mb-6">
-                {BANNER_PRICING.plans[1].features.map((feature, i) => (
-                  <li key={i}>✓ {feature.text}</li>
-                ))}
-              </ul>
-              <Link href="/banner/pricing">
-                <button className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-xl transition-colors">
-                  {BANNER_PRICING.plans[1].cta}
-                </button>
-              </Link>
-            </div>
+            ))}
           </div>
+          
+          <p className="text-center text-sm text-gray-500 mt-6">
+            <Link href="/banner/pricing" className="text-purple-600 hover:underline">
+              詳しい料金・機能比較を見る →
+            </Link>
+          </p>
         </div>
       </section>
 

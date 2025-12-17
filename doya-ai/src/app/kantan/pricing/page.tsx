@@ -2,19 +2,18 @@
 
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { Check, ArrowLeft, Sparkles, Crown, Zap } from 'lucide-react'
-import { KANTAN_PRICING } from '@/lib/pricing'
+import { Check, ArrowLeft, Sparkles, Crown, Zap, Star } from 'lucide-react'
+import { KANTAN_PRICING, getAnnualMonthlyPrice } from '@/lib/pricing'
 
 export default function KantanPricingPage() {
   const { data: session } = useSession()
-  const freePlan = KANTAN_PRICING.plans[0]
-  const proPlan = KANTAN_PRICING.plans[1]
+  const plans = KANTAN_PRICING.plans
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
       {/* ヘッダー */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-blue-100">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/kantan" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
             <ArrowLeft className="w-5 h-5" />
             <span>戻る</span>
@@ -29,90 +28,91 @@ export default function KantanPricingPage() {
       </header>
 
       {/* メイン */}
-      <main className="max-w-4xl mx-auto px-4 py-12">
+      <main className="max-w-5xl mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">
             料金プラン
           </h1>
           <p className="text-lg text-gray-600">
-            あなたのビジネスに合ったプランをお選びください
+            あなたの利用頻度に合ったプランをお選びください
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-          {/* 無料プラン */}
-          <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-sm">
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-7 h-7 text-gray-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">{freePlan.name}</h2>
-              <div className="mt-4">
-                <span className="text-4xl font-bold text-gray-900">{freePlan.priceLabel}</span>
-              </div>
-            </div>
+        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+          {plans.map((plan, index) => {
+            const isPopular = plan.popular
+            const Icon = index === 0 ? Sparkles : index === 1 ? Star : Crown
             
-            <ul className="space-y-4 mb-8">
-              {freePlan.features.map((feature, i) => (
-                <li key={i} className="flex items-center gap-3 text-gray-700">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span>{feature.text}</span>
-                </li>
-              ))}
-            </ul>
+            return (
+              <div 
+                key={plan.id}
+                className={`rounded-2xl p-6 relative ${
+                  isPopular 
+                    ? 'bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-300 shadow-lg' 
+                    : 'bg-white border-2 border-gray-200'
+                }`}
+              >
+                {isPopular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="px-4 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
+                      人気No.1
+                    </span>
+                  </div>
+                )}
+                
+                <div className="text-center mb-6">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 ${
+                    isPopular 
+                      ? 'bg-gradient-to-br from-blue-500 to-cyan-500' 
+                      : 'bg-gray-100'
+                  }`}>
+                    <Icon className={`w-6 h-6 ${isPopular ? 'text-white' : 'text-gray-600'}`} />
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900">{plan.name}</h2>
+                  <p className="text-sm text-gray-500 mt-1">{plan.description}</p>
+                  <div className="mt-4">
+                    <span className={`text-3xl font-bold ${isPopular ? 'text-blue-600' : 'text-gray-900'}`}>
+                      {plan.priceLabel}
+                    </span>
+                    {plan.period && (
+                      <span className="text-gray-500 text-sm">{plan.period}</span>
+                    )}
+                  </div>
+                  {plan.price > 0 && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      年払いなら ¥{getAnnualMonthlyPrice(plan.price).toLocaleString()}/月
+                    </p>
+                  )}
+                </div>
+                
+                <ul className="space-y-3 mb-6">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2 text-gray-700 text-sm">
+                      <Check className={`w-4 h-4 mt-0.5 flex-shrink-0 ${isPopular ? 'text-blue-500' : 'text-green-500'}`} />
+                      <span>{feature.text}</span>
+                    </li>
+                  ))}
+                </ul>
 
-            {session ? (
-              <Link href="/kantan/dashboard">
-                <button className="w-full py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
-                  ダッシュボードへ
-                </button>
-              </Link>
-            ) : (
-              <Link href="/kantan/dashboard">
-                <button className="w-full py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
-                  {freePlan.cta}
-                </button>
-              </Link>
-            )}
-          </div>
-
-          {/* プロプラン */}
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-8 border-2 border-blue-300 shadow-lg relative">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-              <span className="px-4 py-1 bg-blue-600 text-white text-sm font-bold rounded-full">
-                おすすめ
-              </span>
-            </div>
-            
-            <div className="text-center mb-6">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Crown className="w-7 h-7 text-white" />
+                {plan.price === 0 ? (
+                  <Link href="/kantan/dashboard">
+                    <button className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
+                      {plan.cta}
+                    </button>
+                  </Link>
+                ) : (
+                  <button className={`w-full py-3 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                    isPopular
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
+                      : 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+                  }`}>
+                    <Zap className="w-4 h-4" />
+                    {plan.cta}
+                  </button>
+                )}
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">{proPlan.name}</h2>
-              <div className="mt-4">
-                <span className="text-4xl font-bold text-blue-600">{proPlan.priceLabel}</span>
-                <span className="text-gray-500">{proPlan.period}</span>
-              </div>
-            </div>
-            
-            <ul className="space-y-4 mb-8">
-              {proPlan.features.map((feature, i) => (
-                <li key={i} className="flex items-center gap-3 text-gray-700">
-                  <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                  <span>{feature.text}</span>
-                </li>
-              ))}
-            </ul>
-
-            <button className="w-full py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-              <Zap className="w-5 h-5" />
-              {proPlan.cta}
-            </button>
-            
-            <p className="text-center text-sm text-gray-500 mt-4">
-              いつでもキャンセル可能
-            </p>
-          </div>
+            )
+          })}
         </div>
 
         {/* FAQ */}
@@ -120,8 +120,9 @@ export default function KantanPricingPage() {
           <h3 className="text-xl font-bold text-gray-900 text-center mb-8">よくある質問</h3>
           <div className="space-y-4">
             {[
-              { q: '無料プランでどこまで使えますか？', a: `全68種類のテンプレートをゲストは1日${KANTAN_PRICING.guestLimit}回、ログイン後は1日${KANTAN_PRICING.freeLimit}回まで使用できます。` },
-              { q: 'プロプランはいつでも解約できますか？', a: 'はい、いつでも解約可能です。解約後も期間終了まで利用できます。' },
+              { q: '無料プランでどこまで使えますか？', a: `ゲストは1日${KANTAN_PRICING.guestLimit}回、ログイン後は1日${KANTAN_PRICING.freeLimit}回まで使用できます。基本テンプレート20種類が利用可能です。` },
+              { q: 'いつでも解約できますか？', a: 'はい、いつでも解約可能です。解約後も期間終了まで利用できます。' },
+              { q: '年払いはできますか？', a: 'はい、年払いで20%オフになります。お支払い画面で選択できます。' },
               { q: '支払い方法は？', a: 'クレジットカード（Visa, Mastercard, JCB, AMEX）に対応しています。' },
             ].map((faq, i) => (
               <div key={i} className="bg-white rounded-xl p-5 border border-gray-200">
