@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import { 
   Sparkles, Loader2, AlertCircle, ChevronRight, 
   Crown, ArrowRight, CheckCircle, Star, Wand2,
-  Home, Clock, Palette, LogOut, Menu, X, ExternalLink
+  Home, Clock, Palette, LogOut, Menu, X, ExternalLink, LogIn
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ServiceNav, { OtherServicesCard } from '@/components/ServiceNav'
@@ -38,13 +37,35 @@ const SAMPLE_INPUTS = [
   { category: 'recruit', size: '1080x1080', keyword: 'エンジニア積極採用中 リモートOK 年収600万〜', label: '採用' },
 ]
 
+// ゲストの1日の上限
+const GUEST_DAILY_LIMIT = 1
+const GUEST_STORAGE_KEY = 'banner_guest_usage'
+
+// ゲスト使用状況を取得
+function getGuestUsage(): { count: number; date: string } {
+  if (typeof window === 'undefined') return { count: 0, date: '' }
+  const stored = localStorage.getItem(GUEST_STORAGE_KEY)
+  if (!stored) return { count: 0, date: '' }
+  try {
+    return JSON.parse(stored)
+  } catch {
+    return { count: 0, date: '' }
+  }
+}
+
+// ゲスト使用状況を保存
+function setGuestUsage(count: number) {
+  if (typeof window === 'undefined') return
+  const today = new Date().toISOString().split('T')[0]
+  localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify({ count, date: today }))
+}
+
 function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(' ')
 }
 
 export default function BannerDashboardPage() {
   const { data: session, status } = useSession()
-  const router = useRouter()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   
   // フォーム状態
@@ -56,15 +77,25 @@ export default function BannerDashboardPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState('')
   const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
+  const [guestUsageCount, setGuestUsageCount] = useState(0)
 
+  const isGuest = !session
   const plan = (session?.user as any)?.bannerPlan || 'FREE'
   const isPro = plan === 'PRO'
+  const userName = session?.user?.name?.split(' ')[0] || 'ゲスト'
 
+  // ゲスト使用状況を読み込み
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin?service=banner')
+    if (isGuest) {
+      const usage = getGuestUsage()
+      const today = new Date().toISOString().split('T')[0]
+      if (usage.date === today) {
+        setGuestUsageCount(usage.count)
+      } else {
+        setGuestUsageCount(0)
+      }
     }
-  }, [status, router])
+  }, [isGuest])
 
   // サンプル入力
   const handleSampleInput = () => {
@@ -75,7 +106,11 @@ export default function BannerDashboardPage() {
     toast.success(`サンプル「${sample.label}」を入力しました！`, { icon: '✨' })
   }
 
-  const canGenerate = category !== '' && keyword.trim() !== ''
+  // ゲストの残り回数
+  const guestRemainingCount = GUEST_DAILY_LIMIT - guestUsageCount
+  const canGuestGenerate = guestRemainingCount > 0
+
+  const canGenerate = category !== '' && keyword.trim() !== '' && (session || canGuestGenerate)
 
   const handleGenerate = async () => {
     setError('')
@@ -87,6 +122,12 @@ export default function BannerDashboardPage() {
 
     if (!keyword.trim()) {
       setError('キーワードを入力してください')
+      return
+    }
+
+    // ゲストの場合、上限チェック
+    if (isGuest && !canGuestGenerate) {
+      setError('本日の無料お試しは上限に達しました。ログインするともっと使えます！')
       return
     }
 
@@ -104,6 +145,13 @@ export default function BannerDashboardPage() {
       
       setGeneratedBanners(mockBanners)
       toast.success('バナーを生成しました！', { icon: '🎨' })
+
+      // ゲストの使用回数を更新
+      if (isGuest) {
+        const newCount = guestUsageCount + 1
+        setGuestUsageCount(newCount)
+        setGuestUsage(newCount)
+      }
     } catch (err) {
       setError('エラーが発生しました。しばらくしてからお試しください。')
     } finally {
@@ -174,8 +222,20 @@ export default function BannerDashboardPage() {
             </div>
           </nav>
 
-          {/* プラン表示 */}
-          {!isPro && (
+          {/* ゲスト向け: ログイン誘導 */}
+          {isGuest && (
+            <div className="p-3">
+              <Link href="/auth/signin?service=banner">
+                <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl p-3 text-center hover:opacity-90 transition-opacity">
+                  <p className="font-bold text-sm">🔐 ログインして使う</p>
+                  <p className="text-xs opacity-80">1日3回まで生成可能に！</p>
+                </div>
+              </Link>
+            </div>
+          )}
+
+          {/* プラン表示（ログイン済み） */}
+          {session && !isPro && (
             <div className="p-3">
               <Link href="/banner/pricing">
                 <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl p-3 text-center hover:opacity-90 transition-opacity">
@@ -188,22 +248,44 @@ export default function BannerDashboardPage() {
 
           {/* ユーザー情報 */}
           <div className="p-3 border-t border-gray-100">
-            <div className="flex items-center gap-3 px-3 py-2 mb-2">
-              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <span className="text-purple-600 font-bold">{session?.user?.name?.[0] || 'U'}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 truncate text-sm">{session?.user?.name}</p>
-                <p className="text-xs text-gray-500">{isPro ? 'プロプラン' : '無料プラン'}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => signOut({ callbackUrl: '/banner' })}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors text-sm"
-            >
-              <LogOut className="w-4 h-4" />
-              ログアウト
-            </button>
+            {session ? (
+              <>
+                <div className="flex items-center gap-3 px-3 py-2 mb-2">
+                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                    <span className="text-purple-600 font-bold">{session?.user?.name?.[0] || 'U'}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800 truncate text-sm">{session?.user?.name}</p>
+                    <p className="text-xs text-gray-500">{isPro ? 'プロプラン' : '無料プラン'}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/banner' })}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors text-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  ログアウト
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3 px-3 py-2 mb-2">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                    <span className="text-gray-500 font-bold">G</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800 text-sm">ゲスト</p>
+                    <p className="text-xs text-gray-500">残り{guestRemainingCount}回/日</p>
+                  </div>
+                </div>
+                <Link href="/auth/signin?service=banner">
+                  <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors text-sm font-medium">
+                    <LogIn className="w-4 h-4" />
+                    ログインする
+                  </button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </aside>
@@ -236,10 +318,37 @@ export default function BannerDashboardPage() {
         </header>
 
         <div className="max-w-3xl mx-auto px-4 py-6">
+          {/* ゲストバナー */}
+          {isGuest && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900">🎨 お試しモード</p>
+                    <p className="text-sm text-gray-600">
+                      残り <span className="font-bold text-purple-600">{guestRemainingCount}回</span> 生成できます（1日{GUEST_DAILY_LIMIT}回まで）
+                    </p>
+                  </div>
+                </div>
+                <Link href="/auth/signin?service=banner">
+                  <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2">
+                    <LogIn className="w-4 h-4" />
+                    ログインで3回に増加
+                  </button>
+                </Link>
+              </div>
+            </div>
+          )}
+
           {/* ヘッダー */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">バナーを生成</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {isGuest ? 'バナーを無料で試す' : 'バナーを生成'}
+              </h1>
               <p className="text-gray-600">カテゴリを選んでキーワードを入力してください</p>
             </div>
             <button
