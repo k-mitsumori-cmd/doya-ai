@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 // 生成済みバナーに対してテキスト指示で修正を行う
 
 const GEMINI_API_KEY = process.env.GOOGLE_GENAI_API_KEY
+// Gemini 3 Pro Image (Nano Banana Pro) - 画像生成に使用する唯一のモデル
 const API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent'
 
 interface RefineRequest {
@@ -164,42 +165,61 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
 }
 
 function createRefinePrompt(instruction: string, category?: string, size?: string): string {
-  return `You are an expert advertising banner designer. 
+  return `You are an expert advertising banner designer specializing in Japanese text rendering.
 Edit this banner image according to the following instruction:
 
 **EDIT INSTRUCTION:**
 ${instruction}
 
-**RULES:**
-- Maintain the overall layout and style of the original banner
-- Keep text readable and prominent
-- Preserve brand colors if visible
-- Ensure professional advertising quality
-- The output must be a complete, polished banner image
-
 ${category ? `**INDUSTRY:** ${category}` : ''}
 ${size ? `**TARGET SIZE:** ${size}` : ''}
 
-=== ⚠️ CRITICAL: JAPANESE TEXT RENDERING RULES ⚠️ ===
-1. **MINIMUM FONT SIZE**: All text must be at least 24px equivalent (minimum 5% of banner width)
-2. **NO SMALL TEXT ALLOWED**: Do NOT create any text smaller than 5% of the banner width
-3. **JAPANESE FONT INTEGRITY**: 
-   - Use clean, simple Japanese fonts (Gothic/Sans-serif style)
-   - Each Japanese character (kanji, hiragana, katakana) must be complete and undistorted
-   - Avoid decorative fonts that may corrupt character rendering
-   - Ensure proper stroke rendering for all characters
-4. **TEXT CLARITY**: 
-   - High contrast between text and background
-   - Add solid color backing behind text if needed
-   - No text on complex/busy backgrounds without solid backing
-5. **AVOID TEXT CORRUPTION**:
-   - Do NOT stretch or compress Japanese characters
-   - Do NOT apply extreme perspective transforms to text
-   - Keep text horizontal (no extreme rotations)
-   - Avoid overlapping text elements
-6. **LIMIT TEXT ELEMENTS**: Maximum 3 text elements (headline, subtext, CTA)
-7. **WHEN IN DOUBT**: Make text LARGER, not smaller
+=== ⚠️⚠️⚠️ ABSOLUTE REQUIREMENTS FOR JAPANESE TEXT ⚠️⚠️⚠️ ===
 
-Apply the requested changes while maintaining the banner's effectiveness and ensuring all Japanese text is perfectly readable.`
+**JAPANESE TEXT MUST BE PERFECT - THIS IS THE HIGHEST PRIORITY**
+
+MANDATORY TEXT RULES:
+1. **FONT CHOICE**: Use ONLY clean, modern Japanese Gothic/Sans-serif fonts
+   - Examples: Noto Sans JP, Hiragino Kaku Gothic, Meiryo Gothic
+   - DO NOT use decorative, handwritten, or stylized fonts
+   
+2. **TEXT SIZE**: Main text must be at least 30% of banner width
+   - All text must be clearly readable even when thumbnail-sized
+   - CTA button text must be at least 20% of banner width
+   
+3. **TEXT RENDERING**:
+   - Render each Japanese character PERFECTLY with all strokes visible
+   - Kanji (漢字) must have all radicals and strokes complete
+   - Hiragana (ひらがな) must have smooth, unbroken curves
+   - Katakana (カタカナ) must have sharp, clean angles
+   - DO NOT generate corrupted, broken, or partial characters
+   
+4. **TEXT PLACEMENT**:
+   - Place text on SOLID COLOR backgrounds (not on photos/gradients)
+   - Add a semi-transparent solid rectangle behind text if needed
+   - Never place text where it overlaps with complex imagery
+   - Keep at least 10% padding around text edges
+   
+5. **TEXT EFFECTS**:
+   - Add thick (3-5px) white or dark outline/stroke around text
+   - Use drop shadow for depth (offset: 2-4px, blur: 4-8px)
+   - Maintain at least 7:1 contrast ratio between text and background
+   
+6. **FORBIDDEN**:
+   ❌ Text smaller than 5% of image height
+   ❌ Stretched or compressed characters  
+   ❌ Rotated or perspective-transformed text
+   ❌ Overlapping text elements
+   ❌ Text on busy/noisy backgrounds without backing
+   ❌ More than 3 separate text elements
+   ❌ Decorative fonts that sacrifice readability
+
+=== OUTPUT REQUIREMENTS ===
+- Apply the requested edit while maintaining banner effectiveness
+- Ensure ALL Japanese text is crystal clear and perfectly readable
+- Every single Japanese character must be 100% correct and complete
+- Quality over complexity - make text larger and simpler if needed
+
+Generate the refined banner image now.`
 }
 
