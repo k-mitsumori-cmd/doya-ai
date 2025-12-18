@@ -325,6 +325,7 @@ export default function BannerDashboard() {
   const [companyName, setCompanyName] = useState('')
   const [logoImage, setLogoImage] = useState<string | null>(null)
   const [personImage, setPersonImage] = useState<string | null>(null)
+  const [referenceImages, setReferenceImages] = useState<string[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showCoach, setShowCoach] = useState(false)
   
@@ -461,6 +462,7 @@ export default function BannerDashboard() {
           companyName: companyName.trim() || undefined,
           logoImage: logoImage || undefined,
           personImage: personImage || undefined,
+          referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
         }),
       })
 
@@ -702,6 +704,31 @@ export default function BannerDashboard() {
       toast.success('画像をアップロードしました')
     } catch {
       toast.error('アップロードに失敗しました')
+    }
+  }
+
+  const handleReferenceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    if (referenceImages.length >= 2) {
+      toast.error('参考画像は最大2枚までです')
+      return
+    }
+
+    const toAdd = files.slice(0, 2 - referenceImages.length)
+    try {
+      const converted = await Promise.all(
+        toAdd.map(async (file) => {
+          if (file.size > 5 * 1024 * 1024) throw new Error('5MB以下の画像を選択してください')
+          return await imageToBase64(file)
+        })
+      )
+      setReferenceImages((prev) => [...prev, ...converted])
+      toast.success('参考画像を追加しました', { icon: '🖼️' })
+    } catch (err: any) {
+      toast.error(err?.message || '参考画像の追加に失敗しました')
+    } finally {
+      e.target.value = ''
     }
   }
 
@@ -1209,7 +1236,7 @@ export default function BannerDashboard() {
                 className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm mb-3 font-medium"
               >
                 <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-                詳細設定（会社名・ロゴ・人物）
+                詳細設定（会社名・ロゴ・人物・参考画像）
               </button>
               
               <AnimatePresence>
@@ -1300,6 +1327,47 @@ export default function BannerDashboard() {
                           )}
                         </div>
                       </div>
+                    </div>
+
+                    {/* Reference Images */}
+                    <div>
+                      <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 font-medium">
+                        <Eye className="w-4 h-4" />
+                        参考画像（テイスト/構図の指定）
+                        <span className="text-xs text-gray-400 font-semibold">最大2枚</span>
+                      </label>
+
+                      {referenceImages.length > 0 && (
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          {referenceImages.map((img, idx) => (
+                            <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-200">
+                              <img src={img} alt={`Reference ${idx + 1}`} className="w-full h-full object-cover" />
+                              <button
+                                onClick={() => setReferenceImages((prev) => prev.filter((_, i) => i !== idx))}
+                                className="absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow-sm"
+                              >
+                                <X className="w-4 h-4 text-gray-600" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <label className="flex items-center justify-center w-full h-12 rounded-xl border-2 border-dashed border-gray-200 hover:border-violet-400 cursor-pointer transition-colors bg-gray-50 hover:bg-violet-50">
+                        <span className="text-sm font-bold text-gray-600">参考画像を追加</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleReferenceUpload}
+                          className="hidden"
+                          disabled={referenceImages.length >= 2}
+                        />
+                      </label>
+
+                      <p className="text-xs text-gray-400 mt-2">
+                        参考画像のロゴ/透かしはコピーしません。雰囲気・配色・構図の参考として使います。
+                      </p>
                     </div>
                   </motion.div>
                 )}

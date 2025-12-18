@@ -206,6 +206,13 @@ interface GenerateOptions {
   personDescription?: string  // 人物の説明（例: "30代女性ビジネスパーソン"）
   logoImage?: string  // ロゴ画像のBase64データ（data:image/...;base64,...形式）
   personImage?: string  // 人物画像のBase64データ
+  referenceImages?: string[] // 参考画像（data:image/...;base64,...形式）
+}
+
+function parseDataUrl(dataUrl: string): { mimeType: string; data: string } {
+  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
+  if (!m) throw new Error('画像形式が不正です（data URLを期待）')
+  return { mimeType: m[1], data: m[2] }
 }
 
 // YouTubeサムネイル専用プロンプト生成
@@ -421,6 +428,19 @@ If a brand name is present, keep it as plain text only.
 `
   }
 
+  // 参考画像がある場合（ロゴ/透かしはコピーしない）
+  if (options.referenceImages && options.referenceImages.length > 0) {
+    prompt += `
+=== REFERENCE IMAGE (STYLE/LAYOUT) ===
+Use the provided reference image(s) ONLY as inspiration for:
+- overall layout and composition
+- color mood and typography-safe text areas
+- visual style (modern, premium, clean)
+Do NOT copy any logos, watermarks, brand marks, or copyrighted characters from the reference.
+Do NOT recreate the exact same design 1:1. Create a new original banner in a similar style.
+`
+  }
+
   // 人物がある場合
   if (options.hasPerson) {
     if (options.personImage) {
@@ -525,11 +545,41 @@ async function generateSingleBanner(
   // 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
   const endpoint = `${GEMINI_API_BASE}/models/${NANO_BANANA_PRO_MODEL}:generateContent`
 
+  // 参考画像/ロゴ/人物を「画像→テキスト」の順で渡す（参考画像を元に生成させる）
+  const imageParts: any[] = []
+  const opts = optionsForGeneration.current
+  const refs = (opts?.referenceImages || []).slice(0, 2)
+  for (const ref of refs) {
+    try {
+      const parsed = parseDataUrl(ref)
+      imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
+    } catch {
+      // ignore
+    }
+  }
+  if (opts?.logoImage) {
+    try {
+      const parsed = parseDataUrl(opts.logoImage)
+      imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
+    } catch {
+      // ignore
+    }
+  }
+  if (opts?.personImage) {
+    try {
+      const parsed = parseDataUrl(opts.personImage)
+      imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
+    } catch {
+      // ignore
+    }
+  }
+
   // Gemini generateContent リクエスト形式（画像生成）
   const requestBody = {
     contents: [
       {
         parts: [
+          ...imageParts,
           { text: prompt }
         ]
       }
@@ -580,6 +630,9 @@ async function generateSingleBanner(
   console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 800))
   throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
 }
+
+// generateSingleBanner に参照画像などを渡すための一時バッファ
+const optionsForGeneration: { current: GenerateOptions | null } = { current: null }
 
 // Gemini 3 Flash で「画像生成用プロンプト」を短く最適化（失敗したら元プロンプトを使う）
 async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<string> {
@@ -685,7 +738,9 @@ export async function generateBanners(
           console.warn('Gemini 3 Flash prompt refine failed. Using base prompt.', e?.message || e)
         }
 
+        optionsForGeneration.current = options
         const banner = await generateSingleBanner(finalPrompt, size)
+        optionsForGeneration.current = null
         
         banners.push(banner)
         console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generated successfully!`)

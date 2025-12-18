@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
       purpose,
       companyName,
       logoImage,
-      personImage 
+      personImage,
+      referenceImages,
     } = body
 
     // バリデーション
@@ -93,6 +94,7 @@ export async function POST(request: NextRequest) {
     if (companyName) console.log(`Company: ${companyName}`)
     if (logoImage) console.log('Logo image provided')
     if (personImage) console.log('Person image provided')
+    if (Array.isArray(referenceImages) && referenceImages.length > 0) console.log(`Reference images: ${referenceImages.length}`)
 
     // バナー生成オプション
     const options = {
@@ -100,6 +102,11 @@ export async function POST(request: NextRequest) {
       companyName: companyName?.trim() || undefined,
       hasLogo: !!logoImage,
       hasPerson: !!personImage,
+      logoImage: logoImage || undefined,
+      personImage: personImage || undefined,
+      referenceImages: Array.isArray(referenceImages)
+        ? referenceImages.filter((x: any) => typeof x === 'string').slice(0, 2)
+        : undefined,
     }
 
     // バナー生成
