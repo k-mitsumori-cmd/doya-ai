@@ -38,6 +38,8 @@ export default function SeoNewPage() {
   })
 
   const [loading, setLoading] = useState(false)
+  const [predicting, setPredicting] = useState(false)
+  const [predictedOnce, setPredictedOnce] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -69,6 +71,61 @@ export default function SeoNewPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  async function predictFromTitle(opts?: { silent?: boolean }) {
+    const t = title.trim()
+    if (t.length < 3) return
+
+    setPredicting(true)
+    if (!opts?.silent) setNotice(null)
+    setError(null)
+    try {
+      const res = await fetch('/api/seo/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: t,
+          seedKeywords: keywordList,
+          tone,
+        }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || '推定に失敗しました')
+
+      const p = json.predicted || {}
+      const personaText = String(p.persona || '').trim()
+      const intentText = String(p.searchIntent || '').trim()
+      const kws = Array.isArray(p.keywords) ? p.keywords.map((s: any) => String(s).trim()).filter(Boolean) : []
+
+      // 既にユーザーが書いたものは基本尊重（空のときだけ自動入力）
+      if (!persona.trim() && personaText) setPersona(personaText)
+      if (!searchIntent.trim() && intentText) setSearchIntent(intentText)
+      if (!keywords.trim() && kws.length) setKeywords(kws.slice(0, 12).join(', '))
+
+      setPredictedOnce(true)
+      if (!opts?.silent) {
+        setNotice('タイトルから読者/意図を推定して入力しました')
+        setTimeout(() => setNotice(null), 2500)
+      }
+    } catch (e: any) {
+      if (!opts?.silent) setError(e?.message || '不明なエラー')
+    } finally {
+      setPredicting(false)
+    }
+  }
+
+  // タイトル入力後、ペルソナ/意図が空なら一度だけ自動推定（コスト暴発を防ぐ）
+  useEffect(() => {
+    if (predictedOnce) return
+    if (!title.trim()) return
+    if (persona.trim() || searchIntent.trim()) return
+
+    const timer = setTimeout(() => {
+      predictFromTitle({ silent: true })
+    }, 900)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title])
 
   function saveDraft() {
     const payload = {
@@ -175,13 +232,27 @@ export default function SeoNewPage() {
             </CardHeader>
             <CardBody className="grid gap-5">
               <div>
-                <label className="block text-sm font-bold text-gray-800">記事タイトル（仮でも可）*</label>
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <label className="block text-sm font-bold text-gray-800">記事タイトル（仮でも可）*</label>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => predictFromTitle()}
+                    disabled={predicting || !title.trim()}
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    {predicting ? '推定中...' : '読者/意図を自動入力'}
+                  </Button>
+                </div>
                 <input
                   className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="例）LLMOとは？SEOとの違いと実務で勝つための設計"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  タイトルを入れると、ペルソナ/検索意図/キーワード候補を推定して入力します（自動は初回のみ、ボタンで再実行可）。
+                </p>
               </div>
 
               <div>
