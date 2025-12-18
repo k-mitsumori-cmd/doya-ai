@@ -29,6 +29,26 @@ export const SeoCreateArticleInputSchema = z.object({
 
 export type SeoCreateArticleInput = z.infer<typeof SeoCreateArticleInputSchema>
 
+// Gemini出力は配列要素がオブジェクトになることがあるため、受け取り側で文字列に正規化する
+const OutlineStringItemSchema = z.preprocess((v) => {
+  if (typeof v === 'string') return v
+  if (v && typeof v === 'object') {
+    const obj = v as Record<string, unknown>
+    const pick = (k: string) => (typeof obj[k] === 'string' ? (obj[k] as string) : '')
+    // よくあるキー候補（faq/question, glossary/term 等）
+    const s =
+      pick('text') ||
+      pick('value') ||
+      pick('title') ||
+      pick('name') ||
+      pick('q') ||
+      pick('question') ||
+      pick('term')
+    return s || JSON.stringify(obj)
+  }
+  return ''
+}, z.string().min(1))
+
 export const SeoOutlineSchema = z.object({
   sections: z.array(
     z.object({
@@ -39,9 +59,9 @@ export const SeoOutlineSchema = z.object({
       h4: z.record(z.array(z.string().min(1))).optional().default({}), // h3 -> h4[]
     })
   ).min(3),
-  internalLinkIdeas: z.array(z.string()).optional().default([]),
-  faq: z.array(z.string()).optional().default([]),
-  glossary: z.array(z.string()).optional().default([]),
+  internalLinkIdeas: z.array(OutlineStringItemSchema).optional().default([]),
+  faq: z.array(OutlineStringItemSchema).optional().default([]),
+  glossary: z.array(OutlineStringItemSchema).optional().default([]),
   diagramIdeas: z
     .array(
       z.object({

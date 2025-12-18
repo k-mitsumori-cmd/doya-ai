@@ -43,8 +43,9 @@ export default function SeoJobPage() {
     [job]
   )
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts?: { showLoading?: boolean }) => {
+    const showLoading = opts?.showLoading === true
+    if (showLoading) setLoading(true)
     setLoadError(null)
     try {
       const res = await fetch(`/api/seo/jobs/${jobId}`, { cache: 'no-store' })
@@ -54,11 +55,12 @@ export default function SeoJobPage() {
       }
       setJob(json.job || null)
     } catch (e: any) {
-      setJob(null)
+      // ポーリング時は一時的な失敗で画面が点滅しないよう、既存jobがある場合は維持する
+      if (showLoading || !job) setJob(null)
       setLoadError(e?.message || '読み込みに失敗しました')
     }
-    setLoading(false)
-  }, [jobId])
+    if (showLoading) setLoading(false)
+  }, [jobId, job])
 
   const advanceOnce = useCallback(async () => {
     if (busy) return
@@ -66,42 +68,30 @@ export default function SeoJobPage() {
     try {
       setActionError(null)
       const res = await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST' })
-      const contentType = res.headers.get('content-type') || ''
       let json: any = null
-      let text = ''
-      if (contentType.includes('application/json')) {
-        try {
-          json = await res.json()
-        } catch {
-          // fallthrough
-        }
+      try {
+        json = await res.json()
+      } catch {
+        // ignore
       }
-      if (!json) {
-        try {
-          text = await res.text()
-        } catch {
-          // ignore
-        }
-      }
-
       if (!res.ok || json?.success === false) {
-        const hint = typeof json?.hint === 'string' ? `\n\nHINT: ${json.hint}` : ''
-        const body = (json?.error || text || '').toString().trim()
-        const msg = body ? `${body}${hint}` : `advance failed (${res.status})`
-        setActionError(msg.slice(0, 2000))
+        const msg = json?.error || `advance failed (${res.status})`
+        setActionError(msg)
         setAuto(false) // 自動実行中なら止める（無限リトライ防止）
-        await load()
+        await load({ showLoading: false })
         return
       }
-      await load()
+      await load({ showLoading: false })
     } finally {
       setBusy(false)
     }
   }, [busy, jobId, load])
 
   useEffect(() => {
-    load()
-    const t = setInterval(load, 2500)
+    load({ showLoading: true })
+    const t = setInterval(() => {
+      load({ showLoading: false })
+    }, 2500)
     return () => clearInterval(t)
   }, [load])
 
@@ -145,7 +135,7 @@ export default function SeoJobPage() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800"
             onClick={() => {
               setLoading(true)
-              load()
+              load({ showLoading: true })
             }}
           >
             再読み込み
