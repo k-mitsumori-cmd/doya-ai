@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 
+// cookies() を使用するため、静的最適化を無効化（ビルド時SSGで落ちるのを防ぐ）
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies()

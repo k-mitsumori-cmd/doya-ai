@@ -14,6 +14,10 @@ import {
 } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 
+// cookies() を使用するため、静的最適化を無効化
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { deleteAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 
+// cookies() を使用するため、静的最適化を無効化
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const cookieStore = await cookies()

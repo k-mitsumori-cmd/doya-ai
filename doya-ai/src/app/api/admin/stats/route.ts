@@ -3,6 +3,10 @@ import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 
+// cookies() を使用するため、静的最適化を無効化（ビルド時SSGで落ちるのを防ぐ）
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     // 管理者認証チェック
