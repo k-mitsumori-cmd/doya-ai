@@ -44,12 +44,13 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
     // プログレスバーのアニメーション
     const progressInterval = setInterval(() => {
       setProgress(prev => {
-        if (prev >= 95) return prev;
-        // 徐々に遅くなる進行
-        const increment = Math.max(0.5, (95 - prev) / 20);
-        return Math.min(95, prev + increment);
+        // 進捗は“目安”。過度に早く進みすぎないように調整。
+        if (prev >= 92) return prev;
+        const base = Math.max(0.4, (92 - prev) / 28);
+        const jitter = Math.random() * 0.9;
+        return Math.min(92, prev + base + jitter);
       });
-    }, estimatedSeconds * 10); // 推定時間に応じて調整
+    }, 380);
 
     // Tipのローテーション
     const tipInterval = setInterval(() => {
@@ -77,7 +78,7 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
   if (!isLoading) return null;
 
   const CurrentTipIcon = loadingTips[tipIndex].icon;
-  const remainingSeconds = Math.max(1, Math.round(estimatedSeconds * (100 - progress) / 100));
+  void estimatedSeconds; // 表示しない（過度な期待値を作らない）
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
@@ -120,7 +121,7 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
           {/* 中央のパーセント表示 */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-4xl font-bold text-white">{Math.round(progress)}%</span>
-            <span className="text-sm text-gray-400">残り約{remainingSeconds}秒</span>
+            <span className="text-sm text-gray-400">進捗は目安です（品質優先で前後します）</span>
           </div>
         </div>
 

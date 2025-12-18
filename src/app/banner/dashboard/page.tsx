@@ -434,6 +434,8 @@ export default function BannerDashboard() {
   const [progress, setProgress] = useState(0)
   const [phaseIndex, setPhaseIndex] = useState(0)
   const [selectedBanner, setSelectedBanner] = useState<number | null>(null)
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null)
+  const [elapsedSec, setElapsedSec] = useState(0)
   
   // 修正機能
   const [refineInstruction, setRefineInstruction] = useState('')
@@ -527,8 +529,14 @@ export default function BannerDashboard() {
     if (!isGenerating) {
       setProgress(0)
       setPhaseIndex(0)
+      setGenerationStartedAt(null)
+      setElapsedSec(0)
       return
     }
+    // 経過時間の追跡（秒数は表示しないが、メッセージ切替に使う）
+    const start = Date.now()
+    setGenerationStartedAt(start)
+    const tick = setInterval(() => setElapsedSec(Math.floor((Date.now() - start) / 1000)), 1000)
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) return 100
@@ -536,7 +544,10 @@ export default function BannerDashboard() {
         return Math.min(prev + increment, 98)
       })
     }, 500)
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      clearInterval(tick)
+    }
   }, [isGenerating])
 
   useEffect(() => {
@@ -1107,7 +1118,7 @@ export default function BannerDashboard() {
                     プロ品質バナーを
                     <br />
                     <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
-                      30秒で自動生成
+                      数クリックで自動生成
                     </span>
                   </h1>
                   
@@ -2404,7 +2415,13 @@ export default function BannerDashboard() {
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="font-semibold">高品質生成中（Nano Banana Pro）</span>
                 </div>
-                <div className="font-semibold">完了まで約 {Math.max(5, Math.round((100 - progress) / 6))} 秒</div>
+                <div className="font-semibold">
+                  {elapsedSec >= 25
+                    ? '少し時間がかかっています（品質優先で前後します）'
+                    : elapsedSec >= 10
+                      ? 'A/B/Cを順に生成中…（進捗は目安）'
+                      : '最適なデザインを探索中…'}
+                </div>
               </div>
             </motion.div>
           </motion.div>
