@@ -179,10 +179,10 @@ export default function SeoDashboardPage() {
                           </div>
                           <ProgressBar value={j.progress} className="mt-2" />
                           <div className="mt-3 flex gap-2">
-                            <Link href={`/seo/jobs/${j.id}`}>
+                            <Link href={`/seo/jobs/${j.id}?auto=1`}>
                               <Button variant="secondary" size="sm">
                                 <ExternalLink className="w-4 h-4" />
-                                ジョブ
+                                ジョブ（自動開始）
                               </Button>
                             </Link>
                           </div>
