@@ -60,6 +60,17 @@ function safeJsonParse<T>(text: string): T | null {
   }
 }
 
+function extractJsonObject(text: string): string | null {
+  const s = String(text || '').trim()
+  if (!s) return null
+  const fenced = s.match(/```json\\s*([\\s\\S]*?)```/i) || s.match(/```\\s*([\\s\\S]*?)```/i)
+  const candidate = (fenced?.[1] || s).trim()
+  const start = candidate.indexOf('{')
+  const end = candidate.lastIndexOf('}')
+  if (start === -1 || end === -1 || end <= start) return null
+  return candidate.slice(start, end + 1)
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse<CoachImageResponse>> {
   try {
     const body: CoachImageRequest = await request.json()
@@ -124,6 +135,7 @@ Rules:
         generationConfig: {
           temperature: 0.4,
           maxOutputTokens: 1200,
+          responseMimeType: 'application/json',
         },
       }),
     })
@@ -142,7 +154,8 @@ Rules:
       ? parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
       : ''
 
-    const parsedOut = safeJsonParse<CoachImageResponse['data']>(text)
+    const extracted = extractJsonObject(text) || text
+    const parsedOut = safeJsonParse<CoachImageResponse['data']>(extracted)
     if (!parsedOut) {
       return NextResponse.json(
         { success: false, error: 'FBのJSON解析に失敗しました（モデル出力が不正）' },

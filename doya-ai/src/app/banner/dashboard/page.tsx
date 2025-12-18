@@ -10,7 +10,7 @@ import {
   User, Building2, Video, Mail, Gift, Megaphone, Target,
   ChevronDown, Check, Star, Eye, Copy, 
   Layers, Play, Crown, ArrowUpRight, Palette, BarChart3,
-  MessageSquare, Send, RotateCcw, Pencil
+  MessageSquare, Send, RotateCcw, Pencil, Link as LinkIcon
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, getGuestUsage, setGuestUsage } from '@/lib/pricing'
@@ -217,6 +217,62 @@ function safeNumber(v: string, fallback: number) {
   return Number.isFinite(n) ? n : fallback
 }
 
+function uniqStrings(items: string[]) {
+  return Array.from(new Set(items.map((s) => String(s || '').trim()).filter(Boolean)))
+}
+
+const OVERLAY_FONT_FAMILY_CSS =
+  'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", Helvetica, Arial'
+const OVERLAY_FONT_FAMILY_CANVAS =
+  'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", Helvetica, Arial'
+
+function computeOverlayMetrics(
+  w: number,
+  h: number,
+  fontScale: number,
+  position: 'bottom' | 'center'
+) {
+  const width = Math.max(1, Math.round(w))
+  const height = Math.max(1, Math.round(h))
+
+  const padding = Math.round(width * 0.045)
+  const panelW = width - padding * 2
+  const panelH = Math.round(height * 0.28)
+  const panelX = padding
+  const panelY =
+    position === 'center'
+      ? Math.round((height - panelH) * 0.55)
+      : height - padding - panelH
+
+  const radius = Math.round(width * 0.03)
+  const baseFont = clamp(Math.round(height * 0.06 * fontScale), 12, Math.round(height * 0.2))
+  const subFont = clamp(Math.round(baseFont * 0.55), 10, Math.round(height * 0.16))
+  const ctaFont = clamp(Math.round(baseFont * 0.58), 10, Math.round(height * 0.16))
+
+  const textPadX = Math.round(panelW * 0.06)
+  const textPadTop = Math.round(panelH * 0.14)
+  const textX = panelX + textPadX
+  const maxTextWidth = panelW * 0.88
+
+  return {
+    width,
+    height,
+    padding,
+    panelW,
+    panelH,
+    panelX,
+    panelY,
+    radius,
+    baseFont,
+    subFont,
+    ctaFont,
+    textPadX,
+    textPadTop,
+    textX,
+    maxTextWidth,
+  }
+}
+
 function buildDefaultOverlay(keyword: string, purpose: string) {
   const k = keyword.trim()
   const headline = k.length > 0 ? k : '訴求メッセージを入力してください'
@@ -308,6 +364,49 @@ function buildHighCtrSampleCopy(category: string, purpose: string) {
   }
 }
 
+function buildHighCtrSampleCopies(category: string, purpose: string) {
+  const base = buildHighCtrSampleCopy(category, purpose)
+  const isYouTube = purpose === 'youtube'
+  const isCampaign = purpose === 'campaign'
+  const isWebinar = purpose === 'webinar'
+
+  const core = isYouTube
+    ? [
+        base,
+        `【衝撃】${base.replace(/^【[^】]+】/, '')}`,
+        `【暴露】${base.replace(/^【[^】]+】/, '')}`,
+        `【神回】${base.replace(/^【[^】]+】/, '')}`,
+        `知らないと損… ${base.replace(/^【[^】]+】/, '')}`,
+        `結論：${base.replace(/^【[^】]+】/, '')}`,
+        `【保存版】${base.replace(/^【[^】]+】/, '')}`,
+        `【3分で】${base.replace(/^【[^】]+】/, '')}`,
+      ]
+    : [
+        base,
+        `【今だけ】${base.replace(/^【[^】]+】/, '')}`,
+        `【無料】${base.replace(/^【[^】]+】/, '')}`,
+        `まずは無料で：${base.replace(/^【[^】]+】/, '')}`,
+        `最短で成果：${base.replace(/^【[^】]+】/, '')}`,
+        `失敗しない：${base.replace(/^【[^】]+】/, '')}`,
+        `【実績】${base.replace(/^【[^】]+】/, '')}`,
+        `迷ったらこれ：${base.replace(/^【[^】]+】/, '')}`,
+        `今すぐチェック：${base.replace(/^【[^】]+】/, '')}`,
+      ]
+
+  const boosts = [
+    ...(isCampaign ? ['【本日限定】', '【期間限定】', '【数量限定】', '今だけ'] : []),
+    ...(isWebinar ? ['【無料ウェビナー】', '【限定公開】', '【資料付き】'] : []),
+  ]
+
+  const boosted = core.flatMap((s) => {
+    const out = [s]
+    for (const b of boosts) out.push(`${b}${s.replace(/^【[^】]+】/, '')}`)
+    return out
+  })
+
+  return uniqStrings(boosted).slice(0, 24)
+}
+
 // ========================================
 // メインコンポーネント
 // ========================================
@@ -357,6 +456,26 @@ export default function BannerDashboard() {
   
   const [guestUsageCount, setGuestUsageCount] = useState(0)
   const [isSuggestingCopy, setIsSuggestingCopy] = useState(false)
+
+  // AIサンプル（押すたびに切り替え）
+  const [aiSamplePool, setAiSamplePool] = useState<string[]>([])
+  const [aiSampleIndex, setAiSampleIndex] = useState(0)
+  const [aiSampleKey, setAiSampleKey] = useState('')
+
+  // サイトURL→カラー抽出（ブランド配色）
+  const [brandUrl, setBrandUrl] = useState('')
+  const [brandPalette, setBrandPalette] = useState<null | {
+    sourceUrl: string
+    colors: Array<{ hex: string; count: number }>
+    palette: { primary: string; secondary: string; accent: string; background: string; text: string; cta: string }
+  }>(null)
+  const [useBrandPalette, setUseBrandPalette] = useState(false)
+  const [isExtractingPalette, setIsExtractingPalette] = useState(false)
+
+  // テキストレイヤー：プレビューの計測（DLと比率を揃える）
+  const overlayPreviewRef = useRef<HTMLDivElement | null>(null)
+  const overlayImgRef = useRef<HTMLImageElement | null>(null)
+  const [overlayPreviewBox, setOverlayPreviewBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
   
   const isGuest = !session
   const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
@@ -377,6 +496,12 @@ export default function BannerDashboard() {
     return { w, h, ratio: w / h }
   }, [effectiveSize])
 
+  const overlayPreviewMetrics = useMemo(() => {
+    const w = overlayPreviewBox.w || 640
+    const h = overlayPreviewBox.h || Math.round(w / (sizeInfo.ratio || 1))
+    return computeOverlayMetrics(w, h, overlayFontScale, overlayPosition)
+  }, [overlayPreviewBox.w, overlayPreviewBox.h, overlayFontScale, overlayPosition, sizeInfo.ratio])
+
   // Effects
   useEffect(() => {
     if (isGuest && typeof window !== 'undefined') {
@@ -390,6 +515,13 @@ export default function BannerDashboard() {
     const sizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
     setSize(sizes[0].value)
   }, [purpose])
+
+  useEffect(() => {
+    // 条件が変わったらローテーション候補をリセット
+    setAiSamplePool([])
+    setAiSampleIndex(0)
+    setAiSampleKey(`${category}|${purpose}`)
+  }, [category, purpose])
 
   useEffect(() => {
     if (!isGenerating) {
@@ -433,6 +565,22 @@ export default function BannerDashboard() {
     setShowTextOverlay(true)
   }, [generatedBanners.length, keyword, purpose])
 
+  // プレビュー領域（画像そのもの）のサイズを追跡
+  useEffect(() => {
+    const el = overlayImgRef.current || overlayPreviewRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+
+    const update = () => {
+      const target = overlayImgRef.current || overlayPreviewRef.current
+      setOverlayPreviewBox({ w: target?.clientWidth || 0, h: target?.clientHeight || 0 })
+    }
+    update()
+
+    const ro = new ResizeObserver(() => update())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [selectedBanner, showTextOverlay, generatedBanners.length])
+
   // Handlers
   const handleSample = () => {
     const sample = SAMPLES[purpose] || SAMPLES.sns_ad
@@ -463,6 +611,10 @@ export default function BannerDashboard() {
           logoImage: logoImage || undefined,
           personImage: personImage || undefined,
           referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
+          brandColors: useBrandPalette && brandPalette?.colors?.length
+            ? brandPalette.colors.map((c) => c.hex)
+            : undefined,
+          brandSourceUrl: useBrandPalette && brandPalette?.sourceUrl ? brandPalette.sourceUrl : undefined,
         }),
       })
 
@@ -549,7 +701,7 @@ export default function BannerDashboard() {
 
       ctx.fillStyle = overlayTextColor
       ctx.textBaseline = 'top'
-      ctx.font = `800 ${baseFont}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Helvetica, Arial`
+      ctx.font = `900 ${baseFont}px ${OVERLAY_FONT_FAMILY_CANVAS}`
 
       const textX = panelX + Math.round(panelW * 0.06)
       let y = panelY + Math.round(panelH * 0.14)
@@ -582,7 +734,7 @@ export default function BannerDashboard() {
       const sub = overlaySubhead.trim()
       if (sub) {
         ctx.globalAlpha = 0.92
-        ctx.font = `600 ${subFont}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Helvetica, Arial`
+        ctx.font = `700 ${subFont}px ${OVERLAY_FONT_FAMILY_CANVAS}`
         ctx.fillText(sub, textX, y + Math.round(baseFont * 0.12))
         ctx.globalAlpha = 1
       }
@@ -592,7 +744,7 @@ export default function BannerDashboard() {
       if (cta) {
         const pillPaddingX = Math.round(panelW * 0.04)
         const pillPaddingY = Math.round(panelH * 0.08)
-        ctx.font = `800 ${ctaFont}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Helvetica, Arial`
+        ctx.font = `900 ${ctaFont}px ${OVERLAY_FONT_FAMILY_CANVAS}`
         const tw = ctx.measureText(cta).width
         const pillW = Math.round(tw + pillPaddingX * 2)
         const pillH = Math.round(ctaFont + pillPaddingY * 1.6)
@@ -635,11 +787,14 @@ export default function BannerDashboard() {
       return
     }
 
-    // まずは即座に高CTRの型で埋める（空欄でも使える）
-    if (!keyword.trim()) {
-      const sample = buildHighCtrSampleCopy(category, purpose)
-      setKeyword(sample)
-      toast.success('クリック率を意識したサンプルを入力しました', { icon: '⚡' })
+    const key = `${category}|${purpose}`
+
+    // 既に候補がある場合は「押すたびに切り替え」
+    if (aiSamplePool.length > 1 && aiSampleKey === key) {
+      const next = (aiSampleIndex + 1) % aiSamplePool.length
+      setAiSampleIndex(next)
+      setKeyword(aiSamplePool[next])
+      toast.success(`サンプルを切り替えました（${next + 1}/${aiSamplePool.length}）`, { icon: '🔁' })
       return
     }
 
@@ -647,33 +802,49 @@ export default function BannerDashboard() {
     setIsSuggestingCopy(true)
     const loading = toast.loading('クリック率を意識したコピーを提案中...', { icon: '⚡' })
     try {
-      const res = await fetch('/api/banner/coach', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'copy',
-          keyword: keyword.trim(),
-          category,
-          useCase: purpose,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error || 'コピー提案に失敗しました')
+      let pool: string[] = []
 
-      const best = data?.data?.copyVariations?.bestPick?.copy
-      if (typeof best === 'string' && best.trim()) {
-        setKeyword(best.trim())
-        toast.success('クリック率を意識したコピーに更新しました', { icon: '✅' })
+      if (!keyword.trim()) {
+        // 空欄ならローカルの高CTRテンプレを複数用意（即時に回せる）
+        pool = buildHighCtrSampleCopies(category, purpose)
       } else {
-        // フォールバック：型で差し替え
-        const sample = buildHighCtrSampleCopy(category, purpose)
-        setKeyword(sample)
-        toast.success('サンプルを入力しました', { icon: '✨' })
+        // 入力がある場合はAIで複数案を生成してプール化
+        const res = await fetch('/api/banner/coach', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'copy',
+            keyword: keyword.trim(),
+            category,
+            useCase: purpose,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok || !data.success) throw new Error(data.error || 'コピー提案に失敗しました')
+
+        const best = data?.data?.copyVariations?.bestPick?.copy
+        const vars = Array.isArray(data?.data?.copyVariations?.variations)
+          ? data.data.copyVariations.variations.map((v: any) => (typeof v?.copy === 'string' ? v.copy : ''))
+          : []
+        pool = uniqStrings([typeof best === 'string' ? best : '', ...vars]).slice(0, 12)
       }
+
+      if (pool.length === 0) {
+        pool = buildHighCtrSampleCopies(category, purpose)
+      }
+
+      setAiSampleKey(key)
+      setAiSamplePool(pool)
+      setAiSampleIndex(0)
+      setKeyword(pool[0])
+      toast.success(`クリック率を意識したサンプルを入力しました（1/${pool.length}）`, { icon: '✅' })
     } catch (e: any) {
-      const sample = buildHighCtrSampleCopy(category, purpose)
-      setKeyword(sample)
-      toast.error(e?.message || 'AI提案に失敗したため、サンプルに切り替えました', { icon: '⚠️' })
+      const pool = buildHighCtrSampleCopies(category, purpose)
+      setAiSampleKey(key)
+      setAiSamplePool(pool)
+      setAiSampleIndex(0)
+      setKeyword(pool[0])
+      toast.error(e?.message || 'AI提案に失敗したため、テンプレサンプルに切り替えました', { icon: '⚠️' })
     } finally {
       toast.dismiss(loading)
       setIsSuggestingCopy(false)
@@ -729,6 +900,33 @@ export default function BannerDashboard() {
       toast.error(err?.message || '参考画像の追加に失敗しました')
     } finally {
       e.target.value = ''
+    }
+  }
+
+  const handleExtractBrandPalette = async () => {
+    const url = brandUrl.trim()
+    if (!url) {
+      toast.error('サイトURLを入力してください', { icon: '🔗' })
+      return
+    }
+    setIsExtractingPalette(true)
+    const loading = toast.loading('サイトからカラーを抽出中...', { icon: '🎨' })
+    try {
+      const res = await fetch('/api/color/palette', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'カラー抽出に失敗しました')
+      setBrandPalette(data.data)
+      setUseBrandPalette(true)
+      toast.success('カラーパレットを抽出しました（生成に適用できます）', { icon: '✅' })
+    } catch (e: any) {
+      toast.error(e?.message || 'カラー抽出に失敗しました', { icon: '⚠️' })
+    } finally {
+      toast.dismiss(loading)
+      setIsExtractingPalette(false)
     }
   }
 
@@ -1371,6 +1569,66 @@ export default function BannerDashboard() {
                         参考画像のロゴ/透かしはコピーしません。雰囲気・配色・構図の参考として使います。
                       </p>
                     </div>
+
+                    {/* Brand Palette from URL */}
+                    <div>
+                      <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 font-medium">
+                        <LinkIcon className="w-4 h-4" />
+                        サイトURLからカラー抽出（配色を合わせる）
+                      </label>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="url"
+                          value={brandUrl}
+                          onChange={(e) => setBrandUrl(e.target.value)}
+                          placeholder="例: https://example.com"
+                          className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all"
+                        />
+                        <button
+                          onClick={handleExtractBrandPalette}
+                          disabled={isExtractingPalette}
+                          className="px-4 py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isExtractingPalette ? '抽出中...' : '抽出'}
+                        </button>
+                      </div>
+
+                      {brandPalette && (
+                        <div className="mt-3 p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="text-xs text-gray-600">
+                              抽出元: <span className="font-semibold text-gray-800">{brandPalette.sourceUrl}</span>
+                            </div>
+                            <button
+                              onClick={() => setUseBrandPalette((v) => !v)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                useBrandPalette
+                                  ? 'bg-violet-100 text-violet-700'
+                                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                              }`}
+                            >
+                              生成に適用: {useBrandPalette ? 'ON' : 'OFF'}
+                            </button>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {(brandPalette.colors || []).slice(0, 10).map((c) => (
+                              <div key={c.hex} className="flex items-center gap-2 px-2 py-1 bg-white rounded-lg border border-gray-200">
+                                <div
+                                  className="w-4 h-4 rounded border border-gray-200"
+                                  style={{ backgroundColor: c.hex }}
+                                />
+                                <span className="text-xs font-mono text-gray-700">{c.hex}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <p className="text-xs text-gray-500 mt-3">
+                            ※ 抽出したカラーを優先して配色します（白/黒/グレーなどのニュートラルは可）。
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1647,52 +1905,87 @@ export default function BannerDashboard() {
                           
                           {/* プレビュー画像 */}
                           <div className="rounded-xl overflow-hidden mb-3 shadow-md">
-                            <div className="relative">
+                            <div className="relative" ref={overlayPreviewRef}>
                               <img 
+                                ref={overlayImgRef}
                                 src={generatedBanners[selectedBanner]} 
                                 alt="Selected Banner" 
                                 className="w-full"
+                                onLoad={() => {
+                                  const el = overlayImgRef.current
+                                  if (el) setOverlayPreviewBox({ w: el.clientWidth || 0, h: el.clientHeight || 0 })
+                                }}
                               />
                               
                               {/* Text Layer Preview (独自性) */}
                               {showTextOverlay && (
                                 <div className="absolute inset-0 pointer-events-none">
                                   <div
-                                    className={`absolute left-3 right-3 ${overlayPosition === 'center' ? 'top-1/2 -translate-y-1/2' : 'bottom-3'} rounded-xl overflow-hidden`}
+                                    className="absolute overflow-hidden"
                                     style={{
+                                      left: `${overlayPreviewMetrics.panelX}px`,
+                                      top: `${overlayPreviewMetrics.panelY}px`,
+                                      width: `${overlayPreviewMetrics.panelW}px`,
+                                      height: `${overlayPreviewMetrics.panelH}px`,
                                       backgroundColor: overlayBgColor,
                                       opacity: clamp(overlayBgOpacity, 0, 100) / 100,
+                                      borderRadius: `${overlayPreviewMetrics.radius}px`,
                                     }}
                                   >
-                                    <div className="p-3 sm:p-4">
+                                    <div
+                                      style={{
+                                        padding: `${overlayPreviewMetrics.textPadTop}px ${overlayPreviewMetrics.textPadX}px`,
+                                      }}
+                                    >
                                       <div
                                         className="font-black leading-tight"
                                         style={{
                                           color: overlayTextColor,
-                                          fontSize: `${clamp(14 * overlayFontScale, 12, 42)}px`,
+                                          fontSize: `${overlayPreviewMetrics.baseFont}px`,
+                                          fontFamily: OVERLAY_FONT_FAMILY_CSS,
+                                          fontWeight: 900,
+                                          lineHeight: 1.1,
+                                          maxWidth: `${overlayPreviewMetrics.maxTextWidth}px`,
+                                          display: '-webkit-box',
+                                          WebkitLineClamp: 2,
+                                          WebkitBoxOrient: 'vertical',
+                                          overflow: 'hidden',
                                         }}
                                       >
                                         {overlayHeadline || ' '}
                                       </div>
                                       {overlaySubhead && (
                                         <div
-                                          className="mt-1 font-semibold opacity-90"
+                                          className="font-semibold opacity-90"
                                           style={{
                                             color: overlayTextColor,
-                                            fontSize: `${clamp(11 * overlayFontScale, 10, 28)}px`,
+                                            fontSize: `${overlayPreviewMetrics.subFont}px`,
+                                            fontFamily: OVERLAY_FONT_FAMILY_CSS,
+                                            fontWeight: 700,
+                                            marginTop: `${Math.round(overlayPreviewMetrics.baseFont * 0.12)}px`,
+                                            maxWidth: `${overlayPreviewMetrics.maxTextWidth}px`,
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
                                           }}
                                         >
                                           {overlaySubhead}
                                         </div>
                                       )}
                                       {overlayCta && (
-                                        <div className="mt-2 flex justify-end">
+                                        <div
+                                          className="flex justify-end"
+                                          style={{ marginTop: `${Math.round(overlayPreviewMetrics.baseFont * 0.18)}px` }}
+                                        >
                                           <div
-                                            className="px-3 py-1 rounded-full font-black"
+                                            className="rounded-full font-black"
                                             style={{
                                               color: overlayTextColor,
                                               backgroundColor: 'rgba(255,255,255,0.14)',
-                                              fontSize: `${clamp(11 * overlayFontScale, 10, 24)}px`,
+                                              fontSize: `${overlayPreviewMetrics.ctaFont}px`,
+                                              fontFamily: OVERLAY_FONT_FAMILY_CSS,
+                                              fontWeight: 900,
+                                              padding: `${Math.round(overlayPreviewMetrics.panelH * 0.08)}px ${Math.round(overlayPreviewMetrics.panelW * 0.04)}px`,
                                             }}
                                           >
                                             {overlayCta}

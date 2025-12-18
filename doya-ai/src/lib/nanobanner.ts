@@ -207,6 +207,9 @@ interface GenerateOptions {
   logoImage?: string  // ロゴ画像のBase64データ（data:image/...;base64,...形式）
   personImage?: string  // 人物画像のBase64データ
   referenceImages?: string[] // 参考画像（data:image/...;base64,...形式）
+  // サイトURLなどから抽出した「ブランドカラー」を優先適用（#RRGGBB 推奨）
+  brandColors?: string[]
+  brandSourceUrl?: string
 }
 
 function parseDataUrl(dataUrl: string): { mimeType: string; data: string } {
@@ -302,6 +305,12 @@ The right side must remain clear for text overlay.
   }
 
   prompt += `
+${Array.isArray(options.brandColors) && options.brandColors.length > 0 ? `
+=== BRAND COLOR PALETTE (MUST USE) ===
+Use these exact brand colors as the main palette:
+${options.brandColors.slice(0, 8).join(', ')}
+Avoid introducing new dominant colors. Minor neutrals are allowed.
+` : ''}
 === FINAL OUTPUT ===
 Generate a YouTube thumbnail that:
 1. Is instantly eye-catching with PURE VISUAL design
@@ -343,6 +352,13 @@ function createBannerPrompt(
   // 短いテキストのみ直接レンダリング、それ以外はテキストエリアを確保
   const shouldRenderText = textLength <= 8 && !hasComplexJapanese
 
+  const brandColors = Array.isArray(options.brandColors)
+    ? options.brandColors.filter((c) => typeof c === 'string' && c.trim().length > 0).slice(0, 8)
+    : []
+  const colorPaletteText = brandColors.length > 0
+    ? `${brandColors.join(', ')} (use these as the primary palette)`
+    : categoryStyle.colors
+
   let prompt = `Create a professional advertisement banner image for Japanese market.
 
 === BANNER SPECIFICATIONS ===
@@ -351,8 +367,14 @@ Purpose: ${options.purpose || 'sns_ad'} - ${purposeStyle.layout}
 
 === DESIGN STYLE ===
 Industry: ${categoryStyle.style}
-Color palette: ${categoryStyle.colors}
+Color palette: ${colorPaletteText}
 Visual elements: ${categoryStyle.elements}
+
+${brandColors.length > 0 ? `=== BRAND COLOR POLICY (VERY IMPORTANT) ===
+Use the brand colors above for major elements (background panels, accents, shapes, CTA button shape).
+Avoid introducing new dominant colors. Neutrals (white/black/gray) are allowed for readability.
+${options.brandSourceUrl ? `Brand source URL (for reference only): ${options.brandSourceUrl}` : ''}
+` : ''}
 
 === LAYOUT & EMPHASIS ===
 ${purposeStyle.emphasis}
