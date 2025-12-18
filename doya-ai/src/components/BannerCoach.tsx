@@ -13,7 +13,11 @@ interface BannerCoachProps {
   keyword: string
   category: string
   useCase: string
+  selectedVariant?: 'A' | 'B' | 'C'
+  selectedImage?: string | null
   onApplyCopy?: (copy: string) => void
+  onApplyRefine?: (instruction: string) => Promise<void> | void
+  onApplyOverlay?: (overlay: { headline: string; subhead: string; cta: string }) => void
 }
 
 interface BannerScore {
@@ -67,13 +71,17 @@ const TYPE_LABELS: Record<string, { label: string; icon: string; gradient: strin
   emotional: { label: '感情訴求', icon: '❤️', gradient: 'from-pink-500/20 to-rose-500/20' },
 }
 
-export default function BannerCoach({ keyword, category, useCase, onApplyCopy }: BannerCoachProps) {
+export default function BannerCoach(props: BannerCoachProps) {
+  const { keyword, category, useCase, selectedVariant, selectedImage, onApplyCopy, onApplyRefine, onApplyOverlay } = props
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'score' | 'copy' | 'benchmark'>('score')
+  const [activeTab, setActiveTab] = useState<'score' | 'copy' | 'benchmark' | 'fb'>('score')
   const [score, setScore] = useState<BannerScore | null>(null)
   const [copyVariations, setCopyVariations] = useState<CopyVariations | null>(null)
   const [benchmark, setBenchmark] = useState<IndustryBenchmark | null>(null)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [isFbLoading, setIsFbLoading] = useState(false)
+  const [fb, setFb] = useState<any | null>(null)
+  const [fbInstruction, setFbInstruction] = useState('')
 
   const analyzeWithCoach = async () => {
     if (!keyword.trim()) {
@@ -125,6 +133,41 @@ export default function BannerCoach({ keyword, category, useCase, onApplyCopy }:
     }
   }
 
+  const analyzeSelectedBanner = async () => {
+    if (!selectedImage) {
+      toast.error('A/B/Cのバナーを選択してください')
+      return
+    }
+    setIsFbLoading(true)
+    const loading = toast.loading('選択バナーを分析中...', { icon: '🔍' })
+    try {
+      const response = await fetch('/api/banner/coach/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: selectedImage,
+          category,
+          useCase,
+          variant: selectedVariant,
+          keyword,
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'FB生成に失敗しました')
+      }
+      setFb(result.data)
+      setFbInstruction(result.data.refineInstruction || '')
+      setActiveTab('fb')
+      toast.success('FBを生成しました', { icon: '✅' })
+    } catch (e: any) {
+      toast.error(e?.message || 'FB生成に失敗しました')
+    } finally {
+      toast.dismiss(loading)
+      setIsFbLoading(false)
+    }
+  }
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-emerald-400'
     if (score >= 60) return 'text-amber-400'
@@ -152,23 +195,34 @@ export default function BannerCoach({ keyword, category, useCase, onApplyCopy }:
               <p className="text-xs text-white/50">プロの視点で分析・改善提案</p>
             </div>
           </div>
-          <button
-            onClick={analyzeWithCoach}
-            disabled={isLoading || !keyword.trim()}
-            className="px-4 py-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm shadow-lg shadow-violet-500/25"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                分析中...
-              </>
-            ) : (
-              <>
-                <Zap className="w-4 h-4" />
-                AI分析
-              </>
-            )}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={analyzeSelectedBanner}
+              disabled={isFbLoading || !selectedImage}
+              className="px-4 py-2 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+              title={selectedImage ? '選択中バナーを分析' : 'A/B/Cのバナーを選択してください'}
+            >
+              {isFbLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              FB生成
+            </button>
+            <button
+              onClick={analyzeWithCoach}
+              disabled={isLoading || !keyword.trim()}
+              className="px-4 py-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm shadow-lg shadow-violet-500/25"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  分析中...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4" />
+                  AI分析
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -179,6 +233,7 @@ export default function BannerCoach({ keyword, category, useCase, onApplyCopy }:
             { id: 'score', label: 'スコア', icon: BarChart3 },
             { id: 'copy', label: 'コピー改善', icon: Lightbulb },
             { id: 'benchmark', label: '業界データ', icon: TrendingUp },
+            { id: 'fb', label: 'FB', icon: Sparkles },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -471,6 +526,121 @@ export default function BannerCoach({ keyword, category, useCase, onApplyCopy }:
                     </div>
                   </div>
                 </div>
+              </motion.div>
+            )}
+
+            {/* FB Tab */}
+            {activeTab === 'fb' && (
+              <motion.div
+                key="fb"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="space-y-4"
+              >
+                {!selectedImage ? (
+                  <div className="text-center py-6 text-white/50 text-sm">
+                    A/B/Cのバナーを選択してから「FB生成」を押してください
+                  </div>
+                ) : !fb ? (
+                  <div className="text-center py-6 text-white/50 text-sm">
+                    「FB生成」を押すと、選択中バナーの改善提案が出ます
+                  </div>
+                ) : (
+                  <>
+                    <div className="bg-white/5 rounded-xl p-3">
+                      <div className="text-xs text-white/40 mb-1">サマリー</div>
+                      <div className="text-sm text-white font-medium">{fb.summary}</div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
+                        <h5 className="font-bold text-emerald-400 text-xs mb-2 flex items-center gap-1">
+                          <Star className="w-3 h-3" /> 良い点
+                        </h5>
+                        <ul className="space-y-1">
+                          {(fb.strengths || []).slice(0, 4).map((s: string, i: number) => (
+                            <li key={i} className="text-[11px] text-white/70">• {s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                        <h5 className="font-bold text-amber-400 text-xs mb-2 flex items-center gap-1">
+                          <Lightbulb className="w-3 h-3" /> 改善点
+                        </h5>
+                        <ul className="space-y-1">
+                          {(fb.issues || []).slice(0, 4).map((s: string, i: number) => (
+                            <li key={i} className="text-[11px] text-white/70">• {s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3">
+                      <div className="text-xs text-white/40 mb-2">クイック改善（すぐ効く）</div>
+                      <div className="flex flex-wrap gap-2">
+                        {(fb.quickWins || []).slice(0, 6).map((t: string) => (
+                          <span key={t} className="px-2 py-1 rounded-full text-[11px] bg-white/10 text-white/70">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-br from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20 rounded-xl p-4">
+                      <div className="text-xs text-white/40 mb-1">提案コピー（CTR重視）</div>
+                      <div className="text-sm text-white font-medium mb-3">{fb.suggestedCopy}</div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApplyCopy(fb.suggestedCopy)}
+                          className="px-3 py-1.5 bg-violet-500/20 text-violet-200 text-xs font-bold rounded-lg hover:bg-violet-500/30 transition-colors"
+                        >
+                          コピーを適用
+                        </button>
+                        <button
+                          onClick={() => handleCopyCopy(fb.suggestedCopy, 9999)}
+                          className="px-3 py-1.5 bg-white/10 text-white/80 text-xs font-bold rounded-lg hover:bg-white/20 transition-colors"
+                        >
+                          <Copy className="w-3 h-3" /> コピー
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-3">
+                      <div className="text-xs text-white/40 mb-2">AI修正指示（このまま再生成できます）</div>
+                      <textarea
+                        value={fbInstruction}
+                        onChange={(e) => setFbInstruction(e.target.value)}
+                        rows={4}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white/90 outline-none"
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={async () => {
+                            if (!onApplyRefine) return
+                            await onApplyRefine(fbInstruction)
+                          }}
+                          disabled={!onApplyRefine || !fbInstruction.trim()}
+                          className="px-3 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-black disabled:opacity-50"
+                        >
+                          ボタンでさらに修正
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (onApplyOverlay && fb?.suggestedOverlay) {
+                              onApplyOverlay(fb.suggestedOverlay)
+                              toast.success('テキストレイヤーに適用しました')
+                            }
+                          }}
+                          disabled={!onApplyOverlay || !fb?.suggestedOverlay}
+                          className="px-3 py-2 rounded-xl bg-white/10 text-white text-xs font-bold hover:bg-white/20 disabled:opacity-50"
+                        >
+                          テキストレイヤーに適用
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

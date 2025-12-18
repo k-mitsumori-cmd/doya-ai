@@ -732,10 +732,12 @@ export default function BannerDashboard() {
     }
   }
 
-  // 画像修正ハンドラー
-  const handleRefine = async () => {
-    if (selectedBanner === null || !refineInstruction.trim()) return
-    
+  // 画像修正ハンドラー（外部から指示文を渡して実行もできる）
+  const handleRefine = async (overrideInstruction?: string) => {
+    if (selectedBanner === null) return
+    const instruction = (overrideInstruction ?? refineInstruction).trim()
+    if (!instruction) return
+
     const originalImage = generatedBanners[selectedBanner]
     
     setIsRefining(true)
@@ -745,7 +747,7 @@ export default function BannerDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           originalImage,
-          instruction: refineInstruction.trim(),
+          instruction,
           category,
           size: effectiveSize,
         }),
@@ -759,7 +761,7 @@ export default function BannerDashboard() {
 
       // 履歴に追加
       setRefineHistory(prev => [...prev, { 
-        instruction: refineInstruction, 
+        instruction, 
         image: originalImage 
       }])
       
@@ -1453,7 +1455,7 @@ export default function BannerDashboard() {
                 }`}
               >
                 <BarChart3 className="w-4 h-4" />
-                AIコーチ
+                AIバナーコーチ
               </button>
             </div>
 
@@ -1469,7 +1471,20 @@ export default function BannerDashboard() {
                     keyword={keyword}
                     category={category}
                     useCase={purpose}
+                    selectedVariant={selectedBanner !== null ? (['A','B','C'][selectedBanner] as any) : undefined}
+                    selectedImage={selectedBanner !== null ? generatedBanners[selectedBanner] : null}
                     onApplyCopy={(copy) => setKeyword(copy)}
+                    onApplyRefine={async (instruction) => {
+                      setRefineInstruction(instruction)
+                      setShowRefineInput(true)
+                      await handleRefine(instruction)
+                    }}
+                    onApplyOverlay={(ov) => {
+                      setShowTextOverlay(true)
+                      setOverlayHeadline(ov.headline)
+                      setOverlaySubhead(ov.subhead)
+                      setOverlayCta(ov.cta)
+                    }}
                   />
                 </motion.div>
               ) : (
@@ -1834,8 +1849,8 @@ export default function BannerDashboard() {
                                       maxLength={200}
                                       disabled={isRefining}
                                     />
-                                    <button
-                                      onClick={handleRefine}
+                              <button
+                                onClick={() => handleRefine()}
                                       disabled={isRefining || !refineInstruction.trim()}
                                       className="absolute right-2 bottom-2 w-8 h-8 bg-gradient-to-r from-fuchsia-500 to-violet-500 rounded-lg flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
