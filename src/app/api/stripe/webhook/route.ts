@@ -193,7 +193,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     data: {
       plan: 'FREE',
       stripeSubscriptionId: null,
-      stripeSubscriptionStatus: 'canceled',
       stripePriceId: null,
       stripeCurrentPeriodEnd: null,
     },
@@ -224,7 +223,6 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
     data: {
       plan,
       stripeSubscriptionId: subscription.id,
-      stripeSubscriptionStatus: subscription.status,
       stripePriceId: priceId,
       stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
     },
