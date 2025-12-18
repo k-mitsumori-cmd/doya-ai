@@ -9,12 +9,12 @@ import {
   Download, Clock, Zap, Layout, X, Image as ImageIcon, 
   User, Building2, Video, Mail, Gift, Megaphone, Target,
   ChevronDown, Check, Star, Eye, Copy, 
-  Layers, Play, Crown, ArrowUpRight, Palette, BarChart3,
+  Play, Crown, ArrowUpRight, Palette,
   MessageSquare, Send, RotateCcw, Pencil, Link as LinkIcon
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, getGuestUsage, setGuestUsage } from '@/lib/pricing'
-import BannerCoach from '@/components/BannerCoach'
+// AIバナーコーチ機能は廃止
 
 // ========================================
 // 定数
@@ -433,7 +433,7 @@ export default function BannerDashboard() {
   const [personImage, setPersonImage] = useState<string | null>(null)
   const [referenceImages, setReferenceImages] = useState<string[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [showCoach, setShowCoach] = useState(false)
+  // const [showCoach, setShowCoach] = useState(false) // removed
   
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
@@ -844,45 +844,22 @@ export default function BannerDashboard() {
       return
     }
 
-    // 既に入力がある場合はAIコーチで改善案を即反映
-    setIsSuggestingCopy(true)
-    const loading = toast.loading('クリック率を意識したコピーを提案中...', { icon: '⚡' })
     try {
-      let pool: string[] = []
-
-      if (!keyword.trim()) {
-        // 空欄ならローカルの高CTRテンプレを複数用意（即時に回せる）
-        pool = buildHighCtrSampleCopies(category, purpose)
-      } else {
-        // 入力がある場合はAIで複数案を生成してプール化
-        const res = await fetch('/api/banner/coach', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'copy',
-            keyword: keyword.trim(),
-            category,
-            useCase: purpose,
-          }),
-        })
-        const data = await res.json()
-        if (!res.ok || !data.success) throw new Error(data.error || 'コピー提案に失敗しました')
-
-        const best = data?.data?.copyVariations?.bestPick?.copy
-        const vars = Array.isArray(data?.data?.copyVariations?.variations)
-          ? data.data.copyVariations.variations.map((v: any) => (typeof v?.copy === 'string' ? v.copy : ''))
-          : []
-        // AIが1案しか返さないケースでも、必ず複数候補にする
-        pool = uniqStrings([
-          typeof best === 'string' ? best : '',
-          ...vars,
-          ...buildHighCtrSampleCopies(category, purpose),
-        ]).slice(0, 12)
-      }
-
-      if (pool.length === 0) {
-        pool = buildHighCtrSampleCopies(category, purpose)
-      }
+      // AIバナーコーチ機能は廃止したため、サンプルはローカル生成のみ
+      setIsSuggestingCopy(true)
+      const base = keyword.trim()
+      const local = buildHighCtrSampleCopies(category, purpose)
+      const boosts = base
+        ? uniqStrings([
+            base,
+            `【今だけ】${base.replace(/^【[^】]+】/, '')}`,
+            `【無料】${base.replace(/^【[^】]+】/, '')}`,
+            `まずは無料で：${base.replace(/^【[^】]+】/, '')}`,
+            `失敗しない：${base.replace(/^【[^】]+】/, '')}`,
+            `今すぐチェック：${base.replace(/^【[^】]+】/, '')}`,
+          ])
+        : []
+      const pool = uniqStrings([...boosts, ...local]).slice(0, 18)
 
       setAiSampleKey(key)
       setAiSamplePool(pool)
@@ -895,9 +872,8 @@ export default function BannerDashboard() {
       setAiSamplePool(pool)
       setAiSampleIndex(0)
       setKeyword(pool[0])
-      toast.error(e?.message || 'AI提案に失敗したため、テンプレサンプルに切り替えました', { icon: '⚠️' })
+      toast.error(e?.message || 'サンプル生成に失敗したため、テンプレサンプルに切り替えました', { icon: '⚠️' })
     } finally {
-      toast.dismiss(loading)
       setIsSuggestingCopy(false)
     }
   }
@@ -1741,72 +1717,14 @@ export default function BannerDashboard() {
           </div>
 
           {/* ========================================
-              Right Column - Results & Coach
+              Right Column - Results
               ======================================== */}
           <div className="space-y-5 sm:space-y-6">
-            
-            {/* AI Coach Toggle */}
-            <div className="flex gap-2 p-1.5 bg-gray-100 rounded-2xl">
-              <button
-                onClick={() => setShowCoach(false)}
-                className={`flex-1 py-3 sm:py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                  !showCoach 
-                    ? 'bg-white text-gray-900 shadow-lg' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <Layers className="w-4 h-4" />
-                生成結果
-              </button>
-              <button
-                onClick={() => setShowCoach(true)}
-                className={`flex-1 py-3 sm:py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
-                  showCoach 
-                    ? 'bg-white text-gray-900 shadow-lg' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                <BarChart3 className="w-4 h-4" />
-                AIバナーコーチ
-              </button>
-            </div>
-
-            <AnimatePresence mode="wait">
-              {showCoach ? (
-                <motion.div
-                  key="coach"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                >
-                  <BannerCoach
-                    keyword={keyword}
-                    category={category}
-                    useCase={purpose}
-                    selectedVariant={selectedBanner !== null ? (['A','B','C'][selectedBanner] as any) : undefined}
-                    selectedImage={selectedBanner !== null ? generatedBanners[selectedBanner] : null}
-                    onApplyCopy={(copy) => setKeyword(copy)}
-                    onApplyRefine={async (instruction) => {
-                      setRefineInstruction(instruction)
-                      setShowRefineInput(true)
-                      await handleRefine(instruction)
-                    }}
-                    onApplyOverlay={(ov) => {
-                      setShowTextOverlay(true)
-                      setOverlayHeadline(ov.headline)
-                      setOverlaySubhead(ov.subhead)
-                      setOverlayCta(ov.cta)
-                    }}
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="results"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-3 sm:space-y-4"
-                >
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="space-y-3 sm:space-y-4"
+            >
                   {generatedBanners.length > 0 ? (
                     <>
                       {/* Text Overlay Notice */}
@@ -2258,9 +2176,7 @@ export default function BannerDashboard() {
                       </div>
                     </div>
                   )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+            </motion.div>
 
             {/* ドヤマーケ CV Banner */}
             <a 
