@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, RefreshCcw, Play, Pause, ExternalLink } from 'lucide-react'
 
 type SeoSection = {
@@ -30,6 +30,7 @@ export default function SeoJobPage() {
   const params = useParams<{ id: string }>()
   const jobId = params.id
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [job, setJob] = useState<SeoJob | null>(null)
   const [loading, setLoading] = useState(true)
   const [auto, setAuto] = useState(false)
@@ -79,6 +80,13 @@ export default function SeoJobPage() {
     const t = setInterval(load, 2500)
     return () => clearInterval(t)
   }, [load])
+
+  // 作成直後 (?auto=1) は自動実行をONにする
+  useEffect(() => {
+    const a = searchParams.get('auto')
+    if (a === '1') setAuto(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!auto) return

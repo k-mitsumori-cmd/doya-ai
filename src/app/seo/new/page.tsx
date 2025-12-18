@@ -178,7 +178,8 @@ export default function SeoNewPage() {
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error || '作成に失敗しました')
-      router.push(`/seo/jobs/${json.jobId}`)
+      // 作成直後は自動実行ONで開始（ユーザーが迷わないように）
+      router.push(`/seo/jobs/${json.jobId}?auto=1`)
     } catch (e: any) {
       setError(e?.message || '不明なエラー')
     } finally {
