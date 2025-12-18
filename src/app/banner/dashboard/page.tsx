@@ -541,7 +541,8 @@ export default function BannerDashboard() {
       setProgress(prev => {
         if (prev >= 100) return 100
         const increment = Math.random() * 3 + 1
-        return Math.min(prev + increment, 98)
+        // 生成中は85%で止める（完了時にのみ100%へ到達させる）
+        return Math.min(prev + increment, 85)
       })
     }, 500)
     return () => {
@@ -2376,7 +2377,7 @@ export default function BannerDashboard() {
                 <motion.div
                   className="h-full bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-600"
                   initial={{ width: '0%' }}
-                  animate={{ width: `${clamp(progress, 2, 98)}%` }}
+                  animate={{ width: `${clamp(progress, 2, 85)}%` }}
                   transition={{ ease: 'easeOut', duration: 0.4 }}
                 />
               </div>
