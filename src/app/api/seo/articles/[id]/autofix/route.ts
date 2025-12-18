@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { autoFixFromAudit } from '@seo/lib/audit'
+import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 const BodySchema = z.object({
   auditId: z.string().optional(),
@@ -8,6 +9,7 @@ const BodySchema = z.object({
 
 export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
   try {
+    await ensureSeoSchema()
     const id = ctx.params.id
     const body = BodySchema.parse(await req.json().catch(() => ({})))
     await autoFixFromAudit(id, body.auditId)
