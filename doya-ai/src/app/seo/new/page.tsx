@@ -43,6 +43,30 @@ export default function SeoNewPage() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
+  function fillSample() {
+    setTitle('採用代行（RPO）徹底比較！おすすめ50社の特徴・料金、委託できる業務内容')
+    setKeywords('採用代行, RPO, 採用アウトソーシング, 人事, 採用支援')
+    setPersona('中堅企業の人事責任者。採用工数が逼迫しており、母集団形成〜面接調整を外注したい。失敗例や相場、選び方を知りたい。')
+    setSearchIntent('定義/できること・できないこと/料金相場/比較表/選び方/失敗例/チェックリスト/FAQが欲しい')
+    setTargetChars(50000)
+    setReferenceUrls('')
+    setTone('ビジネス')
+    setForbidden('誇大表現NG, 競合名の断定的批判NG')
+    setLlmo({
+      tldr: true,
+      conclusionFirst: true,
+      faq: true,
+      glossary: true,
+      comparison: true,
+      quotes: true,
+      templates: true,
+      objections: true,
+    })
+    setStep(0)
+    setNotice('サンプルを入力しました（そのまま「ジョブ作成して開始」で生成できます）')
+    setTimeout(() => setNotice(null), 3500)
+  }
+
   const keywordList = useMemo(
     () =>
       keywords
@@ -197,6 +221,10 @@ export default function SeoNewPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="secondary" size="sm" onClick={fillSample}>
+            <Sparkles className="w-4 h-4" />
+            サンプル入力
+          </Button>
           <Button variant="secondary" size="sm" onClick={saveDraft}>
             <Save className="w-4 h-4" />
             下書き保存

@@ -48,7 +48,15 @@ export default function SeoJobPage() {
     if (showLoading) setLoading(true)
     setLoadError(null)
     try {
-      const res = await fetch(`/api/seo/jobs/${jobId}`, { cache: 'no-store' })
+      // ハング対策: Vercelの一時的な遅延で「読み込み中…」が永遠に続かないようtimeoutを入れる
+      const controller = new AbortController()
+      const timeoutMs = 12000
+      const t = setTimeout(() => controller.abort(), timeoutMs)
+      const res = await fetch(`/api/seo/jobs/${jobId}`, {
+        cache: 'no-store',
+        signal: controller.signal,
+      })
+      clearTimeout(t)
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
         throw new Error(json?.error || `API Error: ${res.status}`)
@@ -57,7 +65,11 @@ export default function SeoJobPage() {
     } catch (e: any) {
       // ポーリング時は一時的な失敗で画面が点滅しないよう、既存jobがある場合は維持する
       if (showLoading || !job) setJob(null)
-      setLoadError(e?.message || '読み込みに失敗しました')
+      const msg =
+        e?.name === 'AbortError'
+          ? '読み込みがタイムアウトしました（回線/サーバの一時遅延の可能性）。再読み込みしてください。'
+          : e?.message || '読み込みに失敗しました'
+      setLoadError(msg)
     }
     if (showLoading) setLoading(false)
   }, [jobId, job])
@@ -184,7 +196,7 @@ export default function SeoJobPage() {
           </button>
           <button
             className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
-            onClick={load}
+            onClick={() => load({ showLoading: true })}
           >
             <RefreshCcw className="w-4 h-4" />
           </button>
@@ -214,6 +226,44 @@ export default function SeoJobPage() {
         <div className="mt-4 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800">
           <p className="font-bold">エラー</p>
           <pre className="text-xs whitespace-pre-wrap mt-2">{job.error}</pre>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 disabled:opacity-60"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true)
+                try {
+                  setActionError(null)
+                  const res = await fetch(`/api/seo/jobs/${jobId}/reset`, { method: 'POST' })
+                  const json = await res.json().catch(() => ({}))
+                  if (!res.ok || json?.success === false) {
+                    throw new Error(json?.error || `reset failed (${res.status})`)
+                  }
+                  setAuto(true)
+                  await load({ showLoading: true })
+                  // すぐ1ステップ進める（ユーザーが迷わないように）
+                  await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST' }).catch(() => {})
+                  await load({ showLoading: false })
+                } catch (e: any) {
+                  setActionError(e?.message || 'リセットに失敗しました')
+                } finally {
+                  setBusy(false)
+                }
+              }}
+            >
+              エラーをリセットして再開
+            </button>
+            <button
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+              disabled={busy}
+              onClick={() => {
+                setAuto(true)
+                advanceOnce()
+              }}
+            >
+              自動実行を再開
+            </button>
+          </div>
         </div>
       ) : null}
       {actionError ? (
