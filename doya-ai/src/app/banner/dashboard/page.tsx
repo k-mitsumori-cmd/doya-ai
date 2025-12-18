@@ -613,7 +613,7 @@ export default function BannerDashboard() {
           originalImage,
           instruction: refineInstruction.trim(),
           category,
-          size,
+          size: effectiveSize,
         }),
       })
 
