@@ -81,11 +81,14 @@ export default function SeoArticlePage() {
   const [loading, setLoading] = useState(true)
   const [memo, setMemo] = useState('')
   const [tab, setTab] = useState<
-    'preview' | 'research' | 'outline' | 'meta' | 'audit' | 'media' | 'links' | 'export'
+    'preview' | 'edit' | 'research' | 'outline' | 'meta' | 'audit' | 'media' | 'links' | 'export'
   >('preview')
   const [diagramTitle, setDiagramTitle] = useState('')
   const [diagramDesc, setDiagramDesc] = useState('')
   const [outlineDraft, setOutlineDraft] = useState('')
+  const [markdownDraft, setMarkdownDraft] = useState('')
+  const [normalizeOnSave, setNormalizeOnSave] = useState(true)
+  const [updateOutlineOnSave, setUpdateOutlineOnSave] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -99,6 +102,7 @@ export default function SeoArticlePage() {
     setArticle(json.article || null)
     setMemo(json.article?.memo?.content || '')
     setOutlineDraft(json.article?.outline || '')
+    setMarkdownDraft(json.article?.finalMarkdown || '')
     setLoading(false)
   }, [id])
 
@@ -189,6 +193,7 @@ export default function SeoArticlePage() {
               onChange={setTab}
               tabs={[
                 { id: 'preview', label: 'プレビュー', badge: 'Write' },
+                { id: 'edit', label: '編集', badge: 'Edit' },
                 { id: 'research', label: 'リサーチ', badge: 'Research' },
                 { id: 'outline', label: 'アウトライン', badge: 'Outline' },
                 { id: 'meta', label: 'メタ', badge: 'SEO' },
@@ -212,6 +217,76 @@ export default function SeoArticlePage() {
               </CardHeader>
               <CardBody>
                 {markdown ? <MarkdownPreview markdown={markdown} /> : <div className="text-gray-500">（最終稿がありません）</div>}
+              </CardBody>
+            </Card>
+          ) : null}
+
+          {tab === 'edit' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>最終稿（貼り付け・編集）</CardTitle>
+                <CardDesc>
+                  ここに本文を貼り付けて保存できます。Markdown見出し（<code>##</code>/<code>###</code>）があるとアウトライン抽出が安定します。
+                </CardDesc>
+              </CardHeader>
+              <CardBody className="space-y-3">
+                <textarea
+                  className="w-full min-h-[520px] font-mono text-xs p-3 rounded-xl border border-gray-200"
+                  value={markdownDraft}
+                  onChange={(e) => setMarkdownDraft(e.target.value)}
+                  placeholder="ここにMarkdown/テキストを貼り付け…"
+                />
+
+                <div className="flex items-center gap-4 flex-wrap text-sm text-gray-700">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={normalizeOnSave}
+                      onChange={(e) => setNormalizeOnSave(e.target.checked)}
+                    />
+                    テキストを軽くMarkdown整形して保存（見出し推定）
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={updateOutlineOnSave}
+                      onChange={(e) => setUpdateOutlineOnSave(e.target.checked)}
+                    />
+                    アウトラインも同時に更新（H2〜H4から抽出）
+                  </label>
+                </div>
+
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setMarkdownDraft(article.finalMarkdown || '')}
+                    disabled={!!busy}
+                  >
+                    元に戻す
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      act('content', async () => {
+                        const res = await fetch(`/api/seo/articles/${id}/content`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            finalMarkdown: markdownDraft,
+                            normalize: normalizeOnSave,
+                            updateOutline: updateOutlineOnSave,
+                          }),
+                        })
+                        const json = await res.json()
+                        if (!json.success) throw new Error(json.error || '失敗しました')
+                      })
+                    }
+                    disabled={!!busy || !markdownDraft.trim()}
+                  >
+                    <FileText className="w-4 h-4" />
+                    保存
+                  </Button>
+                </div>
               </CardBody>
             </Card>
           ) : null}
