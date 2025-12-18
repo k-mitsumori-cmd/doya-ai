@@ -155,15 +155,21 @@ async function ensureOutlineAndSections(jobId: string) {
   })
   await prisma.seoArticle.update({ where: { id: article.id }, data: { status: 'RUNNING' } })
 
-  // 参考URLがある場合、アウトライン前に自動リサーチ（未実行なら）
-  const urls = (article.referenceUrls as any) as string[] | null
-  if (Array.isArray(urls) && urls.length) {
-    const hasRef = await prisma.seoReference.findFirst({ where: { articleId: article.id }, select: { id: true } })
-    if (!hasRef) {
-      try {
-        await researchAndStore(article.id)
-      } catch {
-        // リサーチ失敗は致命にしない（入力中心でも生成可能）
+  // NOTE: Vercel等のサーバレス環境では、ここで「複数URLの取得＋要約」を自動実行するとタイムアウトしやすい。
+  // デフォルトはOFFにして、必要ならUIから「参考URLを解析」を明示的に実行してもらう。
+  // どうしても自動化したい場合は、環境変数でONにする（自己責任）。
+  const autoResearch = process.env.SEO_AUTO_RESEARCH_BEFORE_OUTLINE === '1'
+  if (autoResearch) {
+    const urls = (article.referenceUrls as any) as string[] | null
+    if (Array.isArray(urls) && urls.length) {
+      const hasRef = await prisma.seoReference.findFirst({ where: { articleId: article.id }, select: { id: true } })
+      if (!hasRef) {
+        try {
+          // 1回のadvanceでやり切ろうとすると落ちやすいので、ここでは最大1件だけに制限
+          await researchAndStore(article.id, { maxUrls: 1 })
+        } catch {
+          // リサーチ失敗は致命にしない（入力中心でも生成可能）
+        }
       }
     }
   }
@@ -479,15 +485,20 @@ async function integrate(jobId: string) {
   })
 }
 
-export async function researchAndStore(articleId: string): Promise<{ stored: number }> {
+export async function researchAndStore(
+  articleId: string,
+  opts?: { maxUrls?: number }
+): Promise<{ stored: number }> {
   const article = await prisma.seoArticle.findUnique({ where: { id: articleId } })
   if (!article) throw new Error('article not found')
 
   const urls = (article.referenceUrls as any) as string[] | null
   const list = Array.isArray(urls) ? urls : []
+  const maxUrls = typeof opts?.maxUrls === 'number' && opts.maxUrls > 0 ? opts.maxUrls : list.length
+  const targets = list.slice(0, maxUrls)
   let stored = 0
 
-  for (const url of list) {
+  for (const url of targets) {
     try {
       const extracted = await fetchAndExtract(url)
       const summarizePrompt = [

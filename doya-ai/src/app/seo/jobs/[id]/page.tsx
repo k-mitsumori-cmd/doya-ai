@@ -34,6 +34,7 @@ export default function SeoJobPage() {
   const [loading, setLoading] = useState(true)
   const [auto, setAuto] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const reviewedCount = useMemo(
     () => (job?.sections || []).filter((s) => s.status === 'reviewed').length,
@@ -52,7 +53,21 @@ export default function SeoJobPage() {
     if (busy) return
     setBusy(true)
     try {
-      await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST' })
+      setActionError(null)
+      const res = await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST' })
+      let json: any = null
+      try {
+        json = await res.json()
+      } catch {
+        // ignore
+      }
+      if (!res.ok || json?.success === false) {
+        const msg = json?.error || `advance failed (${res.status})`
+        setActionError(msg)
+        setAuto(false) // 自動実行中なら止める（無限リトライ防止）
+        await load()
+        return
+      }
       await load()
     } finally {
       setBusy(false)
@@ -152,6 +167,15 @@ export default function SeoJobPage() {
         <div className="mt-4 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800">
           <p className="font-bold">エラー</p>
           <pre className="text-xs whitespace-pre-wrap mt-2">{job.error}</pre>
+        </div>
+      ) : null}
+      {actionError ? (
+        <div className="mt-4 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800">
+          <p className="font-bold">実行エラー（advance）</p>
+          <pre className="text-xs whitespace-pre-wrap mt-2">{actionError}</pre>
+          <p className="text-xs mt-2 text-red-800/90">
+            まずは環境変数（<code>GOOGLE_GENAI_API_KEY</code> / <code>DATABASE_URL</code>）や参考URLの重さを確認してください。
+          </p>
         </div>
       ) : null}
 
