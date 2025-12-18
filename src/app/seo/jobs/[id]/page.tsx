@@ -36,6 +36,7 @@ export default function SeoJobPage() {
   const [auto, setAuto] = useState(false)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const reviewedCount = useMemo(
     () => (job?.sections || []).filter((s) => s.status === 'reviewed').length,
@@ -44,9 +45,18 @@ export default function SeoJobPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch(`/api/seo/jobs/${jobId}`, { cache: 'no-store' })
-    const json = await res.json()
-    setJob(json.job || null)
+    setLoadError(null)
+    try {
+      const res = await fetch(`/api/seo/jobs/${jobId}`, { cache: 'no-store' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || `API Error: ${res.status}`)
+      }
+      setJob(json.job || null)
+    } catch (e: any) {
+      setJob(null)
+      setLoadError(e?.message || '読み込みに失敗しました')
+    }
     setLoading(false)
   }, [jobId])
 
@@ -56,15 +66,29 @@ export default function SeoJobPage() {
     try {
       setActionError(null)
       const res = await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST' })
+      const contentType = res.headers.get('content-type') || ''
       let json: any = null
-      try {
-        json = await res.json()
-      } catch {
-        // ignore
+      let text = ''
+      if (contentType.includes('application/json')) {
+        try {
+          json = await res.json()
+        } catch {
+          // fallthrough
+        }
       }
+      if (!json) {
+        try {
+          text = await res.text()
+        } catch {
+          // ignore
+        }
+      }
+
       if (!res.ok || json?.success === false) {
-        const msg = json?.error || `advance failed (${res.status})`
-        setActionError(msg)
+        const hint = typeof json?.hint === 'string' ? `\n\nHINT: ${json.hint}` : ''
+        const body = (json?.error || text || '').toString().trim()
+        const msg = body ? `${body}${hint}` : `advance failed (${res.status})`
+        setActionError(msg.slice(0, 2000))
         setAuto(false) // 自動実行中なら止める（無限リトライ防止）
         await load()
         return
@@ -98,10 +122,35 @@ export default function SeoJobPage() {
     return () => clearTimeout(t)
   }, [auto, job, advanceOnce])
 
-  if (loading || !job) {
+  if (loading) {
     return (
       <main className="max-w-6xl mx-auto px-4 py-10">
         <div className="text-gray-600">読み込み中...</div>
+      </main>
+    )
+  }
+
+  if (!job) {
+    return (
+      <main className="max-w-6xl mx-auto px-4 py-10">
+        <div className="p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800">
+          <p className="font-bold">読み込みに失敗しました</p>
+          <pre className="text-xs whitespace-pre-wrap mt-2">{loadError || '不明なエラー'}</pre>
+          <p className="text-xs mt-2 text-red-800/90">
+            まずは環境変数（<code>GOOGLE_GENAI_API_KEY</code> / <code>DATABASE_URL</code>）とDB接続状態を確認してください。
+          </p>
+        </div>
+        <div className="mt-4">
+          <button
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800"
+            onClick={() => {
+              setLoading(true)
+              load()
+            }}
+          >
+            再読み込み
+          </button>
+        </div>
       </main>
     )
   }
