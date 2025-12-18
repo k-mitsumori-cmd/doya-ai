@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
+import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 const BodySchema = z.object({
   title: z.string().min(1).max(120),
@@ -11,8 +12,9 @@ const BodySchema = z.object({
 
 export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
   try {
+    await ensureSeoSchema()
     const articleId = ctx.params.id
-    const article = await prisma.seoArticle.findUnique({ where: { id: articleId } })
+    const article = await (prisma as any).seoArticle.findUnique({ where: { id: articleId } })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
 
     const body = BodySchema.parse(await req.json())
@@ -41,7 +43,7 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     const filename = `seo_${articleId}_${Date.now()}_diagram.png`
     const saved = await saveBase64ToFile({ base64: img.dataBase64, filename, subdir: 'images' })
 
-    const rec = await prisma.seoImage.create({
+    const rec = await (prisma as any).seoImage.create({
       data: {
         articleId,
         kind: 'DIAGRAM',
