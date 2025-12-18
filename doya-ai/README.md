@@ -21,6 +21,12 @@
 - **決済**: Stripe
 - **AI**: OpenAI GPT-4
 
+## URL固定ルール（重要）
+
+- **バナー生成ツールのURLは `https://doya-ai.vercel.app/banner` に固定**します。
+- 広告/資料/外部導線で参照されるため、**`/banner` は変更しない**でください。
+- LP（紹介ページ）は `https://doya-ai.vercel.app/banner/landing` に配置します。
+
 ## 料金プラン
 
 ### 無料プラン（¥0）
