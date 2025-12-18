@@ -4,7 +4,26 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
-import { Download, Image as ImageIcon, Link2, RefreshCcw, Sparkles } from 'lucide-react'
+import { Tabs } from '@seo/components/ui/Tabs'
+import { Button } from '@seo/components/ui/Button'
+import { Card, CardBody, CardHeader, CardTitle, CardDesc } from '@seo/components/ui/Card'
+import { Badge } from '@seo/components/ui/Badge'
+import { ProgressBar } from '@seo/components/ui/ProgressBar'
+import { StatCard } from '@seo/components/ui/StatCard'
+import { analyzeMarkdown } from '@seo/lib/score'
+import {
+  Download,
+  Image as ImageIcon,
+  Link2,
+  RefreshCcw,
+  Sparkles,
+  ExternalLink,
+  Wand2,
+  Settings,
+  BookOpen,
+  Search,
+  FileText,
+} from 'lucide-react'
 
 type SeoImage = {
   id: string
@@ -28,6 +47,16 @@ type SeoKnowledge = {
   createdAt: string
 }
 
+type SeoReference = {
+  id: string
+  url: string
+  title?: string | null
+  summary?: string | null
+  headings?: any
+  insights?: any
+  createdAt: string
+}
+
 type Article = {
   id: string
   title: string
@@ -41,6 +70,8 @@ type Article = {
   images: SeoImage[]
   linkChecks: { url: string; ok: boolean; statusCode?: number | null; finalUrl?: string | null; error?: string | null }[]
   knowledgeItems?: SeoKnowledge[]
+  references?: SeoReference[]
+  llmoOptions?: any
 }
 
 export default function SeoArticlePage() {
@@ -49,13 +80,17 @@ export default function SeoArticlePage() {
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [memo, setMemo] = useState('')
-  const [tab, setTab] = useState<'preview' | 'markdown'>('preview')
+  const [tab, setTab] = useState<
+    'preview' | 'research' | 'outline' | 'meta' | 'audit' | 'media' | 'links' | 'export'
+  >('preview')
   const [diagramTitle, setDiagramTitle] = useState('')
   const [diagramDesc, setDiagramDesc] = useState('')
+  const [outlineDraft, setOutlineDraft] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
   const markdown = useMemo(() => article?.finalMarkdown || '', [article])
+  const score = useMemo(() => analyzeMarkdown(markdown || ''), [markdown])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -63,6 +98,7 @@ export default function SeoArticlePage() {
     const json = await res.json()
     setArticle(json.article || null)
     setMemo(json.article?.memo?.content || '')
+    setOutlineDraft(json.article?.outline || '')
     setLoading(false)
   }, [id])
 
@@ -95,47 +131,36 @@ export default function SeoArticlePage() {
   const latestAudit = article.audits?.[0]
   const latestJobId = article.jobs?.[0]?.id
   const knowledgeByType = (t: string) => (article.knowledgeItems || []).filter((k) => k.type === t)
+  const metaItem = knowledgeByType('meta')?.[0]
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">{article.title}</h1>
-          <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-600">
-            <span className="px-2 py-1 rounded-full bg-gray-100">status: {article.status}</span>
-            <span className="px-2 py-1 rounded-full bg-gray-100">目標: {article.targetChars}</span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 truncate">{article.title}</h1>
+            <Badge tone={article.status === 'DONE' ? 'green' : article.status === 'ERROR' ? 'red' : 'blue'}>
+              {article.status}
+            </Badge>
+            <Badge tone="gray">目標 {article.targetChars.toLocaleString('ja-JP')}</Badge>
           </div>
+          <p className="text-sm text-gray-600 mt-1">
+            Research → Outline → Write → Audit → Media/Links → Export の流れで品質を上げます
+          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           {latestJobId ? (
-            <Link
-              href={`/seo/jobs/${latestJobId}`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50"
-            >
-              ジョブへ
+            <Link href={`/seo/jobs/${latestJobId}`}>
+              <Button variant="secondary">
+                <ExternalLink className="w-4 h-4" />
+                ジョブ
+              </Button>
             </Link>
           ) : null}
-          <a
-            href={`/api/seo/articles/${id}/export/markdown`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50"
-          >
-            <Download className="w-4 h-4" />
-            Markdown
-          </a>
-          <a
-            href={`/api/seo/articles/${id}/export/html`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50"
-          >
-            <Download className="w-4 h-4" />
-            HTML
-          </a>
-          <button
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
-            onClick={load}
-          >
+          <Button variant="ghost" onClick={load}>
             <RefreshCcw className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -145,295 +170,439 @@ export default function SeoArticlePage() {
         </div>
       ) : null}
 
-      <div className="mt-6 grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <button
-                className={`px-3 py-2 rounded-xl text-sm font-bold border ${
-                  tab === 'preview' ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-700'
-                }`}
-                onClick={() => setTab('preview')}
-              >
-                プレビュー
-              </button>
-              <button
-                className={`px-3 py-2 rounded-xl text-sm font-bold border ${
-                  tab === 'markdown' ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-700'
-                }`}
-                onClick={() => setTab('markdown')}
-              >
-                Markdown
-              </button>
-            </div>
-            <div className="text-xs text-gray-500">画像は `![alt](/api/seo/images/&lt;id&gt;)` で挿入できます</div>
-          </div>
+      <div className="mt-6 grid md:grid-cols-4 gap-3">
+        <StatCard label="Content Score" value={`${score.score}`} sub="目安: 70+で強い" tone={score.score >= 70 ? 'green' : score.score >= 50 ? 'amber' : 'red'} icon={<Sparkles className="w-5 h-5" />} />
+        <StatCard label="文字数" value={score.charCount.toLocaleString('ja-JP')} sub={`目標 ${article.targetChars.toLocaleString('ja-JP')}`} />
+        <StatCard label="構造" value={`${score.headingCount}見出し`} sub={`${score.tableCount ? '表あり' : '表なし'} / FAQ ${score.faqCount ? 'あり' : 'なし'}`} />
+        <StatCard label="素材" value={`${score.linkCount}リンク`} sub={`${score.imageCount}画像`} />
+      </div>
 
-          <div className="mt-3 p-4 rounded-2xl border border-gray-200">
-            {tab === 'preview' ? (
-              markdown ? (
-                <MarkdownPreview markdown={markdown} />
-              ) : (
-                <div className="text-gray-500">（まだ最終稿がありません。ジョブを完了してください）</div>
-              )
-            ) : (
-              <textarea
-                className="w-full min-h-[520px] font-mono text-xs p-3 rounded-xl border border-gray-200"
-                value={markdown || article.outline || ''}
-                readOnly
-              />
-            )}
-          </div>
+      <div className="mt-4">
+        <Card>
+          <CardBody className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="min-w-[240px]">
+              <p className="text-xs text-gray-500 font-bold">進捗（最終稿の充実度）</p>
+              <ProgressBar value={score.score} className="mt-2" />
+            </div>
+            <Tabs
+              value={tab}
+              onChange={setTab}
+              tabs={[
+                { id: 'preview', label: 'プレビュー', badge: 'Write' },
+                { id: 'research', label: 'リサーチ', badge: 'Research' },
+                { id: 'outline', label: 'アウトライン', badge: 'Outline' },
+                { id: 'meta', label: 'メタ', badge: 'SEO' },
+                { id: 'audit', label: '監査', badge: 'Audit' },
+                { id: 'media', label: '画像', badge: 'Media' },
+                { id: 'links', label: 'リンク', badge: 'Links' },
+                { id: 'export', label: '出力', badge: 'Export' },
+              ]}
+            />
+          </CardBody>
+        </Card>
+      </div>
+
+      <div className="mt-6 grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          {tab === 'preview' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>プレビュー</CardTitle>
+                <CardDesc>Markdownをレンダリングします（表/画像/リンク）。</CardDesc>
+              </CardHeader>
+              <CardBody>
+                {markdown ? <MarkdownPreview markdown={markdown} /> : <div className="text-gray-500">（最終稿がありません）</div>}
+              </CardBody>
+            </Card>
+          ) : null}
+
+          {tab === 'research' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>リサーチ</CardTitle>
+                <CardDesc>参考URLを要点化してナレッジとして蓄積します（丸写し禁止）。</CardDesc>
+              </CardHeader>
+              <CardBody className="space-y-4">
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    act('research', async () => {
+                      const res = await fetch(`/api/seo/articles/${id}/research`, { method: 'POST' })
+                      const json = await res.json()
+                      if (!json.success) throw new Error(json.error || '失敗しました')
+                    })
+                  }
+                  disabled={!!busy}
+                >
+                  <Search className="w-4 h-4" />
+                  {busy === 'research' ? '解析中...' : '参考URLを解析'}
+                </Button>
+
+                <div className="space-y-3">
+                  {(article.references || []).map((r) => (
+                    <div key={r.id} className="p-4 rounded-2xl border border-gray-200 bg-white">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-bold text-gray-900 truncate">{r.title || r.url}</p>
+                          <a className="text-xs text-blue-600 hover:underline" href={r.url} target="_blank" rel="noreferrer">
+                            {r.url}
+                          </a>
+                        </div>
+                        <Badge tone="purple">参考</Badge>
+                      </div>
+                      {r.summary ? <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{r.summary}</p> : null}
+                    </div>
+                  ))}
+                  {(article.references || []).length === 0 ? (
+                    <div className="text-sm text-gray-500">（まだ参考URL解析結果がありません）</div>
+                  ) : null}
+                </div>
+              </CardBody>
+            </Card>
+          ) : null}
+
+          {tab === 'outline' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>アウトライン（編集可）</CardTitle>
+                <CardDesc>アウトラインを整えると分割生成が安定します。</CardDesc>
+              </CardHeader>
+              <CardBody className="space-y-3">
+                <textarea
+                  className="w-full min-h-[380px] font-mono text-xs p-3 rounded-xl border border-gray-200"
+                  value={outlineDraft}
+                  onChange={(e) => setOutlineDraft(e.target.value)}
+                  placeholder="（未生成）"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setOutlineDraft(article.outline || '')}
+                    disabled={!!busy}
+                  >
+                    元に戻す
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      act('outline', async () => {
+                        const res = await fetch(`/api/seo/articles/${id}/outline`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ outline: outlineDraft }),
+                        })
+                        const json = await res.json()
+                        if (!json.success) throw new Error(json.error || '失敗しました')
+                      })
+                    }
+                    disabled={!!busy}
+                  >
+                    <FileText className="w-4 h-4" />
+                    保存
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+          ) : null}
+
+          {tab === 'meta' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>メタ生成（title/description/slug/OG）</CardTitle>
+                <CardDesc>SERPスニペット用のメタをGeminiで生成し、記事に紐づけて保存します。</CardDesc>
+              </CardHeader>
+              <CardBody className="space-y-4">
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    act('meta', async () => {
+                      const res = await fetch(`/api/seo/articles/${id}/meta`, { method: 'POST' })
+                      const json = await res.json()
+                      if (!json.success) throw new Error(json.error || '失敗しました')
+                    })
+                  }
+                  disabled={!!busy}
+                >
+                  <Wand2 className="w-4 h-4" />
+                  {busy === 'meta' ? '生成中...' : 'メタを生成'}
+                </Button>
+
+                <div className="grid gap-3">
+                  {metaItem ? (
+                    <pre className="text-xs whitespace-pre-wrap p-3 rounded-xl bg-gray-50 border border-gray-200">
+                      {metaItem.content}
+                    </pre>
+                  ) : (
+                    <p className="text-sm text-gray-500">（まだメタがありません）</p>
+                  )}
+                </div>
+              </CardBody>
+            </Card>
+          ) : null}
+
+          {tab === 'audit' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>品質監査（二重チェック）</CardTitle>
+                <CardDesc>別プロンプトで弱点を洗い出し、自動修正で反映します。</CardDesc>
+              </CardHeader>
+              <CardBody className="space-y-3">
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      act('audit', async () => {
+                        const res = await fetch(`/api/seo/articles/${id}/audit`, { method: 'POST' })
+                        const json = await res.json()
+                        if (!json.success) throw new Error(json.error || '失敗しました')
+                      })
+                    }
+                    disabled={!!busy}
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    {busy === 'audit' ? '監査中...' : '監査'}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      act('autofix', async () => {
+                        const res = await fetch(`/api/seo/articles/${id}/autofix`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ auditId: latestAudit?.id }),
+                        })
+                        const json = await res.json()
+                        if (!json.success) throw new Error(json.error || '失敗しました')
+                      })
+                    }
+                    disabled={!!busy || !latestAudit}
+                  >
+                    自動修正
+                  </Button>
+                </div>
+                {latestAudit ? (
+                  <pre className="text-xs whitespace-pre-wrap p-3 rounded-xl bg-gray-50 border border-gray-200">
+                    {latestAudit.report}
+                  </pre>
+                ) : (
+                  <p className="text-sm text-gray-500">（まだ監査レポートがありません）</p>
+                )}
+              </CardBody>
+            </Card>
+          ) : null}
+
+          {tab === 'media' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>画像（バナー / 図解）</CardTitle>
+                <CardDesc>Geminiで生成し、Markdownリンクで記事に挿入できます。</CardDesc>
+              </CardHeader>
+              <CardBody className="space-y-4">
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    act('banner', async () => {
+                      const res = await fetch(`/api/seo/articles/${id}/images/banner`, { method: 'POST' })
+                      const json = await res.json()
+                      if (!json.success) throw new Error(json.error || '失敗しました')
+                    })
+                  }
+                  disabled={!!busy}
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  {busy === 'banner' ? '生成中...' : 'バナー生成'}
+                </Button>
+
+                <div className="grid gap-2">
+                  <input
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm"
+                    value={diagramTitle}
+                    onChange={(e) => setDiagramTitle(e.target.value)}
+                    placeholder="図解タイトル（例：施策マップ）"
+                  />
+                  <textarea
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm min-h-20"
+                    value={diagramDesc}
+                    onChange={(e) => setDiagramDesc(e.target.value)}
+                    placeholder="図解で表現する内容（例：入力→解析→生成→監査→公開の流れ）"
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      act('diagram', async () => {
+                        const res = await fetch(`/api/seo/articles/${id}/images/diagram`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ title: diagramTitle, description: diagramDesc }),
+                        })
+                        const json = await res.json()
+                        if (!json.success) throw new Error(json.error || '失敗しました')
+                        setDiagramTitle('')
+                        setDiagramDesc('')
+                      })
+                    }
+                    disabled={!!busy || !diagramTitle.trim() || !diagramDesc.trim()}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {busy === 'diagram' ? '生成中...' : '図解生成'}
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {article.images?.map((img) => (
+                    <div key={img.id} className="p-3 rounded-xl border border-gray-200">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-bold text-gray-900">
+                          {img.kind}: {img.title || img.id}
+                        </p>
+                        <a className="text-xs text-blue-600 hover:underline" href={`/api/seo/images/${img.id}`} target="_blank" rel="noreferrer">
+                          表示
+                        </a>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        挿入用: <code className="px-1 py-0.5 bg-gray-100 rounded">![{img.title || 'image'}](/api/seo/images/{img.id})</code>
+                      </p>
+                    </div>
+                  ))}
+                  {article.images?.length ? null : <p className="text-sm text-gray-500">（画像はまだありません）</p>}
+                </div>
+              </CardBody>
+            </Card>
+          ) : null}
+
+          {tab === 'links' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>リンクチェック</CardTitle>
+                <CardDesc>記事内リンクを抽出して到達確認します。</CardDesc>
+              </CardHeader>
+              <CardBody className="space-y-3">
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    act('linkcheck', async () => {
+                      const res = await fetch(`/api/seo/articles/${id}/link-check`, { method: 'POST' })
+                      const json = await res.json()
+                      if (!json.success) throw new Error(json.error || '失敗しました')
+                    })
+                  }
+                  disabled={!!busy}
+                >
+                  <Link2 className="w-4 h-4" />
+                  {busy === 'linkcheck' ? '確認中...' : 'リンクチェック実行'}
+                </Button>
+                <div className="max-h-[420px] overflow-auto border border-gray-100 rounded-xl">
+                  {article.linkChecks?.length ? (
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50 text-gray-600">
+                        <tr>
+                          <th className="text-left p-2">URL</th>
+                          <th className="text-left p-2">結果</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {article.linkChecks.map((r) => (
+                          <tr key={r.url} className="border-t border-gray-100">
+                            <td className="p-2">
+                              <a className="text-blue-600 hover:underline" href={r.url} target="_blank" rel="noreferrer">
+                                {r.url}
+                              </a>
+                              {r.finalUrl && r.finalUrl !== r.url ? (
+                                <div className="text-[10px] text-gray-500 mt-1">→ {r.finalUrl}</div>
+                              ) : null}
+                            </td>
+                            <td className={`p-2 ${r.ok ? 'text-green-700' : 'text-red-700'}`}>
+                              {r.ok ? 'OK' : 'NG'} {r.statusCode ? `(${r.statusCode})` : ''}
+                              {r.error ? <div className="text-[10px] mt-1">{r.error}</div> : null}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="p-3 text-sm text-gray-500">（未実行）</div>
+                  )}
+                </div>
+              </CardBody>
+            </Card>
+          ) : null}
+
+          {tab === 'export' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>エクスポート</CardTitle>
+                <CardDesc>用途別にダウンロードできます（WordPress貼り付け向け含む）。</CardDesc>
+              </CardHeader>
+              <CardBody className="flex flex-wrap gap-2">
+                <a href={`/api/seo/articles/${id}/export/markdown`} className="inline-flex">
+                  <Button variant="secondary">
+                    <Download className="w-4 h-4" /> Markdown
+                  </Button>
+                </a>
+                <a href={`/api/seo/articles/${id}/export/html`} className="inline-flex">
+                  <Button variant="secondary">
+                    <Download className="w-4 h-4" /> HTML
+                  </Button>
+                </a>
+                <a href={`/api/seo/articles/${id}/export/wp`} className="inline-flex">
+                  <Button variant="primary">
+                    <Download className="w-4 h-4" /> WordPressクリーンHTML
+                  </Button>
+                </a>
+              </CardBody>
+            </Card>
+          ) : null}
         </div>
 
         <div className="space-y-6">
-          <div className="p-4 rounded-2xl border border-gray-200">
-            <p className="font-bold text-gray-900">参考URL解析（ナレッジ蓄積）</p>
-            <p className="text-xs text-gray-500 mt-1">参考URLがある場合のみ実行します（要点化・言い換え）。</p>
-            <button
-              className="mt-3 w-full px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 disabled:opacity-60"
-              disabled={!!busy}
-              onClick={() =>
-                act('research', async () => {
-                  const res = await fetch(`/api/seo/articles/${id}/research`, { method: 'POST' })
-                  const json = await res.json()
-                  if (!json.success) throw new Error(json.error || '失敗しました')
-                })
-              }
-            >
-              {busy === 'research' ? '解析中...' : '解析を実行'}
-            </button>
-          </div>
-
-          <div className="p-4 rounded-2xl border border-gray-200">
-            <p className="font-bold text-gray-900">“AIっぽさ”メモ</p>
-            <p className="text-xs text-gray-500 mt-1">次回のリライトで反映されます（体験談/葛藤/失敗談/具体例など）。</p>
-            <textarea
-              className="mt-3 w-full min-h-28 px-3 py-2 rounded-xl border border-gray-200 text-sm"
-              value={memo}
-              onChange={(e) => setMemo(e.target.value)}
-              placeholder="例）結論が綺麗すぎる。失敗談・判断基準の具体例を増やしたい。"
-            />
-            <button
-              className="mt-3 w-full px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-              disabled={!!busy}
-              onClick={() =>
-                act('memo', async () => {
-                  const res = await fetch(`/api/seo/articles/${id}/memo`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: memo }),
-                  })
-                  const json = await res.json()
-                  if (!json.success) throw new Error(json.error || '失敗しました')
-                })
-              }
-            >
-              {busy === 'memo' ? '保存中...' : '保存'}
-            </button>
-          </div>
-
-          <div className="p-4 rounded-2xl border border-gray-200">
-            <p className="font-bold text-gray-900">品質監査（二重チェック）</p>
-            <div className="flex gap-2 mt-3">
-              <button
-                className="flex-1 px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 disabled:opacity-60"
-                disabled={!!busy}
-                onClick={() =>
-                  act('audit', async () => {
-                    const res = await fetch(`/api/seo/articles/${id}/audit`, { method: 'POST' })
-                    const json = await res.json()
-                    if (!json.success) throw new Error(json.error || '失敗しました')
-                  })
-                }
-              >
-                {busy === 'audit' ? '監査中...' : '監査'}
-              </button>
-              <button
-                className="flex-1 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-                disabled={!!busy || !latestAudit}
-                onClick={() =>
-                  act('autofix', async () => {
-                    const res = await fetch(`/api/seo/articles/${id}/autofix`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ auditId: latestAudit?.id }),
-                    })
-                    const json = await res.json()
-                    if (!json.success) throw new Error(json.error || '失敗しました')
-                  })
-                }
-              >
-                {busy === 'autofix' ? '修正中...' : '自動修正'}
-              </button>
-            </div>
-            <div className="mt-3">
-              {latestAudit ? (
-                <details>
-                  <summary className="text-sm font-bold text-gray-700 cursor-pointer">最新の監査レポート</summary>
-                  <pre className="text-xs whitespace-pre-wrap mt-2 p-3 rounded-xl bg-gray-50 border border-gray-200">
-                    {latestAudit.report}
-                  </pre>
-                </details>
-              ) : (
-                <p className="text-xs text-gray-500">（まだ監査レポートがありません）</p>
-              )}
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl border border-gray-200">
-            <p className="font-bold text-gray-900">画像生成（バナー / 図解）</p>
-            <button
-              className="mt-3 w-full px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 disabled:opacity-60 inline-flex items-center justify-center gap-2"
-              disabled={!!busy}
-              onClick={() =>
-                act('banner', async () => {
-                  const res = await fetch(`/api/seo/articles/${id}/images/banner`, { method: 'POST' })
-                  const json = await res.json()
-                  if (!json.success) throw new Error(json.error || '失敗しました')
-                })
-              }
-            >
-              <ImageIcon className="w-4 h-4" />
-              {busy === 'banner' ? '生成中...' : 'バナー生成'}
-            </button>
-
-            <div className="mt-4 grid gap-2">
-              <input
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm"
-                value={diagramTitle}
-                onChange={(e) => setDiagramTitle(e.target.value)}
-                placeholder="図解タイトル（例：LLMOの施策マップ）"
-              />
+          <Card>
+            <CardHeader>
+              <CardTitle>作業メモ（AIっぽさ対策）</CardTitle>
+              <CardDesc>次回のリライトで反映します（体験談/葛藤/失敗談/具体例）。</CardDesc>
+            </CardHeader>
+            <CardBody className="space-y-3">
               <textarea
-                className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm min-h-20"
-                value={diagramDesc}
-                onChange={(e) => setDiagramDesc(e.target.value)}
-                placeholder="図解で表現する内容（例：入力→解析→生成→監査→公開の流れ）"
+                className="w-full min-h-28 px-3 py-2 rounded-xl border border-gray-200 text-sm"
+                value={memo}
+                onChange={(e) => setMemo(e.target.value)}
+                placeholder="例）断言が強い。判断基準のトレードオフを追加。失敗談が欲しい。"
               />
-              <button
-                className="w-full px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60 inline-flex items-center justify-center gap-2"
-                disabled={!!busy || !diagramTitle.trim() || !diagramDesc.trim()}
+              <Button
+                variant="secondary"
                 onClick={() =>
-                  act('diagram', async () => {
-                    const res = await fetch(`/api/seo/articles/${id}/images/diagram`, {
+                  act('memo', async () => {
+                    const res = await fetch(`/api/seo/articles/${id}/memo`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ title: diagramTitle, description: diagramDesc }),
+                      body: JSON.stringify({ content: memo }),
                     })
                     const json = await res.json()
                     if (!json.success) throw new Error(json.error || '失敗しました')
-                    setDiagramTitle('')
-                    setDiagramDesc('')
                   })
                 }
+                disabled={!!busy}
               >
-                <Sparkles className="w-4 h-4" />
-                {busy === 'diagram' ? '生成中...' : '図解生成'}
-              </button>
-            </div>
+                <Settings className="w-4 h-4" />
+                {busy === 'memo' ? '保存中...' : '保存'}
+              </Button>
+            </CardBody>
+          </Card>
 
-            <div className="mt-4 space-y-3">
-              {article.images?.map((img) => (
-                <div key={img.id} className="p-3 rounded-xl border border-gray-200">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-bold text-gray-900">
-                      {img.kind}: {img.title || img.id}
-                    </p>
-                    <a
-                      className="text-xs text-blue-600 hover:text-blue-700"
-                      href={`/api/seo/images/${img.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      表示
-                    </a>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    挿入用: <code className="px-1 py-0.5 bg-gray-100 rounded">![{img.title || 'image'}](/api/seo/images/{img.id})</code>
-                  </p>
-                </div>
-              ))}
-              {article.images?.length ? null : <p className="text-xs text-gray-500">（画像はまだありません）</p>}
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl border border-gray-200">
-            <p className="font-bold text-gray-900">リンクチェック</p>
-            <button
-              className="mt-3 w-full px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60 inline-flex items-center justify-center gap-2"
-              disabled={!!busy}
-              onClick={() =>
-                act('linkcheck', async () => {
-                  const res = await fetch(`/api/seo/articles/${id}/link-check`, { method: 'POST' })
-                  const json = await res.json()
-                  if (!json.success) throw new Error(json.error || '失敗しました')
-                })
-              }
-            >
-              <Link2 className="w-4 h-4" />
-              {busy === 'linkcheck' ? '確認中...' : 'リンクチェック実行'}
-            </button>
-            <div className="mt-3 max-h-56 overflow-auto border border-gray-100 rounded-xl">
-              {article.linkChecks?.length ? (
-                <table className="w-full text-xs">
-                  <thead className="bg-gray-50 text-gray-600">
-                    <tr>
-                      <th className="text-left p-2">URL</th>
-                      <th className="text-left p-2">結果</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {article.linkChecks.map((r) => (
-                      <tr key={r.url} className="border-t border-gray-100">
-                        <td className="p-2">
-                          <a className="text-blue-600 hover:underline" href={r.url} target="_blank" rel="noreferrer">
-                            {r.url}
-                          </a>
-                          {r.finalUrl && r.finalUrl !== r.url ? (
-                            <div className="text-[10px] text-gray-500 mt-1">→ {r.finalUrl}</div>
-                          ) : null}
-                        </td>
-                        <td className={`p-2 ${r.ok ? 'text-green-700' : 'text-red-700'}`}>
-                          {r.ok ? 'OK' : 'NG'} {r.statusCode ? `(${r.statusCode})` : ''}
-                          {r.error ? <div className="text-[10px] mt-1">{r.error}</div> : null}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="p-3 text-xs text-gray-500">（未実行）</div>
-              )}
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl border border-gray-200">
-            <p className="font-bold text-gray-900">ナレッジ（差別化機能）</p>
-            <div className="mt-2 space-y-3">
-              {knowledgeByType('intro_ab').map((k) => (
+          <Card>
+            <CardHeader>
+              <CardTitle>ナレッジ（自動生成）</CardTitle>
+              <CardDesc>導入A/B・内部リンク・SNS要約など</CardDesc>
+            </CardHeader>
+            <CardBody className="space-y-3">
+              {['intro_ab', 'internal_link', 'sns'].flatMap((t) => knowledgeByType(t as any)).map((k) => (
                 <details key={k.id} className="p-3 rounded-xl bg-gray-50 border border-gray-200">
-                  <summary className="text-sm font-bold text-gray-800 cursor-pointer">{k.title || '導入文案A/B'}</summary>
+                  <summary className="text-sm font-bold text-gray-800 cursor-pointer">{k.title || k.type}</summary>
                   <pre className="text-xs whitespace-pre-wrap mt-2">{k.content}</pre>
                 </details>
               ))}
-              {knowledgeByType('internal_link').map((k) => (
-                <details key={k.id} className="p-3 rounded-xl bg-gray-50 border border-gray-200">
-                  <summary className="text-sm font-bold text-gray-800 cursor-pointer">{k.title || '内部リンク提案'}</summary>
-                  <pre className="text-xs whitespace-pre-wrap mt-2">{k.content}</pre>
-                </details>
-              ))}
-              {knowledgeByType('sns').map((k) => (
-                <details key={k.id} className="p-3 rounded-xl bg-gray-50 border border-gray-200">
-                  <summary className="text-sm font-bold text-gray-800 cursor-pointer">{k.title || 'SNS要約 & CTA案'}</summary>
-                  <pre className="text-xs whitespace-pre-wrap mt-2">{k.content}</pre>
-                </details>
-              ))}
-              {!article.knowledgeItems?.length ? (
-                <p className="text-xs text-gray-500">（まだナレッジがありません。ジョブ完了後に自動生成されます）</p>
-              ) : null}
-            </div>
-          </div>
+              {!article.knowledgeItems?.length ? <p className="text-sm text-gray-500">（まだナレッジがありません）</p> : null}
+            </CardBody>
+          </Card>
         </div>
       </div>
 

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { markdownToHtmlBasic } from '@seo/lib/markdown'
+import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+  await ensureSeoSchema()
   const id = ctx.params.id
-  const article = await prisma.seoArticle.findUnique({ where: { id } })
+  const article = await (prisma as any).seoArticle.findUnique({ where: { id } })
   if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
   const md = article.finalMarkdown || ''
   const body = markdownToHtmlBasic(md)

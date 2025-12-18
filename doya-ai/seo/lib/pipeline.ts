@@ -155,6 +155,19 @@ async function ensureOutlineAndSections(jobId: string) {
   })
   await prisma.seoArticle.update({ where: { id: article.id }, data: { status: 'RUNNING' } })
 
+  // 参考URLがある場合、アウトライン前に自動リサーチ（未実行なら）
+  const urls = (article.referenceUrls as any) as string[] | null
+  if (Array.isArray(urls) && urls.length) {
+    const hasRef = await prisma.seoReference.findFirst({ where: { articleId: article.id }, select: { id: true } })
+    if (!hasRef) {
+      try {
+        await researchAndStore(article.id)
+      } catch {
+        // リサーチ失敗は致命にしない（入力中心でも生成可能）
+      }
+    }
+  }
+
   const researchContext = await buildResearchContext(article.id)
   const outline = await generateOutline(article, researchContext)
   const outlineMd = toOutlineMarkdown(outline)
