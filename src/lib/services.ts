@@ -165,6 +165,42 @@ export const SERVICES: Service[] = [
     requiresAuth: false,  // ゲストも1日1回まで利用可
     isNew: true,
   },
+
+  // ----------------------------------------
+  // ドヤ記事作成（SEO/LLMO 長文記事生成）
+  // ----------------------------------------
+  {
+    id: 'seo',
+    name: 'ドヤ記事作成',
+    shortName: 'SEO',
+    description: 'SEO + LLMOに強い長文記事を安定生成',
+    longDescription:
+      'アウトライン→分割生成→整合性チェック→統合のパイプラインで、5万字〜6万字でも崩れにくい記事生成を目指します。',
+    icon: '🧠',
+    color: 'slate',
+    gradient: 'from-slate-700 to-slate-900',
+    bgGradient: 'from-slate-50 to-gray-50',
+    href: '/seo',
+    dashboardHref: '/seo',
+    pricingHref: '/seo',
+    guideHref: '/seo',
+    features: [
+      '参考URL解析→要点化（丸写し禁止）',
+      'アウトライン作成（検索意図クラスタ）',
+      'セクション分割生成（整合性チェック付き）',
+      '監査（二重チェック）と自動修正',
+      'バナー/図解画像生成・リンクチェック',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: '（暫定）', dailyLimit: 0, price: 0 },
+      pro: { name: 'プロプラン', limit: '（暫定）', dailyLimit: -1, price: 0 },
+    },
+    status: 'active',
+    category: 'text',
+    order: 3,
+    requiresAuth: false,
+    isNew: true,
+  },
   
   // ----------------------------------------
   // LP作成AI（近日公開）
@@ -206,7 +242,7 @@ export const SERVICES: Service[] = [
     },
     status: 'coming_soon',
     category: 'web',
-    order: 3,
+    order: 4,
     requiresAuth: true,
     badge: '近日公開',
   },
@@ -251,7 +287,7 @@ export const SERVICES: Service[] = [
     },
     status: 'coming_soon',
     category: 'text',
-    order: 4,
+    order: 5,
     requiresAuth: true,
     badge: '近日公開',
   },
@@ -296,7 +332,7 @@ export const SERVICES: Service[] = [
     },
     status: 'coming_soon',
     category: 'text',
-    order: 5,
+    order: 6,
     requiresAuth: true,
     badge: '近日公開',
   },
