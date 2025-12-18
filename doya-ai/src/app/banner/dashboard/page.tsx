@@ -82,14 +82,52 @@ const SIZE_PRESETS: Record<string, Array<{ value: string; label: string; ratio: 
   ],
 }
 
-const SAMPLES: Record<string, { category: string; keyword: string; company?: string }> = {
-  sns_ad: { category: 'marketing', keyword: '成果報酬型広告運用 初月無料キャンペーン実施中', company: 'マーケAI' },
-  youtube: { category: 'it', keyword: '【衝撃】ChatGPT活用術 知らないと損する5つの裏技', company: 'AI解説チャンネル' },
-  display: { category: 'ec', keyword: '決算セール MAX70%OFF 本日限り！' },
-  webinar: { category: 'it', keyword: '【無料ウェビナー】AI時代のマーケティング完全攻略', company: 'TechCorp' },
-  lp_hero: { category: 'it', keyword: '業務効率を10倍に。次世代AIプラットフォーム' },
-  email: { category: 'ec', keyword: '会員様限定 ポイント5倍キャンペーン開催中' },
-  campaign: { category: 'telecom', keyword: '乗り換えで最大2万円キャッシュバック 月額990円〜' },
+type Sample = { category: string; keyword: string; company?: string }
+
+// サンプル入力（押すたびに切り替え）
+const SAMPLE_POOLS: Record<string, Sample[]> = {
+  sns_ad: [
+    { category: 'marketing', keyword: '成果報酬型広告運用 初月無料キャンペーン実施中' },
+    { category: 'marketing', keyword: '広告費ムダ打ち0へ。CV改善の無料診断、今だけ受付中' },
+    { category: 'marketing', keyword: 'LP改善×運用でCPAを削減。まずは無料相談' },
+    { category: 'marketing', keyword: '新規獲得を加速。プロの運用代行 月額9,800円〜' },
+  ],
+  youtube: [
+    { category: 'it', keyword: '【衝撃】ChatGPT活用術 知らないと損する5つの裏技' },
+    { category: 'it', keyword: '【保存版】AIで作業が10倍速くなる“最短ルート”' },
+    { category: 'it', keyword: '【初心者OK】プロンプトの型5選：今日から使える' },
+    { category: 'it', keyword: '【検証】AIに任せたら“ここまで”できた…結果がヤバい' },
+  ],
+  display: [
+    { category: 'ec', keyword: '決算セール MAX70%OFF 本日限り！' },
+    { category: 'ec', keyword: '送料無料＆即日発送。人気アイテムが今だけお得' },
+    { category: 'ec', keyword: '新作入荷！まとめ買いでさらに10%OFF' },
+    { category: 'ec', keyword: '在庫限り。今すぐチェック→' },
+  ],
+  webinar: [
+    { category: 'it', keyword: '【無料ウェビナー】AI時代のマーケティング完全攻略' },
+    { category: 'it', keyword: '【参加無料】成功事例から学ぶCV改善の勝ちパターン' },
+    { category: 'it', keyword: '【60分で理解】生成AI活用ロードマップ（Q&A付き）' },
+    { category: 'it', keyword: '【限定公開】広告運用の最新トレンド解説セミナー' },
+  ],
+  lp_hero: [
+    { category: 'it', keyword: '業務効率を10倍に。次世代AIプラットフォーム' },
+    { category: 'it', keyword: 'チームの生産性を底上げ。導入サポート付き' },
+    { category: 'it', keyword: '面倒な作業を自動化。最短1日で運用開始' },
+    { category: 'it', keyword: 'セキュアにAI導入。企業向けプランあり' },
+  ],
+  email: [
+    { category: 'ec', keyword: '会員様限定 ポイント5倍キャンペーン開催中' },
+    { category: 'ec', keyword: '本日23:59まで：特別クーポン配布中' },
+    { category: 'ec', keyword: 'リピーター様へ：人気商品が再入荷しました' },
+    { category: 'ec', keyword: '今週のおすすめ：売れ筋ランキングTOP5' },
+  ],
+  campaign: [
+    { category: 'telecom', keyword: '乗り換えで最大2万円キャッシュバック 月額990円〜' },
+    { category: 'telecom', keyword: '今だけ端末割引。乗り換え相談も無料' },
+    { category: 'telecom', keyword: '家計見直しに。通信費を月1,000円台へ' },
+    { category: 'telecom', keyword: '速度も価格も妥協しない。新プラン登場' },
+  ],
 }
 
 // A/B/Cパターンの工夫点・特徴
@@ -464,6 +502,11 @@ export default function BannerDashboard() {
   const [aiSampleIndex, setAiSampleIndex] = useState(0)
   const [aiSampleKey, setAiSampleKey] = useState('')
 
+  // サンプル入力（押すたびに切り替え）
+  const [samplePool, setSamplePool] = useState<Sample[]>([])
+  const [sampleIndex, setSampleIndex] = useState(0)
+  const [sampleKey, setSampleKey] = useState('')
+
   // サイトURL→カラー抽出（ブランド配色）
   const [brandUrl, setBrandUrl] = useState('')
   const [brandPalette, setBrandPalette] = useState<null | {
@@ -516,6 +559,13 @@ export default function BannerDashboard() {
   useEffect(() => {
     const sizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
     setSize(sizes[0].value)
+  }, [purpose])
+
+  useEffect(() => {
+    // 用途が変わったらサンプル入力のローテーションをリセット
+    setSamplePool([])
+    setSampleIndex(0)
+    setSampleKey('')
   }, [purpose])
 
   useEffect(() => {
@@ -595,11 +645,29 @@ export default function BannerDashboard() {
 
   // Handlers
   const handleSample = () => {
-    const sample = SAMPLES[purpose] || SAMPLES.sns_ad
-    setCategory(sample.category)
-    setKeyword(sample.keyword)
+    const key = purpose || 'sns_ad'
+    const pool = SAMPLE_POOLS[key] || SAMPLE_POOLS.sns_ad
+
+    // 既に候補がある場合は押すたびに切り替え
+    if (samplePool.length > 1 && sampleKey === key) {
+      const next = (sampleIndex + 1) % samplePool.length
+      setSampleIndex(next)
+      const s = samplePool[next]
+      setCategory(s.category)
+      setKeyword(s.keyword)
+      toast.success(`サンプルを切り替えました（${next + 1}/${samplePool.length}）`, { icon: '🔁' })
+      return
+    }
+
+    // 初回（または用途変更後）はプールをセットして1つ目を適用
+    setSampleKey(key)
+    setSamplePool(pool)
+    setSampleIndex(0)
+    const s = pool[0]
+    setCategory(s.category)
+    setKeyword(s.keyword)
     // 会社名は勝手に入れない（ブランド/ロゴが混入しやすいため）
-    toast.success('サンプルを入力しました（会社名・ロゴは未設定）', { icon: '✨' })
+    toast.success(`サンプルを入力しました（1/${pool.length} / 会社名・ロゴは未設定）`, { icon: '✨' })
   }
 
   const handleGenerate = async () => {
