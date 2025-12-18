@@ -25,8 +25,8 @@ const processingSteps = [
   { progress: 30, text: 'AIが考え中...' },
   { progress: 50, text: 'コンテンツを生成中...' },
   { progress: 70, text: '文章を最適化中...' },
-  { progress: 85, text: '最終チェック中...' },
-  { progress: 95, text: 'まもなく完了...' },
+  { progress: 82, text: '最終チェック中...' },
+  { progress: 85, text: '仕上げ中...' },
 ];
 
 export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: LoadingProgressProps) {
@@ -45,10 +45,10 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         // 進捗は“目安”。過度に早く進みすぎないように調整。
-        if (prev >= 92) return prev;
-        const base = Math.max(0.4, (92 - prev) / 28);
+        if (prev >= 85) return prev;
+        const base = Math.max(0.35, (85 - prev) / 30);
         const jitter = Math.random() * 0.9;
-        return Math.min(92, prev + base + jitter);
+        return Math.min(85, prev + base + jitter);
       });
     }, 380);
 
