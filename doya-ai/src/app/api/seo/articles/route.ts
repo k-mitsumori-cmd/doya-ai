@@ -3,14 +3,22 @@ import { prisma } from '@/lib/prisma'
 import { SeoCreateArticleInputSchema } from '@seo/lib/types'
 
 export async function GET() {
-  const articles = await prisma.seoArticle.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 50,
-    include: {
-      jobs: { orderBy: { createdAt: 'desc' }, take: 1 },
-    },
-  })
-  return NextResponse.json({ success: true, articles })
+  try {
+    const articles = await prisma.seoArticle.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: {
+        jobs: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+    })
+    return NextResponse.json({ success: true, articles })
+  } catch (e: any) {
+    // DB未反映/接続不可でも画面側が404にならないよう、明示的にJSONエラーを返す
+    return NextResponse.json(
+      { success: false, error: e?.message || 'DBエラー（スキーマ未反映の可能性）', articles: [] },
+      { status: 500 }
+    )
+  }
 }
 
 export async function POST(req: NextRequest) {
