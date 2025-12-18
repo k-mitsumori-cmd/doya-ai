@@ -12,6 +12,38 @@ function clampText(s: string, max = 12000): string {
   return s.length > max ? `${s.slice(0, max)}\n...(truncated)` : s
 }
 
+function outlineItemToString(v: unknown): string {
+  if (typeof v === 'string') return v.trim()
+  if (v && typeof v === 'object') {
+    const obj = v as Record<string, unknown>
+    const pick = (k: string) => (typeof obj[k] === 'string' ? (obj[k] as string).trim() : '')
+    // よくあるキー候補（faq/question, glossary/term 等）
+    const s =
+      pick('text') ||
+      pick('value') ||
+      pick('title') ||
+      pick('name') ||
+      pick('q') ||
+      pick('question') ||
+      pick('term')
+    if (s) return s
+    try {
+      return JSON.stringify(obj)
+    } catch {
+      return ''
+    }
+  }
+  return ''
+}
+
+function normalizeStringArray(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return v
+    .map(outlineItemToString)
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
 function toOutlineMarkdown(outline: SeoOutline): string {
   const lines: string[] = []
   lines.push('# アウトライン')
@@ -136,7 +168,14 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     },
     'JSON'
   )
-  return SeoOutlineSchema.parse(raw)
+  // Gemini出力が揺れて faq/glossary が object[] になることがあるため、ここで必ず正規化してからparseする
+  const normalized = {
+    ...(raw as any),
+    internalLinkIdeas: normalizeStringArray((raw as any)?.internalLinkIdeas),
+    faq: normalizeStringArray((raw as any)?.faq),
+    glossary: normalizeStringArray((raw as any)?.glossary),
+  }
+  return SeoOutlineSchema.parse(normalized)
 }
 
 async function ensureOutlineAndSections(jobId: string) {
