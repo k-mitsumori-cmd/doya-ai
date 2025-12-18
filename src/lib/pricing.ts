@@ -43,67 +43,66 @@ export interface ServicePricing {
 }
 
 // ========================================
-// カンタンドヤAI 料金設定
+// ドヤSEO 料金設定
 // ========================================
-// 文章生成はAPIコストが低いため、手頃な価格設定
-// 競合: ChatGPT Plus $20/月、Copy.ai $49/月
-export const KANTAN_PRICING: ServicePricing = {
-  serviceId: 'kantan',
-  serviceName: 'カンタンドヤAI',
-  serviceIcon: '📝',
-  guestLimit: 3,      // ゲスト: 1日3回（お試し用）
-  freeLimit: 5,       // 無料会員: 1日5回（継続利用促進）
-  proLimit: 50,       // プロ会員: 1日50回（実用的な量）
+// SEO記事生成はコストが読みづらいため、まずは控えめな上限で運用
+export const SEO_PRICING: ServicePricing = {
+  serviceId: 'seo',
+  serviceName: 'ドヤSEO',
+  serviceIcon: '🧠',
+  guestLimit: 1,      // ゲスト: 1日1回
+  freeLimit: 2,       // 無料会員: 1日2回
+  proLimit: 10,       // プロ会員: 1日10回
   historyDays: {
     free: 7,          // 無料: 7日間保存
     pro: -1,          // プロ: 無制限
   },
   plans: [
     {
-      id: 'kantan-free',
+      id: 'seo-free',
       name: 'フリー',
       price: 0,
       priceLabel: '¥0',
       period: '',
       description: 'まずは試してみたい方',
       features: [
-        { text: 'ゲスト: 1日3回まで', included: true },
-        { text: 'ログイン: 1日5回まで', included: true },
-        { text: '基本テンプレート（20種類）', included: true },
+        { text: 'ゲスト: 1日1回まで', included: true },
+        { text: 'ログイン: 1日2回まで', included: true },
+        { text: 'アウトライン/セクション生成', included: true },
         { text: '履歴保存（7日間）', included: true },
       ],
       cta: '無料で試す',
     },
     {
-      id: 'kantan-starter',
+      id: 'seo-starter',
       name: 'スターター',
       price: 980,
       priceLabel: '¥980',
       period: '/月（税込）',
       description: '個人利用に最適',
-      color: 'blue',
+      color: 'slate',
       features: [
-        { text: '1日20回まで生成', included: true },
-        { text: '全68テンプレート利用可能', included: true },
-        { text: 'トーン調整機能', included: true },
+        { text: '1日5回まで生成', included: true },
+        { text: 'SEO構成/FAQ生成', included: true },
+        { text: '簡易監査（重複/整合性）', included: true },
         { text: '履歴保存（30日間）', included: true },
         { text: 'メールサポート', included: true },
       ],
       cta: 'スタータープランを始める',
     },
     {
-      id: 'kantan-pro',
+      id: 'seo-pro',
       name: 'プロ',
       price: 2980,
       priceLabel: '¥2,980',
       period: '/月（税込）',
       description: 'ビジネス利用に',
       popular: true,
-      color: 'blue',
+      color: 'slate',
       features: [
-        { text: '1日50回まで生成', included: true },
-        { text: '全68テンプレート利用可能', included: true },
-        { text: 'トーン・長さ調整機能', included: true },
+        { text: '1日10回まで生成', included: true },
+        { text: 'セクション分割生成（安定化）', included: true },
+        { text: '監査（二重チェック）', included: true },
         { text: '履歴保存（無制限）', included: true },
         { text: 'API連携（近日公開）', included: true },
         { text: '優先サポート', included: true },
@@ -207,9 +206,60 @@ export const BANNER_PRICING: ServicePricing = {
 }
 
 // ========================================
+// カンタンドヤAI 料金設定
+// ========================================
+// 文章生成は画像より低コストなので、ゲスト枠は少し多めに設定
+export const KANTAN_PRICING: ServicePricing = {
+  serviceId: 'kantan',
+  serviceName: 'カンタンドヤAI',
+  serviceIcon: '📝',
+  guestLimit: 3, // ゲスト: 1日3回
+  freeLimit: 5, // 無料会員: 1日5回
+  proLimit: 50, // プロ会員: 1日50回
+  historyDays: {
+    free: 7,
+    pro: -1,
+  },
+  plans: [
+    {
+      id: 'kantan-free',
+      name: 'フリー',
+      price: 0,
+      priceLabel: '¥0',
+      period: '',
+      description: 'まずは試してみたい方',
+      features: [
+        { text: 'ゲスト: 1日3回まで', included: true },
+        { text: 'ログイン: 1日5回まで', included: true },
+        { text: '主要テンプレートを利用可能', included: true },
+        { text: '履歴保存（7日間）', included: true },
+      ],
+      cta: '無料で試す',
+    },
+    {
+      id: 'kantan-pro',
+      name: 'プロ',
+      price: 1980,
+      priceLabel: '¥1,980',
+      period: '/月（税込）',
+      description: '業務で継続利用する方向け',
+      popular: true,
+      color: 'blue',
+      features: [
+        { text: '1日50回まで生成', included: true },
+        { text: '全テンプレート利用可能', included: true },
+        { text: '履歴保存（無制限）', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+  ],
+}
+
+// ========================================
 // ポータル全体のセット割引
 // ========================================
-// カンタン（¥2,980）+ バナー（¥4,980）= ¥7,960 → 25%OFF
+// SEO（¥2,980）+ バナー（¥4,980）= ¥7,960 → 25%OFF
 export const BUNDLE_PRICING = {
   name: 'ドヤAI オールインワン',
   price: 5980,
@@ -219,7 +269,7 @@ export const BUNDLE_PRICING = {
   originalPrice: '¥7,960',
   description: '両方使うなら断然お得',
   features: [
-    { text: 'カンタンドヤAI プロ（通常¥2,980）', included: true },
+    { text: 'ドヤSEO プロ（通常¥2,980）', included: true },
     { text: 'ドヤバナーAI プロ（通常¥4,980）', included: true },
     { text: '今後追加される新サービスも利用可能', included: true },
     { text: '優先サポート', included: true },
@@ -245,10 +295,12 @@ export function getAnnualMonthlyPrice(monthlyPrice: number): number {
 // ========================================
 export function getPricingByService(serviceId: string): ServicePricing | null {
   switch (serviceId) {
-    case 'kantan':
-      return KANTAN_PRICING
+    case 'seo':
+      return SEO_PRICING
     case 'banner':
       return BANNER_PRICING
+    case 'kantan':
+      return KANTAN_PRICING
     default:
       return null
   }
@@ -276,7 +328,7 @@ export function getDailyLimit(serviceId: string, userType: 'guest' | 'free' | 'p
 
 // プランを取得（フリー、スターター、プロなど）
 export function getPlanById(planId: string): Plan | null {
-  const allPlans = [...KANTAN_PRICING.plans, ...BANNER_PRICING.plans]
+  const allPlans = [...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...KANTAN_PRICING.plans]
   return allPlans.find(p => p.id === planId) || null
 }
 
