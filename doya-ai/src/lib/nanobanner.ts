@@ -22,8 +22,13 @@
 
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-// Nano Banana Pro (gemini-2.0-flash-exp)
-const NANO_BANANA_PRO_MODEL = 'gemini-2.0-flash-exp'
+// Gemini 3 Flash（テキスト生成・プロンプト作成用）
+// 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
+const GEMINI_3_FLASH_MODEL = 'gemini-3-flash-preview'
+
+// Nano Banana Pro（Gemini 3 Pro Image / 画像生成用）
+// 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
+const NANO_BANANA_PRO_MODEL = 'gemini-3-pro-image-preview'
 
 // APIキーを取得
 function getApiKey(): string {
@@ -512,35 +517,44 @@ async function generateSingleBanner(
   
   console.log('Calling Nano Banana Pro...')
   console.log('Model:', NANO_BANANA_PRO_MODEL)
-  console.log('Prompt length:', prompt.length)
   
-  // Nano Banana Pro generateContent エンドポイント
-  const endpoint = `${GEMINI_API_BASE}/models/${NANO_BANANA_PRO_MODEL}:generateContent?key=${apiKey}`
-  
-  // 画像生成用のプロンプト（シンプルに）
-  const imagePrompt = `Generate an image: ${prompt}`
-  
-  // Gemini generateContent リクエスト形式（公式ドキュメント準拠）
+  const aspectRatio = getAspectRatio(size)
+  const [w, h] = size.split('x').map((v) => Number(v))
+  const maxSide = Math.max(w || 0, h || 0)
+  const imageSize = maxSide >= 2500 ? '4K' : '2K'
+
+  // Nano Banana Pro generateContent エンドポイント（APIキーはヘッダで渡す）
+  // 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
+  const endpoint = `${GEMINI_API_BASE}/models/${NANO_BANANA_PRO_MODEL}:generateContent`
+
+  // Gemini generateContent リクエスト形式（画像生成）
   const requestBody = {
     contents: [
       {
         parts: [
-          { text: imagePrompt }
+          { text: prompt }
         ]
       }
     ],
     generationConfig: {
-      responseModalities: ["IMAGE", "TEXT"]
+      // 画像を必ず返してほしいので IMAGE を優先
+      responseModalities: ["IMAGE", "TEXT"],
+      // Nano Banana Pro の画像設定（SDK の config.imageConfig 相当）
+      // ※ generativelanguage API の generationConfig として扱う
+      imageConfig: {
+        aspectRatio,
+        imageSize,
+      },
     }
   }
   
   console.log('Calling Nano Banana Pro API...')
-  console.log('Endpoint:', endpoint.replace(apiKey, 'API_KEY_HIDDEN'))
   
   const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
     },
     body: JSON.stringify(requestBody),
   })
@@ -553,35 +567,67 @@ async function generateSingleBanner(
   
   const result = await response.json()
   console.log('Nano Banana Pro API Response received')
-  console.log('Response structure:', Object.keys(result))
   
   // レスポンスから画像を抽出（Gemini generateContent形式）
   if (result.candidates && result.candidates[0]?.content?.parts) {
-    console.log('Parts count:', result.candidates[0].content.parts.length)
     for (const part of result.candidates[0].content.parts) {
-      console.log('Part type:', Object.keys(part))
       if (part.inlineData) {
         console.log('Image found in Nano Banana Pro response!')
-        console.log('MIME type:', part.inlineData.mimeType)
         const mimeType = part.inlineData.mimeType || 'image/png'
         return `data:${mimeType};base64,${part.inlineData.data}`
       }
     }
   }
   
-  // デバッグ用：レスポンス全体をログ
-  console.error('No image in response. Full response:', JSON.stringify(result, null, 2).substring(0, 1000))
-  
-  // テキストレスポンスがある場合はそれを表示
-  if (result.candidates && result.candidates[0]?.content?.parts) {
-    for (const part of result.candidates[0].content.parts) {
-      if (part.text) {
-        console.log('Text response:', part.text.substring(0, 200))
-      }
-    }
-  }
-  
+  console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 800))
   throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
+}
+
+// Gemini 3 Flash で「画像生成用プロンプト」を短く最適化（失敗したら元プロンプトを使う）
+async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<string> {
+  const apiKey = getApiKey()
+  const endpoint = `${GEMINI_API_BASE}/models/${GEMINI_3_FLASH_MODEL}:generateContent`
+
+  const instruction = [
+    'You are a prompt engineer for a premium image generation model.',
+    'Rewrite the following prompt into a concise, high-signal image prompt (English).',
+    'Keep ALL constraints about Japanese text readability, font size, and solid text background.',
+    'Do not add policy text. Output ONLY the final prompt.',
+    '',
+    '--- ORIGINAL PROMPT ---',
+    originalPrompt,
+  ].join('\n')
+
+  const requestBody = {
+    contents: [{ parts: [{ text: instruction }] }],
+    generationConfig: {
+      temperature: 0.3,
+      maxOutputTokens: 900,
+    },
+  }
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify(requestBody),
+  })
+
+  if (!res.ok) {
+    const t = await res.text()
+    throw new Error(`Gemini 3 Flash error: ${res.status} - ${t.substring(0, 300)}`)
+  }
+
+  const json = await res.json()
+  const parts = json?.candidates?.[0]?.content?.parts
+  const text = Array.isArray(parts)
+    ? parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
+    : ''
+
+  if (!text) throw new Error('Gemini 3 Flash returned empty text')
+  return text
 }
 
 // サイズからアスペクト比を計算
@@ -630,11 +676,18 @@ export async function generateBanners(
     // 3パターン順次生成（Nano Banana Pro のみ使用）
     for (const appealType of appealTypes) {
       try {
-        const prompt = createBannerPrompt(category, keyword, size, appealType, options)
+        const basePrompt = createBannerPrompt(category, keyword, size, appealType, options)
         console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} type ${appealType.type} (${appealType.japanese})...`)
         
         // Nano Banana Pro で生成（他のモデルは使用しない）
-        const banner = await generateSingleBanner(prompt, size)
+        let finalPrompt = basePrompt
+        try {
+          finalPrompt = await refinePromptWithGemini3Flash(basePrompt)
+        } catch (e: any) {
+          console.warn('Gemini 3 Flash prompt refine failed. Using base prompt.', e?.message || e)
+        }
+
+        const banner = await generateSingleBanner(finalPrompt, size)
         
         banners.push(banner)
         console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generated successfully!`)
