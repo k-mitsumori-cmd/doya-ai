@@ -23,9 +23,21 @@ interface GenerateContentRequest {
 }
 
 function getApiKey(): string {
-  const apiKey = process.env.GOOGLE_GENAI_API_KEY
-  if (!apiKey) throw new Error('GOOGLE_GENAI_API_KEY が設定されていません')
-  return apiKey
+  // 環境差分（Vercel/ローカル）で変数名が揺れやすいので複数候補を許容する
+  const candidates = [
+    process.env.GOOGLE_GENAI_API_KEY,
+    process.env.GOOGLE_API_KEY,
+    process.env.GEMINI_API_KEY,
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+  ].filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+
+  const apiKey = candidates[0]
+  if (!apiKey) {
+    throw new Error(
+      'Gemini APIキーが設定されていません。環境変数: GOOGLE_GENAI_API_KEY（推奨）/ GOOGLE_API_KEY / GEMINI_API_KEY を設定してください。'
+    )
+  }
+  return apiKey.trim()
 }
 
 function joinPartsText(parts: any): string {
