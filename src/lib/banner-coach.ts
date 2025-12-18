@@ -8,11 +8,63 @@
 // 4. 業界ベンチマーク比較
 // 5. コピーライティング最適化
 
-import OpenAI from 'openai'
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+const GEMINI_3_FLASH_MODEL = 'gemini-3-flash-preview'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+function getApiKey(): string {
+  const apiKey = process.env.GOOGLE_GENAI_API_KEY
+  if (!apiKey) throw new Error('GOOGLE_GENAI_API_KEY が設定されていません')
+  return apiKey
+}
+
+function extractJsonObject(text: string): string | null {
+  const s = String(text || '').trim()
+  if (!s) return null
+
+  const fenced = s.match(/```json\\s*([\\s\\S]*?)```/i) || s.match(/```\\s*([\\s\\S]*?)```/i)
+  const candidate = (fenced?.[1] || s).trim()
+
+  const start = candidate.indexOf('{')
+  const end = candidate.lastIndexOf('}')
+  if (start === -1 || end === -1 || end <= start) return null
+  return candidate.slice(start, end + 1)
+}
+
+async function callGeminiJson<T>(prompt: string, temperature: number): Promise<T> {
+  const apiKey = getApiKey()
+  const endpoint = `${GEMINI_API_BASE}/models/${GEMINI_3_FLASH_MODEL}:generateContent`
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature,
+        maxOutputTokens: 1200,
+        responseMimeType: 'application/json',
+      },
+    }),
+  })
+
+  if (!res.ok) {
+    const t = await res.text()
+    throw new Error(`Gemini API Error: ${res.status} - ${t.substring(0, 300)}`)
+  }
+
+  const json = await res.json()
+  const parts = json?.candidates?.[0]?.content?.parts
+  const text = Array.isArray(parts)
+    ? parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
+    : ''
+
+  const raw = extractJsonObject(text)
+  if (!raw) throw new Error('JSONが取得できませんでした')
+  return JSON.parse(raw) as T
+}
 
 // ========================================
 // バナー品質スコア
@@ -62,15 +114,7 @@ export async function analyzeBannerQuality(
 }
 
 各スコアは0-100で評価。具体的で実用的なフィードバックを提供してください。`
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-    })
-
-    const result = JSON.parse(response.choices[0].message.content || '{}')
+    const result = await callGeminiJson<BannerScore>(prompt, 0.6)
     return result as BannerScore
 
   } catch (error) {
@@ -165,15 +209,7 @@ ${originalCopy}
 }
 
 日本語で、実際に使える具体的なコピーを提案してください。`
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      temperature: 0.8,
-    })
-
-    return JSON.parse(response.choices[0].message.content || '{}') as CopyVariations
+    return await callGeminiJson<CopyVariations>(prompt, 0.75)
 
   } catch (error) {
     console.error('Copy variations error:', error)

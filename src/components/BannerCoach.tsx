@@ -181,25 +181,25 @@ export default function BannerCoach(props: BannerCoachProps) {
   }
 
   return (
-    <div className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
       {/* Header */}
-      <div className="relative p-5 border-b border-white/5">
-        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-violet-500/10" />
+      <div className="relative p-5 border-b border-gray-100">
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-50 via-fuchsia-50 to-violet-50" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center shadow-lg shadow-violet-500/25">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-white">AIバナーコーチ</h3>
-              <p className="text-xs text-white/50">プロの視点で分析・改善提案</p>
+              <h3 className="font-bold text-gray-900">AIバナーコーチ</h3>
+              <p className="text-xs text-gray-600">分析 → 改善 → ワンクリックで適用</p>
             </div>
           </div>
           <div className="flex gap-2">
             <button
               onClick={analyzeSelectedBanner}
               disabled={isFbLoading || !selectedImage}
-              className="px-4 py-2 bg-white/10 text-white font-bold rounded-xl hover:bg-white/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+              className="px-4 py-2 bg-gray-100 text-gray-900 font-bold rounded-xl hover:bg-gray-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
               title={selectedImage ? '選択中バナーを分析' : 'A/B/Cのバナーを選択してください'}
             >
               {isFbLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
@@ -228,7 +228,7 @@ export default function BannerCoach(props: BannerCoachProps) {
 
       {/* Tabs */}
       {(score || copyVariations || benchmark) && (
-        <div className="flex border-b border-white/5">
+        <div className="flex border-b border-gray-100">
           {[
             { id: 'score', label: 'スコア', icon: BarChart3 },
             { id: 'copy', label: 'コピー改善', icon: Lightbulb },
@@ -241,7 +241,7 @@ export default function BannerCoach(props: BannerCoachProps) {
               className={`flex-1 px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-all relative ${
                 activeTab === tab.id
                   ? 'text-violet-400'
-                  : 'text-white/40 hover:text-white/60'
+                  : 'text-gray-500 hover:text-gray-900'
               }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -264,13 +264,13 @@ export default function BannerCoach(props: BannerCoachProps) {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mx-auto mb-4">
               <Target className="w-8 h-8 text-violet-400" />
             </div>
-            <h4 className="font-bold text-white mb-2">AIがバナーを分析</h4>
-            <p className="text-white/40 text-sm mb-4">
+            <h4 className="font-bold text-gray-900 mb-2">AIがバナーを分析</h4>
+            <p className="text-gray-600 text-sm mb-4">
               キーワードを入力して「AI分析」をクリック
             </p>
             <div className="flex flex-wrap justify-center gap-2">
               {['品質スコア', 'コピー5案', 'CTR予測', '業界データ'].map((feature) => (
-                <span key={feature} className="px-3 py-1 bg-white/5 rounded-full text-xs text-white/40">
+                <span key={feature} className="px-3 py-1 bg-gray-100 rounded-full text-xs text-gray-600">
                   {feature}
                 </span>
               ))}
