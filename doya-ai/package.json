@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "カンタンドヤAI - 文章作成がカンタンになる",
   "private": true,
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && prisma db push --accept-data-loss --skip-generate && next build",
