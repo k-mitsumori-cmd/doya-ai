@@ -73,6 +73,10 @@ model User {
   
   // 生成履歴
   generations   Generation[]
+
+  // SEO記事生成（ドヤ記事作成）
+  seoArticles   SeoArticle[]
+  seoKnowledgeItems SeoKnowledgeItem[]
   
   // Stripe関連（ポータル全体の顧客情報）
   stripeCustomerId       String?   @unique
@@ -295,4 +299,201 @@ model AdminSession {
   @@index([adminUserId])
   @@index([token])
   @@index([expiresAt])
+}
+
+// ============================================
+// SEO記事生成（ドヤ記事作成）
+// ============================================
+
+model SeoArticle {
+  id            String   @id @default(cuid())
+
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  status        String   @default("DRAFT") // DRAFT | RUNNING | DONE | ERROR
+
+  // 入力
+  title         String
+  keywords      Json     // string[]
+  persona       String?  @db.Text
+  searchIntent  String?  @db.Text
+  targetChars   Int      @default(10000)
+  tone          String   @default("丁寧")
+  forbidden     Json?    // string[]
+  referenceUrls Json?    // string[]
+  llmoOptions   Json?    // {tldr:boolean, faq:boolean, glossary:boolean, comparison:boolean, quotes:boolean, templates:boolean, objections:boolean}
+
+  // 途中成果物
+  outline       String?  @db.Text
+  finalMarkdown String?  @db.Text
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  jobs          SeoJob[]
+  sections      SeoSection[]
+  references    SeoReference[]
+  audits        SeoAuditReport[]
+  memo          SeoUserMemo?
+  images        SeoImage[]
+  linkChecks    SeoLinkCheckResult[]
+  knowledgeItems SeoKnowledgeItem[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model SeoJob {
+  id          String   @id @default(cuid())
+  articleId   String
+  article     SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  status      String   @default("queued") // queued | running | done | error
+  progress    Int      @default(0)
+  step        String   @default("init") // init | outline | sections | integrate | audit | done
+  error       String?  @db.Text
+
+  // 途中再開用
+  cursor      Int      @default(0) // 次に生成するセクションindex
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  startedAt   DateTime?
+  finishedAt  DateTime?
+
+  sections    SeoSection[]
+  audits      SeoAuditReport[]
+
+  @@index([articleId, createdAt])
+  @@index([status, updatedAt])
+}
+
+model SeoSection {
+  id            String   @id @default(cuid())
+  articleId     String
+  article       SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  jobId         String?
+  job           SeoJob?   @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  index         Int
+  headingPath   String?   // "H2:... > H3:..."
+  plannedChars  Int       @default(2000)
+  status        String    @default("pending") // pending | generated | reviewed | error
+
+  prompt        String?   @db.Text
+  content       String?   @db.Text
+  consistency   String?   @db.Text
+  error         String?   @db.Text
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([articleId, index])
+  @@index([articleId, index])
+  @@index([status, updatedAt])
+}
+
+model SeoReference {
+  id            String   @id @default(cuid())
+  articleId     String
+  article       SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  url           String
+  title         String?
+  fetchedAt     DateTime?
+
+  extractedText String?  @db.Text
+  headings      Json?    // {h2:string[], h3:string[], faq:string[]}
+  summary       String?  @db.Text
+  insights      Json?    // {claims:string[], structure:string[], internalLinks:string[], faq:string[]}
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([articleId, createdAt])
+  @@unique([articleId, url])
+}
+
+model SeoAuditReport {
+  id          String   @id @default(cuid())
+  articleId   String
+  article     SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  jobId       String?
+  job         SeoJob?   @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  report      String   @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([articleId, createdAt])
+}
+
+model SeoUserMemo {
+  id          String   @id @default(cuid())
+  articleId   String   @unique
+  article     SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  content     String   @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SeoImage {
+  id          String   @id @default(cuid())
+  articleId   String
+  article     SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  kind        String   // BANNER | DIAGRAM
+  title       String?
+  prompt      String   @db.Text
+  description String?  @db.Text
+
+  filePath    String
+  mimeType    String   @default("image/png")
+  width       Int?
+  height      Int?
+
+  createdAt   DateTime @default(now())
+
+  @@index([articleId, createdAt])
+}
+
+model SeoLinkCheckResult {
+  id          String   @id @default(cuid())
+  articleId   String
+  article     SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  url         String
+  statusCode  Int?
+  ok          Boolean  @default(false)
+  finalUrl    String?
+  error       String?
+  checkedAt   DateTime @default(now())
+
+  createdAt   DateTime @default(now())
+
+  @@unique([articleId, url])
+  @@index([articleId, checkedAt])
+}
+
+model SeoKnowledgeItem {
+  id          String   @id @default(cuid())
+
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  articleId   String?
+  article     SeoArticle? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+
+  type        String   // trend | insight | prompt | internalLink | note
+  title       String?
+  content     String   @db.Text
+  sourceUrls  Json?    // string[]
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
 }
