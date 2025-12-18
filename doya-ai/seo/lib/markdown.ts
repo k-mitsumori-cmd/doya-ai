@@ -10,10 +10,62 @@ function escapeHtml(s: string): string {
 export function extractLinks(markdown: string): string[] {
   const urls = new Set<string>()
   const re = /\[[^\]]*?\]\((https?:\/\/[^)\s]+)\)/g
-  for (const m of markdown.matchAll(re)) {
+  const text = markdown || ''
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
     if (m[1]) urls.add(m[1])
   }
   return Array.from(urls)
+}
+
+export function extractOutlineFromMarkdown(markdown: string): string {
+  const lines = (markdown || '').replace(/\r\n/g, '\n').split('\n')
+  const out: string[] = []
+  for (const raw of lines) {
+    const m = raw.match(/^(#{2,4})\s+(.+?)\s*$/) // H2〜H4
+    if (!m) continue
+    const level = m[1].length
+    const title = m[2].trim()
+    const indent = level === 2 ? '' : level === 3 ? '  ' : '    '
+    out.push(`${indent}- ${title}`)
+  }
+  return out.join('\n')
+}
+
+/**
+ * Markdownでない“素の文章”を、最低限の見出し構造を持つMarkdownに寄せます。
+ * - ルールは控えめ（誤爆しやすいので）
+ * - 短め/句点なし/前後が空行、の行を見出し候補として `##` 化
+ */
+export function normalizePlaintextToMarkdown(input: string): string {
+  const lines = (input || '').replace(/\r\n/g, '\n').split('\n')
+  const out: string[] = []
+
+  const looksLikeHeading = (line: string, prev: string, next: string) => {
+    const t = line.trim()
+    if (!t) return false
+    if (t.startsWith('#')) return false
+    if (t.startsWith('- ') || t.match(/^\d+\.\s+/)) return false
+    if (t.startsWith('|') || t.includes('http://') || t.includes('https://')) return false
+    if (t.length > 40) return false
+    if (/[。．\.：:]\s*$/.test(t)) return false
+    // 連続URL断片（scalenut.com など）を弾く
+    if (t.includes('.') && !/[\u3040-\u30ff\u4e00-\u9faf]/.test(t)) return false
+    if (prev.trim() !== '' && next.trim() !== '') return false
+    return true
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? ''
+    const prev = lines[i - 1] ?? ''
+    const next = lines[i + 1] ?? ''
+    if (looksLikeHeading(line, prev, next)) {
+      out.push(`## ${line.trim()}`)
+    } else {
+      out.push(line)
+    }
+  }
+  return out.join('\n')
 }
 
 // 依存追加なしの超軽量Markdown→HTML（最低限のプレビュー/エクスポート用）
