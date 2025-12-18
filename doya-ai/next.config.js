@@ -1,8 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Vercel build で collect-build-traces が micromatch のスタックオーバーフローで落ちる事象があるため、
-  // まずはトレースを無効化してデプロイを安定させる（必要なら後で再調整）
-  outputFileTracing: false,
+  // NOTE:
+  // outputFileTracing を無効化すると、Vercel のServerless同梱で
+  // App Router の `page_client-reference-manifest.js` 等が欠落し、実行時に 500 になり得る。
+  // そのため tracing は有効（デフォルト）で運用する。
+  // （過去に collect-build-traces のスタックオーバーフローが出た場合は Next.js の更新で対応する）
   images: {
     remotePatterns: [
       {
@@ -66,10 +68,10 @@ const nextConfig = {
   // リダイレクト設定
   async redirects() {
     return [
-      // ダッシュボードへの直接アクセスをカンタンダッシュボードへ
+      // ダッシュボードへの直接アクセスをSEOへ
       {
         source: '/dashboard',
-        destination: '/kantan/dashboard',
+        destination: '/seo',
         permanent: false,
       },
     ]
