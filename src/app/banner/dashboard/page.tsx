@@ -253,6 +253,61 @@ function createCopyVariants(headline: string, purpose: string) {
   return Array.from(new Set(variants)).slice(0, 5)
 }
 
+function buildHighCtrSampleCopy(category: string, purpose: string) {
+  // 業種×用途で「クリック率が上がりやすい型」を当てる（最初の1手を速くする）
+  const isYouTube = purpose === 'youtube'
+  const isCampaign = purpose === 'campaign'
+  const isWebinar = purpose === 'webinar'
+  const isLp = purpose === 'lp_hero'
+
+  switch (category) {
+    case 'telecom':
+      return isYouTube
+        ? '【暴露】格安SIMで通信費が半額になる理由'
+        : isCampaign
+          ? '【本日限定】乗り換えで最大2万円還元｜月額990円〜'
+          : '月額990円〜｜乗り換えで最大2万円還元（今だけ）'
+    case 'ec':
+      return isYouTube
+        ? '【検証】Amazonより安い？ガチで買ってみた'
+        : '【本日限定】MAX70%OFF｜送料無料で今すぐお得に'
+    case 'marketing':
+      return isWebinar
+        ? '【無料ウェビナー】売上を伸ばす広告改善 “即効” 5施策'
+        : isLp
+          ? '売上を最短で伸ばす。成果直結の広告運用をはじめよう'
+          : '【無料診断】広告費のムダを削減してCVを増やす'
+    case 'recruit':
+      return isYouTube
+        ? '【転職】年収が上がる人が必ずやってること'
+        : '【未経験OK】月給30万〜｜面談だけでもOK（今週）'
+    case 'beauty':
+      return isCampaign
+        ? '【初回限定】毛穴・くすみ対策｜今だけ特別価格'
+        : '【初回限定】肌が変わる。人気No.1ケアを体験'
+    case 'food':
+      return isCampaign
+        ? '【期間限定】人気メニューが今だけ20%OFF（本日）'
+        : '【限定】今週だけの特別メニュー｜クーポン配布中'
+    case 'realestate':
+      return '【来場特典】理想の住まいが見つかる｜今週末見学会'
+    case 'education':
+      return isWebinar
+        ? '【無料説明会】3ヶ月でスキル習得｜学習ロードマップ公開'
+        : '最短で伸びる。無料体験で学習効果を実感'
+    case 'finance':
+      return '【今だけ】手数料を見直して“毎月のムダ”を削減'
+    case 'health':
+      return '【予約受付中】検査・相談をスムーズに｜まずは無料相談'
+    case 'it':
+      return isYouTube
+        ? '【神機能】仕事が10倍速くなるAI活用術'
+        : '業務効率を10倍に。AIでムダ時間を削減'
+    default:
+      return isYouTube ? '【必見】知らないと損する最新テクニック' : '【今だけ】まずは無料でお試し｜成果を最短で'
+  }
+}
+
 // ========================================
 // メインコンポーネント
 // ========================================
@@ -300,6 +355,7 @@ export default function BannerDashboard() {
   const [tipIndex, setTipIndex] = useState(0)
   
   const [guestUsageCount, setGuestUsageCount] = useState(0)
+  const [isSuggestingCopy, setIsSuggestingCopy] = useState(false)
   
   const isGuest = !session
   const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
@@ -568,6 +624,57 @@ export default function BannerDashboard() {
       toast.success('テキスト入りでダウンロードしました', { icon: '⬇️' })
     } catch (e: any) {
       toast.error(e?.message || '合成に失敗しました')
+    }
+  }
+
+  const handleSmartCopySample = async () => {
+    if (!category) {
+      toast.error('先に「業種」を選択してください', { icon: '👆' })
+      return
+    }
+
+    // まずは即座に高CTRの型で埋める（空欄でも使える）
+    if (!keyword.trim()) {
+      const sample = buildHighCtrSampleCopy(category, purpose)
+      setKeyword(sample)
+      toast.success('クリック率を意識したサンプルを入力しました', { icon: '⚡' })
+      return
+    }
+
+    // 既に入力がある場合はAIコーチで改善案を即反映
+    setIsSuggestingCopy(true)
+    const loading = toast.loading('クリック率を意識したコピーを提案中...', { icon: '⚡' })
+    try {
+      const res = await fetch('/api/banner/coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'copy',
+          keyword: keyword.trim(),
+          category,
+          useCase: purpose,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'コピー提案に失敗しました')
+
+      const best = data?.data?.copyVariations?.bestPick?.copy
+      if (typeof best === 'string' && best.trim()) {
+        setKeyword(best.trim())
+        toast.success('クリック率を意識したコピーに更新しました', { icon: '✅' })
+      } else {
+        // フォールバック：型で差し替え
+        const sample = buildHighCtrSampleCopy(category, purpose)
+        setKeyword(sample)
+        toast.success('サンプルを入力しました', { icon: '✨' })
+      }
+    } catch (e: any) {
+      const sample = buildHighCtrSampleCopy(category, purpose)
+      setKeyword(sample)
+      toast.error(e?.message || 'AI提案に失敗したため、サンプルに切り替えました', { icon: '⚠️' })
+    } finally {
+      toast.dismiss(loading)
+      setIsSuggestingCopy(false)
     }
   }
 
@@ -1055,14 +1162,26 @@ export default function BannerDashboard() {
               transition={{ delay: 0.25 }}
               className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/60 p-5 sm:p-6 shadow-lg shadow-gray-200/50 hover:shadow-xl transition-all"
             >
-              <div className="flex items-center gap-3 mb-4 sm:mb-5">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-orange-600 to-amber-600 flex items-center justify-center text-white font-black text-sm sm:text-base shadow-lg shadow-orange-500/30">
-                  4
+              <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-orange-600 to-amber-600 flex items-center justify-center text-white font-black text-sm sm:text-base shadow-lg shadow-orange-500/30">
+                    4
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-base sm:text-lg text-gray-900">キャッチコピー</h2>
+                    <p className="text-xs text-gray-400 hidden sm:block">業種×用途に合わせてCTRを上げる</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-bold text-base sm:text-lg text-gray-900">キャッチコピー</h2>
-                  <p className="text-xs text-gray-400 hidden sm:block">バナーのメインメッセージ</p>
-                </div>
+
+                <button
+                  onClick={handleSmartCopySample}
+                  disabled={isSuggestingCopy}
+                  className="flex items-center gap-2 px-3.5 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-xl transition-colors text-sm font-black disabled:opacity-60"
+                >
+                  {isSuggestingCopy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                  <span className="hidden sm:inline">AIサンプル</span>
+                  <span className="sm:hidden">AI</span>
+                </button>
               </div>
               <div className="relative">
                 <textarea
