@@ -93,7 +93,7 @@ const SAMPLE_SCENARIOS: SampleScenario[] = [
   { purpose: 'webinar', category: 'it', keyword: '【参加無料】生成AI活用ロードマップ（Q&A付き）' },
   { purpose: 'webinar', category: 'finance', keyword: '【無料セミナー】家計見直しで月1万円を生み出す方法' },
   { purpose: 'lp_hero', category: 'it', keyword: '業務効率を10倍に。次世代AIプラットフォーム' },
-  { purpose: 'lp_hero', category: 'healthcare', keyword: '予約から問診まで一括管理。現場をもっとラクに' },
+  { purpose: 'lp_hero', category: 'health', keyword: '予約から問診まで一括管理。現場をもっとラクに' },
   { purpose: 'email', category: 'ec', keyword: '本日23:59まで：会員様限定クーポン配布中' },
   { purpose: 'campaign', category: 'telecom', keyword: '乗り換えで最大2万円キャッシュバック 月額990円〜' },
   { purpose: 'youtube', category: 'it', keyword: '【保存版】AIで作業が10倍速くなる“最短ルート”' },
@@ -473,6 +473,7 @@ export default function BannerDashboard() {
 
   // サンプル入力（用途/業種/キーワードまで押すたびに切り替え）
   const [sampleScenarioIndex, setSampleScenarioIndex] = useState(-1)
+  const sampleScenarioIndexRef = useRef(-1)
 
   // サイトURL→カラー抽出（ブランド配色）
   const [brandUrl, setBrandUrl] = useState('')
@@ -606,10 +607,12 @@ export default function BannerDashboard() {
   // Handlers
   const handleSample = () => {
     const pool = SAMPLE_SCENARIOS
-    const next = (sampleScenarioIndex + 1) % pool.length
+    // 連打でも確実に切り替わるようRefで管理（stateの非同期更新による“同じが連続”を防ぐ）
+    sampleScenarioIndexRef.current = (sampleScenarioIndexRef.current + 1) % pool.length
+    const next = sampleScenarioIndexRef.current
     setSampleScenarioIndex(next)
 
-    const s = pool[next]
+    const s = pool[next]!
     // 用途/業種/キーワードをまとめて切り替える
     setPurpose(s.purpose)
     setCategory(s.category)
@@ -1189,7 +1192,10 @@ export default function BannerDashboard() {
                   className="flex items-center gap-2 px-3.5 py-2 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl transition-colors text-sm font-bold"
                 >
                   <Wand2 className="w-4 h-4" />
-                  サンプル入力
+                  <span>サンプル入力</span>
+                  <span className="px-2 py-0.5 rounded-full bg-white/70 border border-violet-200 text-[11px] font-black text-violet-700">
+                    {Math.max(1, sampleScenarioIndex + 1)}/{SAMPLE_SCENARIOS.length}
+                  </span>
                 </button>
               </div>
               <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
