@@ -399,28 +399,26 @@ Instead, create a visually striking banner with:
   if (options.companyName) {
     prompt += `
 === COMPANY/BRAND NAME ===
-Display "${options.companyName}" as the brand name (smaller than main text, but visible)
+Display "${options.companyName}" as plain brand TEXT only (smaller than main text, but visible).
+Do NOT create any logo mark, emblem, seal, watermark, or fake brand icon from the brand name.
 `
   }
 
-  // ロゴがある場合
-  if (options.hasLogo) {
-    if (options.logoImage) {
-      // 実際のロゴ画像が提供されている場合
-      prompt += `
+  // ロゴは「アップロードされた実ロゴ画像」がある場合のみ使用（勝手に適当なロゴを入れない）
+  if (options.logoImage) {
+    prompt += `
 === LOGO PLACEMENT (PROVIDED) ===
-I am providing the company logo image. Please incorporate this logo into the banner design.
+I am providing the company logo image. Incorporate ONLY this provided logo into the banner design.
 Place the logo in a visible corner (top-left or bottom-right recommended).
 Maintain the logo's original colors and shape, blending it naturally with the banner design.
 `
-    } else {
-      // ロゴ画像がない場合はプレースホルダー
-      prompt += `
-=== LOGO PLACEHOLDER ===
-Include a company logo placeholder in the corner (top-left or bottom-right recommended)
-${options.logoDescription ? `Logo style: ${options.logoDescription}` : 'Create a simple, professional logo placeholder'}
+  } else {
+    prompt += `
+=== LOGO / BRAND MARK POLICY (VERY IMPORTANT) ===
+Do NOT include ANY logo, emblem, seal, watermark, badge, or random brand mark.
+Do NOT invent a logo or "logo-like icon".
+If a brand name is present, keep it as plain text only.
 `
-    }
   }
 
   // 人物がある場合
