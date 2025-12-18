@@ -16,12 +16,22 @@ type SeoArticleRow = {
 export default function SeoDashboardPage() {
   const [articles, setArticles] = useState<SeoArticleRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
-    const res = await fetch('/api/seo/articles', { cache: 'no-store' })
-    const json = await res.json()
-    setArticles(json.articles || [])
+    setError(null)
+    try {
+      const res = await fetch('/api/seo/articles', { cache: 'no-store' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json.success === false) {
+        throw new Error(json.error || `API Error: ${res.status}`)
+      }
+      setArticles(json.articles || [])
+    } catch (e: any) {
+      setArticles([])
+      setError(e?.message || '読み込みに失敗しました')
+    }
     setLoading(false)
   }
 
@@ -57,6 +67,16 @@ export default function SeoDashboardPage() {
 
       <div className="mt-8">
         <h2 className="text-lg font-bold text-gray-900 mb-3">記事一覧</h2>
+
+        {error ? (
+          <div className="mb-4 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800 text-sm">
+            <p className="font-bold">読み込みエラー</p>
+            <p className="mt-1 whitespace-pre-wrap">{error}</p>
+            <p className="mt-2 text-xs text-red-700">
+              本番ではDBの`prisma db push`（またはmigrate）を別途実行してください。
+            </p>
+          </div>
+        ) : null}
 
         {loading ? (
           <div className="text-gray-500">読み込み中...</div>
