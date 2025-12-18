@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -208,6 +208,51 @@ async function imageToBase64(file: File): Promise<string> {
   })
 }
 
+function clamp(n: number, min: number, max: number) {
+  return Math.min(Math.max(n, min), max)
+}
+
+function safeNumber(v: string, fallback: number) {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : fallback
+}
+
+function buildDefaultOverlay(keyword: string, purpose: string) {
+  const k = keyword.trim()
+  const headline = k.length > 0 ? k : '訴求メッセージを入力してください'
+  const cta =
+    purpose === 'youtube'
+      ? '今すぐ見る'
+      : purpose === 'webinar'
+        ? '無料で参加'
+        : purpose === 'campaign'
+          ? '今すぐチェック'
+          : '詳しくはこちら'
+  return { headline, subhead: '', cta }
+}
+
+function createCopyVariants(headline: string, purpose: string) {
+  const base = headline.trim()
+  const head = base.length ? base : '今すぐ成果を出す'
+  const variants =
+    purpose === 'youtube'
+      ? [
+          `【衝撃】${head}`,
+          `知らないと損… ${head}`,
+          `これで変わる：${head}`,
+          `最短で理解：${head}`,
+          `今すぐ使える ${head}`,
+        ]
+      : [
+          `${head}`,
+          `まずは無料で ${head}`,
+          `今だけ：${head}`,
+          `最短ルートで ${head}`,
+          `迷ったらこれ：${head}`,
+        ]
+  return Array.from(new Set(variants)).slice(0, 5)
+}
+
 // ========================================
 // メインコンポーネント
 // ========================================
@@ -242,12 +287,17 @@ export default function BannerDashboard() {
   const [refineHistory, setRefineHistory] = useState<{ instruction: string; image: string }[]>([])
   
   // テキストオーバーレイ機能
-  const [overlayText, setOverlayText] = useState('')
-  const [overlayFontSize, setOverlayFontSize] = useState(48)
-  const [overlayColor, setOverlayColor] = useState('#FFFFFF')
-  const [overlayBgColor, setOverlayBgColor] = useState('#000000')
-  const [overlayBgOpacity, setOverlayBgOpacity] = useState(70)
   const [showTextOverlay, setShowTextOverlay] = useState(false)
+  const [overlayHeadline, setOverlayHeadline] = useState('')
+  const [overlaySubhead, setOverlaySubhead] = useState('')
+  const [overlayCta, setOverlayCta] = useState('')
+  const [overlayTextColor, setOverlayTextColor] = useState('#FFFFFF')
+  const [overlayBgColor, setOverlayBgColor] = useState('#111827') // gray-900
+  const [overlayBgOpacity, setOverlayBgOpacity] = useState(82)
+  const [overlayPosition, setOverlayPosition] = useState<'bottom' | 'center'>('bottom')
+  const [overlayFontScale, setOverlayFontScale] = useState(1)
+  const compositeCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  const [tipIndex, setTipIndex] = useState(0)
   
   const [guestUsageCount, setGuestUsageCount] = useState(0)
   
@@ -262,6 +312,13 @@ export default function BannerDashboard() {
     parseInt(customHeight) >= 100 && parseInt(customHeight) <= 4096
   )
   const canGenerate = category && keyword.trim() && (session || guestRemaining > 0) && isValidCustomSize
+
+  const sizeInfo = useMemo(() => {
+    const [wStr, hStr] = effectiveSize.split('x')
+    const w = safeNumber(wStr, 1080)
+    const h = safeNumber(hStr, 1080)
+    return { w, h, ratio: w / h }
+  }, [effectiveSize])
 
   // Effects
   useEffect(() => {
@@ -300,6 +357,24 @@ export default function BannerDashboard() {
     }, 6000)
     return () => clearInterval(phaseInterval)
   }, [isGenerating])
+
+  useEffect(() => {
+    if (!isGenerating) return
+    const t = setInterval(() => {
+      setTipIndex((prev) => (prev + 1) % GENERATION_TIPS.length)
+    }, 5200)
+    return () => clearInterval(t)
+  }, [isGenerating])
+
+  // 生成結果が入ったらテキストレイヤー初期値をセット（独自機能）
+  useEffect(() => {
+    if (generatedBanners.length === 0) return
+    const d = buildDefaultOverlay(keyword, purpose)
+    setOverlayHeadline(d.headline)
+    setOverlaySubhead(d.subhead)
+    setOverlayCta(d.cta)
+    setShowTextOverlay(true)
+  }, [generatedBanners.length, keyword, purpose])
 
   // Handlers
   const handleSample = () => {
@@ -362,6 +437,137 @@ export default function BannerDashboard() {
       toast.error('生成に失敗しました', { icon: '❌', duration: 5000 })
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const downloadWithTextOverlay = async (imageUrl: string) => {
+    try {
+      const canvas = compositeCanvasRef.current || document.createElement('canvas')
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Canvasの初期化に失敗しました')
+
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+        img.src = imageUrl
+      })
+
+      // 画像サイズ
+      canvas.width = img.naturalWidth || sizeInfo.w
+      canvas.height = img.naturalHeight || sizeInfo.h
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+      // テキストレイヤー
+      const padding = Math.round(canvas.width * 0.045)
+      const panelW = canvas.width - padding * 2
+      const panelH = Math.round(canvas.height * 0.28)
+      const panelX = padding
+      const panelY = overlayPosition === 'center'
+        ? Math.round((canvas.height - panelH) * 0.55)
+        : canvas.height - padding - panelH
+
+      const opacity = clamp(overlayBgOpacity, 0, 100) / 100
+      ctx.save()
+      ctx.globalAlpha = opacity
+      ctx.fillStyle = overlayBgColor
+      const r = Math.round(canvas.width * 0.03)
+      // rounded rect
+      ctx.beginPath()
+      ctx.moveTo(panelX + r, panelY)
+      ctx.arcTo(panelX + panelW, panelY, panelX + panelW, panelY + panelH, r)
+      ctx.arcTo(panelX + panelW, panelY + panelH, panelX, panelY + panelH, r)
+      ctx.arcTo(panelX, panelY + panelH, panelX, panelY, r)
+      ctx.arcTo(panelX, panelY, panelX + panelW, panelY, r)
+      ctx.closePath()
+      ctx.fill()
+      ctx.restore()
+
+      const baseFont = Math.round(canvas.height * 0.06 * overlayFontScale)
+      const subFont = Math.round(baseFont * 0.55)
+      const ctaFont = Math.round(baseFont * 0.58)
+
+      ctx.fillStyle = overlayTextColor
+      ctx.textBaseline = 'top'
+      ctx.font = `800 ${baseFont}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Helvetica, Arial`
+
+      const textX = panelX + Math.round(panelW * 0.06)
+      let y = panelY + Math.round(panelH * 0.14)
+
+      // headline（自動改行：2行まで）
+      const headline = overlayHeadline.trim()
+      const maxWidth = panelW * 0.88
+      const lines: string[] = []
+      if (headline) {
+        const words = headline.split('')
+        let line = ''
+        for (const ch of words) {
+          const test = line + ch
+          if (ctx.measureText(test).width > maxWidth && line) {
+            lines.push(line)
+            line = ch
+          } else {
+            line = test
+          }
+          if (lines.length >= 2) break
+        }
+        if (lines.length < 2 && line) lines.push(line)
+      }
+      for (const line of lines) {
+        ctx.fillText(line, textX, y)
+        y += Math.round(baseFont * 1.1)
+      }
+
+      // subhead
+      const sub = overlaySubhead.trim()
+      if (sub) {
+        ctx.globalAlpha = 0.92
+        ctx.font = `600 ${subFont}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Helvetica, Arial`
+        ctx.fillText(sub, textX, y + Math.round(baseFont * 0.12))
+        ctx.globalAlpha = 1
+      }
+
+      // CTA pill
+      const cta = overlayCta.trim()
+      if (cta) {
+        const pillPaddingX = Math.round(panelW * 0.04)
+        const pillPaddingY = Math.round(panelH * 0.08)
+        ctx.font = `800 ${ctaFont}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Helvetica, Arial`
+        const tw = ctx.measureText(cta).width
+        const pillW = Math.round(tw + pillPaddingX * 2)
+        const pillH = Math.round(ctaFont + pillPaddingY * 1.6)
+        const pillX = panelX + panelW - pillW - Math.round(panelW * 0.06)
+        const pillY = panelY + panelH - pillH - Math.round(panelH * 0.14)
+        ctx.save()
+        ctx.fillStyle = overlayTextColor
+        ctx.globalAlpha = 0.12
+        // rounded rect for CTA
+        const pr = Math.round(pillH / 2)
+        ctx.beginPath()
+        ctx.moveTo(pillX + pr, pillY)
+        ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillH, pr)
+        ctx.arcTo(pillX + pillW, pillY + pillH, pillX, pillY + pillH, pr)
+        ctx.arcTo(pillX, pillY + pillH, pillX, pillY, pr)
+        ctx.arcTo(pillX, pillY, pillX + pillW, pillY, pr)
+        ctx.closePath()
+        ctx.fill()
+        ctx.restore()
+        ctx.fillStyle = overlayTextColor
+        ctx.fillText(cta, pillX + pillPaddingX, pillY + Math.round(pillPaddingY * 0.6))
+      }
+
+      const out = canvas.toDataURL('image/png')
+      const link = document.createElement('a')
+      link.href = out
+      link.download = `doya-banner-text-${Date.now()}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('テキスト入りでダウンロードしました', { icon: '⬇️' })
+    } catch (e: any) {
+      toast.error(e?.message || '合成に失敗しました')
     }
   }
 
@@ -459,11 +665,12 @@ export default function BannerDashboard() {
         position="top-center" 
         toastOptions={{
           style: {
-            background: '#1a1a2e',
-            color: '#fff',
+            background: '#ffffff',
+            color: '#111827',
             borderRadius: '16px',
             padding: '16px 24px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            boxShadow: '0 25px 50px -12px rgba(17, 24, 39, 0.18)',
+            border: '1px solid rgba(229, 231, 235, 0.9)',
           },
         }}
       />
@@ -655,11 +862,11 @@ export default function BannerDashboard() {
                       onClick={() => setCategory(cat.value)}
                       className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl text-center transition-all ${
                         isSelected 
-                          ? 'bg-white shadow-lg scale-[1.02] ring-2' 
+                          ? 'bg-white shadow-lg scale-[1.02] outline outline-2 outline-offset-2' 
                           : 'bg-gray-50/50 hover:bg-gray-100 hover:scale-[1.02]'
                       }`}
                       style={{ 
-                        ringColor: isSelected ? cat.color : undefined,
+                        outlineColor: isSelected ? cat.color : undefined,
                         boxShadow: isSelected ? `0 10px 40px -10px ${cat.color}40` : undefined
                       }}
                     >
@@ -1238,11 +1445,182 @@ export default function BannerDashboard() {
                           
                           {/* プレビュー画像 */}
                           <div className="rounded-xl overflow-hidden mb-3 shadow-md">
-                            <img 
-                              src={generatedBanners[selectedBanner]} 
-                              alt="Selected Banner" 
-                              className="w-full"
-                            />
+                            <div className="relative">
+                              <img 
+                                src={generatedBanners[selectedBanner]} 
+                                alt="Selected Banner" 
+                                className="w-full"
+                              />
+                              
+                              {/* Text Layer Preview (独自性) */}
+                              {showTextOverlay && (
+                                <div className="absolute inset-0 pointer-events-none">
+                                  <div
+                                    className={`absolute left-3 right-3 ${overlayPosition === 'center' ? 'top-1/2 -translate-y-1/2' : 'bottom-3'} rounded-xl overflow-hidden`}
+                                    style={{
+                                      backgroundColor: overlayBgColor,
+                                      opacity: clamp(overlayBgOpacity, 0, 100) / 100,
+                                    }}
+                                  >
+                                    <div className="p-3 sm:p-4">
+                                      <div
+                                        className="font-black leading-tight"
+                                        style={{
+                                          color: overlayTextColor,
+                                          fontSize: `${clamp(14 * overlayFontScale, 12, 42)}px`,
+                                        }}
+                                      >
+                                        {overlayHeadline || ' '}
+                                      </div>
+                                      {overlaySubhead && (
+                                        <div
+                                          className="mt-1 font-semibold opacity-90"
+                                          style={{
+                                            color: overlayTextColor,
+                                            fontSize: `${clamp(11 * overlayFontScale, 10, 28)}px`,
+                                          }}
+                                        >
+                                          {overlaySubhead}
+                                        </div>
+                                      )}
+                                      {overlayCta && (
+                                        <div className="mt-2 flex justify-end">
+                                          <div
+                                            className="px-3 py-1 rounded-full font-black"
+                                            style={{
+                                              color: overlayTextColor,
+                                              backgroundColor: 'rgba(255,255,255,0.14)',
+                                              fontSize: `${clamp(11 * overlayFontScale, 10, 24)}px`,
+                                            }}
+                                          >
+                                            {overlayCta}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 独自性：テキストレイヤー編集＆合成DL */}
+                          <div className="border-t border-gray-100 pt-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <Pencil className="w-4 h-4 text-violet-600" />
+                                <span className="text-sm font-bold text-gray-900">テキストレイヤー（アプリ独自）</span>
+                                <span className="text-[11px] text-gray-500 hidden sm:inline">日本語文字化け対策にも◎</span>
+                              </div>
+                              <button
+                                onClick={() => setShowTextOverlay(!showTextOverlay)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                  showTextOverlay ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                              >
+                                {showTextOverlay ? 'ON' : 'OFF'}
+                              </button>
+                            </div>
+
+                            {showTextOverlay && (
+                              <div className="space-y-2">
+                                <input
+                                  value={overlayHeadline}
+                                  onChange={(e) => setOverlayHeadline(e.target.value)}
+                                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none"
+                                  placeholder="見出し（例: 月額990円〜 乗り換えで最大2万円）"
+                                />
+                                <input
+                                  value={overlaySubhead}
+                                  onChange={(e) => setOverlaySubhead(e.target.value)}
+                                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none"
+                                  placeholder="サブ（任意）"
+                                />
+                                <div className="grid grid-cols-2 gap-2">
+                                  <input
+                                    value={overlayCta}
+                                    onChange={(e) => setOverlayCta(e.target.value)}
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none"
+                                    placeholder="CTA（例: 詳しくはこちら）"
+                                  />
+                                  <select
+                                    value={overlayPosition}
+                                    onChange={(e) => setOverlayPosition(e.target.value as any)}
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900"
+                                  >
+                                    <option value="bottom">下</option>
+                                    <option value="center">中央</option>
+                                  </select>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2">
+                                  <div className="col-span-2 flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                                    <span className="text-xs font-bold text-gray-600">サイズ</span>
+                                    <input
+                                      type="range"
+                                      min={0.8}
+                                      max={1.5}
+                                      step={0.05}
+                                      value={overlayFontScale}
+                                      onChange={(e) => setOverlayFontScale(Number(e.target.value))}
+                                      className="w-full"
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                                    <span className="text-xs font-bold text-gray-600">濃さ</span>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={100}
+                                      value={overlayBgOpacity}
+                                      onChange={(e) => setOverlayBgOpacity(Number(e.target.value))}
+                                      className="w-14 bg-transparent text-sm font-bold text-gray-900 outline-none"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    onClick={() => {
+                                      const d = buildDefaultOverlay(keyword, purpose)
+                                      setOverlayHeadline(d.headline)
+                                      setOverlaySubhead(d.subhead)
+                                      setOverlayCta(d.cta)
+                                    }}
+                                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-lg font-bold"
+                                  >
+                                    自動セット
+                                  </button>
+                                  {createCopyVariants(keyword, purpose).map((v) => (
+                                    <button
+                                      key={v}
+                                      onClick={() => setOverlayHeadline(v)}
+                                      className="px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs rounded-lg font-bold"
+                                    >
+                                      {v.length > 18 ? `${v.slice(0, 18)}…` : v}
+                                    </button>
+                                  ))}
+                                </div>
+
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => downloadWithTextOverlay(generatedBanners[selectedBanner])}
+                                    className="flex-1 py-2.5 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-800 transition-colors"
+                                  >
+                                    テキスト入りでDL（合成）
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText([overlayHeadline, overlaySubhead, overlayCta].filter(Boolean).join('\n'))
+                                      toast.success('テキストをコピーしました')
+                                    }}
+                                    className="px-3 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition-colors"
+                                  >
+                                    <Copy className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* 修正入力フォーム */}
@@ -1420,6 +1798,123 @@ export default function BannerDashboard() {
           </div>
         </div>
       </footer>
+
+      {/* Hidden canvas for composite download */}
+      <canvas ref={compositeCanvasRef} className="hidden" />
+
+      {/* ========================================
+          Generation Fullscreen Overlay (飽きさせない演出)
+          ======================================== */}
+      <AnimatePresence>
+        {isGenerating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center"
+          >
+            <div className="absolute inset-0 bg-white/85 backdrop-blur-xl" />
+            <div className="absolute inset-0 overflow-hidden">
+              <motion.div
+                className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-gradient-to-br from-violet-300/35 to-fuchsia-300/35 rounded-full blur-3xl"
+                animate={{ scale: [1, 1.08, 1], rotate: [0, 18, 0] }}
+                transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              <motion.div
+                className="absolute -bottom-40 -left-40 w-[520px] h-[520px] bg-gradient-to-br from-cyan-300/30 to-blue-300/30 rounded-full blur-3xl"
+                animate={{ scale: [1, 1.06, 1], rotate: [0, -14, 0] }}
+                transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              {FLOATING_ICONS.map((ic, idx) => (
+                <motion.div
+                  key={`${ic}-${idx}`}
+                  className="absolute text-2xl sm:text-3xl opacity-35"
+                  style={{
+                    left: `${(idx * 13 + 7) % 90}%`,
+                    top: `${(idx * 11 + 10) % 90}%`,
+                  }}
+                  animate={{ y: [0, -14, 0], rotate: [0, 8, 0], opacity: [0.18, 0.38, 0.18] }}
+                  transition={{ duration: 4 + (idx % 3), repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  {ic}
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div
+              initial={{ y: 12, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              className="relative w-[min(640px,92vw)] bg-white border border-gray-200/70 rounded-3xl shadow-2xl shadow-gray-900/10 p-6 sm:p-8"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-2xl blur-lg opacity-30" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-white shadow-lg">
+                      <Sparkles className="w-6 h-6" />
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 font-semibold">生成中</div>
+                    <div className="text-lg sm:text-xl font-black text-gray-900">
+                      {GENERATION_PHASES[phaseIndex].icon} {GENERATION_PHASES[phaseIndex].label}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-sm font-black text-gray-900 tabular-nums">
+                  {Math.round(progress)}%
+                </div>
+              </div>
+
+              <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-600"
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${clamp(progress, 2, 98)}%` }}
+                  transition={{ ease: 'easeOut', duration: 0.4 }}
+                />
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {['A', 'B', 'C'].map((k, idx) => (
+                  <div
+                    key={k}
+                    className={`rounded-2xl border px-3 py-2 text-center ${
+                      phaseIndex >= 2 + idx ? 'bg-violet-50 border-violet-200' : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <div className="text-xs text-gray-500 font-semibold">パターン</div>
+                    <div className="text-base font-black text-gray-900">{k}</div>
+                  </div>
+                ))}
+              </div>
+
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={tipIndex}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="mt-5 rounded-2xl bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200/60 p-4"
+                >
+                  <div className="text-sm font-bold text-violet-700 flex items-start gap-2">
+                    <span className="text-lg leading-none">{GENERATION_TIPS[tipIndex].icon}</span>
+                    <span>{GENERATION_TIPS[tipIndex].text}</span>
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+
+              <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="font-semibold">高品質生成中（Nano Banana Pro）</span>
+                </div>
+                <div className="font-semibold">完了まで約 {Math.max(5, Math.round((100 - progress) / 6))} 秒</div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
