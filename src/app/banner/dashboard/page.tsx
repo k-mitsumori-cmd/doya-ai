@@ -381,8 +381,8 @@ export default function BannerDashboard() {
     const sample = SAMPLES[purpose] || SAMPLES.sns_ad
     setCategory(sample.category)
     setKeyword(sample.keyword)
-    if (sample.company) setCompanyName(sample.company)
-    toast.success('サンプルを入力しました', { icon: '✨' })
+    // 会社名は勝手に入れない（ブランド/ロゴが混入しやすいため）
+    toast.success('サンプルを入力しました（会社名・ロゴは未設定）', { icon: '✨' })
   }
 
   const handleGenerate = async () => {
@@ -804,10 +804,10 @@ export default function BannerDashboard() {
                 </div>
                 <button 
                   onClick={handleSample}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-600 rounded-lg transition-colors text-xs font-semibold"
+                  className="flex items-center gap-2 px-3.5 py-2 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl transition-colors text-sm font-bold"
                 >
-                  <Wand2 className="w-3.5 h-3.5" />
-                  サンプル
+                  <Wand2 className="w-4 h-4" />
+                  サンプル入力
                 </button>
               </div>
               <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
@@ -1069,7 +1069,7 @@ export default function BannerDashboard() {
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   placeholder="例: 月額990円〜 乗り換えで最大2万円キャッシュバック"
-                  className="w-full px-4 sm:px-5 py-4 sm:py-5 bg-gray-50/50 border-2 border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:border-violet-500 focus:bg-white focus:shadow-lg focus:shadow-violet-500/10 outline-none transition-all resize-none text-sm sm:text-base leading-relaxed"
+                  className="w-full px-4 sm:px-5 py-4 sm:py-5 bg-gray-50/50 border-2 border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:border-violet-500 focus:bg-white focus:shadow-lg focus:shadow-violet-500/10 outline-none transition-all resize-none text-base sm:text-lg leading-relaxed"
                   rows={3}
                   maxLength={200}
                 />
