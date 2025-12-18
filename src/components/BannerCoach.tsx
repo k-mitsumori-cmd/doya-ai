@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Sparkles, Loader2, TrendingUp, Lightbulb, 
@@ -82,6 +82,24 @@ export default function BannerCoach(props: BannerCoachProps) {
   const [isFbLoading, setIsFbLoading] = useState(false)
   const [fb, setFb] = useState<any | null>(null)
   const [fbInstruction, setFbInstruction] = useState('')
+
+  // 入力が変わったら、前の分析結果が残って混乱しないよう自動リセット
+  const inputKey = useMemo(() => {
+    const hasImg = !!selectedImage
+    return `${keyword}|${category}|${useCase}|${selectedVariant || ''}|${hasImg ? '1' : '0'}`
+  }, [keyword, category, useCase, selectedVariant, selectedImage])
+
+  useEffect(() => {
+    // ローディング中は触らない（UIちらつき回避）
+    if (isLoading || isFbLoading) return
+    if (!score && !copyVariations && !benchmark && !fb) return
+    setScore(null)
+    setCopyVariations(null)
+    setBenchmark(null)
+    setFb(null)
+    setFbInstruction('')
+    setActiveTab('score')
+  }, [inputKey])
 
   const analyzeWithCoach = async () => {
     if (!keyword.trim()) {
