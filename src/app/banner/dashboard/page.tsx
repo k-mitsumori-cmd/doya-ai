@@ -810,6 +810,20 @@ export default function BannerDashboard() {
       return
     }
 
+    // 候補が1つしかない場合でも、テンプレ候補を足して「切り替え可能」にする
+    if (aiSamplePool.length === 1 && aiSampleKey === key) {
+      const expanded = uniqStrings([
+        ...aiSamplePool,
+        ...buildHighCtrSampleCopies(category, purpose),
+      ]).slice(0, 12)
+      const next = expanded.length > 1 ? 1 : 0
+      setAiSamplePool(expanded)
+      setAiSampleIndex(next)
+      setKeyword(expanded[next] || expanded[0] || '')
+      toast.success(`サンプルを切り替えました（${next + 1}/${expanded.length}）`, { icon: '🔁' })
+      return
+    }
+
     // 既に入力がある場合はAIコーチで改善案を即反映
     setIsSuggestingCopy(true)
     const loading = toast.loading('クリック率を意識したコピーを提案中...', { icon: '⚡' })
@@ -838,7 +852,12 @@ export default function BannerDashboard() {
         const vars = Array.isArray(data?.data?.copyVariations?.variations)
           ? data.data.copyVariations.variations.map((v: any) => (typeof v?.copy === 'string' ? v.copy : ''))
           : []
-        pool = uniqStrings([typeof best === 'string' ? best : '', ...vars]).slice(0, 12)
+        // AIが1案しか返さないケースでも、必ず複数候補にする
+        pool = uniqStrings([
+          typeof best === 'string' ? best : '',
+          ...vars,
+          ...buildHighCtrSampleCopies(category, purpose),
+        ]).slice(0, 12)
       }
 
       if (pool.length === 0) {
