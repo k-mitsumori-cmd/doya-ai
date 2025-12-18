@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Vercel build で collect-build-traces が micromatch のスタックオーバーフローで落ちる事象があるため、
+  // まずはトレースを無効化してデプロイを安定させる（必要なら後で再調整）
+  outputFileTracing: false,
   images: {
     remotePatterns: [
       {
