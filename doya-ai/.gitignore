@@ -39,6 +39,10 @@ next-env.d.ts
 # prisma
 prisma/migrations
 
+# doya-logo outputs (generated artifacts)
+LOGO/outputs/**
+!LOGO/outputs/.gitkeep
+
 # IDE
 .idea
 .vscode
