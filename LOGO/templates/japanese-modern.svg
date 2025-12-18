@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!--
+    Template: japanese-modern
+    NOTE: This file is used as a "mark source". Generator extracts MARK block and composes final logo.
+  -->
+  <!--MARK_START-->
+  <g id="mark" fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Enso-like circle with a deliberate gap (余白) -->
+    <path d="M142 270c8 78 70 140 148 140 83 0 150-67 150-150S373 110 290 110c-62 0-115 38-139 92" />
+    <!-- Torii-inspired top bar (very abstract, minimal) -->
+    <path d="M176 160h220" />
+  </g>
+  <!--MARK_END-->
+  <rect x="0" y="0" width="512" height="512" fill="none"/>
+</svg>
+
+

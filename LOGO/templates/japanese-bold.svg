@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!--
+    Template: japanese-bold
+    Used as a "mark source" (MARK block).
+  -->
+  <!--MARK_START-->
+  <g id="mark">
+    <!-- Hanko (角印) inspired stamp frame -->
+    <rect x="128" y="128" width="256" height="256" rx="28" fill="none" stroke="currentColor" stroke-width="28"/>
+    <!-- Inner cut to make it feel modern + tech -->
+    <path d="M196 256h120" stroke="currentColor" stroke-width="28" stroke-linecap="round"/>
+    <path d="M256 196v120" stroke="currentColor" stroke-width="28" stroke-linecap="round"/>
+  </g>
+  <!--MARK_END-->
+  <rect x="0" y="0" width="512" height="512" fill="none"/>
+</svg>
+
+
