@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { SeoCreateArticleInputSchema } from '@seo/lib/types'
+import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 export async function GET() {
   try {
-    const articles = await prisma.seoArticle.findMany({
+    await ensureSeoSchema()
+    const seoArticle = (prisma as any).seoArticle as any
+    const articles = await seoArticle.findMany({
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
@@ -23,10 +26,14 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    await ensureSeoSchema()
     const body = await req.json()
     const input = SeoCreateArticleInputSchema.parse(body)
 
-    const article = await prisma.seoArticle.create({
+    const seoArticle = (prisma as any).seoArticle as any
+    const seoJob = (prisma as any).seoJob as any
+
+    const article = await seoArticle.create({
       data: {
         status: 'DRAFT',
         title: input.title,
@@ -41,7 +48,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    const job = await prisma.seoJob.create({
+    const job = await seoJob.create({
       data: { articleId: article.id, status: 'queued', step: 'init', progress: 0 },
     })
 
