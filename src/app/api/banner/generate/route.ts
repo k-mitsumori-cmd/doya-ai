@@ -29,6 +29,7 @@ function checkRateLimit(ip: string, isGuest: boolean): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    const disableLimits = process.env.DOYA_DISABLE_LIMITS === '1'
     // セッションチェック
     const session = await getServerSession(authOptions)
     const isGuest = !session
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
                'unknown'
 
     // レート制限チェック
-    if (!checkRateLimit(ip, isGuest)) {
+    if (!disableLimits && !checkRateLimit(ip, isGuest)) {
       return NextResponse.json(
         { error: 'リクエストが多すぎます。1分ほど待ってから再試行してください。' },
         { status: 429 }

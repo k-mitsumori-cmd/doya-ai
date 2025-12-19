@@ -179,6 +179,9 @@ export const SEO_PRICING: ServicePricing = {
 
 // SEO: user.plan から日次上限を決定（Stripe webhookの更新方針に合わせる）
 export function getSeoDailyLimitByUserPlan(plan: string | null | undefined): number {
+  // テスト用: 回数制限を無効化（本番で戻すのが簡単なように環境変数で制御）
+  // Vercel側で DOYA_DISABLE_LIMITS=1 を設定すると無制限になる
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.SEO_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
   if (p === 'BUSINESS') return 50
   if (p === 'PRO') return 10
