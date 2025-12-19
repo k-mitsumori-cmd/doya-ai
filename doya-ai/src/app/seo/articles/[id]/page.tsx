@@ -164,6 +164,39 @@ function SeoArticleInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // NOTE: hooksは条件分岐の前に必ず宣言する（React error #310 対策）
+  const latestJob = article?.jobs?.[0]
+  const latestJobId = latestJob?.id
+
+  const advanceOnce = useCallback(async () => {
+    if (!latestJobId) return
+    setActionError(null)
+    const res = await fetch(`/api/seo/jobs/${latestJobId}/advance`, { method: 'POST' })
+    let json: any = null
+    try {
+      json = await res.json()
+    } catch {
+      // ignore
+    }
+    if (!res.ok || json?.success === false) {
+      const msg = json?.error || `advance failed (${res.status})`
+      setActionError(msg)
+      setAutoRun(false)
+      return
+    }
+    await load({ showLoading: false })
+  }, [latestJobId, load])
+
+  useEffect(() => {
+    if (!autoRun) return
+    if (!latestJob) return
+    if (latestJob.status === 'done' || latestJob.status === 'error') return
+    const t = setTimeout(() => {
+      advanceOnce()
+    }, 700)
+    return () => clearTimeout(t)
+  }, [autoRun, latestJob, advanceOnce])
+
   if (loading) {
     return (
       <main className="max-w-6xl mx-auto px-4 py-10">
@@ -194,39 +227,8 @@ function SeoArticleInner() {
   }
 
   const latestAudit = article.audits?.[0]
-  const latestJob = article.jobs?.[0]
-  const latestJobId = latestJob?.id
   const knowledgeByType = (t: string) => (article.knowledgeItems || []).filter((k) => k.type === t)
   const metaItem = knowledgeByType('meta')?.[0]
-
-  const advanceOnce = useCallback(async () => {
-    if (!latestJobId) return
-    setActionError(null)
-    const res = await fetch(`/api/seo/jobs/${latestJobId}/advance`, { method: 'POST' })
-    let json: any = null
-    try {
-      json = await res.json()
-    } catch {
-      // ignore
-    }
-    if (!res.ok || json?.success === false) {
-      const msg = json?.error || `advance failed (${res.status})`
-      setActionError(msg)
-      setAutoRun(false)
-      return
-    }
-    await load({ showLoading: false })
-  }, [latestJobId, load])
-
-  useEffect(() => {
-    if (!autoRun) return
-    if (!latestJob) return
-    if (latestJob.status === 'done' || latestJob.status === 'error') return
-    const t = setTimeout(() => {
-      advanceOnce()
-    }, 700)
-    return () => clearTimeout(t)
-  }, [autoRun, latestJob, advanceOnce])
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
