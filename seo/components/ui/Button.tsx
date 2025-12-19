@@ -14,6 +14,9 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: Size }) {
   return (
     <button
+      // NOTE: type未指定だと、親に<form>がある場合に submit 扱いになり
+      // onClickの挙動が崩れることがあるためデフォルトはbuttonにする
+      type={props.type ?? 'button'}
       {...props}
       className={clsx(
         'inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-emerald-400/40 focus:ring-offset-2 focus:ring-offset-transparent',

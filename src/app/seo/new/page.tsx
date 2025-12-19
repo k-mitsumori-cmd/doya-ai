@@ -221,15 +221,36 @@ export default function SeoNewPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="secondary" size="sm" onClick={fillSample}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault()
+              fillSample()
+            }}
+          >
             <Sparkles className="w-4 h-4" />
             サンプル入力
           </Button>
-          <Button variant="secondary" size="sm" onClick={saveDraft}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault()
+              saveDraft()
+            }}
+          >
             <Save className="w-4 h-4" />
             下書き保存
           </Button>
-          <Button variant="ghost" size="sm" onClick={clearDraft}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault()
+              clearDraft()
+            }}
+          >
             破棄
           </Button>
         </div>
