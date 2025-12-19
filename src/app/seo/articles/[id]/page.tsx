@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
+import { ClientErrorBoundary } from '@seo/components/ClientErrorBoundary'
 import { Tabs } from '@seo/components/ui/Tabs'
 import { Button } from '@seo/components/ui/Button'
 import { Card, CardBody, CardHeader, CardTitle, CardDesc } from '@seo/components/ui/Card'
@@ -75,6 +76,14 @@ type Article = {
 }
 
 export default function SeoArticlePage() {
+  return (
+    <ClientErrorBoundary title="記事ページの表示でエラーが発生しました">
+      <SeoArticleInner />
+    </ClientErrorBoundary>
+  )
+}
+
+function SeoArticleInner() {
   const params = useParams<{ id: string }>()
   const id = params.id
   const searchParams = useSearchParams()
