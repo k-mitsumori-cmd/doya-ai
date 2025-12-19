@@ -21,6 +21,9 @@ import {
   BookOpen,
   Lightbulb,
   CheckCircle2,
+  ImageIcon,
+  X,
+  MessageSquare,
 } from 'lucide-react'
 
 const TARGETS = [10000, 20000, 30000, 40000, 50000, 60000]
@@ -100,11 +103,42 @@ export default function SeoNewPage() {
     objections: true,
   })
 
+  // 新機能：依頼テキストと参考画像
+  const [requestText, setRequestText] = useState('')
+  const [referenceImages, setReferenceImages] = useState<{ name: string; dataUrl: string }[]>([])
+
   const [loading, setLoading] = useState(false)
   const [predicting, setPredicting] = useState(false)
   const [predictedOnce, setPredictedOnce] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+
+  // 画像アップロード処理
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files
+    if (!files) return
+    
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith('image/')) return
+      if (referenceImages.length >= 5) {
+        setError('参考画像は最大5枚までです')
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = () => {
+        setReferenceImages((prev) => [
+          ...prev,
+          { name: file.name, dataUrl: reader.result as string },
+        ])
+      }
+      reader.readAsDataURL(file)
+    })
+    e.target.value = '' // reset input
+  }
+
+  function removeImage(index: number) {
+    setReferenceImages((prev) => prev.filter((_, i) => i !== index))
+  }
 
   function applyTemplate(t: (typeof TEMPLATES)[number]) {
     setTitle(t.title)
@@ -254,6 +288,9 @@ export default function SeoNewPage() {
           .map((s) => s.trim())
           .filter(Boolean),
         llmoOptions: llmo,
+        // 新機能：依頼テキストと参考画像
+        requestText: requestText.trim() || null,
+        referenceImages: referenceImages.length > 0 ? referenceImages : null,
       }
       const res = await fetch('/api/seo/articles', {
         method: 'POST',
@@ -471,6 +508,86 @@ export default function SeoNewPage() {
                 placeholder="タイトル入力で自動推定されます"
               />
             </div>
+          </div>
+
+          {/* 依頼テキスト */}
+          <div className="p-4 rounded-xl border border-cyan-200 bg-cyan-50 space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-cyan-600" />
+              <p className="text-sm font-bold text-cyan-700">依頼テキスト（任意）</p>
+            </div>
+            <p className="text-xs text-cyan-600">
+              記事に含めたい内容、参考にしてほしいテキスト、具体的な要望などを入力してください。
+              AIが記事生成時に参考にします。
+            </p>
+            <textarea
+              className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm min-h-32 focus:outline-none focus:border-cyan-500"
+              value={requestText}
+              onChange={(e) => setRequestText(e.target.value)}
+              placeholder={`例）
+・自社の強みとして「導入実績300社以上」「24時間サポート」を強調してください
+・以下の事例を記事内で紹介してください：
+  - A社様：導入後3ヶ月で採用コスト30%削減
+  - B社様：面接調整工数を月40時間削減
+・競合との違いとして「専任担当制」をアピールしたい
+・読者が行動に移せるよう、無料相談への誘導を入れてください`}
+            />
+            {requestText.length > 0 && (
+              <p className="text-xs text-cyan-600">
+                {requestText.length}文字入力済み
+              </p>
+            )}
+          </div>
+
+          {/* 参考画像 */}
+          <div className="p-4 rounded-xl border border-orange-200 bg-orange-50 space-y-4">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-orange-600" />
+              <p className="text-sm font-bold text-orange-700">参考画像（任意・最大5枚）</p>
+            </div>
+            <p className="text-xs text-orange-600">
+              記事のイメージとなる画像、参考にしたいデザイン、図解の元になる画像などをアップロードしてください。
+              AIがバナーや図解を生成する際の参考にします。
+            </p>
+            
+            <div className="flex items-center gap-3 flex-wrap">
+              <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-300 bg-white text-orange-700 text-sm font-bold cursor-pointer hover:bg-orange-100 transition-colors">
+                <UploadCloud className="w-4 h-4" />
+                画像を選択
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </label>
+              <span className="text-xs text-orange-600">
+                {referenceImages.length}/5 枚アップロード済み
+              </span>
+            </div>
+
+            {referenceImages.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                {referenceImages.map((img, i) => (
+                  <div key={i} className="relative group">
+                    <img
+                      src={img.dataUrl}
+                      alt={img.name}
+                      className="w-full h-24 object-cover rounded-lg border border-orange-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(i)}
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <p className="text-[10px] text-orange-600 truncate mt-1">{img.name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardBody>
       </Card>

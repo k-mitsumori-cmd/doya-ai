@@ -15,6 +15,12 @@ export const SeoLlmoOptionsSchema = z.object({
 
 export type SeoLlmoOptions = z.infer<typeof SeoLlmoOptionsSchema>
 
+// 参考画像の型
+export const SeoReferenceImageSchema = z.object({
+  name: z.string(),
+  dataUrl: z.string(), // Base64 data URL
+})
+
 export const SeoCreateArticleInputSchema = z.object({
   title: z.string().min(1).max(200),
   keywords: z.array(z.string().min(1).max(100)).min(1).max(10),
@@ -25,6 +31,9 @@ export const SeoCreateArticleInputSchema = z.object({
   tone: SeoToneSchema.default('丁寧'),
   forbidden: z.array(z.string().min(1).max(200)).max(50).optional().default([]),
   llmoOptions: SeoLlmoOptionsSchema.optional(),
+  // 新機能：依頼テキストと参考画像
+  requestText: z.string().max(50000).optional().nullable(),
+  referenceImages: z.array(SeoReferenceImageSchema).max(5).optional().nullable(),
 })
 
 export type SeoCreateArticleInput = z.infer<typeof SeoCreateArticleInputSchema>

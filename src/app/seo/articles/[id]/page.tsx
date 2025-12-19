@@ -90,6 +90,9 @@ type Article = {
   references?: SeoReference[]
   llmoOptions?: any
   sections?: { id: string; status: string }[]
+  // 新機能：依頼テキストと参考画像
+  requestText?: string | null
+  referenceImages?: { name: string; dataUrl: string }[] | null
 }
 
 const TABS = [
@@ -1464,6 +1467,49 @@ function SeoArticleInner() {
               </div>
             </CardBody>
           </Card>
+
+          {/* 依頼テキスト */}
+          {article.requestText && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-cyan-500" />
+                  依頼テキスト
+                </CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="max-h-48 overflow-auto">
+                  <pre className="text-xs text-gray-700 whitespace-pre-wrap">{article.requestText}</pre>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {/* 参考画像 */}
+          {article.referenceImages && (article.referenceImages as any[]).length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5 text-orange-500" />
+                  参考画像
+                </CardTitle>
+              </CardHeader>
+              <CardBody>
+                <div className="grid grid-cols-2 gap-2">
+                  {(article.referenceImages as { name: string; dataUrl: string }[]).map((img, i) => (
+                    <div key={i} className="relative group">
+                      <img
+                        src={img.dataUrl}
+                        alt={img.name}
+                        className="w-full h-20 object-cover rounded-lg border border-gray-200"
+                      />
+                      <p className="text-[10px] text-gray-500 truncate mt-1">{img.name}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardBody>
+            </Card>
+          )}
         </div>
       </div>
     </main>

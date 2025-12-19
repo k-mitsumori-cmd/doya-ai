@@ -65,6 +65,9 @@ export async function POST(req: NextRequest) {
         forbidden: input.forbidden as any,
         referenceUrls: input.referenceUrls as any,
         llmoOptions: (input.llmoOptions ?? undefined) as any,
+        // 新機能：依頼テキストと参考画像
+        requestText: input.requestText || null,
+        referenceImages: input.referenceImages || null,
       },
     })
 
