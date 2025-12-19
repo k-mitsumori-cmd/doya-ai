@@ -45,18 +45,67 @@ function joinPartsText(parts: any): string {
   return p.map((x) => (typeof x?.text === 'string' ? x.text : '')).join('\n').trim()
 }
 
-function extractFirstJsonObject(text: string): string | null {
-  const s = text.indexOf('{')
+function stripCodeFences(s: string): string {
+  // ```json ... ``` や ``` ... ``` を雑に除去（Geminiがルールを破ることがあるため）
+  return s
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim()
+}
+
+function extractFirstJsonValue(text: string): string | null {
+  const cleaned = stripCodeFences(text)
+  const sObj = cleaned.indexOf('{')
+  const sArr = cleaned.indexOf('[')
+  const s =
+    sObj < 0 ? sArr : sArr < 0 ? sObj : Math.min(sObj, sArr)
   if (s < 0) return null
-  // 雑に最初のJSONオブジェクト終端を探す（出力は「JSON only」を強制する前提）
+
+  const open = cleaned[s]
+  const close = open === '{' ? '}' : ']'
+
+  // 文字列中の括弧を無視しつつ、対応する閉じ括弧までを切り出す
   let depth = 0
-  for (let i = s; i < text.length; i++) {
-    const c = text[i]
-    if (c === '{') depth++
-    if (c === '}') depth--
-    if (depth === 0) return text.slice(s, i + 1)
+  let inStr = false
+  let esc = false
+  for (let i = s; i < cleaned.length; i++) {
+    const c = cleaned[i]
+    if (inStr) {
+      if (esc) {
+        esc = false
+      } else if (c === '\\') {
+        esc = true
+      } else if (c === '"') {
+        inStr = false
+      }
+      continue
+    }
+    if (c === '"') {
+      inStr = true
+      continue
+    }
+    if (c === open) depth++
+    if (c === close) depth--
+    if (depth === 0) return cleaned.slice(s, i + 1)
   }
   return null
+}
+
+function repairJsonLike(input: string): string {
+  let s = stripCodeFences(input)
+  // U+2028/U+2029 はJSON.parseが嫌う環境があるので除去
+  s = s.replace(/\u2028|\u2029/g, '')
+  // 先頭のJSON本体だけ抜く（余計な文章が混ざることがある）
+  const extracted = extractFirstJsonValue(s)
+  if (extracted) s = extracted
+  // 末尾カンマ（..., } / ..., ]）を除去
+  // NOTE: 厳密には文字列中に影響する可能性があるが、Geminiの壊れ方はほぼこれなので実用優先
+  for (let i = 0; i < 5; i++) {
+    const next = s.replace(/,\s*([}\]])/g, '$1')
+    if (next === s) break
+    s = next
+  }
+  return s.trim()
 }
 
 export async function geminiGenerateText(req: GenerateContentRequest): Promise<string> {
@@ -108,11 +157,39 @@ export async function geminiGenerateJson<T>(
     generationConfig: req.generationConfig,
   })
 
-  const maybeJson = extractFirstJsonObject(text) ?? text
   try {
-    return JSON.parse(maybeJson) as T
+    const primary = extractFirstJsonValue(text) ?? stripCodeFences(text)
+    return JSON.parse(primary) as T
   } catch (e: any) {
-    throw new Error(`Gemini JSON parse failed: ${(e?.message || e) as string}\n---\n${text.substring(0, 800)}`)
+    // よくある壊れ方（末尾カンマ/コードフェンス混入/余計な文章）を自動修復して再トライ
+    try {
+      const repaired = repairJsonLike(text)
+      return JSON.parse(repaired) as T
+    } catch (e2: any) {
+      // 最終手段: Gemini自身に「厳密JSONに整形」させる（1回だけ）
+      try {
+        const fixPrompt = [
+          `You must output STRICT ${schemaName} only.`,
+          'No markdown. No extra text. No code fences.',
+          'Fix the following JSON-like text into valid strict JSON.',
+          'Do NOT change meaning; only fix syntax.',
+          '',
+          stripCodeFences(text).slice(0, 24000),
+        ].join('\n')
+
+        const fixedText = await geminiGenerateText({
+          model: req.model,
+          parts: [{ text: fixPrompt }],
+          generationConfig: { temperature: 0, maxOutputTokens: 4096 },
+        })
+        const fixed = repairJsonLike(fixedText)
+        return JSON.parse(fixed) as T
+      } catch (e3: any) {
+        throw new Error(
+          `Gemini JSON parse failed: ${(e?.message || e) as string}\n---\n${stripCodeFences(text).substring(0, 1200)}`
+        )
+      }
+    }
   }
 }
 
