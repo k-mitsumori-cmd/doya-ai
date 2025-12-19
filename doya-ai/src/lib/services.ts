@@ -167,6 +167,53 @@ export const SERVICES: Service[] = [
   },
 
   // ----------------------------------------
+  // ドヤロゴ（ロゴ生成）
+  // ----------------------------------------
+  {
+    id: 'logo',
+    name: 'ドヤロゴ',
+    shortName: 'ロゴ',
+    description: '日本っぽくてイケてるロゴをA/B/Cで自動生成',
+    longDescription:
+      'サービス名と内容だけで、日本市場で信頼されやすいロゴを3パターン（王道/攻め/ミニマル）で生成。ロゴキット・パレット・ガイドラインまで一括出力します。',
+    icon: '🏷️',
+    color: 'indigo',
+    gradient: 'from-indigo-500 to-sky-500',
+    bgGradient: 'from-indigo-50 to-sky-50',
+    href: '/logo',
+    dashboardHref: '/logo',
+    pricingHref: '/logo',
+    guideHref: '/logo',
+    features: [
+      'A/B/C 3パターン同時生成',
+      '横長/正方形（SNSアイコン）対応',
+      'SVG/PNG/JPEG出力',
+      'カラーパレット自動生成',
+      'ガイドライン/生成理由/ロゴキットZIP',
+      'ダークモード/モノクロ/反転版も自動生成',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '（暫定）',
+        dailyLimit: 1,
+        price: 0,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '（暫定）',
+        dailyLimit: -1,
+        price: 0,
+      },
+    },
+    status: 'active',
+    category: 'image',
+    order: 3,
+    requiresAuth: false,
+    isNew: true,
+  },
+
+  // ----------------------------------------
   // ドヤ記事作成（SEO/LLMO 長文記事生成）
   // ----------------------------------------
   {
@@ -197,7 +244,7 @@ export const SERVICES: Service[] = [
     },
     status: 'active',
     category: 'text',
-    order: 3,
+    order: 4,
     requiresAuth: false,
     isNew: true,
   },
