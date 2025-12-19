@@ -69,7 +69,6 @@ const TEMPLATES = [
 
 export default function SeoNewPage() {
   const router = useRouter()
-  const [mode, setMode] = useState<'quick' | 'full'>('quick')
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   const [title, setTitle] = useState('')
@@ -125,7 +124,6 @@ export default function SeoNewPage() {
       templates: true,
       objections: true,
     })
-    setMode('full')
     setShowAdvanced(true)
     setNotice('サンプルを入力しました')
     setTimeout(() => setNotice(null), 2500)
@@ -154,7 +152,6 @@ export default function SeoNewPage() {
       setTone(d.tone || 'ビジネス')
       setForbidden(d.forbidden || '')
       setLlmo({ ...llmo, ...(d.llmo || {}) })
-      if (d.title) setMode('full')
     } catch {
       // ignore
     }
@@ -271,20 +268,20 @@ export default function SeoNewPage() {
       <div className="mb-6">
         <button
           onClick={() => router.push('/seo')}
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-4 transition-colors"
+          className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm mb-4 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           一覧へ戻る
         </button>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
-                <FileText className="w-6 h-6 text-gray-900" />
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shadow-lg">
+                <FileText className="w-6 h-6 text-white" />
               </div>
               新規記事作成
             </h1>
-            <p className="text-white/70 mt-2">
+            <p className="text-gray-500 mt-2">
               タイトルとキーワードを入力するだけで、高品質なSEO記事を自動生成します。
             </p>
           </div>
@@ -303,14 +300,14 @@ export default function SeoNewPage() {
 
       {/* Notices */}
       {notice && (
-        <div className="mb-4 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-sm flex items-center gap-2">
+        <div className="mb-4 p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           {notice}
         </div>
       )}
 
       {error && (
-        <div className="mb-4 p-4 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+        <div className="mb-4 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm">
           <p className="font-bold">エラー</p>
           <p className="mt-1 whitespace-pre-wrap">{error}</p>
         </div>
@@ -318,8 +315,8 @@ export default function SeoNewPage() {
 
       {/* Template Picker */}
       <div className="mb-6">
-        <p className="text-sm font-bold text-gray-400 mb-3 flex items-center gap-2">
-          <Lightbulb className="w-4 h-4" />
+        <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
+          <Lightbulb className="w-4 h-4 text-amber-500" />
           テンプレートから始める
         </p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -327,10 +324,10 @@ export default function SeoNewPage() {
             <button
               key={t.id}
               onClick={() => applyTemplate(t)}
-              className="p-4 rounded-xl border border-gray-700 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-left group"
+              className="p-4 rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50 transition-all text-left group shadow-sm hover:shadow-md"
             >
               <span className="text-2xl">{t.icon}</span>
-              <p className="text-sm font-bold text-white mt-2 group-hover:text-emerald-400 transition-colors">
+              <p className="text-sm font-bold text-gray-900 mt-2 group-hover:text-blue-600 transition-colors">
                 {t.name}
               </p>
               <p className="text-xs text-gray-500 mt-1">
@@ -345,7 +342,7 @@ export default function SeoNewPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-emerald-400" />
+            <Target className="w-5 h-5 text-blue-500" />
             記事の基本設定
           </CardTitle>
           <CardDesc>タイトルとキーワードは必須です。入力するとペルソナ・検索意図を自動推定します。</CardDesc>
@@ -354,8 +351,8 @@ export default function SeoNewPage() {
           {/* Title */}
           <div>
             <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
-              <label className="block text-sm font-bold text-white">
-                記事タイトル <span className="text-red-400">*</span>
+              <label className="block text-sm font-bold text-gray-700">
+                記事タイトル <span className="text-red-500">*</span>
               </label>
               <Button
                 variant="secondary"
@@ -368,7 +365,7 @@ export default function SeoNewPage() {
               </Button>
             </div>
             <input
-              className="w-full px-4 py-3 rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="例）LLMOとは？SEOとの違いと実務で勝つための設計"
@@ -377,11 +374,11 @@ export default function SeoNewPage() {
 
           {/* Keywords */}
           <div>
-            <label className="block text-sm font-bold text-white mb-2">
-              キーワード <span className="text-red-400">*</span>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              キーワード <span className="text-red-500">*</span>
             </label>
             <input
-              className="w-full px-4 py-3 rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
               placeholder="例）LLMO, AI検索最適化, SEO（カンマ区切り）"
@@ -399,9 +396,9 @@ export default function SeoNewPage() {
           {/* Target & Tone */}
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold text-white mb-2">目標文字数</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">目標文字数</label>
               <select
-                className="w-full px-4 py-3 rounded-xl border border-gray-700 bg-gray-800 text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-blue-500"
                 value={targetChars}
                 onChange={(e) => setTargetChars(Number(e.target.value))}
               >
@@ -414,9 +411,9 @@ export default function SeoNewPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-bold text-white mb-2">トーン</label>
+              <label className="block text-sm font-bold text-gray-700 mb-2">トーン</label>
               <select
-                className="w-full px-4 py-3 rounded-xl border border-gray-700 bg-gray-800 text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-blue-500"
                 value={tone}
                 onChange={(e) => setTone(e.target.value as any)}
               >
@@ -428,24 +425,24 @@ export default function SeoNewPage() {
           </div>
 
           {/* AI Generated Fields */}
-          <div className="p-4 rounded-xl border border-gray-700 bg-gray-800/50 space-y-4">
+          <div className="p-4 rounded-xl border border-violet-200 bg-violet-50 space-y-4">
             <div className="flex items-center gap-2">
-              <Wand2 className="w-4 h-4 text-purple-400" />
-              <p className="text-sm font-bold text-purple-300">AI自動入力（編集可）</p>
+              <Wand2 className="w-4 h-4 text-violet-500" />
+              <p className="text-sm font-bold text-violet-700">AI自動入力（編集可）</p>
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-400 mb-1">想定読者（ペルソナ）</label>
+              <label className="block text-xs font-bold text-gray-600 mb-1">想定読者（ペルソナ）</label>
               <textarea
-                className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder:text-gray-500 text-sm min-h-20 focus:outline-none focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm min-h-20 focus:outline-none focus:border-violet-500"
                 value={persona}
                 onChange={(e) => setPersona(e.target.value)}
                 placeholder="タイトル入力で自動推定されます"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-400 mb-1">検索意図</label>
+              <label className="block text-xs font-bold text-gray-600 mb-1">検索意図</label>
               <textarea
-                className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder:text-gray-500 text-sm min-h-16 focus:outline-none focus:border-purple-500"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm min-h-16 focus:outline-none focus:border-violet-500"
                 value={searchIntent}
                 onChange={(e) => setSearchIntent(e.target.value)}
                 placeholder="タイトル入力で自動推定されます"
@@ -458,11 +455,11 @@ export default function SeoNewPage() {
       {/* Advanced Options Toggle */}
       <button
         onClick={() => setShowAdvanced(!showAdvanced)}
-        className="w-full mt-4 p-4 rounded-xl border border-gray-700 hover:border-gray-600 flex items-center justify-between text-left transition-colors"
+        className="w-full mt-4 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-between text-left transition-colors shadow-sm"
       >
         <div className="flex items-center gap-3">
-          <Settings2 className="w-5 h-5 text-gray-400" />
-          <span className="font-bold text-white">詳細設定</span>
+          <Settings2 className="w-5 h-5 text-gray-500" />
+          <span className="font-bold text-gray-900">詳細設定</span>
           <span className="text-xs text-gray-500">参考URL・禁止事項・LLMO要素</span>
         </div>
         {showAdvanced ? (
@@ -478,25 +475,25 @@ export default function SeoNewPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-blue-400" />
+                <BookOpen className="w-5 h-5 text-cyan-500" />
                 参考URL・制約
               </CardTitle>
               <CardDesc>競合記事のURLを入力すると、要点を抽出してより良い記事を生成します。</CardDesc>
             </CardHeader>
             <CardBody className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-white mb-2">参考URL（複数入力可）</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">参考URL（複数入力可）</label>
                 <textarea
-                  className="w-full px-4 py-3 rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 min-h-24 focus:outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 min-h-24 focus:outline-none focus:border-blue-500"
                   value={referenceUrls}
                   onChange={(e) => setReferenceUrls(e.target.value)}
                   placeholder={`https://example.com/article\nhttps://example.com/another`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-bold text-white mb-2">禁止事項</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">禁止事項</label>
                 <textarea
-                  className="w-full px-4 py-3 rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 min-h-16 focus:outline-none focus:border-emerald-500"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 min-h-16 focus:outline-none focus:border-blue-500"
                   value={forbidden}
                   onChange={(e) => setForbidden(e.target.value)}
                   placeholder="例）競合A社名を出さない, 誇大表現NG"
@@ -508,7 +505,7 @@ export default function SeoNewPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-amber-400" />
+                <Zap className="w-5 h-5 text-amber-500" />
                 LLMO要素（ON/OFF）
               </CardTitle>
               <CardDesc>AI検索に強い記事構造をスイッチで制御します。</CardDesc>
@@ -525,8 +522,8 @@ export default function SeoNewPage() {
                 <Toggle checked={llmo.objections} onChange={(v) => setLlmo({ ...llmo, objections: v })} label="反論に答える" description="読者の不安を先回りで潰す" />
               </div>
 
-              <div className="mt-4 p-3 rounded-xl bg-gray-800/50 border border-gray-700">
-                <p className="text-xs font-bold text-gray-400 mb-2">クイック設定</p>
+              <div className="mt-4 p-3 rounded-xl bg-gray-50 border border-gray-200">
+                <p className="text-xs font-bold text-gray-600 mb-2">クイック設定</p>
                 <div className="flex flex-wrap gap-2">
                   <Button
                     variant="secondary"
@@ -557,13 +554,13 @@ export default function SeoNewPage() {
       )}
 
       {/* Submit Area */}
-      <div className="mt-8 p-6 rounded-2xl border border-gray-700 bg-gray-800/50">
+      <div className="mt-8 p-6 rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white shadow-sm">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-500">
               準備完了
               {canSubmit && (
-                <span className="ml-2 text-emerald-400">
+                <span className="ml-2 text-blue-600 font-medium">
                   ✓ {title.slice(0, 30)}{title.length > 30 ? '...' : ''} ({targetChars.toLocaleString()}字)
                 </span>
               )}
@@ -585,7 +582,7 @@ export default function SeoNewPage() {
               variant="primary"
               onClick={submit}
               disabled={loading || !canSubmit}
-              className="shadow-lg shadow-emerald-500/25"
+              className="shadow-lg"
             >
               <UploadCloud className="w-4 h-4" />
               {loading ? '作成中...' : '記事を生成'}
@@ -595,7 +592,7 @@ export default function SeoNewPage() {
       </div>
 
       {/* Tips */}
-      <div className="mt-6 p-4 rounded-xl border border-gray-700 bg-gray-800/30">
+      <div className="mt-6 p-4 rounded-xl border border-gray-200 bg-white shadow-sm">
         <p className="text-xs font-bold text-gray-500 mb-2">💡 ヒント</p>
         <ul className="text-xs text-gray-500 space-y-1">
           <li>• タイトルを入力するとAIがペルソナ・検索意図を自動推定します</li>
