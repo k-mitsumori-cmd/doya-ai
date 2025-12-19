@@ -145,6 +145,15 @@ export async function ensureSeoSchema(): Promise<void> {
       );
     `)
 
+    // 新しいカラムの追加（既存テーブルへのマイグレーション）
+    // requestText と referenceImages を追加
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "SeoArticle" ADD COLUMN IF NOT EXISTS "requestText" TEXT;`)
+    } catch { /* column might already exist */ }
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "SeoArticle" ADD COLUMN IF NOT EXISTS "referenceImages" JSONB;`)
+    } catch { /* column might already exist */ }
+
     // indexes / uniques（冪等）
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SeoArticle_userId_createdAt_idx" ON "SeoArticle" ("userId", "createdAt");`)
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SeoArticle_status_createdAt_idx" ON "SeoArticle" ("status", "createdAt");`)
