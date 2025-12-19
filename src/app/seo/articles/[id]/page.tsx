@@ -374,7 +374,7 @@ function SeoArticleInner() {
               </CardHeader>
               <CardBody className="space-y-3">
                 <textarea
-                  className="w-full min-h-[520px] font-mono text-xs p-3 rounded-xl border border-gray-200"
+                  className="w-full min-h-[520px] font-mono text-xs p-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400"
                   value={markdownDraft}
                   onChange={(e) => setMarkdownDraft(e.target.value)}
                   placeholder="ここにMarkdown/テキストを貼り付け…"
@@ -487,7 +487,7 @@ function SeoArticleInner() {
               </CardHeader>
               <CardBody className="space-y-3">
                 <textarea
-                  className="w-full min-h-[380px] font-mono text-xs p-3 rounded-xl border border-gray-200"
+                  className="w-full min-h-[380px] font-mono text-xs p-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400"
                   value={outlineDraft}
                   onChange={(e) => setOutlineDraft(e.target.value)}
                   placeholder="（未生成）"
@@ -633,13 +633,13 @@ function SeoArticleInner() {
 
                 <div className="grid gap-2">
                   <input
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm"
                     value={diagramTitle}
                     onChange={(e) => setDiagramTitle(e.target.value)}
                     placeholder="図解タイトル（例：施策マップ）"
                   />
                   <textarea
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm min-h-20"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm min-h-20"
                     value={diagramDesc}
                     onChange={(e) => setDiagramDesc(e.target.value)}
                     placeholder="図解で表現する内容（例：入力→解析→生成→監査→公開の流れ）"
@@ -780,7 +780,7 @@ function SeoArticleInner() {
             </CardHeader>
             <CardBody className="space-y-3">
               <textarea
-                className="w-full min-h-28 px-3 py-2 rounded-xl border border-gray-200 text-sm"
+                className="w-full min-h-28 px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm"
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
                 placeholder="例）断言が強い。判断基準のトレードオフを追加。失敗談が欲しい。"

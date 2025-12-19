@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateJson, geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { fetchAndExtract } from '@seo/lib/extract'
 import { SeoCreateArticleInput, SeoOutline, SeoOutlineSchema } from '@seo/lib/types'
+import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 
 function nowIso() {
   return new Date().toISOString()
@@ -10,6 +12,57 @@ function nowIso() {
 function clampText(s: string, max = 12000): string {
   if (!s) return ''
   return s.length > max ? `${s.slice(0, max)}\n...(truncated)` : s
+}
+
+function mdCharCount(s: string): number {
+  return (s || '').replace(/\r\n/g, '\n').length
+}
+
+function normalizeH2Heading(md: string, fallback: string): string {
+  const t = (md || '').trim()
+  if (!t) return `## ${fallback}\n\n（生成に失敗しました）`
+  if (/^##\s+/m.test(t)) return t
+  // 先頭がH2でない場合は補う（統合で崩れないように）
+  return `## ${fallback}\n\n${t}`
+}
+
+function computeMinSections(targetChars: number): number {
+  // 1セクションの現実的な安定出力: 2000-3000字
+  // 50,000字なら最低でも18セクション程度は必要
+  const t = Math.max(10000, Number(targetChars || 10000))
+  const min = Math.ceil(t / 2800)
+  return Math.max(12, Math.min(28, min))
+}
+
+function ensureMinSections(outline: SeoOutline, targetChars: number): SeoOutline {
+  const minSections = computeMinSections(targetChars)
+  if (outline.sections.length >= minSections) return outline
+
+  const extras: SeoOutline['sections'] = []
+  const templates = [
+    { h2: '比較表で一気に整理：RPO会社の選び方（用途別）', intentTag: '比較' },
+    { h2: '導入前に必ず確認すべきチェックリスト（コピペ可）', intentTag: '手順' },
+    { h2: 'よくある失敗談と回避策（現場で起きがち）', intentTag: '失敗例' },
+    { h2: '社内稟議を通すための説明テンプレ（例文つき）', intentTag: 'テンプレ' },
+    { h2: 'よくある質問（FAQ）', intentTag: 'FAQ' },
+  ]
+  let idx = 0
+  while (outline.sections.length + extras.length < minSections) {
+    const t = templates[idx % templates.length]
+    extras.push({
+      h2: t.h2,
+      intentTag: t.intentTag,
+      plannedChars: 2500,
+      h3: [],
+      h4: {},
+    })
+    idx++
+  }
+
+  return {
+    ...outline,
+    sections: [...outline.sections, ...extras],
+  }
 }
 
 function outlineItemToString(v: unknown): string {
@@ -47,7 +100,9 @@ function normalizeStringArray(v: unknown): string[] {
 function toOutlineMarkdown(outline: SeoOutline): string {
   const lines: string[] = []
   lines.push('# アウトライン')
-  for (const [i, sec] of outline.sections.entries()) {
+  // entries() は環境によって downlevelIteration が必要になるため、通常forで回す
+  for (let i = 0; i < outline.sections.length; i++) {
+    const sec = outline.sections[i]
     lines.push(`\n## ${i + 1}. ${sec.h2}${sec.intentTag ? `（意図: ${sec.intentTag}）` : ''}`)
     if (sec.h3?.length) {
       for (const h3 of sec.h3) {
@@ -79,13 +134,14 @@ function toOutlineMarkdown(outline: SeoOutline): string {
 }
 
 async function buildResearchContext(articleId: string): Promise<string> {
-  const refs = await prisma.seoReference.findMany({
+  const p = prisma as any
+  const refs = await p.seoReference.findMany({
     where: { articleId },
     orderBy: { createdAt: 'asc' },
   })
   if (!refs.length) return ''
 
-  const blocks = refs.map((r) => {
+  const blocks = refs.map((r: any) => {
     const h2 = (r.headings as any)?.h2
     const h3 = (r.headings as any)?.h3
     const insights = r.insights as any
@@ -126,6 +182,7 @@ function llmoOptionsText(article: any): string {
 async function generateOutline(article: any, researchContext: string): Promise<SeoOutline> {
   const forbidden = Array.isArray(article.forbidden) ? article.forbidden : (article.forbidden as any) || []
   const keywords = Array.isArray(article.keywords) ? article.keywords : (article.keywords as any) || []
+  const minSections = computeMinSections(Number(article.targetChars || 10000))
 
   const prompt = [
     'You are a Japanese SEO + LLMO expert editor.',
@@ -148,7 +205,8 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     researchContext,
     '',
     'Constraints:',
-    '- sections: 12-28 items (H2). Each plannedChars 1500-3000 (except intro/conclusion).',
+    `- sections: ${minSections}-28 items (H2).`,
+    '- Each plannedChars 1800-3200 (except intro/conclusion).',
     '- Add intentTag per section (e.g., 定義/比較/手順/事例/注意点/FAQ/用語).',
     '- Include E-E-A-T reinforcement sections (experience, decision tradeoffs, failure cases).',
     '- Include at least one: comparison table, checklist, step-by-step template.',
@@ -175,11 +233,13 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     faq: normalizeStringArray((raw as any)?.faq),
     glossary: normalizeStringArray((raw as any)?.glossary),
   }
-  return SeoOutlineSchema.parse(normalized)
+  const parsed = SeoOutlineSchema.parse(normalized)
+  return ensureMinSections(parsed, Number(article.targetChars || 10000))
 }
 
 async function ensureOutlineAndSections(jobId: string) {
-  const job = await prisma.seoJob.findUnique({
+  const p = prisma as any
+  const job = await p.seoJob.findUnique({
     where: { id: jobId },
     include: { article: true },
   })
@@ -188,11 +248,11 @@ async function ensureOutlineAndSections(jobId: string) {
 
   if (article.outline) return
 
-  await prisma.seoJob.update({
+  await p.seoJob.update({
     where: { id: jobId },
     data: { status: 'running', step: 'outline', startedAt: job.startedAt ?? new Date() },
   })
-  await prisma.seoArticle.update({ where: { id: article.id }, data: { status: 'RUNNING' } })
+  await p.seoArticle.update({ where: { id: article.id }, data: { status: 'RUNNING' } })
 
   // NOTE: Vercel等のサーバレス環境では、ここで「複数URLの取得＋要約」を自動実行するとタイムアウトしやすい。
   // デフォルトはOFFにして、必要ならUIから「参考URLを解析」を明示的に実行してもらう。
@@ -201,7 +261,7 @@ async function ensureOutlineAndSections(jobId: string) {
   if (autoResearch) {
     const urls = (article.referenceUrls as any) as string[] | null
     if (Array.isArray(urls) && urls.length) {
-      const hasRef = await prisma.seoReference.findFirst({ where: { articleId: article.id }, select: { id: true } })
+      const hasRef = await p.seoReference.findFirst({ where: { articleId: article.id }, select: { id: true } })
       if (!hasRef) {
         try {
           // 1回のadvanceでやり切ろうとすると落ちやすいので、ここでは最大1件だけに制限
@@ -217,7 +277,7 @@ async function ensureOutlineAndSections(jobId: string) {
   const outline = await generateOutline(article, researchContext)
   const outlineMd = toOutlineMarkdown(outline)
 
-  await prisma.seoArticle.update({
+  await p.seoArticle.update({
     where: { id: article.id },
     data: { outline: outlineMd },
   })
@@ -232,11 +292,11 @@ async function ensureOutlineAndSections(jobId: string) {
     jobId: jobId,
     index: i,
     headingPath: `H2: ${s.h2}${s.intentTag ? ` [${s.intentTag}]` : ''}`,
-    plannedChars: Math.max(1200, Math.min(3200, Math.round((s.plannedChars || 2000) * ratio))),
+    plannedChars: Math.max(1800, Math.min(3500, Math.round((s.plannedChars || 2200) * ratio))),
     status: 'pending',
   }))
 
-  await prisma.seoSection.createMany({ data: createData, skipDuplicates: true })
+  await p.seoSection.createMany({ data: createData, skipDuplicates: true })
 
   // 差別化①: 導入文A/B案（ペルソナ別）
   const abPrompt = [
@@ -267,7 +327,7 @@ async function ensureOutlineAndSections(jobId: string) {
   } catch {
     abText = 'A: （生成に失敗しました）\nB: （生成に失敗しました）'
   }
-  await prisma.seoKnowledgeItem.create({
+  await p.seoKnowledgeItem.create({
     data: {
       userId: article.userId,
       articleId: article.id,
@@ -280,7 +340,8 @@ async function ensureOutlineAndSections(jobId: string) {
 }
 
 async function generateSection(jobId: string) {
-  const job = await prisma.seoJob.findUnique({
+  const p = prisma as any
+  const job = await p.seoJob.findUnique({
     where: { id: jobId },
     include: { article: true, sections: { orderBy: { index: 'asc' } } },
   })
@@ -288,13 +349,13 @@ async function generateSection(jobId: string) {
 
   const article = job.article
   const sections = job.sections
-  const next = sections.find((s) => s.status !== 'reviewed')
+  const next = sections.find((s: any) => s.status !== 'reviewed')
   if (!next) return
 
   const prevSections = sections
-    .filter((s) => s.index < next.index && s.content)
+    .filter((s: any) => s.index < next.index && s.content)
     .slice(-2)
-    .map((s) => `# Prev section ${s.index}\n${clampText(s.content || '', 2200)}`)
+    .map((s: any) => `# Prev section ${s.index}\n${clampText(s.content || '', 2200)}`)
     .join('\n\n')
 
   const outline = article.outline || ''
@@ -376,28 +437,178 @@ async function generateSection(jobId: string) {
     // ignore
   }
 
-  await prisma.seoSection.update({
+  // 文字数が明らかに不足する場合は、1回だけ追記で増量（50,000字達成のため）
+  try {
+    const currentLen = mdCharCount(rewritten)
+    const goal = Math.max(1200, Number(next.plannedChars || 2200))
+    if (currentLen < goal * 0.75) {
+      const expandPrompt = [
+        'You are a Japanese SEO writer.',
+        'Expand the following section while keeping structure and tone.',
+        'Do NOT repeat the same sentences. Add concrete examples, checklists, pitfalls, and decision criteria.',
+        'Keep it consistent with the heading and outline.',
+        'Return Markdown only.',
+        '',
+        `Target additional chars: ~${Math.max(600, Math.round(goal - currentLen))}`,
+        '',
+        'Section (current):',
+        clampText(rewritten, 9000),
+      ].join('\n')
+      const expanded = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: expandPrompt }],
+        generationConfig: { temperature: 0.55, maxOutputTokens: 6500 },
+      })
+      rewritten = expanded && expanded.trim() ? expanded : rewritten
+    }
+  } catch {
+    // ignore
+  }
+
+  await p.seoSection.update({
     where: { id: next.id },
     data: {
       prompt,
-      content: rewritten,
+      content: normalizeH2Heading(rewritten, next.headingPath || `section_${next.index}`),
       consistency: issues.length ? `ISSUES:\n- ${issues.join('\n- ')}` : null,
       status: 'reviewed',
     },
   })
 
-  const doneCount = sections.filter((s) => s.status === 'reviewed').length + 1
+  const doneCount = sections.filter((s: any) => s.status === 'reviewed').length + 1
   const total = sections.length
   const progress = Math.min(75, Math.round((doneCount / Math.max(1, total)) * 70) + 15)
 
-  await prisma.seoJob.update({
+  await p.seoJob.update({
     where: { id: jobId },
     data: { cursor: next.index + 1, step: 'sections', status: 'running', progress },
   })
 }
 
+async function autoGenerateBanner(article: any) {
+  await ensureSeoStorage()
+  const prompt = [
+    'Create a modern Japanese SEO article banner image.',
+    'CRITICAL: NO TEXT at all (no Japanese, no English, no numbers).',
+    'Create a clean visual with a large empty area for text overlay.',
+    'Style: professional, high contrast, modern.',
+    '',
+    `Theme: ${article.title}`,
+    `Keywords: ${((article.keywords as any) || []).join(', ')}`,
+    '',
+    'Output: a single 16:9 banner image.',
+  ].join('\n')
+
+  const img = await geminiGenerateImagePng({
+    prompt,
+    aspectRatio: '16:9',
+    imageSize: '2K',
+    model: GEMINI_IMAGE_MODEL_DEFAULT,
+  })
+
+  const filename = `seo_${article.id}_${Date.now()}_banner.png`
+  const saved = await saveBase64ToFile({ base64: img.dataBase64, filename, subdir: 'images' })
+  const rec = await (prisma as any).seoImage.create({
+    data: {
+      articleId: article.id,
+      kind: 'BANNER',
+      title: '記事バナー',
+      prompt,
+      filePath: saved.relativePath,
+      mimeType: img.mimeType || 'image/png',
+    },
+  })
+  return rec
+}
+
+async function autoGenerateDiagram(article: any, args: { title: string; description: string }) {
+  await ensureSeoStorage()
+  const prompt = [
+    'Create a clean monochrome-friendly diagram illustration for a Japanese business article.',
+    'CRITICAL: NO TEXT at all (no Japanese, no English, no numbers).',
+    'Use simple shapes, icons, arrows, and layout to represent the concept.',
+    'Style: flat vector-like, minimal, high contrast, plenty of whitespace.',
+    '',
+    `Article title: ${article.title}`,
+    `Diagram title (concept): ${args.title}`,
+    `What to express: ${args.description}`,
+    '',
+    'Output: one square (1:1) diagram image.',
+  ].join('\n')
+
+  const img = await geminiGenerateImagePng({
+    prompt,
+    aspectRatio: '1:1',
+    imageSize: '2K',
+    model: GEMINI_IMAGE_MODEL_DEFAULT,
+  })
+
+  const filename = `seo_${article.id}_${Date.now()}_diagram.png`
+  const saved = await saveBase64ToFile({ base64: img.dataBase64, filename, subdir: 'images' })
+  const rec = await (prisma as any).seoImage.create({
+    data: {
+      articleId: article.id,
+      kind: 'DIAGRAM',
+      title: args.title,
+      description: args.description,
+      prompt,
+      filePath: saved.relativePath,
+      mimeType: img.mimeType || 'image/png',
+    },
+  })
+  return rec
+}
+
+async function generateLlmoBlocks(article: any, merged: string): Promise<string> {
+  const on = (k: string) => ((article.llmoOptions as any) || {})?.[k] !== false
+  const prompt = [
+    'You are a Japanese SEO + LLMO editor.',
+    'Generate helpful additional blocks for the article in Markdown.',
+    'Do NOT copy from sources.',
+    'Output ONLY Markdown (no JSON).',
+    '',
+    `Title: ${article.title}`,
+    `Tone: ${article.tone}`,
+    `Keywords: ${((article.keywords as any) || []).join(', ')}`,
+    `Target chars: ${article.targetChars}`,
+    '',
+    `Include blocks (ON/OFF):`,
+    `- TL;DR: ${on('tldr') ? 'ON' : 'OFF'}`,
+    `- 結論ファースト＋根拠: ${on('conclusionFirst') ? 'ON' : 'OFF'}`,
+    `- FAQ: ${on('faq') ? 'ON' : 'OFF'}`,
+    `- 用語集: ${on('glossary') ? 'ON' : 'OFF'}`,
+    `- 比較表: ${on('comparison') ? 'ON' : 'OFF'}`,
+    `- 引用・根拠（言い換え）: ${on('quotes') ? 'ON' : 'OFF'}`,
+    `- 実務テンプレ: ${on('templates') ? 'ON' : 'OFF'}`,
+    `- 反論に答える: ${on('objections') ? 'ON' : 'OFF'}`,
+    '',
+    'Rules:',
+    '- If OFF, omit the section entirely.',
+    '- Keep each block concise but useful.',
+    '- Use headings starting from "##".',
+    '- For FAQ: Q: / A: format.',
+    '- For glossary: markdown table is OK.',
+    '- For comparison: include at least one markdown table when ON.',
+    '',
+    'Context (truncated):',
+    clampText(merged, 9000),
+  ].join('\n')
+
+  try {
+    const out = await geminiGenerateText({
+      model: GEMINI_TEXT_MODEL_DEFAULT,
+      parts: [{ text: prompt }],
+      generationConfig: { temperature: 0.45, maxOutputTokens: 2200 },
+    })
+    return out?.trim() ? out.trim() : ''
+  } catch {
+    return ''
+  }
+}
+
 async function integrate(jobId: string) {
-  const job = await prisma.seoJob.findUnique({
+  const p = prisma as any
+  const job = await p.seoJob.findUnique({
     where: { id: jobId },
     include: {
       article: { include: { memo: true } },
@@ -409,51 +620,102 @@ async function integrate(jobId: string) {
   const sections = job.sections
   const memo = article.memo?.content
 
-  const merged = sections
-    .map((s) => s.content || '')
+  const mergedSections = sections
+    .map((s: any) => normalizeH2Heading(s.content || '', s.headingPath || `section_${s.index}`))
     .filter(Boolean)
     .join('\n\n')
 
-  const prompt = [
-    'You are a Japanese chief editor for SEO + LLMO long-form articles.',
-    'Integrate sections into ONE coherent Markdown article.',
-    'Do NOT copy from sources. Keep originality.',
-    'Unify tone and remove redundancy.',
-    '',
-    `Title: ${article.title}`,
-    `Tone: ${article.tone}`,
-    `Target chars: ${article.targetChars}`,
-    memo ? `User memo about "AIっぽさ":\n${clampText(memo, 1200)}` : '',
-    '',
-    'LLMO elements toggles:',
-    llmoOptionsText(article),
-    '',
-    'When ON, include these parts:',
-    '- TL;DR at top (bullets)',
-    '- conclusion first + reasons',
-    '- FAQ (Q/A)',
-    '- glossary',
-    '- comparison table (markdown table)',
-    '- "引用・根拠" section: paraphrased insights (no direct quotes)',
-    '- practical templates: checklist, steps, copy-ready examples',
-    '- "反論に答える" section',
-    '',
-    'Input sections (draft):',
-    clampText(merged, 15000),
-  ]
-    .filter(Boolean)
-    .join('\n')
-
-  const finalMarkdown = await geminiGenerateText({
-    model: GEMINI_TEXT_MODEL_DEFAULT,
-    parts: [{ text: prompt }],
-    generationConfig: { temperature: 0.35, maxOutputTokens: 8000 },
+  // まずは“セクション結合”で文字数を担保（ここで短くしない）
+  const parts: string[] = [`# ${article.title}`]
+  // 既にバナーがあるなら先頭に差し込む（ない場合は後で生成）
+  const existingBanner = await p.seoImage.findFirst({
+    where: { articleId: article.id, kind: 'BANNER' },
+    orderBy: { createdAt: 'desc' },
   })
+  if (existingBanner?.id) {
+    parts.push(`![記事バナー](/api/seo/images/${existingBanner.id})`)
+  }
 
-  await prisma.seoArticle.update({
+  // LLMOの追加ブロック（短くてもOK、品質補助＆文字数補助）
+  const llmoBlocks = await generateLlmoBlocks(article, mergedSections)
+  if (llmoBlocks) parts.push(llmoBlocks)
+
+  if (memo) {
+    parts.push('<!-- AIっぽさメモ（次回リライト用） -->')
+    parts.push(`<!-- ${clampText(memo, 1200)} -->`)
+  }
+
+  parts.push('## 本文')
+  parts.push(mergedSections)
+
+  // 目標文字数に足りない場合は、追補セクションを自動生成して埋める（最大5回）
+  const target = Math.max(10000, Number(article.targetChars || 10000))
+  for (let i = 0; i < 5; i++) {
+    const cur = mdCharCount(parts.join('\n\n'))
+    if (cur >= target * 0.95) break
+    const need = Math.round(target * 0.98 - cur)
+    const addPrompt = [
+      'You are a Japanese SEO writer.',
+      'Write an additional section to improve completeness and meet the target length.',
+      'Do NOT copy from sources; add originality (experience, tradeoffs, failure cases, checklists).',
+      'Return Markdown only and start with "## ".',
+      '',
+      `Article title: ${article.title}`,
+      `Keywords: ${((article.keywords as any) || []).join(', ')}`,
+      `Tone: ${article.tone}`,
+      memo ? `User memo about AI-likeness:\n${clampText(memo, 900)}` : '',
+      '',
+      `Target chars for this additional section: ~${Math.min(3500, Math.max(1800, need))}`,
+      '',
+      'Context (truncated):',
+      clampText(parts.join('\n\n'), 9000),
+    ]
+      .filter(Boolean)
+      .join('\n')
+    try {
+      const extra = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: addPrompt }],
+        generationConfig: { temperature: 0.6, maxOutputTokens: 6500 },
+      })
+      if (extra && extra.trim()) parts.push(extra.trim())
+    } catch {
+      break
+    }
+  }
+
+  const finalMarkdown = parts.join('\n\n')
+
+  await p.seoArticle.update({
     where: { id: article.id },
     data: { finalMarkdown, status: 'DONE' },
   })
+
+  // 自動で素材生成（バナー＋図解）: 失敗しても本文完成は優先する
+  try {
+    await p.seoJob.update({ where: { id: jobId }, data: { step: 'media', progress: 92, status: 'running' } })
+    const alreadyBanner = await p.seoImage.findFirst({
+      where: { articleId: article.id, kind: 'BANNER' },
+      select: { id: true },
+    })
+    if (!alreadyBanner) await autoGenerateBanner(article)
+
+    // 図解は、参考が無い場合でも「流程」「比較」「判断フロー」などを自動生成
+    const diagramIdeas = [
+      { title: 'RPO導入の流れ', description: '課題整理→要件定義→業務切り出し→委託→運用改善→成果測定の流れ' },
+      { title: 'RPO会社選定の判断軸', description: '費用/範囲/専門性/スピード/運用体制/データ連携の6軸で比較する' },
+    ]
+    const existingDiagrams = await p.seoImage.count({
+      where: { articleId: article.id, kind: 'DIAGRAM' },
+    })
+    if (existingDiagrams < 2) {
+      for (const d of diagramIdeas.slice(0, 2 - existingDiagrams)) {
+        await autoGenerateDiagram(article, d)
+      }
+    }
+  } catch {
+    // ignore
+  }
 
   // 差別化②: 内部リンク提案（記事本文から抽出して提案）
   const internalLinkPrompt = [
@@ -476,7 +738,7 @@ async function integrate(jobId: string) {
   } catch {
     internalLinks = '（生成に失敗しました）'
   }
-  await prisma.seoKnowledgeItem.create({
+  await p.seoKnowledgeItem.create({
     data: {
       userId: article.userId,
       articleId: article.id,
@@ -507,7 +769,7 @@ async function integrate(jobId: string) {
   } catch {
     sns = '（生成に失敗しました）'
   }
-  await prisma.seoKnowledgeItem.create({
+  await p.seoKnowledgeItem.create({
     data: {
       userId: article.userId,
       articleId: article.id,
@@ -518,7 +780,7 @@ async function integrate(jobId: string) {
     },
   })
 
-  await prisma.seoJob.update({
+  await p.seoJob.update({
     where: { id: jobId },
     data: { status: 'done', step: 'done', progress: 100, finishedAt: new Date() },
   })
@@ -528,7 +790,8 @@ export async function researchAndStore(
   articleId: string,
   opts?: { maxUrls?: number }
 ): Promise<{ stored: number }> {
-  const article = await prisma.seoArticle.findUnique({ where: { id: articleId } })
+  const p = prisma as any
+  const article = await p.seoArticle.findUnique({ where: { id: articleId } })
   if (!article) throw new Error('article not found')
 
   const urls = (article.referenceUrls as any) as string[] | null
@@ -569,7 +832,7 @@ export async function researchAndStore(
         generationConfig: { temperature: 0.3, maxOutputTokens: 1800 },
       })
 
-      await prisma.seoReference.upsert({
+      await p.seoReference.upsert({
         where: { articleId_url: { articleId, url } },
         create: {
           articleId,
@@ -592,7 +855,7 @@ export async function researchAndStore(
       })
 
       // ナレッジにも残す
-      await prisma.seoKnowledgeItem.create({
+      await p.seoKnowledgeItem.create({
         data: {
           userId: article.userId,
           articleId,
@@ -614,7 +877,8 @@ export async function researchAndStore(
 }
 
 export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
-  const job = await prisma.seoJob.findUnique({
+  const p = prisma as any
+  const job = await p.seoJob.findUnique({
     where: { id: jobId },
     include: { article: true, sections: true },
   })
@@ -624,26 +888,26 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
   try {
     await ensureOutlineAndSections(jobId)
 
-    const afterOutline = await prisma.seoJob.findUnique({
+    const afterOutline = await p.seoJob.findUnique({
       where: { id: jobId },
       include: { sections: true },
     })
-    const remaining = (afterOutline?.sections || []).some((s) => s.status !== 'reviewed')
+    const remaining = (afterOutline?.sections || []).some((s: any) => s.status !== 'reviewed')
 
     if (remaining) {
       await generateSection(jobId)
       return { jobId }
     }
 
-    await prisma.seoJob.update({ where: { id: jobId }, data: { step: 'integrate', progress: 85 } })
+    await p.seoJob.update({ where: { id: jobId }, data: { step: 'integrate', progress: 85, status: 'running' } })
     await integrate(jobId)
     return { jobId }
   } catch (e: any) {
-    await prisma.seoJob.update({
+    await p.seoJob.update({
       where: { id: jobId },
       data: { status: 'error', error: e?.message || 'unknown error' },
     })
-    await prisma.seoArticle.update({
+    await p.seoArticle.update({
       where: { id: job.articleId },
       data: { status: 'ERROR' },
     })
