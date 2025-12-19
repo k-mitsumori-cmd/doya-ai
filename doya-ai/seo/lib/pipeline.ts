@@ -179,22 +179,90 @@ function llmoOptionsText(article: any): string {
   ].join('\n')
 }
 
+function parseOutlineFromMarkdown(md: string, targetChars: number): SeoOutline {
+  const lines = String(md || '')
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+
+  const sections: SeoOutline['sections'] = []
+  let current: SeoOutline['sections'][number] | null = null
+  let currentH3: string | null = null
+
+  const cleanHeading = (s: string) =>
+    s
+      .replace(/^#+\s*/, '')
+      .replace(/^\d+\.\s*/, '')
+      .trim()
+
+  for (const raw of lines) {
+    if (raw.startsWith('#### ')) {
+      const h4 = cleanHeading(raw)
+      if (current && currentH3 && h4) {
+        const arr = current.h4[currentH3] || []
+        if (!arr.includes(h4)) current.h4[currentH3] = [...arr, h4]
+      }
+      continue
+    }
+    if (raw.startsWith('### ')) {
+      const h3 = cleanHeading(raw)
+      if (current && h3) {
+        if (!current.h3.includes(h3)) current.h3.push(h3)
+        currentH3 = h3
+        if (!current.h4[currentH3]) current.h4[currentH3] = []
+      }
+      continue
+    }
+    if (raw.startsWith('## ') && !raw.startsWith('###')) {
+      const h2raw = cleanHeading(raw)
+      if (!h2raw) continue
+      // 例: "xxx（意図: 比較）" を intentTag に分離
+      const m = h2raw.match(/^(.*?)(?:（意図:\s*([^）]+)）)?$/)
+      const h2 = (m?.[1] || h2raw).trim()
+      const intentTag = (m?.[2] || '').trim()
+      current = { h2, intentTag, plannedChars: 2200, h3: [], h4: {} }
+      currentH3 = null
+      sections.push(current)
+      continue
+    }
+    // 先頭の "# タイトル" は無視
+  }
+
+  const baseCount = Math.max(12, sections.length || 0)
+  const per = Math.max(1800, Math.min(3500, Math.round(Math.max(10000, targetChars) / Math.max(1, baseCount))))
+  for (const s of sections) s.plannedChars = per
+
+  const outline: SeoOutline = {
+    sections: sections.length ? sections : [{ h2: '概要', intentTag: '定義', plannedChars: per, h3: [], h4: {} }],
+    internalLinkIdeas: [],
+    faq: [],
+    glossary: [],
+    diagramIdeas: [],
+  }
+  return ensureMinSections(outline, targetChars)
+}
+
 async function generateOutline(article: any, researchContext: string): Promise<SeoOutline> {
   const forbidden = Array.isArray(article.forbidden) ? article.forbidden : (article.forbidden as any) || []
   const keywords = Array.isArray(article.keywords) ? article.keywords : (article.keywords as any) || []
   const minSections = computeMinSections(Number(article.targetChars || 10000))
 
+  // アウトラインを確実に完結させるため、シンプルなスキーマで生成
+  // h4は省略可にしてJSON長を削減（後で個別セクション生成時に詳細化できる）
   const prompt = [
     'You are a Japanese SEO + LLMO expert editor.',
-    'Goal: produce an outline that can scale to 50,000-60,000 Japanese chars without breaking.',
+    'Goal: produce a COMPLETE, parseable JSON outline for a long-form article.',
     'Do NOT copy text from sources. Only paraphrase insights.',
-    'Output JSON with keys: sections, internalLinkIdeas, faq, glossary, diagramIdeas.',
+    '',
+    'CRITICAL: Output COMPLETE JSON. Do not truncate.',
+    'Output JSON with keys: sections, faq, glossary (all simple arrays).',
     '',
     'Article requirements (Japanese):',
     `- Title: ${article.title}`,
     `- Keywords: ${(keywords as string[]).join(', ')}`,
-    article.persona ? `- Persona: ${clampText(article.persona, 1200)}` : '',
-    article.searchIntent ? `- Search intent: ${clampText(article.searchIntent, 1200)}` : '',
+    article.persona ? `- Persona: ${clampText(article.persona, 800)}` : '',
+    article.searchIntent ? `- Search intent: ${clampText(article.searchIntent, 800)}` : '',
     `- Target chars: ${article.targetChars}`,
     `- Tone: ${article.tone}`,
     forbidden.length ? `- Forbidden: ${(forbidden as string[]).join(' / ')}` : '',
@@ -202,18 +270,18 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     'LLMO elements toggles:',
     llmoOptionsText(article),
     '',
-    researchContext,
+    researchContext ? clampText(researchContext, 4000) : '',
     '',
     'Constraints:',
-    `- sections: ${minSections}-28 items (H2).`,
-    '- Each plannedChars 1800-3200 (except intro/conclusion).',
-    '- Add intentTag per section (e.g., 定義/比較/手順/事例/注意点/FAQ/用語).',
-    '- Include E-E-A-T reinforcement sections (experience, decision tradeoffs, failure cases).',
-    '- Include at least one: comparison table, checklist, step-by-step template.',
-    '- Ensure headings are consistent and non-overlapping.',
+    `- sections: exactly ${minSections} items (H2).`,
+    '- Each section: {h2: string, intentTag: string, plannedChars: number (1800-3200), h3: string[], h4: {}}',
+    '- Keep h4 empty ({}) to reduce JSON size. Details will be generated per section.',
+    '- intentTag: 定義/比較/手順/事例/注意点/FAQ/用語 etc.',
+    '- faq: array of 5-10 question strings.',
+    '- glossary: array of 5-10 term strings.',
     '',
-    'JSON schema example:',
-    '{ "sections":[{"h2":"...", "intentTag":"...", "plannedChars":2000, "h3":["..."], "h4":{"H3 title":["..."]}}], "internalLinkIdeas":["..."], "faq":["..."], "glossary":["..."], "diagramIdeas":[{"title":"...", "description":"...", "insertionHint":"..."}] }',
+    'JSON schema (EXACTLY this format):',
+    '{"sections":[{"h2":"見出し","intentTag":"定義","plannedChars":2000,"h3":["小見出し1"],"h4":{}}],"faq":["質問1","質問2"],"glossary":["用語1","用語2"]}',
   ]
     .filter(Boolean)
     .join('\n')
@@ -222,10 +290,42 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     {
       model: GEMINI_TEXT_MODEL_DEFAULT,
       prompt,
-      generationConfig: { temperature: 0.3, maxOutputTokens: 6000 },
+      // 長いアウトラインでも途切れないよう十分なトークン数を確保
+      generationConfig: { temperature: 0.3, maxOutputTokens: 32000 },
     },
     'JSON'
-  )
+  ).catch(async () => {
+    // フォールバック: JSONが壊れても止めない（Markdownアウトラインで生成→こちらで解析）
+    const mdPrompt = [
+      'You are a Japanese SEO editor.',
+      'Output ONLY a Markdown outline (no JSON).',
+      'Use headings strictly:',
+      '- H2: "## ...（意図: xxx）"',
+      '- H3: "### ..."',
+      '- H4: "#### ..."',
+      `Create ${minSections}-28 H2 sections suitable for a ${article.targetChars} char article.`,
+      'Do NOT copy from sources.',
+      '',
+      `Title: ${article.title}`,
+      `Keywords: ${(keywords as string[]).join(', ')}`,
+      article.persona ? `Persona: ${clampText(article.persona, 1200)}` : '',
+      article.searchIntent ? `Search intent: ${clampText(article.searchIntent, 1200)}` : '',
+      `Tone: ${article.tone}`,
+      forbidden.length ? `Forbidden: ${(forbidden as string[]).join(' / ')}` : '',
+      '',
+      researchContext,
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    const md = await geminiGenerateText({
+      model: GEMINI_TEXT_MODEL_DEFAULT,
+      parts: [{ text: mdPrompt }],
+      generationConfig: { temperature: 0.3, maxOutputTokens: 4500 },
+    })
+    return parseOutlineFromMarkdown(md, Number(article.targetChars || 10000))
+  })
+
   // Gemini出力が揺れて faq/glossary が object[] になることがあるため、ここで必ず正規化してからparseする
   const normalized = {
     ...(raw as any),

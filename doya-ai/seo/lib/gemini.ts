@@ -108,6 +108,76 @@ function repairJsonLike(input: string): string {
   return s.trim()
 }
 
+/**
+ * JSONが途中で切れた場合に、閉じ括弧を補完して有効なJSONにする
+ */
+function closeIncompleteJson(input: string): string {
+  let s = stripCodeFences(input).trim()
+
+  // 開始文字を特定
+  const sObj = s.indexOf('{')
+  const sArr = s.indexOf('[')
+  const startIdx = sObj < 0 ? sArr : sArr < 0 ? sObj : Math.min(sObj, sArr)
+  if (startIdx < 0) return s
+
+  s = s.slice(startIdx)
+
+  // 未閉じの括弧をスタックで追跡
+  const stack: string[] = []
+  let inStr = false
+  let esc = false
+
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (inStr) {
+      if (esc) {
+        esc = false
+      } else if (c === '\\') {
+        esc = true
+      } else if (c === '"') {
+        inStr = false
+      }
+      continue
+    }
+    if (c === '"') {
+      inStr = true
+      continue
+    }
+    if (c === '{' || c === '[') {
+      stack.push(c === '{' ? '}' : ']')
+    } else if (c === '}' || c === ']') {
+      if (stack.length > 0 && stack[stack.length - 1] === c) {
+        stack.pop()
+      }
+    }
+  }
+
+  // 文字列が未閉じならダミーで閉じる
+  if (inStr) {
+    s += '"'
+  }
+
+  // 未完了の部分を削除（途中のキー名やカンマ等）
+  // 最後が , や : で終わっていたら不完全なので削除
+  s = s.replace(/,\s*$/, '')
+  s = s.replace(/:\s*$/, ': null')
+  // 未閉じの文字列キーを削除
+  s = s.replace(/"[^"]*$/, '')
+  // 再度末尾の , や : を削除
+  s = s.replace(/,\s*$/, '')
+  s = s.replace(/:\s*$/, ': null')
+
+  // 末尾カンマを除去してから閉じ括弧を追加
+  s = s.replace(/,\s*$/, '')
+
+  // 未閉じの括弧を逆順に閉じる
+  while (stack.length > 0) {
+    s += stack.pop()
+  }
+
+  return s
+}
+
 export async function geminiGenerateText(req: GenerateContentRequest): Promise<string> {
   const apiKey = getApiKey()
   const endpoint = `${GEMINI_API_BASE}/models/${req.model}:generateContent`
@@ -122,7 +192,8 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
       contents: [{ parts: req.parts }],
       generationConfig: {
         temperature: req.generationConfig?.temperature ?? 0.4,
-        maxOutputTokens: req.generationConfig?.maxOutputTokens ?? 4096,
+        // アウトライン等長いJSON出力に対応するため大きめに設定
+        maxOutputTokens: req.generationConfig?.maxOutputTokens ?? 65536,
       },
     }),
   })
@@ -147,6 +218,7 @@ export async function geminiGenerateJson<T>(
     `You must output STRICT ${schemaName} only.`,
     'No markdown. No extra text. No code fences.',
     'If a field is unknown, use empty string/empty array/null as appropriate.',
+    'Make sure to output COMPLETE JSON - do not truncate.',
     '',
     req.prompt,
   ].join('\n')
@@ -157,37 +229,52 @@ export async function geminiGenerateJson<T>(
     generationConfig: req.generationConfig,
   })
 
+  // Step 1: 直接パース試行
   try {
     const primary = extractFirstJsonValue(text) ?? stripCodeFences(text)
     return JSON.parse(primary) as T
   } catch (e: any) {
-    // よくある壊れ方（末尾カンマ/コードフェンス混入/余計な文章）を自動修復して再トライ
+    // Step 2: 基本的な修復
     try {
       const repaired = repairJsonLike(text)
       return JSON.parse(repaired) as T
     } catch (e2: any) {
-      // 最終手段: Gemini自身に「厳密JSONに整形」させる（1回だけ）
+      // Step 3: 途切れたJSONを閉じる試行
       try {
-        const fixPrompt = [
-          `You must output STRICT ${schemaName} only.`,
-          'No markdown. No extra text. No code fences.',
-          'Fix the following JSON-like text into valid strict JSON.',
-          'Do NOT change meaning; only fix syntax.',
-          '',
-          stripCodeFences(text).slice(0, 24000),
-        ].join('\n')
-
-        const fixedText = await geminiGenerateText({
-          model: req.model,
-          parts: [{ text: fixPrompt }],
-          generationConfig: { temperature: 0, maxOutputTokens: 4096 },
-        })
-        const fixed = repairJsonLike(fixedText)
-        return JSON.parse(fixed) as T
+        const closed = closeIncompleteJson(text)
+        const repairedClosed = repairJsonLike(closed)
+        return JSON.parse(repairedClosed) as T
       } catch (e3: any) {
-        throw new Error(
-          `Gemini JSON parse failed: ${(e?.message || e) as string}\n---\n${stripCodeFences(text).substring(0, 1200)}`
-        )
+        // Step 4: 最終手段 - Gemini自身に修正させる
+        try {
+          const fixPrompt = [
+            `You must output STRICT ${schemaName} only.`,
+            'No markdown. No extra text. No code fences.',
+            'Fix the following INCOMPLETE/TRUNCATED JSON-like text into valid strict JSON.',
+            'Close any unclosed brackets, remove trailing commas, and ensure valid syntax.',
+            'Do NOT change meaning; only fix syntax and complete the structure.',
+            '',
+            stripCodeFences(text).slice(0, 48000),
+          ].join('\n')
+
+          const fixedText = await geminiGenerateText({
+            model: req.model,
+            parts: [{ text: fixPrompt }],
+            generationConfig: { temperature: 0, maxOutputTokens: 65536 },
+          })
+          const fixed = repairJsonLike(fixedText)
+          return JSON.parse(fixed) as T
+        } catch (e4: any) {
+          // Step 5: 閉じ括弧補完後のGemini修正
+          try {
+            const closed = closeIncompleteJson(text)
+            return JSON.parse(closed) as T
+          } catch (e5: any) {
+            throw new Error(
+              `Gemini JSON parse failed: ${(e?.message || e) as string}\n---\n${stripCodeFences(text).substring(0, 1200)}`
+            )
+          }
+        }
       }
     }
   }
