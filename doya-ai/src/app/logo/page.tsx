@@ -390,7 +390,7 @@ export default function DoyaLogoPage() {
                 <p className="text-white/50">3パターンから選んでダウンロード</p>
               </div>
 
-              <div className="grid lg:grid-cols-[1fr,400px] gap-8">
+              <div className="grid lg:grid-cols-[1fr,360px] gap-6">
                 {/* Main Preview */}
                 <div className="bg-white/5 rounded-3xl border border-white/10 overflow-hidden">
                   {/* Pattern Tabs */}
@@ -416,13 +416,13 @@ export default function DoyaLogoPage() {
                   </div>
 
                   {/* Preview Area */}
-                  <div className={`p-8 min-h-[400px] flex items-center justify-center transition-colors ${previewMode === 'dark' ? 'bg-[#0B0F1A]' : 'bg-white'}`}>
+                  <div className={`p-8 min-h-[300px] flex items-center justify-center transition-colors ${previewMode === 'dark' ? 'bg-[#0B0F1A]' : 'bg-white'}`}>
                     {currentPattern && (
                       <div 
-                        className="w-full max-w-lg"
+                        className="w-full max-w-2xl [&_svg]:w-full [&_svg]:h-auto"
                         dangerouslySetInnerHTML={{ 
                           __html: currentPattern.logos.find(
-                            (l) => l.layout === 'horizontal' && l.mode === previewMode
+                            (l) => l.layout === 'horizontal' && l.mode === (previewMode === 'dark' ? 'dark' : 'default')
                           )?.svg || '' 
                         }} 
                       />
@@ -453,20 +453,20 @@ export default function DoyaLogoPage() {
                 </div>
 
                 {/* Sidebar */}
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {/* Pattern Info */}
                   {currentPattern && (
-                    <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center font-bold">
+                    <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center font-bold text-sm flex-shrink-0">
                           {currentPattern.id}
                         </div>
-                        <div>
-                          <h3 className="font-bold">{currentPattern.title}</h3>
-                          <p className="text-sm text-white/50">{currentPattern.description}</p>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-sm leading-tight">{currentPattern.title}</h3>
+                          <p className="text-xs text-white/50 mt-0.5 leading-snug">{currentPattern.description}</p>
                         </div>
                       </div>
-                      <p className="text-sm text-white/70 leading-relaxed">
+                      <p className="text-xs text-white/60 leading-relaxed">
                         {currentPattern.oneLiner}
                       </p>
                     </div>
@@ -474,12 +474,12 @@ export default function DoyaLogoPage() {
 
                   {/* Square Preview */}
                   {currentPattern && (
-                    <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                      <h4 className="text-sm font-semibold text-white/70 mb-4">アイコン版</h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="aspect-square rounded-xl bg-white p-4 flex items-center justify-center">
+                    <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+                      <h4 className="text-sm font-semibold text-white/70 mb-3">アイコン版</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="aspect-square rounded-xl bg-white p-3 flex items-center justify-center overflow-hidden">
                           <div 
-                            className="w-full h-full"
+                            className="w-full h-full [&_svg]:w-full [&_svg]:h-full [&_svg]:max-w-full [&_svg]:max-h-full"
                             dangerouslySetInnerHTML={{ 
                               __html: currentPattern.logos.find(
                                 (l) => l.layout === 'square' && l.mode === 'default'
@@ -487,9 +487,9 @@ export default function DoyaLogoPage() {
                             }} 
                           />
                         </div>
-                        <div className="aspect-square rounded-xl bg-[#0B0F1A] p-4 flex items-center justify-center">
+                        <div className="aspect-square rounded-xl bg-[#0B0F1A] p-3 flex items-center justify-center overflow-hidden">
                           <div 
-                            className="w-full h-full"
+                            className="w-full h-full [&_svg]:w-full [&_svg]:h-full [&_svg]:max-w-full [&_svg]:max-h-full"
                             dangerouslySetInnerHTML={{ 
                               __html: currentPattern.logos.find(
                                 (l) => l.layout === 'square' && l.mode === 'dark'
@@ -505,7 +505,7 @@ export default function DoyaLogoPage() {
                   <button
                     onClick={downloadZip}
                     disabled={loading}
-                    className="w-full py-5 rounded-xl font-bold text-lg bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/30 hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/40 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    className="w-full py-4 rounded-xl font-bold text-base bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/30 hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {loading ? (
                       <>
@@ -521,21 +521,21 @@ export default function DoyaLogoPage() {
                   </button>
 
                   {/* Included in Kit */}
-                  <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
-                    <h4 className="text-sm font-semibold text-white/70 mb-3">ダウンロード内容</h4>
-                    <ul className="space-y-2 text-sm text-white/60">
-                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400" /> SVG / PNG / JPEG（全パターン）</li>
-                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400" /> カラーパレット</li>
-                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400" /> 使用ガイドライン</li>
-                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400" /> 生成理由ドキュメント</li>
-                      <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-400" /> Figma用最適化SVG</li>
+                  <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
+                    <h4 className="text-xs font-semibold text-white/70 mb-2">ダウンロード内容</h4>
+                    <ul className="space-y-1.5 text-xs text-white/60">
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> SVG / PNG / JPEG（全パターン）</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> カラーパレット</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> 使用ガイドライン</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> 生成理由ドキュメント</li>
+                      <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" /> Figma用最適化SVG</li>
                     </ul>
                   </div>
 
                   {/* Start Over */}
                   <button
                     onClick={() => { setStep(1); setPatterns(null); setServiceName(''); setServiceDescription(''); }}
-                    className="w-full py-3 rounded-xl text-sm font-medium text-white/50 hover:text-white border border-white/10 hover:border-white/20 transition-all"
+                    className="w-full py-2.5 rounded-xl text-xs font-medium text-white/50 hover:text-white border border-white/10 hover:border-white/20 transition-all"
                   >
                     最初からやり直す
                   </button>
