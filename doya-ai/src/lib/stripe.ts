@@ -22,15 +22,17 @@ export const getStripePublishableKey = () => {
 // 本番環境では環境変数で管理することを推奨
 
 export const STRIPE_PRICE_IDS = {
-  // カンタンドヤAI
-  kantan: {
-    starter: {
-      monthly: process.env.STRIPE_PRICE_KANTAN_STARTER_MONTHLY || 'price_kantan_starter_monthly',
-      yearly: process.env.STRIPE_PRICE_KANTAN_STARTER_YEARLY || 'price_kantan_starter_yearly',
-    },
+  // ドヤSEO
+  seo: {
+    // PRO: 月額¥3,000（1日10回）
     pro: {
-      monthly: process.env.STRIPE_PRICE_KANTAN_PRO_MONTHLY || 'price_kantan_pro_monthly',
-      yearly: process.env.STRIPE_PRICE_KANTAN_PRO_YEARLY || 'price_kantan_pro_yearly',
+      monthly: process.env.STRIPE_PRICE_SEO_PRO_MONTHLY || 'price_seo_pro_monthly',
+      yearly: process.env.STRIPE_PRICE_SEO_PRO_YEARLY || 'price_seo_pro_yearly',
+    },
+    // BUSINESS: 月額¥9,900（1日50回）
+    business: {
+      monthly: process.env.STRIPE_PRICE_SEO_BUSINESS_MONTHLY || 'price_seo_business_monthly',
+      yearly: process.env.STRIPE_PRICE_SEO_BUSINESS_YEARLY || 'price_seo_business_yearly',
     },
   },
   // ドヤバナーAI
