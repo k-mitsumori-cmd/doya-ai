@@ -585,7 +585,7 @@ export default function BannerDashboard() {
     setOverlayHeadline(d.headline)
     setOverlaySubhead(d.subhead)
     setOverlayCta(d.cta)
-    setShowTextOverlay(true)
+    // ベースはOFF（自動でONにしない）
   }, [generatedBanners.length, keyword, purpose])
 
   // プレビュー領域（画像そのもの）のサイズを追跡
@@ -627,6 +627,8 @@ export default function BannerDashboard() {
     
     setError('')
     setIsGenerating(true)
+    // テキストレイヤーはベースOFF（必要な時だけユーザーがON）
+    setShowTextOverlay(false)
     setGeneratedBanners([])
     setSelectedBanner(null)
 
@@ -2218,14 +2220,14 @@ export default function BannerDashboard() {
 
             {/* Quick Links */}
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <Link href="/kantan/dashboard">
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200 rounded-lg sm:rounded-xl p-3 sm:p-4 hover:border-blue-400 hover:shadow-md transition-all group">
+              <Link href="/seo">
+                <div className="bg-gradient-to-br from-emerald-50 to-slate-50 border border-emerald-200 rounded-lg sm:rounded-xl p-3 sm:p-4 hover:border-emerald-400 hover:shadow-md transition-all group">
                   <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                    <span className="text-xl sm:text-2xl">📝</span>
-                    <span className="font-bold text-xs sm:text-sm text-gray-800">カンタンドヤAI</span>
+                    <span className="text-xl sm:text-2xl">🔎</span>
+                    <span className="font-bold text-xs sm:text-sm text-gray-800">ドヤSEO</span>
                   </div>
                   <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-gray-700 transition-colors">
-                    文章も作成する →
+                    SEO記事も作成する →
                   </p>
                 </div>
               </Link>
@@ -2253,7 +2255,7 @@ export default function BannerDashboard() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <Link href="/" className="hover:text-gray-900 transition-colors">ポータル</Link>
-              <Link href="/kantan" className="hover:text-gray-900 transition-colors">カンタンドヤAI</Link>
+              <Link href="/seo" className="hover:text-gray-900 transition-colors">ドヤSEO</Link>
               <Link href="/terms" className="hover:text-gray-900 transition-colors">利用規約</Link>
               <Link href="/privacy" className="hover:text-gray-900 transition-colors">プライバシー</Link>
             </div>
