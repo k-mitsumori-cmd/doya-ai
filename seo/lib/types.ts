@@ -23,7 +23,7 @@ export const SeoReferenceImageSchema = z.object({
 
 export const SeoCreateArticleInputSchema = z.object({
   title: z.string().min(1).max(200),
-  keywords: z.array(z.string().min(1).max(100)).min(1).max(10),
+  keywords: z.array(z.string().min(1).max(100)).min(1).max(50),
   persona: z.string().max(5000).optional().default(''),
   searchIntent: z.string().max(5000).optional().default(''),
   targetChars: z.number().int().min(1000).max(60000),
