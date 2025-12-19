@@ -127,7 +127,7 @@ export default function SeoJobPage() {
   if (loading) {
     return (
       <main className="max-w-6xl mx-auto px-4 py-10">
-        <div className="text-gray-600">読み込み中...</div>
+        <div className="text-white/70">読み込み中...</div>
       </main>
     )
   }
@@ -161,8 +161,8 @@ export default function SeoJobPage() {
     <main className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900">生成ジョブ</h1>
-          <p className="text-gray-600 mt-1">{job.article.title}</p>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">生成ジョブ</h1>
+          <p className="text-white/70 mt-1">{job.article.title}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Link

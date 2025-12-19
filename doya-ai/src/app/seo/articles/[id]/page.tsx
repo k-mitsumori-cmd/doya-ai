@@ -235,13 +235,13 @@ function SeoArticleInner() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 truncate">{article.title}</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight truncate">{article.title}</h1>
             <Badge tone={article.status === 'DONE' ? 'green' : article.status === 'ERROR' ? 'red' : 'blue'}>
               {article.status}
             </Badge>
             <Badge tone="gray">目標 {article.targetChars.toLocaleString('ja-JP')}</Badge>
           </div>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="text-sm text-white/70 mt-1">
             Research → Outline → Write → Audit → Media/Links → Export の流れで品質を上げます
           </p>
         </div>
