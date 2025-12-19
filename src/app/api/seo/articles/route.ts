@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { SeoCreateArticleInputSchema } from '@seo/lib/types'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { getSeoDailyLimitByUserPlan } from '@/lib/pricing'
+import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 
 export async function GET() {
   try {
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
 
     const article = await seoArticle.create({
       data: {
-        status: 'DRAFT',
+        status: 'RUNNING',
         userId,
         title: input.title,
         keywords: input.keywords as any,
@@ -83,8 +84,78 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // 互換のためジョブは作るが、シンプル生成ではジョブを進めない（ここで即生成して完了させる）
     const job = await seoJob.create({
-      data: { articleId: article.id, status: 'queued', step: 'init', progress: 0 },
+      data: { articleId: article.id, status: 'running', step: 'write', progress: 10 },
+    })
+
+    // ==============================
+    // シンプル生成（最優先で“必ず本文を出す”）
+    // - JSONや分割パイプラインを使わない（壊れにくい）
+    // - serverless timeout対策: 出力はまず短めに（後で追記できる）
+    // ==============================
+    const keywords = Array.isArray(input.keywords) ? input.keywords : []
+    const forbidden = Array.isArray(input.forbidden) ? input.forbidden : []
+    const refUrls = Array.isArray(input.referenceUrls) ? input.referenceUrls : []
+    const llmo = (input.llmoOptions as any) || {}
+
+    const llmoOn = (k: string) => llmo?.[k] !== false
+    const llmoText = [
+      llmoOn('tldr') ? 'ON: TL;DR' : 'OFF: TL;DR',
+      llmoOn('conclusionFirst') ? 'ON: 結論ファースト＋根拠' : 'OFF: 結論ファースト＋根拠',
+      llmoOn('faq') ? 'ON: FAQ' : 'OFF: FAQ',
+      llmoOn('glossary') ? 'ON: 用語集' : 'OFF: 用語集',
+      llmoOn('comparison') ? 'ON: 比較表' : 'OFF: 比較表',
+      llmoOn('quotes') ? 'ON: 引用・根拠（言い換え）' : 'OFF: 引用・根拠（言い換え）',
+      llmoOn('templates') ? 'ON: 実務テンプレ' : 'OFF: 実務テンプレ',
+      llmoOn('objections') ? 'ON: 反論に答える' : 'OFF: 反論に答える',
+    ].join('\n')
+
+    const prompt = [
+      'You are a Japanese SEO editor.',
+      'Write a practical SEO article in Japanese as Markdown.',
+      'No direct copying from any sources. Paraphrase only and add originality.',
+      'Avoid generic AI tone. Be concrete, include examples and checklists.',
+      '',
+      `Title: ${input.title}`,
+      `Keywords: ${keywords.join(', ')}`,
+      input.persona ? `Persona: ${String(input.persona).slice(0, 1500)}` : '',
+      input.searchIntent ? `Search intent: ${String(input.searchIntent).slice(0, 1500)}` : '',
+      `Tone: ${input.tone}`,
+      forbidden.length ? `Forbidden: ${forbidden.join(' / ')}` : '',
+      refUrls.length ? `Reference URLs (do not copy):\n- ${refUrls.join('\n- ')}` : '',
+      '',
+      'LLMO toggles:',
+      llmoText,
+      '',
+      'Output format (Markdown):',
+      '- Start with "# {title}"',
+      '- If TL;DR is ON: include "## TL;DR" with bullet points',
+      '- Use H2/H3 headings',
+      '- If comparison is ON: include at least one markdown table',
+      '- If templates is ON: include checklist + steps + copy-ready examples',
+      '- If objections is ON: include a section that addresses objections',
+      '- If glossary is ON: include a glossary section',
+      '- If FAQ is ON: include FAQ section (Q/A)',
+      '',
+      'Important: keep the first draft within ~6,000-10,000 Japanese chars so it finishes reliably. The user can extend later.',
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    const finalMarkdown = await geminiGenerateText({
+      model: GEMINI_TEXT_MODEL_DEFAULT,
+      parts: [{ text: prompt }],
+      generationConfig: { temperature: 0.6, maxOutputTokens: 2500 },
+    })
+
+    await seoArticle.update({
+      where: { id: article.id },
+      data: { finalMarkdown, status: 'DONE' },
+    })
+    await seoJob.update({
+      where: { id: job.id },
+      data: { status: 'done', step: 'done', progress: 100, finishedAt: new Date() },
     })
 
     return NextResponse.json({ success: true, articleId: article.id, jobId: job.id })

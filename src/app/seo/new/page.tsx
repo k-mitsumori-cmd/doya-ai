@@ -202,8 +202,8 @@ export default function SeoNewPage() {
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error || '作成に失敗しました')
-      // シンプル導線: 記事ページへ移動し、裏で自動生成を開始（素材も生成される）
-      router.push(`/seo/articles/${json.articleId}?auto=1`)
+      // シンプル導線: 作成時に本文まで生成して保存するため、記事ページへ直行
+      router.push(`/seo/articles/${json.articleId}`)
     } catch (e: any) {
       setError(e?.message || '不明なエラー')
     } finally {
