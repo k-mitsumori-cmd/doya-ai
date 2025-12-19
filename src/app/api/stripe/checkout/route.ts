@@ -36,9 +36,22 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.vercel.app'
     
     // サービスに応じたリダイレクトURL
-    const service = planId.split('-')[0] // 'kantan-pro' -> 'kantan'
-    const successUrl = `${baseUrl}/${service}/dashboard?payment=success`
-    const cancelUrl = `${baseUrl}/${service}/pricing?payment=cancelled`
+    const service = planId.split('-')[0] // 'seo-pro' -> 'seo'
+    const successPath =
+      service === 'seo'
+        ? '/seo'
+        : service === 'banner'
+          ? '/banner/dashboard'
+          : '/'
+    const cancelPath =
+      service === 'seo'
+        ? '/pricing?payment=cancelled'
+        : service === 'banner'
+          ? '/banner/pricing?payment=cancelled'
+          : '/pricing?payment=cancelled'
+
+    const successUrl = `${baseUrl}${successPath}?payment=success`
+    const cancelUrl = `${baseUrl}${cancelPath}`
 
     // Checkout Session作成
     const checkoutSession = await createCheckoutSession({
@@ -66,9 +79,9 @@ export async function POST(request: NextRequest) {
 // プランIDからStripe価格IDを取得
 function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string | null {
   const priceMap: Record<string, { monthly: string; yearly: string }> = {
-    // カンタンドヤAI
-    'kantan-starter': STRIPE_PRICE_IDS.kantan.starter,
-    'kantan-pro': STRIPE_PRICE_IDS.kantan.pro,
+    // ドヤSEO
+    'seo-pro': STRIPE_PRICE_IDS.seo.pro,
+    'seo-business': STRIPE_PRICE_IDS.seo.business,
     // ドヤバナーAI
     'banner-starter': STRIPE_PRICE_IDS.banner.starter,
     'banner-pro': STRIPE_PRICE_IDS.banner.pro,
