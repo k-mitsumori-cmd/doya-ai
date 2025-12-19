@@ -43,6 +43,58 @@ export interface ServicePricing {
 }
 
 // ========================================
+// カンタンドヤAI（テキスト生成）料金設定
+// ========================================
+// /kantan ページや robots/sitemap のメタ生成で参照されるため、
+// ここで必ず export して「undefined参照でビルド落ち」を防ぐ。
+export const KANTAN_PRICING: ServicePricing = {
+  serviceId: 'kantan',
+  serviceName: 'カンタンドヤAI',
+  serviceIcon: '📝',
+  guestLimit: 3, // ゲスト: 1日3回
+  freeLimit: 10, // ログイン無料: 1日10回
+  proLimit: 100, // プロ: 1日100回
+  historyDays: {
+    free: 7,
+    pro: -1,
+  },
+  plans: [
+    {
+      id: 'kantan-free',
+      name: '無料',
+      price: 0,
+      priceLabel: '¥0',
+      period: '',
+      description: 'まずは試してみたい方',
+      features: [
+        { text: 'ゲスト: 1日3回まで', included: true },
+        { text: 'ログイン: 1日10回まで', included: true },
+        { text: '68種類のテンプレート', included: true },
+        { text: '履歴保存（7日間）', included: true },
+      ],
+      cta: '無料で試す',
+    },
+    {
+      id: 'kantan-pro',
+      name: 'プロ',
+      price: 2980,
+      priceLabel: '¥2,980',
+      period: '/月（税込）',
+      description: '月額2,980円：1日100回',
+      popular: true,
+      color: 'blue',
+      features: [
+        { text: '1日100回まで生成', included: true },
+        { text: '全テンプレート利用可能', included: true },
+        { text: '履歴保存（無制限）', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+  ],
+}
+
+// ========================================
 // ドヤSEO 料金設定
 // ========================================
 // SEO記事生成はコストが読みづらいため、まずは控えめな上限で運用
@@ -266,6 +318,8 @@ export function getAnnualMonthlyPrice(monthlyPrice: number): number {
 // ========================================
 export function getPricingByService(serviceId: string): ServicePricing | null {
   switch (serviceId) {
+    case 'kantan':
+      return KANTAN_PRICING
     case 'seo':
       return SEO_PRICING
     case 'banner':
@@ -297,7 +351,7 @@ export function getDailyLimit(serviceId: string, userType: 'guest' | 'free' | 'p
 
 // プランを取得（フリー、スターター、プロなど）
 export function getPlanById(planId: string): Plan | null {
-  const allPlans = [...SEO_PRICING.plans, ...BANNER_PRICING.plans]
+  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans]
   return allPlans.find(p => p.id === planId) || null
 }
 
