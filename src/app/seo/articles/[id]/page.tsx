@@ -105,6 +105,183 @@ const TABS = [
   { id: 'export', label: '出力', icon: Download, color: 'text-gray-500' },
 ] as const
 
+type DiagramSuggestion = {
+  title: string
+  description: string
+  insertAfterHeading?: string
+  priority: 'high' | 'medium' | 'low'
+  selected?: boolean
+}
+
+function DiagramSuggestions({
+  articleId,
+  onGenerated,
+  busy,
+  setBusy,
+  setMessage,
+}: {
+  articleId: string
+  onGenerated: () => void
+  busy: string | null
+  setBusy: (v: string | null) => void
+  setMessage: (v: string | null) => void
+}) {
+  const [suggestions, setSuggestions] = useState<DiagramSuggestion[]>([])
+  const [loading, setLoading] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function fetchSuggestions() {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/seo/articles/${articleId}/images/suggest`, { method: 'POST' })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || '提案の取得に失敗しました')
+      setSuggestions((json.suggestions || []).map((s: DiagramSuggestion) => ({ ...s, selected: true })))
+    } catch (e: any) {
+      setError(e?.message || '不明なエラー')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function generateSelected() {
+    const selected = suggestions.filter((s) => s.selected)
+    if (!selected.length) return
+
+    setGenerating(true)
+    setBusy('batch-diagrams')
+    setError(null)
+    try {
+      const res = await fetch(`/api/seo/articles/${articleId}/images/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ diagrams: selected.map((s) => ({ title: s.title, description: s.description })) }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || '生成に失敗しました')
+      
+      const summary = json.summary || {}
+      setMessage(`${summary.success || 0}個の図解を生成しました ✓`)
+      setTimeout(() => setMessage(null), 3000)
+      onGenerated()
+      setSuggestions([]) // 生成後はクリア
+    } catch (e: any) {
+      setError(e?.message || '不明なエラー')
+    } finally {
+      setGenerating(false)
+      setBusy(null)
+    }
+  }
+
+  const toggleSelection = (index: number) => {
+    setSuggestions((prev) =>
+      prev.map((s, i) => (i === index ? { ...s, selected: !s.selected } : s))
+    )
+  }
+
+  const selectedCount = suggestions.filter((s) => s.selected).length
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Button
+          variant="secondary"
+          onClick={fetchSuggestions}
+          disabled={loading || !!busy}
+        >
+          <Wand2 className="w-4 h-4" />
+          {loading ? '分析中...' : '記事を分析して提案'}
+        </Button>
+        {suggestions.length > 0 && (
+          <span className="text-sm text-gray-500">
+            {suggestions.length}個の図解を提案
+          </span>
+        )}
+      </div>
+
+      {error && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          {error}
+        </div>
+      )}
+
+      {suggestions.length > 0 && (
+        <>
+          <div className="space-y-3">
+            {suggestions.map((s, i) => (
+              <div
+                key={i}
+                className={`p-4 rounded-xl border transition-all cursor-pointer ${
+                  s.selected
+                    ? 'border-purple-300 bg-purple-50'
+                    : 'border-gray-200 bg-gray-50 opacity-60'
+                }`}
+                onClick={() => toggleSelection(i)}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={s.selected}
+                    onChange={() => toggleSelection(i)}
+                    className="mt-1 rounded"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-bold text-gray-900">{s.title}</p>
+                      <Badge
+                        tone={s.priority === 'high' ? 'red' : s.priority === 'medium' ? 'amber' : 'gray'}
+                      >
+                        {s.priority === 'high' ? '優先度高' : s.priority === 'medium' ? '優先度中' : '優先度低'}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">{s.description}</p>
+                    {s.insertAfterHeading && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        挿入位置: 「{s.insertAfterHeading}」の後
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+            <p className="text-sm text-gray-500">
+              {selectedCount}個を選択中
+            </p>
+            <Button
+              variant="primary"
+              onClick={generateSelected}
+              disabled={generating || selectedCount === 0 || !!busy}
+            >
+              <Sparkles className="w-4 h-4" />
+              {generating ? '生成中...' : `選択した${selectedCount}個を生成`}
+            </Button>
+          </div>
+        </>
+      )}
+
+      {!suggestions.length && !loading && (
+        <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+          <p className="text-sm text-gray-600">
+            「記事を分析して提案」ボタンをクリックすると、AIが記事内容を分析して
+            読者の理解を助ける図解を3〜5個提案します。
+          </p>
+          <ul className="text-xs text-gray-500 mt-2 space-y-1">
+            <li>• 複雑なプロセスやフロー</li>
+            <li>• 比較や対比を示す箇所</li>
+            <li>• 概念や関係性の説明</li>
+            <li>• 選択肢がある場面</li>
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function SeoArticlePage() {
   return (
     <ClientErrorBoundary title="記事ページの表示でエラーが発生しました">
@@ -836,43 +1013,85 @@ function SeoArticleInner() {
           )}
 
           {tab === 'media' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-orange-500" />
-                  画像（バナー / 図解）
-                </CardTitle>
-                <CardDesc>Geminiで生成し、Markdownリンクで記事に挿入できます。</CardDesc>
-              </CardHeader>
-              <CardBody className="space-y-4">
-                <Button
-                  variant="primary"
-                  onClick={() =>
-                    act('banner', async () => {
-                      const res = await fetch(`/api/seo/articles/${id}/images/banner`, { method: 'POST' })
-                      const json = await res.json()
-                      if (!json.success) throw new Error(json.error || '失敗しました')
-                    })
-                  }
-                  disabled={!!busy}
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  {busy === 'banner' ? '生成中...' : 'バナー生成'}
-                </Button>
+            <div className="space-y-6">
+              {/* バナー画像 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-orange-500" />
+                    バナー画像
+                  </CardTitle>
+                  <CardDesc>記事のアイキャッチ画像を生成します。SNSシェア時にも使用できます。</CardDesc>
+                </CardHeader>
+                <CardBody>
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      act('banner', async () => {
+                        const res = await fetch(`/api/seo/articles/${id}/images/banner`, { method: 'POST' })
+                        const json = await res.json()
+                        if (!json.success) throw new Error(json.error || '失敗しました')
+                      })
+                    }
+                    disabled={!!busy}
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    {busy === 'banner' ? '生成中...' : 'バナーを生成'}
+                  </Button>
+                  {article.images?.filter((img) => img.kind === 'banner').map((img) => (
+                    <div key={img.id} className="mt-4 p-4 rounded-xl border border-orange-200 bg-orange-50">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <p className="text-sm font-bold text-gray-900">{img.title || 'バナー画像'}</p>
+                        <a className="text-xs text-blue-600 hover:underline" href={`/api/seo/images/${img.id}`} target="_blank" rel="noreferrer">
+                          表示
+                        </a>
+                      </div>
+                      <div className="p-2 rounded bg-white text-xs text-gray-600 font-mono border border-gray-200">
+                        ![{img.title || 'banner'}](/api/seo/images/{img.id})
+                      </div>
+                    </div>
+                  ))}
+                </CardBody>
+              </Card>
 
-                <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 space-y-3">
-                  <p className="text-sm font-bold text-gray-700">図解を生成</p>
+              {/* 図解の自動提案 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wand2 className="w-5 h-5 text-purple-500" />
+                    図解を自動提案
+                  </CardTitle>
+                  <CardDesc>
+                    記事の内容を分析して、読者の理解を助ける図解を自動で提案します。
+                    提案された図解をまとめて生成できます。
+                  </CardDesc>
+                </CardHeader>
+                <CardBody className="space-y-4">
+                  <DiagramSuggestions articleId={id} onGenerated={() => load()} busy={busy} setBusy={setBusy} setMessage={setMessage} />
+                </CardBody>
+              </Card>
+
+              {/* 手動で図解を作成 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-cyan-500" />
+                    手動で図解を作成
+                  </CardTitle>
+                  <CardDesc>特定の内容を図解にしたい場合は、こちらから作成できます。</CardDesc>
+                </CardHeader>
+                <CardBody className="space-y-3">
                   <input
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm"
                     value={diagramTitle}
                     onChange={(e) => setDiagramTitle(e.target.value)}
-                    placeholder="図解タイトル（例：施策マップ）"
+                    placeholder="図解タイトル（例：RPO導入フロー）"
                   />
                   <textarea
                     className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm min-h-20"
                     value={diagramDesc}
                     onChange={(e) => setDiagramDesc(e.target.value)}
-                    placeholder="図解で表現する内容（例：入力→解析→生成→監査→公開の流れ）"
+                    placeholder="図解で表現する内容（例：課題発見→要件定義→業者選定→導入→運用の5ステップ）"
                   />
                   <Button
                     variant="secondary"
@@ -892,35 +1111,76 @@ function SeoArticleInner() {
                     disabled={!!busy || !diagramTitle.trim() || !diagramDesc.trim()}
                   >
                     <Sparkles className="w-4 h-4" />
-                    {busy === 'diagram' ? '生成中...' : '図解生成'}
+                    {busy === 'diagram' ? '生成中...' : '図解を生成'}
                   </Button>
-                </div>
+                </CardBody>
+              </Card>
 
-                <div className="grid sm:grid-cols-2 gap-3">
-                  {article.images?.map((img) => (
-                    <div key={img.id} className="p-4 rounded-xl border border-gray-200 bg-white">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-bold text-gray-900">
-                          {img.kind}: {img.title || img.id}
-                        </p>
-                        <a className="text-xs text-blue-600 hover:underline" href={`/api/seo/images/${img.id}`} target="_blank" rel="noreferrer">
-                          表示
-                        </a>
-                      </div>
-                      <div className="mt-2 p-2 rounded bg-gray-100 text-xs text-gray-600 font-mono">
-                        ![{img.title || 'image'}](/api/seo/images/{img.id})
-                      </div>
+              {/* 生成済み画像一覧 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-gray-500" />
+                    生成済み画像一覧
+                  </CardTitle>
+                  <CardDesc>
+                    画像をクリックして表示。Markdownコードをコピーして記事に挿入できます。
+                  </CardDesc>
+                </CardHeader>
+                <CardBody>
+                  {article.images?.length ? (
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      {article.images.map((img) => (
+                        <div key={img.id} className="p-4 rounded-xl border border-gray-200 bg-white hover:shadow-md transition-shadow">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div>
+                              <Badge tone={img.kind === 'banner' ? 'orange' : 'blue'}>
+                                {img.kind === 'banner' ? 'バナー' : '図解'}
+                              </Badge>
+                              <p className="text-sm font-bold text-gray-900 mt-1">{img.title || img.id}</p>
+                              {img.description && (
+                                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{img.description}</p>
+                              )}
+                            </div>
+                            <a
+                              href={`/api/seo/images/${img.id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex-shrink-0 px-2 py-1 text-xs font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100"
+                            >
+                              表示
+                            </a>
+                          </div>
+                          <div className="p-2 rounded bg-gray-50 border border-gray-100">
+                            <div className="flex items-center justify-between gap-2">
+                              <code className="text-xs text-gray-600 truncate">
+                                ![{img.title || 'image'}](/api/seo/images/{img.id})
+                              </code>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`![${img.title || 'image'}](/api/seo/images/${img.id})`)
+                                  setMessage('コピーしました ✓')
+                                  setTimeout(() => setMessage(null), 2000)
+                                }}
+                                className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600"
+                              >
+                                <Copy className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-                {!article.images?.length && (
-                  <div className="text-center py-8 text-gray-400">
-                    <ImageIcon className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p className="text-gray-600">画像がありません</p>
-                  </div>
-                )}
-              </CardBody>
-            </Card>
+                  ) : (
+                    <div className="text-center py-8 text-gray-400">
+                      <ImageIcon className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                      <p className="text-gray-600">まだ画像がありません</p>
+                      <p className="text-sm mt-1">上のボタンから画像を生成できます</p>
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+            </div>
           )}
 
           {tab === 'links' && (
@@ -1107,29 +1367,6 @@ function SeoArticleInner() {
             </CardBody>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-500" />
-                ナレッジ（自動生成）
-              </CardTitle>
-            </CardHeader>
-            <CardBody className="space-y-3">
-              {['intro_ab', 'internal_link', 'sns'].flatMap((t) => knowledgeByType(t)).map((k) => (
-                <details key={k.id} className="p-3 rounded-xl bg-gray-50 border border-gray-200 group">
-                  <summary className="text-sm font-bold text-gray-700 cursor-pointer flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-500" />
-                    {k.title || k.type}
-                  </summary>
-                  <pre className="text-xs text-gray-600 whitespace-pre-wrap mt-3 pt-3 border-t border-gray-200">{k.content}</pre>
-                </details>
-              ))}
-              {!article.knowledgeItems?.length && (
-                <p className="text-sm text-gray-400 text-center py-4">ナレッジがありません</p>
-              )}
-            </CardBody>
-          </Card>
-
           {/* Quick Actions */}
           <Card>
             <CardHeader>
@@ -1172,18 +1409,59 @@ function SeoArticleInner() {
               <Button
                 variant="secondary"
                 className="w-full justify-start"
-                onClick={() =>
-                  act('banner', async () => {
-                    const res = await fetch(`/api/seo/articles/${id}/images/banner`, { method: 'POST' })
-                    const json = await res.json()
-                    if (!json.success) throw new Error(json.error || '失敗しました')
-                  })
-                }
-                disabled={!!busy}
+                onClick={() => setTab('media')}
               >
                 <ImageIcon className="w-4 h-4 text-orange-500" />
-                バナー生成
+                図解を作成
               </Button>
+              <Button
+                variant="secondary"
+                className="w-full justify-start"
+                onClick={() => setTab('note')}
+              >
+                <PenTool className="w-4 h-4 text-amber-500" />
+                note記事を作成
+              </Button>
+            </CardBody>
+          </Card>
+
+          {/* 記事情報 */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-gray-500" />
+                記事情報
+              </CardTitle>
+            </CardHeader>
+            <CardBody className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">ステータス</span>
+                <Badge tone={article.status === 'DONE' ? 'green' : article.status === 'ERROR' ? 'red' : article.status === 'RUNNING' ? 'amber' : 'blue'}>
+                  {article.status === 'DONE' ? '完成' : article.status === 'ERROR' ? 'エラー' : article.status === 'RUNNING' ? '生成中' : '下書き'}
+                </Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">目標文字数</span>
+                <span className="font-bold text-gray-900">{article.targetChars.toLocaleString()}字</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">現在の文字数</span>
+                <span className="font-bold text-gray-900">{score.charCount.toLocaleString()}字</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">見出し数</span>
+                <span className="font-bold text-gray-900">{score.headingCount}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">画像数</span>
+                <span className="font-bold text-gray-900">{article.images?.length || 0}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Content Score</span>
+                <span className={`font-bold ${score.score >= 70 ? 'text-emerald-600' : score.score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                  {score.score}点
+                </span>
+              </div>
             </CardBody>
           </Card>
         </div>
