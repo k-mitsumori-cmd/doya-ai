@@ -80,6 +80,7 @@ export default function SeoArticlePage() {
   const searchParams = useSearchParams()
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [autoRun, setAutoRun] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [memo, setMemo] = useState('')
@@ -101,13 +102,29 @@ export default function SeoArticlePage() {
   const load = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading === true
     if (showLoading) setLoading(true)
-    const res = await fetch(`/api/seo/articles/${id}`, { cache: 'no-store' })
-    const json = await res.json()
-    setArticle(json.article || null)
-    setMemo(json.article?.memo?.content || '')
-    setOutlineDraft(json.article?.outline || '')
-    setMarkdownDraft(json.article?.finalMarkdown || '')
-    if (showLoading) setLoading(false)
+    setLoadError(null)
+    try {
+      const res = await fetch(`/api/seo/articles/${id}`, { cache: 'no-store' })
+      let json: any = null
+      try {
+        json = await res.json()
+      } catch {
+        json = null
+      }
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || `API Error: ${res.status}`)
+      }
+      setArticle(json.article || null)
+      setMemo(json.article?.memo?.content || '')
+      setOutlineDraft(json.article?.outline || '')
+      setMarkdownDraft(json.article?.finalMarkdown || '')
+    } catch (e: any) {
+      setLoadError(e?.message || '読み込みに失敗しました')
+      // ポーリング時は画面が真っ白にならないよう維持。初回/明示リロード時はnullにする
+      if (showLoading) setArticle(null)
+    } finally {
+      if (showLoading) setLoading(false)
+    }
   }, [id])
 
   async function act(name: string, fn: () => Promise<void>) {
@@ -138,10 +155,31 @@ export default function SeoArticlePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  if (loading || !article) {
+  if (loading) {
     return (
       <main className="max-w-6xl mx-auto px-4 py-10">
         <div className="text-gray-600">読み込み中...</div>
+      </main>
+    )
+  }
+  if (!article) {
+    return (
+      <main className="max-w-6xl mx-auto px-4 py-10">
+        <div className="p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800">
+          <p className="font-bold">読み込みに失敗しました</p>
+          <pre className="text-xs whitespace-pre-wrap mt-2">{loadError || '不明なエラー'}</pre>
+          <p className="text-xs mt-2 text-red-800/90">
+            まずは環境変数（<code>GOOGLE_GENAI_API_KEY</code> / <code>DATABASE_URL</code>）とDB接続状態を確認してください。
+          </p>
+        </div>
+        <div className="mt-4">
+          <button
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800"
+            onClick={() => load({ showLoading: true })}
+          >
+            再読み込み
+          </button>
+        </div>
       </main>
     )
   }
@@ -252,6 +290,13 @@ export default function SeoArticlePage() {
               <pre className="text-xs whitespace-pre-wrap mt-2">{actionError}</pre>
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {loadError ? (
+        <div className="mt-4 p-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-900">
+          <p className="font-bold">更新に失敗しました（再試行中）</p>
+          <p className="mt-1 whitespace-pre-wrap">{loadError}</p>
         </div>
       ) : null}
 
