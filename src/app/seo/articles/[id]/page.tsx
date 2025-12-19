@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
 import { Tabs } from '@seo/components/ui/Tabs'
@@ -64,7 +64,7 @@ type Article = {
   targetChars: number
   outline?: string | null
   finalMarkdown?: string | null
-  jobs?: { id: string; status: string; progress: number; step: string; createdAt: string }[]
+  jobs?: { id: string; status: string; progress: number; step: string; error?: string | null; createdAt: string }[]
   memo?: { content: string } | null
   audits: SeoAudit[]
   images: SeoImage[]
@@ -77,8 +77,11 @@ type Article = {
 export default function SeoArticlePage() {
   const params = useParams<{ id: string }>()
   const id = params.id
+  const searchParams = useSearchParams()
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
+  const [autoRun, setAutoRun] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [memo, setMemo] = useState('')
   const [tab, setTab] = useState<
     'preview' | 'edit' | 'research' | 'outline' | 'meta' | 'audit' | 'media' | 'links' | 'export'
@@ -95,15 +98,16 @@ export default function SeoArticlePage() {
   const markdown = useMemo(() => article?.finalMarkdown || '', [article])
   const score = useMemo(() => analyzeMarkdown(markdown || ''), [markdown])
 
-  const load = useCallback(async () => {
-    setLoading(true)
+  const load = useCallback(async (opts?: { showLoading?: boolean }) => {
+    const showLoading = opts?.showLoading === true
+    if (showLoading) setLoading(true)
     const res = await fetch(`/api/seo/articles/${id}`, { cache: 'no-store' })
     const json = await res.json()
     setArticle(json.article || null)
     setMemo(json.article?.memo?.content || '')
     setOutlineDraft(json.article?.outline || '')
     setMarkdownDraft(json.article?.finalMarkdown || '')
-    setLoading(false)
+    if (showLoading) setLoading(false)
   }, [id])
 
   async function act(name: string, fn: () => Promise<void>) {
@@ -121,8 +125,18 @@ export default function SeoArticlePage() {
   }
 
   useEffect(() => {
-    load()
+    load({ showLoading: true })
+    const t = setInterval(() => {
+      load({ showLoading: false })
+    }, 2500)
+    return () => clearInterval(t)
   }, [load])
+
+  // ?auto=1 で記事ページから自動生成を開始（ジョブページ不要）
+  useEffect(() => {
+    if (searchParams.get('auto') === '1') setAutoRun(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (loading || !article) {
     return (
@@ -133,9 +147,39 @@ export default function SeoArticlePage() {
   }
 
   const latestAudit = article.audits?.[0]
-  const latestJobId = article.jobs?.[0]?.id
+  const latestJob = article.jobs?.[0]
+  const latestJobId = latestJob?.id
   const knowledgeByType = (t: string) => (article.knowledgeItems || []).filter((k) => k.type === t)
   const metaItem = knowledgeByType('meta')?.[0]
+
+  const advanceOnce = useCallback(async () => {
+    if (!latestJobId) return
+    setActionError(null)
+    const res = await fetch(`/api/seo/jobs/${latestJobId}/advance`, { method: 'POST' })
+    let json: any = null
+    try {
+      json = await res.json()
+    } catch {
+      // ignore
+    }
+    if (!res.ok || json?.success === false) {
+      const msg = json?.error || `advance failed (${res.status})`
+      setActionError(msg)
+      setAutoRun(false)
+      return
+    }
+    await load({ showLoading: false })
+  }, [latestJobId, load])
+
+  useEffect(() => {
+    if (!autoRun) return
+    if (!latestJob) return
+    if (latestJob.status === 'done' || latestJob.status === 'error') return
+    const t = setTimeout(() => {
+      advanceOnce()
+    }, 700)
+    return () => clearTimeout(t)
+  }, [autoRun, latestJob, advanceOnce])
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
@@ -162,11 +206,54 @@ export default function SeoArticlePage() {
               </Button>
             </Link>
           ) : null}
-          <Button variant="ghost" onClick={load}>
+          {latestJobId && latestJob?.status !== 'done' ? (
+            <Button variant={autoRun ? 'secondary' : 'primary'} onClick={() => setAutoRun((v) => !v)}>
+              {autoRun ? '自動停止' : '生成を開始'}
+            </Button>
+          ) : null}
+          <Button variant="ghost" onClick={() => load({ showLoading: true })}>
             <RefreshCcw className="w-4 h-4" />
           </Button>
         </div>
       </div>
+
+      {latestJobId && latestJob ? (
+        <div className="mt-4">
+          <Card>
+            <CardBody className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="min-w-[260px]">
+                <p className="text-xs text-gray-500 font-bold">生成進捗</p>
+                <div className="mt-1 flex items-center gap-2 flex-wrap">
+                  <Badge tone={latestJob.status === 'error' ? 'red' : latestJob.status === 'done' ? 'green' : 'amber'}>
+                    {latestJob.status}
+                  </Badge>
+                  <span className="text-xs text-gray-600">step: {latestJob.step}</span>
+                  <span className="text-xs text-gray-600">{latestJob.progress}%</span>
+                </div>
+                <ProgressBar value={latestJob.progress} className="mt-2" />
+              </div>
+              <div className="text-xs text-gray-600 max-w-[520px]">
+                <p className="font-bold text-gray-700">使い方</p>
+                <p className="mt-1">
+                  このページを開いたまま自動で進みます（止まったら「生成を開始」を押してください）。
+                </p>
+              </div>
+            </CardBody>
+          </Card>
+          {latestJob.error ? (
+            <div className="mt-3 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800">
+              <p className="font-bold">生成エラー</p>
+              <pre className="text-xs whitespace-pre-wrap mt-2">{latestJob.error}</pre>
+            </div>
+          ) : null}
+          {actionError ? (
+            <div className="mt-3 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800">
+              <p className="font-bold">実行エラー（advance）</p>
+              <pre className="text-xs whitespace-pre-wrap mt-2">{actionError}</pre>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {message ? (
         <div className="mt-4 p-3 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800">

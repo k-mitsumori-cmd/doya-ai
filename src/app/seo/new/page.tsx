@@ -202,8 +202,8 @@ export default function SeoNewPage() {
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error || '作成に失敗しました')
-      // 作成直後は自動実行ONで開始（ユーザーが迷わないように）
-      router.push(`/seo/jobs/${json.jobId}?auto=1`)
+      // シンプル導線: 記事ページへ移動し、裏で自動生成を開始（素材も生成される）
+      router.push(`/seo/articles/${json.articleId}?auto=1`)
     } catch (e: any) {
       setError(e?.message || '不明なエラー')
     } finally {
@@ -217,7 +217,7 @@ export default function SeoNewPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">新規作成（SEO Studio）</h1>
           <p className="text-gray-600 mt-1">
-            ウィザードで要件を固めてから、アウトライン→分割生成→統合へ進みます。
+            条件を入力して「作成して生成」を押すだけで、記事本文と素材を自動生成します（記事ページで進捗を確認できます）。
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -556,7 +556,7 @@ export default function SeoNewPage() {
             ) : (
               <Button variant="primary" onClick={submit} disabled={loading || !title.trim() || keywordList.length === 0}>
                 <UploadCloud className="w-4 h-4" />
-                {loading ? '作成中...' : 'ジョブ作成して開始'}
+                    {loading ? '作成中...' : '作成して生成'}
               </Button>
             )}
           </div>
