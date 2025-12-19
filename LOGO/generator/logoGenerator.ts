@@ -86,16 +86,19 @@ function renderLogoSvg(args: {
   const name = escapeXml(input.serviceName)
   const sub = escapeXml(input.serviceDescription)
 
-  const fontFamily = [
-    'Noto Sans JP',
-    'Hiragino Sans',
-    'Yu Gothic',
-    'Meiryo',
-    'system-ui',
-    '-apple-system',
-    'Segoe UI',
-    'sans-serif',
-  ].map((f) => (f.includes(' ') ? `"${f}"` : f)).join(', ')
+  // NOTE: XML属性として安全な形式にする（JSON.stringifyで\"を混ぜるとSVGパーサが壊れる）
+  const fontFamily = escapeXml(
+    [
+      'Noto Sans JP',
+      'Hiragino Sans',
+      'Yu Gothic',
+      'Meiryo',
+      'system-ui',
+      '-apple-system',
+      'Segoe UI',
+      'sans-serif',
+    ].join(', ')
+  )
 
   // pattern-specific typography tweaks
   const weight = patternId === 'B' ? 800 : patternId === 'C' ? 600 : 700
@@ -108,8 +111,8 @@ function renderLogoSvg(args: {
       `<g transform="translate(64,64) scale(0.38)" style="color:${c.mark}">${markInnerSvg}</g>`,
       // wordmark (Japanese whitespace-ish)
       `<g transform="translate(330,102)">`,
-      `<text x="0" y="0" fill="${c.text}" font-family=${JSON.stringify(fontFamily)} font-size="84" font-weight="${weight}" letter-spacing="${tracking}">${name}</text>`,
-      `<text x="2" y="66" fill="${c.text}" opacity="0.75" font-family=${JSON.stringify(fontFamily)} font-size="22" font-weight="500" letter-spacing="0.2">${sub}</text>`,
+      `<text x="0" y="0" fill="${c.text}" font-family="${fontFamily}" font-size="84" font-weight="${weight}" letter-spacing="${tracking}">${name}</text>`,
+      `<text x="2" y="66" fill="${c.text}" opacity="0.75" font-family="${fontFamily}" font-size="22" font-weight="500" letter-spacing="0.2">${sub}</text>`,
       `</g>`,
       // subtle divider for "ma" (only in A/C)
       ...(patternId !== 'B'
@@ -122,14 +125,8 @@ function renderLogoSvg(args: {
   // square
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${viewBox}" role="img" aria-label="${name} icon">`,
-    `<g transform="translate(0,0)">`,
-    `<g transform="translate(0,0)">`,
-    `<g transform="translate(0,0)">`,
-    `</g>`,
-    `</g>`,
-    `</g>`,
     `<g transform="translate(156,110) scale(0.52)" style="color:${c.mark}">${markInnerSvg}</g>`,
-    `<text x="256" y="410" text-anchor="middle" fill="${c.text}" font-family=${JSON.stringify(fontFamily)} font-size="46" font-weight="${weight}" letter-spacing="${tracking}">${name}</text>`,
+    `<text x="256" y="410" text-anchor="middle" fill="${c.text}" font-family="${fontFamily}" font-size="46" font-weight="${weight}" letter-spacing="${tracking}">${name}</text>`,
     `</svg>`,
   ].join('')
 }

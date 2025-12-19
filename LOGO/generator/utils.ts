@@ -1,12 +1,18 @@
 import crypto from 'node:crypto'
 
 export function slugify(input: string): string {
-  const base = String(input || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, '-')
+  const raw = String(input || '').trim().toLowerCase()
+  // Keep filesystem paths ASCII-safe for downstream native libs (e.g. sharp/libvips)
+  const ascii = raw
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '') // remove diacritics
+    .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-  return base || `service-${Date.now()}`
+  if (ascii) return ascii
+
+  // Fallback: stable-ish short hash (so Japanese-only names still work)
+  const h = crypto.createHash('sha1').update(raw || String(Date.now())).digest('hex').slice(0, 10)
+  return `doya-${h}`
 }
 
 export function stableSeed(input: Record<string, unknown>): string {
