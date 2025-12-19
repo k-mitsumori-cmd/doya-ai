@@ -884,31 +884,77 @@ function SeoArticleInner() {
                   <Download className="w-5 h-5 text-gray-500" />
                   エクスポート
                 </CardTitle>
-                <CardDesc>用途別にダウンロードできます。</CardDesc>
+                <CardDesc>用途別にダウンロードできます。プラットフォームに最適化された形式を選択してください。</CardDesc>
               </CardHeader>
-              <CardBody>
-                <div className="grid sm:grid-cols-3 gap-4">
-                  <a href={`/api/seo/articles/${id}/export/markdown`} className="block">
-                    <div className="p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-center">
-                      <FileText className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                      <p className="font-bold text-gray-900">Markdown</p>
-                      <p className="text-xs text-gray-500 mt-1">.md形式</p>
-                    </div>
-                  </a>
-                  <a href={`/api/seo/articles/${id}/export/html`} className="block">
-                    <div className="p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-center">
-                      <Layers className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                      <p className="font-bold text-gray-900">HTML</p>
-                      <p className="text-xs text-gray-500 mt-1">.html形式</p>
-                    </div>
-                  </a>
-                  <a href={`/api/seo/articles/${id}/export/wp`} className="block">
-                    <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-all text-center">
-                      <ExternalLink className="w-8 h-8 mx-auto text-emerald-600 mb-2" />
-                      <p className="font-bold text-emerald-700">WordPress</p>
-                      <p className="text-xs text-emerald-600 mt-1">クリーンHTML</p>
-                    </div>
-                  </a>
+              <CardBody className="space-y-6">
+                {/* 基本フォーマット */}
+                <div>
+                  <p className="text-sm font-bold text-gray-600 mb-3">📄 基本フォーマット</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <a href={`/api/seo/articles/${id}/export/markdown`} className="block">
+                      <div className="p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-center">
+                        <FileText className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                        <p className="font-bold text-gray-900">Markdown</p>
+                        <p className="text-xs text-gray-500 mt-1">.md形式</p>
+                      </div>
+                    </a>
+                    <a href={`/api/seo/articles/${id}/export/html`} className="block">
+                      <div className="p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-center">
+                        <Layers className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                        <p className="font-bold text-gray-900">HTML</p>
+                        <p className="text-xs text-gray-500 mt-1">.html形式</p>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+
+                {/* プラットフォーム別 */}
+                <div>
+                  <p className="text-sm font-bold text-gray-600 mb-3">🌐 プラットフォーム別</p>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <a href={`/api/seo/articles/${id}/export/wp`} className="block">
+                      <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-all">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+                            <ExternalLink className="w-6 h-6 text-emerald-600" />
+                          </div>
+                          <div className="text-left">
+                            <p className="font-bold text-emerald-700">WordPress</p>
+                            <p className="text-xs text-emerald-600 mt-0.5">クリーンHTML</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-emerald-600/80 mt-3">
+                          ブロックエディタ対応。そのまま貼り付けられます。
+                        </p>
+                      </div>
+                    </a>
+                    <a href={`/api/seo/articles/${id}/export/note`} className="block">
+                      <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 transition-all">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+                            <span className="text-2xl">📝</span>
+                          </div>
+                          <div className="text-left">
+                            <p className="font-bold text-amber-700">note</p>
+                            <p className="text-xs text-amber-600 mt-0.5">最適化Markdown</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-amber-600/80 mt-3">
+                          note向けに見出し・画像を調整済み。
+                        </p>
+                      </div>
+                    </a>
+                  </div>
+                </div>
+
+                {/* ヒント */}
+                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                  <p className="text-sm font-bold text-gray-600 mb-2">💡 エクスポートのヒント</p>
+                  <ul className="text-xs text-gray-500 space-y-1">
+                    <li>• <strong>WordPress</strong>: HTMLをそのままクラシックエディタまたはブロックエディタに貼り付け</li>
+                    <li>• <strong>note</strong>: ダウンロード後、画像をnoteにアップロードして差し替えてください</li>
+                    <li>• <strong>Markdown</strong>: GitHub、Qiita、Zenn、Notion等で使用可能</li>
+                  </ul>
                 </div>
               </CardBody>
             </Card>
