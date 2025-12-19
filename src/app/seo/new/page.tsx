@@ -295,7 +295,7 @@ export default function SeoNewPage() {
                   </Button>
                 </div>
                 <input
-                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="例）LLMOとは？SEOとの違いと実務で勝つための設計"
@@ -308,7 +308,7 @@ export default function SeoNewPage() {
               <div>
                 <label className="block text-sm font-bold text-gray-800">取りたいキーワード（複数可）*</label>
                 <input
-                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
                   value={keywords}
                   onChange={(e) => setKeywords(e.target.value)}
                   placeholder="例）LLMO, AI検索最適化, SEO"
@@ -327,7 +327,7 @@ export default function SeoNewPage() {
                 <div>
                   <label className="block text-sm font-bold text-gray-800">目標文字数*</label>
                   <select
-                    className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200"
+                    className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900"
                     value={targetChars}
                     onChange={(e) => setTargetChars(Number(e.target.value))}
                   >
@@ -342,7 +342,7 @@ export default function SeoNewPage() {
                 <div>
                   <label className="block text-sm font-bold text-gray-800">トーン*</label>
                   <select
-                    className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200"
+                    className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900"
                     value={tone}
                     onChange={(e) => setTone(e.target.value as any)}
                   >
@@ -369,7 +369,7 @@ export default function SeoNewPage() {
               <div>
                 <label className="block text-sm font-bold text-gray-800">想定読者（ペルソナ）</label>
                 <textarea
-                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 min-h-28"
+                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 min-h-28"
                   value={persona}
                   onChange={(e) => setPersona(e.target.value)}
                   placeholder="例）BtoBマーケ担当。AI検索の影響が不安。社内稟議が必要。"
@@ -378,7 +378,7 @@ export default function SeoNewPage() {
               <div>
                 <label className="block text-sm font-bold text-gray-800">検索意図</label>
                 <textarea
-                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 min-h-24"
+                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 min-h-24"
                   value={searchIntent}
                   onChange={(e) => setSearchIntent(e.target.value)}
                   placeholder="例）定義/比較/手順/失敗例/チェックリスト/FAQが欲しい"
@@ -405,7 +405,7 @@ export default function SeoNewPage() {
               <div>
                 <label className="block text-sm font-bold text-gray-800">参考URL（複数入力可）</label>
                 <textarea
-                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 min-h-28"
+                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 min-h-28"
                   value={referenceUrls}
                   onChange={(e) => setReferenceUrls(e.target.value)}
                   placeholder={`https://example.com/article\nhttps://example.com/another`}
@@ -418,7 +418,7 @@ export default function SeoNewPage() {
               <div>
                 <label className="block text-sm font-bold text-gray-800">禁止事項（競合名を出さない等）</label>
                 <textarea
-                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 min-h-20"
+                  className="mt-2 w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 min-h-20"
                   value={forbidden}
                   onChange={(e) => setForbidden(e.target.value)}
                   placeholder="例）競合A社名を出さない, 誇大表現NG"
