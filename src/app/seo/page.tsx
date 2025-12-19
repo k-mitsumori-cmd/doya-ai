@@ -66,8 +66,8 @@ export default function SeoDashboardPage() {
     <main className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">ドヤ記事作成（SEO Studio）</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">ドヤ記事作成（SEO Studio）</h1>
+          <p className="text-white/70 mt-1">
             5万字〜6万字でも崩れにくい「アウトライン→分割生成→統合」パイプライン
           </p>
         </div>

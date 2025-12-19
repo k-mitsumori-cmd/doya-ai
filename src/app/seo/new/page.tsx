@@ -215,8 +215,8 @@ export default function SeoNewPage() {
     <main className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">新規作成（SEO Studio）</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">新規作成（SEO Studio）</h1>
+          <p className="text-white/70 mt-1">
             条件を入力して「作成して生成」を押すだけで、記事本文と素材を自動生成します（記事ページで進捗を確認できます）。
           </p>
         </div>
