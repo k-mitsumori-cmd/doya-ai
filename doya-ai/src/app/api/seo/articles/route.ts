@@ -39,27 +39,12 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = String((session.user as any).id || '')
-    const userPlan = String((session.user as any).plan || 'FREE')
-    const dailyLimit = getSeoDailyLimitByUserPlan(userPlan)
+    // テスト段階のため、SEO記事作成の日次上限チェックは一旦無効化する。
+    // 既存の上限ロジックは将来戻せるように残す（pricing側に実装あり）。
+    // const userPlan = String((session.user as any).plan || 'FREE')
+    // const dailyLimit = getSeoDailyLimitByUserPlan(userPlan)
 
-    // 日次上限チェック（今日作成したSEO記事数で判定）
-    const start = new Date()
-    start.setHours(0, 0, 0, 0)
-    const end = new Date(start)
-    end.setDate(end.getDate() + 1)
-
-    const usedToday = await (prisma as any).seoArticle.count({
-      where: { userId, createdAt: { gte: start, lt: end } },
-    })
-    if (dailyLimit >= 0 && usedToday >= dailyLimit) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `本日の生成上限に達しました（${usedToday}/${dailyLimit}回）。プランをアップグレードしてください。`,
-        },
-        { status: 429 }
-      )
-    }
+    // NOTE: 日次上限チェックは停止中（テスト用）
 
     const body = await req.json()
     const input = SeoCreateArticleInputSchema.parse(body)
