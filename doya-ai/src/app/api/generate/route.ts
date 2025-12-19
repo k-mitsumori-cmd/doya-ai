@@ -28,12 +28,13 @@ function checkRateLimit(ip: string): boolean {
 
 export async function POST(req: NextRequest) {
   try {
+    const disableLimits = process.env.DOYA_DISABLE_LIMITS === '1'
     // IPアドレスでのレート制限
     const ip = req.headers.get('x-forwarded-for') || 
                req.headers.get('x-real-ip') || 
                'unknown'
     
-    if (!checkRateLimit(ip)) {
+    if (!disableLimits && !checkRateLimit(ip)) {
       return NextResponse.json(
         { error: 'リクエストが多すぎます。しばらくしてからお試しください。' },
         { status: 429 }

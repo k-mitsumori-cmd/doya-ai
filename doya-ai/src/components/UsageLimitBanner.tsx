@@ -16,6 +16,8 @@ import {
 import { getUsageCount, getRemainingCount, PLAN_LIMITS, UserTier } from '@/lib/usage'
 
 export function UsageLimitBanner() {
+  // テスト用: 制限表示を無効化（NEXT_PUBLIC_DOYA_DISABLE_LIMITS=1）
+  if (process.env.NEXT_PUBLIC_DOYA_DISABLE_LIMITS === '1') return null
   const { data: session, status } = useSession()
   const [remaining, setRemaining] = useState<number | 'unlimited'>(3)
   const [dismissed, setDismissed] = useState(false)
