@@ -54,9 +54,37 @@ export const SeoOutlineSchema = z.object({
     z.object({
       h2: z.string().min(1),
       intentTag: z.string().min(1).optional().default(''),
-      plannedChars: z.number().int().min(800).max(3500).optional().default(2000),
-      h3: z.array(z.string().min(1)).optional().default([]),
-      h4: z.record(z.array(z.string().min(1))).optional().default({}), // h3 -> h4[]
+      // Gemini出力が上限超え/文字列/小数/nullになることがあるため、ここで吸収する
+      plannedChars: z
+        .preprocess((v) => {
+          if (v == null) return undefined
+          const n =
+            typeof v === 'number'
+              ? v
+              : typeof v === 'string'
+                ? Number.parseInt(v, 10)
+                : Number.NaN
+          if (!Number.isFinite(n)) return undefined
+          // 仕様上は1500-3000推奨だが、生成を止めないため schema 上限(3500)に丸める
+          const clamped = Math.max(800, Math.min(3500, Math.round(n)))
+          return clamped
+        }, z.number().int().min(800).max(3500))
+        .optional()
+        .default(2000),
+      h3: z
+        .preprocess((v) => (v == null ? [] : v), z.array(z.string().min(1)))
+        .optional()
+        .default([]),
+      // Geminiがh4をnullで返すことがあるため、null/配列/非objectは空オブジェクトに落とす
+      h4: z
+        .preprocess((v) => {
+          if (v == null) return {}
+          if (Array.isArray(v)) return {}
+          if (typeof v !== 'object') return {}
+          return v
+        }, z.record(z.array(z.string().min(1))))
+        .optional()
+        .default({}), // h3 -> h4[]
     })
   ).min(3),
   internalLinkIdeas: z.array(OutlineStringItemSchema).optional().default([]),
