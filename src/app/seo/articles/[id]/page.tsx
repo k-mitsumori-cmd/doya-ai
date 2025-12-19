@@ -39,6 +39,7 @@ import {
   Zap,
   Target,
   BarChart3,
+  PenTool,
 } from 'lucide-react'
 
 type SeoImage = {
@@ -94,8 +95,9 @@ type Article = {
 const TABS = [
   { id: 'preview', label: 'プレビュー', icon: Eye, color: 'text-blue-500' },
   { id: 'edit', label: '編集', icon: Edit3, color: 'text-purple-500' },
+  { id: 'note', label: 'note記事', icon: PenTool, color: 'text-amber-500' },
   { id: 'research', label: 'リサーチ', icon: Compass, color: 'text-cyan-500' },
-  { id: 'outline', label: 'アウトライン', icon: Layout, color: 'text-amber-500' },
+  { id: 'outline', label: 'アウトライン', icon: Layout, color: 'text-gray-500' },
   { id: 'meta', label: 'メタ', icon: Tag, color: 'text-pink-500' },
   { id: 'audit', label: '監査', icon: CheckCircle, color: 'text-emerald-500' },
   { id: 'media', label: '画像', icon: ImageIcon, color: 'text-orange-500' },
@@ -531,6 +533,112 @@ function SeoArticleInner() {
                     <FileText className="w-4 h-4" />
                     保存
                   </Button>
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {tab === 'note' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PenTool className="w-5 h-5 text-amber-500" />
+                  note記事を作成
+                </CardTitle>
+                <CardDesc>
+                  noteで読まれやすい文体・構成で記事を生成します。
+                  パーソナルな語り口、適度な余白、読者への語りかけを重視。
+                </CardDesc>
+              </CardHeader>
+              <CardBody className="space-y-5">
+                {/* note記事の特徴説明 */}
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+                  <p className="text-sm font-bold text-amber-800 mb-2">📝 note記事の特徴</p>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    <li>• 1文が短く、読みやすい（40文字目安）</li>
+                    <li>• 「〜ですよね」「〜なんです」のような親しみやすい文体</li>
+                    <li>• 冒頭で読者の共感を呼ぶ問いかけ</li>
+                    <li>• 体験談や具体的なエピソードを交える</li>
+                    <li>• 最後に読者への温かいメッセージ</li>
+                  </ul>
+                </div>
+
+                {/* 生成ボタン */}
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      act('note', async () => {
+                        const res = await fetch(`/api/seo/articles/${id}/generate-note`, { method: 'POST' })
+                        const json = await res.json()
+                        if (!json.success) throw new Error(json.error || '失敗しました')
+                      })
+                    }
+                    disabled={!!busy}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {busy === 'note' ? 'note記事を生成中...' : 'note記事を生成'}
+                  </Button>
+                  <span className="text-xs text-gray-500">
+                    ※ 記事情報（タイトル、キーワード、ペルソナ）を元に生成します
+                  </span>
+                </div>
+
+                {/* 生成されたnote記事を表示 */}
+                {(() => {
+                  const noteItem = (article.knowledgeItems || []).find((k) => k.type === 'note_article')
+                  if (!noteItem) {
+                    return (
+                      <div className="text-center py-12 text-gray-400">
+                        <PenTool className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="text-gray-600 font-medium">note記事がまだありません</p>
+                        <p className="text-sm mt-1">上のボタンでnote向けの記事を生成できます</p>
+                      </div>
+                    )
+                  }
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-bold text-gray-700">生成されたnote記事</p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(noteItem.content)
+                              setMessage('コピーしました ✓')
+                              setTimeout(() => setMessage(null), 2000)
+                            }}
+                          >
+                            <Copy className="w-4 h-4" />
+                            コピー
+                          </Button>
+                          <a
+                            href={`/api/seo/articles/${id}/export/note`}
+                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-bold text-amber-700 bg-amber-100 rounded-lg hover:bg-amber-200 transition-colors"
+                          >
+                            <Download className="w-4 h-4" />
+                            ダウンロード
+                          </a>
+                        </div>
+                      </div>
+                      <div className="p-5 rounded-xl bg-white border border-gray-200 shadow-sm">
+                        <MarkdownPreview markdown={noteItem.content} />
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* noteへの投稿ガイド */}
+                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                  <p className="text-sm font-bold text-gray-600 mb-2">💡 noteに投稿する際のヒント</p>
+                  <ul className="text-xs text-gray-500 space-y-1">
+                    <li>• 記事をコピーしてnoteのエディタに貼り付けます</li>
+                    <li>• 見出しや太字はそのまま反映されます</li>
+                    <li>• 画像は別途noteにアップロードして挿入してください</li>
+                    <li>• 冒頭の文章が特に重要です（フィードでの表示に影響）</li>
+                    <li>• タグは3〜5個程度がおすすめ</li>
+                  </ul>
                 </div>
               </CardBody>
             </Card>

@@ -30,6 +30,16 @@ const STORAGE_KEY = 'doya_seo_new_draft_v1'
 // よく使うテンプレート
 const TEMPLATES = [
   {
+    id: 'note',
+    name: 'note記事',
+    icon: '📝',
+    title: '○○してみて気づいたこと',
+    targetChars: 5000,
+    searchIntent: '体験談/気づき/学び/おすすめ/読者へのメッセージ',
+    llmo: { tldr: false, conclusionFirst: false, faq: false, glossary: false, comparison: false, quotes: false, templates: false, objections: false },
+    isNote: true,
+  },
+  {
     id: 'comparison',
     name: '比較・ランキング記事',
     icon: '📊',
@@ -319,20 +329,33 @@ export default function SeoNewPage() {
           <Lightbulb className="w-4 h-4 text-amber-500" />
           テンプレートから始める
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {TEMPLATES.map((t) => (
             <button
               key={t.id}
               onClick={() => applyTemplate(t)}
-              className="p-4 rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50 transition-all text-left group shadow-sm hover:shadow-md"
+              className={`p-4 rounded-xl border transition-all text-left group shadow-sm hover:shadow-md ${
+                t.id === 'note'
+                  ? 'border-amber-200 bg-amber-50 hover:border-amber-300 hover:bg-amber-100'
+                  : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+              }`}
             >
               <span className="text-2xl">{t.icon}</span>
-              <p className="text-sm font-bold text-gray-900 mt-2 group-hover:text-blue-600 transition-colors">
+              <p className={`text-sm font-bold mt-2 transition-colors ${
+                t.id === 'note'
+                  ? 'text-amber-800 group-hover:text-amber-900'
+                  : 'text-gray-900 group-hover:text-blue-600'
+              }`}>
                 {t.name}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className={`text-xs mt-1 ${t.id === 'note' ? 'text-amber-600' : 'text-gray-500'}`}>
                 {t.targetChars.toLocaleString()}字
               </p>
+              {t.id === 'note' && (
+                <span className="inline-block mt-2 text-[10px] px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 font-bold">
+                  おすすめ
+                </span>
+              )}
             </button>
           ))}
         </div>
