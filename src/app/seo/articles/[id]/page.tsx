@@ -5,10 +5,10 @@ import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
 import { ClientErrorBoundary } from '@seo/components/ClientErrorBoundary'
+import { GenerationProgress } from '@seo/components/GenerationProgress'
 import { Button } from '@seo/components/ui/Button'
 import { Card, CardBody, CardHeader, CardTitle, CardDesc } from '@seo/components/ui/Card'
 import { Badge } from '@seo/components/ui/Badge'
-import { ProgressBar } from '@seo/components/ui/ProgressBar'
 import { analyzeMarkdown } from '@seo/lib/score'
 import {
   Download,
@@ -37,7 +37,6 @@ import {
   Copy,
   Check,
   Zap,
-  Clock,
   Target,
   BarChart3,
 } from 'lucide-react'
@@ -89,18 +88,19 @@ type Article = {
   knowledgeItems?: SeoKnowledge[]
   references?: SeoReference[]
   llmoOptions?: any
+  sections?: { id: string; status: string }[]
 }
 
 const TABS = [
-  { id: 'preview', label: 'プレビュー', icon: Eye, color: 'text-blue-400' },
-  { id: 'edit', label: '編集', icon: Edit3, color: 'text-purple-400' },
-  { id: 'research', label: 'リサーチ', icon: Compass, color: 'text-cyan-400' },
-  { id: 'outline', label: 'アウトライン', icon: Layout, color: 'text-amber-400' },
-  { id: 'meta', label: 'メタ', icon: Tag, color: 'text-pink-400' },
-  { id: 'audit', label: '監査', icon: CheckCircle, color: 'text-emerald-400' },
-  { id: 'media', label: '画像', icon: ImageIcon, color: 'text-orange-400' },
-  { id: 'links', label: 'リンク', icon: Link2, color: 'text-indigo-400' },
-  { id: 'export', label: '出力', icon: Download, color: 'text-gray-400' },
+  { id: 'preview', label: 'プレビュー', icon: Eye, color: 'text-blue-500' },
+  { id: 'edit', label: '編集', icon: Edit3, color: 'text-purple-500' },
+  { id: 'research', label: 'リサーチ', icon: Compass, color: 'text-cyan-500' },
+  { id: 'outline', label: 'アウトライン', icon: Layout, color: 'text-amber-500' },
+  { id: 'meta', label: 'メタ', icon: Tag, color: 'text-pink-500' },
+  { id: 'audit', label: '監査', icon: CheckCircle, color: 'text-emerald-500' },
+  { id: 'media', label: '画像', icon: ImageIcon, color: 'text-orange-500' },
+  { id: 'links', label: 'リンク', icon: Link2, color: 'text-indigo-500' },
+  { id: 'export', label: '出力', icon: Download, color: 'text-gray-500' },
 ] as const
 
 export default function SeoArticlePage() {
@@ -231,13 +231,21 @@ function SeoArticleInner() {
     }
   }
 
+  // セクション進捗を計算
+  const sectionsDone = useMemo(() => {
+    return (article?.sections || []).filter((s) => s.status === 'reviewed').length
+  }, [article])
+  const sectionsTotal = useMemo(() => {
+    return (article?.sections || []).length
+  }, [article])
+
   if (loading) {
     return (
       <main className="max-w-6xl mx-auto px-4 py-10">
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
-            <div className="w-12 h-12 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-gray-400 mt-4">読み込み中...</p>
+            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-gray-500 mt-4">読み込み中...</p>
           </div>
         </div>
       </main>
@@ -247,19 +255,19 @@ function SeoArticleInner() {
   if (!article) {
     return (
       <main className="max-w-6xl mx-auto px-4 py-10">
-        <div className="p-6 rounded-2xl border border-red-500/30 bg-red-500/10">
+        <div className="p-6 rounded-2xl border border-red-200 bg-red-50">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-6 h-6 text-red-400 flex-shrink-0" />
+            <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0" />
             <div>
-              <p className="font-bold text-red-300">読み込みに失敗しました</p>
-              <pre className="text-xs text-red-200/80 whitespace-pre-wrap mt-2">{loadError || '不明なエラー'}</pre>
-              <p className="text-xs mt-3 text-red-200/60">
-                環境変数（<code className="bg-red-500/20 px-1 rounded">GOOGLE_GENAI_API_KEY</code> / <code className="bg-red-500/20 px-1 rounded">DATABASE_URL</code>）とDB接続状態を確認してください。
+              <p className="font-bold text-red-800">読み込みに失敗しました</p>
+              <pre className="text-xs text-red-600 whitespace-pre-wrap mt-2">{loadError || '不明なエラー'}</pre>
+              <p className="text-xs mt-3 text-red-500">
+                環境変数（<code className="bg-red-100 px-1 rounded">GOOGLE_GENAI_API_KEY</code> / <code className="bg-red-100 px-1 rounded">DATABASE_URL</code>）とDB接続状態を確認してください。
               </p>
             </div>
           </div>
           <button
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500 text-white font-bold hover:bg-red-600 transition-colors"
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 text-white font-bold hover:bg-red-700 transition-colors"
             onClick={() => load({ showLoading: true })}
           >
             <RefreshCcw className="w-4 h-4" />
@@ -274,13 +282,13 @@ function SeoArticleInner() {
   const knowledgeByType = (t: string) => (article.knowledgeItems || []).filter((k) => k.type === t)
   const metaItem = knowledgeByType('meta')?.[0]
   const charProgress = Math.min(100, Math.round((score.charCount / article.targetChars) * 100))
-  const isComplete = article.status === 'DONE' && score.charCount >= article.targetChars * 0.9
+  const isGenerating = latestJob && latestJob.status !== 'done' && latestJob.status !== 'error'
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-6">
-        <Link href="/seo" className="inline-flex items-center gap-2 text-gray-400 hover:text-white text-sm mb-4 transition-colors">
+        <Link href="/seo" className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm mb-4 transition-colors">
           <ArrowLeft className="w-4 h-4" />
           一覧へ戻る
         </Link>
@@ -291,11 +299,11 @@ function SeoArticleInner() {
               <Badge tone={article.status === 'DONE' ? 'green' : article.status === 'ERROR' ? 'red' : article.status === 'RUNNING' ? 'amber' : 'blue'}>
                 {article.status === 'DONE' ? '完成' : article.status === 'ERROR' ? 'エラー' : article.status === 'RUNNING' ? '生成中' : '下書き'}
               </Badge>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight truncate">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight truncate">
                 {article.title}
               </h1>
             </div>
-            <p className="text-sm text-gray-400 mt-2">
+            <p className="text-sm text-gray-500 mt-2">
               目標 {article.targetChars.toLocaleString('ja-JP')}字 → 現在 {score.charCount.toLocaleString('ja-JP')}字 ({charProgress}%)
             </p>
           </div>
@@ -305,7 +313,6 @@ function SeoArticleInner() {
               <Button
                 variant={autoRun ? 'secondary' : 'primary'}
                 onClick={() => setAutoRun((v) => !v)}
-                className={autoRun ? 'animate-pulse' : ''}
               >
                 {autoRun ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 {autoRun ? '一時停止' : '生成を開始'}
@@ -318,103 +325,105 @@ function SeoArticleInner() {
         </div>
       </div>
 
-      {/* Progress Banner */}
-      {latestJob && latestJob.status !== 'done' && (
-        <div className="mb-6 p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                <Clock className="w-5 h-5 text-amber-400 animate-pulse" />
-              </div>
-              <div>
-                <p className="font-bold text-amber-300">生成中</p>
-                <p className="text-xs text-amber-200/70">ステップ: {latestJob.step}</p>
-              </div>
-            </div>
-            <div className="flex-1 max-w-md">
-              <div className="flex items-center justify-between text-xs text-amber-200/70 mb-1">
-                <span>進捗</span>
-                <span>{latestJob.progress}%</span>
-              </div>
-              <ProgressBar value={latestJob.progress} />
-            </div>
-          </div>
+      {/* Generation Progress (large, animated) */}
+      {isGenerating && (
+        <div className="mb-8">
+          <GenerationProgress
+            status={latestJob.status}
+            step={latestJob.step}
+            progress={latestJob.progress}
+            sectionsDone={sectionsDone}
+            sectionsTotal={sectionsTotal}
+          />
           {latestJob.error && (
-            <div className="mt-3 p-3 rounded-xl bg-red-500/20 text-red-300 text-sm">
-              <p className="font-bold">エラー</p>
-              <pre className="text-xs whitespace-pre-wrap mt-1">{latestJob.error}</pre>
+            <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700">
+              <p className="font-bold">エラー詳細</p>
+              <pre className="text-xs whitespace-pre-wrap mt-2">{latestJob.error}</pre>
+            </div>
+          )}
+          {actionError && (
+            <div className="mt-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700">
+              <p className="font-bold">実行エラー</p>
+              <pre className="text-xs whitespace-pre-wrap mt-2">{actionError}</pre>
             </div>
           )}
         </div>
       )}
 
-      {/* Action Error */}
-      {actionError && (
-        <div className="mb-4 p-4 rounded-2xl border border-red-500/30 bg-red-500/10 text-red-300 text-sm">
-          <p className="font-bold">実行エラー</p>
-          <pre className="text-xs whitespace-pre-wrap mt-1">{actionError}</pre>
+      {/* Completion/Error Status */}
+      {latestJob?.status === 'done' && (
+        <div className="mb-6">
+          <GenerationProgress status="done" step="done" progress={100} />
+        </div>
+      )}
+
+      {latestJob?.status === 'error' && (
+        <div className="mb-6">
+          <GenerationProgress status="error" step="error" progress={latestJob.progress} />
         </div>
       )}
 
       {/* Success Message */}
       {message && (
-        <div className="mb-4 p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 text-sm flex items-center gap-2">
+        <div className="mb-4 p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm flex items-center gap-2">
           <CheckCircle className="w-4 h-4" />
           {message}
         </div>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="p-4 rounded-2xl border border-gray-700 bg-gray-800/50">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${score.score >= 70 ? 'bg-emerald-500/20' : score.score >= 50 ? 'bg-amber-500/20' : 'bg-red-500/20'}`}>
-              <BarChart3 className={`w-5 h-5 ${score.score >= 70 ? 'text-emerald-400' : score.score >= 50 ? 'text-amber-400' : 'text-red-400'}`} />
+      {/* Stats Cards (only show when not actively generating) */}
+      {!isGenerating && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className={`p-4 rounded-2xl border ${score.score >= 70 ? 'bg-emerald-50 border-emerald-200' : score.score >= 50 ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${score.score >= 70 ? 'bg-emerald-100' : score.score >= 50 ? 'bg-amber-100' : 'bg-red-100'}`}>
+                <BarChart3 className={`w-5 h-5 ${score.score >= 70 ? 'text-emerald-600' : score.score >= 50 ? 'text-amber-600' : 'text-red-600'}`} />
+              </div>
+              <div>
+                <p className={`text-2xl font-bold ${score.score >= 70 ? 'text-emerald-700' : score.score >= 50 ? 'text-amber-700' : 'text-red-700'}`}>{score.score}</p>
+                <p className="text-xs text-gray-500">Content Score</p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{score.score}</p>
-              <p className="text-xs text-gray-500">Content Score</p>
+          </div>
+          <div className={`p-4 rounded-2xl border ${charProgress >= 90 ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${charProgress >= 90 ? 'bg-emerald-100' : 'bg-blue-100'}`}>
+                <Target className={`w-5 h-5 ${charProgress >= 90 ? 'text-emerald-600' : 'text-blue-600'}`} />
+              </div>
+              <div>
+                <p className={`text-2xl font-bold ${charProgress >= 90 ? 'text-emerald-700' : 'text-blue-700'}`}>{score.charCount.toLocaleString()}</p>
+                <p className="text-xs text-gray-500">文字数 ({charProgress}%)</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 rounded-2xl border bg-purple-50 border-purple-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+                <Layers className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-purple-700">{score.headingCount}</p>
+                <p className="text-xs text-gray-500">見出し</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 rounded-2xl border bg-orange-50 border-orange-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                <ImageIcon className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-orange-700">{article.images?.length || 0}</p>
+                <p className="text-xs text-gray-500">画像</p>
+              </div>
             </div>
           </div>
         </div>
-        <div className="p-4 rounded-2xl border border-gray-700 bg-gray-800/50">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${charProgress >= 90 ? 'bg-emerald-500/20' : 'bg-blue-500/20'}`}>
-              <Target className={`w-5 h-5 ${charProgress >= 90 ? 'text-emerald-400' : 'text-blue-400'}`} />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{score.charCount.toLocaleString()}</p>
-              <p className="text-xs text-gray-500">文字数 ({charProgress}%)</p>
-            </div>
-          </div>
-        </div>
-        <div className="p-4 rounded-2xl border border-gray-700 bg-gray-800/50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-              <Layers className="w-5 h-5 text-purple-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{score.headingCount}</p>
-              <p className="text-xs text-gray-500">見出し</p>
-            </div>
-          </div>
-        </div>
-        <div className="p-4 rounded-2xl border border-gray-700 bg-gray-800/50">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center">
-              <ImageIcon className="w-5 h-5 text-orange-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-white">{article.images?.length || 0}</p>
-              <p className="text-xs text-gray-500">画像</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="mb-6 overflow-x-auto">
-        <div className="flex gap-1 p-1 rounded-2xl bg-gray-800/50 border border-gray-700 min-w-max">
+        <div className="flex gap-1 p-1.5 rounded-2xl bg-gray-100 border border-gray-200 min-w-max">
           {TABS.map((t) => {
             const Icon = t.icon
             const isActive = tab === t.id
@@ -424,8 +433,8 @@ function SeoArticleInner() {
                 onClick={() => setTab(t.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isActive
-                    ? 'bg-gray-700 text-white shadow-lg'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-700/50'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
                 }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? t.color : ''}`} />
@@ -445,18 +454,14 @@ function SeoArticleInner() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <Eye className="w-5 h-5 text-blue-400" />
+                      <Eye className="w-5 h-5 text-blue-500" />
                       プレビュー
                     </CardTitle>
                     <CardDesc>Markdownをレンダリングします（表/画像/リンク）。</CardDesc>
                   </div>
                   {markdown && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => copyToClipboard(markdown)}
-                    >
-                      {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    <Button variant="ghost" size="sm" onClick={() => copyToClipboard(markdown)}>
+                      {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                       {copied ? 'コピー済み' : 'コピー'}
                     </Button>
                   )}
@@ -466,9 +471,9 @@ function SeoArticleInner() {
                 {markdown ? (
                   <MarkdownPreview markdown={markdown} />
                 ) : (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="text-center py-12 text-gray-400">
                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>最終稿がありません</p>
+                    <p className="text-gray-600 font-medium">最終稿がありません</p>
                     <p className="text-sm mt-1">「生成を開始」ボタンで記事を生成してください</p>
                   </div>
                 )}
@@ -480,36 +485,26 @@ function SeoArticleInner() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Edit3 className="w-5 h-5 text-purple-400" />
+                  <Edit3 className="w-5 h-5 text-purple-500" />
                   最終稿（貼り付け・編集）
                 </CardTitle>
                 <CardDesc>ここに本文を貼り付けて保存できます。</CardDesc>
               </CardHeader>
               <CardBody className="space-y-4">
                 <textarea
-                  className="w-full min-h-[520px] font-mono text-sm p-4 rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full min-h-[520px] font-mono text-sm p-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   value={markdownDraft}
                   onChange={(e) => setMarkdownDraft(e.target.value)}
                   placeholder="ここにMarkdown/テキストを貼り付け…"
                 />
 
                 <div className="flex items-center gap-4 flex-wrap">
-                  <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={normalizeOnSave}
-                      onChange={(e) => setNormalizeOnSave(e.target.checked)}
-                      className="rounded"
-                    />
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                    <input type="checkbox" checked={normalizeOnSave} onChange={(e) => setNormalizeOnSave(e.target.checked)} className="rounded" />
                     Markdown整形して保存
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={updateOutlineOnSave}
-                      onChange={(e) => setUpdateOutlineOnSave(e.target.checked)}
-                      className="rounded"
-                    />
+                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                    <input type="checkbox" checked={updateOutlineOnSave} onChange={(e) => setUpdateOutlineOnSave(e.target.checked)} className="rounded" />
                     アウトラインも更新
                   </label>
                 </div>
@@ -545,7 +540,7 @@ function SeoArticleInner() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Compass className="w-5 h-5 text-cyan-400" />
+                  <Compass className="w-5 h-5 text-cyan-500" />
                   リサーチ
                 </CardTitle>
                 <CardDesc>参考URLを要点化してナレッジとして蓄積します。</CardDesc>
@@ -568,23 +563,23 @@ function SeoArticleInner() {
 
                 <div className="space-y-3">
                   {(article.references || []).map((r) => (
-                    <div key={r.id} className="p-4 rounded-xl border border-gray-700 bg-gray-800/50">
+                    <div key={r.id} className="p-4 rounded-xl border border-gray-200 bg-gray-50">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="font-bold text-white truncate">{r.title || r.url}</p>
-                          <a className="text-xs text-blue-400 hover:underline" href={r.url} target="_blank" rel="noreferrer">
+                          <p className="font-bold text-gray-900 truncate">{r.title || r.url}</p>
+                          <a className="text-xs text-blue-600 hover:underline" href={r.url} target="_blank" rel="noreferrer">
                             {r.url}
                           </a>
                         </div>
                         <Badge tone="purple">参考</Badge>
                       </div>
-                      {r.summary && <p className="text-sm text-gray-300 mt-2 whitespace-pre-wrap">{r.summary}</p>}
+                      {r.summary && <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">{r.summary}</p>}
                     </div>
                   ))}
                   {(article.references || []).length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-gray-400">
                       <Compass className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                      <p>参考URL解析結果がありません</p>
+                      <p className="text-gray-600">参考URL解析結果がありません</p>
                     </div>
                   )}
                 </div>
@@ -596,14 +591,14 @@ function SeoArticleInner() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Layout className="w-5 h-5 text-amber-400" />
+                  <Layout className="w-5 h-5 text-amber-500" />
                   アウトライン（編集可）
                 </CardTitle>
                 <CardDesc>アウトラインを整えると分割生成が安定します。</CardDesc>
               </CardHeader>
               <CardBody className="space-y-4">
                 <textarea
-                  className="w-full min-h-[380px] font-mono text-sm p-4 rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full min-h-[380px] font-mono text-sm p-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500"
                   value={outlineDraft}
                   onChange={(e) => setOutlineDraft(e.target.value)}
                   placeholder="（未生成）"
@@ -639,7 +634,7 @@ function SeoArticleInner() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Tag className="w-5 h-5 text-pink-400" />
+                  <Tag className="w-5 h-5 text-pink-500" />
                   メタ生成
                 </CardTitle>
                 <CardDesc>SERPスニペット用のメタをGeminiで生成します。</CardDesc>
@@ -661,13 +656,13 @@ function SeoArticleInner() {
                 </Button>
 
                 {metaItem ? (
-                  <pre className="text-sm whitespace-pre-wrap p-4 rounded-xl bg-gray-800 border border-gray-700 text-gray-300">
+                  <pre className="text-sm whitespace-pre-wrap p-4 rounded-xl bg-gray-50 border border-gray-200 text-gray-700">
                     {metaItem.content}
                   </pre>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-400">
                     <Tag className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p>メタがありません</p>
+                    <p className="text-gray-600">メタがありません</p>
                   </div>
                 )}
               </CardBody>
@@ -678,7 +673,7 @@ function SeoArticleInner() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <CheckCircle className="w-5 h-5 text-emerald-500" />
                   品質監査（二重チェック）
                 </CardTitle>
                 <CardDesc>別プロンプトで弱点を洗い出し、自動修正で反映します。</CardDesc>
@@ -719,13 +714,13 @@ function SeoArticleInner() {
                   </Button>
                 </div>
                 {latestAudit ? (
-                  <pre className="text-sm whitespace-pre-wrap p-4 rounded-xl bg-gray-800 border border-gray-700 text-gray-300">
+                  <pre className="text-sm whitespace-pre-wrap p-4 rounded-xl bg-gray-50 border border-gray-200 text-gray-700">
                     {latestAudit.report}
                   </pre>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-400">
                     <CheckCircle className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p>監査レポートがありません</p>
+                    <p className="text-gray-600">監査レポートがありません</p>
                   </div>
                 )}
               </CardBody>
@@ -736,7 +731,7 @@ function SeoArticleInner() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ImageIcon className="w-5 h-5 text-orange-400" />
+                  <ImageIcon className="w-5 h-5 text-orange-500" />
                   画像（バナー / 図解）
                 </CardTitle>
                 <CardDesc>Geminiで生成し、Markdownリンクで記事に挿入できます。</CardDesc>
@@ -757,16 +752,16 @@ function SeoArticleInner() {
                   {busy === 'banner' ? '生成中...' : 'バナー生成'}
                 </Button>
 
-                <div className="p-4 rounded-xl border border-gray-700 bg-gray-800/50 space-y-3">
-                  <p className="text-sm font-bold text-gray-400">図解を生成</p>
+                <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 space-y-3">
+                  <p className="text-sm font-bold text-gray-700">図解を生成</p>
                   <input
-                    className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder:text-gray-500 text-sm"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm"
                     value={diagramTitle}
                     onChange={(e) => setDiagramTitle(e.target.value)}
                     placeholder="図解タイトル（例：施策マップ）"
                   />
                   <textarea
-                    className="w-full px-3 py-2 rounded-lg border border-gray-600 bg-gray-700 text-white placeholder:text-gray-500 text-sm min-h-20"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm min-h-20"
                     value={diagramDesc}
                     onChange={(e) => setDiagramDesc(e.target.value)}
                     placeholder="図解で表現する内容（例：入力→解析→生成→監査→公開の流れ）"
@@ -795,25 +790,25 @@ function SeoArticleInner() {
 
                 <div className="grid sm:grid-cols-2 gap-3">
                   {article.images?.map((img) => (
-                    <div key={img.id} className="p-4 rounded-xl border border-gray-700 bg-gray-800/50">
+                    <div key={img.id} className="p-4 rounded-xl border border-gray-200 bg-white">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-bold text-white">
+                        <p className="text-sm font-bold text-gray-900">
                           {img.kind}: {img.title || img.id}
                         </p>
-                        <a className="text-xs text-blue-400 hover:underline" href={`/api/seo/images/${img.id}`} target="_blank" rel="noreferrer">
+                        <a className="text-xs text-blue-600 hover:underline" href={`/api/seo/images/${img.id}`} target="_blank" rel="noreferrer">
                           表示
                         </a>
                       </div>
-                      <div className="mt-2 p-2 rounded bg-gray-700 text-xs text-gray-400 font-mono">
+                      <div className="mt-2 p-2 rounded bg-gray-100 text-xs text-gray-600 font-mono">
                         ![{img.title || 'image'}](/api/seo/images/{img.id})
                       </div>
                     </div>
                   ))}
                 </div>
                 {!article.images?.length && (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-400">
                     <ImageIcon className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p>画像がありません</p>
+                    <p className="text-gray-600">画像がありません</p>
                   </div>
                 )}
               </CardBody>
@@ -824,7 +819,7 @@ function SeoArticleInner() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Link2 className="w-5 h-5 text-indigo-400" />
+                  <Link2 className="w-5 h-5 text-indigo-500" />
                   リンクチェック
                 </CardTitle>
                 <CardDesc>記事内リンクを抽出して到達確認します。</CardDesc>
@@ -845,26 +840,26 @@ function SeoArticleInner() {
                   {busy === 'linkcheck' ? '確認中...' : 'リンクチェック実行'}
                 </Button>
                 {article.linkChecks?.length ? (
-                  <div className="max-h-[420px] overflow-auto rounded-xl border border-gray-700">
+                  <div className="max-h-[420px] overflow-auto rounded-xl border border-gray-200">
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-800 text-gray-400 sticky top-0">
+                      <thead className="bg-gray-50 text-gray-600 sticky top-0">
                         <tr>
                           <th className="text-left p-3">URL</th>
                           <th className="text-left p-3 w-24">結果</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-700">
+                      <tbody className="divide-y divide-gray-100">
                         {article.linkChecks.map((r) => (
-                          <tr key={r.url} className="hover:bg-gray-800/50">
+                          <tr key={r.url} className="hover:bg-gray-50">
                             <td className="p-3">
-                              <a className="text-blue-400 hover:underline truncate block" href={r.url} target="_blank" rel="noreferrer">
+                              <a className="text-blue-600 hover:underline truncate block" href={r.url} target="_blank" rel="noreferrer">
                                 {r.url}
                               </a>
                               {r.finalUrl && r.finalUrl !== r.url && (
-                                <div className="text-xs text-gray-500 mt-1">→ {r.finalUrl}</div>
+                                <div className="text-xs text-gray-400 mt-1">→ {r.finalUrl}</div>
                               )}
                             </td>
-                            <td className={`p-3 ${r.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                            <td className={`p-3 ${r.ok ? 'text-emerald-600' : 'text-red-600'}`}>
                               {r.ok ? '✓ OK' : '✗ NG'} {r.statusCode ? `(${r.statusCode})` : ''}
                             </td>
                           </tr>
@@ -873,9 +868,9 @@ function SeoArticleInner() {
                     </table>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-400">
                     <Link2 className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p>リンクチェック未実行</p>
+                    <p className="text-gray-600">リンクチェック未実行</p>
                   </div>
                 )}
               </CardBody>
@@ -886,7 +881,7 @@ function SeoArticleInner() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Download className="w-5 h-5 text-gray-400" />
+                  <Download className="w-5 h-5 text-gray-500" />
                   エクスポート
                 </CardTitle>
                 <CardDesc>用途別にダウンロードできます。</CardDesc>
@@ -894,24 +889,24 @@ function SeoArticleInner() {
               <CardBody>
                 <div className="grid sm:grid-cols-3 gap-4">
                   <a href={`/api/seo/articles/${id}/export/markdown`} className="block">
-                    <div className="p-4 rounded-xl border border-gray-700 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-center">
+                    <div className="p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-center">
                       <FileText className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                      <p className="font-bold text-white">Markdown</p>
+                      <p className="font-bold text-gray-900">Markdown</p>
                       <p className="text-xs text-gray-500 mt-1">.md形式</p>
                     </div>
                   </a>
                   <a href={`/api/seo/articles/${id}/export/html`} className="block">
-                    <div className="p-4 rounded-xl border border-gray-700 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all text-center">
+                    <div className="p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all text-center">
                       <Layers className="w-8 h-8 mx-auto text-gray-400 mb-2" />
-                      <p className="font-bold text-white">HTML</p>
+                      <p className="font-bold text-gray-900">HTML</p>
                       <p className="text-xs text-gray-500 mt-1">.html形式</p>
                     </div>
                   </a>
                   <a href={`/api/seo/articles/${id}/export/wp`} className="block">
-                    <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 transition-all text-center">
-                      <ExternalLink className="w-8 h-8 mx-auto text-emerald-400 mb-2" />
-                      <p className="font-bold text-emerald-300">WordPress</p>
-                      <p className="text-xs text-emerald-400/70 mt-1">クリーンHTML</p>
+                    <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-all text-center">
+                      <ExternalLink className="w-8 h-8 mx-auto text-emerald-600 mb-2" />
+                      <p className="font-bold text-emerald-700">WordPress</p>
+                      <p className="text-xs text-emerald-600 mt-1">クリーンHTML</p>
                     </div>
                   </a>
                 </div>
@@ -925,14 +920,14 @@ function SeoArticleInner() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-gray-400" />
+                <MessageSquare className="w-5 h-5 text-gray-500" />
                 作業メモ
               </CardTitle>
               <CardDesc>AIっぽさ対策のメモ</CardDesc>
             </CardHeader>
             <CardBody className="space-y-3">
               <textarea
-                className="w-full min-h-28 px-3 py-2 rounded-xl border border-gray-700 bg-gray-800 text-white placeholder:text-gray-500 text-sm focus:outline-none focus:border-emerald-500"
+                className="w-full min-h-28 px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-blue-500"
                 value={memo}
                 onChange={(e) => setMemo(e.target.value)}
                 placeholder="例）断言が強い。判断基準のトレードオフを追加。失敗談が欲しい。"
@@ -961,22 +956,22 @@ function SeoArticleInner() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-400" />
+                <Sparkles className="w-5 h-5 text-amber-500" />
                 ナレッジ（自動生成）
               </CardTitle>
             </CardHeader>
             <CardBody className="space-y-3">
               {['intro_ab', 'internal_link', 'sns'].flatMap((t) => knowledgeByType(t)).map((k) => (
-                <details key={k.id} className="p-3 rounded-xl bg-gray-800/50 border border-gray-700 group">
-                  <summary className="text-sm font-bold text-white cursor-pointer flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-amber-400" />
+                <details key={k.id} className="p-3 rounded-xl bg-gray-50 border border-gray-200 group">
+                  <summary className="text-sm font-bold text-gray-700 cursor-pointer flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
                     {k.title || k.type}
                   </summary>
-                  <pre className="text-xs text-gray-400 whitespace-pre-wrap mt-3 pt-3 border-t border-gray-700">{k.content}</pre>
+                  <pre className="text-xs text-gray-600 whitespace-pre-wrap mt-3 pt-3 border-t border-gray-200">{k.content}</pre>
                 </details>
               ))}
               {!article.knowledgeItems?.length && (
-                <p className="text-sm text-gray-500 text-center py-4">ナレッジがありません</p>
+                <p className="text-sm text-gray-400 text-center py-4">ナレッジがありません</p>
               )}
             </CardBody>
           </Card>
@@ -985,7 +980,7 @@ function SeoArticleInner() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-emerald-400" />
+                <Zap className="w-5 h-5 text-blue-500" />
                 クイックアクション
               </CardTitle>
             </CardHeader>
@@ -1002,7 +997,7 @@ function SeoArticleInner() {
                 }
                 disabled={!!busy}
               >
-                <CheckCircle className="w-4 h-4 text-emerald-400" />
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
                 品質チェック
               </Button>
               <Button
@@ -1017,7 +1012,7 @@ function SeoArticleInner() {
                 }
                 disabled={!!busy}
               >
-                <Tag className="w-4 h-4 text-pink-400" />
+                <Tag className="w-4 h-4 text-pink-500" />
                 メタ生成
               </Button>
               <Button
@@ -1032,7 +1027,7 @@ function SeoArticleInner() {
                 }
                 disabled={!!busy}
               >
-                <ImageIcon className="w-4 h-4 text-orange-400" />
+                <ImageIcon className="w-4 h-4 text-orange-500" />
                 バナー生成
               </Button>
             </CardBody>
