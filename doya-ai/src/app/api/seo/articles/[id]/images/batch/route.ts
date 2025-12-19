@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
-import { geminiGenerateImage } from '@seo/lib/gemini'
-import { saveImage } from '@seo/lib/storage'
+import { prisma } from '@/lib/prisma'
+import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
+import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 /**
  * 複数の図解を一括生成するAPI
@@ -12,6 +13,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    await ensureSeoSchema()
+    const articleId = params.id
     const body = await req.json()
     const diagrams: { title: string; description: string }[] = body.diagrams || []
 
@@ -20,7 +23,7 @@ export async function POST(
     }
 
     const article = await (prisma as any).seoArticle.findUnique({
-      where: { id: params.id },
+      where: { id: articleId },
       select: { id: true, title: true },
     })
 
@@ -28,47 +31,45 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Article not found' }, { status: 404 })
     }
 
+    await ensureSeoStorage()
+
     const results: { title: string; success: boolean; imageId?: string; error?: string }[] = []
 
     // 順番に生成（並列だとレート制限に引っかかる可能性）
     for (const diagram of diagrams.slice(0, 5)) {
       try {
-        const prompt = `
-Create a professional infographic diagram for a Japanese article.
-Style: Clean, modern, minimal, professional
-Colors: Blue and gray tones with white background
-Language: Japanese text if any labels needed
+        const prompt = [
+          'Create a clean monochrome-friendly diagram illustration for a Japanese business article.',
+          'CRITICAL: NO TEXT at all (no Japanese, no English, no numbers).',
+          'Use simple shapes, icons, arrows, and layout to represent the concept.',
+          'Style: flat vector-like, minimal, high contrast, plenty of whitespace.',
+          '',
+          `Article title: ${article.title}`,
+          `Diagram title (concept): ${diagram.title}`,
+          `What to express: ${diagram.description}`,
+          '',
+          'Output: one square (1:1) diagram image.',
+        ].join('\n')
 
-Title: ${diagram.title}
-Content to visualize: ${diagram.description}
+        const img = await geminiGenerateImagePng({
+          prompt,
+          aspectRatio: '1:1',
+          imageSize: '2K',
+          model: GEMINI_IMAGE_MODEL_DEFAULT,
+        })
 
-Important:
-- Clear visual hierarchy
-- Easy to understand at a glance
-- Professional business style
-- No cluttered elements
-`
-
-        const imageBuffer = await geminiGenerateImage(prompt)
-        
-        if (!imageBuffer) {
-          results.push({
-            title: diagram.title,
-            success: false,
-            error: '画像生成に失敗しました',
-          })
-          continue
-        }
-
-        const filePath = await saveImage(imageBuffer, 'png')
+        const filename = `seo_${articleId}_${Date.now()}_diagram.png`
+        const saved = await saveBase64ToFile({ base64: img.dataBase64, filename, subdir: 'images' })
 
         const seoImage = await (prisma as any).seoImage.create({
           data: {
-            articleId: params.id,
-            kind: 'diagram',
+            articleId,
+            kind: 'DIAGRAM',
             title: diagram.title,
             description: diagram.description,
-            filePath,
+            prompt,
+            filePath: saved.relativePath,
+            mimeType: img.mimeType || 'image/png',
           },
         })
 
@@ -77,6 +78,9 @@ Important:
           success: true,
           imageId: seoImage.id,
         })
+
+        // レート制限を避けるため少し待つ
+        await new Promise((resolve) => setTimeout(resolve, 500))
       } catch (err: any) {
         results.push({
           title: diagram.title,
@@ -103,4 +107,3 @@ Important:
     return NextResponse.json({ success: false, error: e?.message || 'Unknown error' }, { status: 500 })
   }
 }
-
