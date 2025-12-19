@@ -294,6 +294,16 @@ function buildDefaultOverlay(keyword: string, purpose: string) {
   return { headline, subhead: '', cta }
 }
 
+// #RGB/#RRGGBB を正規化（クライアント側）
+function normalizeHexClient(v: string): string | null {
+  const s = String(v || '').trim()
+  const m = s.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+  if (!m) return null
+  const raw = m[1]
+  const hex = raw.length === 3 ? raw.split('').map((c) => c + c).join('') : raw
+  return `#${hex.toUpperCase()}`
+}
+
 function createCopyVariants(headline: string, purpose: string) {
   const base = headline.trim()
   const head = base.length ? base : '今すぐ成果を出す'
@@ -482,6 +492,14 @@ export default function BannerDashboard() {
     colors: Array<{ hex: string; count: number }>
     palette: { primary: string; secondary: string; accent: string; background: string; text: string; cta: string }
   }>(null)
+  const [brandPaletteEdit, setBrandPaletteEdit] = useState<null | {
+    primary: string
+    secondary: string
+    accent: string
+    background: string
+    text: string
+    cta: string
+  }>(null)
   const [useBrandPalette, setUseBrandPalette] = useState(false)
   const [isExtractingPalette, setIsExtractingPalette] = useState(false)
 
@@ -645,8 +663,19 @@ export default function BannerDashboard() {
           logoImage: logoImage || undefined,
           personImage: personImage || undefined,
           referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
-          brandColors: useBrandPalette && brandPalette?.colors?.length
-            ? brandPalette.colors.map((c) => c.hex)
+          brandColors: useBrandPalette
+            ? (() => {
+                const p = brandPaletteEdit || brandPalette?.palette
+                const paletteColors = p
+                  ? [p.primary, p.secondary, p.accent, p.background, p.text, p.cta]
+                      .map((x) => normalizeHexClient(x))
+                      .filter((x): x is string => typeof x === 'string')
+                  : []
+                const topColors = Array.isArray(brandPalette?.colors)
+                  ? brandPalette.colors.map((c) => normalizeHexClient(c.hex)).filter((x): x is string => typeof x === 'string')
+                  : []
+                return uniqStrings([...paletteColors, ...topColors]).slice(0, 8)
+              })()
             : undefined,
           brandSourceUrl: useBrandPalette && brandPalette?.sourceUrl ? brandPalette.sourceUrl : undefined,
         }),
@@ -949,6 +978,7 @@ export default function BannerDashboard() {
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'カラー抽出に失敗しました')
       setBrandPalette(data.data)
+      if (data?.data?.palette) setBrandPaletteEdit(data.data.palette)
       setUseBrandPalette(true)
       toast.success('カラーパレットを抽出しました（生成に適用できます）', { icon: '✅' })
     } catch (e: any) {
@@ -1631,16 +1661,78 @@ export default function BannerDashboard() {
                             <div className="text-xs text-gray-600">
                               抽出元: <span className="font-semibold text-gray-800">{brandPalette.sourceUrl}</span>
                             </div>
-                            <button
-                              onClick={() => setUseBrandPalette((v) => !v)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                                useBrandPalette
-                                  ? 'bg-violet-100 text-violet-700'
-                                  : 'bg-white text-gray-700 hover:bg-gray-100'
-                              }`}
-                            >
-                              生成に適用: {useBrandPalette ? 'ON' : 'OFF'}
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  if (brandPalette?.palette) setBrandPaletteEdit(brandPalette.palette)
+                                  toast.success('抽出パレットに戻しました')
+                                }}
+                                className="px-3 py-1.5 rounded-lg text-xs font-bold transition-colors bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+                              >
+                                パレットをリセット
+                              </button>
+                              <button
+                                onClick={() => setUseBrandPalette((v) => !v)}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                                  useBrandPalette
+                                    ? 'bg-violet-100 text-violet-700'
+                                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                                }`}
+                              >
+                                生成に適用: {useBrandPalette ? 'ON' : 'OFF'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Palette editor */}
+                          <div className="mt-4">
+                            <div className="text-xs font-bold text-gray-700 mb-2">抽出パレット（編集可）</div>
+                            {(() => {
+                              const p = brandPaletteEdit || brandPalette.palette
+                              const rows: Array<{ k: keyof typeof p; label: string }> = [
+                                { k: 'primary', label: 'Primary' },
+                                { k: 'secondary', label: 'Secondary' },
+                                { k: 'accent', label: 'Accent' },
+                                { k: 'background', label: 'Background' },
+                                { k: 'text', label: 'Text' },
+                                { k: 'cta', label: 'CTA' },
+                              ]
+                              return (
+                                <div className="grid sm:grid-cols-2 gap-2">
+                                  {rows.map(({ k, label }) => {
+                                    const v = normalizeHexClient(String(p?.[k] || '')) || '#000000'
+                                    return (
+                                      <div key={k} className="flex items-center gap-2 bg-white rounded-xl border border-gray-200 px-3 py-2">
+                                        <div className="w-8 text-[11px] font-bold text-gray-500">{label}</div>
+                                        <input
+                                          type="color"
+                                          value={v}
+                                          onChange={(e) => {
+                                            const hex = normalizeHexClient(e.target.value) || e.target.value
+                                            setBrandPaletteEdit((prev) => ({ ...(prev || (brandPalette.palette as any)), [k]: hex }))
+                                          }}
+                                          className="h-8 w-10 p-0 bg-transparent border-0"
+                                          aria-label={`${label} color`}
+                                        />
+                                        <input
+                                          value={brandPaletteEdit?.[k] ?? brandPalette.palette[k]}
+                                          onChange={(e) => {
+                                            const hex = e.target.value
+                                            setBrandPaletteEdit((prev) => ({ ...(prev || (brandPalette.palette as any)), [k]: hex }))
+                                          }}
+                                          className="flex-1 px-2 py-1 rounded-lg border border-gray-200 text-xs font-mono text-gray-800 outline-none focus:border-violet-400"
+                                          placeholder="#RRGGBB"
+                                        />
+                                        <div className="w-6 h-6 rounded border border-gray-200" style={{ backgroundColor: v }} />
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )
+                            })()}
+                            <p className="text-[11px] text-gray-500 mt-2">
+                              ※ ここで編集したパレットが「生成に適用ON」のとき優先されます（最大8色まで送信）。
+                            </p>
                           </div>
 
                           <div className="mt-3 flex flex-wrap gap-2">
