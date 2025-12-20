@@ -18,6 +18,7 @@ import { KANTAN_PRICING, getGuestRemainingCount } from '@/lib/pricing'
 const SIDEBAR_MENU = [
   { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
   { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text' },
+  { id: 'chat', label: 'AIチャット', icon: <MessageSquare className="w-5 h-5" />, href: '/kantan/dashboard/chat' },
   { id: 'history', label: '生成履歴', icon: <Clock className="w-5 h-5" />, href: '/kantan/dashboard/history' },
   { id: 'analytics', label: 'アナリティクス', icon: <BarChart3 className="w-5 h-5" />, href: '#', disabled: true },
 ]
