@@ -439,17 +439,17 @@ function createCopyVariants(headline: string, purpose: string) {
     purpose === 'youtube'
       ? [
           `【衝撃】${head}`,
+          `【保存版】${head}`,
           `知らないと損… ${head}`,
-          `これで変わる：${head}`,
-          `最短で理解：${head}`,
-          `今すぐ使える ${head}`,
+          `結論：${head}`,
+          `【検証】${head}`,
         ]
       : [
           `${head}`,
-          `まずは無料で ${head}`,
-          `今だけ：${head}`,
-          `最短ルートで ${head}`,
-          `迷ったらこれ：${head}`,
+          `【無料】${head}`,
+          `【今だけ】${head}`,
+          `失敗しない：${head}`,
+          `まずは1分で：${head}`,
         ]
   return Array.from(new Set(variants)).slice(0, 5)
 }
@@ -464,40 +464,40 @@ function buildHighCtrSampleCopy(category: string, purpose: string) {
   switch (category) {
     case 'telecom':
       return isYouTube
-        ? '【暴露】格安SIMで通信費が半額になる理由'
+        ? '【暴露】通信費が月5,000円下がる人の共通点'
         : isCampaign
           ? '【本日限定】乗り換えで最大2万円還元｜月額990円〜'
           : '月額990円〜｜乗り換えで最大2万円還元（今だけ）'
     case 'ec':
       return isYouTube
-        ? '【検証】Amazonより安い？ガチで買ってみた'
+        ? '【検証】人気No.1を買ってみた結果（ガチレビュー）'
         : '【本日限定】MAX70%OFF｜送料無料で今すぐお得に'
     case 'marketing':
       return isWebinar
-        ? '【無料ウェビナー】売上を伸ばす広告改善 “即効” 5施策'
+        ? '【参加無料】売上を伸ばす広告改善 “即効” 5施策（資料付き）'
         : isLp
           ? '売上を最短で伸ばす。成果直結の広告運用をはじめよう'
           : '【無料診断】広告費のムダを削減してCVを増やす'
     case 'recruit':
       return isYouTube
-        ? '【転職】年収が上がる人が必ずやってること'
+        ? '【転職】年収が上がる人が“最初に”やること'
         : '【未経験OK】月給30万〜｜面談だけでもOK（今週）'
     case 'beauty':
       return isCampaign
         ? '【初回限定】毛穴・くすみ対策｜今だけ特別価格'
-        : '【初回限定】肌が変わる。人気No.1ケアを体験'
+        : '【初回限定】30分で印象UP。人気No.1ケアを体験'
     case 'food':
       return isCampaign
-        ? '【期間限定】人気メニューが今だけ20%OFF（本日）'
+        ? '【本日限定】人気メニューが今だけ20%OFF'
         : '【限定】今週だけの特別メニュー｜クーポン配布中'
     case 'realestate':
-      return '【来場特典】理想の住まいが見つかる｜今週末見学会'
+      return '【来場特典】理想の住まいが見つかる｜今週末 見学会'
     case 'education':
       return isWebinar
         ? '【無料説明会】3ヶ月でスキル習得｜学習ロードマップ公開'
-        : '最短で伸びる。無料体験で学習効果を実感'
+        : '【無料体験】最短で伸びる学習法、まずは1日で実感'
     case 'finance':
-      return '【今だけ】手数料を見直して“毎月のムダ”を削減'
+      return '【無料相談】手数料を見直して“毎月のムダ”を削減'
     case 'health':
       return '【予約受付中】検査・相談をスムーズに｜まずは無料相談'
     case 'it':
@@ -524,23 +524,25 @@ function buildHighCtrSampleCopies(category: string, purpose: string) {
         `知らないと損… ${base.replace(/^【[^】]+】/, '')}`,
         `結論：${base.replace(/^【[^】]+】/, '')}`,
         `【保存版】${base.replace(/^【[^】]+】/, '')}`,
-        `【3分で】${base.replace(/^【[^】]+】/, '')}`,
+        `【検証】${base.replace(/^【[^】]+】/, '')}`,
+        `【初心者OK】${base.replace(/^【[^】]+】/, '')}`,
+        `【完全解説】${base.replace(/^【[^】]+】/, '')}`,
       ]
     : [
         base,
-        `【今だけ】${base.replace(/^【[^】]+】/, '')}`,
         `【無料】${base.replace(/^【[^】]+】/, '')}`,
-        `まずは無料で：${base.replace(/^【[^】]+】/, '')}`,
-        `最短で成果：${base.replace(/^【[^】]+】/, '')}`,
+        `【今だけ】${base.replace(/^【[^】]+】/, '')}`,
+        `【先着】${base.replace(/^【[^】]+】/, '')}`,
         `失敗しない：${base.replace(/^【[^】]+】/, '')}`,
+        `まずは1分で：${base.replace(/^【[^】]+】/, '')}`,
         `【実績】${base.replace(/^【[^】]+】/, '')}`,
-        `迷ったらこれ：${base.replace(/^【[^】]+】/, '')}`,
+        `比較して選ぶ：${base.replace(/^【[^】]+】/, '')}`,
         `今すぐチェック：${base.replace(/^【[^】]+】/, '')}`,
       ]
 
   const boosts = [
     ...(isCampaign ? ['【本日限定】', '【期間限定】', '【数量限定】', '今だけ'] : []),
-    ...(isWebinar ? ['【無料ウェビナー】', '【限定公開】', '【資料付き】'] : []),
+    ...(isWebinar ? ['【参加無料】', '【無料ウェビナー】', '【限定公開】', '【資料付き】', '【Q&Aあり】'] : []),
   ]
 
   const boosted = core.flatMap((s) => {
@@ -549,7 +551,22 @@ function buildHighCtrSampleCopies(category: string, purpose: string) {
     return out
   })
 
-  return uniqStrings(boosted).slice(0, 24)
+  // さらに「数字/証明/簡単」を混ぜてCTRを底上げ
+  const extras = isYouTube
+    ? [
+        '【3分で理解】',
+        '【5選】',
+        '【結論だけ】',
+      ]
+    : [
+        '【最短】',
+        '【たった1分】',
+        '【今すぐ】',
+      ]
+
+  const expanded = boosted.flatMap((s) => extras.map((p) => `${p}${s.replace(/^【[^】]+】/, '')}`).concat([s]))
+
+  return uniqStrings(expanded).slice(0, 36)
 }
 
 // ========================================
@@ -1069,27 +1086,49 @@ export default function BannerDashboard() {
     }
 
     try {
-      // AIバナーコーチ機能は廃止したため、サンプルはローカル生成のみ
+      // CTR特化：AIで12案生成 → ローカルテンプレと合流して“切り替え可能”にする
       setIsSuggestingCopy(true)
       const base = keyword.trim()
       const local = buildHighCtrSampleCopies(category, purpose)
+
+      let ai: string[] = []
+      try {
+        const res = await fetch('/api/banner/copy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category,
+            purpose,
+            base: base || undefined,
+            companyName: companyName.trim() || undefined,
+          }),
+        })
+        const data = await res.json()
+        if (res.ok && Array.isArray(data?.suggestions)) {
+          ai = data.suggestions.filter((s: any) => typeof s === 'string')
+        }
+      } catch {
+        // ignore (fallback to local)
+      }
+
       const boosts = base
         ? uniqStrings([
             base,
             `【今だけ】${base.replace(/^【[^】]+】/, '')}`,
             `【無料】${base.replace(/^【[^】]+】/, '')}`,
-            `まずは無料で：${base.replace(/^【[^】]+】/, '')}`,
+            `【先着】${base.replace(/^【[^】]+】/, '')}`,
             `失敗しない：${base.replace(/^【[^】]+】/, '')}`,
-            `今すぐチェック：${base.replace(/^【[^】]+】/, '')}`,
+            `まずは1分で：${base.replace(/^【[^】]+】/, '')}`,
           ])
         : []
-      const pool = uniqStrings([...boosts, ...local]).slice(0, 18)
+
+      const pool = uniqStrings([...ai, ...boosts, ...local]).slice(0, 24)
 
       setAiSampleKey(key)
       setAiSamplePool(pool)
       setAiSampleIndex(0)
-      setKeyword(pool[0])
-      toast.success(`クリック率を意識したサンプルを入力しました（1/${pool.length}）`, { icon: '✅' })
+      setKeyword(pool[0] || local[0] || '')
+      toast.success(`クリックされやすいサンプルを入力しました（1/${Math.max(1, pool.length)}）`, { icon: '✅' })
     } catch (e: any) {
       const pool = buildHighCtrSampleCopies(category, purpose)
       setAiSampleKey(key)
