@@ -11,16 +11,16 @@ export default function BannerPricingPage() {
   const plans = BANNER_PRICING.plans
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50">
       {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-purple-100">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-sky-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/banner" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
             <ArrowLeft className="w-5 h-5" />
             <span>戻る</span>
           </Link>
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center">
               <span className="text-xl">🎨</span>
             </div>
             <span className="font-bold text-gray-800">ドヤバナーAI</span>
@@ -49,13 +49,13 @@ export default function BannerPricingPage() {
                 key={plan.id}
                 className={`rounded-2xl p-5 relative ${
                   isPopular 
-                    ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-300 shadow-lg' 
+                    ? 'bg-gradient-to-br from-sky-50 to-cyan-50 border-2 border-sky-300 shadow-lg' 
                     : 'bg-white border-2 border-gray-200'
                 }`}
               >
                 {isPopular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="px-3 py-1 bg-purple-600 text-white text-xs font-bold rounded-full">
+                    <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
                       人気No.1
                     </span>
                   </div>
@@ -64,7 +64,7 @@ export default function BannerPricingPage() {
                 <div className="text-center mb-5">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3 ${
                     isPopular 
-                      ? 'bg-gradient-to-br from-purple-500 to-pink-500' 
+                      ? 'bg-gradient-to-br from-blue-600 to-cyan-600' 
                       : 'bg-gray-100'
                   }`}>
                     <Icon className={`w-5 h-5 ${isPopular ? 'text-white' : 'text-gray-600'}`} />
@@ -72,7 +72,7 @@ export default function BannerPricingPage() {
                   <h2 className="text-lg font-bold text-gray-900">{plan.name}</h2>
                   <p className="text-xs text-gray-500 mt-1">{plan.description}</p>
                   <div className="mt-3">
-                    <span className={`text-2xl font-bold ${isPopular ? 'text-purple-600' : 'text-gray-900'}`}>
+                    <span className={`text-2xl font-bold ${isPopular ? 'text-blue-600' : 'text-gray-900'}`}>
                       {plan.priceLabel}
                     </span>
                     {plan.period && (
@@ -85,7 +85,7 @@ export default function BannerPricingPage() {
                 <ul className="space-y-2 mb-5">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-2 text-gray-700 text-xs">
-                      <Check className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${isPopular ? 'text-purple-500' : 'text-green-500'}`} />
+                      <Check className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${isPopular ? 'text-sky-500' : 'text-green-500'}`} />
                       <span>{feature.text}</span>
                     </li>
                   ))}
@@ -102,8 +102,8 @@ export default function BannerPricingPage() {
                     planId={plan.id}
                     className={`w-full py-2.5 text-sm ${
                       isPopular
-                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'
-                        : 'bg-purple-100 hover:bg-purple-200 text-purple-700'
+                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
+                        : 'bg-sky-100 hover:bg-sky-200 text-sky-800'
                     }`}
                     variant={isPopular ? 'primary' : 'secondary'}
                   >
@@ -142,7 +142,7 @@ export default function BannerPricingPage() {
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4">機能</th>
                   <th className="text-center py-3 px-4">無料版</th>
-                  <th className="text-center py-3 px-4 bg-purple-50">有料版</th>
+                  <th className="text-center py-3 px-4 bg-sky-50">有料版</th>
                 </tr>
               </thead>
               <tbody>
@@ -156,7 +156,7 @@ export default function BannerPricingPage() {
                   <tr key={i} className="border-b border-gray-100">
                     <td className="py-3 px-4 font-medium text-gray-700">{row.feature}</td>
                     {row.values.map((val, j) => (
-                      <td key={j} className={`text-center py-3 px-4 ${j === 1 ? 'bg-purple-50' : ''}`}>
+                      <td key={j} className={`text-center py-3 px-4 ${j === 1 ? 'bg-sky-50' : ''}`}>
                         {val === '○' ? <Check className="w-4 h-4 text-green-500 mx-auto" /> : 
                          val === '×' ? <span className="text-gray-300">−</span> : val}
                       </td>
