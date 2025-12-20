@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { 
-  LayoutDashboard, Users, BarChart3, Settings, LogOut, 
+  LayoutDashboard, Users, BarChart3, Settings, LogOut,
+  KeyRound,
   Sparkles, ChevronRight, ExternalLink, HelpCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -19,6 +20,7 @@ export function Sidebar() {
     { icon: Users, label: 'ユーザー管理', href: '/users' },
     { icon: BarChart3, label: '収益レポート', href: '/revenue' },
     { icon: Settings, label: '設定', href: '/settings' },
+    { icon: KeyRound, label: 'アカウント権限', href: '/accounts' },
     { icon: HelpCircle, label: '使い方ガイド', href: '/guide' },
   ]
 

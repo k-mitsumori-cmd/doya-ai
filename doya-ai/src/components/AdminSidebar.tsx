@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { signOut, useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard,
@@ -20,6 +19,7 @@ import {
   Crown,
   Bell,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const mainNavItems = [
   { icon: LayoutDashboard, label: 'ダッシュボード', href: '/admin', badge: null },
@@ -27,6 +27,7 @@ const mainNavItems = [
   { icon: FileText, label: 'テンプレート', href: '/admin/templates', badge: null },
   { icon: BarChart3, label: 'アナリティクス', href: '/admin/analytics', badge: null },
   { icon: CreditCard, label: '売上・課金', href: '/admin/billing', badge: null },
+  { icon: Shield, label: '管理者アカウント', href: '/admin/admin-users', badge: null },
   { icon: Settings, label: '設定', href: '/admin/settings', badge: null },
 ]
 
@@ -37,7 +38,14 @@ const serviceLinks = [
 
 export function AdminSidebar() {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth/logout', { method: 'POST', credentials: 'include' })
+      window.location.href = '/admin/login'
+    } catch {
+      toast.error('ログアウトに失敗しました')
+    }
+  }
 
   return (
     <aside className="w-64 bg-[#0D0D12] border-r border-white/5 h-screen sticky top-0 flex flex-col">
@@ -63,19 +71,8 @@ export function AdminSidebar() {
       </div>
 
       {/* User Info */}
-      {session?.user && (
-        <div className="px-4 py-3 border-b border-white/5">
-          <div className="flex items-center gap-3 p-3 bg-white/[0.02] rounded-xl">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold text-sm">
-              {session.user.name?.charAt(0) || 'A'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{session.user.name}</p>
-              <p className="text-xs text-white/40 truncate">{session.user.email}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 管理者セッション情報の表示は /api/admin/auth/session で取得する設計だが、
+          ここでは簡略化して省略（必要なら後で追加） */}
 
       {/* Main Navigation */}
       <nav className="flex-1 p-4 overflow-y-auto">
@@ -173,7 +170,7 @@ export function AdminSidebar() {
           </motion.div>
         </Link>
         <button
-          onClick={() => signOut({ callbackUrl: '/' })}
+          onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-all w-full"
         >
           <LogOut className="w-4 h-4" />

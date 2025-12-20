@@ -38,7 +38,10 @@ npm install
 `.env.local` ファイルを作成:
 
 ```env
-# 管理者認証
+# 管理者認証（アカウント制）
+# 初期アカウント（Owner）のメール
+ADMIN_OWNER_EMAIL=admin@local
+# 初期アカウント（Owner）のパスワード
 ADMIN_PASSWORD=your-secure-password
 ADMIN_JWT_SECRET=your-jwt-secret-key
 
@@ -80,8 +83,9 @@ npm start
 
 ## デフォルト認証情報
 
-開発環境のデフォルトパスワード:
-- パスワード: `doya-admin-2024`
+開発環境のデフォルト（初期Owner）:
+- メール: `admin@local`（`ADMIN_OWNER_EMAIL` 未設定時）
+- パスワード: `doya-admin-2024`（`ADMIN_PASSWORD` 未設定時）
 
 ⚠️ **本番環境では必ず変更してください**
 

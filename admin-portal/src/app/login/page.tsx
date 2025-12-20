@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 
 export default function LoginPage() {
   const router = useRouter()
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -14,6 +15,10 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
+    if (!email) {
+      toast.error('メールアドレスを入力してください')
+      return
+    }
     if (!password) {
       toast.error('パスワードを入力してください')
       return
@@ -25,7 +30,7 @@ export default function LoginPage() {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ email, password }),
       })
       
       const data = await response.json()
@@ -66,7 +71,23 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-blue-100 mb-2">
-                管理者パスワード
+                メールアドレス
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@local"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none transition-all"
+                autoComplete="username"
+              />
+              <p className="text-xs text-blue-200/60 mt-2">
+                初期アカウントは <span className="font-mono">ADMIN_OWNER_EMAIL</span>（未設定なら <span className="font-mono">admin@local</span>）です
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-blue-100 mb-2">
+                パスワード
               </label>
               <div className="relative">
                 <input
@@ -75,6 +96,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="パスワードを入力"
                   className="w-full px-4 py-3 pr-12 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-blue-300/50 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/20 outline-none transition-all"
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -107,13 +129,16 @@ export default function LoginPage() {
           <div className="flex justify-center gap-4">
             <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
               <Sparkles className="w-4 h-4 text-blue-400" />
-              <span className="text-blue-200 text-sm">カンタンドヤAI</span>
+              <span className="text-blue-200 text-sm">ドヤSEO</span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
               <span className="text-lg">🎨</span>
               <span className="text-purple-200 text-sm">ドヤバナーAI</span>
             </div>
           </div>
+          <p className="text-xs text-blue-200/50 mt-4">
+            権限の変更はログイン後に「設定 → アカウント権限」から行えます
+          </p>
         </div>
       </div>
     </div>

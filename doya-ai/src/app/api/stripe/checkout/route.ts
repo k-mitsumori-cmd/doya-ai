@@ -60,6 +60,10 @@ export async function POST(request: NextRequest) {
       userEmail: session.user.email,
       successUrl,
       cancelUrl,
+      metadata: {
+        planId,
+        serviceId: service,
+      },
     })
 
     return NextResponse.json({

@@ -58,6 +58,30 @@ export const STRIPE_PRICE_IDS = {
 }
 
 // ========================================
+// 価格ID ↔ プランID 変換（厳密マッピング）
+// ========================================
+export type PlanId = 'seo-pro' | 'seo-business' | 'banner-pro' | 'bundle'
+export type ServiceId = 'seo' | 'banner' | 'bundle'
+
+export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
+  return (planId.split('-')[0] as ServiceId) || 'bundle'
+}
+
+export function getPlanIdFromStripePriceId(priceId: string | null | undefined): PlanId | null {
+  if (!priceId) return null
+  const entries: Array<[PlanId, { monthly: string; yearly: string }]> = [
+    ['seo-pro', STRIPE_PRICE_IDS.seo.pro],
+    ['seo-business', STRIPE_PRICE_IDS.seo.business],
+    ['banner-pro', STRIPE_PRICE_IDS.banner.pro],
+    ['bundle', STRIPE_PRICE_IDS.bundle],
+  ]
+  for (const [planId, prices] of entries) {
+    if (prices.monthly === priceId || prices.yearly === priceId) return planId
+  }
+  return null
+}
+
+// ========================================
 // Checkout Session作成
 // ========================================
 export async function createCheckoutSession({
@@ -66,6 +90,7 @@ export async function createCheckoutSession({
   userEmail,
   successUrl,
   cancelUrl,
+  metadata,
   mode = 'subscription',
 }: {
   priceId: string
@@ -73,6 +98,7 @@ export async function createCheckoutSession({
   userEmail: string
   successUrl: string
   cancelUrl: string
+  metadata?: Record<string, string>
   mode?: 'subscription' | 'payment'
 }) {
   const session = await stripe.checkout.sessions.create({
@@ -90,6 +116,7 @@ export async function createCheckoutSession({
     client_reference_id: userId,
     metadata: {
       userId,
+      ...(metadata || {}),
     },
     // 日本語化
     locale: 'ja',
@@ -97,6 +124,7 @@ export async function createCheckoutSession({
     subscription_data: mode === 'subscription' ? {
       metadata: {
         userId,
+        ...(metadata || {}),
       },
     } : undefined,
     // 請求先住所を収集しない（シンプル化）
