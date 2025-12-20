@@ -146,20 +146,19 @@ export default function KantanTextListPage() {
   }, 0)
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-hidden">
-      {/* アニメーション背景 */}
+    <div className="min-h-screen bg-white text-gray-800 overflow-hidden">
+      {/* 背景デコレーション */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-gradient-to-br from-purple-500/30 via-transparent to-transparent rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '10s' }} />
-          <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] bg-gradient-to-br from-cyan-500/20 via-transparent to-transparent rounded-full blur-[80px] animate-pulse" style={{ animationDuration: '8s', animationDelay: '2s' }} />
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-gradient-to-br from-blue-100 via-transparent to-transparent rounded-full blur-[100px]" />
+          <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] bg-gradient-to-br from-cyan-100 via-transparent to-transparent rounded-full blur-[80px]" />
         </div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px]" />
       </div>
 
       {/* ヘッダー */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/5">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/kantan/dashboard" className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-all duration-300">
+          <Link href="/kantan/dashboard" className="flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-all duration-300">
             <ChevronRight className="w-4 h-4 rotate-180" />
             <span className="text-sm font-medium">ダッシュボード</span>
           </Link>
@@ -172,15 +171,15 @@ export default function KantanTextListPage() {
               </div>
             </div>
             <div className="hidden sm:block">
-              <span className="font-bold">AIエージェント</span>
-              <span className="text-white/40 text-sm ml-2">({ALL_AGENTS.length}種類)</span>
+              <span className="font-bold text-gray-800">AIエージェント</span>
+              <span className="text-gray-400 text-sm ml-2">({ALL_AGENTS.length}種類)</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-full text-xs font-bold">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-full text-xs font-bold">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <Cpu className="w-3 h-3 text-purple-400" />
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Gemini 3.0</span>
+            <Cpu className="w-3 h-3 text-purple-500" />
+            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Gemini 3.0</span>
           </div>
         </div>
       </header>
@@ -189,47 +188,47 @@ export default function KantanTextListPage() {
       <main className="max-w-7xl mx-auto px-6 py-8 relative">
         {/* 統計カード */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/5 rounded-2xl p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center">
                 <Cpu className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-black text-white">{ALL_AGENTS.length}</p>
-                <p className="text-xs text-white/40">AIエージェント</p>
+                <p className="text-2xl font-black text-gray-800">{ALL_AGENTS.length}</p>
+                <p className="text-xs text-gray-400">AIエージェント</p>
               </div>
             </div>
           </div>
-          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/5 rounded-2xl p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
                 <Timer className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-black text-white">{Math.round(totalTimeSavedNum)}h+</p>
-                <p className="text-xs text-white/40">総削減時間</p>
+                <p className="text-2xl font-black text-gray-800">{Math.round(totalTimeSavedNum)}h+</p>
+                <p className="text-xs text-gray-400">総削減時間</p>
               </div>
             </div>
           </div>
-          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/5 rounded-2xl p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                 <Flame className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-black text-white">{POPULAR_AGENTS.length}</p>
-                <p className="text-xs text-white/40">人気エージェント</p>
+                <p className="text-2xl font-black text-gray-800">{POPULAR_AGENTS.length}</p>
+                <p className="text-xs text-gray-400">人気エージェント</p>
               </div>
             </div>
           </div>
-          <div className="bg-white/[0.03] backdrop-blur-xl border border-white/5 rounded-2xl p-4">
+          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
                 <Layers className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-black text-white">{CATEGORIES.length - 1}</p>
-                <p className="text-xs text-white/40">カテゴリ</p>
+                <p className="text-2xl font-black text-gray-800">{CATEGORIES.length - 1}</p>
+                <p className="text-xs text-gray-400">カテゴリ</p>
               </div>
             </div>
           </div>
@@ -238,31 +237,31 @@ export default function KantanTextListPage() {
         {/* 人気エージェント */}
         <div className="mb-10">
           <div className="flex items-center gap-2 mb-4">
-            <Flame className="w-5 h-5 text-amber-400" />
-            <h2 className="font-bold text-white">人気エージェント</h2>
-            <span className="text-xs text-white/40">- 最もよく使われています</span>
+            <Flame className="w-5 h-5 text-amber-500" />
+            <h2 className="font-bold text-gray-800">人気エージェント</h2>
+            <span className="text-xs text-gray-400">- 最もよく使われています</span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {POPULAR_AGENTS.slice(0, 4).map((agent) => (
               <Link key={agent.id} href={`/kantan/dashboard/text/${agent.id}`} className="group">
                 <div className="relative h-full">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${agent.gradient} rounded-2xl opacity-0 group-hover:opacity-20 blur-xl transition-all duration-500`} />
-                  <div className="relative h-full p-4 bg-gradient-to-br from-white/[0.05] to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl hover:border-white/20 transition-all duration-300 overflow-hidden">
-                    <div className={`absolute -top-8 -right-8 w-20 h-20 bg-gradient-to-br ${agent.gradient} opacity-20 blur-2xl`} />
+                  <div className={`absolute inset-0 bg-gradient-to-br ${agent.gradient} rounded-2xl opacity-0 group-hover:opacity-10 blur-xl transition-all duration-500`} />
+                  <div className="relative h-full p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-lg transition-all duration-300 overflow-hidden">
+                    <div className={`absolute -top-8 -right-8 w-20 h-20 bg-gradient-to-br ${agent.gradient} opacity-10 blur-2xl`} />
                     <div className="relative flex items-start gap-3">
-                      <div className={`w-12 h-12 bg-gradient-to-br ${agent.gradient} rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-lg ${agent.glow} group-hover:scale-110 transition-transform duration-300`}>
+                      <div className={`w-12 h-12 bg-gradient-to-br ${agent.gradient} rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                         {agent.icon}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <Crown className="w-3 h-3 text-amber-400" />
-                          <span className="text-[10px] text-amber-400 font-bold">人気</span>
+                          <Crown className="w-3 h-3 text-amber-500" />
+                          <span className="text-[10px] text-amber-500 font-bold">人気</span>
                         </div>
-                        <h3 className="font-bold text-white truncate text-sm">{agent.name}</h3>
-                        <p className="text-xs text-white/40 truncate mb-2">{agent.desc}</p>
+                        <h3 className="font-bold text-gray-800 truncate text-sm">{agent.name}</h3>
+                        <p className="text-xs text-gray-400 truncate mb-2">{agent.desc}</p>
                         <div className="flex items-center gap-1.5">
-                          <Timer className="w-3 h-3 text-emerald-400" />
-                          <span className="text-xs text-emerald-400 font-bold">-{agent.timeSaved}</span>
+                          <Timer className="w-3 h-3 text-emerald-500" />
+                          <span className="text-xs text-emerald-500 font-bold">-{agent.timeSaved}</span>
                         </div>
                       </div>
                     </div>
@@ -276,15 +275,15 @@ export default function KantanTextListPage() {
         {/* 検索 */}
         <div className="mb-6">
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-100 to-purple-100 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
           <div className="relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="AIエージェントを検索..."
-                className="w-full pl-14 pr-6 py-4 bg-white/[0.03] backdrop-blur-xl border border-white/5 rounded-2xl text-white placeholder-white/30 focus:border-cyan-500/30 focus:bg-white/[0.05] outline-none transition-all duration-300"
+                className="w-full pl-14 pr-6 py-4 bg-white border border-gray-200 rounded-2xl text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all duration-300"
             />
             </div>
           </div>
@@ -298,8 +297,8 @@ export default function KantanTextListPage() {
               onClick={() => setSelectedCategory(category.id)}
               className={`group/cat relative px-3 py-2 rounded-xl text-xs font-medium transition-all duration-300 flex items-center gap-1.5 ${
                 selectedCategory === category.id
-                  ? 'bg-gradient-to-r from-cyan-500/20 to-purple-500/20 border border-cyan-500/30 text-white'
-                  : 'bg-white/[0.02] border border-white/5 text-white/40 hover:text-white/70 hover:border-white/10'
+                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg'
+                  : 'bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
               }`}
             >
               {category.icon}
@@ -310,15 +309,15 @@ export default function KantanTextListPage() {
 
         {/* 結果数とソート */}
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm text-white/40">
+          <p className="text-sm text-gray-500">
             {filteredAgents.length}件のエージェント
           </p>
           <button
             onClick={() => setShowOnlyPopular(!showOnlyPopular)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               showOnlyPopular
-                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
-                : 'bg-white/5 border border-white/10 text-white/50 hover:text-white/70'
+                ? 'bg-amber-100 border border-amber-300 text-amber-600'
+                : 'bg-gray-100 border border-gray-200 text-gray-500 hover:bg-gray-200'
             }`}
           >
             <Star className="w-3 h-3" />
@@ -335,27 +334,27 @@ export default function KantanTextListPage() {
                 <div className={`absolute inset-0 bg-gradient-to-br ${agent.gradient} rounded-2xl opacity-0 group-hover:opacity-10 blur-xl transition-all duration-500`} />
                 
                 {/* カード */}
-                <div className="relative h-full p-4 bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl hover:border-white/10 transition-all duration-300 overflow-hidden group-hover:translate-y-[-2px]">
+                <div className="relative h-full p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-lg transition-all duration-300 overflow-hidden group-hover:translate-y-[-2px]">
                   {/* 装飾 */}
-                  <div className={`absolute -top-8 -right-8 w-20 h-20 bg-gradient-to-br ${agent.gradient} opacity-10 blur-2xl group-hover:opacity-30 transition-opacity`} />
+                  <div className={`absolute -top-8 -right-8 w-20 h-20 bg-gradient-to-br ${agent.gradient} opacity-10 blur-2xl group-hover:opacity-20 transition-opacity`} />
                   
                   <div className="relative flex items-center gap-3">
-                    <div className={`w-10 h-10 bg-gradient-to-br ${agent.gradient} rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-lg ${agent.glow} group-hover:scale-110 transition-transform duration-300`}>
+                    <div className={`w-10 h-10 bg-gradient-to-br ${agent.gradient} rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                       {agent.icon}
                   </div>
                   <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-white truncate text-sm">{agent.name}</h3>
-                        {agent.popular && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+                        <h3 className="font-bold text-gray-800 truncate text-sm">{agent.name}</h3>
+                        {agent.popular && <Crown className="w-3 h-3 text-amber-500 flex-shrink-0" />}
                       </div>
-                      <p className="text-xs text-white/40 truncate">{agent.desc}</p>
+                      <p className="text-xs text-gray-400 truncate">{agent.desc}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                        <Timer className="w-3 h-3 text-emerald-400" />
-                        <span className="text-[10px] text-emerald-400 font-bold">-{agent.timeSaved}</span>
+                      <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full">
+                        <Timer className="w-3 h-3 text-emerald-500" />
+                        <span className="text-[10px] text-emerald-600 font-bold">-{agent.timeSaved}</span>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-white/10 group-hover:text-cyan-400 group-hover:translate-x-1 transition-all" />
+                      <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
                     </div>
                   </div>
                 </div>
@@ -366,31 +365,31 @@ export default function KantanTextListPage() {
 
         {filteredAgents.length === 0 && (
           <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
-              <Search className="w-8 h-8 text-white/20" />
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <Search className="w-8 h-8 text-gray-300" />
             </div>
-            <p className="text-white/30 text-lg">該当するAIエージェントが見つかりません</p>
+            <p className="text-gray-400 text-lg">該当するAIエージェントが見つかりません</p>
           </div>
         )}
 
         {/* 他サービス */}
         <div className="space-y-4">
-          <h3 className="text-center text-white/30 text-sm font-bold uppercase tracking-wider mb-6">専門AIツール</h3>
+          <h3 className="text-center text-gray-400 text-sm font-bold uppercase tracking-wider mb-6">専門AIツール</h3>
           
           <div className="grid md:grid-cols-2 gap-4">
             <Link href="/banner" className="block group">
               <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:border-purple-500/20 transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-100 to-pink-100 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative p-5 bg-white border border-gray-200 rounded-2xl hover:border-purple-300 hover:shadow-lg transition-all duration-300">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                       <span className="text-xl">🎨</span>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-white">ドヤバナーAI</h4>
-                      <p className="text-xs text-white/40">A/B/Cの3案を同時に作成</p>
+                      <h4 className="font-bold text-gray-800">ドヤバナーAI</h4>
+                      <p className="text-xs text-gray-400">A/B/Cの3案を同時に作成</p>
                     </div>
-                    <ArrowRight className="w-5 h-5 text-white/10 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
+                    <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
               </div>
@@ -398,17 +397,17 @@ export default function KantanTextListPage() {
 
             <Link href="/seo" className="block group">
               <div className="relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-500/20 to-gray-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative p-5 bg-white/[0.02] border border-white/5 rounded-2xl hover:border-slate-500/20 transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-100 to-gray-100 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative p-5 bg-white border border-gray-200 rounded-2xl hover:border-gray-300 hover:shadow-lg transition-all duration-300">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center shadow-lg shadow-slate-500/20 group-hover:scale-110 transition-transform">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-500 to-gray-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                       <span className="text-xl">🧠</span>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-white">ドヤSEO</h4>
-                      <p className="text-xs text-white/40">5万字超の長文記事も安定生成</p>
+                      <h4 className="font-bold text-gray-800">ドヤSEO</h4>
+                      <p className="text-xs text-gray-400">5万字超の長文記事も安定生成</p>
                     </div>
-                    <ArrowRight className="w-5 h-5 text-white/10 group-hover:text-slate-400 group-hover:translate-x-1 transition-all" />
+                    <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
               </div>

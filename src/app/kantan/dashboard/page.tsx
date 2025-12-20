@@ -287,7 +287,7 @@ export default function KantanDashboardPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Rocket className="w-6 h-6 text-white" />
@@ -299,7 +299,7 @@ export default function KantanDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex">
+    <div className="min-h-screen bg-white flex">
       {/* CSS アニメーション */}
       <style jsx>{`
         @keyframes fadeIn {

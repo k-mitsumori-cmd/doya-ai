@@ -1,16 +1,21 @@
 Output dir: /Users/mitsumori_katsuki/Library/CloudStorage/GoogleDrive-k-mitsumori@surisuta.jp/マイドライブ/01_事業管理/09_Cursol/doya-ai/public/banner-samples
 Total samples: 31
 [1/31] generating purpose-sns_ad (1080x1080)...
-TypeError: fetch failed
-    at node:internal/deps/undici/undici:15845:13
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async generateImage (file:///Users/mitsumori_katsuki/Library/CloudStorage/GoogleDrive-k-mitsumori@surisuta.jp/%E3%83%9E%E3%82%A4%E3%83%88%E3%82%99%E3%83%A9%E3%82%A4%E3%83%95%E3%82%99/01_%E4%BA%8B%E6%A5%AD%E7%AE%A1%E7%90%86/09_Cursol/doya-ai/scripts/generate-banner-samples.mjs:89:15)
-    at async main (file:///Users/mitsumori_katsuki/Library/CloudStorage/GoogleDrive-k-mitsumori@surisuta.jp/%E3%83%9E%E3%82%A4%E3%83%88%E3%82%99%E3%83%A9%E3%82%A4%E3%83%95%E3%82%99/01_%E4%BA%8B%E6%A5%AD%E7%AE%A1%E7%90%86/09_Cursol/doya-ai/scripts/generate-banner-samples.mjs:339:21) {
-  [cause]: Error: getaddrinfo ENOTFOUND generativelanguage.googleapis.com
-      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
-    errno: -3008,
-    code: 'ENOTFOUND',
-    syscall: 'getaddrinfo',
-    hostname: 'generativelanguage.googleapis.com'
-  }
-}
+  -> wrote public/banner-samples/purpose-sns_ad.png (366778 bytes)
+[2/31] generating purpose-youtube (1280x720)...
+  -> wrote public/banner-samples/purpose-youtube.png (578601 bytes)
+[3/31] generating purpose-display (300x250)...
+  -> wrote public/banner-samples/purpose-display.png (435947 bytes)
+[4/31] generating purpose-webinar (1920x1080)...
+  -> wrote public/banner-samples/purpose-webinar.png (265406 bytes)
+[5/31] generating purpose-lp_hero (1920x600)...
+  -> wrote public/banner-samples/purpose-lp_hero.png (382203 bytes)
+[6/31] generating purpose-email (600x200)...
+  -> wrote public/banner-samples/purpose-email.png (356069 bytes)
+[7/31] generating purpose-campaign (1200x628)...
+  -> wrote public/banner-samples/purpose-campaign.png (462852 bytes)
+[8/31] generating cat-telecom (1200x628)...
+  -> wrote public/banner-samples/cat-telecom.png (369008 bytes)
+[9/31] generating cat-marketing (1200x628)...
+  -> wrote public/banner-samples/cat-marketing.png (271746 bytes)
+[10/31] generating cat-ec (1200x628)...
