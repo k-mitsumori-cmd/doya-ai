@@ -24,99 +24,99 @@ const CATEGORIES = [
   { 
     value: 'telecom', label: '通信', icon: '📱', color: '#3B82F6', bg: 'from-blue-500/20 to-cyan-500/20',
     description: '【視線誘導】スマホを持つ手元を強調し、月額料金や「乗り換え0円」などの数字が瞬時に目に入る、コンバージョン重視のレイアウト。',
-    sample: 'https://images.unsplash.com/photo-1512428559087-560fa5ceab42?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-telecom.png'
   },
   { 
     value: 'marketing', label: 'マーケ', icon: '📊', color: '#0EA5E9', bg: 'from-sky-500/20 to-cyan-500/20',
     description: '【権威性】プロフェッショナルな人物と実績グラフを組み合わせ、「このサービスなら解決できる」という信頼感を醸成するB2B特化スタイル。',
-    sample: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-marketing.png'
   },
   { 
     value: 'ec', label: 'EC', icon: '🛒', color: '#F97316', bg: 'from-orange-500/20 to-amber-500/20',
     description: '【購買意欲】商品の質感を大胆に見せつつ、セールバッジや期間限定の赤を効かせた、衝動買いを誘発するダイナミックなデザイン。',
-    sample: 'https://images.unsplash.com/photo-1526170315870-ef68a1ff6202?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-ec.png'
   },
   { 
     value: 'recruit', label: '採用', icon: '👥', color: '#22C55E', bg: 'from-green-500/20 to-emerald-500/20',
     description: '【共感訴求】自然な笑顔のチーム写真を背景に、クリーンな白文字を配置。職場の雰囲気と「自分もここで働きたい」という期待感を高めます。',
-    sample: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-recruit.png'
   },
   { 
     value: 'beauty', label: '美容', icon: '💄', color: '#EC4899', bg: 'from-pink-500/20 to-rose-500/20',
     description: '【憧れ喚起】透明感のある人物アップと洗練された余白。高級感のあるフォントが映える、自分磨きの意欲を刺激するビューティースタイル。',
-    sample: 'https://images.unsplash.com/photo-1596462502278-27bfdc4033c8?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-beauty.png'
   },
   { 
     value: 'food', label: '飲食', icon: '🍽️', color: '#EF4444', bg: 'from-red-500/20 to-orange-500/20',
     description: '【シズル感】料理の「美味しそう」を最大限に引き出す接写構図。食欲を刺激する暖色背景で、店舗予約や注文ボタンへのクリックを促します。',
-    sample: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-food.png'
   },
   { 
     value: 'realestate', label: '不動産', icon: '🏠', color: '#14B8A6', bg: 'from-teal-500/20 to-cyan-500/20',
     description: '【安心・理想】開放感のある内装イメージ。落ち着いたトーンで「一生の買い物」をサポートする誠実さと、理想の暮らしを視覚化します。',
-    sample: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-realestate.png'
   },
   { 
     value: 'education', label: '教育', icon: '📚', color: '#6366F1', bg: 'from-indigo-500/20 to-blue-500/20',
     description: '【未来への自己投資】真剣に学ぶ姿と明るい光の演出。習得できるスキルをステップ形式で見せる、申し込みへのハードルを下げる構成。',
-    sample: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-education.png'
   },
   { 
     value: 'finance', label: '金融', icon: '💰', color: '#EAB308', bg: 'from-yellow-500/20 to-amber-500/20',
     description: '【堅実な資産形成】スマホアプリの操作感と資産増を想起させるアイコン。ダークネイビーと金の対比で、プロフェッショナルな品質を担保。',
-    sample: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-finance.png'
   },
   { 
     value: 'health', label: '医療', icon: '🏥', color: '#06B6D4', bg: 'from-cyan-500/20 to-teal-500/20',
     description: '【清潔感と安全】専門家の優しそうな表情と、機能性を感じさせる青のグラデーション。健康課題の解決をストレートに伝えるデザイン。',
-    sample: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-health.png'
   },
   { 
     value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-500/20 to-indigo-500/20',
     description: '【先進・スピード】サーバーやネットワークの抽象的な光。デジタル領域での圧倒的な優位性と、最新技術の導入効果をクールに伝えます。',
-    sample: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-it.png'
   },
   { 
     value: 'other', label: 'その他', icon: '✨', color: '#64748B', bg: 'from-slate-500/20 to-gray-500/20',
     description: '【万能・モダン】特定の業種に縛られない自由なキャンバス。どんなキャッチコピーでも主役になれる、引き算の美学を活かした配置。',
-    sample: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=400&h=300&auto=format&fit=crop'
+    sample: '/banner-samples/cat-other.png'
   },
 ]
 
 const PURPOSES = [
   { 
     value: 'sns_ad', label: 'SNS広告', icon: Target, desc: 'FB/IG/X', hot: true,
-    sample: 'https://images.unsplash.com/photo-1611162616475-46b635cb6868?q=80&w=400&h=300&auto=format&fit=crop',
+    sample: '/banner-samples/purpose-sns_ad.png',
     description: '【スクロール停止】フィード上で指を止めさせる大胆なビジュアルと、3秒で理解できる明快なCTA配置。'
   },
   { 
     value: 'youtube', label: 'YouTube', icon: Play, desc: 'サムネイル', hot: true,
-    sample: 'https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?q=80&w=400&h=300&auto=format&fit=crop',
+    sample: '/banner-samples/purpose-youtube.png',
     description: '【クリック誘発】表情豊かな人物＋強調文字で「見なきゃ損」感を演出。関連動画の中で埋もれないコントラスト設計。'
   },
   { 
     value: 'display', label: 'ディスプレイ', icon: Layout, desc: 'GDN/YDA', hot: false,
-    sample: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=400&h=300&auto=format&fit=crop',
+    sample: '/banner-samples/purpose-display.png',
     description: '【視認性重視】小さなサイズでも読みやすい太字フォントと、ブランドカラーを活かしたシンプル構成。'
   },
   { 
     value: 'webinar', label: 'ウェビナー', icon: Video, desc: 'セミナー', hot: false,
-    sample: 'https://images.unsplash.com/photo-1591115765373-5207764f72e7?q=80&w=400&h=300&auto=format&fit=crop',
+    sample: '/banner-samples/purpose-webinar.png',
     description: '【権威性＋緊急性】登壇者の写真と「参加無料」「残席わずか」で申し込みを後押しするレイアウト。'
   },
   { 
     value: 'lp_hero', label: 'LP', icon: Megaphone, desc: 'ヒーロー', hot: false,
-    sample: 'https://images.unsplash.com/photo-1551434678-e076c223a692?q=80&w=400&h=300&auto=format&fit=crop',
+    sample: '/banner-samples/purpose-lp_hero.png',
     description: '【ファーストビュー】ページを開いた瞬間に価値提案が伝わる、余白を活かした大胆なヘッドライン配置。'
   },
   { 
     value: 'email', label: 'メール', icon: Mail, desc: 'ヘッダー', hot: false,
-    sample: 'https://images.unsplash.com/photo-1596526131083-e8c633c948d2?q=80&w=400&h=300&auto=format&fit=crop',
+    sample: '/banner-samples/purpose-email.png',
     description: '【開封後の導線】メール上部で目を引き、本文へスムーズに誘導するシンプルで軽量なデザイン。'
   },
   { 
     value: 'campaign', label: 'セール', icon: Gift, desc: 'キャンペーン', hot: false,
-    sample: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?q=80&w=400&h=300&auto=format&fit=crop',
+    sample: '/banner-samples/purpose-campaign.png',
     description: '【衝動喚起】「今だけ」「限定」を強調するバースト装飾と、お得感が一目でわかる価格表示レイアウト。'
   },
 ]
@@ -124,51 +124,51 @@ const PURPOSES = [
 // サイズ別のイメージとCTRロジック解説
 const SIZE_INFO: Record<string, { sample: string; description: string }> = {
   '1080x1080': {
-    sample: 'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?q=80&w=400&h=400&auto=format&fit=crop',
+    sample: '/banner-samples/size-1080x1080.png',
     description: '【フィード最適】Instagram/Facebookで最も表示面積が大きく、スクロール中に目を引きやすい正方形。'
   },
   '1200x628': {
-    sample: 'https://images.unsplash.com/photo-1432821596592-e2c18b78144f?q=80&w=400&h=210&auto=format&fit=crop',
+    sample: '/banner-samples/size-1200x628.png',
     description: '【OGP/リンク広告】シェア時のプレビューで情報量と視認性のバランスが最も取れた黄金比率。'
   },
   '1080x1920': {
-    sample: 'https://images.unsplash.com/photo-1585399000684-d2f72660f092?q=80&w=300&h=533&auto=format&fit=crop',
+    sample: '/banner-samples/size-1080x1920.png',
     description: '【ストーリー/リール】全画面表示で没入感MAX。スワイプアップを促す縦型レイアウト。'
   },
   '1280x720': {
-    sample: 'https://images.unsplash.com/photo-1626379953822-baec19c3accd?q=80&w=400&h=225&auto=format&fit=crop',
+    sample: '/banner-samples/size-1280x720.png',
     description: '【YouTube HD】関連動画一覧で埋もれない、顔＋テキストのコントラストが効くサムネイル向け。'
   },
   '1920x1080': {
-    sample: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=400&h=225&auto=format&fit=crop',
+    sample: '/banner-samples/size-1920x1080.png',
     description: '【フルHD】ウェビナーやプレゼン背景に最適。高解像度でプロフェッショナルな印象を与える。'
   },
   '300x250': {
-    sample: 'https://images.unsplash.com/photo-1553484771-047a44eee27b?q=80&w=300&h=250&auto=format&fit=crop',
+    sample: '/banner-samples/size-300x250.png',
     description: '【レクタングル】GDN/YDAで最も配信量が多いサイズ。限られたスペースで要点を伝える設計。'
   },
   '728x90': {
-    sample: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?q=80&w=400&h=50&auto=format&fit=crop',
+    sample: '/banner-samples/size-728x90.png',
     description: '【リーダーボード】記事上部に表示されるPC向けバナー。ブランド認知に効果的な横長形式。'
   },
   '320x50': {
-    sample: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=320&h=50&auto=format&fit=crop',
+    sample: '/banner-samples/size-320x50.png',
     description: '【モバイルバナー】スマホ画面下部に表示。タップしやすいCTAボタン配置が鍵。'
   },
   '1920x600': {
-    sample: 'https://images.unsplash.com/photo-1557682250-33bd709cbe85?q=80&w=400&h=125&auto=format&fit=crop',
+    sample: '/banner-samples/size-1920x600.png',
     description: '【LPワイドヒーロー】ファーストビューを占有し、キャッチコピーを最大限に目立たせるワイド形式。'
   },
   '1200x800': {
-    sample: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?q=80&w=400&h=267&auto=format&fit=crop',
+    sample: '/banner-samples/size-1200x800.png',
     description: '【LP標準】バランスの良い3:2比率。メインビジュアルとCTAを自然に配置できる。'
   },
   '600x200': {
-    sample: 'https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?q=80&w=400&h=133&auto=format&fit=crop',
+    sample: '/banner-samples/size-600x200.png',
     description: '【メールヘッダー】開封直後に目に入る最初の要素。ブランドロゴとキャンペーン名を明示。'
   },
   '600x300': {
-    sample: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=400&h=200&auto=format&fit=crop',
+    sample: '/banner-samples/size-600x300.png',
     description: '【メールバナー】本文中に差し込む訴求画像。クリックを促すボタン風デザインが効果的。'
   },
 }
@@ -1480,6 +1480,12 @@ export default function BannerDashboard() {
                                 src={purposeData.sample}
                                 alt={purposeData.label}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  const el = e.currentTarget
+                                  if (el.dataset.fallbackApplied === '1') return
+                                  el.dataset.fallbackApplied = '1'
+                                  el.src = String(purposeData.sample || '').replace(/\.png(\?.*)?$/, '.svg')
+                                }}
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-2">
                                 <span className="text-white text-[10px] font-bold">広告デザインイメージ</span>
@@ -1573,6 +1579,12 @@ export default function BannerDashboard() {
                               src={catData.sample} 
                               alt={catData.label} 
                               className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                              onError={(e) => {
+                                const el = e.currentTarget
+                                if (el.dataset.fallbackApplied === '1') return
+                                el.dataset.fallbackApplied = '1'
+                                el.src = String(catData.sample || '').replace(/\.png(\?.*)?$/, '.svg')
+                              }}
                             />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
                               <span className="text-white text-[10px] font-black tracking-widest uppercase">Design Taste</span>
@@ -1800,6 +1812,12 @@ export default function BannerDashboard() {
                                       src={sizeData.sample}
                                       alt={displaySize}
                                       className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        const el = e.currentTarget
+                                        if (el.dataset.fallbackApplied === '1') return
+                                        el.dataset.fallbackApplied = '1'
+                                        el.src = String(sizeData.sample || '').replace(/\.png(\?.*)?$/, '.svg')
+                                      }}
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-2">
                                       <span className="text-white text-[10px] font-bold">サイズイメージ</span>
