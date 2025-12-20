@@ -93,7 +93,7 @@ async function generateImage(prompt, size) {
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         responseModalities: ['IMAGE', 'TEXT'],
-        imageConfig: { aspectRatio, imageSize: '2K' },
+        // aspectRatio is sometimes restricted in exp models
       },
     }),
   })
@@ -236,18 +236,18 @@ async function main() {
     const headline = String(s.keyword || '').slice(0, 40)
     const sub = String(s.subText || '').slice(0, 40)
     const cta = String(s.cta || '').slice(0, 16)
-    const c1 = (s.colors && s.colors[0]) || '#2563EB'
-    const c2 = (s.colors && s.colors[1]) || '#06B6D4'
-    const c3 = (s.colors && s.colors[2]) || '#FFFFFF'
-    const c4 = (s.colors && s.colors[3]) || '#0B1220'
+    const c1 = (s.colors && s.colors[0]) || '#2563EB' // Primary Blue
+    const c2 = (s.colors && s.colors[1]) || '#F97316' // Accent Orange
+    const c3 = (s.colors && s.colors[2]) || '#FFFFFF' // White
+    const c4 = (s.colors && s.colors[3]) || '#0F172A' // Dark Slate
 
     const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="${c4}"/>
-      <stop offset="45%" stop-color="${c1}"/>
-      <stop offset="100%" stop-color="${c2}"/>
+      <stop offset="60%" stop-color="${c1}"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
     </linearGradient>
     <linearGradient id="panel" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="${c3}" stop-opacity="0.16"/>
@@ -261,7 +261,7 @@ async function main() {
   <rect width="${width}" height="${height}" rx="${Math.round(Math.min(width, height) * 0.05)}" fill="url(#bg)"/>
 
   <!-- abstract grid -->
-  <g opacity="0.18">
+  <g opacity="0.1">
     ${Array.from({ length: 12 }).map((_, idx) => {
       const x = Math.round((width / 12) * idx)
       return `<line x1="${x}" y1="0" x2="${x}" y2="${height}" stroke="${c3}" stroke-width="1" />`
@@ -284,11 +284,11 @@ async function main() {
     ${sub.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
   </text>` : ''}
 
-  <!-- right illustration blocks -->
-  <g transform="translate(${Math.round(width * 0.70)} ${Math.round(height * 0.18)})" opacity="0.95">
-    <rect x="0" y="0" width="${Math.round(width * 0.24)}" height="${Math.round(height * 0.28)}" rx="${Math.round(height * 0.06)}" fill="${c3}" fill-opacity="0.18" stroke="${c3}" stroke-opacity="0.14"/>
-    <rect x="${Math.round(width * 0.02)}" y="${Math.round(height * 0.04)}" width="${Math.round(width * 0.20)}" height="${Math.round(height * 0.20)}" rx="${Math.round(height * 0.05)}" fill="${c3}" fill-opacity="0.10"/>
-    <rect x="0" y="${Math.round(height * 0.32)}" width="${Math.round(width * 0.24)}" height="${Math.round(height * 0.18)}" rx="${Math.round(height * 0.06)}" fill="${c3}" fill-opacity="0.10" stroke="${c3}" stroke-opacity="0.10"/>
+  <!-- right decoration: accent bars (Bunridge style) -->
+  <g transform="translate(${Math.round(width * 0.70)} ${Math.round(height * 0.18)})">
+    <rect x="0" y="0" width="${Math.round(width * 0.04)}" height="${Math.round(height * 0.28)}" rx="4" fill="${c2}"/>
+    <rect x="${Math.round(width * 0.06)}" y="${Math.round(height * 0.08)}" width="${Math.round(width * 0.04)}" height="${Math.round(height * 0.20)}" rx="4" fill="#FBBF24"/>
+    <rect x="${Math.round(width * 0.12)}" y="${Math.round(height * 0.12)}" width="${Math.round(width * 0.04)}" height="${Math.round(height * 0.16)}" rx="4" fill="${c2}" opacity="0.6"/>
   </g>
 
   <!-- CTA -->
@@ -296,7 +296,7 @@ async function main() {
   <g filter="url(#shadow)">
     <rect x="${Math.round(width * 0.68)}" y="${Math.round(height * 0.72)}"
           width="${Math.round(width * 0.26)}" height="${Math.round(height * 0.16)}"
-          rx="${Math.round(height * 0.06)}" fill="${c2}"/>
+          rx="${Math.round(height * 0.06)}" fill="#FBBF24"/>
     <text x="${Math.round(width * 0.70)}" y="${Math.round(height * 0.82)}"
           fill="${c4}" font-family="ui-sans-serif, system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', sans-serif"
           font-size="${Math.round(height * 0.065)}" font-weight="900">

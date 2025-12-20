@@ -33,10 +33,10 @@ export default function BannerLandingPage() {
             </Link>
             <div className="w-px h-6 bg-gray-200"></div>
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center">
-                <span className="text-xl">🎨</span>
+              <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-gray-800">ドヤバナーAI</span>
+              <span className="font-bold text-gray-800 text-lg tracking-tight">Bunridge</span>
             </div>
           </div>
 
@@ -70,30 +70,30 @@ export default function BannerLandingPage() {
       {/* ヒーロー */}
       <section className="py-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-sky-100 text-sky-800 rounded-full text-sm font-medium mb-6">
-            <Sparkles className="w-4 h-4" />
-            A/B/C 3案同時生成
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-6">
+            <Sparkles className="w-4 h-4 text-orange-500" />
+            Bunridge AI Generation
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-6 tracking-tight">
             プロ品質のバナーを<br />
-            <span className="text-blue-600">ワンボタンで生成</span>
+            <span className="text-blue-600">一瞬で可視化する</span>
           </h1>
-          <p className="text-lg text-gray-600 mb-8">
+          <p className="text-lg text-gray-600 mb-10 leading-relaxed">
             カテゴリを選んでキーワードを入力するだけ。<br />
-            AIがA/B/Cの3案を同時に生成します。
+            Bunridge AIがクリエイティブな3案を同時に生成します。
           </p>
 
           {session ? (
             <Link href="/banner">
-              <button className="px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white text-lg font-bold rounded-2xl shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2 mx-auto">
-                バナーを作成する
+              <button className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-2xl shadow-xl shadow-blue-500/20 transition-all flex items-center gap-2 mx-auto active:scale-95">
+                ダッシュボードを開く
                 <ArrowRight className="w-5 h-5" />
               </button>
             </Link>
           ) : (
             <Link href="/auth/signin?service=banner">
-              <button className="px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white text-lg font-bold rounded-2xl shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2 mx-auto">
-                無料で始める
+              <button className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-2xl shadow-xl shadow-blue-500/20 transition-all flex items-center gap-2 mx-auto active:scale-95">
+                無料で体験する
                 <ArrowRight className="w-5 h-5" />
               </button>
             </Link>
@@ -188,14 +188,14 @@ export default function BannerLandingPage() {
                 <ul className="space-y-1 text-gray-600 text-xs mb-4">
                   {plan.features.slice(0, 3).map((feature, i) => (
                     <li key={i} className="flex items-start gap-1.5">
-                      <span className={plan.popular ? 'text-sky-500' : 'text-green-500'}>✓</span>
+                      <span className={plan.popular ? 'text-orange-500' : 'text-blue-500'}>✓</span>
                       <span>{feature.text}</span>
                     </li>
                   ))}
                 </ul>
                 {plan.price === 0 ? (
                   <Link href="/banner">
-                    <button className="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg transition-colors">
+                    <button className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition-colors">
                       {plan.cta}
                     </button>
                   </Link>
@@ -203,8 +203,8 @@ export default function BannerLandingPage() {
                   <Link href="/banner/pricing">
                     <button className={`w-full py-2 text-xs font-bold rounded-lg transition-colors ${
                       plan.popular
-                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
-                        : 'bg-sky-100 hover:bg-sky-200 text-sky-800'
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                        : 'bg-blue-50 hover:bg-blue-100 text-blue-800'
                     }`}>
                       {plan.cta}
                     </button>
