@@ -58,8 +58,6 @@ export async function POST(request: NextRequest) {
       logoImage,
       personImage,
       referenceImages,
-      brandColors,
-      brandSourceUrl,
     } = body
 
     // バリデーション
@@ -98,19 +96,6 @@ export async function POST(request: NextRequest) {
     if (logoImage) console.log('Logo image provided')
     if (personImage) console.log('Person image provided')
     if (Array.isArray(referenceImages) && referenceImages.length > 0) console.log(`Reference images: ${referenceImages.length}`)
-    if (Array.isArray(brandColors) && brandColors.length > 0) console.log(`Brand colors: ${brandColors.length}`)
-
-    // #RGB/#RRGGBB を正規化
-    const normalizeHex = (v: string): string | null => {
-      const s = String(v || '').trim()
-      const m = s.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
-      if (!m) return null
-      const raw = m[1]
-      const hex = raw.length === 3
-        ? raw.split('').map((c) => c + c).join('')
-        : raw
-      return `#${hex.toUpperCase()}`
-    }
 
     // バナー生成オプション
     const options = {
@@ -123,13 +108,6 @@ export async function POST(request: NextRequest) {
       referenceImages: Array.isArray(referenceImages)
         ? referenceImages.filter((x: any) => typeof x === 'string').slice(0, 2)
         : undefined,
-      brandColors: Array.isArray(brandColors)
-        ? brandColors
-            .map((x: any) => (typeof x === 'string' ? normalizeHex(x) : null))
-            .filter((x: string | null): x is string => typeof x === 'string')
-            .slice(0, 8)
-        : undefined,
-      brandSourceUrl: typeof brandSourceUrl === 'string' ? brandSourceUrl.trim().slice(0, 300) : undefined,
     }
 
     // バナー生成
