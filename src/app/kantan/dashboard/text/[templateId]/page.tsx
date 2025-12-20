@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { 
   ArrowLeft, Sparkles, Loader2, Copy, Check, 
-  RefreshCw, Wand2, LogIn 
+  RefreshCw, Wand2, LogIn, Send, ChevronRight, Rocket, Cpu, User, Bot, MessageSquare
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { SAMPLE_TEMPLATES } from '@/lib/templates'
@@ -30,6 +30,14 @@ function setGuestUsage(count: number) {
   if (typeof window === 'undefined') return
   const today = new Date().toISOString().split('T')[0]
   localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify({ count, date: today }))
+}
+
+// チャットメッセージ型
+interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
 }
 
 // サンプル入力データ
@@ -59,6 +67,18 @@ const SAMPLE_INPUTS: Record<string, Record<string, string>> = {
     tone: 'ポップ',
     target: '20-30代の美容に関心のある女性',
   },
+  'lp-full-text': {
+    product: 'AIマーケティングツール「カンタンマーケAI」',
+    target: 'マーケティング業務を効率化したい中小企業のマーケター',
+    benefit: 'LP構成案4時間→10分、バナーコピー40案を1分で生成',
+    features: 'Gemini 3.0搭載、チャット形式でブラッシュアップ可能、68種類以上のAIエージェント',
+  },
+  'banner-copy': {
+    product: 'オンライン英会話アプリ',
+    target: '英語を話せるようになりたい社会人',
+    appeal: '1日10分から、ネイティブ講師と話せる',
+    cta: '無料体験',
+  },
 }
 
 export default function TemplateDetailPage() {
@@ -66,6 +86,7 @@ export default function TemplateDetailPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const templateId = params.templateId as string
+  const chatEndRef = useRef<HTMLDivElement>(null)
 
   // テンプレート取得
   const template = SAMPLE_TEMPLATES.find(t => t.id === templateId)
@@ -76,6 +97,11 @@ export default function TemplateDetailPage() {
   const [output, setOutput] = useState('')
   const [copied, setCopied] = useState(false)
   const [guestUsageCount, setGuestUsageCount] = useState(0)
+  
+  // チャット状態
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [chatInput, setChatInput] = useState('')
+  const [isChatting, setIsChatting] = useState(false)
 
   const isGuest = !session
   
@@ -92,6 +118,11 @@ export default function TemplateDetailPage() {
     }
   }, [isGuest])
 
+  // チャット末尾にスクロール
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMessages])
+
   const guestRemainingCount = GUEST_DAILY_LIMIT - guestUsageCount
   const canGuestGenerate = guestRemainingCount > 0
   
@@ -106,10 +137,10 @@ export default function TemplateDetailPage() {
   // テンプレートが見つからない
   if (!template) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
         <div className="text-center">
-          <p className="text-gray-600 mb-4">テンプレートが見つかりません</p>
-          <Link href="/kantan/dashboard" className="text-blue-600 hover:underline">
+          <p className="text-white/60 mb-4">テンプレートが見つかりません</p>
+          <Link href="/kantan/dashboard" className="text-cyan-400 hover:underline">
             ダッシュボードに戻る
           </Link>
         </div>
@@ -146,6 +177,7 @@ export default function TemplateDetailPage() {
 
     setIsGenerating(true)
     setOutput('')
+    setChatMessages([])
 
     try {
       const response = await fetch('/api/generate', {
@@ -164,7 +196,18 @@ export default function TemplateDetailPage() {
       }
 
       setOutput(data.output)
-      toast.success('生成完了！', { icon: '🎉' })
+      
+      // 初回生成結果をチャット履歴に追加
+      setChatMessages([
+        {
+          id: `msg-${Date.now()}`,
+          role: 'assistant',
+          content: data.output,
+          timestamp: new Date(),
+        }
+      ])
+      
+      toast.success('生成完了！チャットでブラッシュアップできます', { icon: '🎉' })
 
       // ゲストの使用回数を更新
       if (isGuest) {
@@ -176,6 +219,78 @@ export default function TemplateDetailPage() {
       toast.error(error.message || '生成に失敗しました')
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  // チャットで修正依頼
+  const handleChatSubmit = async () => {
+    if (!chatInput.trim() || isChatting) return
+    if (isGuest && !canGuestGenerate) {
+      toast.error('本日の無料お試しは上限に達しました')
+      return
+    }
+
+    const userMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: chatInput,
+      timestamp: new Date(),
+    }
+    
+    setChatMessages(prev => [...prev, userMessage])
+    setChatInput('')
+    setIsChatting(true)
+
+    try {
+      // 現在の出力と修正依頼を含めたプロンプト
+      const refinementPrompt = `以下は先ほど生成した${template.name}の内容です：
+
+---
+${output}
+---
+
+ユーザーからの修正依頼：
+${chatInput}
+
+上記の修正依頼を反映して、改善版を出力してください。`
+
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: 'chat-refinement',
+          inputs: {
+            prompt: refinementPrompt,
+          },
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || '生成に失敗しました')
+      }
+
+      const assistantMessage: ChatMessage = {
+        id: `msg-${Date.now()}`,
+        role: 'assistant',
+        content: data.output,
+        timestamp: new Date(),
+      }
+      
+      setChatMessages(prev => [...prev, assistantMessage])
+      setOutput(data.output) // 最新の出力を更新
+
+      // ゲストの使用回数を更新
+      if (isGuest) {
+        const newCount = guestUsageCount + 1
+        setGuestUsageCount(newCount)
+        setGuestUsage(newCount)
+      }
+    } catch (error: any) {
+      toast.error(error.message || '修正に失敗しました')
+    } finally {
+      setIsChatting(false)
     }
   }
 
@@ -191,57 +306,92 @@ export default function TemplateDetailPage() {
   const handleReset = () => {
     setOutput('')
     setInputs({})
+    setChatMessages([])
+    setChatInput('')
   }
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">読み込み中...</p>
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-2xl blur-2xl opacity-50 animate-pulse" />
+            <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center mx-auto mb-4">
+              <Rocket className="w-8 h-8 text-white animate-bounce" />
+            </div>
+          </div>
+          <p className="text-white/40">読み込み中...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-center" />
+    <div className="min-h-screen bg-[#0a0a0f] text-white">
+      <Toaster 
+        position="top-center" 
+        toastOptions={{
+          style: {
+            background: '#1a1a2e',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.1)',
+          },
+        }}
+      />
+      
+      {/* アニメーション背景 */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-gradient-to-br from-cyan-500/30 via-transparent to-transparent rounded-full blur-[80px] animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-gradient-to-br from-purple-500/20 via-transparent to-transparent rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+        </div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px]" />
+      </div>
       
       {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/kantan/dashboard" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="w-5 h-5" />
-            <span className="hidden sm:inline">戻る</span>
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/5">
+        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+          <Link href="/kantan/dashboard" className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-all">
+            <ChevronRight className="w-4 h-4 rotate-180" />
+            <span className="hidden sm:inline text-sm">戻る</span>
           </Link>
           
-          <h1 className="font-bold text-gray-800 truncate">{template.name}</h1>
-          
-          {session ? (
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-              <span className="text-blue-600 text-sm font-bold">
-                {session.user?.name?.[0] || 'U'}
-              </span>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-lg blur opacity-50" />
+              <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center">
+                <Rocket className="w-4 h-4 text-white" />
+              </div>
             </div>
-          ) : (
-            <Link href="/auth/signin" className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-full">
-              <LogIn className="w-4 h-4" />
-            </Link>
-          )}
+            <h1 className="font-bold text-white truncate max-w-[200px]">{template.name}</h1>
+          </div>
+          
+          <div className="flex items-center gap-2 px-2 py-1 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-full text-[10px] font-bold">
+            <Cpu className="w-3 h-3 text-purple-400" />
+            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Gemini 3.0</span>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-6">
+      <main className="max-w-4xl mx-auto px-4 py-6 relative">
         {/* ゲストバナー */}
         {isGuest && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+          <div className="mb-6 p-4 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 backdrop-blur-xl border border-cyan-500/20 rounded-2xl">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <p className="text-sm text-blue-700">
-                🆓 お試しモード：残り <strong>{guestRemainingCount}回</strong>
-              </p>
-              <Link href="/auth/signin">
-                <button className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-full">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-cyan-400" />
+                </div>
+                <div>
+                  <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-bold rounded-full">FREE TRIAL</span>
+                  <p className="text-white/60 text-sm mt-1">
+                    残り <span className="font-bold text-cyan-400">{guestRemainingCount}回</span>
+                  </p>
+                </div>
+              </div>
+              <Link href="/auth/signin?service=kantan">
+                <button className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white text-sm font-bold rounded-xl flex items-center gap-2 hover:scale-105 transition-transform">
+                  <LogIn className="w-4 h-4" />
                   ログインで10回に！
                 </button>
               </Link>
@@ -249,81 +399,133 @@ export default function TemplateDetailPage() {
           </div>
         )}
 
-        {/* 出力結果がある場合 */}
+        {/* 出力結果がある場合（チャット形式） */}
         {output ? (
-          <div className="animate-fade-in">
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold text-gray-900">📝 生成結果</h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors"
-                  >
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    {copied ? 'コピー済み' : 'コピー'}
-                  </button>
-                </div>
+          <div className="space-y-6">
+            {/* チャット履歴 */}
+            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-3xl p-6 max-h-[60vh] overflow-y-auto">
+              <div className="flex items-center gap-2 mb-6">
+                <MessageSquare className="w-5 h-5 text-cyan-400" />
+                <h2 className="font-bold text-white">チャットでブラッシュアップ</h2>
               </div>
-              <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-xl p-4">
-                {output}
+              
+              <div className="space-y-4">
+                {chatMessages.map((msg) => (
+                  <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                    {msg.role === 'assistant' && (
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                    <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                      msg.role === 'user' 
+                        ? 'bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 border border-cyan-500/30' 
+                        : 'bg-white/5 border border-white/5'
+                    }`}>
+                      <div className="text-white/80 text-sm whitespace-pre-wrap">{msg.content}</div>
+                    </div>
+                    {msg.role === 'user' && (
+                      <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 text-white/60" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {isChatting && (
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="bg-white/5 border border-white/5 rounded-2xl px-4 py-3">
+                      <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
+                    </div>
+                  </div>
+                )}
+                
+                <div ref={chatEndRef} />
               </div>
             </div>
 
+            {/* チャット入力 */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 rounded-2xl blur-xl" />
+              <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-4">
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleChatSubmit()}
+                    placeholder="修正依頼を入力... 例：もっとカジュアルに / 箇条書きで整理して / CTAを強めに"
+                    className="flex-1 bg-transparent text-white placeholder-white/30 outline-none"
+                    disabled={isChatting}
+                  />
+                  <button
+                    onClick={handleChatSubmit}
+                    disabled={!chatInput.trim() || isChatting}
+                    className="w-10 h-10 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 flex items-center justify-center text-white disabled:opacity-50 hover:scale-105 transition-transform"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* アクションボタン */}
             <div className="flex gap-3">
               <button
+                onClick={handleCopy}
+                className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
+                {copied ? 'コピー済み' : '最新をコピー'}
+              </button>
+              <button
                 onClick={handleReset}
-                className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-5 h-5" />
                 新しく作成
-              </button>
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating || !canGenerate}
-                className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                <Sparkles className="w-5 h-5" />
-                もう一度生成
               </button>
             </div>
           </div>
         ) : (
           <>
             {/* テンプレート説明 */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-6">
-              <p className="text-gray-600">{template.description}</p>
+            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 mb-6">
+              <p className="text-white/60">{template.description}</p>
             </div>
 
             {/* サンプル入力ボタン */}
             <button
               onClick={handleSampleInput}
-              className="w-full mb-6 py-3 px-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold rounded-xl shadow-lg flex items-center justify-center gap-2"
+              className="group w-full mb-6 py-4 px-6 bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 hover:from-cyan-500/30 hover:to-emerald-500/30 border border-cyan-500/30 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-3"
             >
-              <Wand2 className="w-5 h-5" />
+              <Wand2 className="w-5 h-5 text-cyan-400 group-hover:rotate-12 transition-transform" />
               ワンボタンでサンプル入力
             </button>
 
             {/* 入力フォーム */}
-            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-6">
-              <h2 className="font-bold text-gray-900 mb-4">入力項目</h2>
-              <div className="space-y-4">
+            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 mb-6">
+              <h2 className="font-bold text-white mb-6">入力項目</h2>
+              <div className="space-y-5">
                 {template.inputFields.map((field) => (
                   <div key={field.name}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-white/60 mb-2">
                       {field.label}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
+                      {field.required && <span className="text-cyan-400 ml-1">*</span>}
                     </label>
                     
                     {field.type === 'select' ? (
                       <select
                         value={inputs[field.name] || ''}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
                       >
-                        <option value="">選択してください</option>
+                        <option value="" className="bg-[#0a0a0f]">選択してください</option>
                         {field.options?.map((option) => (
-                          <option key={option} value={option}>{option}</option>
+                          <option key={option} value={option} className="bg-[#0a0a0f]">{option}</option>
                         ))}
                       </select>
                     ) : field.type === 'textarea' ? (
@@ -332,7 +534,7 @@ export default function TemplateDetailPage() {
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
                         placeholder={field.placeholder}
                         rows={4}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-none"
                       />
                     ) : (
                       <input
@@ -340,7 +542,7 @@ export default function TemplateDetailPage() {
                         value={inputs[field.name] || ''}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
                         placeholder={field.placeholder}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
                       />
                     )}
                   </div>
@@ -353,10 +555,10 @@ export default function TemplateDetailPage() {
               onClick={handleGenerate}
               disabled={isGenerating || !canGenerate}
               className={`
-                w-full py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3
+                group w-full py-5 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3
                 ${canGenerate && !isGenerating
-                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-xl shadow-blue-500/25 hover:shadow-2xl'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-cyan-500 via-emerald-500 to-teal-500 text-white shadow-2xl shadow-cyan-500/25 hover:scale-[1.02]'
+                  : 'bg-white/10 text-white/30 cursor-not-allowed'
                 }
               `}
             >
@@ -367,16 +569,16 @@ export default function TemplateDetailPage() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-6 h-6" />
-                  生成する
+                  <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+                  AIで生成する
                 </>
               )}
             </button>
 
             {!canGenerate && isGuest && !canGuestGenerate && (
-              <p className="text-center text-sm text-gray-500 mt-3">
+              <p className="text-center text-sm text-white/40 mt-4">
                 本日の無料お試しは上限に達しました。
-                <Link href="/auth/signin" className="text-blue-600 hover:underline ml-1">
+                <Link href="/auth/signin?service=kantan" className="text-cyan-400 hover:underline ml-1">
                   ログインで続ける
                 </Link>
               </p>
@@ -387,4 +589,3 @@ export default function TemplateDetailPage() {
     </div>
   )
 }
-

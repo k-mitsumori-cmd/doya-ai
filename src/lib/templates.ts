@@ -1528,6 +1528,19 @@ NG条件: {{ng}}`,
     outputType: 'TEXT',
     isPremium: false,
   },
+  // ==================== チャット修正用（内部使用） ====================
+  {
+    id: 'chat-refinement',
+    name: 'チャット修正',
+    description: 'チャット形式でコンテンツをブラッシュアップ',
+    categoryId: 'writing',
+    prompt: `{{prompt}}`,
+    inputFields: [
+      { name: 'prompt', label: 'プロンプト', type: 'textarea', required: true },
+    ],
+    outputType: 'TEXT',
+    isPremium: false,
+  },
 ]
 
 export function generateTemplateId(category: string, index: number): string {
