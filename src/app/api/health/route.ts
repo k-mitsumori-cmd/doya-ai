@@ -12,8 +12,13 @@ export async function GET() {
 
   // データベース接続テスト
   try {
-    await prisma.$queryRaw`SELECT 1`
-    result.database = 'connected'
+    // DATABASE_URL が無い環境（ローカル/ビルド時など）では Prisma 接続チェックをスキップ
+    if (!process.env.DATABASE_URL) {
+      result.database = 'skipped'
+    } else {
+      await prisma.$queryRaw`SELECT 1`
+      result.database = 'connected'
+    }
   } catch (error: any) {
     result.database = 'error'
     result.status = 'degraded'
