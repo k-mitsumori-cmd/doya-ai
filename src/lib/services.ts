@@ -63,35 +63,36 @@ export interface Service {
 
 export const SERVICES: Service[] = [
   // ----------------------------------------
-  // カンタンドヤAI（テキスト生成）
+  // カンタンマーケAI（マーケティング業務AIエージェント）
   // ----------------------------------------
   {
     id: 'kantan',
-    name: 'カンタンドヤAI',
-    shortName: 'カンタン',
-    description: 'ビジネス文章をAIが自動生成',
-    longDescription: 'メール、ブログ、SNS投稿など68種類のテンプレートから、必要な文章をワンボタンで作成できます。',
-    icon: '📝',
-    color: 'blue',
-    gradient: 'from-blue-500 to-cyan-500',
-    bgGradient: 'from-blue-50 to-cyan-50',
+    name: 'カンタンマーケAI',
+    shortName: 'マーケ',
+    description: 'マーケティング業務をAIエージェントで劇的効率化',
+    longDescription: 'LP構成案、バナーコピー、広告文、メルマガ、競合分析…マーケ業務を丸ごとチャット形式のAIエージェントがサポート。プロンプト不要で誰でもプロ品質のアウトプット。',
+    icon: '🚀',
+    color: 'emerald',
+    gradient: 'from-emerald-500 to-teal-500',
+    bgGradient: 'from-emerald-50 to-teal-50',
     href: '/kantan',
     dashboardHref: '/kantan/dashboard',
     pricingHref: '/kantan/pricing',
     guideHref: '/kantan/guide',
     features: [
-      '68種類のテンプレート',
-      'ビジネスメール自動生成',
-      'ブログ記事作成',
-      'SNS投稿文作成',
-      'キャッチコピー生成',
-      '議事録・提案書作成',
+      'LP構成案を10分で作成',
+      'バナーコピー40案を1分で生成',
+      '広告データ分析',
+      'メルマガ・記事作成',
+      'ペルソナ・競合分析',
+      'チャット形式でブラッシュアップ',
     ],
     useCases: [
-      '営業メールを素早く作成したい',
-      'ブログのネタが尽きた',
-      'SNS運用を効率化したい',
-      'キャッチコピーが思いつかない',
+      'LP構成案に4時間かかっている',
+      'バナーコピーのアイデアが出ない',
+      '広告分析に時間がかかりすぎる',
+      'マーケターが足りていない',
+      'AIを活用しきれていない',
     ],
     pricing: {
       free: { 
@@ -104,7 +105,7 @@ export const SERVICES: Service[] = [
         name: 'プロプラン', 
         limit: '1日100回まで', 
         dailyLimit: 100,
-        price: 2980,
+        price: 4980,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_KANTAN_PRO_PRICE_ID,
       },
     },
@@ -112,6 +113,7 @@ export const SERVICES: Service[] = [
     category: 'text',
     order: 1,
     requiresAuth: false,  // ゲストも一部利用可
+    isNew: true,
   },
   
   // ----------------------------------------

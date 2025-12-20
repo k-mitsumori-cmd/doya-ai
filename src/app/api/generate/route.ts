@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { SAMPLE_TEMPLATES } from '@/lib/templates'
-import { generateText } from '@/lib/openai'
+import { generateTextWithGemini, getGeminiModelName } from '@/lib/gemini-text'
 
 // レート制限用（本番環境ではRedisなどを使用することを推奨）
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
@@ -123,8 +123,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // OpenAI APIを使用してテキスト生成
-    const output = await generateText(prompt, inputs)
+    // Gemini 3.0 Flashを使用してテキスト生成（高速・高品質）
+    const output = await generateTextWithGemini(prompt, inputs, {
+      temperature: 0.8,
+      maxOutputTokens: 8192,
+    })
 
     if (!output) {
       return NextResponse.json(
@@ -136,6 +139,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       output,
+      model: getGeminiModelName(),
       generation: {
         id: `gen-${Date.now()}`,
         output,
@@ -143,20 +147,21 @@ export async function POST(req: NextRequest) {
         templateId,
         userId: session?.user?.id || 'anonymous',
         createdAt: new Date().toISOString(),
+        model: getGeminiModelName(),
       },
     })
   } catch (error: any) {
     console.error('Generation error:', error)
     
-    // OpenAI APIのエラーハンドリング
-    if (error.code === 'insufficient_quota') {
+    // Gemini APIのエラーハンドリング
+    if (error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {
       return NextResponse.json(
         { error: 'APIの利用制限に達しました。しばらくしてからお試しください。' },
         { status: 503 }
       )
     }
     
-    if (error.code === 'rate_limit_exceeded') {
+    if (error.message?.includes('rate') || error.message?.includes('429')) {
       return NextResponse.json(
         { error: 'リクエストが集中しています。しばらくしてからお試しください。' },
         { status: 429 }
