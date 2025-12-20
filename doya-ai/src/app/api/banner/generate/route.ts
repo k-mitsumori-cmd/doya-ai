@@ -140,11 +140,6 @@ export async function POST(request: NextRequest) {
       const userId = (session?.user as any)?.id as string | undefined
       if (userId) {
         const today = new Date().toISOString().split('T')[0] // UTC日付
-        const planRaw = String((session?.user as any)?.plan || 'FREE').toUpperCase()
-        const isPaid =
-          planRaw === 'PRO' || planRaw === 'BUNDLE' || planRaw === 'BUSINESS' || planRaw === 'ENTERPRISE' || planRaw === 'PREMIUM'
-        const desiredPlan = isPaid ? 'PRO' : 'FREE'
-        const dailyLimit = isPaid ? BANNER_PRICING.proLimit : BANNER_PRICING.freeLimit
 
         try {
           const current = await prisma.userServiceSubscription.upsert({
@@ -152,14 +147,12 @@ export async function POST(request: NextRequest) {
             create: {
               userId,
               serviceId: 'banner',
-              plan: desiredPlan,
+              plan: 'FREE',
               dailyUsage: 0,
               monthlyUsage: 0,
               lastUsageReset: new Date(),
             },
-            update: {
-              plan: desiredPlan,
-            },
+            update: {},
           })
 
           // 日付/月が変わっていたらリセット
@@ -180,7 +173,15 @@ export async function POST(request: NextRequest) {
               })
             : current
 
-          if (normalized.dailyUsage >= dailyLimit) {
+          const plan = String(normalized.plan || 'FREE').toUpperCase()
+          const dailyLimit =
+            plan === 'ENTERPRISE'
+              ? -1
+              : plan === 'PRO'
+                ? BANNER_PRICING.proLimit
+                : BANNER_PRICING.freeLimit
+
+          if (dailyLimit !== -1 && normalized.dailyUsage >= dailyLimit) {
             return NextResponse.json(
               {
                 error: '本日の使用回数上限に達しました。上位利用をご希望の場合はお問い合わせください。',
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
           usageInfo = {
             dailyLimit,
             dailyUsed: normalized.dailyUsage,
-            dailyRemaining: Math.max(0, dailyLimit - normalized.dailyUsage),
+            dailyRemaining: dailyLimit === -1 ? -1 : Math.max(0, dailyLimit - normalized.dailyUsage),
           }
         } catch (e: any) {
           console.error('Banner usage limit check failed:', e)

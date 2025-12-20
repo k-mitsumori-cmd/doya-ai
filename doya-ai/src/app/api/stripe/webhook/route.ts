@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { constructWebhookEvent, stripe } from '@/lib/stripe'
+import { constructWebhookEvent, getPlanIdFromStripePriceId, getServiceIdFromPlanId, stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 
@@ -198,6 +198,28 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     },
   })
 
+  // サービス別プランもフリーに戻す（どのサービスの解約かは価格ID/metadataから推定）
+  try {
+    const priceId = subscription.items.data[0]?.price.id
+    const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
+    const planIdFromMeta = (subscription.metadata?.planId as any) || null
+    const planId = (planIdFromPrice || planIdFromMeta) as any
+    if (planId && typeof planId === 'string') {
+      const serviceId = getServiceIdFromPlanId(planId)
+      if (serviceId !== 'bundle') {
+        await prisma.userServiceSubscription.update({
+          where: { userId_serviceId: { userId: user.id, serviceId } },
+          data: {
+            plan: 'FREE',
+            stripeSubscriptionId: null,
+            stripePriceId: null,
+            stripeCurrentPeriodEnd: null,
+          },
+        }).catch(() => {})
+      }
+    }
+  } catch {}
+
   console.log(`Subscription canceled for user: ${user.id}`)
 }
 
@@ -216,36 +238,59 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 // ========================================
 async function updateUserSubscription(userId: string, subscription: Stripe.Subscription) {
   const priceId = subscription.items.data[0]?.price.id
-  const plan = getPlanFromPriceId(priceId)
+  const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
+  const planIdFromMeta = (subscription.metadata?.planId as any) || null
+  const planId = (planIdFromPrice || planIdFromMeta) as any
+
+  // まずはサービス別に確実に反映
+  if (planId && typeof planId === 'string' && planId.includes('-')) {
+    const serviceId = getServiceIdFromPlanId(planId)
+    if (serviceId !== 'bundle') {
+      const servicePlan =
+        planId === 'seo-business'
+          ? 'BUSINESS'
+          : planId.endsWith('-pro')
+            ? 'PRO'
+            : 'FREE'
+      await prisma.userServiceSubscription.upsert({
+        where: { userId_serviceId: { userId, serviceId } },
+        create: {
+          userId,
+          serviceId,
+          plan: servicePlan,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: priceId,
+          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          dailyUsage: 0,
+          monthlyUsage: 0,
+          lastUsageReset: new Date(),
+        },
+        update: {
+          plan: servicePlan,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: priceId,
+          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        },
+      })
+    }
+  }
+
+  // ポータル全体のplanも更新（互換用）
+  const userPlan =
+    planId === 'bundle' ? 'BUNDLE'
+      : planId === 'seo-business' ? 'BUSINESS'
+        : planId && String(planId).endsWith('-pro') ? 'PRO'
+          : 'FREE'
 
   await prisma.user.update({
     where: { id: userId },
     data: {
-      plan,
+      plan: userPlan,
       stripeSubscriptionId: subscription.id,
       stripePriceId: priceId,
       stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
     },
   })
 
-  console.log(`Updated subscription for user ${userId}: ${plan} (${subscription.status})`)
-}
-
-// 価格IDからプラン名を取得
-function getPlanFromPriceId(priceId: string): string {
-  // 環境変数またはデフォルト値と照合
-  // 実際の価格IDに応じて調整が必要
-  if (priceId.includes('pro') || priceId.includes('PRO')) {
-    return 'PRO'
-  }
-  if (priceId.includes('starter') || priceId.includes('STARTER')) {
-    return 'STARTER'
-  }
-  if (priceId.includes('business') || priceId.includes('BUSINESS')) {
-    return 'BUSINESS'
-  }
-  if (priceId.includes('bundle') || priceId.includes('BUNDLE')) {
-    return 'BUNDLE'
-  }
-  return 'FREE'
+  console.log(`Updated subscription for user ${userId}: ${userPlan} (${subscription.status})`)
 }
