@@ -5,8 +5,8 @@ import { ArrowLeft, Palette, Save } from 'lucide-react'
 import { useState } from 'react'
 
 export default function BannerBrandPage() {
-  const [primaryColor, setPrimaryColor] = useState('#8B5CF6')
-  const [secondaryColor, setSecondaryColor] = useState('#EC4899')
+  const [primaryColor, setPrimaryColor] = useState('#2563EB')
+  const [secondaryColor, setSecondaryColor] = useState('#06B6D4')
   const [brandName, setBrandName] = useState('')
 
   return (
@@ -19,7 +19,7 @@ export default function BannerBrandPage() {
             <span>戻る</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Palette className="w-5 h-5 text-purple-600" />
+            <Palette className="w-5 h-5 text-blue-600" />
             <span className="font-bold text-gray-800">ブランド設定</span>
           </div>
         </div>
@@ -41,7 +41,7 @@ export default function BannerBrandPage() {
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
                 placeholder="例: My Company"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-sky-200 outline-none transition-all"
               />
             </div>
 
@@ -61,7 +61,7 @@ export default function BannerBrandPage() {
                   type="text"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
+                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none"
                 />
               </div>
             </div>
@@ -82,7 +82,7 @@ export default function BannerBrandPage() {
                   type="text"
                   value={secondaryColor}
                   onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 outline-none"
+                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none"
                 />
               </div>
             </div>
@@ -101,7 +101,7 @@ export default function BannerBrandPage() {
             </div>
 
             {/* 保存ボタン */}
-            <button className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
+            <button className="w-full py-4 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
               <Save className="w-5 h-5" />
               保存する
             </button>

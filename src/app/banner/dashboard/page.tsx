@@ -21,7 +21,7 @@ import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, in
 // ========================================
 const CATEGORIES = [
   { value: 'telecom', label: '通信', icon: '📱', color: '#3B82F6', bg: 'from-blue-500/20 to-cyan-500/20' },
-  { value: 'marketing', label: 'マーケ', icon: '📊', color: '#8B5CF6', bg: 'from-violet-500/20 to-purple-500/20' },
+  { value: 'marketing', label: 'マーケ', icon: '📊', color: '#0EA5E9', bg: 'from-sky-500/20 to-cyan-500/20' },
   { value: 'ec', label: 'EC', icon: '🛒', color: '#F97316', bg: 'from-orange-500/20 to-amber-500/20' },
   { value: 'recruit', label: '採用', icon: '👥', color: '#22C55E', bg: 'from-green-500/20 to-emerald-500/20' },
   { value: 'beauty', label: '美容', icon: '💄', color: '#EC4899', bg: 'from-pink-500/20 to-rose-500/20' },
@@ -30,7 +30,7 @@ const CATEGORIES = [
   { value: 'education', label: '教育', icon: '📚', color: '#6366F1', bg: 'from-indigo-500/20 to-blue-500/20' },
   { value: 'finance', label: '金融', icon: '💰', color: '#EAB308', bg: 'from-yellow-500/20 to-amber-500/20' },
   { value: 'health', label: '医療', icon: '🏥', color: '#06B6D4', bg: 'from-cyan-500/20 to-teal-500/20' },
-  { value: 'it', label: 'IT', icon: '💻', color: '#A855F7', bg: 'from-purple-500/20 to-violet-500/20' },
+  { value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-500/20 to-indigo-500/20' },
   { value: 'other', label: 'その他', icon: '✨', color: '#64748B', bg: 'from-slate-500/20 to-gray-500/20' },
 ]
 
@@ -162,7 +162,7 @@ const BANNER_INSIGHTS: Record<string, {
         'ナンバリング（3つ、5選）で具体性',
         '青・緑の信頼感カラー',
       ],
-      color: 'from-blue-500 to-violet-500',
+      color: 'from-blue-500 to-cyan-500',
       icon: '📚',
     },
     {
@@ -1054,7 +1054,7 @@ export default function BannerDashboard() {
   // Render
   // ========================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/30 text-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50/40 text-gray-900">
       <Toaster 
         position="top-center" 
         toastOptions={{
@@ -1077,14 +1077,14 @@ export default function BannerDashboard() {
           <div className="h-16 sm:h-20 flex items-center justify-between">
             <Link href="/banner" className="flex items-center gap-3 sm:gap-4 group">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
-                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center shadow-xl">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
+                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-600 via-sky-600 to-cyan-600 flex items-center justify-center shadow-xl">
                   <span className="text-xl sm:text-2xl">🎨</span>
                 </div>
               </div>
               <div>
                 <h1 className="font-black text-lg sm:text-xl tracking-tight">
-                  <span className="bg-gradient-to-r from-violet-700 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-blue-700 via-sky-600 to-cyan-600 bg-clip-text text-transparent">
                     ドヤバナーAI
                   </span>
                 </h1>
@@ -1125,15 +1125,15 @@ export default function BannerDashboard() {
                   <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl border ${
                     userRemaining <= 5
                       ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200/50'
-                      : 'bg-gradient-to-r from-violet-50 to-fuchsia-50 border-violet-200/50'
+                      : 'bg-gradient-to-r from-sky-50 to-cyan-50 border-sky-200/60'
                   }`}>
-                    <div className={`w-2 h-2 rounded-full ${userRemaining <= 5 ? 'bg-amber-400' : 'bg-violet-400'} ${userRemaining <= 5 ? 'animate-pulse' : ''}`} />
+                    <div className={`w-2 h-2 rounded-full ${userRemaining <= 5 ? 'bg-amber-400' : 'bg-sky-400'} ${userRemaining <= 5 ? 'animate-pulse' : ''}`} />
                     {userRemaining <= 0 ? (
                       <span className="text-xs sm:text-sm font-black text-amber-800">本日の上限</span>
                     ) : (
                       <>
-                        <span className={`text-xs sm:text-sm font-bold ${userRemaining <= 5 ? 'text-amber-700' : 'text-violet-700'}`}>{userRemaining}</span>
-                        <span className={`text-xs hidden sm:inline ${userRemaining <= 5 ? 'text-amber-600' : 'text-violet-600'}`}>回残り</span>
+                        <span className={`text-xs sm:text-sm font-bold ${userRemaining <= 5 ? 'text-amber-700' : 'text-sky-800'}`}>{userRemaining}</span>
+                        <span className={`text-xs hidden sm:inline ${userRemaining <= 5 ? 'text-amber-600' : 'text-sky-700'}`}>回残り</span>
                       </>
                     )}
                     {userRemaining <= 0 && (
@@ -1147,8 +1147,8 @@ export default function BannerDashboard() {
                       </a>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-violet-100 to-fuchsia-100 border border-violet-200/50">
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-white text-xs font-bold">
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-sky-100 to-cyan-100 border border-sky-200/60">
+                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white text-xs font-bold">
                       {session.user?.name?.[0]?.toUpperCase() || 'U'}
                     </div>
                     <span className="text-sm font-semibold text-gray-700 max-w-[80px] truncate hidden sm:block">{session.user?.name?.split(' ')[0]}</span>
@@ -1178,17 +1178,17 @@ export default function BannerDashboard() {
               className="relative overflow-hidden"
             >
               {/* Main Card */}
-              <div className="relative bg-white rounded-3xl border border-gray-200/60 p-6 sm:p-10 shadow-2xl shadow-violet-500/5">
+              <div className="relative bg-white rounded-3xl border border-gray-200/60 p-6 sm:p-10 shadow-2xl shadow-blue-500/5">
                 {/* Subtle Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/[0.02] via-transparent to-fuchsia-500/[0.02] rounded-3xl" />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] via-transparent to-cyan-500/[0.02] rounded-3xl" />
                 
                 {/* Decorative Shapes */}
-                <div className="absolute -top-20 -right-20 w-60 h-60 bg-gradient-to-br from-violet-100 to-fuchsia-100 rounded-full blur-3xl opacity-60" />
+                <div className="absolute -top-20 -right-20 w-60 h-60 bg-gradient-to-br from-sky-100 to-cyan-100 rounded-full blur-3xl opacity-60" />
                 <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-gradient-to-tr from-cyan-100 to-blue-100 rounded-full blur-3xl opacity-40" />
                 
                 <div className="relative">
                   {/* Badge */}
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-sm font-semibold shadow-lg shadow-violet-500/30 mb-6">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/30 mb-6">
                     <Sparkles className="w-4 h-4" />
                     A/B/C 3パターン同時生成
                   </div>
@@ -1197,7 +1197,7 @@ export default function BannerDashboard() {
                   <h1 className="text-3xl sm:text-4xl font-black mb-4 tracking-tight leading-tight">
                     プロ品質バナーを
                     <br />
-                    <span className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+                    <span className="bg-gradient-to-r from-blue-600 via-sky-600 to-cyan-600 bg-clip-text text-transparent">
                       数クリックで自動生成
                     </span>
                   </h1>
@@ -1219,7 +1219,7 @@ export default function BannerDashboard() {
             >
               <div className="flex items-center justify-between mb-4 sm:mb-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-white font-black text-sm sm:text-base shadow-lg shadow-violet-500/30">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white font-black text-sm sm:text-base shadow-lg shadow-blue-500/30">
                     1
                   </div>
                   <div>
@@ -1229,11 +1229,11 @@ export default function BannerDashboard() {
                 </div>
                 <button 
                   onClick={handleSample}
-                  className="flex items-center gap-2 px-3.5 py-2 bg-violet-50 hover:bg-violet-100 text-violet-700 rounded-xl transition-colors text-sm font-bold"
+                  className="flex items-center gap-2 px-3.5 py-2 bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-xl transition-colors text-sm font-bold"
                 >
                   <Wand2 className="w-4 h-4" />
                   <span>サンプル入力</span>
-                  <span className="px-2 py-0.5 rounded-full bg-white/70 border border-violet-200 text-[11px] font-black text-violet-700">
+                  <span className="px-2 py-0.5 rounded-full bg-white/70 border border-sky-200 text-[11px] font-black text-sky-800">
                     {category
                       ? `${Math.max(1, sampleCopyIndex + 1)}/${Math.max(1, sampleCopyTotal)}`
                       : `${Math.max(1, sampleScenarioIndex + 1)}/${SAMPLE_SCENARIOS.length}`}
@@ -1250,7 +1250,7 @@ export default function BannerDashboard() {
                       onClick={() => setPurpose(p.value)}
                       className={`relative p-3 sm:p-4 rounded-xl sm:rounded-2xl text-center transition-all ${
                         isSelected 
-                          ? 'bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/30 scale-[1.02]' 
+                          ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]' 
                           : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:scale-[1.02]'
                       }`}
                     >
@@ -1369,7 +1369,7 @@ export default function BannerDashboard() {
                           onChange={(e) => setCustomWidth(e.target.value)}
                           min={100}
                           max={4096}
-                          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-center text-lg font-bold focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-100 outline-none transition-all"
+                          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-center text-lg font-bold focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
                           placeholder="1080"
                         />
                       </div>
@@ -1382,7 +1382,7 @@ export default function BannerDashboard() {
                           onChange={(e) => setCustomHeight(e.target.value)}
                           min={100}
                           max={4096}
-                          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-center text-lg font-bold focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-100 outline-none transition-all"
+                          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-center text-lg font-bold focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
                           placeholder="1080"
                         />
                       </div>
@@ -1392,7 +1392,7 @@ export default function BannerDashboard() {
                     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
                       <div className="flex items-center gap-2">
                         <div 
-                          className="bg-gradient-to-br from-fuchsia-200 to-violet-200 border border-fuchsia-300 rounded"
+                          className="bg-gradient-to-br from-sky-200 to-cyan-200 border border-sky-300 rounded"
                           style={{
                             width: `${Math.min(40, 40 * (parseInt(customWidth) || 1) / (parseInt(customHeight) || 1))}px`,
                             height: `${Math.min(40, 40 * (parseInt(customHeight) || 1) / (parseInt(customWidth) || 1))}px`,
@@ -1463,11 +1463,11 @@ export default function BannerDashboard() {
                           onClick={() => setSize(s.value)}
                           className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 ${
                             isSelected 
-                              ? 'bg-violet-50 border-2 border-violet-400 text-violet-700 shadow-sm' 
+                              ? 'bg-sky-50 border-2 border-sky-400 text-sky-800 shadow-sm' 
                               : 'bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                           }`}
                         >
-                          {isSelected && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-600" />}
+                          {isSelected && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />}
                           <span className="font-medium text-xs sm:text-sm">{s.label}</span>
                           <span className="text-[10px] sm:text-xs text-gray-400 hidden sm:inline">{s.ratio}</span>
                         </button>
@@ -1511,7 +1511,7 @@ export default function BannerDashboard() {
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
                   placeholder="例: 月額990円〜 乗り換えで最大2万円キャッシュバック"
-                  className="w-full px-4 sm:px-5 py-4 sm:py-5 bg-gray-50/50 border-2 border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:border-violet-500 focus:bg-white focus:shadow-lg focus:shadow-violet-500/10 outline-none transition-all resize-none text-base sm:text-lg leading-relaxed"
+                  className="w-full px-4 sm:px-5 py-4 sm:py-5 bg-gray-50/50 border-2 border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:bg-white focus:shadow-lg focus:shadow-blue-500/10 outline-none transition-all resize-none text-base sm:text-lg leading-relaxed"
                   rows={3}
                   maxLength={200}
                 />
@@ -1554,7 +1554,7 @@ export default function BannerDashboard() {
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
                         placeholder="例: 株式会社〇〇"
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all"
                       />
                     </div>
                     
@@ -1578,7 +1578,7 @@ export default function BannerDashboard() {
                               </button>
                             </div>
                           ) : (
-                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-200 hover:border-violet-400 cursor-pointer transition-colors bg-gray-50 hover:bg-violet-50">
+                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-200 hover:border-sky-400 cursor-pointer transition-colors bg-gray-50 hover:bg-sky-50">
                               <Building2 className="w-8 h-8 text-gray-300 mb-2" />
                               <span className="text-xs text-gray-400">アップロード</span>
                               <input
@@ -1610,7 +1610,7 @@ export default function BannerDashboard() {
                               </button>
                             </div>
                           ) : (
-                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-200 hover:border-violet-400 cursor-pointer transition-colors bg-gray-50 hover:bg-violet-50">
+                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-200 hover:border-sky-400 cursor-pointer transition-colors bg-gray-50 hover:bg-sky-50">
                               <User className="w-8 h-8 text-gray-300 mb-2" />
                               <span className="text-xs text-gray-400">アップロード</span>
                               <input
@@ -1649,7 +1649,7 @@ export default function BannerDashboard() {
                         </div>
                       )}
 
-                      <label className="flex items-center justify-center w-full h-12 rounded-xl border-2 border-dashed border-gray-200 hover:border-violet-400 cursor-pointer transition-colors bg-gray-50 hover:bg-violet-50">
+                      <label className="flex items-center justify-center w-full h-12 rounded-xl border-2 border-dashed border-gray-200 hover:border-sky-400 cursor-pointer transition-colors bg-gray-50 hover:bg-sky-50">
                         <span className="text-sm font-bold text-gray-600">参考画像を追加</span>
                         <input
                           type="file"
@@ -1681,7 +1681,7 @@ export default function BannerDashboard() {
                             onClick={() => setUseCustomColors((v) => !v)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
                               useCustomColors
-                                ? 'bg-violet-100 text-violet-700'
+                                ? 'bg-sky-100 text-sky-800'
                                 : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
                             }`}
                           >
@@ -1692,7 +1692,7 @@ export default function BannerDashboard() {
                         <div className="mt-3 flex flex-col sm:flex-row gap-2">
                           <input
                             type="color"
-                            value={normalizeHexClient(colorDraft) || '#8B5CF6'}
+                            value={normalizeHexClient(colorDraft) || '#2563EB'}
                             onChange={(e) => setColorDraft(e.target.value)}
                             className="h-12 w-16 rounded-xl border border-gray-200 bg-white p-1"
                             aria-label="color picker"
@@ -1700,14 +1700,14 @@ export default function BannerDashboard() {
                           <input
                             value={colorDraft}
                             onChange={(e) => setColorDraft(e.target.value)}
-                            placeholder="#8B5CF6"
-                            className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all font-mono"
+                            placeholder="#2563EB"
+                            className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all font-mono"
                           />
                           <button
                             onClick={() => {
                               const hex = normalizeHexClient(colorDraft)
                               if (!hex) {
-                                toast.error('HEX形式（例: #8B5CF6）で入力してください')
+                                toast.error('HEX形式（例: #2563EB）で入力してください')
                                 return
                               }
                               setCustomColors((prev) => uniqStrings([...prev, hex]).slice(0, 8))
@@ -1785,7 +1785,7 @@ export default function BannerDashboard() {
                   <>
                     <div className="absolute inset-0 bg-gray-900" />
                     <div 
-                      className="absolute inset-0 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-600 transition-all duration-300"
+                      className="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600 transition-all duration-300"
                       style={{ clipPath: `inset(0 ${100 - progress}% 0 0)` }}
                     />
                     <div className="relative flex items-center gap-3">
@@ -1798,7 +1798,7 @@ export default function BannerDashboard() {
                   </>
                 ) : (
                   <>
-                    <div className="absolute inset-0 bg-gradient-to-r from-violet-600/0 via-violet-600/10 to-violet-600/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-blue-600/10 to-blue-600/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                     <Sparkles className="w-6 h-6 sm:w-7 sm:h-7" />
                     <span>バナーを生成する</span>
                     <ArrowRight className="w-5 h-5 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
@@ -1841,13 +1841,13 @@ export default function BannerDashboard() {
                   {generatedBanners.length > 0 ? (
                     <>
                       {/* Text Overlay Notice */}
-                      <div className="bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200/50 rounded-2xl p-4 mb-4">
+                      <div className="bg-gradient-to-r from-sky-50 to-cyan-50 border border-sky-200/60 rounded-2xl p-4 mb-4">
                         <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
-                            <Pencil className="w-4 h-4 text-violet-600" />
+                          <div className="w-8 h-8 rounded-xl bg-sky-100 flex items-center justify-center flex-shrink-0">
+                            <Pencil className="w-4 h-4 text-blue-600" />
                           </div>
                           <div className="text-sm text-gray-600">
-                            <span className="font-semibold text-violet-700">ヒント：</span>
+                            <span className="font-semibold text-sky-800">ヒント：</span>
                             生成されたバナーにはテキスト用スペースが確保されています。Canvaなどでテキストを追加してください。
                           </div>
                         </div>
@@ -1867,7 +1867,7 @@ export default function BannerDashboard() {
                               onClick={() => setSelectedBanner(i)}
                               className={`relative aspect-square rounded-lg sm:rounded-xl overflow-hidden cursor-pointer group shadow-md hover:shadow-xl transition-shadow ${
                                 selectedBanner === i 
-                                  ? 'ring-2 ring-violet-500 ring-offset-2 ring-offset-white' 
+                                  ? 'ring-2 ring-sky-500 ring-offset-2 ring-offset-white' 
                                   : ''
                               }`}
                             >
@@ -1971,7 +1971,7 @@ export default function BannerDashboard() {
                                 onClick={() => setShowRefineInput(!showRefineInput)}
                                 className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-colors ${
                                   showRefineInput 
-                                    ? 'bg-fuchsia-100 text-fuchsia-700' 
+                                    ? 'bg-sky-100 text-sky-800' 
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
                                 }`}
                               >
@@ -1980,7 +1980,7 @@ export default function BannerDashboard() {
                               </button>
                               <button
                                 onClick={() => handleDownload(generatedBanners[selectedBanner], selectedBanner)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-violet-100 text-violet-700 rounded-lg text-sm hover:bg-violet-200 transition-colors"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-sky-100 text-sky-800 rounded-lg text-sm hover:bg-sky-200 transition-colors"
                               >
                                 <Download className="w-4 h-4" />
                                 DL
@@ -2088,14 +2088,14 @@ export default function BannerDashboard() {
                           <div className="border-t border-gray-100 pt-3">
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                <Pencil className="w-4 h-4 text-violet-600" />
+                                <Pencil className="w-4 h-4 text-blue-600" />
                                 <span className="text-sm font-bold text-gray-900">テキストレイヤー（アプリ独自）</span>
                                 <span className="text-[11px] text-gray-500 hidden sm:inline">日本語文字化け対策にも◎</span>
                               </div>
                               <button
                                 onClick={() => setShowTextOverlay(!showTextOverlay)}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                                  showTextOverlay ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                  showTextOverlay ? 'bg-sky-100 text-sky-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                 }`}
                               >
                                 {showTextOverlay ? 'ON' : 'OFF'}
@@ -2107,20 +2107,20 @@ export default function BannerDashboard() {
                                 <input
                                   value={overlayHeadline}
                                   onChange={(e) => setOverlayHeadline(e.target.value)}
-                                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none"
+                                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                                   placeholder="見出し（例: 月額990円〜 乗り換えで最大2万円）"
                                 />
                                 <input
                                   value={overlaySubhead}
                                   onChange={(e) => setOverlaySubhead(e.target.value)}
-                                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none"
+                                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                                   placeholder="サブ（任意）"
                                 />
                                 <div className="grid grid-cols-2 gap-2">
                                   <input
                                     value={overlayCta}
                                     onChange={(e) => setOverlayCta(e.target.value)}
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none"
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none"
                                     placeholder="CTA（例: 詳しくはこちら）"
                                   />
                                   <select
@@ -2175,7 +2175,7 @@ export default function BannerDashboard() {
                                     <button
                                       key={v}
                                       onClick={() => setOverlayHeadline(v)}
-                                      className="px-3 py-1.5 bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs rounded-lg font-bold"
+                                      className="px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs rounded-lg font-bold"
                                     >
                                       {v.length > 18 ? `${v.slice(0, 18)}…` : v}
                                     </button>
@@ -2214,7 +2214,7 @@ export default function BannerDashboard() {
                               >
                                 <div className="pt-3 border-t border-gray-100">
                                   <div className="flex items-center gap-2 mb-2">
-                                    <MessageSquare className="w-4 h-4 text-fuchsia-500" />
+                                    <MessageSquare className="w-4 h-4 text-cyan-600" />
                                     <span className="text-sm font-medium text-gray-800">AIに修正指示</span>
                                   </div>
                                   <div className="relative">
@@ -2222,7 +2222,7 @@ export default function BannerDashboard() {
                                       value={refineInstruction}
                                       onChange={(e) => setRefineInstruction(e.target.value)}
                                       placeholder="例: 背景を青に変更して、文字をもっと大きくして"
-                                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-fuchsia-400 focus:ring-2 focus:ring-fuchsia-100 outline-none transition-all resize-none text-sm pr-12"
+                                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 outline-none transition-all resize-none text-sm pr-12"
                                       rows={2}
                                       maxLength={200}
                                       disabled={isRefining}
@@ -2230,7 +2230,7 @@ export default function BannerDashboard() {
                               <button
                                 onClick={() => handleRefine()}
                                       disabled={isRefining || !refineInstruction.trim()}
-                                      className="absolute right-2 bottom-2 w-8 h-8 bg-gradient-to-r from-fuchsia-500 to-violet-500 rounded-lg flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                                      className="absolute right-2 bottom-2 w-8 h-8 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                       {isRefining ? (
                                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -2257,7 +2257,7 @@ export default function BannerDashboard() {
                                     ))}
                                   </div>
                                   {isRefining && (
-                                    <div className="mt-3 flex items-center gap-2 text-fuchsia-600 text-sm">
+                                    <div className="mt-3 flex items-center gap-2 text-sky-700 text-sm">
                                       <Loader2 className="w-4 h-4 animate-spin" />
                                       <span>AIが修正中...</span>
                                     </div>
@@ -2272,8 +2272,8 @@ export default function BannerDashboard() {
                     </>
                   ) : (
                     <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center shadow-sm">
-                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-100 to-fuchsia-100 flex items-center justify-center mx-auto mb-4">
-                        <ImageIcon className="w-10 h-10 text-violet-500" />
+                      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-100 flex items-center justify-center mx-auto mb-4">
+                        <ImageIcon className="w-10 h-10 text-sky-500" />
                       </div>
                       <h3 className="font-bold text-lg mb-2 text-gray-900">生成結果がここに表示されます</h3>
                       <p className="text-gray-500 text-sm mb-4">
@@ -2394,7 +2394,7 @@ export default function BannerDashboard() {
             <div className="absolute inset-0 bg-white/85 backdrop-blur-xl" />
             <div className="absolute inset-0 overflow-hidden">
               <motion.div
-                className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-gradient-to-br from-violet-300/35 to-fuchsia-300/35 rounded-full blur-3xl"
+                className="absolute -top-40 -right-40 w-[520px] h-[520px] bg-gradient-to-br from-sky-300/35 to-cyan-300/35 rounded-full blur-3xl"
                 animate={{ scale: [1, 1.08, 1], rotate: [0, 18, 0] }}
                 transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
               />
@@ -2427,8 +2427,8 @@ export default function BannerDashboard() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-2xl blur-lg opacity-30" />
-                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-white shadow-lg">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-2xl blur-lg opacity-30" />
+                    <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white shadow-lg">
                       <Sparkles className="w-6 h-6" />
                     </div>
                   </div>
@@ -2446,7 +2446,7 @@ export default function BannerDashboard() {
 
               <div className="h-3 rounded-full bg-gray-100 overflow-hidden">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-600"
+                  className="h-full bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-600"
                   initial={{ width: '0%' }}
                   animate={{ width: `${clamp(progress, 2, 85)}%` }}
                   transition={{ ease: 'easeOut', duration: 0.4 }}
@@ -2458,7 +2458,7 @@ export default function BannerDashboard() {
                   <div
                     key={k}
                     className={`rounded-2xl border px-3 py-2 text-center ${
-                      phaseIndex >= 2 + idx ? 'bg-violet-50 border-violet-200' : 'bg-white border-gray-200'
+                      phaseIndex >= 2 + idx ? 'bg-sky-50 border-sky-200' : 'bg-white border-gray-200'
                     }`}
                   >
                     <div className="text-xs text-gray-500 font-semibold">パターン</div>
@@ -2473,9 +2473,9 @@ export default function BannerDashboard() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="mt-5 rounded-2xl bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200/60 p-4"
+                  className="mt-5 rounded-2xl bg-gradient-to-r from-sky-50 to-cyan-50 border border-sky-200/70 p-4"
                 >
-                  <div className="text-sm font-bold text-violet-700 flex items-start gap-2">
+                  <div className="text-sm font-bold text-sky-800 flex items-start gap-2">
                     <span className="text-lg leading-none">{GENERATION_TIPS[tipIndex].icon}</span>
                     <span>{GENERATION_TIPS[tipIndex].text}</span>
                   </div>

@@ -76,7 +76,7 @@ export default function BannerHistoryPage() {
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
       </div>
     )
   }
@@ -91,7 +91,7 @@ export default function BannerHistoryPage() {
             <span>戻る</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-purple-600" />
+            <Clock className="w-5 h-5 text-blue-600" />
             <span className="font-bold text-gray-800">生成履歴</span>
           </div>
           {history.length > 0 && (
@@ -111,7 +111,7 @@ export default function BannerHistoryPage() {
               <span className="text-sm">※ ゲスト・無料プランは7日間保存</span>
             </p>
             <Link href="/banner/dashboard">
-              <button className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors">
+              <button className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors">
                 バナーを生成する
               </button>
             </Link>
@@ -122,7 +122,7 @@ export default function BannerHistoryPage() {
               <div key={item.id} className="bg-white rounded-2xl p-5 border border-gray-200">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <span className="px-3 py-1 bg-purple-100 text-purple-700 text-sm font-medium rounded-full">
+                    <span className="px-3 py-1 bg-sky-100 text-sky-800 text-sm font-medium rounded-full">
                       {item.category}
                     </span>
                     <span className="ml-3 text-sm text-gray-500">
