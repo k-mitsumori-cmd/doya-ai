@@ -561,6 +561,7 @@ export default function BannerDashboard() {
   const [purpose, setPurpose] = useState('sns_ad')
   const [category, setCategory] = useState('')
   const [keyword, setKeyword] = useState('')
+  const [imageDescription, setImageDescription] = useState('') // 詳細テキスト（イメージ説明）
   const [size, setSize] = useState('1080x1080')
   const [useCustomSize, setUseCustomSize] = useState(false)
   const [customWidth, setCustomWidth] = useState('1080')
@@ -854,6 +855,7 @@ export default function BannerDashboard() {
           size: effectiveSize,
           purpose,
           companyName: companyName.trim() || undefined,
+          imageDescription: imageDescription.trim() || undefined,
           logoImage: logoImage || undefined,
           personImage: personImage || undefined,
           referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
@@ -1848,6 +1850,49 @@ export default function BannerDashboard() {
                 />
                 <div className="absolute bottom-4 right-4 px-2 py-1 bg-white rounded-md text-xs text-gray-400 font-medium">
                   {keyword.length}/200
+                </div>
+              </div>
+
+              {/* 詳細テキスト（イメージ説明） */}
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-violet-500" />
+                  <span className="text-sm font-medium text-gray-700">イメージ説明（任意）</span>
+                  <span className="px-2 py-0.5 bg-violet-50 text-violet-600 text-[10px] font-bold rounded-full">NEW</span>
+                </div>
+                <p className="text-xs text-gray-400 mb-2">
+                  バナーに表現したいビジュアルイメージを自由に記述してください。AIがこの説明を元に画像を生成します。
+                </p>
+                <div className="relative">
+                  <textarea
+                    value={imageDescription}
+                    onChange={(e) => setImageDescription(e.target.value)}
+                    placeholder="例: 青空の下で笑顔でジャンプする若い女性、モダンなオフィスで働くビジネスマン、自然光が差し込む明るいリビングルーム..."
+                    className="w-full px-4 py-3 bg-violet-50/30 border border-violet-200/50 rounded-xl text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100 outline-none transition-all resize-none text-sm"
+                    rows={2}
+                    maxLength={300}
+                  />
+                  <div className="absolute bottom-2 right-3 px-1.5 py-0.5 bg-white rounded text-[10px] text-gray-400">
+                    {imageDescription.length}/300
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {[
+                    '笑顔の人物',
+                    'モダンなオフィス',
+                    'スマホを操作',
+                    '自然光・明るい',
+                    '未来的・デジタル',
+                    '商品が目立つ',
+                  ].map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => setImageDescription(prev => prev ? `${prev}、${tag}` : tag)}
+                      className="px-2 py-1 bg-gray-100 hover:bg-violet-100 text-gray-600 hover:text-violet-700 text-[10px] rounded-md transition-colors"
+                    >
+                      + {tag}
+                    </button>
+                  ))}
                 </div>
               </div>
             </motion.div>
