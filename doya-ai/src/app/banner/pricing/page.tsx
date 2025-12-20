@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Check, ArrowLeft, Sparkles, Crown } from 'lucide-react'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getAnnualMonthlyPrice } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
 export default function BannerPricingPage() {
@@ -79,11 +79,7 @@ export default function BannerPricingPage() {
                       <span className="text-gray-500 text-xs">{plan.period}</span>
                     )}
                   </div>
-                  {plan.price > 0 && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      年払い ¥{getAnnualMonthlyPrice(plan.price).toLocaleString()}/月
-                    </p>
-                  )}
+                  {/* 年払い表記は一旦非表示（混乱防止） */}
                 </div>
                 
                 <ul className="space-y-2 mb-5">
@@ -179,7 +175,7 @@ export default function BannerPricingPage() {
             {[
               { q: '無料版でどこまで使えますか？', a: `ゲストは1日${BANNER_PRICING.guestLimit}回、ログイン後は1日${BANNER_PRICING.freeLimit}回まで生成できます。` },
               { q: '生成した画像の著作権は？', a: '生成した画像の著作権はお客様に帰属します。商用利用も可能です。' },
-              { q: '年払いはできますか？', a: 'はい、年払いで20%オフになります。お支払い画面で選択できます。' },
+              // 年払い表記は一旦非表示（混乱防止）
               { q: '30回/日以上使いたい場合は？', a: '上位利用（チーム/法人/大量生成など）は別リンクからご相談ください。' },
             ].map((faq, i) => (
               <div key={i} className="bg-white rounded-xl p-5 border border-gray-200">
