@@ -21,6 +21,7 @@ import { Button } from '@seo/components/ui/Button'
 import { Card, CardBody, CardHeader, CardTitle, CardDesc } from '@seo/components/ui/Card'
 import { Badge } from '@seo/components/ui/Badge'
 import { ProgressBar } from '@seo/components/ui/ProgressBar'
+import { FeatureGuide } from '@/components/FeatureGuide'
 
 type SeoArticleRow = {
   id: string
@@ -98,114 +99,79 @@ export default function SeoDashboardPage() {
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-8">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-violet-600 to-fuchsia-600 p-8 mb-8 shadow-xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-        <div className="relative z-10">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
-                  <Zap className="w-7 h-7 text-white" />
-                </div>
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                  ドヤ記事作成
-                </h1>
-              </div>
-              <p className="text-white/80 mt-2 max-w-xl">
-                5万字〜6万字でも崩れにくい「アウトライン→分割生成→統合」パイプライン。<br />
-                日本最強レベルのSEO+LLMO記事を安定生成します。
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" onClick={load} className="text-white/80 hover:text-white hover:bg-white/10">
-                <RefreshCcw className="w-4 h-4" />
+      {/* Feature Guide */}
+      <div className="mb-6 flex justify-end">
+        <FeatureGuide 
+          featureId="seo-overview"
+          title="ドヤ記事作成"
+          description="SEOとLLMO（AI検索エンジン最適化）に特化した、圧倒的な情報量の記事を自動生成するツールです。分割生成パイプラインにより、5万字を超える長文でも構造を崩さず高品質に出力します。"
+          steps={[
+            "「新規作成」ボタンから記事のタイトルとキーワードを入力します。",
+            "AIがターゲット（ペルソナ）と検索意図を自動で推定します。",
+            "アウトライン（構成案）を生成し、内容を確認・調整します。",
+            "各章を個別に詳細生成し、最後に一つの完璧な記事に統合します。",
+            "完成した記事を監査（オーディット）し、弱点を自動修正して公開準備完了です。"
+          ]}
+        />
+      </div>
+
+      {/* Hero Header - よりシンプルに */}
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-gray-200 p-8 mb-8 shadow-sm">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50" />
+        <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              ダッシュボード
+            </h1>
+            <p className="text-gray-500 mt-1">
+              現在のプロジェクトの状況をひと目で確認できます。
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" onClick={load} className="text-gray-500 hover:text-gray-900 hover:bg-gray-100">
+              <RefreshCcw className="w-4 h-4" />
+            </Button>
+            <Link href="/seo/new">
+              <Button variant="primary" className="bg-[#2563EB] text-white hover:bg-blue-700 shadow-lg shadow-blue-500/20">
+                <Plus className="w-4 h-4" />
+                新規作成
               </Button>
-              <Link href="/seo/new">
-                <Button variant="primary" className="bg-white text-violet-700 hover:bg-gray-100 shadow-lg">
-                  <Plus className="w-4 h-4" />
-                  新規作成
-                </Button>
-              </Link>
-            </div>
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <button
-          onClick={() => setStatusFilter('ALL')}
-          className={`p-4 rounded-2xl border transition-all ${statusFilter === 'ALL' ? 'border-gray-400 bg-gray-50 shadow-sm' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-gray-600" />
-            </div>
-            <div className="text-left">
-              <p className="text-2xl font-bold text-gray-900">{counts.total}</p>
-              <p className="text-xs text-gray-500">全記事</p>
-            </div>
+      {/* Quick Stats - 画像のようなデザインに */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+            <TrendingUp className="w-6 h-6" />
           </div>
-        </button>
-        <button
-          onClick={() => setStatusFilter('RUNNING')}
-          className={`p-4 rounded-2xl border transition-all ${statusFilter === 'RUNNING' ? 'border-amber-400 bg-amber-50 shadow-sm' : 'border-gray-200 hover:border-amber-300 bg-white'}`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-amber-600" />
-            </div>
-            <div className="text-left">
-              <p className="text-2xl font-bold text-gray-900">{counts.running}</p>
-              <p className="text-xs text-amber-600">生成中</p>
-            </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">全記事数</p>
+            <p className="text-2xl font-bold text-gray-900">{counts.total.toLocaleString()}</p>
           </div>
-        </button>
-        <button
-          onClick={() => setStatusFilter('DONE')}
-          className={`p-4 rounded-2xl border transition-all ${statusFilter === 'DONE' ? 'border-emerald-400 bg-emerald-50 shadow-sm' : 'border-gray-200 hover:border-emerald-300 bg-white'}`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            </div>
-            <div className="text-left">
-              <p className="text-2xl font-bold text-gray-900">{counts.done}</p>
-              <p className="text-xs text-emerald-600">完成</p>
-            </div>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+            <Clock className="w-6 h-6" />
           </div>
-        </button>
-        <button
-          onClick={() => setStatusFilter('DRAFT')}
-          className={`p-4 rounded-2xl border transition-all ${statusFilter === 'DRAFT' ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-gray-200 hover:border-blue-300 bg-white'}`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-blue-600" />
-            </div>
-            <div className="text-left">
-              <p className="text-2xl font-bold text-gray-900">{counts.draft}</p>
-              <p className="text-xs text-blue-600">下書き</p>
-            </div>
+          <div>
+            <p className="text-sm font-medium text-gray-500">現在進行中の記事数</p>
+            <p className="text-2xl font-bold text-gray-900">{counts.running.toLocaleString()}</p>
           </div>
-        </button>
-        <button
-          onClick={() => setStatusFilter('ERROR')}
-          className={`p-4 rounded-2xl border transition-all ${statusFilter === 'ERROR' ? 'border-red-400 bg-red-50 shadow-sm' : 'border-gray-200 hover:border-red-300 bg-white'}`}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-            </div>
-            <div className="text-left">
-              <p className="text-2xl font-bold text-gray-900">{counts.errorCount}</p>
-              <p className="text-xs text-red-600">エラー</p>
-            </div>
+        </div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
-        </button>
+          <div>
+            <p className="text-sm font-medium text-gray-500">完成記事数</p>
+            <p className="text-2xl font-bold text-gray-900">{counts.done.toLocaleString()}</p>
+          </div>
+        </div>
       </div>
+
 
       {/* Running Articles (if any) */}
       {runningArticles.length > 0 && (

@@ -15,6 +15,7 @@ import {
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
 import DashboardSidebar from '@/components/DashboardSidebar'
+import { FeatureGuide } from '@/components/FeatureGuide'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -1383,6 +1384,22 @@ export default function BannerDashboard() {
               ======================================== */}
           <div className="space-y-6">
             
+            {/* Feature Guide */}
+            <div className="flex justify-end">
+              <FeatureGuide 
+                featureId="banner-overview"
+                title="ドヤバナーAI"
+                description="プロのデザイナーが作成したような高品質なバナーを、AIが3パターン同時に生成します。SNS広告、YouTubeサムネイル、ディスプレイ広告など、用途に合わせた最適なレイアウトを自動設計します。"
+                steps={[
+                  "「用途を選択」から、SNS広告やYouTubeサムネイルなど、バナーをどこで使うか選びます。",
+                  "「カテゴリを選択」から、あなたのビジネスに近い業種を選びます。デザインの方向性が決まります。",
+                  "「ターゲットとキーワード」を入力します。誰に、何を伝えたいかを書くだけでOKです。",
+                  "「バナーを生成する」をクリック！AIが数秒で3つの異なるアプローチのバナーを作成します。",
+                  "気に入ったバナーをダウンロード。必要に応じて微調整（リファイン）も可能です。"
+                ]}
+              />
+            </div>
+
             {/* Hero Section - Premium Minimal Design */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
