@@ -156,7 +156,6 @@ export default function BannerPricingPage() {
                   { feature: 'カテゴリ', values: ['基本カテゴリ', '全カテゴリ'] },
                   { feature: 'ロゴ組み込み', values: ['×', '○'] },
                   { feature: '人物画像組み込み', values: ['×', '○'] },
-                  { feature: 'ブランドカラー（URL抽出/編集）', values: ['○', '○'] },
                 ].map((row, i) => (
                   <tr key={i} className="border-b border-gray-100">
                     <td className="py-3 px-4 font-medium text-gray-700">{row.feature}</td>
