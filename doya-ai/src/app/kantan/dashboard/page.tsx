@@ -20,6 +20,7 @@ const SIDEBAR_MENU = [
   { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text' },
   { id: 'chat', label: 'AIチャット', icon: <MessageSquare className="w-5 h-5" />, href: '/kantan/dashboard/chat' },
   { id: 'history', label: '生成履歴', icon: <Clock className="w-5 h-5" />, href: '/kantan/dashboard/history' },
+  { id: 'plan', label: 'サービスプラン', icon: <Star className="w-5 h-5" />, href: '/kantan/dashboard/plan' },
   { id: 'analytics', label: 'アナリティクス', icon: <BarChart3 className="w-5 h-5" />, href: '#', disabled: true },
 ]
 
