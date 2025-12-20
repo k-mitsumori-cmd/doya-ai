@@ -81,11 +81,8 @@ function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string
   const priceMap: Record<string, { monthly: string; yearly: string }> = {
     // ドヤSEO
     'seo-pro': STRIPE_PRICE_IDS.seo.pro,
-    'seo-business': STRIPE_PRICE_IDS.seo.business,
     // ドヤバナーAI
-    'banner-starter': STRIPE_PRICE_IDS.banner.starter,
     'banner-pro': STRIPE_PRICE_IDS.banner.pro,
-    'banner-business': STRIPE_PRICE_IDS.banner.business,
     // セットプラン
     'bundle': STRIPE_PRICE_IDS.bundle,
   }

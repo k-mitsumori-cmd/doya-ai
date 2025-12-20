@@ -209,7 +209,7 @@ export const BANNER_PRICING: ServicePricing = {
   plans: [
     {
       id: 'banner-free',
-      name: 'フリー',
+      name: '無料版',
       price: 0,
       priceLabel: '¥0',
       period: '',
@@ -224,29 +224,12 @@ export const BANNER_PRICING: ServicePricing = {
       cta: '無料で試す',
     },
     {
-      id: 'banner-starter',
-      name: 'スターター',
-      price: 1980,
-      priceLabel: '¥1,980',
-      period: '/月（税込）',
-      description: '個人・小規模事業者向け',
-      color: 'violet',
-      features: [
-        { text: '1日10回まで生成（30案/日）', included: true },
-        { text: '全カテゴリ利用可能', included: true },
-        { text: 'A/B/C 3案同時生成', included: true },
-        { text: '高解像度出力', included: true },
-        { text: '履歴保存（30日間）', included: true },
-      ],
-      cta: 'スタータープランを始める',
-    },
-    {
       id: 'banner-pro',
-      name: 'プロ',
+      name: '有料版',
       price: 4980,
       priceLabel: '¥4,980',
       period: '/月（税込）',
-      description: 'マーケター・代理店向け',
+      description: '月額4,980円：1日30回まで',
       popular: true,
       color: 'violet',
       features: [
@@ -258,29 +241,15 @@ export const BANNER_PRICING: ServicePricing = {
         { text: '履歴保存（無制限）', included: true },
         { text: '優先サポート', included: true },
       ],
-      cta: 'プロプランを始める',
-    },
-    {
-      id: 'banner-business',
-      name: 'ビジネス',
-      price: 14800,
-      priceLabel: '¥14,800',
-      period: '/月（税込）',
-      description: '企業・チーム利用',
-      color: 'violet',
-      features: [
-        { text: '無制限に生成', included: true },
-        { text: '全カテゴリ利用可能', included: true },
-        { text: 'ブランドカラー設定', included: true },
-        { text: 'ロゴ・人物画像の組み込み', included: true },
-        { text: 'チームメンバー5名まで', included: true },
-        { text: 'API連携', included: true },
-        { text: '専任サポート', included: true },
-      ],
-      cta: 'お問い合わせ',
+      cta: '有料版を始める',
     },
   ],
 }
+
+// 30回/日を超える利用（チーム/法人/大量生成など）の相談導線
+export const HIGH_USAGE_CONTACT_URL =
+  process.env.NEXT_PUBLIC_HIGH_USAGE_CONTACT_URL ||
+  'mailto:support@doya-ai.com?subject=%E4%B8%8A%E4%BD%8D%E3%83%97%E3%83%A9%E3%83%B3%EF%BC%8830%E5%9B%9E%2F%E6%97%A5%E8%B6%85%EF%BC%89%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6'
 
 // ========================================
 // ポータル全体のセット割引
@@ -352,7 +321,7 @@ export function getDailyLimit(serviceId: string, userType: 'guest' | 'free' | 'p
   }
 }
 
-// プランを取得（フリー、スターター、プロなど）
+// プランを取得（無料版/有料版など）
 export function getPlanById(planId: string): Plan | null {
   const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans]
   return allPlans.find(p => p.id === planId) || null
@@ -413,5 +382,51 @@ export function incrementGuestUsage(serviceId: string): number {
   }
   
   setGuestUsage(serviceId, newCount)
+  return newCount
+}
+
+// ========================================
+// ログインユーザー使用状況（ローカルストレージ）
+// ※ 現状は簡易実装（ユーザーIDまでは区別しない）
+// ========================================
+export interface UserUsage {
+  date: string
+  count: number
+}
+
+export function getUserUsage(serviceId: string): UserUsage {
+  if (typeof window === 'undefined') return { date: '', count: 0 }
+  try {
+    const key = `doya_user_usage_${serviceId}`
+    const stored = localStorage.getItem(key)
+    if (!stored) return { date: '', count: 0 }
+    return JSON.parse(stored)
+  } catch {
+    return { date: '', count: 0 }
+  }
+}
+
+export function setUserUsage(serviceId: string, count: number): void {
+  if (typeof window === 'undefined') return
+  const key = `doya_user_usage_${serviceId}`
+  const today = new Date().toISOString().split('T')[0]
+  localStorage.setItem(key, JSON.stringify({ date: today, count }))
+}
+
+export function getUserRemainingCount(serviceId: string, userType: 'free' | 'pro'): number {
+  const pricing = getPricingByService(serviceId)
+  if (!pricing) return 0
+  const limit = userType === 'pro' ? pricing.proLimit : pricing.freeLimit
+  const usage = getUserUsage(serviceId)
+  const today = new Date().toISOString().split('T')[0]
+  if (usage.date !== today) return limit
+  return Math.max(0, limit - usage.count)
+}
+
+export function incrementUserUsage(serviceId: string): number {
+  const usage = getUserUsage(serviceId)
+  const today = new Date().toISOString().split('T')[0]
+  const newCount = usage.date === today ? usage.count + 1 : 1
+  setUserUsage(serviceId, newCount)
   return newCount
 }

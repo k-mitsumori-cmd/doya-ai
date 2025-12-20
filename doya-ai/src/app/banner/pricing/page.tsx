@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { Check, ArrowLeft, Sparkles, Crown, Zap, Star, Building } from 'lucide-react'
-import { BANNER_PRICING, getAnnualMonthlyPrice } from '@/lib/pricing'
+import { Check, ArrowLeft, Sparkles, Crown } from 'lucide-react'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getAnnualMonthlyPrice } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
 export default function BannerPricingPage() {
@@ -35,15 +35,14 @@ export default function BannerPricingPage() {
             料金プラン
           </h1>
           <p className="text-lg text-gray-600">
-            ビジネス規模に合ったプランをお選びください
+            無料版と有料版（¥4,980 / 1日30回）だけのシンプル設計
           </p>
         </div>
 
-        <div className="grid md:grid-cols-4 gap-5 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {plans.map((plan, index) => {
             const isPopular = plan.popular
-            const icons = [Sparkles, Star, Crown, Building]
-            const Icon = icons[index] || Sparkles
+            const Icon = index === 0 ? Sparkles : Crown
             
             return (
               <div 
@@ -80,7 +79,7 @@ export default function BannerPricingPage() {
                       <span className="text-gray-500 text-xs">{plan.period}</span>
                     )}
                   </div>
-                  {plan.price > 0 && plan.price < 10000 && (
+                  {plan.price > 0 && (
                     <p className="text-xs text-gray-400 mt-1">
                       年払い ¥{getAnnualMonthlyPrice(plan.price).toLocaleString()}/月
                     </p>
@@ -102,12 +101,6 @@ export default function BannerPricingPage() {
                       {plan.cta}
                     </button>
                   </Link>
-                ) : plan.id === 'banner-business' ? (
-                  <a href="mailto:support@doya-ai.com?subject=ビジネスプランについて">
-                    <button className="w-full py-2.5 bg-gray-800 hover:bg-gray-900 text-white text-sm font-bold rounded-xl transition-colors">
-                      {plan.cta}
-                    </button>
-                  </a>
                 ) : (
                   <CheckoutButton
                     planId={plan.id}
@@ -126,6 +119,24 @@ export default function BannerPricingPage() {
           })}
         </div>
 
+        {/* 30回/日を超える導線 */}
+        <div className="mt-10 max-w-3xl mx-auto">
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+              <p className="font-bold text-gray-900">30回/日を超えて使いたい場合</p>
+              <p className="text-sm text-gray-600 mt-1">チーム運用・大量生成・法人契約などは別途ご案内します。</p>
+            </div>
+            <a
+              href={HIGH_USAGE_CONTACT_URL}
+              target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
+              rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+              className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-gray-900 text-white font-bold text-sm hover:bg-gray-800 transition-colors"
+            >
+              上位利用はこちら
+            </a>
+          </div>
+        </div>
+
         {/* 比較表 */}
         <div className="mt-16 max-w-4xl mx-auto">
           <h3 className="text-xl font-bold text-gray-900 text-center mb-8">プラン比較</h3>
@@ -134,27 +145,23 @@ export default function BannerPricingPage() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4">機能</th>
-                  <th className="text-center py-3 px-4">フリー</th>
-                  <th className="text-center py-3 px-4">スターター</th>
-                  <th className="text-center py-3 px-4 bg-purple-50">プロ</th>
-                  <th className="text-center py-3 px-4">ビジネス</th>
+                  <th className="text-center py-3 px-4">無料版</th>
+                  <th className="text-center py-3 px-4 bg-purple-50">有料版</th>
                 </tr>
               </thead>
               <tbody>
                 {[
-                  { feature: '1日の生成回数', values: ['2回', '10回', '30回', '無制限'] },
-                  { feature: '1日の生成案数', values: ['6案', '30案', '90案', '無制限'] },
-                  { feature: 'カテゴリ', values: ['基本6種', '全12種', '全12種', '全12種'] },
-                  { feature: 'ロゴ組み込み', values: ['×', '×', '○', '○'] },
-                  { feature: '人物画像組み込み', values: ['×', '×', '○', '○'] },
-                  { feature: 'ブランドカラー設定', values: ['×', '×', '×', '○'] },
-                  { feature: 'チームメンバー', values: ['×', '×', '×', '5名まで'] },
-                  { feature: 'API連携', values: ['×', '×', '×', '○'] },
+                  { feature: '1日の生成回数', values: [`（ゲスト）${BANNER_PRICING.guestLimit}回 / （ログイン）${BANNER_PRICING.freeLimit}回`, `${BANNER_PRICING.proLimit}回`] },
+                  { feature: '1日の生成案数', values: [`（最大）${BANNER_PRICING.freeLimit * 3}案`, `${BANNER_PRICING.proLimit * 3}案`] },
+                  { feature: 'カテゴリ', values: ['基本カテゴリ', '全カテゴリ'] },
+                  { feature: 'ロゴ組み込み', values: ['×', '○'] },
+                  { feature: '人物画像組み込み', values: ['×', '○'] },
+                  { feature: 'ブランドカラー（URL抽出/編集）', values: ['○', '○'] },
                 ].map((row, i) => (
                   <tr key={i} className="border-b border-gray-100">
                     <td className="py-3 px-4 font-medium text-gray-700">{row.feature}</td>
                     {row.values.map((val, j) => (
-                      <td key={j} className={`text-center py-3 px-4 ${j === 2 ? 'bg-purple-50' : ''}`}>
+                      <td key={j} className={`text-center py-3 px-4 ${j === 1 ? 'bg-purple-50' : ''}`}>
                         {val === '○' ? <Check className="w-4 h-4 text-green-500 mx-auto" /> : 
                          val === '×' ? <span className="text-gray-300">−</span> : val}
                       </td>
@@ -171,10 +178,10 @@ export default function BannerPricingPage() {
           <h3 className="text-xl font-bold text-gray-900 text-center mb-8">よくある質問</h3>
           <div className="space-y-4">
             {[
-              { q: '無料プランでどこまで使えますか？', a: `ゲストは1日${BANNER_PRICING.guestLimit}回、ログイン後は1日${BANNER_PRICING.freeLimit}回まで生成できます。基本カテゴリ6種類が利用可能です。` },
+              { q: '無料版でどこまで使えますか？', a: `ゲストは1日${BANNER_PRICING.guestLimit}回、ログイン後は1日${BANNER_PRICING.freeLimit}回まで生成できます。` },
               { q: '生成した画像の著作権は？', a: '生成した画像の著作権はお客様に帰属します。商用利用も可能です。' },
-              { q: 'ビジネスプランのチームメンバー追加は？', a: '5名を超える場合は、追加1名あたり¥2,000/月でご利用いただけます。' },
               { q: '年払いはできますか？', a: 'はい、年払いで20%オフになります。お支払い画面で選択できます。' },
+              { q: '30回/日以上使いたい場合は？', a: '上位利用（チーム/法人/大量生成など）は別リンクからご相談ください。' },
             ].map((faq, i) => (
               <div key={i} className="bg-white rounded-xl p-5 border border-gray-200">
                 <h4 className="font-bold text-gray-900 mb-2">{faq.q}</h4>

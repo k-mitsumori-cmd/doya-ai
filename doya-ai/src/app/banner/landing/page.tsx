@@ -161,10 +161,10 @@ export default function BannerLandingPage() {
             💰 料金プラン
           </h2>
           <p className="text-center text-gray-600 mb-8">
-            まずは無料でお試し。ビジネス規模に合わせてアップグレード。
+            無料版と有料版（¥4,980 / 1日30回）だけのシンプル設計
           </p>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4">
             {BANNER_PRICING.plans.map((plan) => (
               <div
                 key={plan.id}
@@ -199,12 +199,6 @@ export default function BannerLandingPage() {
                       {plan.cta}
                     </button>
                   </Link>
-                ) : plan.id === 'banner-business' ? (
-                  <a href="mailto:support@doya-ai.com">
-                    <button className="w-full py-2 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold rounded-lg transition-colors">
-                      お問い合わせ
-                    </button>
-                  </a>
                 ) : (
                   <Link href="/banner/pricing">
                     <button className={`w-full py-2 text-xs font-bold rounded-lg transition-colors ${

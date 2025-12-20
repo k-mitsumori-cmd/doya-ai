@@ -13,7 +13,7 @@ import {
   MessageSquare, Send, RotateCcw, Pencil, Link as LinkIcon
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
-import { BANNER_PRICING, getGuestUsage, setGuestUsage } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -509,8 +509,14 @@ export default function BannerDashboard() {
   const [overlayPreviewBox, setOverlayPreviewBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
   
   const isGuest = !session
+  const bannerPlan = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
+  const isProUser = !isGuest && (bannerPlan === 'PRO')
   const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
   const guestRemaining = BANNER_PRICING.guestLimit - guestUsageCount
+  const [userUsageCount, setUserUsageCount] = useState(0)
+  const userDailyLimit = isProUser ? BANNER_PRICING.proLimit : BANNER_PRICING.freeLimit
+  const userRemaining = Math.max(0, userDailyLimit - userUsageCount)
+  const remainingCount = isGuest ? guestRemaining : userRemaining
   
   // カスタムサイズの場合は入力値を使用
   const effectiveSize = useCustomSize ? `${customWidth}x${customHeight}` : size
@@ -518,7 +524,7 @@ export default function BannerDashboard() {
     parseInt(customWidth) >= 100 && parseInt(customWidth) <= 4096 &&
     parseInt(customHeight) >= 100 && parseInt(customHeight) <= 4096
   )
-  const canGenerate = category && keyword.trim() && (session || guestRemaining > 0) && isValidCustomSize
+  const canGenerate = category && keyword.trim() && remainingCount > 0 && isValidCustomSize
 
   const sizeInfo = useMemo(() => {
     const [wStr, hStr] = effectiveSize.split('x')
@@ -539,6 +545,14 @@ export default function BannerDashboard() {
       const usage = getGuestUsage('banner')
       const today = new Date().toISOString().split('T')[0]
       setGuestUsageCount(usage.date === today ? usage.count : 0)
+    }
+  }, [isGuest])
+
+  useEffect(() => {
+    if (!isGuest && typeof window !== 'undefined') {
+      const usage = getUserUsage('banner')
+      const today = new Date().toISOString().split('T')[0]
+      setUserUsageCount(usage.date === today ? usage.count : 0)
     }
   }, [isGuest])
 
@@ -642,6 +656,15 @@ export default function BannerDashboard() {
 
   const handleGenerate = async () => {
     if (!canGenerate) return
+
+    // 上限に達している場合は上位利用へ誘導
+    if (remainingCount <= 0) {
+      toast.error('本日の上限に達しました。上位利用をご希望の場合はリンクからご相談ください。', { duration: 6000 })
+      try {
+        if (HIGH_USAGE_CONTACT_URL) window.open(HIGH_USAGE_CONTACT_URL, HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : '_self')
+      } catch {}
+      return
+    }
     
     setError('')
     setIsGenerating(true)
@@ -693,6 +716,9 @@ export default function BannerDashboard() {
         const newCount = guestUsageCount + 1
         setGuestUsageCount(newCount)
         setGuestUsage('banner', newCount)
+      } else {
+        const newCount = incrementUserUsage('banner')
+        setUserUsageCount(newCount)
       }
       
       // 部分的にエラーがあった場合は警告表示
@@ -1115,6 +1141,25 @@ export default function BannerDashboard() {
                       <span className="hidden sm:inline">履歴</span>
                     </button>
                   </Link>
+                  <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl border ${
+                    userRemaining <= 5
+                      ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200/50'
+                      : 'bg-gradient-to-r from-violet-50 to-fuchsia-50 border-violet-200/50'
+                  }`}>
+                    <div className={`w-2 h-2 rounded-full ${userRemaining <= 5 ? 'bg-amber-400' : 'bg-violet-400'} ${userRemaining <= 5 ? 'animate-pulse' : ''}`} />
+                    <span className={`text-xs sm:text-sm font-bold ${userRemaining <= 5 ? 'text-amber-700' : 'text-violet-700'}`}>{userRemaining}</span>
+                    <span className={`text-xs hidden sm:inline ${userRemaining <= 5 ? 'text-amber-600' : 'text-violet-600'}`}>回残り</span>
+                    {userRemaining <= 0 && (
+                      <a
+                        href={HIGH_USAGE_CONTACT_URL}
+                        target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
+                        rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+                        className="ml-2 px-2 py-1 rounded-lg bg-gray-900 text-white text-[10px] font-bold hover:bg-gray-800"
+                      >
+                        上位利用
+                      </a>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-violet-100 to-fuchsia-100 border border-violet-200/50">
                     <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-white text-xs font-bold">
                       {session.user?.name?.[0]?.toUpperCase() || 'U'}
