@@ -16,3 +16,4 @@ console.log('[db-push] DATABASE_URL is set. Running prisma db push...')
 run('./node_modules/.bin/prisma', ['db', 'push', '--skip-generate'])
 
 
+

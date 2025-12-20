@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 
 export default function AdminLoginPage() {
   const router = useRouter()
-  const [username, setUsername] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -65,7 +65,7 @@ export default function AdminLoginPage() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ identifier, password }),
       })
 
       const data = await response.json()
@@ -171,16 +171,16 @@ export default function AdminLoginPage() {
 
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                ユーザー名
+                ユーザー名 / メール
               </label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="管理者ユーザー名"
+                  placeholder="例: k-mitsumori@surisuta.jp"
                   required
                   disabled={isLoading || !!lockoutMessage}
                   autoComplete="username"

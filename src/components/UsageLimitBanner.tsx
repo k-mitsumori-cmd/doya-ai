@@ -17,7 +17,8 @@ import { getUsageCount, getRemainingCount, PLAN_LIMITS, UserTier } from '@/lib/u
 
 export function UsageLimitBanner() {
   // テスト用: 制限表示を無効化（NEXT_PUBLIC_DOYA_DISABLE_LIMITS=1）
-  if (process.env.NEXT_PUBLIC_DOYA_DISABLE_LIMITS === '1') return null
+  // NOTE: Hooksの呼び出し順を守るため、早期returnはhooksの後で行う
+  const disableLimitUi = process.env.NEXT_PUBLIC_DOYA_DISABLE_LIMITS === '1'
   const { data: session, status } = useSession()
   const [remaining, setRemaining] = useState<number | 'unlimited'>(3)
   const [dismissed, setDismissed] = useState(false)
@@ -38,6 +39,8 @@ export function UsageLimitBanner() {
   useEffect(() => {
     setRemaining(getRemainingCount(tier))
   }, [tier])
+
+  if (disableLimitUi) return null
 
   // 無制限または十分な残り回数がある場合は表示しない
   if (remaining === 'unlimited' || (typeof remaining === 'number' && remaining > 5)) {

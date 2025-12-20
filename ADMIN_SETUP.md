@@ -46,6 +46,20 @@ npm install -D tsx
 npx tsx src/scripts/create-admin.ts <username> <password> [email] [name]
 ```
 
+### 3.0 すでに管理者がいるか確認
+
+```bash
+npx tsx src/scripts/check-admin-users.ts
+```
+
+### 3.1 既存管理者のパスワードをリセット（または存在しなければ作成）
+
+ユーザー名が既に存在するか不明な場合や、パスワードを忘れた場合は `upsert-admin.ts` を使うと安全です。
+
+```bash
+npx tsx src/scripts/upsert-admin.ts <username> <password> [email] [name]
+```
+
 **例**:
 ```bash
 npx tsx src/scripts/create-admin.ts admin SecureP@ssw0rd123! admin@example.com "管理者"
@@ -114,8 +128,32 @@ npx tsx src/scripts/create-admin.ts admin SecureP@ssw0rd123! admin@example.com "
 ### ログイン
 
 1. `/admin/login`にアクセス
-2. ユーザー名とパスワードを入力
+2. ユーザー名またはメールとパスワードを入力（どちらでもOK）
 3. 認証成功後、ダッシュボードにリダイレクト
+
+### 初期管理者の自動作成（Bootstrap / 任意）
+
+本番環境で **管理者がまだ1人も存在しない場合のみ**、環境変数から初期管理者を自動作成できます。
+
+```env
+ADMIN_BOOTSTRAP_EMAIL=k-mitsumori@surisuta.jp
+ADMIN_BOOTSTRAP_PASSWORD=StrongP@ssw0rd123!
+```
+
+※ 既に管理者が存在する場合は何もしません。
+
+### 緊急復旧ログイン（Break-glass / 任意・推奨はしない）
+
+「既存の管理者がいるが、誰もログインできない」などの緊急時だけ使う復旧手段です。  
+有効化した場合、指定のメール/パスワードでログイン成功した瞬間に、そのメールの管理者をDBに作成/更新します。
+
+```env
+ADMIN_BREAKGLASS_ENABLED=true
+ADMIN_BREAKGLASS_EMAIL=k-mitsumori@surisuta.jp
+ADMIN_BREAKGLASS_PASSWORD=StrongP@ssw0rd123!
+```
+
+⚠️ 使い終わったら必ず `ADMIN_BREAKGLASS_ENABLED` を `false` に戻してください。
 
 ### ログアウト
 

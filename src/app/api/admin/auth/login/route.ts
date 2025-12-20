@@ -21,12 +21,13 @@ export const runtime = 'nodejs'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { username, password } = body
+    const identifier = (body.identifier || body.username || '').toString().trim()
+    const password = (body.password || '').toString()
 
     // 入力検証
-    if (!username || !password) {
+    if (!identifier || !password) {
       return NextResponse.json(
-        { error: 'ユーザー名とパスワードが必要です' },
+        { error: 'ユーザー名（またはメール）とパスワードが必要です' },
         { status: 400 }
       )
     }
@@ -36,10 +37,10 @@ export async function POST(request: NextRequest) {
     const userAgent = getUserAgent(request)
 
     // レート制限チェック
-    const rateLimit = await checkRateLimit(ipAddress, username)
+    const rateLimit = await checkRateLimit(ipAddress, identifier)
     if (!rateLimit.allowed) {
       await recordLoginAttempt(
-        username,
+        identifier,
         false,
         null,
         ipAddress,
@@ -62,15 +63,81 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Break-glass: 緊急復旧ログイン（任意）
+    // - 本番で管理者の認証情報が不明になった場合の救済
+    // - 有効化は明示的に ADMIN_BREAKGLASS_ENABLED=true を設定した場合のみ
+    // - 指定のメールでログイン成功したら、そのメールのAdminUserをDBにupsertして復旧する
+    const breakglassEnabled = process.env.ADMIN_BREAKGLASS_ENABLED === 'true'
+    const breakglassEmail = process.env.ADMIN_BREAKGLASS_EMAIL?.trim().toLowerCase()
+    const breakglassPassword = process.env.ADMIN_BREAKGLASS_PASSWORD?.trim()
+    if (breakglassEnabled && breakglassEmail && breakglassPassword) {
+      const idLower = identifier.trim().toLowerCase()
+      if (idLower === breakglassEmail && password === breakglassPassword) {
+        const pw = validatePassword(breakglassPassword)
+        if (!pw.valid) {
+          return NextResponse.json(
+            { error: '緊急復旧パスワードが要件を満たしていません（ADMIN_BREAKGLASS_PASSWORD）' },
+            { status: 500 }
+          )
+        }
+
+        const passwordHash = await hashPassword(breakglassPassword)
+        await prisma.adminUser.upsert({
+          where: { username: breakglassEmail },
+          create: {
+            username: breakglassEmail,
+            email: breakglassEmail,
+            name: 'Owner',
+            passwordHash,
+            isActive: true,
+          },
+          update: {
+            email: breakglassEmail,
+            name: 'Owner',
+            passwordHash,
+            isActive: true,
+          },
+        })
+      }
+    }
+
+    // Bootstrap: 管理者が0人の時だけ、環境変数から初期管理者を作成
+    // - 本番セットアップを簡単にするため（1回だけ）
+    // - 既に管理者がいる場合は何もしない
+    const bootstrapEmail = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim()
+    const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD?.trim()
+    if (bootstrapEmail && bootstrapPassword) {
+      const count = await prisma.adminUser.count()
+      if (count === 0) {
+        const pw = validatePassword(bootstrapPassword)
+        if (pw.valid) {
+          const passwordHash = await hashPassword(bootstrapPassword)
+          await prisma.adminUser.create({
+            data: {
+              username: bootstrapEmail,
+              email: bootstrapEmail,
+              name: 'Owner',
+              passwordHash,
+              isActive: true,
+            },
+          })
+        } else if (process.env.NODE_ENV === 'development') {
+          console.warn('[admin bootstrap] password does not meet requirements:', pw.errors)
+        }
+      }
+    }
+
     // 管理者ユーザーを検索
-    const adminUser = await prisma.adminUser.findUnique({
-      where: { username },
+    const adminUser = await prisma.adminUser.findFirst({
+      where: {
+        OR: [{ username: identifier }, { email: identifier }],
+      },
     })
 
     // デバッグログ（本番環境では削除推奨）
     if (process.env.NODE_ENV === 'development') {
       console.log('Admin user lookup:', {
-        username,
+        identifier,
         found: !!adminUser,
         hasHash: !!adminUser?.passwordHash,
         isActive: adminUser?.isActive,
@@ -107,7 +174,7 @@ export async function POST(request: NextRequest) {
         : 'アカウントが無効化されています'
 
       await recordLoginAttempt(
-        username,
+        identifier,
         false,
         adminUser?.id || null,
         ipAddress,
@@ -140,7 +207,7 @@ export async function POST(request: NextRequest) {
     await createAdminSession(adminUser.id, token, ipAddress, userAgent)
 
     // ログイン試行を記録
-    await recordLoginAttempt(username, true, adminUser.id, ipAddress, userAgent)
+    await recordLoginAttempt(identifier, true, adminUser.id, ipAddress, userAgent)
 
     // セキュアなHTTPOnlyクッキーに設定
     const cookieStore = await cookies()
