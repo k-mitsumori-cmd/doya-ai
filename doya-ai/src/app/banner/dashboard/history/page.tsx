@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Clock, Download, Trash2, Image as ImageIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
+import DashboardSidebar from '@/components/DashboardSidebar'
 
 interface HistoryItem {
   id: string
@@ -76,32 +77,37 @@ export default function BannerHistoryPage() {
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        <DashboardSidebar />
+        <div className="pl-[72px] lg:pl-[240px] flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+        </div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-4">
-          <Link href="/banner/dashboard" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="w-5 h-5" />
-            <span>戻る</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-blue-600" />
-            <span className="font-bold text-gray-800">生成履歴</span>
+      <DashboardSidebar />
+      <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+        {/* ヘッダー */}
+        <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+          <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-4">
+            <Link href="/banner" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+              <ArrowLeft className="w-5 h-5" />
+              <span>戻る</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-blue-600" />
+              <span className="font-bold text-gray-800">生成履歴</span>
+            </div>
+            {history.length > 0 && (
+              <span className="ml-auto text-sm text-gray-500">{history.length}件</span>
+            )}
           </div>
-          {history.length > 0 && (
-            <span className="ml-auto text-sm text-gray-500">{history.length}件</span>
-          )}
-        </div>
-      </header>
+        </header>
 
-      {/* メイン */}
-      <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* メイン */}
+        <main className="max-w-4xl mx-auto px-4 py-8">
         {history.length === 0 ? (
           <div className="text-center py-16">
             <ImageIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -165,10 +171,11 @@ export default function BannerHistoryPage() {
                   </div>
                 )}
               </div>
-            ))}
+            )            )}
           </div>
         )}
-      </main>
+        </main>
+      </div>
     </div>
   )
 }
