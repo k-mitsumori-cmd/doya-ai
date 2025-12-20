@@ -83,14 +83,94 @@ const CATEGORIES = [
 ]
 
 const PURPOSES = [
-  { value: 'sns_ad', label: 'SNS広告', icon: Target, desc: 'FB/IG/X', hot: true },
-  { value: 'youtube', label: 'YouTube', icon: Play, desc: 'サムネイル', hot: true },
-  { value: 'display', label: 'ディスプレイ', icon: Layout, desc: 'GDN/YDA', hot: false },
-  { value: 'webinar', label: 'ウェビナー', icon: Video, desc: 'セミナー', hot: false },
-  { value: 'lp_hero', label: 'LP', icon: Megaphone, desc: 'ヒーロー', hot: false },
-  { value: 'email', label: 'メール', icon: Mail, desc: 'ヘッダー', hot: false },
-  { value: 'campaign', label: 'セール', icon: Gift, desc: 'キャンペーン', hot: false },
+  { 
+    value: 'sns_ad', label: 'SNS広告', icon: Target, desc: 'FB/IG/X', hot: true,
+    sample: 'https://images.unsplash.com/photo-1611162616475-46b635cb6868?q=80&w=400&h=300&auto=format&fit=crop',
+    description: '【スクロール停止】フィード上で指を止めさせる大胆なビジュアルと、3秒で理解できる明快なCTA配置。'
+  },
+  { 
+    value: 'youtube', label: 'YouTube', icon: Play, desc: 'サムネイル', hot: true,
+    sample: 'https://images.unsplash.com/photo-1611162618071-b39a2ec055fb?q=80&w=400&h=300&auto=format&fit=crop',
+    description: '【クリック誘発】表情豊かな人物＋強調文字で「見なきゃ損」感を演出。関連動画の中で埋もれないコントラスト設計。'
+  },
+  { 
+    value: 'display', label: 'ディスプレイ', icon: Layout, desc: 'GDN/YDA', hot: false,
+    sample: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=400&h=300&auto=format&fit=crop',
+    description: '【視認性重視】小さなサイズでも読みやすい太字フォントと、ブランドカラーを活かしたシンプル構成。'
+  },
+  { 
+    value: 'webinar', label: 'ウェビナー', icon: Video, desc: 'セミナー', hot: false,
+    sample: 'https://images.unsplash.com/photo-1591115765373-5207764f72e7?q=80&w=400&h=300&auto=format&fit=crop',
+    description: '【権威性＋緊急性】登壇者の写真と「参加無料」「残席わずか」で申し込みを後押しするレイアウト。'
+  },
+  { 
+    value: 'lp_hero', label: 'LP', icon: Megaphone, desc: 'ヒーロー', hot: false,
+    sample: 'https://images.unsplash.com/photo-1551434678-e076c223a692?q=80&w=400&h=300&auto=format&fit=crop',
+    description: '【ファーストビュー】ページを開いた瞬間に価値提案が伝わる、余白を活かした大胆なヘッドライン配置。'
+  },
+  { 
+    value: 'email', label: 'メール', icon: Mail, desc: 'ヘッダー', hot: false,
+    sample: 'https://images.unsplash.com/photo-1596526131083-e8c633c948d2?q=80&w=400&h=300&auto=format&fit=crop',
+    description: '【開封後の導線】メール上部で目を引き、本文へスムーズに誘導するシンプルで軽量なデザイン。'
+  },
+  { 
+    value: 'campaign', label: 'セール', icon: Gift, desc: 'キャンペーン', hot: false,
+    sample: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?q=80&w=400&h=300&auto=format&fit=crop',
+    description: '【衝動喚起】「今だけ」「限定」を強調するバースト装飾と、お得感が一目でわかる価格表示レイアウト。'
+  },
 ]
+
+// サイズ別のイメージとCTRロジック解説
+const SIZE_INFO: Record<string, { sample: string; description: string }> = {
+  '1080x1080': {
+    sample: 'https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?q=80&w=400&h=400&auto=format&fit=crop',
+    description: '【フィード最適】Instagram/Facebookで最も表示面積が大きく、スクロール中に目を引きやすい正方形。'
+  },
+  '1200x628': {
+    sample: 'https://images.unsplash.com/photo-1432821596592-e2c18b78144f?q=80&w=400&h=210&auto=format&fit=crop',
+    description: '【OGP/リンク広告】シェア時のプレビューで情報量と視認性のバランスが最も取れた黄金比率。'
+  },
+  '1080x1920': {
+    sample: 'https://images.unsplash.com/photo-1585399000684-d2f72660f092?q=80&w=300&h=533&auto=format&fit=crop',
+    description: '【ストーリー/リール】全画面表示で没入感MAX。スワイプアップを促す縦型レイアウト。'
+  },
+  '1280x720': {
+    sample: 'https://images.unsplash.com/photo-1626379953822-baec19c3accd?q=80&w=400&h=225&auto=format&fit=crop',
+    description: '【YouTube HD】関連動画一覧で埋もれない、顔＋テキストのコントラストが効くサムネイル向け。'
+  },
+  '1920x1080': {
+    sample: 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=400&h=225&auto=format&fit=crop',
+    description: '【フルHD】ウェビナーやプレゼン背景に最適。高解像度でプロフェッショナルな印象を与える。'
+  },
+  '300x250': {
+    sample: 'https://images.unsplash.com/photo-1553484771-047a44eee27b?q=80&w=300&h=250&auto=format&fit=crop',
+    description: '【レクタングル】GDN/YDAで最も配信量が多いサイズ。限られたスペースで要点を伝える設計。'
+  },
+  '728x90': {
+    sample: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?q=80&w=400&h=50&auto=format&fit=crop',
+    description: '【リーダーボード】記事上部に表示されるPC向けバナー。ブランド認知に効果的な横長形式。'
+  },
+  '320x50': {
+    sample: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=320&h=50&auto=format&fit=crop',
+    description: '【モバイルバナー】スマホ画面下部に表示。タップしやすいCTAボタン配置が鍵。'
+  },
+  '1920x600': {
+    sample: 'https://images.unsplash.com/photo-1557682250-33bd709cbe85?q=80&w=400&h=125&auto=format&fit=crop',
+    description: '【LPワイドヒーロー】ファーストビューを占有し、キャッチコピーを最大限に目立たせるワイド形式。'
+  },
+  '1200x800': {
+    sample: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?q=80&w=400&h=267&auto=format&fit=crop',
+    description: '【LP標準】バランスの良い3:2比率。メインビジュアルとCTAを自然に配置できる。'
+  },
+  '600x200': {
+    sample: 'https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?q=80&w=400&h=133&auto=format&fit=crop',
+    description: '【メールヘッダー】開封直後に目に入る最初の要素。ブランドロゴとキャンペーン名を明示。'
+  },
+  '600x300': {
+    sample: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=400&h=200&auto=format&fit=crop',
+    description: '【メールバナー】本文中に差し込む訴求画像。クリックを促すボタン風デザインが効果的。'
+  },
+}
 
 const SIZE_PRESETS: Record<string, Array<{ value: string; label: string; ratio: string }>> = {
   default: [
@@ -537,6 +617,10 @@ export default function BannerDashboard() {
 
   // カテゴリホバー/選択用
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null)
+  // 用途ホバー用
+  const [hoveredPurpose, setHoveredPurpose] = useState<string | null>(null)
+  // サイズホバー用
+  const [hoveredSize, setHoveredSize] = useState<string | null>(null)
 
   // 使用カラー（任意・手動指定）
   const [useCustomColors, setUseCustomColors] = useState(false)
@@ -1317,30 +1401,82 @@ export default function BannerDashboard() {
                   </span>
                 </button>
               </div>
-              <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 sm:gap-3">
-                {PURPOSES.map((p) => {
-                  const Icon = p.icon
-                  const isSelected = purpose === p.value
-                  return (
-                    <button
-                      key={p.value}
-                      onClick={() => setPurpose(p.value)}
-                      className={`relative p-3 sm:p-4 rounded-xl sm:rounded-2xl text-center transition-all ${
-                        isSelected 
-                          ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]' 
-                          : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:scale-[1.02]'
-                      }`}
-                    >
-                      {p.hot && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-amber-400 to-orange-400 rounded-full shadow-md flex items-center justify-center">
-                          <span className="text-[6px] text-white font-bold">★</span>
-                        </span>
-                      )}
-                      <Icon className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 ${isSelected ? 'text-white' : ''}`} />
-                      <span className="text-[10px] sm:text-xs font-bold block truncate">{p.label}</span>
-                    </button>
-                  )
-                })}
+              <div className="grid lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 sm:gap-3">
+                  {PURPOSES.map((p) => {
+                    const Icon = p.icon
+                    const isSelected = purpose === p.value
+                    return (
+                      <button
+                        key={p.value}
+                        onClick={() => setPurpose(p.value)}
+                        onMouseEnter={() => setHoveredPurpose(p.value)}
+                        onMouseLeave={() => setHoveredPurpose(null)}
+                        className={`relative p-3 sm:p-4 rounded-xl sm:rounded-2xl text-center transition-all ${
+                          isSelected 
+                            ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]' 
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:scale-[1.02]'
+                        }`}
+                      >
+                        {p.hot && (
+                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-amber-400 to-orange-400 rounded-full shadow-md flex items-center justify-center">
+                            <span className="text-[6px] text-white font-bold">★</span>
+                          </span>
+                        )}
+                        <Icon className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 ${isSelected ? 'text-white' : ''}`} />
+                        <span className="text-[10px] sm:text-xs font-bold block truncate">{p.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <AnimatePresence mode="wait">
+                  {(() => {
+                    const displayPurpose = hoveredPurpose || purpose
+                    const purposeData = PURPOSES.find(p => p.value === displayPurpose)
+                    if (!purposeData) return (
+                      <motion.div
+                        key="none"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="bg-gray-50 rounded-2xl p-4 border border-gray-200 flex items-center justify-center h-full min-h-[120px]"
+                      >
+                        <p className="text-gray-400 text-sm">用途を選択するとイメージが表示されます</p>
+                      </motion.div>
+                    )
+                    return (
+                      <motion.div
+                        key={purposeData.value}
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        className="relative bg-gray-50 rounded-2xl p-4 border border-gray-200 overflow-hidden"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent z-0" />
+                        <div className="relative z-10">
+                          <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-blue-500" />
+                            <span className="text-blue-600">CTR戦略:</span> {purposeData.label}
+                          </h3>
+                          <p className="text-xs text-gray-600 mb-3">
+                            {purposeData.description}
+                          </p>
+                          {purposeData.sample && (
+                            <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border border-gray-200 shadow-md">
+                              <img
+                                src={purposeData.sample}
+                                alt={purposeData.label}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-2">
+                                <span className="text-white text-[10px] font-bold">広告デザインイメージ</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    )
+                  })()}
+                </AnimatePresence>
               </div>
             </motion.div>
 
@@ -1590,24 +1726,78 @@ export default function BannerDashboard() {
                     exit={{ opacity: 0, y: -10 }}
                     className="flex flex-wrap gap-1.5 sm:gap-2"
                   >
-                    {currentSizes.map((s) => {
-                      const isSelected = size === s.value
-                      return (
-                        <button
-                          key={s.value}
-                          onClick={() => setSize(s.value)}
-                          className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 ${
-                            isSelected 
-                              ? 'bg-sky-50 border-2 border-sky-400 text-sky-800 shadow-sm' 
-                              : 'bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                          }`}
-                        >
-                          {isSelected && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />}
-                          <span className="font-medium text-xs sm:text-sm">{s.label}</span>
-                          <span className="text-[10px] sm:text-xs text-gray-400 hidden sm:inline">{s.ratio}</span>
-                        </button>
-                      )
-                    })}
+                    <div className="grid lg:grid-cols-2 gap-4">
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                        {currentSizes.map((s) => {
+                          const isSelected = size === s.value
+                          return (
+                            <button
+                              key={s.value}
+                              onClick={() => setSize(s.value)}
+                              onMouseEnter={() => setHoveredSize(s.value)}
+                              onMouseLeave={() => setHoveredSize(null)}
+                              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 ${
+                                isSelected 
+                                  ? 'bg-sky-50 border-2 border-sky-400 text-sky-800 shadow-sm' 
+                                  : 'bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                              }`}
+                            >
+                              {isSelected && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />}
+                              <span className="font-medium text-xs sm:text-sm">{s.label}</span>
+                              <span className="text-[10px] sm:text-xs text-gray-400 hidden sm:inline">{s.ratio}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <AnimatePresence mode="wait">
+                        {(() => {
+                          const displaySize = hoveredSize || size
+                          const sizeData = SIZE_INFO[displaySize]
+                          if (!sizeData) return (
+                            <motion.div
+                              key="none"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="bg-gray-50 rounded-2xl p-4 border border-gray-200 flex items-center justify-center h-full min-h-[100px]"
+                            >
+                              <p className="text-gray-400 text-sm">サイズを選択するとイメージが表示されます</p>
+                            </motion.div>
+                          )
+                          return (
+                            <motion.div
+                              key={displaySize}
+                              initial={{ opacity: 0, x: 10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: -10 }}
+                              className="relative bg-gray-50 rounded-2xl p-4 border border-gray-200 overflow-hidden"
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent z-0" />
+                              <div className="relative z-10">
+                                <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                  <Sparkles className="w-4 h-4 text-emerald-500" />
+                                  <span className="text-emerald-600">レイアウト:</span> {displaySize}
+                                </h3>
+                                <p className="text-xs text-gray-600 mb-3">
+                                  {sizeData.description}
+                                </p>
+                                {sizeData.sample && (
+                                  <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border border-gray-200 shadow-md">
+                                    <img
+                                      src={sizeData.sample}
+                                      alt={displaySize}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-2">
+                                      <span className="text-white text-[10px] font-bold">サイズイメージ</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </motion.div>
+                          )
+                        })()}
+                      </AnimatePresence>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
