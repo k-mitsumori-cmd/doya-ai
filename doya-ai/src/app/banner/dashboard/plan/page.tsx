@@ -15,6 +15,10 @@ import {
   Loader2,
   Sparkles,
   Star,
+  Target,
+  CheckCircle2,
+  MessageSquare,
+  Image as ImageIcon,
   Zap,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -276,6 +280,86 @@ export default function BannerPlanPage() {
 
             {/* Side panel */}
             <div className="space-y-4">
+              {/* Recommended usage */}
+              <div className="bg-white rounded-3xl border border-gray-200/70 shadow-sm p-5">
+                <p className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-blue-600" />
+                  おすすめの使い方
+                </p>
+
+                <div className="space-y-3">
+                  {[
+                    {
+                      title: '1分で要件を固める（最短）',
+                      desc: 'AIチャットで「用途/業種/訴求/雰囲気」を会話で整理→そのまま生成。',
+                      href: '/banner/dashboard/chat',
+                      icon: MessageSquare,
+                      color: 'from-blue-600 to-cyan-600',
+                      cta: 'AIチャットを開く',
+                    },
+                    {
+                      title: 'A/B/Cを比較してCTRを上げる',
+                      desc: 'まず3案生成→良い案をベースに、色や訴求を微調整して2回目で完成度UP。',
+                      href: '/banner',
+                      icon: Sparkles,
+                      color: 'from-sky-600 to-blue-600',
+                      cta: 'バナー生成へ',
+                    },
+                    {
+                      title: '履歴から“当たり”を再利用する',
+                      desc: '過去の当たり構図・配色を見返して、次の制作に転用。',
+                      href: '/banner/dashboard/history',
+                      icon: Clock,
+                      color: 'from-slate-700 to-slate-900',
+                      cta: '履歴を見る',
+                    },
+                  ].map((s, i) => {
+                    const Icon = s.icon
+                    return (
+                      <div key={i} className="rounded-2xl border border-gray-200 p-4 bg-gray-50/50">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${s.color} flex items-center justify-center shadow-sm`}>
+                                <Icon className="w-4 h-4 text-white" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-black text-gray-900">{s.title}</p>
+                                <p className="mt-0.5 text-xs text-gray-600">{s.desc}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <Link
+                            href={s.href}
+                            className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-900 text-xs font-black hover:bg-gray-50"
+                          >
+                            {s.cta}
+                            <ArrowUpRight className="w-3.5 h-3.5 text-blue-600" />
+                          </Link>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="mt-4 rounded-2xl bg-gradient-to-r from-sky-50 to-cyan-50 border border-sky-200/60 p-4">
+                  <p className="text-xs font-black text-sky-900 mb-2">“CTRが上がる”ための型（チェックリスト）</p>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {[
+                      '数字（%OFF / 期間 / 価格）を入れる',
+                      'ベネフィットを先頭に置く（例:「予約が3倍に」）',
+                      'イメージ説明で主役（人物/商品/背景）を明確化',
+                      '色は3〜5色に絞ってコントラストを強める',
+                    ].map((t) => (
+                      <div key={t} className="flex items-center gap-2 text-xs text-gray-700">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span className="font-medium">{t}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div className="bg-white rounded-3xl border border-gray-200/70 shadow-sm p-5">
                 <p className="text-sm font-black text-gray-900 mb-3">導入ユーザーの声</p>
                 <div className="space-y-3">
@@ -307,6 +391,13 @@ export default function BannerPlanPage() {
                     className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white border border-gray-200 text-gray-900 font-black hover:bg-gray-50"
                   >
                     効果分析を見る
+                    <ArrowUpRight className="w-4 h-4 text-blue-600" />
+                  </Link>
+                  <Link
+                    href="/banner"
+                    className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white border border-gray-200 text-gray-900 font-black hover:bg-gray-50"
+                  >
+                    生成画面へ（A/B/C）
                     <ArrowUpRight className="w-4 h-4 text-blue-600" />
                   </Link>
                 </div>
