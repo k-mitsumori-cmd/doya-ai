@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ArrowLeft, Palette, Save } from 'lucide-react'
 import { useState } from 'react'
+import DashboardSidebar from '@/components/DashboardSidebar'
 
 export default function BannerBrandPage() {
   const [primaryColor, setPrimaryColor] = useState('#2563EB')
@@ -11,22 +12,24 @@ export default function BannerBrandPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-4">
-          <Link href="/banner/dashboard" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="w-5 h-5" />
-            <span>戻る</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Palette className="w-5 h-5 text-blue-600" />
-            <span className="font-bold text-gray-800">ブランド設定</span>
+      <DashboardSidebar />
+      <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+        {/* ヘッダー */}
+        <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
+          <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-4">
+            <Link href="/banner" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
+              <ArrowLeft className="w-5 h-5" />
+              <span>戻る</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <Palette className="w-5 h-5 text-blue-600" />
+              <span className="font-bold text-gray-800">ブランド設定</span>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* メイン */}
-      <main className="max-w-2xl mx-auto px-4 py-8">
+        {/* メイン */}
+        <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <h2 className="text-xl font-bold text-gray-900 mb-6">ブランドカラー設定</h2>
           
@@ -111,7 +114,8 @@ export default function BannerBrandPage() {
         <p className="text-center text-sm text-gray-500 mt-6">
           ※ ブランド設定はプロプランのみ利用可能です
         </p>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }

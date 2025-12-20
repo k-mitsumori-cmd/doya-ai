@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
+import DashboardSidebar from '@/components/DashboardSidebar'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -1218,19 +1219,24 @@ export default function BannerDashboard() {
   // ========================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50/40 text-gray-900">
-      <Toaster 
-        position="top-center" 
-        toastOptions={{
-          style: {
-            background: '#ffffff',
-            color: '#111827',
-            borderRadius: '16px',
-            padding: '16px 24px',
-            boxShadow: '0 25px 50px -12px rgba(17, 24, 39, 0.18)',
-            border: '1px solid rgba(229, 231, 235, 0.9)',
-          },
-        }}
-      />
+      {/* サイドバー */}
+      <DashboardSidebar />
+
+      {/* メインコンテンツ（サイドバー分のマージンを追加） */}
+      <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+        <Toaster 
+          position="top-center" 
+          toastOptions={{
+            style: {
+              background: '#ffffff',
+              color: '#111827',
+              borderRadius: '16px',
+              padding: '16px 24px',
+              boxShadow: '0 25px 50px -12px rgba(17, 24, 39, 0.18)',
+              border: '1px solid rgba(229, 231, 235, 0.9)',
+            },
+          }}
+        />
       
       {/* ========================================
           Header - Ultra Modern Glass Morphism
@@ -2915,6 +2921,7 @@ export default function BannerDashboard() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   )
 }

@@ -18,6 +18,7 @@ import {
   Layers,
   ChevronRight
 } from 'lucide-react'
+import DashboardSidebar from '@/components/DashboardSidebar'
 
 // 1バナー生成で削減できる推定時間（分）
 const ESTIMATED_TIME_SAVED_PER_BANNER = 45 // デザイナーが1バナー作るのに平均45分
@@ -116,47 +117,52 @@ export default function StatsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+        <DashboardSidebar />
+        <div className="pl-[72px] lg:pl-[240px] flex items-center justify-center min-h-screen">
+          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+        </div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <Link 
-                href="/banner"
-                className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-                <span className="hidden sm:inline text-sm font-medium">戻る</span>
-              </Link>
-              <div className="h-6 w-px bg-gray-200" />
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                  <BarChart3 className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-base sm:text-lg font-black text-gray-900">効率化ダッシュボード</h1>
-                  <p className="text-[10px] sm:text-xs text-gray-400 hidden sm:block">制作時間の削減効果を可視化</p>
+      <DashboardSidebar />
+      <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <Link 
+                  href="/banner"
+                  className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span className="hidden sm:inline text-sm font-medium">戻る</span>
+                </Link>
+                <div className="h-6 w-px bg-gray-200" />
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <BarChart3 className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h1 className="text-base sm:text-lg font-black text-gray-900">効率化ダッシュボード</h1>
+                    <p className="text-[10px] sm:text-xs text-gray-400 hidden sm:block">制作時間の削減効果を可視化</p>
+                  </div>
                 </div>
               </div>
+              <Link 
+                href="/banner/dashboard/history"
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                履歴を見る
+                <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
-            <Link 
-              href="/banner/dashboard/history"
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
-            >
-              履歴を見る
-              <ChevronRight className="w-4 h-4" />
-            </Link>
           </div>
-        </div>
-      </header>
+        </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Hero Stats */}
@@ -422,7 +428,8 @@ export default function StatsPage() {
             </button>
           </Link>
         </motion.div>
-      </main>
+        </main>
+      </div>
     </div>
   )
 }
