@@ -72,6 +72,17 @@ const SIDEBAR_MENU = [
     },
   },
   { 
+    id: 'pricing', 
+    label: '料金プラン', 
+    icon: <DollarSign className="w-5 h-5" />, 
+    href: '/kantan/dashboard/pricing',
+    description: '現在のプランと利用状況を確認。アップグレードやプラン比較ができます。',
+    preview: {
+      stats: ['プラン比較', 'アップグレード', '利用状況確認'],
+      color: 'from-emerald-500 to-cyan-500',
+    },
+  },
+  { 
     id: 'analytics', 
     label: 'アナリティクス', 
     icon: <BarChart3 className="w-5 h-5" />, 
