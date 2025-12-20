@@ -41,7 +41,7 @@ const mainNavItems: NavItem[] = [
 
 const dataNavItems: NavItem[] = [
   { href: '/banner/dashboard/stats', label: 'アナリティクス', icon: TrendingUp },
-  { href: '/banner/pricing', label: 'プラン', icon: Layers },
+  { href: '/banner/dashboard/plan', label: 'プラン', icon: Layers },
 ]
 
 const settingsNavItems: NavItem[] = [
