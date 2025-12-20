@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Download, Palette, Zap, Check, ChevronRight, Eye, Layers, FileText } from 'lucide-react'
+import { Sparkles, Download, Palette, Zap, Check, ChevronRight, Eye, Layers, FileText, Link, Image, Loader2 } from 'lucide-react'
 
 type Mood = 'japanese_modern' | 'wa_tech' | 'minimal' | 'bold' | 'startup'
 type Industry = 'saas' | 'hr' | 'ai' | 'marketing' | 'fintech' | 'other'
@@ -55,6 +55,15 @@ export default function DoyaLogoPage() {
   const [selectedPattern, setSelectedPattern] = useState<'A' | 'B' | 'C'>('A')
   const [previewMode, setPreviewMode] = useState<'default' | 'dark'>('default')
 
+  // カラー抽出関連
+  const [extractUrl, setExtractUrl] = useState('')
+  const [extracting, setExtracting] = useState(false)
+  const [extractError, setExtractError] = useState<string | null>(null)
+  const [extractedPalette, setExtractedPalette] = useState<{ primary: string; secondary: string } | null>(null)
+
+  // 参考バナー/イメージURL
+  const [referenceImageUrl, setReferenceImageUrl] = useState('')
+
   const payload = useMemo(
     () => ({
       serviceName,
@@ -63,12 +72,38 @@ export default function DoyaLogoPage() {
       industry,
       mainColor: mainColor || undefined,
       subColor: subColor || undefined,
+      referenceImageUrl: referenceImageUrl || undefined,
     }),
-    [serviceName, serviceDescription, mood, industry, mainColor, subColor]
+    [serviceName, serviceDescription, mood, industry, mainColor, subColor, referenceImageUrl]
   )
 
   const canProceedStep1 = serviceName.trim().length >= 1
   const canProceedStep2 = serviceDescription.trim().length >= 1
+
+  async function extractPalette() {
+    if (!extractUrl.trim()) return
+    setExtracting(true)
+    setExtractError(null)
+    try {
+      const res = await fetch('/api/color/palette', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: extractUrl }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json?.success) {
+        throw new Error(json?.error || 'パレット抽出に失敗しました')
+      }
+      const { primary, secondary } = json.data.palette
+      setMainColor(primary)
+      setSubColor(secondary)
+      setExtractedPalette({ primary, secondary })
+    } catch (e: unknown) {
+      setExtractError(e instanceof Error ? e.message : '抽出エラー')
+    } finally {
+      setExtracting(false)
+    }
+  }
 
   async function generateLogos() {
     setLoading(true)
@@ -340,6 +375,81 @@ export default function DoyaLogoPage() {
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* URL からカラー抽出 */}
+                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Link className="w-4 h-4 text-violet-400" />
+                    <label className="text-sm font-semibold text-white/70">URLからカラー抽出（任意）</label>
+                  </div>
+                  <p className="text-xs text-white/40 mb-4">既存サイトやLPからブランドカラーを自動抽出して適用できます</p>
+                  <div className="flex gap-3">
+                    <input
+                      type="url"
+                      value={extractUrl}
+                      onChange={(e) => setExtractUrl(e.target.value)}
+                      placeholder="https://example.com"
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-violet-500 text-sm placeholder:text-white/20"
+                    />
+                    <button
+                      onClick={extractPalette}
+                      disabled={!extractUrl.trim() || extracting}
+                      className={`
+                        px-5 py-3 rounded-xl font-semibold text-sm transition-all flex items-center gap-2
+                        ${extractUrl.trim() && !extracting
+                          ? 'bg-violet-500/20 border border-violet-500/50 text-violet-300 hover:bg-violet-500/30'
+                          : 'bg-white/5 text-white/30 border border-white/10 cursor-not-allowed'}
+                      `}
+                    >
+                      {extracting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          抽出中
+                        </>
+                      ) : (
+                        <>
+                          <Palette className="w-4 h-4" />
+                          抽出する
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {extractError && (
+                    <div className="mt-3 text-sm text-red-400">{extractError}</div>
+                  )}
+                  {extractedPalette && (
+                    <div className="mt-4 flex items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <span className="text-sm text-emerald-300">カラーを適用しました</span>
+                      <div className="flex items-center gap-2 ml-auto">
+                        <div className="w-6 h-6 rounded-md border border-white/20" style={{ backgroundColor: extractedPalette.primary }} title={extractedPalette.primary} />
+                        <div className="w-6 h-6 rounded-md border border-white/20" style={{ backgroundColor: extractedPalette.secondary }} title={extractedPalette.secondary} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 参考バナー/イメージURL */}
+                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Image className="w-4 h-4 text-fuchsia-400" />
+                    <label className="text-sm font-semibold text-white/70">参考バナー/イメージURL（任意）</label>
+                  </div>
+                  <p className="text-xs text-white/40 mb-4">参考にしたいバナーやロゴの画像URLを入力すると、雰囲気を考慮して生成します</p>
+                  <input
+                    type="url"
+                    value={referenceImageUrl}
+                    onChange={(e) => setReferenceImageUrl(e.target.value)}
+                    placeholder="https://example.com/banner.png"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-fuchsia-500 text-sm placeholder:text-white/20"
+                  />
+                  {referenceImageUrl && (
+                    <div className="mt-4 flex items-center gap-3 p-3 bg-fuchsia-500/10 border border-fuchsia-500/30 rounded-xl">
+                      <Check className="w-4 h-4 text-fuchsia-400" />
+                      <span className="text-sm text-fuchsia-300">参考イメージを設定しました</span>
+                    </div>
+                  )}
                 </div>
 
                 {error && (
