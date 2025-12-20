@@ -147,15 +147,15 @@ export const SERVICES: Service[] = [
     pricing: {
       free: { 
         name: '無料プラン', 
-        limit: '1日1枚まで', 
-        dailyLimit: 1,
+        limit: '1日3回まで', 
+        dailyLimit: 3,
         price: 0 
       },
       pro: { 
         name: 'プロプラン', 
-        limit: '無制限', 
-        dailyLimit: -1,
-        price: 9980,
+        limit: '1日30回まで', 
+        dailyLimit: 30,
+        price: 4980,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_BANNER_PRO_PRICE_ID,
       },
     },

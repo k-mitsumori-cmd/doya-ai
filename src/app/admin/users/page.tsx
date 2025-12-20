@@ -202,8 +202,8 @@ export default function AdminUsersPage() {
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
             { label: '総ユーザー', value: users.length, icon: Users, color: 'from-blue-500 to-cyan-500' },
-            { label: 'プロプラン', value: users.filter(u => u.plan === 'PRO').length, icon: Crown, color: 'from-amber-500 to-orange-500' },
-            { label: 'スターター', value: users.filter(u => u.plan === 'STARTER').length, icon: Zap, color: 'from-violet-500 to-fuchsia-500' },
+            { label: '有料版', value: users.filter(u => u.plan === 'PRO').length, icon: Crown, color: 'from-amber-500 to-orange-500' },
+            { label: '旧:スターター', value: users.filter(u => u.plan === 'STARTER').length, icon: Zap, color: 'from-violet-500 to-fuchsia-500' },
             { label: '管理者', value: users.filter(u => u.role === 'ADMIN').length, icon: Shield, color: 'from-emerald-500 to-green-500' },
           ].map((stat, index) => (
             <motion.div
@@ -242,8 +242,8 @@ export default function AdminUsersPage() {
             >
               <option value="all" className="bg-[#0A0A0F]">すべてのプラン</option>
               <option value="FREE" className="bg-[#0A0A0F]">フリー</option>
-              <option value="STARTER" className="bg-[#0A0A0F]">スターター</option>
-              <option value="PRO" className="bg-[#0A0A0F]">プロ</option>
+              <option value="PRO" className="bg-[#0A0A0F]">有料版</option>
+              <option value="STARTER" className="bg-[#0A0A0F]">旧:スターター</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
           </div>
