@@ -10,7 +10,7 @@ import {
   User, Building2, Video, Mail, Gift, Megaphone, Target,
   ChevronDown, Check, Star, Eye, Copy, 
   Play, Crown, ArrowUpRight, Palette,
-  MessageSquare, Send, RotateCcw, Pencil
+  MessageSquare, Send, RotateCcw, Pencil, BarChart3
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
@@ -1277,6 +1277,12 @@ export default function BannerDashboard() {
                 </>
               ) : (
                 <>
+                  <Link href="/banner/dashboard/stats">
+                    <button className="flex items-center gap-2 px-3 py-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all text-sm">
+                      <BarChart3 className="w-4 h-4" />
+                      <span className="hidden sm:inline">効果</span>
+                    </button>
+                  </Link>
                   <Link href="/banner/dashboard/history">
                     <button className="flex items-center gap-2 px-3 py-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all text-sm">
                       <Clock className="w-4 h-4" />
