@@ -20,18 +20,66 @@ import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, in
 // 定数
 // ========================================
 const CATEGORIES = [
-  { value: 'telecom', label: '通信', icon: '📱', color: '#3B82F6', bg: 'from-blue-500/20 to-cyan-500/20' },
-  { value: 'marketing', label: 'マーケ', icon: '📊', color: '#0EA5E9', bg: 'from-sky-500/20 to-cyan-500/20' },
-  { value: 'ec', label: 'EC', icon: '🛒', color: '#F97316', bg: 'from-orange-500/20 to-amber-500/20' },
-  { value: 'recruit', label: '採用', icon: '👥', color: '#22C55E', bg: 'from-green-500/20 to-emerald-500/20' },
-  { value: 'beauty', label: '美容', icon: '💄', color: '#EC4899', bg: 'from-pink-500/20 to-rose-500/20' },
-  { value: 'food', label: '飲食', icon: '🍽️', color: '#EF4444', bg: 'from-red-500/20 to-orange-500/20' },
-  { value: 'realestate', label: '不動産', icon: '🏠', color: '#14B8A6', bg: 'from-teal-500/20 to-cyan-500/20' },
-  { value: 'education', label: '教育', icon: '📚', color: '#6366F1', bg: 'from-indigo-500/20 to-blue-500/20' },
-  { value: 'finance', label: '金融', icon: '💰', color: '#EAB308', bg: 'from-yellow-500/20 to-amber-500/20' },
-  { value: 'health', label: '医療', icon: '🏥', color: '#06B6D4', bg: 'from-cyan-500/20 to-teal-500/20' },
-  { value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-500/20 to-indigo-500/20' },
-  { value: 'other', label: 'その他', icon: '✨', color: '#64748B', bg: 'from-slate-500/20 to-gray-500/20' },
+  { 
+    value: 'telecom', label: '通信', icon: '📱', color: '#3B82F6', bg: 'from-blue-500/20 to-cyan-500/20',
+    description: '青を基調とした、清潔感とスピード感のあるテック系デザイン。',
+    sample: 'https://images.unsplash.com/photo-1562408590-e32931084e23?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'marketing', label: 'マーケ', icon: '📊', color: '#0EA5E9', bg: 'from-sky-500/20 to-cyan-500/20',
+    description: '信頼感のあるネイビーや明るいシアンを使い、数値や実績を強調。',
+    sample: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'ec', label: 'EC', icon: '🛒', color: '#F97316', bg: 'from-orange-500/20 to-amber-500/20',
+    description: 'オレンジや黄色の暖色系で、お得感と購買意欲をそそるポップなデザイン。',
+    sample: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'recruit', label: '採用', icon: '👥', color: '#22C55E', bg: 'from-green-500/20 to-emerald-500/20',
+    description: 'フレッシュな緑を使い、明るい笑顔やチームワークを感じさせる清潔感。',
+    sample: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'beauty', label: '美容', icon: '💄', color: '#EC4899', bg: 'from-pink-500/20 to-rose-500/20',
+    description: 'ピンクや白を基調とした、透明感と高級感のある洗練されたスタイル。',
+    sample: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'food', label: '飲食', icon: '🍽️', color: '#EF4444', bg: 'from-red-500/20 to-orange-500/20',
+    description: '赤や暖色を使い、シズル感のある写真が映える食欲をそそるデザイン。',
+    sample: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'realestate', label: '不動産', icon: '🏠', color: '#14B8A6', bg: 'from-teal-500/20 to-cyan-500/20',
+    description: '落ち着いたトーンで、安心感と重厚感のあるプロフェッショナルな印象。',
+    sample: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'education', label: '教育', icon: '📚', color: '#6366F1', bg: 'from-indigo-500/20 to-blue-500/20',
+    description: '誠実な青や明るい色を組み合わせ、学びの意欲を高める知的な雰囲気。',
+    sample: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'finance', label: '金融', icon: '💰', color: '#EAB308', bg: 'from-yellow-500/20 to-amber-500/20',
+    description: 'ゴールドや紺を使い、堅実さと将来性を感じさせる硬派なデザイン。',
+    sample: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'health', label: '医療', icon: '🏥', color: '#06B6D4', bg: 'from-cyan-500/20 to-teal-500/20',
+    description: '清潔な白や水色を使い、優しさと安心感を与えるメディカルスタイル。',
+    sample: 'https://images.unsplash.com/photo-1505751172107-573225a91703?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-500/20 to-indigo-500/20',
+    description: 'モダンなダークモードやサイバーな青を使い、先進性をアピール。',
+    sample: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=400&h=300&auto=format&fit=crop'
+  },
+  { 
+    value: 'other', label: 'その他', icon: '✨', color: '#64748B', bg: 'from-slate-500/20 to-gray-500/20',
+    description: '汎用性が高く、どんなテーマにも馴染むシンプルで洗練されたデザイン。',
+    sample: 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?q=80&w=400&h=300&auto=format&fit=crop'
+  },
 ]
 
 const PURPOSES = [
@@ -486,6 +534,9 @@ export default function BannerDashboard() {
   const sampleCopyIndexRef = useRef<Record<string, number>>({})
   const [sampleCopyIndex, setSampleCopyIndex] = useState(0)
   const [sampleCopyTotal, setSampleCopyTotal] = useState(0)
+
+  // カテゴリホバー/選択用
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null)
 
   // 使用カラー（任意・手動指定）
   const [useCustomColors, setUseCustomColors] = useState(false)
@@ -1294,6 +1345,7 @@ export default function BannerDashboard() {
             </motion.div>
 
             {/* Step 2: Category */}
+            {/* Step 2: Category */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1309,30 +1361,87 @@ export default function BannerDashboard() {
                   <p className="text-xs text-gray-400 hidden sm:block">デザインテイストに影響します</p>
                 </div>
               </div>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 sm:gap-3">
-                {CATEGORIES.map((cat) => {
-                  const isSelected = category === cat.value
-                  return (
-                    <button
-                      key={cat.value}
-                      onClick={() => setCategory(cat.value)}
-                      className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl text-center transition-all ${
-                        isSelected 
-                          ? 'bg-white shadow-lg scale-[1.02] outline outline-2 outline-offset-2' 
-                          : 'bg-gray-50/50 hover:bg-gray-100 hover:scale-[1.02]'
-                      }`}
-                      style={{ 
-                        outlineColor: isSelected ? cat.color : undefined,
-                        boxShadow: isSelected ? `0 10px 40px -10px ${cat.color}40` : undefined
-                      }}
-                    >
-                      <span className="text-xl sm:text-2xl block mb-1">{cat.icon}</span>
-                      <span className={`text-[10px] sm:text-xs font-bold ${isSelected ? 'text-gray-900' : 'text-gray-500'}`}>
-                        {cat.label}
-                      </span>
-                    </button>
-                  )
-                })}
+
+              <div className="grid lg:grid-cols-[1fr,240px] gap-6">
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 sm:gap-3">
+                  {CATEGORIES.map((cat) => {
+                    const isSelected = category === cat.value
+                    return (
+                      <button
+                        key={cat.value}
+                        onClick={() => setCategory(cat.value)}
+                        onMouseEnter={() => setHoveredCategory(cat.value)}
+                        onMouseLeave={() => setHoveredCategory(null)}
+                        className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl text-center transition-all ${
+                          isSelected 
+                            ? 'bg-white shadow-lg scale-[1.02] outline outline-2 outline-offset-2' 
+                            : 'bg-gray-50/50 hover:bg-gray-100 hover:scale-[1.02]'
+                        }`}
+                        style={{ 
+                          outlineColor: isSelected ? cat.color : undefined,
+                          boxShadow: isSelected ? `0 10px 40px -10px ${cat.color}40` : undefined
+                        }}
+                      >
+                        <span className="text-xl sm:text-2xl block mb-1">{cat.icon}</span>
+                        <span className={`text-[10px] sm:text-xs font-bold ${isSelected ? 'text-gray-900' : 'text-gray-500'}`}>
+                          {cat.label}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Design Style Preview Panel (Visible on Desktop) */}
+                <div className="hidden lg:block relative min-h-[180px]">
+                  <AnimatePresence mode="wait">
+                    {(() => {
+                      const displayCat = hoveredCategory || category
+                      const catData = CATEGORIES.find(c => c.value === displayCat)
+                      if (!catData) return (
+                        <motion.div
+                          key="none"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="h-full border-2 border-dashed border-gray-100 rounded-2xl flex flex-col items-center justify-center p-4 text-center"
+                        >
+                          <Palette className="w-8 h-8 text-gray-200 mb-2" />
+                          <p className="text-[10px] text-gray-400 font-medium">業種を選ぶと<br />デザイン傾向を表示</p>
+                        </motion.div>
+                      )
+
+                      return (
+                        <motion.div
+                          key={catData.value}
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="h-full bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 shadow-inner flex flex-col"
+                        >
+                          <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
+                            <img 
+                              src={catData.sample} 
+                              alt={catData.label} 
+                              className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
+                              <span className="text-white text-[10px] font-black tracking-widest uppercase">Design Taste</span>
+                            </div>
+                          </div>
+                          <div className="p-3">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className="text-xs">{catData.icon}</span>
+                              <span className="text-xs font-bold text-gray-800">{catData.label}のデザイン</span>
+                            </div>
+                            <p className="text-[10px] leading-relaxed text-gray-500 font-medium">
+                              {catData.description}
+                            </p>
+                          </div>
+                        </motion.div>
+                      )
+                    })()}
+                  </AnimatePresence>
+                </div>
               </div>
             </motion.div>
 
