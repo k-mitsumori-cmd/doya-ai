@@ -2,12 +2,12 @@ import { Metadata } from 'next'
 import { SITE_CONFIG, SERVICE_SEO, generateSoftwareApplicationSchema } from '@/lib/seo'
 
 // ============================================
-// カンタンドヤAI メタデータ
+// カンタンマーケAI メタデータ
 // ============================================
 export const metadata: Metadata = {
   title: {
     default: SERVICE_SEO.kantan.title,
-    template: `%s | カンタンドヤAI`,
+    template: `%s | カンタンマーケAI`,
   },
   description: SERVICE_SEO.kantan.description,
   keywords: SERVICE_SEO.kantan.keywords,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
         url: SERVICE_SEO.kantan.ogImage,
         width: 1200,
         height: 630,
-        alt: 'カンタンドヤAI - AIで文章作成がカンタンになる',
+        alt: 'カンタンマーケAI - マーケティング業務をAIで劇的効率化',
       },
     ],
   },

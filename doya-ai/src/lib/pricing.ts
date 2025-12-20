@@ -43,14 +43,15 @@ export interface ServicePricing {
 }
 
 // ========================================
-// カンタンドヤAI（テキスト生成）料金設定
+// カンタンマーケAI（マーケティング業務AIエージェント）料金設定
 // ========================================
 // /kantan ページや robots/sitemap のメタ生成で参照されるため、
 // ここで必ず export して「undefined参照でビルド落ち」を防ぐ。
+// 参考: https://lp.airmake.airdesign.ai/ エアマケ
 export const KANTAN_PRICING: ServicePricing = {
   serviceId: 'kantan',
-  serviceName: 'カンタンドヤAI',
-  serviceIcon: '📝',
+  serviceName: 'カンタンマーケAI',
+  serviceIcon: '🚀',
   guestLimit: 3, // ゲスト: 1日3回
   freeLimit: 10, // ログイン無料: 1日10回
   proLimit: 100, // プロ: 1日100回
@@ -65,11 +66,12 @@ export const KANTAN_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '¥0',
       period: '',
-      description: 'まずは試してみたい方',
+      description: 'まずはAIマーケターを体験',
       features: [
         { text: 'ゲスト: 1日3回まで', included: true },
         { text: 'ログイン: 1日10回まで', included: true },
-        { text: '68種類のテンプレート', included: true },
+        { text: 'チャット形式でマーケ相談', included: true },
+        { text: '15種類のマーケAIエージェント', included: true },
         { text: '履歴保存（7日間）', included: true },
       ],
       cta: '無料で試す',
@@ -77,19 +79,38 @@ export const KANTAN_PRICING: ServicePricing = {
     {
       id: 'kantan-pro',
       name: 'プロ',
-      price: 2980,
-      priceLabel: '¥2,980',
+      price: 4980,
+      priceLabel: '¥4,980',
       period: '/月（税込）',
-      description: '月額2,980円：1日100回',
+      description: 'マーケ業務を劇的効率化',
       popular: true,
-      color: 'blue',
+      color: 'emerald',
       features: [
         { text: '1日100回まで生成', included: true },
-        { text: '全テンプレート利用可能', included: true },
+        { text: '全AIエージェント利用可能', included: true },
+        { text: 'ブランド設定対応', included: true },
+        { text: '広告データ分析', included: true },
         { text: '履歴保存（無制限）', included: true },
         { text: '優先サポート', included: true },
       ],
       cta: 'プロプランを始める',
+    },
+    {
+      id: 'kantan-enterprise',
+      name: '法人',
+      price: 0,
+      priceLabel: '要相談',
+      period: '',
+      description: 'カスタムAIエージェント構築',
+      color: 'slate',
+      features: [
+        { text: '業務プロセス全体をAI化', included: true },
+        { text: 'カスタムAIエージェント開発', included: true },
+        { text: '高セキュリティ環境', included: true },
+        { text: '請求書払い・契約書対応', included: true },
+        { text: '専任サポート', included: true },
+      ],
+      cta: 'お問い合わせ',
     },
   ],
 }

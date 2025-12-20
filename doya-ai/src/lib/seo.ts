@@ -25,25 +25,25 @@ export const SERVICE_SEO = {
     ogImage: '/og/portal.png',
   },
   
-  // カンタンドヤAI
+  // カンタンマーケAI（マーケティング業務AIエージェント）
   kantan: {
-    title: 'カンタンドヤAI | テンプレでビジネス文章をAI自動生成',
+    title: 'カンタンマーケAI | マーケティング業務をAIで劇的効率化',
     description:
-      'メール、ブログ、SNS投稿、提案書…テンプレートを選んで情報を入れるだけで、読みやすい文章をAIが自動生成します。',
-    keywords: ['文章生成', 'ビジネスメール', '提案書', '議事録', 'SNS投稿', 'テンプレート', '生成AI'],
+      'LP構成案、バナーコピー、広告文、メルマガ、競合分析…マーケ業務を丸ごとAIエージェントがサポート。チャット形式で誰でもプロ品質のアウトプット。',
+    keywords: ['マーケティングAI', 'LP構成案', 'バナーコピー', '広告文作成', 'メルマガ', '競合分析', 'AIエージェント', 'マーケティング自動化'],
     ogImage: '/og/portal.png',
     sections: {
       dashboard: {
-        title: 'ダッシュボード | カンタンドヤAI',
-        description: 'テンプレートを選んで文章を作成。履歴の確認もできます。',
+        title: 'ダッシュボード | カンタンマーケAI',
+        description: 'チャット形式でマーケティング業務を効率化。15種類のAIエージェントが対応。',
       },
       pricing: {
-        title: '料金プラン | カンタンドヤAI',
+        title: '料金プラン | カンタンマーケAI',
         description: `無料プランはゲスト1日${KANTAN_PRICING.guestLimit}回、ログイン後1日${KANTAN_PRICING.freeLimit}回まで。プロプランは1日${KANTAN_PRICING.proLimit}回まで。`,
       },
       guide: {
-        title: '使い方 | カンタンドヤAI',
-        description: 'テンプレートの選び方、入力のコツ、文章品質を上げるポイントを解説します。',
+        title: '使い方 | カンタンマーケAI',
+        description: 'AIエージェントの選び方、プロンプトのコツ、マーケ業務効率化のポイントを解説します。',
       },
     },
   },
@@ -157,7 +157,7 @@ export function generateSoftwareApplicationSchema(service: 'seo' | 'banner' | 'k
       },
     },
     kantan: {
-      name: 'カンタンドヤAI',
+      name: 'カンタンマーケAI',
       applicationCategory: 'BusinessApplication',
       offers: {
         '@type': 'Offer',
