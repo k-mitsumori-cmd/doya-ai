@@ -22,63 +22,63 @@ import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, in
 const CATEGORIES = [
   { 
     value: 'telecom', label: '通信', icon: '📱', color: '#3B82F6', bg: 'from-blue-500/20 to-cyan-500/20',
-    description: '青を基調とした、清潔感とスピード感のあるテック系デザイン。',
-    sample: 'https://images.unsplash.com/photo-1562408590-e32931084e23?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【テック・信頼】スピード感のある斜めラインと、デバイスが引き立つモダンな青のグラデーション。',
+    sample: 'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'marketing', label: 'マーケ', icon: '📊', color: '#0EA5E9', bg: 'from-sky-500/20 to-cyan-500/20',
-    description: '信頼感のあるネイビーや明るいシアンを使い、数値や実績を強調。',
-    sample: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【ビジネス・実績】グラフや抽象的な幾何学模様を配し、数字が際立つクリーンなビジネスレイアウト。',
+    sample: 'https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'ec', label: 'EC', icon: '🛒', color: '#F97316', bg: 'from-orange-500/20 to-amber-500/20',
-    description: 'オレンジや黄色の暖色系で、お得感と購買意欲をそそるポップなデザイン。',
-    sample: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【セール・活気】「今だけ」を強調するバースト装飾と、購買意欲を高める鮮やかな暖色。',
+    sample: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'recruit', label: '採用', icon: '👥', color: '#22C55E', bg: 'from-green-500/20 to-emerald-500/20',
-    description: 'フレッシュな緑を使い、明るい笑顔やチームワークを感じさせる清潔感。',
-    sample: 'https://images.unsplash.com/photo-1521737711867-e3b97375f902?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【キャリア・希望】人物が映える余白と、成長や調和を感じさせる爽やかなグリーンの配色。',
+    sample: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'beauty', label: '美容', icon: '💄', color: '#EC4899', bg: 'from-pink-500/20 to-rose-500/20',
-    description: 'ピンクや白を基調とした、透明感と高級感のある洗練されたスタイル。',
-    sample: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【洗練・上品】透明感のあるテクスチャと、高級コスメを彷彿とさせる繊細なニュアンスカラー。',
+    sample: 'https://images.unsplash.com/photo-1560780552-ba54683cb263?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'food', label: '飲食', icon: '🍽️', color: '#EF4444', bg: 'from-red-500/20 to-orange-500/20',
-    description: '赤や暖色を使い、シズル感のある写真が映える食欲をそそるデザイン。',
-    sample: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【シズル感・情熱】食欲を刺激する赤を使い、商品の質感が伝わるダイナミックな配置。',
+    sample: 'https://images.unsplash.com/photo-1550684847-75bdda21cc95?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'realestate', label: '不動産', icon: '🏠', color: '#14B8A6', bg: 'from-teal-500/20 to-cyan-500/20',
-    description: '落ち着いたトーンで、安心感と重厚感のあるプロフェッショナルな印象。',
-    sample: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【信頼・生活】落ち着いたアースカラーと、間取りや空間を意識した安定感のある構図。',
+    sample: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'education', label: '教育', icon: '📚', color: '#6366F1', bg: 'from-indigo-500/20 to-blue-500/20',
-    description: '誠実な青や明るい色を組み合わせ、学びの意欲を高める知的な雰囲気。',
-    sample: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【知性・未来】学びの集中力を高めるネイビーと、アクセントカラーを使った分かりやすい訴求。',
+    sample: 'https://images.unsplash.com/photo-1554147090-e1221a04a025?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'finance', label: '金融', icon: '💰', color: '#EAB308', bg: 'from-yellow-500/20 to-amber-500/20',
-    description: 'ゴールドや紺を使い、堅実さと将来性を感じさせる硬派なデザイン。',
-    sample: 'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【堅実・プロ】ダークトーンとゴールドを組み合わせた、威厳と信頼を感じさせる配色。',
+    sample: 'https://images.unsplash.com/photo-1550684376-efcbd6e3f031?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'health', label: '医療', icon: '🏥', color: '#06B6D4', bg: 'from-cyan-500/20 to-teal-500/20',
-    description: '清潔な白や水色を使い、優しさと安心感を与えるメディカルスタイル。',
-    sample: 'https://images.unsplash.com/photo-1505751172107-573225a91703?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【清潔・安心】ホワイトスペースを広く取り、柔らかい曲線を用いた優しいケアスタイル。',
+    sample: 'https://images.unsplash.com/photo-1516542076529-1ea3854896f2?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-500/20 to-indigo-500/20',
-    description: 'モダンなダークモードやサイバーな青を使い、先進性をアピール。',
-    sample: 'https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【革新・スピード】ダークモードを意識した背景に、ネオンカラーのアクセントを加えた近未来デザイン。',
+    sample: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=400&h=300&auto=format&fit=crop'
   },
   { 
     value: 'other', label: 'その他', icon: '✨', color: '#64748B', bg: 'from-slate-500/20 to-gray-500/20',
-    description: '汎用性が高く、どんなテーマにも馴染むシンプルで洗練されたデザイン。',
-    sample: 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?q=80&w=400&h=300&auto=format&fit=crop'
+    description: '【汎用・シンプル】どんなコピーにも馴染むミニマルな背景と、バランスの良い配色。',
+    sample: 'https://images.unsplash.com/photo-1553356084-58ef4a67b2a7?q=80&w=400&h=300&auto=format&fit=crop'
   },
 ]
 
