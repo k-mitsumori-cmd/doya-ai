@@ -483,6 +483,9 @@ export default function BannerDashboard() {
   // サンプル入力（用途/業種/キーワードまで押すたびに切り替え）
   const [sampleScenarioIndex, setSampleScenarioIndex] = useState(-1)
   const sampleScenarioIndexRef = useRef(-1)
+  const sampleCopyIndexRef = useRef<Record<string, number>>({})
+  const [sampleCopyIndex, setSampleCopyIndex] = useState(0)
+  const [sampleCopyTotal, setSampleCopyTotal] = useState(0)
 
   // 使用カラー（任意・手動指定）
   const [useCustomColors, setUseCustomColors] = useState(false)
@@ -552,6 +555,15 @@ export default function BannerDashboard() {
     setAiSamplePool([])
     setAiSampleIndex(0)
     setAiSampleKey(`${category}|${purpose}`)
+    // 「サンプル入力」も業種×用途でカウントをリセット
+    if (category) {
+      const poolLen = buildHighCtrSampleCopies(category, purpose).length
+      setSampleCopyTotal(poolLen)
+      setSampleCopyIndex(0)
+    } else {
+      setSampleCopyTotal(0)
+      setSampleCopyIndex(0)
+    }
   }, [category, purpose])
 
   useEffect(() => {
@@ -624,19 +636,31 @@ export default function BannerDashboard() {
 
   // Handlers
   const handleSample = () => {
+    // 業種を選択中なら「いまの業種に合わせたキャッチコピー」だけ切り替える
+    if (category) {
+      const key = `${category}|${purpose}`
+      const pool = buildHighCtrSampleCopies(category, purpose)
+      const current = sampleCopyIndexRef.current[key] ?? -1
+      const next = (current + 1) % Math.max(1, pool.length)
+      sampleCopyIndexRef.current[key] = next
+      setSampleCopyIndex(next)
+      setSampleCopyTotal(pool.length)
+      setKeyword(pool[next] || pool[0] || '')
+
+      const label = CATEGORIES.find((c) => c.value === category)?.label || category
+      toast.success(`キャッチコピーを「${label}」向けサンプルにしました（${next + 1}/${pool.length}）`, { icon: '🔁' })
+      return
+    }
+
+    // 業種未選択の場合は「用途/業種/キーワード」をまとめてセット（導線として残す）
     const pool = SAMPLE_SCENARIOS
-    // 連打でも確実に切り替わるようRefで管理（stateの非同期更新による“同じが連続”を防ぐ）
     sampleScenarioIndexRef.current = (sampleScenarioIndexRef.current + 1) % pool.length
     const next = sampleScenarioIndexRef.current
     setSampleScenarioIndex(next)
-
     const s = pool[next]!
-    // 用途/業種/キーワードをまとめて切り替える
     setPurpose(s.purpose)
     setCategory(s.category)
     setKeyword(s.keyword)
-
-    // 会社名は勝手に入れない（ブランド/ロゴが混入しやすいため）
     toast.success(`サンプルを切り替えました（${next + 1}/${pool.length}）`, { icon: '🔁' })
   }
 
@@ -1193,7 +1217,9 @@ export default function BannerDashboard() {
                   <Wand2 className="w-4 h-4" />
                   <span>サンプル入力</span>
                   <span className="px-2 py-0.5 rounded-full bg-white/70 border border-violet-200 text-[11px] font-black text-violet-700">
-                    {Math.max(1, sampleScenarioIndex + 1)}/{SAMPLE_SCENARIOS.length}
+                    {category
+                      ? `${Math.max(1, sampleCopyIndex + 1)}/${Math.max(1, sampleCopyTotal)}`
+                      : `${Math.max(1, sampleScenarioIndex + 1)}/${SAMPLE_SCENARIOS.length}`}
                   </span>
                 </button>
               </div>
