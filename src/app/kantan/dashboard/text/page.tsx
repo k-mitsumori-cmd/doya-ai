@@ -1,8 +1,25 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, Search, Sparkles, FileText, Lightbulb, BarChart3, Target, MessageSquare, TrendingUp, Users, PenTool, Mail, Megaphone, Layers, Briefcase, Palette, Globe, Zap, BookOpen, Settings, Scale, Languages, Edit3, Cpu, ChevronRight, Rocket, Clock, Star, CheckCircle2, Timer, Crown, Flame } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Search, Sparkles, FileText, Lightbulb, BarChart3, Target, MessageSquare, TrendingUp, Users, PenTool, Mail, Megaphone, Layers, Briefcase, Palette, Globe, Zap, BookOpen, Settings, Scale, Languages, Edit3, Cpu, ChevronRight, Rocket, Clock, Star, CheckCircle2, Timer, Crown, Flame, Home, DollarSign, HelpCircle, Bell } from 'lucide-react'
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
+
+// サイドバーメニュー
+const SIDEBAR_MENU = [
+  { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
+  { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text', active: true },
+  { id: 'chat', label: 'AIチャット', icon: <MessageSquare className="w-5 h-5" />, href: '/kantan/dashboard/chat' },
+  { id: 'history', label: '生成履歴', icon: <Clock className="w-5 h-5" />, href: '/kantan/dashboard/history' },
+  { id: 'plan', label: 'サービスプラン', icon: <Star className="w-5 h-5" />, href: '/kantan/dashboard/plan' },
+  { id: 'pricing', label: '料金プラン', icon: <DollarSign className="w-5 h-5" />, href: '/kantan/dashboard/pricing' },
+  { id: 'analytics', label: 'アナリティクス', icon: <BarChart3 className="w-5 h-5" />, href: '#', disabled: true },
+]
+
+const SIDEBAR_MENU_BOTTOM = [
+  { id: 'settings', label: '設定', icon: <Settings className="w-5 h-5" />, href: '#', disabled: true },
+  { id: 'help', label: 'ヘルプ', icon: <HelpCircle className="w-5 h-5" />, href: '#', disabled: true },
+]
 
 // マーケティング中心の全AIエージェント一覧（時間削減効果付き）
 const ALL_AGENTS = [
@@ -122,9 +139,13 @@ const CATEGORIES = [
 const POPULAR_AGENTS = ALL_AGENTS.filter(a => a.popular)
 
 export default function KantanTextListPage() {
+  const { data: session } = useSession()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('すべて')
   const [showOnlyPopular, setShowOnlyPopular] = useState(false)
+  
+  const userName = session?.user?.name || 'ゲスト'
+  const userInitial = userName[0]?.toUpperCase() || 'G'
 
   const filteredAgents = ALL_AGENTS.filter(agent => {
     const matchesSearch = agent.name.includes(searchQuery) || agent.desc.includes(searchQuery)
@@ -146,46 +167,120 @@ export default function KantanTextListPage() {
   }, 0)
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 overflow-hidden">
-      {/* 背景デコレーション */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-gradient-to-br from-blue-100 via-transparent to-transparent rounded-full blur-[100px]" />
-          <div className="absolute bottom-0 left-1/3 w-[400px] h-[400px] bg-gradient-to-br from-cyan-100 via-transparent to-transparent rounded-full blur-[80px]" />
-        </div>
-      </div>
-
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/kantan/dashboard" className="flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-all duration-300">
-            <ChevronRight className="w-4 h-4 rotate-180" />
-            <span className="text-sm font-medium">ダッシュボード</span>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* サイドバー */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-40">
+        {/* ロゴ */}
+        <div className="p-5 border-b border-gray-100">
+          <Link href="/kantan" className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+              <Rocket className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="font-bold text-gray-800 text-lg">カンタンマーケ</div>
+              <div className="text-[10px] text-blue-500 font-medium">Powered by Gemini 3.0</div>
+            </div>
           </Link>
-          
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-xl blur opacity-50" />
-              <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center">
-                <Rocket className="w-4 h-4 text-white" />
+        </div>
+
+        {/* メインメニュー */}
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <p className="text-xs text-gray-400 uppercase tracking-wider mb-3 px-3">メニュー</p>
+          <ul className="space-y-1">
+            {SIDEBAR_MENU.map((item) => (
+              <li key={item.id}>
+                <Link
+                  href={item.disabled ? '#' : item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                    item.active
+                      ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/25'
+                      : item.disabled
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                  }`}
+                >
+                  {item.icon}
+                  <span className="font-medium text-sm">{item.label}</span>
+                  {item.disabled && (
+                    <span className="ml-auto text-[10px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full">Soon</span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <p className="text-xs text-gray-400 uppercase tracking-wider mb-3 px-3">その他</p>
+            <ul className="space-y-1">
+              {SIDEBAR_MENU_BOTTOM.map((item) => (
+                <li key={item.id}>
+                  <Link
+                    href={item.disabled ? '#' : item.href}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                      item.disabled
+                        ? 'text-gray-300 cursor-not-allowed'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                    }`}
+                  >
+                    {item.icon}
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </nav>
+
+        {/* 他サービスへのリンク */}
+        <div className="p-4 border-t border-gray-100">
+          <p className="text-xs text-gray-400 uppercase tracking-wider mb-3 px-2">他のAIツール</p>
+          <div className="space-y-2">
+            <Link href="/banner" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors">
+              <span className="text-lg">🎨</span>
+              <span className="text-sm text-purple-700 font-medium">ドヤバナーAI</span>
+            </Link>
+            <Link href="/seo" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
+              <span className="text-lg">🧠</span>
+              <span className="text-sm text-gray-700 font-medium">ドヤSEO</span>
+            </Link>
+          </div>
+        </div>
+      </aside>
+
+      {/* メインコンテンツ */}
+      <main className="flex-1 ml-64">
+        {/* ヘッダー */}
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
+          <div className="px-8 h-16 flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">AIエージェント</h1>
+              <p className="text-xs text-gray-400">{ALL_AGENTS.length}種類のマーケティング特化AI</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-full text-xs font-bold">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <Cpu className="w-3 h-3 text-purple-500" />
+                <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Gemini 3.0</span>
+              </div>
+              <button className="relative p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              </button>
+              <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+                <div className="text-right hidden sm:block">
+                  <div className="text-sm font-medium text-gray-800">{userName}</div>
+                  <div className="text-xs text-gray-400">{session ? 'Pro' : 'ゲスト'}</div>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold shadow-lg">
+                  {userInitial}
+                </div>
               </div>
             </div>
-            <div className="hidden sm:block">
-              <span className="font-bold text-gray-800">AIエージェント</span>
-              <span className="text-gray-400 text-sm ml-2">({ALL_AGENTS.length}種類)</span>
-            </div>
           </div>
-          
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-full text-xs font-bold">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <Cpu className="w-3 h-3 text-purple-500" />
-            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Gemini 3.0</span>
-          </div>
-        </div>
-      </header>
+        </header>
 
-      {/* メイン */}
-      <main className="max-w-7xl mx-auto px-6 py-8 relative">
+        {/* コンテンツ */}
+        <div className="p-8">
         {/* 統計カード */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
@@ -413,6 +508,7 @@ export default function KantanTextListPage() {
               </div>
             </Link>
           </div>
+        </div>
         </div>
       </main>
     </div>
