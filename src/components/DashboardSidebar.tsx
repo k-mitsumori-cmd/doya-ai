@@ -11,6 +11,7 @@ import {
   BarChart3, 
   Settings, 
   Palette,
+  MessageSquare,
   ChevronLeft,
   ChevronRight,
   Bell,
@@ -32,8 +33,8 @@ interface NavItem {
 }
 
 const mainNavItems: NavItem[] = [
-  { href: '/banner', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/banner', label: 'バナー生成', icon: Sparkles, hot: true },
+  { href: '/banner/dashboard/chat', label: 'AIチャット', icon: MessageSquare },
   { href: '/banner/dashboard/history', label: '生成履歴', icon: Clock },
   { href: '/banner/dashboard/stats', label: '効果分析', icon: BarChart3 },
 ]
