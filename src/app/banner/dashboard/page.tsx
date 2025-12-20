@@ -715,8 +715,13 @@ export default function BannerDashboard() {
         setGuestUsageCount(newCount)
         setGuestUsage('banner', newCount)
       } else {
-        const newCount = incrementUserUsage('banner')
-        setUserUsageCount(newCount)
+        const serverUsed = Number(data?.usage?.dailyUsed)
+        if (Number.isFinite(serverUsed)) {
+          setUserUsageCount(serverUsed)
+        } else {
+          const newCount = incrementUserUsage('banner')
+          setUserUsageCount(newCount)
+        }
       }
       
       // 部分的にエラーがあった場合は警告表示
