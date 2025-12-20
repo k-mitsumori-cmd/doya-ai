@@ -1091,9 +1091,15 @@ export default function BannerDashboard() {
               {isGuest ? (
                 <>
                   <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50">
-                    <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                    <span className="text-xs sm:text-sm font-bold text-amber-700">{guestRemaining}</span>
-                    <span className="text-xs text-amber-600 hidden sm:inline">回残り</span>
+                    <div className={`w-2 h-2 rounded-full bg-amber-400 ${guestRemaining <= 0 ? '' : 'animate-pulse'}`} />
+                    {guestRemaining <= 0 ? (
+                      <span className="text-xs sm:text-sm font-black text-amber-800">本日の上限</span>
+                    ) : (
+                      <>
+                        <span className="text-xs sm:text-sm font-bold text-amber-700">{guestRemaining}</span>
+                        <span className="text-xs text-amber-600 hidden sm:inline">回残り</span>
+                      </>
+                    )}
                   </div>
                   <Link href="/auth/signin?callbackUrl=/banner/dashboard">
                     <button className="group flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition-all text-xs sm:text-sm shadow-lg shadow-gray-900/20">
@@ -1117,8 +1123,14 @@ export default function BannerDashboard() {
                       : 'bg-gradient-to-r from-violet-50 to-fuchsia-50 border-violet-200/50'
                   }`}>
                     <div className={`w-2 h-2 rounded-full ${userRemaining <= 5 ? 'bg-amber-400' : 'bg-violet-400'} ${userRemaining <= 5 ? 'animate-pulse' : ''}`} />
-                    <span className={`text-xs sm:text-sm font-bold ${userRemaining <= 5 ? 'text-amber-700' : 'text-violet-700'}`}>{userRemaining}</span>
-                    <span className={`text-xs hidden sm:inline ${userRemaining <= 5 ? 'text-amber-600' : 'text-violet-600'}`}>回残り</span>
+                    {userRemaining <= 0 ? (
+                      <span className="text-xs sm:text-sm font-black text-amber-800">本日の上限</span>
+                    ) : (
+                      <>
+                        <span className={`text-xs sm:text-sm font-bold ${userRemaining <= 5 ? 'text-amber-700' : 'text-violet-700'}`}>{userRemaining}</span>
+                        <span className={`text-xs hidden sm:inline ${userRemaining <= 5 ? 'text-amber-600' : 'text-violet-600'}`}>回残り</span>
+                      </>
+                    )}
                     {userRemaining <= 0 && (
                       <a
                         href={HIGH_USAGE_CONTACT_URL}
@@ -1788,6 +1800,17 @@ export default function BannerDashboard() {
                   </>
                 )}
               </button>
+
+              {!isGenerating && remainingCount <= 0 && (
+                <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm text-center font-medium">
+                  本日の使用回数上限に達しました。
+                  {isGuest ? (
+                    <span className="ml-1">ログインしてプランをご確認ください。</span>
+                  ) : (
+                    <span className="ml-1">必要なら「上位利用」からご相談ください。</span>
+                  )}
+                </div>
+              )}
               
               {error && (
                 <motion.div 
