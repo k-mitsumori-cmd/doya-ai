@@ -200,6 +200,7 @@ const YOUTUBE_APPEAL_TYPES = [
 interface GenerateOptions {
   purpose?: string
   companyName?: string
+  imageDescription?: string  // ユーザーが入力したイメージ説明（例: "青空の下でジャンプする女性"）
   hasLogo?: boolean
   hasPerson?: boolean
   logoDescription?: string  // ロゴの説明（例: "青い円形のロゴ"）
@@ -236,7 +237,13 @@ Goal: MAXIMIZE click-through rate (CTR) through VISUALS ONLY
 === THUMBNAIL CONCEPT/THEME ===
 "${keyword}"
 Express this concept through visuals, NOT through text.
-
+${options.imageDescription ? `
+=== 🎨 USER-SPECIFIED VISUAL IMAGE (IMPORTANT) ===
+The user has specifically requested the following visual elements:
+"${options.imageDescription}"
+Incorporate these visual elements prominently in the thumbnail design.
+This is a high priority request from the user.
+` : ''}
 === STYLE: ${appealType.focus} ===
 ${appealType.style}
 
@@ -379,7 +386,14 @@ ${purposeStyle.emphasis}
 
 === APPEAL TYPE: ${appealType.focus} ===
 ${appealType.style}
+${options.imageDescription ? `
+=== 🎨 USER-SPECIFIED VISUAL IMAGE (HIGHEST PRIORITY) ===
+The user has specifically requested the following visual elements:
+"${options.imageDescription}"
 
+IMPORTANT: Incorporate these visual elements prominently in the banner design.
+This overrides default imagery suggestions. Make these elements the main visual focus.
+` : ''}
 === ⚠️⚠️⚠️ TEXT HANDLING - VERY IMPORTANT ⚠️⚠️⚠️ ===
 
 ${shouldRenderText ? `

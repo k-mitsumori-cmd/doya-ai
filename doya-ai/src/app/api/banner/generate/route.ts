@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
       size, 
       purpose,
       companyName,
+      imageDescription,
       logoImage,
       personImage,
       referenceImages,
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`Banner generation request - Category: ${category}, Purpose: ${purpose}, Size: ${size}, Guest: ${isGuest}`)
     if (companyName) console.log(`Company: ${companyName}`)
+    if (imageDescription) console.log(`Image description: ${imageDescription.slice(0, 50)}...`)
     if (logoImage) console.log('Logo image provided')
     if (personImage) console.log('Person image provided')
     if (Array.isArray(referenceImages) && referenceImages.length > 0) console.log(`Reference images: ${referenceImages.length}`)
@@ -117,6 +119,7 @@ export async function POST(request: NextRequest) {
     const options = {
       purpose: purpose || 'sns_ad',
       companyName: companyName?.trim() || undefined,
+      imageDescription: imageDescription?.trim() || undefined,
       hasLogo: !!logoImage,
       hasPerson: !!personImage,
       logoImage: logoImage || undefined,
