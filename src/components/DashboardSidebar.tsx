@@ -134,11 +134,11 @@ export default function DashboardSidebar() {
     <motion.aside
       animate={{ width: isCollapsed ? 72 : 240 }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="fixed left-0 top-0 h-screen bg-gradient-to-b from-blue-600 via-blue-700 to-blue-800 flex flex-col z-50 shadow-xl shadow-blue-900/30"
+      className="fixed left-0 top-0 h-screen bg-blue-600 flex flex-col z-50 shadow-xl shadow-blue-900/10"
     >
       {/* Logo */}
-      <div className="px-4 py-5 flex items-center gap-3 border-b border-white/10">
-        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-lg">
+      <div className="px-4 py-6 flex items-center gap-3 border-b border-white/5">
+        <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 shadow-sm border border-white/10">
           <Zap className="w-6 h-6 text-white" />
         </div>
         <AnimatePresence>
@@ -149,15 +149,15 @@ export default function DashboardSidebar() {
               exit={{ opacity: 0, x: -10 }}
               className="overflow-hidden"
             >
-              <h1 className="text-lg font-black text-white tracking-tight">Doya AI</h1>
-              <p className="text-[10px] text-blue-200/70">Banner Generator</p>
+              <h1 className="text-xl font-black text-white tracking-tight leading-none">Bunridge</h1>
+              <p className="text-[10px] text-blue-100/60 mt-1 font-medium tracking-wider uppercase">Analytics Portal</p>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
+      <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
         {/* Main Navigation */}
         <div className="space-y-1">
           {mainNavItems.map((item) => (
@@ -166,7 +166,7 @@ export default function DashboardSidebar() {
         </div>
 
         {/* Data Section */}
-        <div className="pt-4">
+        <div className="pt-6">
           <SectionTitle title="データベース" />
           <div className="space-y-1">
             {dataNavItems.map((item) => (
@@ -176,7 +176,7 @@ export default function DashboardSidebar() {
         </div>
 
         {/* Settings Section */}
-        <div className="pt-4">
+        <div className="pt-6">
           <SectionTitle title="設定" />
           <div className="space-y-1">
             {settingsNavItems.map((item) => (
@@ -187,9 +187,9 @@ export default function DashboardSidebar() {
       </nav>
 
       {/* User Profile */}
-      <div className="p-3 border-t border-white/10">
-        <div className={`flex items-center gap-3 p-2 rounded-xl bg-white/10 ${isCollapsed ? 'justify-center' : ''}`}>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center flex-shrink-0 shadow-lg ring-2 ring-white/20">
+      <div className="p-4 border-t border-white/5 bg-blue-700/30">
+        <div className={`flex items-center gap-3 p-2 rounded-xl ${isCollapsed ? 'justify-center' : ''}`}>
+          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-inner border border-white/10">
             {session?.user?.image ? (
               <img 
                 src={session.user.image} 
@@ -208,11 +208,11 @@ export default function DashboardSidebar() {
                 exit={{ opacity: 0 }}
                 className="flex-1 min-w-0"
               >
-                <p className="text-sm font-semibold text-white truncate">
-                  {session?.user?.name || 'ゲスト'}
+                <p className="text-sm font-bold text-white truncate">
+                  {session?.user?.name || '田中 太郎'}
                 </p>
-                <p className="text-[10px] text-blue-200/70 truncate">
-                  {session?.user?.email || 'ログインしてください'}
+                <p className="text-[10px] text-blue-100/60 truncate font-medium">
+                  {session?.user?.email || 'Admin'}
                 </p>
               </motion.div>
             )}
@@ -220,7 +220,7 @@ export default function DashboardSidebar() {
           {!isCollapsed && session && (
             <button
               onClick={() => signOut()}
-              className="p-1.5 text-blue-200/50 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
               title="ログアウト"
             >
               <LogOut className="w-4 h-4" />
@@ -232,7 +232,7 @@ export default function DashboardSidebar() {
       {/* Collapse Toggle */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-20 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors border border-gray-200"
+        className="absolute -right-3 top-24 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors border border-gray-100 z-10"
       >
         {isCollapsed ? (
           <ChevronRight className="w-4 h-4" />
@@ -248,10 +248,10 @@ export default function DashboardSidebar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="px-4 py-3 text-center border-t border-white/10"
+            className="px-4 py-4 text-center border-t border-white/5"
           >
-            <p className="text-[10px] text-blue-200/40">
-              Powered by Gemini 3 Pro
+            <p className="text-[10px] text-blue-100/30 font-bold tracking-widest">
+              @GORO
             </p>
           </motion.div>
         )}

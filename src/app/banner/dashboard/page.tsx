@@ -22,62 +22,62 @@ import DashboardSidebar from '@/components/DashboardSidebar'
 // ========================================
 const CATEGORIES = [
   { 
-    value: 'telecom', label: '通信', icon: '📱', color: '#3B82F6', bg: 'from-blue-500/20 to-cyan-500/20',
+    value: 'telecom', label: '通信', icon: '📱', color: '#2563EB', bg: 'from-blue-500/10 to-blue-600/10',
     description: '【視線誘導】スマホを持つ手元を強調し、月額料金や「乗り換え0円」などの数字が瞬時に目に入る、コンバージョン重視のレイアウト。',
     sample: '/banner-samples/cat-telecom.png'
   },
   { 
-    value: 'marketing', label: 'マーケ', icon: '📊', color: '#0EA5E9', bg: 'from-sky-500/20 to-cyan-500/20',
+    value: 'marketing', label: 'マーケ', icon: '📊', color: '#3B82F6', bg: 'from-blue-400/10 to-blue-500/10',
     description: '【権威性】プロフェッショナルな人物と実績グラフを組み合わせ、「このサービスなら解決できる」という信頼感を醸成するB2B特化スタイル。',
     sample: '/banner-samples/cat-marketing.png'
   },
   { 
-    value: 'ec', label: 'EC', icon: '🛒', color: '#F97316', bg: 'from-orange-500/20 to-amber-500/20',
+    value: 'ec', label: 'EC', icon: '🛒', color: '#F97316', bg: 'from-orange-500/10 to-orange-600/10',
     description: '【購買意欲】商品の質感を大胆に見せつつ、セールバッジや期間限定の赤を効かせた、衝動買いを誘発するダイナミックなデザイン。',
     sample: '/banner-samples/cat-ec.png'
   },
   { 
-    value: 'recruit', label: '採用', icon: '👥', color: '#22C55E', bg: 'from-green-500/20 to-emerald-500/20',
+    value: 'recruit', label: '採用', icon: '👥', color: '#22C55E', bg: 'from-green-500/10 to-green-600/10',
     description: '【共感訴求】自然な笑顔のチーム写真を背景に、クリーンな白文字を配置。職場の雰囲気と「自分もここで働きたい」という期待感を高めます。',
     sample: '/banner-samples/cat-recruit.png'
   },
   { 
-    value: 'beauty', label: '美容', icon: '💄', color: '#EC4899', bg: 'from-pink-500/20 to-rose-500/20',
+    value: 'beauty', label: '美容', icon: '💄', color: '#EC4899', bg: 'from-pink-500/10 to-pink-600/10',
     description: '【憧れ喚起】透明感のある人物アップと洗練された余白。高級感のあるフォントが映える、自分磨きの意欲を刺激するビューティースタイル。',
     sample: '/banner-samples/cat-beauty.png'
   },
   { 
-    value: 'food', label: '飲食', icon: '🍽️', color: '#EF4444', bg: 'from-red-500/20 to-orange-500/20',
+    value: 'food', label: '飲食', icon: '🍽️', color: '#EF4444', bg: 'from-red-500/10 to-red-600/10',
     description: '【シズル感】料理の「美味しそう」を最大限に引き出す接写構図。食欲を刺激する暖色背景で、店舗予約や注文ボタンへのクリックを促します。',
     sample: '/banner-samples/cat-food.png'
   },
   { 
-    value: 'realestate', label: '不動産', icon: '🏠', color: '#14B8A6', bg: 'from-teal-500/20 to-cyan-500/20',
+    value: 'realestate', label: '不動産', icon: '🏠', color: '#14B8A6', bg: 'from-teal-500/10 to-teal-600/10',
     description: '【安心・理想】開放感のある内装イメージ。落ち着いたトーンで「一生の買い物」をサポートする誠実さと、理想の暮らしを視覚化します。',
     sample: '/banner-samples/cat-realestate.png'
   },
   { 
-    value: 'education', label: '教育', icon: '📚', color: '#6366F1', bg: 'from-indigo-500/20 to-blue-500/20',
+    value: 'education', label: '教育', icon: '📚', color: '#6366F1', bg: 'from-indigo-500/10 to-indigo-600/10',
     description: '【未来への自己投資】真剣に学ぶ姿と明るい光の演出。習得できるスキルをステップ形式で見せる、申し込みへのハードルを下げる構成。',
     sample: '/banner-samples/cat-education.png'
   },
   { 
-    value: 'finance', label: '金融', icon: '💰', color: '#EAB308', bg: 'from-yellow-500/20 to-amber-500/20',
+    value: 'finance', label: '金融', icon: '💰', color: '#F59E0B', bg: 'from-amber-500/10 to-amber-600/10',
     description: '【堅実な資産形成】スマホアプリの操作感と資産増を想起させるアイコン。ダークネイビーと金の対比で、プロフェッショナルな品質を担保。',
     sample: '/banner-samples/cat-finance.png'
   },
   { 
-    value: 'health', label: '医療', icon: '🏥', color: '#06B6D4', bg: 'from-cyan-500/20 to-teal-500/20',
+    value: 'health', label: '医療', icon: '🏥', color: '#06B6D4', bg: 'from-cyan-500/10 to-cyan-600/10',
     description: '【清潔感と安全】専門家の優しそうな表情と、機能性を感じさせる青のグラデーション。健康課題の解決をストレートに伝えるデザイン。',
     sample: '/banner-samples/cat-health.png'
   },
   { 
-    value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-500/20 to-indigo-500/20',
+    value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-500/10 to-blue-600/10',
     description: '【先進・スピード】サーバーやネットワークの抽象的な光。デジタル領域での圧倒的な優位性と、最新技術の導入効果をクールに伝えます。',
     sample: '/banner-samples/cat-it.png'
   },
   { 
-    value: 'other', label: 'その他', icon: '✨', color: '#64748B', bg: 'from-slate-500/20 to-gray-500/20',
+    value: 'other', label: 'その他', icon: '✨', color: '#64748B', bg: 'from-slate-500/10 to-slate-600/10',
     description: '【万能・モダン】特定の業種に縛られない自由なキャンバス。どんなキャッチコピーでも主役になれる、引き算の美学を活かした配置。',
     sample: '/banner-samples/cat-other.png'
   },
@@ -1257,7 +1257,7 @@ export default function BannerDashboard() {
   // Render
   // ========================================
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50/40 text-gray-900">
+    <div className="min-h-screen bg-slate-50 text-gray-900">
       {/* サイドバー */}
       <DashboardSidebar />
 
@@ -1285,18 +1285,16 @@ export default function BannerDashboard() {
           <div className="h-16 sm:h-20 flex items-center justify-between">
             <Link href="/banner" className="flex items-center gap-3 sm:gap-4 group">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
-                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-blue-600 via-sky-600 to-cyan-600 flex items-center justify-center shadow-xl">
-                  <span className="text-xl sm:text-2xl">🎨</span>
+                <div className="absolute inset-0 bg-blue-600 rounded-xl blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
+                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg">
+                  <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                 </div>
               </div>
               <div>
-                <h1 className="font-black text-lg sm:text-xl tracking-tight">
-                  <span className="bg-gradient-to-r from-blue-700 via-sky-600 to-cyan-600 bg-clip-text text-transparent">
-                    ドヤバナーAI
-                  </span>
+                <h1 className="font-black text-lg sm:text-2xl tracking-tighter text-blue-600">
+                  Bunridge
                 </h1>
-                <p className="hidden sm:block text-[10px] text-gray-400 font-medium tracking-wider uppercase">Professional Banner Generator</p>
+                <p className="hidden sm:block text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-0.5">Professional Suite</p>
               </div>
             </Link>
             

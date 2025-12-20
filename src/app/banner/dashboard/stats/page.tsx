@@ -260,7 +260,7 @@ export default function StatsPage() {
                           initial={{ height: 0 }}
                           animate={{ height: `${height}%` }}
                           transition={{ delay: 0.2 + i * 0.05, duration: 0.5 }}
-                          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-blue-600 to-cyan-500 rounded-t-lg"
+                          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-orange-500 to-amber-400 rounded-t-lg"
                         />
                         {day.count > 0 && (
                           <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-bold text-gray-600">
@@ -298,11 +298,11 @@ export default function StatsPage() {
                   const maxCount = topCategories[0]?.[1] || 1
                   const percentage = (count / maxCount) * 100
                   const colors = [
-                    'from-yellow-400 to-amber-500',
-                    'from-gray-300 to-gray-400',
-                    'from-amber-600 to-orange-700',
+                    'from-orange-500 to-amber-400',
+                    'from-blue-500 to-blue-600',
+                    'from-amber-400 to-yellow-300',
                     'from-blue-400 to-blue-500',
-                    'from-gray-200 to-gray-300',
+                    'from-slate-400 to-slate-500',
                   ]
                   return (
                     <div key={cat} className="flex items-center gap-3">
