@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { 
   ArrowLeft, Sparkles, Loader2, Copy, Check, 
-  RefreshCw, Wand2, LogIn, Send, ChevronRight, Rocket, Cpu, User, Bot, MessageSquare
+  RefreshCw, Wand2, LogIn, Send, ChevronRight, Rocket, Cpu, User, Bot, MessageSquare,
+  Timer, FileText, Download, Zap, CheckCircle2, ChevronDown, History, Star
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { SAMPLE_TEMPLATES } from '@/lib/templates'
@@ -68,18 +69,44 @@ const SAMPLE_INPUTS: Record<string, Record<string, string>> = {
     target: '20-30代の美容に関心のある女性',
   },
   'lp-full-text': {
-    product: 'AIマーケティングツール「カンタンマーケAI」',
-    target: 'マーケティング業務を効率化したい中小企業のマーケター',
-    benefit: 'LP構成案4時間→10分、バナーコピー40案を1分で生成',
-    features: 'Gemini 3.0搭載、チャット形式でブラッシュアップ可能、68種類以上のAIエージェント',
+    productName: 'AIマーケティングツール「カンタンマーケAI」',
+    targetAudience: 'マーケティング業務を効率化したい中小企業のマーケター',
+    description: 'LP構成案4時間→10分、バナーコピー40案を1分で生成できるAIツール',
+    differentiator: 'Gemini 3.0搭載、チャット形式でブラッシュアップ可能、68種類以上のAIエージェント',
   },
-  'banner-copy': {
-    product: 'オンライン英会話アプリ',
-    target: '英語を話せるようになりたい社会人',
-    appeal: '1日10分から、ネイティブ講師と話せる',
-    cta: '無料体験',
+  'lp-headline': {
+    product: 'AIマーケティングツール',
+    target: 'マーケター、事業責任者',
+    benefit: 'LP構成案4時間→10分、広告コピー40案を1分で生成',
+    difference: 'チャット形式で何度でもブラッシュアップ可能',
+  },
+  'google-ad-title': {
+    productName: 'オンライン英会話アプリ',
+    targetAudience: '英語を話せるようになりたい社会人',
+    features: '1日10分から、ネイティブ講師とマンツーマン',
+    objective: '無料体験申込',
+  },
+  'persona-creation': {
+    productName: 'クラウド会計ソフト',
+    description: '中小企業向けの経理業務を自動化するSaaS',
+    targetAudience: '従業員30名以下の中小企業経営者',
+  },
+  'competitor-analysis': {
+    ourService: 'AIマーケティングツール「カンタンマーケAI」',
+    competitors: 'ChatGPT, Notion AI, Jasper AI',
+    industry: 'AI SaaS / マーケティングツール',
   },
 }
+
+// 修正提案のサンプル
+const REFINEMENT_SUGGESTIONS = [
+  'もっとカジュアルに',
+  '具体的な数値を入れて',
+  '箇条書きで整理して',
+  'CTAを強めに',
+  '文章を短くして',
+  '別の切り口で',
+]
 
 export default function TemplateDetailPage() {
   const params = useParams()
@@ -97,6 +124,8 @@ export default function TemplateDetailPage() {
   const [output, setOutput] = useState('')
   const [copied, setCopied] = useState(false)
   const [guestUsageCount, setGuestUsageCount] = useState(0)
+  const [generationTime, setGenerationTime] = useState(0)
+  const [showInputs, setShowInputs] = useState(true)
   
   // チャット状態
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
@@ -178,6 +207,7 @@ export default function TemplateDetailPage() {
     setIsGenerating(true)
     setOutput('')
     setChatMessages([])
+    const startTime = Date.now()
 
     try {
       const response = await fetch('/api/generate', {
@@ -190,12 +220,15 @@ export default function TemplateDetailPage() {
       })
 
       const data = await response.json()
+      const endTime = Date.now()
+      setGenerationTime(Math.round((endTime - startTime) / 1000))
 
       if (!response.ok) {
         throw new Error(data.error || '生成に失敗しました')
       }
 
       setOutput(data.output)
+      setShowInputs(false)
       
       // 初回生成結果をチャット履歴に追加
       setChatMessages([
@@ -223,8 +256,9 @@ export default function TemplateDetailPage() {
   }
 
   // チャットで修正依頼
-  const handleChatSubmit = async () => {
-    if (!chatInput.trim() || isChatting) return
+  const handleChatSubmit = async (message?: string) => {
+    const inputMessage = message || chatInput
+    if (!inputMessage.trim() || isChatting) return
     if (isGuest && !canGuestGenerate) {
       toast.error('本日の無料お試しは上限に達しました')
       return
@@ -233,7 +267,7 @@ export default function TemplateDetailPage() {
     const userMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
       role: 'user',
-      content: chatInput,
+      content: inputMessage,
       timestamp: new Date(),
     }
     
@@ -250,7 +284,7 @@ ${output}
 ---
 
 ユーザーからの修正依頼：
-${chatInput}
+${inputMessage}
 
 上記の修正依頼を反映して、改善版を出力してください。`
 
@@ -308,6 +342,8 @@ ${chatInput}
     setInputs({})
     setChatMessages([])
     setChatInput('')
+    setShowInputs(true)
+    setGenerationTime(0)
   }
 
   if (status === 'loading') {
@@ -350,10 +386,10 @@ ${chatInput}
       
       {/* ヘッダー */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/5">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/kantan/dashboard" className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-all">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+          <Link href="/kantan/dashboard/text" className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-all">
             <ChevronRight className="w-4 h-4 rotate-180" />
-            <span className="hidden sm:inline text-sm">戻る</span>
+            <span className="hidden sm:inline text-sm">エージェント一覧</span>
           </Link>
           
           <div className="flex items-center gap-2">
@@ -369,11 +405,11 @@ ${chatInput}
           <div className="flex items-center gap-2 px-2 py-1 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-full text-[10px] font-bold">
             <Cpu className="w-3 h-3 text-purple-400" />
             <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Gemini 3.0</span>
-          </div>
+            </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 relative">
+      <main className="max-w-5xl mx-auto px-4 py-6 relative">
         {/* ゲストバナー */}
         {isGuest && (
           <div className="mb-6 p-4 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 backdrop-blur-xl border border-cyan-500/20 rounded-2xl">
@@ -399,120 +435,39 @@ ${chatInput}
           </div>
         )}
 
-        {/* 出力結果がある場合（チャット形式） */}
-        {output ? (
-          <div className="space-y-6">
-            {/* チャット履歴 */}
-            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-3xl p-6 max-h-[60vh] overflow-y-auto">
-              <div className="flex items-center gap-2 mb-6">
-                <MessageSquare className="w-5 h-5 text-cyan-400" />
-                <h2 className="font-bold text-white">チャットでブラッシュアップ</h2>
-              </div>
-              
-              <div className="space-y-4">
-                {chatMessages.map((msg) => (
-                  <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                    {msg.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
-                        <Bot className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                    <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                      msg.role === 'user' 
-                        ? 'bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 border border-cyan-500/30' 
-                        : 'bg-white/5 border border-white/5'
-                    }`}>
-                      <div className="text-white/80 text-sm whitespace-pre-wrap">{msg.content}</div>
-                    </div>
-                    {msg.role === 'user' && (
-                      <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                        <User className="w-4 h-4 text-white/60" />
-                      </div>
-                    )}
-                  </div>
-                ))}
-                
-                {isChatting && (
-                  <div className="flex gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="bg-white/5 border border-white/5 rounded-2xl px-4 py-3">
-                      <Loader2 className="w-5 h-5 text-cyan-400 animate-spin" />
-                    </div>
-                  </div>
-                )}
-                
-                <div ref={chatEndRef} />
-              </div>
-            </div>
-
-            {/* チャット入力 */}
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 rounded-2xl blur-xl" />
-              <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-4">
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleChatSubmit()}
-                    placeholder="修正依頼を入力... 例：もっとカジュアルに / 箇条書きで整理して / CTAを強めに"
-                    className="flex-1 bg-transparent text-white placeholder-white/30 outline-none"
-                    disabled={isChatting}
-                  />
-                  <button
-                    onClick={handleChatSubmit}
-                    disabled={!chatInput.trim() || isChatting}
-                    className="w-10 h-10 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 flex items-center justify-center text-white disabled:opacity-50 hover:scale-105 transition-transform"
-                  >
-                    <Send className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* アクションボタン */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleCopy}
-                className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-              >
-                {copied ? <Check className="w-5 h-5 text-emerald-400" /> : <Copy className="w-5 h-5" />}
-                {copied ? 'コピー済み' : '最新をコピー'}
-              </button>
-              <button
-                onClick={handleReset}
-                className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
-              >
-                <RefreshCw className="w-5 h-5" />
-                新しく作成
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
+        <div className="grid lg:grid-cols-5 gap-6">
+          {/* 左側：入力フォーム */}
+          <div className={`lg:col-span-2 ${output && !showInputs ? 'hidden lg:block' : ''}`}>
             {/* テンプレート説明 */}
-            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 mb-6">
-              <p className="text-white/60">{template.description}</p>
+            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-5 mb-4">
+              <div className="flex items-center gap-3 mb-3">
+                <FileText className="w-5 h-5 text-cyan-400" />
+                <h2 className="font-bold text-white">このエージェントについて</h2>
+              </div>
+              <p className="text-white/60 text-sm">{template.description}</p>
             </div>
 
             {/* サンプル入力ボタン */}
             <button
               onClick={handleSampleInput}
-              className="group w-full mb-6 py-4 px-6 bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 hover:from-cyan-500/30 hover:to-emerald-500/30 border border-cyan-500/30 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-3"
+              className="group w-full mb-4 py-3 px-5 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 hover:from-cyan-500/20 hover:to-emerald-500/20 border border-cyan-500/20 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-3"
             >
               <Wand2 className="w-5 h-5 text-cyan-400 group-hover:rotate-12 transition-transform" />
-              ワンボタンでサンプル入力
+              <span className="text-sm">ワンクリックでサンプル入力</span>
             </button>
 
             {/* 入力フォーム */}
-            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-6 mb-6">
-              <h2 className="font-bold text-white mb-6">入力項目</h2>
-              <div className="space-y-5">
+            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold text-white flex items-center gap-2">
+                  <span>入力項目</span>
+                  <span className="text-xs text-white/40 font-normal">（{template.inputFields.filter(f => f.required).length}項目必須）</span>
+                </h2>
+              </div>
+              <div className="space-y-4">
                 {template.inputFields.map((field) => (
                   <div key={field.name}>
-                    <label className="block text-sm font-medium text-white/60 mb-2">
+                    <label className="block text-xs font-medium text-white/60 mb-1.5">
                       {field.label}
                       {field.required && <span className="text-cyan-400 ml-1">*</span>}
                     </label>
@@ -521,7 +476,7 @@ ${chatInput}
                       <select
                         value={inputs[field.name] || ''}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
                       >
                         <option value="" className="bg-[#0a0a0f]">選択してください</option>
                         {field.options?.map((option) => (
@@ -533,8 +488,8 @@ ${chatInput}
                         value={inputs[field.name] || ''}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
                         placeholder={field.placeholder}
-                        rows={4}
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-none"
+                        rows={3}
+                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/30 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-none"
                       />
                     ) : (
                       <input
@@ -542,12 +497,11 @@ ${chatInput}
                         value={inputs[field.name] || ''}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
                         placeholder={field.placeholder}
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/30 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
                       />
                     )}
                   </div>
                 ))}
-              </div>
             </div>
 
             {/* 生成ボタン */}
@@ -555,36 +509,190 @@ ${chatInput}
               onClick={handleGenerate}
               disabled={isGenerating || !canGenerate}
               className={`
-                group w-full py-5 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3
+                  group w-full mt-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-3
                 ${canGenerate && !isGenerating
-                  ? 'bg-gradient-to-r from-cyan-500 via-emerald-500 to-teal-500 text-white shadow-2xl shadow-cyan-500/25 hover:scale-[1.02]'
-                  : 'bg-white/10 text-white/30 cursor-not-allowed'
+                    ? 'bg-gradient-to-r from-cyan-500 via-emerald-500 to-teal-500 text-white shadow-2xl shadow-cyan-500/25 hover:scale-[1.02]'
+                    : 'bg-white/10 text-white/30 cursor-not-allowed'
                 }
               `}
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   生成中...
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                  AIで生成する
+                    <Zap className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                    AIで生成する
                 </>
               )}
             </button>
 
             {!canGenerate && isGuest && !canGuestGenerate && (
-              <p className="text-center text-sm text-white/40 mt-4">
+                <p className="text-center text-xs text-white/40 mt-3">
                 本日の無料お試しは上限に達しました。
-                <Link href="/auth/signin?service=kantan" className="text-cyan-400 hover:underline ml-1">
+                  <Link href="/auth/signin?service=kantan" className="text-cyan-400 hover:underline ml-1">
                   ログインで続ける
                 </Link>
               </p>
             )}
-          </>
-        )}
+            </div>
+          </div>
+
+          {/* 右側：出力結果とチャット */}
+          <div className={`lg:col-span-3 ${!output ? 'hidden lg:flex lg:items-center lg:justify-center' : ''}`}>
+            {output ? (
+              <div className="space-y-4">
+                {/* 生成情報 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs text-emerald-400 font-bold">生成完了</span>
+                    </div>
+                    {generationTime > 0 && (
+                      <div className="flex items-center gap-1.5 text-xs text-white/40">
+                        <Timer className="w-3.5 h-3.5" />
+                        <span>{generationTime}秒</span>
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setShowInputs(!showInputs)}
+                    className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white/60"
+                  >
+                    {showInputs ? '入力を隠す' : '入力を表示'}
+                  </button>
+                </div>
+
+                {/* チャット履歴 */}
+                <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-5 max-h-[50vh] overflow-y-auto">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MessageSquare className="w-5 h-5 text-cyan-400" />
+                    <h2 className="font-bold text-white text-sm">チャットでブラッシュアップ</h2>
+                    <span className="text-xs text-white/40">（何度でも修正OK）</span>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {chatMessages.map((msg, index) => (
+                      <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                        {msg.role === 'assistant' && (
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
+                            <Bot className="w-4 h-4 text-white" />
+                          </div>
+                        )}
+                        <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                          msg.role === 'user' 
+                            ? 'bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 border border-cyan-500/30' 
+                            : 'bg-white/5 border border-white/5'
+                        }`}>
+                          <div className="text-white/80 text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                          {msg.role === 'assistant' && index === chatMessages.length - 1 && !isChatting && (
+                            <button
+                              onClick={handleCopy}
+                              className="mt-3 flex items-center gap-1.5 text-xs text-white/40 hover:text-cyan-400 transition-colors"
+                            >
+                              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                              {copied ? 'コピー済み' : 'コピー'}
+                            </button>
+                          )}
+                        </div>
+                        {msg.role === 'user' && (
+                          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                            <User className="w-4 h-4 text-white/60" />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {isChatting && (
+                      <div className="flex gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
+                          <Bot className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="bg-white/5 border border-white/5 rounded-2xl px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
+                            <span className="text-sm text-white/60">修正中...</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div ref={chatEndRef} />
+                  </div>
+                </div>
+
+                {/* 修正提案ボタン */}
+                <div className="flex flex-wrap gap-2">
+                  {REFINEMENT_SUGGESTIONS.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => handleChatSubmit(suggestion)}
+                      disabled={isChatting}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs text-white/60 hover:text-white transition-all disabled:opacity-50"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+
+                {/* チャット入力 */}
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 rounded-2xl blur-xl" />
+                  <div className="relative bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-3">
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleChatSubmit()}
+                        placeholder="修正依頼を入力... 例：もっとカジュアルに"
+                        className="flex-1 bg-transparent text-white text-sm placeholder-white/30 outline-none"
+                        disabled={isChatting}
+                      />
+                      <button
+                        onClick={() => handleChatSubmit()}
+                        disabled={!chatInput.trim() || isChatting}
+                        className="w-10 h-10 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 flex items-center justify-center text-white disabled:opacity-50 hover:scale-105 transition-transform"
+                      >
+                        <Send className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* アクションボタン */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCopy}
+                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    {copied ? 'コピー済み' : '最新をコピー'}
+                  </button>
+                  <button
+                    onClick={handleReset}
+                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    新しく作成
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // 初期状態（出力なし）
+              <div className="text-center py-16">
+                <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-6">
+                  <Sparkles className="w-10 h-10 text-white/20" />
+                </div>
+                <h3 className="text-white/40 text-lg mb-2">ここに生成結果が表示されます</h3>
+                <p className="text-white/20 text-sm">左の入力フォームを埋めて「AIで生成する」をクリック</p>
+              </div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   )
