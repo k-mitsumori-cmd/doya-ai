@@ -228,6 +228,15 @@ function uniqStrings(items: string[]) {
   return Array.from(new Set(items.map((s) => String(s || '').trim()).filter(Boolean)))
 }
 
+function normalizeHexClient(v: string): string | null {
+  const s = String(v || '').trim()
+  const m = s.match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+  if (!m) return null
+  const raw = m[1]
+  const hex = raw.length === 3 ? raw.split('').map((c) => c + c).join('') : raw
+  return `#${hex.toUpperCase()}`
+}
+
 const OVERLAY_FONT_FAMILY_CSS =
   'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", Helvetica, Arial'
 const OVERLAY_FONT_FAMILY_CANVAS =
@@ -475,6 +484,11 @@ export default function BannerDashboard() {
   const [sampleScenarioIndex, setSampleScenarioIndex] = useState(-1)
   const sampleScenarioIndexRef = useRef(-1)
 
+  // 使用カラー（任意・手動指定）
+  const [useCustomColors, setUseCustomColors] = useState(false)
+  const [customColors, setCustomColors] = useState<string[]>([])
+  const [colorDraft, setColorDraft] = useState('#8B5CF6')
+
   // テキストレイヤー：プレビューの計測（DLと比率を揃える）
   const overlayPreviewRef = useRef<HTMLDivElement | null>(null)
   const overlayImgRef = useRef<HTMLImageElement | null>(null)
@@ -658,6 +672,9 @@ export default function BannerDashboard() {
           logoImage: logoImage || undefined,
           personImage: personImage || undefined,
           referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
+          brandColors: useCustomColors
+            ? uniqStrings(customColors.map((c) => normalizeHexClient(c) || '').filter(Boolean)).slice(0, 8)
+            : undefined,
         }),
       })
 
@@ -1606,8 +1623,101 @@ export default function BannerDashboard() {
                       </p>
                     </div>
 
-                    {/* Brand Palette from URL */}
-                    {/* サイトURLからのカラー抽出は廃止 */}
+                    {/* Manual Colors */}
+                    <div>
+                      <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 font-medium">
+                        <Palette className="w-4 h-4" />
+                        使用カラー（任意）
+                      </label>
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-xs text-gray-600">
+                            生成に適用: <span className="font-semibold text-gray-800">{useCustomColors ? 'ON' : 'OFF'}</span>
+                          </div>
+                          <button
+                            onClick={() => setUseCustomColors((v) => !v)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                              useCustomColors
+                                ? 'bg-violet-100 text-violet-700'
+                                : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                            }`}
+                          >
+                            {useCustomColors ? 'ON' : 'OFF'}
+                          </button>
+                        </div>
+
+                        <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="color"
+                            value={normalizeHexClient(colorDraft) || '#8B5CF6'}
+                            onChange={(e) => setColorDraft(e.target.value)}
+                            className="h-12 w-16 rounded-xl border border-gray-200 bg-white p-1"
+                            aria-label="color picker"
+                          />
+                          <input
+                            value={colorDraft}
+                            onChange={(e) => setColorDraft(e.target.value)}
+                            placeholder="#8B5CF6"
+                            className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 outline-none transition-all font-mono"
+                          />
+                          <button
+                            onClick={() => {
+                              const hex = normalizeHexClient(colorDraft)
+                              if (!hex) {
+                                toast.error('HEX形式（例: #8B5CF6）で入力してください')
+                                return
+                              }
+                              setCustomColors((prev) => uniqStrings([...prev, hex]).slice(0, 8))
+                              setColorDraft(hex)
+                              toast.success('カラーを追加しました', { icon: '🎨' })
+                            }}
+                            className="px-4 py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800"
+                          >
+                            追加
+                          </button>
+                          <button
+                            onClick={() => {
+                              const cat = CATEGORIES.find((c) => c.value === category)
+                              const hex = normalizeHexClient(cat?.color || '')
+                              if (!hex) {
+                                toast.error('カテゴリを選択してください')
+                                return
+                              }
+                              setCustomColors((prev) => uniqStrings([...prev, hex]).slice(0, 8))
+                              toast.success('カテゴリ色を追加しました', { icon: '➕' })
+                            }}
+                            className="px-4 py-3 rounded-xl bg-white text-gray-700 font-bold hover:bg-gray-100 border border-gray-200"
+                          >
+                            カテゴリ色
+                          </button>
+                        </div>
+
+                        {customColors.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {customColors.map((c) => (
+                              <button
+                                key={c}
+                                onClick={() => setCustomColors((prev) => prev.filter((x) => x !== c))}
+                                className="flex items-center gap-2 px-2 py-1 bg-white rounded-lg border border-gray-200 hover:bg-gray-100"
+                                title="クリックで削除"
+                              >
+                                <div className="w-4 h-4 rounded border border-gray-200" style={{ backgroundColor: c }} />
+                                <span className="text-xs font-mono text-gray-700">{c}</span>
+                                <span className="text-xs text-gray-400">×</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-500 mt-3">
+                            まだ指定されていません（OFFのままでもOK）。最大8色まで。
+                          </p>
+                        )}
+
+                        <p className="text-xs text-gray-500 mt-3">
+                          ※ ON の場合、ここで指定した色を優先して配色します（白/黒/グレー等は補助色として追加されることがあります）。
+                        </p>
+                      </div>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
