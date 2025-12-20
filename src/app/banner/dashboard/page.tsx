@@ -492,6 +492,17 @@ export default function BannerDashboard() {
   const [customColors, setCustomColors] = useState<string[]>([])
   const [colorDraft, setColorDraft] = useState('#8B5CF6')
 
+  // 生成履歴（ローカルストレージから読み込み）
+  interface HistoryItem {
+    id: string
+    category: string
+    keyword: string
+    size: string
+    createdAt: string
+    banners: string[]
+  }
+  const [recentHistory, setRecentHistory] = useState<HistoryItem[]>([])
+
   // テキストレイヤー：プレビューの計測（DLと比率を揃える）
   const overlayPreviewRef = useRef<HTMLDivElement | null>(null)
   const overlayImgRef = useRef<HTMLImageElement | null>(null)
@@ -544,6 +555,21 @@ export default function BannerDashboard() {
       setUserUsageCount(usage.date === today ? usage.count : 0)
     }
   }, [isGuest])
+
+  // 生成履歴をローカルストレージから読み込み
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const stored = localStorage.getItem('banner_history')
+      if (stored) {
+        const parsed = JSON.parse(stored) as HistoryItem[]
+        // 最新3件のみ取得（表示用）
+        setRecentHistory(parsed.slice(0, 3))
+      }
+    } catch {
+      setRecentHistory([])
+    }
+  }, [generatedBanners.length]) // 生成後も更新
 
   useEffect(() => {
     const sizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
@@ -1833,6 +1859,46 @@ export default function BannerDashboard() {
               Right Column - Results
               ======================================== */}
           <div className="space-y-5 sm:space-y-6">
+            {/* Recent History (when no generation result) */}
+            {generatedBanners.length === 0 && recentHistory.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-sm"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-gray-500" />
+                    最近の生成履歴
+                  </h3>
+                  <Link href="/banner/dashboard/history" className="text-xs text-blue-600 hover:underline font-medium">
+                    すべて見る →
+                  </Link>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {recentHistory.slice(0, 3).map((item) => (
+                    <div key={item.id} className="space-y-1.5">
+                      {item.banners?.[0] && (
+                        <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group">
+                          <img
+                            src={item.banners[0]}
+                            alt={item.keyword}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">{item.banners.length}案</span>
+                          </div>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-gray-500 truncate" title={item.keyword}>
+                        {item.keyword.length > 16 ? `${item.keyword.slice(0, 16)}…` : item.keyword}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
