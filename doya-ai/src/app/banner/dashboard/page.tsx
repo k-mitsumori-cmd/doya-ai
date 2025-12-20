@@ -1070,7 +1070,7 @@ export default function BannerDashboard() {
       <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-2xl border-b border-gray-200/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
           <div className="h-16 sm:h-20 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 sm:gap-4 group">
+            <Link href="/banner" className="flex items-center gap-3 sm:gap-4 group">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
                 <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 flex items-center justify-center shadow-xl">
