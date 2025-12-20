@@ -472,7 +472,7 @@ ${inputValue}
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f8fafc]">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Rocket className="w-6 h-6 text-white" />
@@ -484,7 +484,7 @@ ${inputValue}
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex">
+    <div className="min-h-screen bg-white flex">
       {/* サイドバー */}
       <aside className="w-64 bg-[#1e3a5f] text-white flex flex-col fixed h-full z-40">
         {/* ロゴ */}

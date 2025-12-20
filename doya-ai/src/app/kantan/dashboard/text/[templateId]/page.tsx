@@ -484,10 +484,10 @@ export default function TemplateDetailPage() {
   // テンプレートが見つからない
   if (!template) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          <p className="text-white/60 mb-4">テンプレートが見つかりません</p>
-          <Link href="/kantan/dashboard" className="text-cyan-400 hover:underline">
+          <p className="text-gray-500 mb-4">テンプレートが見つかりません</p>
+          <Link href="/kantan/dashboard" className="text-blue-500 hover:underline">
             ダッシュボードに戻る
           </Link>
         </div>
@@ -666,7 +666,7 @@ ${inputMessage}
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-2xl blur-2xl opacity-50 animate-pulse" />
@@ -674,38 +674,38 @@ ${inputMessage}
               <Rocket className="w-8 h-8 text-white animate-bounce" />
             </div>
           </div>
-          <p className="text-white/40">読み込み中...</p>
+          <p className="text-gray-400">読み込み中...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-white text-gray-800">
       <Toaster 
         position="top-center" 
         toastOptions={{
           style: {
-            background: '#1a1a2e',
-            color: '#fff',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: '#fff',
+            color: '#333',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
           },
         }}
       />
       
-      {/* アニメーション背景 */}
+      {/* 背景デコレーション */}
       <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-gradient-to-br from-cyan-500/30 via-transparent to-transparent rounded-full blur-[80px] animate-pulse" style={{ animationDuration: '8s' }} />
-          <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-gradient-to-br from-purple-500/20 via-transparent to-transparent rounded-full blur-[60px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-gradient-to-br from-cyan-100 via-transparent to-transparent rounded-full blur-[80px]" />
+          <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-gradient-to-br from-purple-100 via-transparent to-transparent rounded-full blur-[60px]" />
         </div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px]" />
       </div>
       
       {/* ヘッダー */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0a0a0f]/80 border-b border-white/5">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/kantan/dashboard/text" className="flex items-center gap-2 text-white/30 hover:text-white/60 transition-all">
+          <Link href="/kantan/dashboard/text" className="flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-all">
             <ChevronRight className="w-4 h-4 rotate-180" />
             <span className="hidden sm:inline text-sm">エージェント一覧</span>
           </Link>
@@ -717,12 +717,12 @@ ${inputMessage}
                 <Rocket className="w-4 h-4 text-white" />
               </div>
             </div>
-            <h1 className="font-bold text-white truncate max-w-[200px]">{template.name}</h1>
+            <h1 className="font-bold text-gray-800 truncate max-w-[200px]">{template.name}</h1>
           </div>
           
-          <div className="flex items-center gap-2 px-2 py-1 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-full text-[10px] font-bold">
-            <Cpu className="w-3 h-3 text-purple-400" />
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Gemini 3.0</span>
+          <div className="flex items-center gap-2 px-2 py-1 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-full text-[10px] font-bold">
+            <Cpu className="w-3 h-3 text-purple-500" />
+            <span className="bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Gemini 3.0</span>
             </div>
         </div>
       </header>
@@ -730,21 +730,21 @@ ${inputMessage}
       <main className="max-w-5xl mx-auto px-4 py-6 relative">
         {/* ゲストバナー */}
         {isGuest && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 backdrop-blur-xl border border-cyan-500/20 rounded-2xl">
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-2xl">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-cyan-400" />
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-blue-500" />
                 </div>
                 <div>
-                  <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-bold rounded-full">FREE TRIAL</span>
-                  <p className="text-white/60 text-sm mt-1">
-                    残り <span className="font-bold text-cyan-400">{guestRemainingCount}回</span>
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs font-bold rounded-full">FREE TRIAL</span>
+                  <p className="text-gray-500 text-sm mt-1">
+                    残り <span className="font-bold text-blue-600">{guestRemainingCount}回</span>
                   </p>
                 </div>
               </div>
               <Link href="/auth/signin?service=kantan">
-                <button className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-emerald-500 text-white text-sm font-bold rounded-xl flex items-center gap-2 hover:scale-105 transition-transform">
+                <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm font-bold rounded-xl flex items-center gap-2 hover:scale-105 transition-transform shadow-lg">
                   <LogIn className="w-4 h-4" />
                   ログインで10回に！
                 </button>
@@ -757,48 +757,48 @@ ${inputMessage}
           {/* 左側：入力フォーム */}
           <div className={`lg:col-span-2 ${output && !showInputs ? 'hidden lg:block' : ''}`}>
             {/* テンプレート説明 */}
-            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-5 mb-4">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4 shadow-sm">
               <div className="flex items-center gap-3 mb-3">
-                <FileText className="w-5 h-5 text-cyan-400" />
-                <h2 className="font-bold text-white">このエージェントについて</h2>
+                <FileText className="w-5 h-5 text-blue-500" />
+                <h2 className="font-bold text-gray-800">このエージェントについて</h2>
               </div>
-              <p className="text-white/60 text-sm">{template.description}</p>
+              <p className="text-gray-500 text-sm">{template.description}</p>
             </div>
 
             {/* サンプル入力ボタン */}
             <button
               onClick={handleSampleInput}
-              className="group w-full mb-4 py-3 px-5 bg-gradient-to-r from-cyan-500/10 to-emerald-500/10 hover:from-cyan-500/20 hover:to-emerald-500/20 border border-cyan-500/20 text-white font-bold rounded-2xl transition-all flex items-center justify-center gap-3"
+              className="group w-full mb-4 py-3 px-5 bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 border border-blue-200 text-gray-700 font-bold rounded-2xl transition-all flex items-center justify-center gap-3"
             >
-              <Wand2 className="w-5 h-5 text-cyan-400 group-hover:rotate-12 transition-transform" />
+              <Wand2 className="w-5 h-5 text-blue-500 group-hover:rotate-12 transition-transform" />
               <span className="text-sm">ワンクリックでサンプル入力</span>
             </button>
 
             {/* 入力フォーム */}
-            <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-5">
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold text-white flex items-center gap-2">
+                <h2 className="font-bold text-gray-800 flex items-center gap-2">
                   <span>入力項目</span>
-                  <span className="text-xs text-white/40 font-normal">（{template.inputFields.filter(f => f.required).length}項目必須）</span>
+                  <span className="text-xs text-gray-400 font-normal">（{template.inputFields.filter(f => f.required).length}項目必須）</span>
                 </h2>
               </div>
               <div className="space-y-4">
                 {template.inputFields.map((field) => (
                   <div key={field.name}>
-                    <label className="block text-xs font-medium text-white/60 mb-1.5">
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
                       {field.label}
-                      {field.required && <span className="text-cyan-400 ml-1">*</span>}
+                      {field.required && <span className="text-blue-500 ml-1">*</span>}
                     </label>
                     
                     {field.type === 'select' ? (
                       <select
                         value={inputs[field.name] || ''}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
-                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                       >
-                        <option value="" className="bg-[#0a0a0f]">選択してください</option>
+                        <option value="">選択してください</option>
                         {field.options?.map((option) => (
-                          <option key={option} value={option} className="bg-[#0a0a0f]">{option}</option>
+                          <option key={option} value={option}>{option}</option>
                         ))}
                       </select>
                     ) : field.type === 'textarea' ? (
@@ -807,7 +807,7 @@ ${inputMessage}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
                         placeholder={field.placeholder}
                         rows={3}
-                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/30 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all resize-none"
+                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
                       />
                     ) : (
                       <input
@@ -815,7 +815,7 @@ ${inputMessage}
                         value={inputs[field.name] || ''}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
                         placeholder={field.placeholder}
-                        className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-white/30 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                       />
                     )}
                   </div>
@@ -829,8 +829,8 @@ ${inputMessage}
               className={`
                   group w-full mt-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-3
                 ${canGenerate && !isGenerating
-                    ? 'bg-gradient-to-r from-cyan-500 via-emerald-500 to-teal-500 text-white shadow-2xl shadow-cyan-500/25 hover:scale-[1.02]'
-                    : 'bg-white/10 text-white/30 cursor-not-allowed'
+                    ? 'bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 text-white shadow-xl shadow-blue-500/25 hover:scale-[1.02]'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }
               `}
             >
@@ -848,9 +848,9 @@ ${inputMessage}
             </button>
 
             {!canGenerate && isGuest && !canGuestGenerate && (
-                <p className="text-center text-xs text-white/40 mt-3">
+                <p className="text-center text-xs text-gray-400 mt-3">
                 本日の無料お試しは上限に達しました。
-                  <Link href="/auth/signin?service=kantan" className="text-cyan-400 hover:underline ml-1">
+                  <Link href="/auth/signin?service=kantan" className="text-blue-500 hover:underline ml-1">
                   ログインで続ける
                 </Link>
               </p>
@@ -865,12 +865,12 @@ ${inputMessage}
                 {/* 生成情報 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      <span className="text-xs text-emerald-400 font-bold">生成完了</span>
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <span className="text-xs text-emerald-600 font-bold">生成完了</span>
                     </div>
                     {generationTime > 0 && (
-                      <div className="flex items-center gap-1.5 text-xs text-white/40">
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400">
                         <Timer className="w-3.5 h-3.5" />
                         <span>{generationTime}秒</span>
                       </div>
@@ -878,38 +878,38 @@ ${inputMessage}
                   </div>
                   <button
                     onClick={() => setShowInputs(!showInputs)}
-                    className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-xs text-white/60"
+                    className="lg:hidden flex items-center gap-2 px-3 py-1.5 bg-gray-100 border border-gray-200 rounded-lg text-xs text-gray-600"
                   >
                     {showInputs ? '入力を隠す' : '入力を表示'}
                   </button>
                 </div>
 
                 {/* チャット履歴 */}
-                <div className="bg-white/[0.02] backdrop-blur-xl border border-white/5 rounded-2xl p-5 max-h-[50vh] overflow-y-auto">
+                <div className="bg-white border border-gray-200 rounded-2xl p-5 max-h-[50vh] overflow-y-auto shadow-sm">
                   <div className="flex items-center gap-2 mb-4">
-                    <MessageSquare className="w-5 h-5 text-cyan-400" />
-                    <h2 className="font-bold text-white text-sm">チャットでブラッシュアップ</h2>
-                    <span className="text-xs text-white/40">（何度でも修正OK）</span>
+                    <MessageSquare className="w-5 h-5 text-blue-500" />
+                    <h2 className="font-bold text-gray-800 text-sm">チャットでブラッシュアップ</h2>
+                    <span className="text-xs text-gray-400">（何度でも修正OK）</span>
                   </div>
                   
                   <div className="space-y-4">
                     {chatMessages.map((msg, index) => (
                       <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
                         {msg.role === 'assistant' && (
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
                             <Bot className="w-4 h-4 text-white" />
                           </div>
                         )}
                         <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${
                           msg.role === 'user' 
-                            ? 'bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 border border-cyan-500/30' 
-                            : 'bg-white/5 border border-white/5'
+                            ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white' 
+                            : 'bg-gray-50 border border-gray-200 text-gray-800'
                         }`}>
-                          <div className="text-white/80 text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
+                          <div className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</div>
                           {msg.role === 'assistant' && index === chatMessages.length - 1 && !isChatting && (
                             <button
                               onClick={handleCopy}
-                              className="mt-3 flex items-center gap-1.5 text-xs text-white/40 hover:text-cyan-400 transition-colors"
+                              className="mt-3 flex items-center gap-1.5 text-xs text-gray-400 hover:text-blue-500 transition-colors"
                             >
                               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                               {copied ? 'コピー済み' : 'コピー'}
@@ -917,8 +917,8 @@ ${inputMessage}
                           )}
                         </div>
                         {msg.role === 'user' && (
-                          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                            <User className="w-4 h-4 text-white/60" />
+                          <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
+                            <User className="w-4 h-4 text-gray-500" />
                           </div>
                         )}
                       </div>
@@ -926,13 +926,13 @@ ${inputMessage}
                     
                     {isChatting && (
                       <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
                           <Bot className="w-4 h-4 text-white" />
                         </div>
-                        <div className="bg-white/5 border border-white/5 rounded-2xl px-4 py-3">
+                        <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />
-                            <span className="text-sm text-white/60">修正中...</span>
+                            <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                            <span className="text-sm text-gray-500">修正中...</span>
                           </div>
                         </div>
                       </div>
@@ -949,7 +949,7 @@ ${inputMessage}
                       key={suggestion}
                       onClick={() => handleChatSubmit(suggestion)}
                       disabled={isChatting}
-                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-xs text-white/60 hover:text-white transition-all disabled:opacity-50"
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-full text-xs text-gray-600 hover:text-gray-800 transition-all disabled:opacity-50"
                     >
                       {suggestion}
                     </button>
@@ -958,8 +958,7 @@ ${inputMessage}
 
                 {/* チャット入力 */}
                 <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-purple-500/10 rounded-2xl blur-xl" />
-                  <div className="relative bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl p-3">
+                  <div className="bg-white border border-gray-200 rounded-2xl p-3 shadow-sm">
                     <div className="flex gap-3">
                       <input
                         type="text"
@@ -967,13 +966,13 @@ ${inputMessage}
                         onChange={(e) => setChatInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleChatSubmit()}
                         placeholder="修正依頼を入力... 例：もっとカジュアルに"
-                        className="flex-1 bg-transparent text-white text-sm placeholder-white/30 outline-none"
+                        className="flex-1 bg-transparent text-gray-800 text-sm placeholder-gray-400 outline-none"
                         disabled={isChatting}
                       />
                       <button
                         onClick={() => handleChatSubmit()}
                         disabled={!chatInput.trim() || isChatting}
-                        className="w-10 h-10 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 flex items-center justify-center text-white disabled:opacity-50 hover:scale-105 transition-transform"
+                        className="w-10 h-10 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center text-white disabled:opacity-50 hover:scale-105 transition-transform shadow-lg"
                       >
                         <Send className="w-5 h-5" />
                       </button>
@@ -985,14 +984,14 @@ ${inputMessage}
                 <div className="flex gap-3">
                   <button
                     onClick={handleCopy}
-                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+                    className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
                   >
-                    {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                    {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                     {copied ? 'コピー済み' : '最新をコピー'}
                   </button>
                   <button
                     onClick={handleReset}
-                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
+                    className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 font-medium rounded-xl transition-all flex items-center justify-center gap-2 text-sm"
                   >
                     <RefreshCw className="w-4 h-4" />
                     新しく作成
@@ -1002,11 +1001,11 @@ ${inputMessage}
             ) : (
               // 初期状態（出力なし）
               <div className="text-center py-16">
-                <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-6">
-                  <Sparkles className="w-10 h-10 text-white/20" />
+                <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-6">
+                  <Sparkles className="w-10 h-10 text-gray-300" />
                 </div>
-                <h3 className="text-white/40 text-lg mb-2">ここに生成結果が表示されます</h3>
-                <p className="text-white/20 text-sm">左の入力フォームを埋めて「AIで生成する」をクリック</p>
+                <h3 className="text-gray-400 text-lg mb-2">ここに生成結果が表示されます</h3>
+                <p className="text-gray-300 text-sm">左の入力フォームを埋めて「AIで生成する」をクリック</p>
               </div>
             )}
           </div>
