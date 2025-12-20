@@ -7,7 +7,10 @@ import {
   Send, Paperclip, MoreHorizontal, Sparkles, LogIn,
   FileText, Target, TrendingUp, Users, BarChart3, Lightbulb,
   Home, Cpu, Clock, Settings, HelpCircle, DollarSign, Bell,
-  MessageSquare, Rocket, Bot, User, Loader2, ChevronRight, Star
+  MessageSquare, Rocket, Bot, User, Loader2, ChevronRight, Star,
+  Megaphone, PenTool, Mail, Search, Share2, ShoppingCart, Globe,
+  Zap, BookOpen, Heart, Palette, Video, Mic, Camera, Gift,
+  Building, Briefcase, Award, Headphones, Shield, Layers, ArrowLeft
 } from 'lucide-react'
 import { KANTAN_PRICING, getGuestRemainingCount } from '@/lib/pricing'
 
@@ -28,15 +31,17 @@ const SIDEBAR_MENU_BOTTOM = [
   { id: 'help', label: 'ヘルプ', icon: <HelpCircle className="w-5 h-5" />, href: '#', disabled: true },
 ]
 
-// チャットカテゴリ（課題解決テンプレート）
+// チャットカテゴリ（課題解決テンプレート）- 全24カテゴリ
 const CHAT_CATEGORIES = [
+  // ==================== 広告・集客 ====================
   {
-    id: 'customer-docs',
-    title: '顧客対応文書',
-    description: '営業メールや報告書をデータに基づき自動作成。',
-    icon: <FileText className="w-6 h-6" />,
-    color: 'bg-blue-500',
-    prompt: '営業メールや報告書の作成を手伝ってください。',
+    id: 'ad-optimization',
+    title: '広告運用最適化',
+    description: 'Google/Meta広告のパフォーマンス改善策を提案。',
+    icon: <Megaphone className="w-6 h-6" />,
+    color: 'bg-red-500',
+    category: '広告・集客',
+    prompt: '広告運用の最適化について相談させてください。',
   },
   {
     id: 'target-analysis',
@@ -44,16 +49,266 @@ const CHAT_CATEGORIES = [
     description: '顧客データから最適なターゲットと次の一手を提案。',
     icon: <Target className="w-6 h-6" />,
     color: 'bg-purple-500',
+    category: '広告・集客',
     prompt: 'ターゲット顧客の分析と戦略提案をお願いします。',
   },
+  {
+    id: 'lp-improvement',
+    title: 'LP改善アドバイス',
+    description: 'CVR向上のためのランディングページ改善点を提案。',
+    icon: <Layers className="w-6 h-6" />,
+    color: 'bg-orange-500',
+    category: '広告・集客',
+    prompt: 'ランディングページの改善点を教えてください。',
+  },
+  {
+    id: 'keyword-strategy',
+    title: 'キーワード戦略',
+    description: 'SEO/リスティングのキーワード選定をサポート。',
+    icon: <Search className="w-6 h-6" />,
+    color: 'bg-teal-500',
+    category: '広告・集客',
+    prompt: 'キーワード戦略について相談させてください。',
+  },
+
+  // ==================== SNS・コンテンツ ====================
+  {
+    id: 'sns-strategy',
+    title: 'SNS運用戦略',
+    description: 'Instagram/Twitter/TikTokの運用方針を立案。',
+    icon: <Share2 className="w-6 h-6" />,
+    color: 'bg-pink-500',
+    category: 'SNS・コンテンツ',
+    prompt: 'SNS運用戦略について相談させてください。',
+  },
+  {
+    id: 'content-planning',
+    title: 'コンテンツ企画',
+    description: 'ブログ・動画・SNSのコンテンツ企画をサポート。',
+    icon: <PenTool className="w-6 h-6" />,
+    color: 'bg-indigo-500',
+    category: 'SNS・コンテンツ',
+    prompt: 'コンテンツ企画について相談させてください。',
+  },
+  {
+    id: 'video-marketing',
+    title: '動画マーケティング',
+    description: 'YouTube/TikTok/Reelsの動画戦略を提案。',
+    icon: <Video className="w-6 h-6" />,
+    color: 'bg-red-600',
+    category: 'SNS・コンテンツ',
+    prompt: '動画マーケティングについて相談させてください。',
+  },
+  {
+    id: 'influencer-marketing',
+    title: 'インフルエンサー施策',
+    description: 'インフルエンサー選定と施策設計をアドバイス。',
+    icon: <Camera className="w-6 h-6" />,
+    color: 'bg-violet-500',
+    category: 'SNS・コンテンツ',
+    prompt: 'インフルエンサーマーケティングについて相談させてください。',
+  },
+
+  // ==================== 営業・セールス ====================
   {
     id: 'sales-strategy',
     title: '営業戦略提案',
     description: '営業実績を分析し、売上向上への具体的な戦略を提案。',
     icon: <TrendingUp className="w-6 h-6" />,
     color: 'bg-emerald-500',
+    category: '営業・セールス',
     prompt: '営業戦略の立案を手伝ってください。',
   },
+  {
+    id: 'customer-docs',
+    title: '顧客対応文書',
+    description: '営業メールや報告書をデータに基づき自動作成。',
+    icon: <FileText className="w-6 h-6" />,
+    color: 'bg-blue-500',
+    category: '営業・セールス',
+    prompt: '営業メールや報告書の作成を手伝ってください。',
+  },
+  {
+    id: 'proposal-creation',
+    title: '提案書作成サポート',
+    description: '顧客を動かす提案書の構成と内容をアドバイス。',
+    icon: <Briefcase className="w-6 h-6" />,
+    color: 'bg-cyan-500',
+    category: '営業・セールス',
+    prompt: '提案書作成について相談させてください。',
+  },
+  {
+    id: 'objection-handling',
+    title: '反論対応トーク',
+    description: 'よくある反論への効果的な切り返しを提案。',
+    icon: <Shield className="w-6 h-6" />,
+    color: 'bg-amber-500',
+    category: '営業・セールス',
+    prompt: '営業での反論対応について相談させてください。',
+  },
+
+  // ==================== 分析・戦略 ====================
+  {
+    id: 'market-analysis',
+    title: '市場分析',
+    description: '業界トレンドと市場機会を分析してレポート。',
+    icon: <BarChart3 className="w-6 h-6" />,
+    color: 'bg-blue-600',
+    category: '分析・戦略',
+    prompt: '市場分析について相談させてください。',
+  },
+  {
+    id: 'competitor-analysis',
+    title: '競合分析',
+    description: '競合他社の強み・弱みを分析して差別化策を提案。',
+    icon: <Users className="w-6 h-6" />,
+    color: 'bg-slate-600',
+    category: '分析・戦略',
+    prompt: '競合分析について相談させてください。',
+  },
+  {
+    id: 'persona-creation',
+    title: 'ペルソナ設計',
+    description: '理想的な顧客像を詳細に設計してマーケティングに活用。',
+    icon: <User className="w-6 h-6" />,
+    color: 'bg-green-500',
+    category: '分析・戦略',
+    prompt: 'ペルソナ設計について相談させてください。',
+  },
+  {
+    id: 'kpi-setting',
+    title: 'KPI設計',
+    description: '効果測定のためのKPI設計と目標設定をサポート。',
+    icon: <Award className="w-6 h-6" />,
+    color: 'bg-yellow-500',
+    category: '分析・戦略',
+    prompt: 'KPIの設計について相談させてください。',
+  },
+
+  // ==================== ブランディング ====================
+  {
+    id: 'brand-strategy',
+    title: 'ブランド戦略',
+    description: 'ブランドポジショニングとメッセージングを設計。',
+    icon: <Palette className="w-6 h-6" />,
+    color: 'bg-fuchsia-500',
+    category: 'ブランディング',
+    prompt: 'ブランド戦略について相談させてください。',
+  },
+  {
+    id: 'naming-copy',
+    title: 'ネーミング・コピー',
+    description: '商品名やキャッチコピーのアイデアを提案。',
+    icon: <Lightbulb className="w-6 h-6" />,
+    color: 'bg-lime-500',
+    category: 'ブランディング',
+    prompt: 'ネーミングやコピーについて相談させてください。',
+  },
+  {
+    id: 'pr-strategy',
+    title: 'PR・広報戦略',
+    description: 'プレスリリースやメディア露出の戦略を立案。',
+    icon: <Mic className="w-6 h-6" />,
+    color: 'bg-rose-500',
+    category: 'ブランディング',
+    prompt: 'PR・広報戦略について相談させてください。',
+  },
+
+  // ==================== EC・CRM ====================
+  {
+    id: 'ec-strategy',
+    title: 'EC売上改善',
+    description: 'ECサイトの売上向上施策を提案。',
+    icon: <ShoppingCart className="w-6 h-6" />,
+    color: 'bg-orange-600',
+    category: 'EC・CRM',
+    prompt: 'ECサイトの売上改善について相談させてください。',
+  },
+  {
+    id: 'crm-strategy',
+    title: 'CRM・リピート施策',
+    description: '顧客ロイヤルティ向上とリピート率改善を提案。',
+    icon: <Heart className="w-6 h-6" />,
+    color: 'bg-pink-600',
+    category: 'EC・CRM',
+    prompt: 'CRM戦略とリピート施策について相談させてください。',
+  },
+  {
+    id: 'email-marketing',
+    title: 'メールマーケティング',
+    description: 'メルマガ・ステップメールの戦略と改善を提案。',
+    icon: <Mail className="w-6 h-6" />,
+    color: 'bg-sky-500',
+    category: 'EC・CRM',
+    prompt: 'メールマーケティングについて相談させてください。',
+  },
+  {
+    id: 'campaign-planning',
+    title: 'キャンペーン企画',
+    description: 'セール・プロモーションの企画をサポート。',
+    icon: <Gift className="w-6 h-6" />,
+    color: 'bg-red-400',
+    category: 'EC・CRM',
+    prompt: 'キャンペーン企画について相談させてください。',
+  },
+
+  // ==================== その他 ====================
+  {
+    id: 'global-marketing',
+    title: '海外マーケティング',
+    description: '海外展開・越境ECのマーケティング戦略を提案。',
+    icon: <Globe className="w-6 h-6" />,
+    color: 'bg-teal-600',
+    category: 'その他',
+    prompt: '海外マーケティングについて相談させてください。',
+  },
+  {
+    id: 'btob-marketing',
+    title: 'BtoBマーケティング',
+    description: '法人向けマーケティングとリードジェネレーション。',
+    icon: <Building className="w-6 h-6" />,
+    color: 'bg-slate-500',
+    category: 'その他',
+    prompt: 'BtoBマーケティングについて相談させてください。',
+  },
+  {
+    id: 'cs-improvement',
+    title: 'カスタマーサポート改善',
+    description: 'CS対応の効率化と顧客満足度向上を提案。',
+    icon: <Headphones className="w-6 h-6" />,
+    color: 'bg-green-600',
+    category: 'その他',
+    prompt: 'カスタマーサポートの改善について相談させてください。',
+  },
+  {
+    id: 'marketing-automation',
+    title: 'マーケ自動化',
+    description: 'MA・自動化ツールの導入と活用をアドバイス。',
+    icon: <Zap className="w-6 h-6" />,
+    color: 'bg-amber-600',
+    category: 'その他',
+    prompt: 'マーケティング自動化について相談させてください。',
+  },
+  {
+    id: 'learning-support',
+    title: 'マーケ学習サポート',
+    description: 'マーケティングの基礎から応用まで学習をサポート。',
+    icon: <BookOpen className="w-6 h-6" />,
+    color: 'bg-indigo-600',
+    category: 'その他',
+    prompt: 'マーケティングについて学びたいです。',
+  },
+]
+
+// カテゴリグループ
+const CATEGORY_GROUPS = [
+  { id: 'ad', name: '広告・集客', color: 'from-red-500 to-orange-500' },
+  { id: 'sns', name: 'SNS・コンテンツ', color: 'from-pink-500 to-purple-500' },
+  { id: 'sales', name: '営業・セールス', color: 'from-emerald-500 to-cyan-500' },
+  { id: 'analysis', name: '分析・戦略', color: 'from-blue-500 to-indigo-500' },
+  { id: 'brand', name: 'ブランディング', color: 'from-fuchsia-500 to-pink-500' },
+  { id: 'ec', name: 'EC・CRM', color: 'from-orange-500 to-red-500' },
+  { id: 'other', name: 'その他', color: 'from-slate-500 to-gray-500' },
 ]
 
 // チャットメッセージ型
@@ -68,9 +323,11 @@ export default function KantanChatPage() {
   const { data: session, status } = useSession()
   const [guestRemainingCount, setGuestRemainingCount] = useState(KANTAN_PRICING.guestLimit)
   const [selectedCategory, setSelectedCategory] = useState<typeof CHAT_CATEGORIES[0] | null>(null)
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const chatEndRef = useRef<HTMLDivElement>(null)
   
   const isGuest = !session
@@ -96,16 +353,51 @@ export default function KantanChatPage() {
       {
         id: `msg-${Date.now()}-1`,
         role: 'assistant',
-        content: 'こんにちは',
+        content: `こんにちは！「${category.title}」の専門AIアシスタントです。🎯`,
         timestamp: new Date(),
       },
       {
         id: `msg-${Date.now()}-2`,
         role: 'assistant',
-        content: 'ご相談の内容はどのようなものでしょうか？',
+        content: getInitialPrompt(category.id),
         timestamp: new Date(),
       },
     ])
+  }
+
+  // カテゴリに応じた初期プロンプト
+  function getInitialPrompt(categoryId: string): string {
+    const prompts: Record<string, string> = {
+      'ad-optimization': '広告運用についてお聞かせください。\n\n例えば：\n• 現在のCPAやROASを改善したい\n• 新しい広告チャネルを試したい\n• クリエイティブのA/Bテストがしたい\n\nどのような課題をお持ちですか？',
+      'target-analysis': 'ターゲット分析についてお手伝いします。\n\n例えば：\n• ペルソナを作りたい\n• ターゲットを絞り込みたい\n• 顧客データを分析したい\n\n現在のターゲット像や課題を教えてください。',
+      'lp-improvement': 'LP改善のアドバイスをいたします。\n\n例えば：\n• CVRを上げたい\n• ファーストビューを改善したい\n• CTAの配置を見直したい\n\n現在のLPのURLや課題を教えてください。',
+      'keyword-strategy': 'キーワード戦略についてお手伝いします。\n\n例えば：\n• SEOのキーワード選定\n• リスティング広告のキーワード設計\n• ロングテールキーワードの発掘\n\nどのような目的でキーワード戦略を検討されていますか？',
+      'sns-strategy': 'SNS運用戦略についてお手伝いします。\n\n例えば：\n• Instagram/Twitter/TikTokどれを始めるべき？\n• 投稿頻度やコンテンツの方針\n• フォロワー増加施策\n\n現在の状況と目標を教えてください。',
+      'content-planning': 'コンテンツ企画をお手伝いします。\n\n例えば：\n• ブログ記事のネタ出し\n• SNS投稿の企画\n• 動画コンテンツの企画\n\nどのようなコンテンツを作りたいですか？',
+      'video-marketing': '動画マーケティングについてお手伝いします。\n\n例えば：\n• YouTube/TikTok/Reelsの使い分け\n• 動画の企画・構成\n• 撮影・編集のコツ\n\nどのような動画を作りたいですか？',
+      'influencer-marketing': 'インフルエンサー施策についてお手伝いします。\n\n例えば：\n• インフルエンサーの選び方\n• 依頼の仕方と報酬設計\n• 効果測定の方法\n\nどのような商品・サービスのPRを検討されていますか？',
+      'sales-strategy': '営業戦略についてお手伝いします。\n\n例えば：\n• 新規開拓の方法\n• 成約率を上げたい\n• 営業プロセスの改善\n\n現在の課題や目標を教えてください。',
+      'customer-docs': '顧客対応文書の作成をお手伝いします。\n\n例えば：\n• 営業メールの作成\n• 提案書・報告書の作成\n• お礼メール・フォローメール\n\nどのような文書を作成したいですか？',
+      'proposal-creation': '提案書作成をサポートします。\n\n例えば：\n• 提案書の構成\n• 訴求ポイントの整理\n• 競合との差別化\n\n提案先の情報や商品・サービスについて教えてください。',
+      'objection-handling': '反論対応のトークスクリプトを作成します。\n\n例えば：\n• 「高い」と言われた時の対応\n• 「検討します」への切り返し\n• 「他社と比較したい」への対応\n\nどのような反論に困っていますか？',
+      'market-analysis': '市場分析をお手伝いします。\n\n例えば：\n• 市場規模の調査\n• 業界トレンドの把握\n• 参入障壁の分析\n\nどの市場・業界について知りたいですか？',
+      'competitor-analysis': '競合分析をお手伝いします。\n\n例えば：\n• 競合の強み・弱み分析\n• ポジショニングマップ作成\n• 差別化戦略の立案\n\n自社と競合について教えてください。',
+      'persona-creation': 'ペルソナ設計をお手伝いします。\n\n例えば：\n• 理想的な顧客像の定義\n• 購買行動の分析\n• ペインポイントの特定\n\n商品・サービスについて教えてください。',
+      'kpi-setting': 'KPI設計をお手伝いします。\n\n例えば：\n• 適切なKPIの選定\n• 目標値の設定\n• 測定方法の設計\n\nどのような目標を達成したいですか？',
+      'brand-strategy': 'ブランド戦略についてお手伝いします。\n\n例えば：\n• ブランドポジショニング\n• ブランドメッセージの策定\n• ブランドガイドライン\n\n現在のブランドについて教えてください。',
+      'naming-copy': 'ネーミング・コピー作成をお手伝いします。\n\n例えば：\n• 商品名・サービス名のアイデア\n• キャッチコピーの作成\n• タグラインの策定\n\n何のネーミング・コピーを作りたいですか？',
+      'pr-strategy': 'PR・広報戦略についてお手伝いします。\n\n例えば：\n• プレスリリースの作成\n• メディアアプローチ\n• 広報計画の立案\n\nどのような情報を発信したいですか？',
+      'ec-strategy': 'EC売上改善についてお手伝いします。\n\n例えば：\n• CVRの改善\n• カート離脱の防止\n• 客単価アップ施策\n\n現在のEC運営の課題を教えてください。',
+      'crm-strategy': 'CRM・リピート施策についてお手伝いします。\n\n例えば：\n• リピート率の向上\n• 会員プログラムの設計\n• 顧客ロイヤルティ向上\n\n現在の顧客データや課題を教えてください。',
+      'email-marketing': 'メールマーケティングについてお手伝いします。\n\n例えば：\n• メルマガの企画・改善\n• ステップメールの設計\n• 開封率・クリック率の改善\n\n現在のメール施策について教えてください。',
+      'campaign-planning': 'キャンペーン企画をお手伝いします。\n\n例えば：\n• セール・プロモーションの企画\n• 特典・インセンティブ設計\n• 告知・集客方法\n\nどのようなキャンペーンを企画したいですか？',
+      'global-marketing': '海外マーケティングについてお手伝いします。\n\n例えば：\n• 海外市場への参入戦略\n• 越境ECの始め方\n• 現地向けマーケティング\n\nどの国・地域への展開を検討されていますか？',
+      'btob-marketing': 'BtoBマーケティングについてお手伝いします。\n\n例えば：\n• リードジェネレーション\n• ホワイトペーパー・ウェビナー\n• ABM（アカウントベースドマーケティング）\n\n現在のBtoBマーケティングの課題を教えてください。',
+      'cs-improvement': 'カスタマーサポート改善についてお手伝いします。\n\n例えば：\n• 問い合わせ対応の効率化\n• FAQ・ヘルプコンテンツの整備\n• 顧客満足度の向上\n\n現在のCS体制と課題を教えてください。',
+      'marketing-automation': 'マーケティング自動化についてお手伝いします。\n\n例えば：\n• MAツールの選定\n• 自動化シナリオの設計\n• リードナーチャリング\n\n現在の課題や自動化したい業務を教えてください。',
+      'learning-support': 'マーケティング学習をサポートします。\n\n例えば：\n• マーケティングの基礎知識\n• 最新トレンドの解説\n• 実践的なスキルアップ\n\n何について学びたいですか？',
+    }
+    return prompts[categoryId] || 'どのようなことでお困りですか？具体的な状況や課題を教えてください。'
   }
 
   // メッセージ送信
@@ -314,47 +606,155 @@ ${inputValue}
         <div className="flex-1 overflow-hidden flex flex-col p-8">
           {/* カテゴリ選択 */}
           {!selectedCategory ? (
-            <div className="grid md:grid-cols-3 gap-6 mb-8">
-              {CHAT_CATEGORIES.map((category) => (
+            <div className="flex-1 overflow-y-auto">
+              {/* ヘッダー */}
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  💬 マーケティング課題を解決
+                </h2>
+                <p className="text-gray-500">
+                  相談したいカテゴリを選択してください（全{CHAT_CATEGORIES.length}カテゴリ）
+                </p>
+              </div>
+
+              {/* 検索バー */}
+              <div className="mb-6">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="カテゴリを検索..."
+                    className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* カテゴリグループタブ */}
+              <div className="flex flex-wrap gap-2 mb-6">
                 <button
-                  key={category.id}
-                  onClick={() => handleSelectCategory(category)}
-                  className="group text-left p-6 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-200 transition-all"
+                  onClick={() => setSelectedGroup(null)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    selectedGroup === null
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
                 >
-                  <div className={`w-12 h-12 ${category.color} rounded-xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
-                    {category.icon}
-                  </div>
-                  <h3 className="font-bold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
-                    {category.title}
-                  </h3>
-                  <p className="text-sm text-gray-500">{category.description}</p>
+                  すべて
                 </button>
-              ))}
+                {CATEGORY_GROUPS.map((group) => (
+                  <button
+                    key={group.id}
+                    onClick={() => setSelectedGroup(group.name)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                      selectedGroup === group.name
+                        ? `bg-gradient-to-r ${group.color} text-white`
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    {group.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* カテゴリグリッド */}
+              <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
+                {CHAT_CATEGORIES
+                  .filter((category) => {
+                    // 検索フィルター
+                    if (searchQuery) {
+                      const query = searchQuery.toLowerCase()
+                      return (
+                        category.title.toLowerCase().includes(query) ||
+                        category.description.toLowerCase().includes(query)
+                      )
+                    }
+                    // グループフィルター
+                    if (selectedGroup) {
+                      return category.category === selectedGroup
+                    }
+                    return true
+                  })
+                  .map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => handleSelectCategory(category)}
+                      className="group text-left p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-blue-200 hover:-translate-y-1 transition-all"
+                    >
+                      <div className={`w-11 h-11 ${category.color} rounded-xl flex items-center justify-center text-white mb-3 group-hover:scale-110 transition-transform shadow-lg`}>
+                        {category.icon}
+                      </div>
+                      <h3 className="font-bold text-gray-800 mb-1 text-sm group-hover:text-blue-600 transition-colors">
+                        {category.title}
+                      </h3>
+                      <p className="text-xs text-gray-500 line-clamp-2">{category.description}</p>
+                      <div className="mt-3 flex items-center text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span>相談を始める</span>
+                        <ChevronRight className="w-3 h-3 ml-1" />
+                      </div>
+                    </button>
+                  ))}
+              </div>
+
+              {/* フィルター結果が0件の場合 */}
+              {CHAT_CATEGORIES.filter((category) => {
+                if (searchQuery) {
+                  const query = searchQuery.toLowerCase()
+                  return (
+                    category.title.toLowerCase().includes(query) ||
+                    category.description.toLowerCase().includes(query)
+                  )
+                }
+                if (selectedGroup) {
+                  return category.category === selectedGroup
+                }
+                return true
+              }).length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">該当するカテゴリが見つかりません</p>
+                </div>
+              )}
             </div>
           ) : (
             <>
               {/* 選択中のカテゴリ */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4">
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 flex-1 flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between p-4 border-b border-gray-100">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 ${selectedCategory.color} rounded-xl flex items-center justify-center text-white`}>
+                    <button 
+                      onClick={() => {
+                        setSelectedCategory(null)
+                        setMessages([])
+                      }}
+                      className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className={`w-10 h-10 ${selectedCategory.color} rounded-xl flex items-center justify-center text-white shadow-lg`}>
                       {selectedCategory.icon}
                     </div>
-                    <h2 className="font-bold text-gray-800">{selectedCategory.title}</h2>
+                    <div>
+                      <h2 className="font-bold text-gray-800">{selectedCategory.title}</h2>
+                      <p className="text-xs text-gray-500">{selectedCategory.category}</p>
+                    </div>
                   </div>
-                  <button 
-                    onClick={() => {
-                      setSelectedCategory(null)
-                      setMessages([])
-                    }}
-                    className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-                  >
-                    <MoreHorizontal className="w-5 h-5" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">{messages.length}メッセージ</span>
+                    <button 
+                      onClick={() => {
+                        setSelectedCategory(null)
+                        setMessages([])
+                      }}
+                      className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                    >
+                      <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* チャットメッセージ */}
-                <div className="p-6 max-h-[50vh] overflow-y-auto">
+                <div className="p-6 flex-1 overflow-y-auto">
                   <div className="space-y-4">
                     {messages.map((msg) => (
                       <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
