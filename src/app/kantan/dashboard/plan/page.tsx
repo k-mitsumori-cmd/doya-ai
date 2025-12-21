@@ -254,7 +254,7 @@ export default function KantanPlanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-white flex">
       {/* モバイルオーバーレイ */}
       {isMobileMenuOpen && (
         <div 

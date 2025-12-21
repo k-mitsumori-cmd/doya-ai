@@ -53,10 +53,29 @@ const dataNavItems: NavItem[] = [
 // 以前の設定項目は削除
 const settingsNavItems: NavItem[] = []
 
-export default function DashboardSidebar() {
+interface DashboardSidebarProps {
+  isCollapsed?: boolean
+  onToggle?: (collapsed: boolean) => void
+  forceExpanded?: boolean
+  isMobile?: boolean
+}
+
+export default function DashboardSidebar({ 
+  isCollapsed: controlledIsCollapsed, 
+  onToggle, 
+  forceExpanded,
+  isMobile 
+}: DashboardSidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [internalIsCollapsed, setInternalIsCollapsed] = useState(false)
+
+  const isCollapsed = forceExpanded ? false : (controlledIsCollapsed ?? internalIsCollapsed)
+  const toggle = () => {
+    const next = !isCollapsed
+    if (onToggle) onToggle(next)
+    else setInternalIsCollapsed(next)
+  }
 
   const isActive = (href: string) => {
     if (href === '/banner') {
@@ -135,9 +154,13 @@ export default function DashboardSidebar() {
 
   return (
     <motion.aside
-      animate={{ width: isCollapsed ? 72 : 240 }}
+      initial={false}
+      animate={{ 
+        width: isCollapsed ? 72 : 240,
+        x: isMobile ? 0 : 0 // モバイル時はコンテナ側で制御
+      }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className="fixed left-0 top-0 h-screen bg-[#2563EB] flex flex-col z-50 shadow-xl"
+      className={`${isMobile ? 'relative' : 'fixed left-0 top-0'} h-screen bg-[#2563EB] flex flex-col z-50 shadow-xl`}
     >
       {/* Logo */}
       <div className="px-6 py-8 flex items-center gap-3">
@@ -159,7 +182,7 @@ export default function DashboardSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
+      <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
         {/* Main Navigation */}
         <div className="space-y-1">
           {mainNavItems.map((item) => (
@@ -232,16 +255,18 @@ export default function DashboardSidebar() {
       </div>
 
       {/* Collapse Toggle */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3 top-24 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors border border-gray-100 z-10"
-      >
-        {isCollapsed ? (
-          <ChevronRight className="w-4 h-4" />
-        ) : (
-          <ChevronLeft className="w-4 h-4" />
-        )}
-      </button>
+      {!isMobile && (
+        <button
+          onClick={toggle}
+          className="absolute -right-3 top-24 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors border border-gray-100 z-10"
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-4 h-4" />
+          ) : (
+            <ChevronLeft className="w-4 h-4" />
+          )}
+        </button>
+      )}
 
       {/* Branding */}
       <AnimatePresence>
