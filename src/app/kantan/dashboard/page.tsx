@@ -14,6 +14,8 @@ import {
   UserCircle, ChevronLeft, Menu, X
 } from 'lucide-react'
 import { KANTAN_PRICING, getGuestRemainingCount } from '@/lib/pricing'
+import { FeatureGuide } from '@/components/FeatureGuide'
+import { DashboardLayout } from '@/components/DashboardLayout'
 
 // サイドバーメニュー - AIエージェント中心に再構成
 const SIDEBAR_MENU = [
@@ -125,238 +127,94 @@ export default function KantanDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex">
-      {/* モバイルオーバーレイ */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* サイドバー */}
-      <aside className={`
-        w-64 lg:w-52 bg-[#3B5998] text-white flex flex-col fixed h-full z-50
-        transform transition-transform duration-300 ease-in-out
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
-        {/* ロゴ */}
-        <div className="p-5 flex items-center justify-between">
-          <Link href="/kantan" className="flex items-center gap-2">
-            <span className="text-xl font-bold tracking-tight">カンタンマーケ</span>
-          </Link>
-          <button 
-            className="lg:hidden p-1 hover:bg-white/10 rounded"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* メインメニュー */}
-        <nav className="flex-1 px-3 overflow-y-auto">
-          <ul className="space-y-1">
-            {SIDEBAR_MENU.map((item) => (
-              <li key={item.id}>
-                <Link
-                  href={item.href}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${
-                    item.active
-                      ? 'bg-white/20 text-white font-medium'
-                      : 'text-white/80 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                  {item.badge && (
-                    <span className="ml-auto bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ul>
-
-          {/* データベースセクション */}
-          <div className="mt-6">
-            <p className="px-3 text-xs text-white/50 uppercase tracking-wider mb-2">データベース</p>
-            <ul className="space-y-1">
-              {SIDEBAR_DATA_MENU.map((item) => (
-                <li key={item.id}>
-                  <Link
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all text-sm"
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </nav>
-
-        {/* 他サービス */}
-        <div className="p-3 border-t border-white/10">
-          <Link href="/banner" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
-            <span>🎨</span>
-            <span>ドヤバナーAI</span>
-          </Link>
-          <Link href="/seo" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
-            <span>🧠</span>
-            <span>ドヤSEO</span>
-          </Link>
-        </div>
-
-        {/* ロゴマーク */}
-        <div className="p-4 text-white/30 text-xs">
-          @カンタンマーケAI
-        </div>
-      </aside>
-
-      {/* メインコンテンツ */}
-      <main className="flex-1 lg:ml-52">
-        {/* ヘッダー */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-          <div className="px-4 lg:px-8 h-16 flex items-center justify-between">
-            {/* モバイルメニューボタン */}
-            <button 
-              className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-              onClick={() => setIsMobileMenuOpen(true)}
-            >
-              <Menu className="w-6 h-6" />
-            </button>
-            
-            <h1 className="text-lg lg:text-xl font-bold text-gray-800">ダッシュボード</h1>
-            
-            <div className="flex items-center gap-2 lg:gap-4">
-              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
-                <Bell className="w-5 h-5" />
-              </button>
-              <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
-                <Settings className="w-5 h-5" />
-              </button>
-              
-              <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
-                <div className="text-right hidden md:block">
-                  <div className="text-sm font-medium text-gray-800">{userName}</div>
-                  <div className="text-xs text-gray-400">Admin</div>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                  <UserCircle className="w-6 h-6 text-white" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
+    <DashboardLayout>
+      <div className="py-2">
         {/* コンテンツ */}
-        <div className="p-4 lg:p-8">
+        <div className="p-0">
           {/* 統計カード */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
             {STATS_CARDS.map((card) => (
-              <div key={card.id} className="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-3 lg:gap-4">
-                  <div className={`w-12 h-12 lg:w-14 lg:h-14 ${card.color} rounded-xl flex items-center justify-center text-white`}>
-                    {card.icon}
-                  </div>
-                  <div>
-                    <p className="text-xs lg:text-sm text-gray-500">{card.label}</p>
-                    <p className="text-2xl lg:text-3xl font-bold text-gray-800">{card.value}</p>
-                  </div>
+              <div key={card.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center gap-4">
+                <div className={`w-14 h-14 ${card.color} rounded-2xl flex items-center justify-center text-white shadow-lg shadow-gray-100`}>
+                  {card.icon}
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">{card.label}</p>
+                  <p className="text-3xl font-black text-gray-900">{card.value}</p>
                 </div>
               </div>
             ))}
           </div>
 
           {/* グラフセクション */}
-          <div className="bg-white rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100 mb-6 lg:mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 lg:mb-6">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
               <div>
-                <h2 className="text-base lg:text-lg font-bold text-gray-800">売上と営業コストの推移</h2>
-                <p className="text-2xl lg:text-4xl font-bold text-gray-900 mt-1 lg:mt-2">64,23%</p>
+                <h2 className="text-lg font-black text-gray-900">パフォーマンス推移</h2>
+                <p className="text-xs text-gray-400 font-bold mt-1">売上と営業コストの相関分析</p>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors self-start sm:self-auto">
-                Month
-                <ChevronDown className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-3xl font-black text-blue-600">64.2%</span>
+                <span className="text-xs font-black text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">+12.5%</span>
+              </div>
             </div>
             
             {/* グラフエリア */}
-            <div className="relative h-48 lg:h-64 overflow-x-auto">
-              {/* Y軸ラベル */}
-              <div className="absolute left-0 top-0 bottom-0 w-8 lg:w-12 flex flex-col justify-between text-[10px] lg:text-xs text-gray-400 py-2">
+            <div className="relative h-64 overflow-x-auto no-scrollbar">
+              <div className="absolute left-0 top-0 bottom-0 w-12 flex flex-col justify-between text-[10px] text-gray-300 font-bold py-2">
                 <span>100%</span>
-                <span>75%</span>
                 <span>50%</span>
-                <span>25%</span>
                 <span>0%</span>
               </div>
               
-              {/* グラフ本体 */}
-              <div className="ml-8 lg:ml-12 h-full flex items-end gap-0.5 lg:gap-1 min-w-[400px] lg:min-w-0">
+              <div className="ml-12 h-full flex items-end gap-1.5 min-w-[600px] sm:min-w-0">
                 {CHART_DATA.map((data, index) => (
-                  <div key={index} className="flex-1 flex gap-0.5 items-end h-full">
+                  <div key={index} className="flex-1 flex gap-0.5 items-end h-full group">
                     <div 
-                      className="flex-1 bg-yellow-400 rounded-t transition-all hover:bg-yellow-500"
+                      className="flex-1 bg-blue-100 rounded-t-sm transition-all group-hover:bg-blue-200"
                       style={{ height: `${data.sales}%` }}
                     />
                     <div 
-                      className="flex-1 bg-orange-500 rounded-t transition-all hover:bg-orange-600"
+                      className="flex-1 bg-blue-600 rounded-t-sm transition-all group-hover:bg-blue-700"
                       style={{ height: `${data.cost}%` }}
                     />
                   </div>
-                ))}
-              </div>
-              
-              {/* 点線グリッド */}
-              <div className="absolute left-8 lg:left-12 right-0 top-0 bottom-0 flex flex-col justify-between pointer-events-none">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <div key={i} className="border-t border-dashed border-gray-200" />
                 ))}
               </div>
             </div>
           </div>
 
           {/* 下部セクション */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
             {/* 顧客情報テーブル */}
-            <div className="lg:col-span-3 bg-white rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100 overflow-x-auto">
-              <h2 className="text-base lg:text-lg font-bold text-gray-800 mb-4">顧客情報</h2>
+            <div className="lg:col-span-3 bg-white rounded-3xl p-8 shadow-sm border border-gray-100 overflow-x-auto">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-lg font-black text-gray-900">アクティブ顧客</h2>
+                <button className="text-xs font-black text-blue-600 hover:underline">すべて見る</button>
+              </div>
               <table className="w-full min-w-[400px]">
                 <thead>
-                  <tr className="text-left text-xs lg:text-sm text-gray-500 border-b border-gray-100">
-                    <th className="pb-3 font-medium">
-                      会社名 <ChevronDown className="inline w-3 h-3 ml-1" />
-                    </th>
-                    <th className="pb-3 font-medium hidden sm:table-cell">
-                      業界 <ChevronDown className="inline w-3 h-3 ml-1" />
-                    </th>
-                    <th className="pb-3 font-medium">
-                      Location <ChevronDown className="inline w-3 h-3 ml-1" />
-                    </th>
-                    <th className="pb-3 font-medium">
-                      Status <ChevronDown className="inline w-3 h-3 ml-1" />
-                    </th>
+                  <tr className="text-left text-[10px] text-gray-400 font-black uppercase tracking-widest border-b border-gray-50">
+                    <th className="pb-4">会社名</th>
+                    <th className="pb-4 hidden sm:table-cell">業界</th>
+                    <th className="pb-4">所在地</th>
+                    <th className="pb-4">ステータス</th>
                   </tr>
                 </thead>
                 <tbody>
                   {CUSTOMER_DATA.map((customer) => (
-                    <tr key={customer.id} className="border-b border-gray-50 last:border-0">
-                      <td className="py-3 lg:py-4 text-xs lg:text-sm text-gray-800">{customer.name}</td>
-                      <td className="py-3 lg:py-4 text-xs lg:text-sm text-gray-600 hidden sm:table-cell">{customer.industry}</td>
-                      <td className="py-3 lg:py-4 text-xs lg:text-sm text-gray-600">
-                        <span className="flex items-center gap-1">
-                          <span className="text-gray-400">📍</span>
+                    <tr key={customer.id} className="border-b border-gray-50 last:border-0 group hover:bg-gray-50/50 transition-colors">
+                      <td className="py-4 text-sm font-bold text-gray-900">{customer.name}</td>
+                      <td className="py-4 text-xs font-bold text-gray-400 hidden sm:table-cell">{customer.industry}</td>
+                      <td className="py-4 text-xs font-bold text-gray-400">
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-blue-500 opacity-30 text-lg">📍</span>
                           {customer.location}
                         </span>
                       </td>
-                      <td className="py-3 lg:py-4">
-                        <span className="inline-flex items-center gap-1 lg:gap-1.5 px-2 lg:px-2.5 py-0.5 lg:py-1 bg-green-100 text-green-700 text-[10px] lg:text-xs font-medium rounded-full">
-                          <span className="w-1 h-1 lg:w-1.5 lg:h-1.5 bg-green-500 rounded-full" />
+                      <td className="py-4">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100">
+                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                           {customer.status}
                         </span>
                       </td>
@@ -367,72 +225,83 @@ export default function KantanDashboardPage() {
             </div>
 
             {/* カレンダー */}
-            <div className="lg:col-span-2 bg-white rounded-xl lg:rounded-2xl p-4 lg:p-6 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base lg:text-lg font-bold text-gray-800">カレンダー</h2>
-                <div className="flex items-center gap-2 text-xs lg:text-sm text-gray-600">
-                  <span>March 2025</span>
-                  <ChevronDown className="w-4 h-4" />
-                </div>
+            <div className="lg:col-span-2 bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-lg font-black text-gray-900">スケジュール</h2>
+                <div className="text-xs font-black text-gray-400">2025年 3月</div>
               </div>
               
-              {/* 曜日ヘッダー */}
-              <div className="grid grid-cols-7 gap-1 lg:gap-2 mb-2">
+              <div className="grid grid-cols-7 gap-1 mb-4">
                 {CALENDAR_DAYS.map((day) => (
-                  <div key={day} className="text-center text-[10px] lg:text-xs text-gray-400 py-1 lg:py-2">
+                  <div key={day} className="text-center text-[10px] font-black text-gray-300 uppercase">
                     {day}
                   </div>
                 ))}
               </div>
               
-              {/* 日付グリッド */}
-              {CALENDAR_DATES.map((week, weekIndex) => (
-                <div key={weekIndex} className="grid grid-cols-7 gap-1 lg:gap-2 mb-1">
-                  {week.map((date, dateIndex) => {
-                    const isToday = date === 8
-                    const isHighlight = date === 5 || date === 7 || date === 14 || date === 20
-                    const isPrevMonth = weekIndex === 0 && date === 31
-                    
-                    return (
-                      <button
-                        key={dateIndex}
-                        className={`
-                          w-full aspect-square rounded-full flex items-center justify-center text-xs lg:text-sm transition-colors
-                          ${isToday ? 'bg-blue-500 text-white font-bold' : ''}
-                          ${isHighlight ? 'text-red-500 font-medium' : ''}
-                          ${isPrevMonth ? 'text-gray-300' : 'text-gray-700'}
-                          ${!isToday && !isPrevMonth ? 'hover:bg-gray-100' : ''}
-                        `}
-                      >
-                        {date}
-                      </button>
-                    )
-                  })}
+              <div className="grid gap-2">
+                {CALENDAR_DATES.map((week, weekIndex) => (
+                  <div key={weekIndex} className="grid grid-cols-7 gap-1">
+                    {week.map((date, dateIndex) => {
+                      const isToday = date === 8
+                      const isPrevMonth = weekIndex === 0 && date === 31
+                      
+                      return (
+                        <div
+                          key={dateIndex}
+                          className={`
+                            aspect-square rounded-xl flex items-center justify-center text-xs font-bold transition-all
+                            ${isToday ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-110' : ''}
+                            ${isPrevMonth ? 'text-gray-200' : 'text-gray-700'}
+                            ${!isToday && !isPrevMonth ? 'hover:bg-blue-50 hover:text-blue-600' : ''}
+                          `}
+                        >
+                          {date}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-8 pt-6 border-t border-gray-50">
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-2 rounded-full bg-blue-600" />
+                  <div className="flex-1">
+                    <p className="text-xs font-black text-gray-900">定例ミーティング</p>
+                    <p className="text-[10px] font-bold text-gray-400">14:00 - 15:00</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-200" />
                 </div>
-              ))}
+              </div>
             </div>
           </div>
 
           {/* ゲストバナー */}
           {isGuest && (
-            <div className="mt-6 lg:mt-8 p-3 lg:p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl lg:rounded-2xl">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <Sparkles className="w-5 h-5 text-blue-500 shrink-0" />
-                  <p className="text-xs lg:text-sm text-gray-700">
-                    🆓 お試しモード：残り <strong className="text-blue-600">{guestRemainingCount}回</strong>
-                  </p>
+            <div className="mt-10 p-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl text-white shadow-xl shadow-blue-500/20">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black leading-tight">ログインして全機能を開放</h3>
+                    <p className="text-blue-100 text-xs font-bold opacity-80 mt-1">
+                      残り <strong className="text-white">{guestRemainingCount}回</strong> の試用が可能です
+                    </p>
+                  </div>
                 </div>
-                <Link href="/auth/signin?service=kantan">
-                  <button className="w-full sm:w-auto px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
-                    ログインで10回/日に！
+                <Link href="/auth/signin?service=kantan" className="w-full sm:w-auto">
+                  <button className="w-full sm:w-auto px-8 py-3 bg-white text-blue-600 text-sm font-black rounded-xl hover:bg-blue-50 transition-colors shadow-lg">
+                    今すぐログイン
                   </button>
                 </Link>
               </div>
             </div>
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   )
+}
 }
