@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Sidebar } from './Sidebar'
+import DashboardSidebar from './DashboardSidebar'
 import { 
   Bell, 
   Settings, 
@@ -20,7 +20,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[#F8FAFC]">
       {/* Sidebar - Desktop */}
       <div className="hidden lg:block">
-        <Sidebar />
+        <DashboardSidebar />
       </div>
 
       {/* Sidebar - Mobile Overlay */}
@@ -28,7 +28,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setIsSidebarOpen(false)} />
           <div className="fixed inset-y-0 left-0 w-64 bg-[#2563EB]">
-            <Sidebar />
+            <DashboardSidebar />
             <button 
               className="absolute top-4 right-[-3rem] p-2 text-white"
               onClick={() => setIsSidebarOpen(false)}
@@ -40,7 +40,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main Content */}
-      <div className="lg:pl-64 flex flex-col min-h-screen">
+      <div className="lg:pl-[240px] flex flex-col min-h-screen transition-all duration-300">
         {/* Top Header */}
         <header className="sticky top-0 z-40 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-8">
           <div className="flex items-center gap-4">

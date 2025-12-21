@@ -3,8 +3,8 @@
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0B1220"/>
-      <stop offset="45%" stop-color="#2563EB"/>
-      <stop offset="100%" stop-color="#06B6D4"/>
+      <stop offset="60%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
     </linearGradient>
     <linearGradient id="panel" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.16"/>
@@ -18,7 +18,7 @@
   <rect width="1200" height="628" rx="31" fill="url(#bg)"/>
 
   <!-- abstract grid -->
-  <g opacity="0.18">
+  <g opacity="0.1">
     <line x1="0" y1="0" x2="0" y2="628" stroke="#FFFFFF" stroke-width="1" />
 <line x1="100" y1="0" x2="100" y2="628" stroke="#FFFFFF" stroke-width="1" />
 <line x1="200" y1="0" x2="200" y2="628" stroke="#FFFFFF" stroke-width="1" />
@@ -49,11 +49,11 @@
     CV改善の無料診断
   </text>
 
-  <!-- right illustration blocks -->
-  <g transform="translate(840 113)" opacity="0.95">
-    <rect x="0" y="0" width="288" height="176" rx="38" fill="#FFFFFF" fill-opacity="0.18" stroke="#FFFFFF" stroke-opacity="0.14"/>
-    <rect x="24" y="25" width="240" height="126" rx="31" fill="#FFFFFF" fill-opacity="0.10"/>
-    <rect x="0" y="201" width="288" height="113" rx="38" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.10"/>
+  <!-- right decoration: accent bars (Bunridge style) -->
+  <g transform="translate(840 113)">
+    <rect x="0" y="0" width="48" height="176" rx="4" fill="#06B6D4"/>
+    <rect x="72" y="50" width="48" height="126" rx="4" fill="#FBBF24"/>
+    <rect x="144" y="75" width="48" height="100" rx="4" fill="#06B6D4" opacity="0.6"/>
   </g>
 
   <!-- CTA -->
@@ -61,7 +61,7 @@
   <g filter="url(#shadow)">
     <rect x="816" y="452"
           width="312" height="100"
-          rx="38" fill="#06B6D4"/>
+          rx="38" fill="#FBBF24"/>
     <text x="840" y="515"
           fill="#0B1220" font-family="ui-sans-serif, system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', sans-serif"
           font-size="41" font-weight="900">

@@ -3,8 +3,8 @@
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0B1220"/>
-      <stop offset="45%" stop-color="#2563EB"/>
-      <stop offset="100%" stop-color="#06B6D4"/>
+      <stop offset="60%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
     </linearGradient>
     <linearGradient id="panel" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.16"/>
@@ -18,7 +18,7 @@
   <rect width="1280" height="720" rx="36" fill="url(#bg)"/>
 
   <!-- abstract grid -->
-  <g opacity="0.18">
+  <g opacity="0.1">
     <line x1="0" y1="0" x2="0" y2="720" stroke="#FFFFFF" stroke-width="1" />
 <line x1="107" y1="0" x2="107" y2="720" stroke="#FFFFFF" stroke-width="1" />
 <line x1="213" y1="0" x2="213" y2="720" stroke="#FFFFFF" stroke-width="1" />
@@ -49,11 +49,11 @@
     今日から使える3つ
   </text>
 
-  <!-- right illustration blocks -->
-  <g transform="translate(896 130)" opacity="0.95">
-    <rect x="0" y="0" width="307" height="202" rx="43" fill="#FFFFFF" fill-opacity="0.18" stroke="#FFFFFF" stroke-opacity="0.14"/>
-    <rect x="26" y="29" width="256" height="144" rx="36" fill="#FFFFFF" fill-opacity="0.10"/>
-    <rect x="0" y="230" width="307" height="130" rx="43" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.10"/>
+  <!-- right decoration: accent bars (Bunridge style) -->
+  <g transform="translate(896 130)">
+    <rect x="0" y="0" width="51" height="202" rx="4" fill="#06B6D4"/>
+    <rect x="77" y="58" width="51" height="144" rx="4" fill="#FBBF24"/>
+    <rect x="154" y="86" width="51" height="115" rx="4" fill="#06B6D4" opacity="0.6"/>
   </g>
 
   <!-- CTA -->

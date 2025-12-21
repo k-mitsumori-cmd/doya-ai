@@ -111,9 +111,9 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
             />
             <defs>
               <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#8b5cf6" />
-                <stop offset="50%" stopColor="#ec4899" />
-                <stop offset="100%" stopColor="#f59e0b" />
+                <stop offset="0%" stopColor="#2563EB" />
+                <stop offset="60%" stopColor="#F97316" />
+                <stop offset="100%" stopColor="#FBBF24" />
               </linearGradient>
             </defs>
           </svg>
@@ -128,7 +128,7 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
         {/* 処理ステップ */}
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5 text-purple-400 animate-pulse" />
+            <Sparkles className="w-5 h-5 text-blue-400 animate-pulse" />
             <span className="text-white font-medium">
               {processingSteps[currentStep]?.text || 'AIが生成中...'}
             </span>
@@ -138,7 +138,7 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
         {/* プログレスバー（サブ） */}
         <div className="w-full h-2 bg-slate-700 rounded-full mb-6 overflow-hidden">
           <div 
-            className="h-full bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-blue-600 via-orange-500 to-amber-400 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -158,7 +158,7 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
           {[0, 1, 2].map(i => (
             <div
               key={i}
-              className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"
+              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
               style={{ animationDelay: `${i * 0.15}s` }}
             />
           ))}
