@@ -249,7 +249,7 @@ export default function BannerPlanPage() {
                   </div>
                   <div className="rounded-2xl border border-gray-200 p-4 bg-white">
                     <div className="flex items-center gap-2 text-sm text-gray-600 font-bold">
-                      <BarChart3 className="w-4 h-4 text-cyan-600" />
+                      <BarChart3 className="w-4 h-4 text-blue-600" />
                       生成枚数（累計）
                     </div>
                     <div className="mt-1 text-2xl font-black text-gray-900">
@@ -269,8 +269,8 @@ export default function BannerPlanPage() {
                   </div>
                 </div>
 
-                <div className="mt-5 rounded-2xl bg-gradient-to-r from-sky-50 to-cyan-50 border border-sky-200/60 p-4">
-                  <p className="text-sm font-black text-sky-900">この画面の狙い</p>
+                <div className="mt-5 rounded-2xl bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200/60 p-4">
+                  <p className="text-sm font-black text-blue-900">この画面の狙い</p>
                   <p className="mt-1 text-sm text-gray-700">
                     「どれだけ制作時間を削減できているか」を見える化し、必要なときに最短でアップグレード・管理できる導線を用意しています。
                   </p>
@@ -294,7 +294,7 @@ export default function BannerPlanPage() {
                       desc: 'AIチャットで「用途/業種/訴求/雰囲気」を会話で整理→そのまま生成。',
                       href: '/banner/dashboard/chat',
                       icon: MessageSquare,
-                      color: 'from-blue-600 to-cyan-600',
+                      color: 'from-blue-600 to-blue-600',
                       cta: 'AIチャットを開く',
                     },
                     {
@@ -302,7 +302,7 @@ export default function BannerPlanPage() {
                       desc: 'まず3案生成→良い案をベースに、色や訴求を微調整して2回目で完成度UP。',
                       href: '/banner',
                       icon: Sparkles,
-                      color: 'from-sky-600 to-blue-600',
+                      color: 'from-blue-600 to-blue-600',
                       cta: 'バナー生成へ',
                     },
                     {
@@ -342,8 +342,8 @@ export default function BannerPlanPage() {
                   })}
                 </div>
 
-                <div className="mt-4 rounded-2xl bg-gradient-to-r from-sky-50 to-cyan-50 border border-sky-200/60 p-4">
-                  <p className="text-xs font-black text-sky-900 mb-2">“CTRが上がる”ための型（チェックリスト）</p>
+                <div className="mt-4 rounded-2xl bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200/60 p-4">
+                  <p className="text-xs font-black text-blue-900 mb-2">“CTRが上がる”ための型（チェックリスト）</p>
                   <div className="grid grid-cols-1 gap-1.5">
                     {[
                       '数字（%OFF / 期間 / 価格）を入れる',
@@ -352,7 +352,7 @@ export default function BannerPlanPage() {
                       '色は3〜5色に絞ってコントラストを強める',
                     ].map((t) => (
                       <div key={t} className="flex items-center gap-2 text-xs text-gray-700">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
                         <span className="font-medium">{t}</span>
                       </div>
                     ))}
@@ -381,7 +381,7 @@ export default function BannerPlanPage() {
                 <div className="space-y-2">
                   <Link
                     href="/banner/dashboard/chat"
-                    className="flex items-center justify-between px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-black"
+                    className="flex items-center justify-between px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-600 text-white font-black"
                   >
                     AIチャットで要件整理 → 生成
                     <ArrowUpRight className="w-4 h-4" />

@@ -169,34 +169,38 @@ export default function BannerChatPage() {
 
           <div className="grid lg:grid-cols-[1fr_360px] gap-4">
             {/* Chat */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-sky-50 to-cyan-50">
-                <p className="text-sm font-bold text-gray-800">チャット</p>
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+              <div className="px-4 py-4 border-b border-gray-100 bg-slate-50 flex items-center justify-between">
+                <p className="text-sm font-bold text-gray-800">会話リクエスト</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Active AI</span>
+                </div>
               </div>
 
-              <div className="h-[60vh] overflow-y-auto p-4 space-y-3">
+              <div className="h-[55vh] overflow-y-auto p-5 space-y-4 bg-white">
                 {messages.map((m) => (
                   <div
                     key={m.id}
-                    className={`flex items-start gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex items-start gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {m.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                        <Bot className="w-4 h-4 text-blue-600" />
+                      <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
+                        <Bot className="w-5 h-5 text-white" />
                       </div>
                     )}
                     <div
-                      className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap border ${
+                      className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
                         m.role === 'user'
-                          ? 'bg-gradient-to-br from-blue-600 to-cyan-600 text-white border-transparent'
-                          : 'bg-gray-50 text-gray-800 border-gray-200'
+                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                          : 'bg-slate-50 text-gray-800 border border-slate-100'
                       }`}
                     >
                       {m.content}
                     </div>
                     {m.role === 'user' && (
-                      <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                        <User className="w-4 h-4 text-gray-600" />
+                      <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 border border-slate-200">
+                        <User className="w-5 h-5 text-slate-500" />
                       </div>
                     )}
                   </div>
@@ -204,14 +208,14 @@ export default function BannerChatPage() {
                 <div ref={endRef} />
               </div>
 
-              <div className="p-3 border-t border-gray-100 bg-white">
-                <div className="flex items-end gap-2">
+              <div className="p-4 border-t border-gray-100 bg-white">
+                <div className="flex items-end gap-3">
                   <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="バナーの要件を自由に書いてください…"
+                    placeholder="例: IT企業の採用バナー。ターゲットは30代エンジニア。青ベースで信頼感のある感じ。"
                     rows={2}
-                    className="flex-1 resize-none px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
+                    className="flex-1 resize-none px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 outline-none text-sm transition-all"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault()
@@ -222,86 +226,143 @@ export default function BannerChatPage() {
                   <button
                     onClick={handleSend}
                     disabled={!canSend}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold text-sm shadow-md shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="w-12 h-12 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center hover:bg-blue-700 transition-all flex-shrink-0 active:scale-95"
                   >
-                    <Send className="w-4 h-4" />
-                    送信
+                    <Send className="w-5 h-5" />
                   </button>
                 </div>
-                <p className="mt-2 text-[11px] text-gray-400">
-                  Enterで送信 / Shift+Enterで改行
-                </p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-[10px] text-gray-400 font-medium">
+                    Shift+Enterで改行 / Enterで送信
+                  </p>
+                  <div className="flex gap-2">
+                    {['#SNS', '#YouTube', '#LP'].map(tag => (
+                      <button 
+                        key={tag}
+                        onClick={() => setInput(prev => prev + (prev ? ' ' : '') + tag)}
+                        className="text-[10px] font-bold text-blue-600 hover:text-blue-800 px-1.5 py-0.5 rounded-md bg-blue-50"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Proposal / Result */}
             <div className="space-y-4">
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-blue-600" />
-                    生成プラン
-                  </p>
-                </div>
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60" />
+                
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm font-black text-gray-900 flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-blue-600" />
+                      生成プラン案
+                    </p>
+                    {proposedSpec && (
+                      <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-black rounded-full uppercase tracking-wider">
+                        Ready
+                      </span>
+                    )}
+                  </div>
 
-                {!proposedSpec ? (
-                  <p className="text-sm text-gray-500">
-                    チャットに要件を書いて送信すると、ここにAIの提案が表示されます。
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="px-3 py-2 rounded-xl bg-sky-50 border border-sky-200/60">
-                      <p className="text-xs font-bold text-sky-800">{summary}</p>
-                      <p className="mt-1 text-xs text-gray-700 whitespace-pre-wrap">
-                        訴求: {proposedSpec.keyword}
-                        {proposedSpec.imageDescription ? `\nイメージ: ${proposedSpec.imageDescription}` : ''}
+                  {!proposedSpec ? (
+                    <div className="py-8 text-center px-4">
+                      <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-slate-100">
+                        <Wand2 className="w-6 h-6 text-slate-300" />
+                      </div>
+                      <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                        チャットに要件を入力してください。<br />AIが自動で最適な生成プランを構成します。
                       </p>
-                      {Array.isArray(proposedSpec.brandColors) && proposedSpec.brandColors.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {proposedSpec.brandColors.slice(0, 8).map((c) => (
-                            <div key={c} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white border border-gray-200">
-                              <span className="w-3 h-3 rounded" style={{ background: c }} />
-                              <span className="text-[10px] text-gray-600 font-mono">{c}</span>
-                            </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
+                        <div className="flex flex-wrap gap-1.5">
+                          {summary.split(' / ').map((s, i) => (
+                            <span key={i} className="px-2 py-1 bg-white rounded-lg text-[10px] font-bold text-slate-600 border border-slate-200 shadow-sm">
+                              {s}
+                            </span>
                           ))}
                         </div>
-                      )}
-                    </div>
+                        
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">訴求キーワード</p>
+                          <p className="text-sm font-bold text-slate-800 leading-relaxed">
+                            {proposedSpec.keyword}
+                          </p>
+                        </div>
 
-                    <button
-                      onClick={handleGenerate}
-                      disabled={isThinking || isGenerating}
-                      className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-black text-sm shadow-lg shadow-blue-500/25 disabled:opacity-50"
-                    >
-                      この内容でバナー生成（A/B/C）
-                    </button>
-                  </div>
-                )}
+                        {proposedSpec.imageDescription && (
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">ビジュアル指示</p>
+                            <p className="text-[11px] text-slate-600 leading-relaxed italic">
+                              "{proposedSpec.imageDescription}"
+                            </p>
+                          </div>
+                        )}
+
+                        {Array.isArray(proposedSpec.brandColors) && proposedSpec.brandColors.length > 0 && (
+                          <div className="pt-2 border-t border-slate-200">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">使用カラー</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {proposedSpec.brandColors.slice(0, 8).map((c) => (
+                                <div key={c} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-slate-200 shadow-sm">
+                                  <span className="w-3 h-3 rounded-sm" style={{ background: c }} />
+                                  <span className="text-[10px] text-slate-600 font-mono font-medium uppercase">{c}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={handleGenerate}
+                        disabled={isThinking || isGenerating}
+                        className="w-full px-6 py-4 rounded-xl bg-blue-600 text-white font-black text-sm shadow-xl shadow-blue-500/30 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                      >
+                        <Sparkles className="w-5 h-5" />
+                        このプランで生成を開始する
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {generatedBanners.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-                  <p className="text-sm font-bold text-gray-900 mb-3">生成結果</p>
-                  <div className="grid grid-cols-3 gap-2">
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm font-black text-gray-900">生成結果 (A/B/C)</p>
+                    <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Select to Download</span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4">
                     {generatedBanners.slice(0, 3).map((b, i) => (
-                      <div key={i} className="group relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-                        <img src={b} alt={`banner-${i}`} className="w-full h-full object-cover aspect-square" />
-                        <button
-                          onClick={() => downloadImage(b, `banner-${String.fromCharCode(65 + i)}.png`)}
-                          className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                          title="ダウンロード"
-                        >
-                          <div className="px-3 py-2 rounded-xl bg-white text-gray-900 font-bold text-xs flex items-center gap-2 shadow-lg">
-                            <Download className="w-4 h-4" />
-                            {String.fromCharCode(65 + i)}案をDL
-                          </div>
-                        </button>
-                        <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/50 text-white text-[10px] font-bold">
-                          {String.fromCharCode(65 + i)}案
+                      <div key={i} className="group relative rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm transition-all hover:shadow-xl hover:scale-[1.02]">
+                        <img src={b} alt={`banner-${i}`} className="w-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-6 text-center">
+                          <p className="text-white font-black text-lg mb-4">
+                            {String.fromCharCode(65 + i)}案
+                          </p>
+                          <button
+                            onClick={() => downloadImage(b, `banner-${String.fromCharCode(65 + i)}.png`)}
+                            className="px-6 py-3 rounded-xl bg-white text-blue-600 font-black text-sm flex items-center gap-2 shadow-2xl transition-all active:scale-95"
+                          >
+                            <Download className="w-5 h-5" />
+                            高画質で保存
+                          </button>
+                        </div>
+                        <div className="absolute top-3 left-3 px-2 py-1 rounded-lg bg-white/90 backdrop-blur-sm text-blue-600 text-[10px] font-black shadow-sm">
+                          PROPOSAL {String.fromCharCode(65 + i)}
                         </div>
                       </div>
                     ))}
                   </div>
+                  <p className="mt-4 text-[10px] text-center text-slate-400 font-medium">
+                    ※ テキストの微調整が必要な場合はダッシュボードから行えます。
+                  </p>
                 </div>
               )}
             </div>

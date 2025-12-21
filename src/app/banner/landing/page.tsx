@@ -8,11 +8,11 @@ import { BANNER_PRICING } from '@/lib/pricing'
 
 // カテゴリ一覧
 const categories = [
-  { id: 'telecom', name: '通信向け', icon: '📱', desc: '格安SIM・光回線', color: 'from-blue-500 to-cyan-500' },
-  { id: 'marketing', name: 'マーケティング', icon: '📊', desc: 'リード獲得', color: 'from-sky-500 to-cyan-500' },
+  { id: 'telecom', name: '通信向け', icon: '📱', desc: '格安SIM・光回線', color: 'from-blue-500 to-blue-500' },
+  { id: 'marketing', name: 'マーケティング', icon: '📊', desc: 'リード獲得', color: 'from-blue-500 to-blue-500' },
   { id: 'ec', name: 'EC向け', icon: '🛒', desc: 'セール・キャンペーン', color: 'from-amber-500 to-orange-500' },
-  { id: 'recruit', name: '採用向け', icon: '👥', desc: '求人・説明会', color: 'from-emerald-500 to-green-500' },
-  { id: 'beauty', name: '美容・コスメ', icon: '💄', desc: 'スキンケア・化粧品', color: 'from-pink-500 to-rose-500' },
+  { id: 'recruit', name: '採用向け', icon: '👥', desc: '求人・説明会', color: 'from-blue-500 to-green-500' },
+  { id: 'beauty', name: '美容・コスメ', icon: '💄', desc: 'スキンケア・化粧品', color: 'from-blue-500 to-blue-500' },
   { id: 'food', name: '飲食・フード', icon: '🍽️', desc: 'レストラン・デリバリー', color: 'from-red-500 to-orange-500' },
 ]
 
@@ -23,9 +23,9 @@ export default function BannerLandingPage() {
   const isPro = plan === 'PRO'
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
       {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-sky-100">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-blue-100">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
@@ -44,7 +44,7 @@ export default function BannerLandingPage() {
             {session ? (
               <>
                 {isPro ? (
-                  <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white text-sm font-medium rounded-full">
+                  <div className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-blue-600 to-blue-600 text-white text-sm font-medium rounded-full">
                     <Crown className="w-4 h-4" />
                     プロ
                   </div>
@@ -116,7 +116,7 @@ export default function BannerLandingPage() {
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {categories.map((cat) => (
-              <div key={cat.id} className="bg-white rounded-2xl p-5 border-2 border-gray-200 hover:border-sky-300 transition-all">
+              <div key={cat.id} className="bg-white rounded-2xl p-5 border-2 border-gray-200 hover:border-blue-300 transition-all">
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${cat.color} flex items-center justify-center mb-3`}>
                   <span className="text-2xl">{cat.icon}</span>
                 </div>
@@ -143,7 +143,7 @@ export default function BannerLandingPage() {
               { title: 'ブランドカラー設定', desc: '自社のブランドカラーを設定して統一感を維持' },
             ].map((item, index) => (
               <div key={index} className="flex items-start gap-3">
-                <Check className="w-5 h-5 text-sky-500 mt-0.5 flex-shrink-0" />
+                <Check className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
                 <div>
                   <h3 className="font-bold text-gray-900">{item.title}</h3>
                   <p className="text-sm text-gray-600">{item.desc}</p>
@@ -170,7 +170,7 @@ export default function BannerLandingPage() {
                 key={plan.id}
                 className={`p-4 rounded-2xl relative ${
                   plan.popular
-                    ? 'bg-gradient-to-br from-sky-50 to-cyan-50 border-2 border-sky-300'
+                    ? 'bg-gradient-to-br from-blue-50 to-blue-50 border-2 border-blue-300'
                     : 'bg-white border-2 border-gray-200'
                 }`}
               >
@@ -223,7 +223,7 @@ export default function BannerLandingPage() {
       </section>
 
       {/* ドヤマーケ CTA */}
-      <section className="py-12 px-4 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500">
+      <section className="py-12 px-4 bg-gradient-to-br from-blue-500 via-blue-500 to-blue-500">
         <div className="max-w-3xl mx-auto">
           <a
             href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1"
@@ -250,7 +250,7 @@ export default function BannerLandingPage() {
                 </div>
                 <div className="flex-shrink-0">
                   <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                    <ArrowRight className="w-6 h-6 text-emerald-600" />
+                    <ArrowRight className="w-6 h-6 text-blue-600" />
                   </div>
                 </div>
               </div>
@@ -260,7 +260,7 @@ export default function BannerLandingPage() {
       </section>
 
       {/* 他サービスへの誘導 */}
-      <section className="py-12 px-4 bg-gradient-to-br from-blue-50 to-cyan-50">
+      <section className="py-12 px-4 bg-gradient-to-br from-blue-50 to-blue-50">
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
             📝 他のサービスもチェック
@@ -269,7 +269,7 @@ export default function BannerLandingPage() {
           <Link href="/kantan">
             <div className="bg-white rounded-2xl p-6 border-2 border-blue-200 hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-blue-500 flex items-center justify-center">
                   <span className="text-3xl">📝</span>
                 </div>
                 <div className="flex-1">

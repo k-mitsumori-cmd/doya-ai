@@ -117,7 +117,7 @@ export default function StatsPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
         <DashboardSidebar />
         <div className="pl-[72px] lg:pl-[240px] flex items-center justify-center min-h-screen">
           <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
@@ -127,7 +127,7 @@ export default function StatsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
       <DashboardSidebar />
       <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
         {/* Header */}
@@ -144,7 +144,7 @@ export default function StatsPage() {
                 </Link>
                 <div className="h-6 w-px bg-gray-200" />
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
                     <BarChart3 className="w-4 h-4 text-white" />
                   </div>
                   <div>
@@ -172,7 +172,7 @@ export default function StatsPage() {
           className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"
         >
           {/* 削減時間 */}
-          <div className="col-span-2 bg-gradient-to-br from-blue-600 via-blue-700 to-cyan-600 rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-blue-500/30 relative overflow-hidden">
+          <div className="col-span-2 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-600 rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-blue-500/30 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-3">
@@ -194,11 +194,11 @@ export default function StatsPage() {
 
           {/* コスト削減 */}
           <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-gray-200 shadow-lg relative overflow-hidden group hover:shadow-xl transition-all">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center">
-                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-blue-600" />
                 </div>
               </div>
               <div className="flex items-baseline gap-1">
@@ -210,11 +210,11 @@ export default function StatsPage() {
 
           {/* 生成バナー数 */}
           <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-gray-200 shadow-lg relative overflow-hidden group hover:shadow-xl transition-all">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-xl bg-violet-100 flex items-center justify-center">
-                  <Layers className="w-4 h-4 text-violet-600" />
+                <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <Layers className="w-4 h-4 text-blue-600" />
                 </div>
               </div>
               <div className="flex items-baseline gap-1">
@@ -241,7 +241,7 @@ export default function StatsPage() {
                 週間生成推移
               </h2>
               <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold ${
-                weeklyGrowth >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                weeklyGrowth >= 0 ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'
               }`}>
                 <TrendingUp className={`w-3 h-3 ${weeklyGrowth < 0 ? 'rotate-180' : ''}`} />
                 {weeklyGrowth >= 0 ? '+' : ''}{weeklyGrowth}%
@@ -288,7 +288,7 @@ export default function StatsPage() {
             className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-gray-200 shadow-lg"
           >
             <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-4">
-              <Target className="w-5 h-5 text-violet-500" />
+              <Target className="w-5 h-5 text-blue-500" />
               業種別ランキング
             </h2>
             
@@ -356,7 +356,7 @@ export default function StatsPage() {
                 desc: '初めてバナーを生成', 
                 icon: Sparkles, 
                 unlocked: totalBanners >= 1,
-                color: 'from-blue-500 to-cyan-500'
+                color: 'from-blue-500 to-blue-500'
               },
               { 
                 title: '量産モード', 
@@ -370,14 +370,14 @@ export default function StatsPage() {
                 desc: '5時間以上削減', 
                 icon: Clock, 
                 unlocked: totalTimeSavedHours >= 5,
-                color: 'from-emerald-500 to-teal-500'
+                color: 'from-blue-500 to-blue-500'
               },
               { 
                 title: 'プロフェッショナル', 
                 desc: '50枚以上生成', 
                 icon: Target, 
                 unlocked: totalBanners >= 50,
-                color: 'from-violet-500 to-purple-500'
+                color: 'from-blue-500 to-blue-500'
               },
             ].map((badge, i) => {
               const Icon = badge.icon
@@ -402,7 +402,7 @@ export default function StatsPage() {
                   </h3>
                   <p className="text-[10px] text-gray-400 mt-0.5">{badge.desc}</p>
                   {badge.unlocked && (
-                    <div className="absolute top-2 right-2 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-md">
+                    <div className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
@@ -422,7 +422,7 @@ export default function StatsPage() {
           className="mt-6 sm:mt-8 text-center"
         >
           <Link href="/banner">
-            <button className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:scale-[1.02] transition-all">
+            <button className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:scale-[1.02] transition-all">
               <Sparkles className="w-5 h-5" />
               新しいバナーを生成する
             </button>
