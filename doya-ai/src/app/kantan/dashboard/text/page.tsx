@@ -5,19 +5,17 @@ import { ArrowLeft, ArrowRight, Search, Sparkles, FileText, Lightbulb, BarChart3
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 
-// サイドバーメニュー
+// サイドバーメニュー - AIエージェント中心に再構成
 const SIDEBAR_MENU = [
-  { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
-  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
-  { id: 'mail', label: 'メール', icon: <Mail className="w-5 h-5" />, href: '#' },
-  { id: 'calendar', label: 'カレンダー', icon: <Calendar className="w-5 h-5" />, href: '#' },
+  { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text', active: true },
   { id: 'chat', label: 'AIチャット', icon: <MessageSquare className="w-5 h-5" />, href: '/kantan/dashboard/chat' },
-  { id: 'plan', label: 'サービスプラン', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/plan' },
+  { id: 'history', label: '生成履歴', icon: <Clock className="w-5 h-5" />, href: '/kantan/dashboard/history' },
+  { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
 ]
 
 const SIDEBAR_DATA_MENU = [
-  { id: 'analytics', label: 'アナリティクス', icon: <TrendingUp className="w-5 h-5" />, href: '#' },
-  { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text', active: true },
+  { id: 'plan', label: 'プラン・料金', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/pricing' },
+  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
 ]
 
 // マーケティング中心の全AIエージェント一覧（時間削減効果付き）
@@ -167,7 +165,7 @@ export default function KantanTextListPage() {
   }, 0)
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-white flex">
       {/* モバイルオーバーレイ */}
       {isMobileMenuOpen && (
         <div 
@@ -386,7 +384,7 @@ export default function KantanTextListPage() {
         {/* 検索 */}
         <div className="mb-6">
           <div className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-cyan-100 to-purple-100 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
           <div className="relative">
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -394,7 +392,7 @@ export default function KantanTextListPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="AIエージェントを検索..."
-                className="w-full pl-14 pr-6 py-4 bg-white border border-gray-200 rounded-2xl text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all duration-300"
+                className="w-full pl-14 pr-6 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-gray-800 placeholder-gray-400 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none shadow-sm transition-all duration-300"
             />
             </div>
           </div>
@@ -442,12 +440,12 @@ export default function KantanTextListPage() {
             <Link key={agent.id} href={`/kantan/dashboard/text/${agent.id}`} className="group">
               <div className="relative h-full">
                 {/* グロー */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${agent.gradient} rounded-2xl opacity-0 group-hover:opacity-10 blur-xl transition-all duration-500`} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${agent.gradient} rounded-2xl opacity-0 group-hover:opacity-20 blur-xl transition-all duration-500`} />
                 
                 {/* カード */}
-                <div className="relative h-full p-4 bg-white border border-gray-200 rounded-2xl hover:border-blue-300 hover:shadow-lg transition-all duration-300 overflow-hidden group-hover:translate-y-[-2px]">
+                <div className="relative h-full p-4 bg-gray-50 border border-gray-100 rounded-2xl shadow-sm hover:shadow-xl hover:bg-white transition-all duration-300 overflow-hidden group-hover:translate-y-[-2px]">
                   {/* 装飾 */}
-                  <div className={`absolute -top-8 -right-8 w-20 h-20 bg-gradient-to-br ${agent.gradient} opacity-10 blur-2xl group-hover:opacity-20 transition-opacity`} />
+                  <div className={`absolute -top-8 -right-8 w-20 h-20 bg-gradient-to-br ${agent.gradient} opacity-10 blur-2xl group-hover:opacity-30 transition-opacity`} />
                   
                   <div className="relative flex items-center gap-3">
                     <div className={`w-10 h-10 bg-gradient-to-br ${agent.gradient} rounded-xl flex items-center justify-center text-white flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
@@ -458,7 +456,7 @@ export default function KantanTextListPage() {
                         <h3 className="font-bold text-gray-800 truncate text-sm">{agent.name}</h3>
                         {agent.popular && <Crown className="w-3 h-3 text-amber-500 flex-shrink-0" />}
                       </div>
-                      <p className="text-xs text-gray-400 truncate">{agent.desc}</p>
+                      <p className="text-xs text-gray-500 truncate">{agent.desc}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-50 border border-emerald-200 rounded-full">

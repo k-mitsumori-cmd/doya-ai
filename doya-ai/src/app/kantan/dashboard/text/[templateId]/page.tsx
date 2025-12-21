@@ -12,19 +12,17 @@ import {
   Menu, X
 } from 'lucide-react'
 
-// サイドバーメニュー
+// サイドバーメニュー - AIエージェント中心に再構成
 const SIDEBAR_MENU = [
-  { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
-  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
-  { id: 'mail', label: 'メール', icon: <Mail className="w-5 h-5" />, href: '#' },
-  { id: 'calendar', label: 'カレンダー', icon: <Calendar className="w-5 h-5" />, href: '#' },
+  { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text', active: true },
   { id: 'chat', label: 'AIチャット', icon: <MessageSquare className="w-5 h-5" />, href: '/kantan/dashboard/chat' },
-  { id: 'plan', label: 'サービスプラン', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/plan' },
+  { id: 'history', label: '生成履歴', icon: <Clock className="w-5 h-5" />, href: '/kantan/dashboard/history' },
+  { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
 ]
 
 const SIDEBAR_DATA_MENU = [
-  { id: 'analytics', label: 'アナリティクス', icon: <TrendingUp className="w-5 h-5" />, href: '#' },
-  { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text', active: true },
+  { id: 'plan', label: 'プラン・料金', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/pricing' },
+  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
 ]
 import toast, { Toaster } from 'react-hot-toast'
 import { SAMPLE_TEMPLATES } from '@/lib/templates'
@@ -702,7 +700,7 @@ ${inputMessage}
   const userInitial = userName[0]?.toUpperCase() || 'G'
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-white flex">
       <Toaster 
         position="top-center" 
         toastOptions={{
