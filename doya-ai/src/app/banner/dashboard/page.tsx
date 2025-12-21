@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
-import DashboardSidebar from '@/components/DashboardSidebar'
+import { DashboardLayout } from '@/components/DashboardLayout' // New import
 import { FeatureGuide } from '@/components/FeatureGuide'
 // AIバナーコーチ機能は廃止
 
@@ -1259,12 +1259,8 @@ export default function BannerDashboard() {
   // Render
   // ========================================
   return (
-    <div className="min-h-screen bg-slate-50 text-gray-900">
-      {/* サイドバー */}
-      <DashboardSidebar />
-
-      {/* メインコンテンツ（サイドバー分のマージンを追加） */}
-      <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+    <DashboardLayout>
+      <div className="text-gray-900">
         <Toaster 
           position="top-center" 
           toastOptions={{
@@ -1278,86 +1274,48 @@ export default function BannerDashboard() {
             },
           }}
         />
-      
-      {/* ========================================
-          Header - Bunridge Professional Style
-          ======================================== */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-          <div className="h-16 sm:h-20 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
-                ダッシュボード
-              </h1>
-            </div>
-            
-            <div className="flex items-center gap-3 sm:gap-6">
-              <div className="hidden md:flex items-center gap-2">
-                <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all relative">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                </button>
-                <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
-                  <Settings className="w-5 h-5" />
-                </button>
-              </div>
 
-              <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-
-              <div className="flex items-center gap-3 pl-2">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold text-slate-800 leading-none">
-                    {session?.user?.name || '田中 太郎'}
-                  </p>
-                  <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">Admin</p>
-                </div>
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                  {session?.user?.image ? (
-                    <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                      {session?.user?.name?.[0]?.toUpperCase() || 'U'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* ========================================
-          Main Content
-          ======================================== */}
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-6 sm:py-8">
         {/* ========================================
-            Top Stats Cards - Bunridge Style
+            Main Content
             ======================================== */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Card 1: 顧客数 */}
-          <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
-            <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100 group-hover:scale-105 transition-transform">
-              <Users className="w-8 h-8 text-white" />
+        <div className="py-2">
+          {/* ========================================
+              Top Stats Cards - Bunridge Style
+              ======================================== */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {/* Card 1: 顧客数 */}
+            <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100 group-hover:scale-105 transition-transform">
+                <Users className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-bold text-gray-400 mb-1">生成回数</p>
+                <p className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tighter">1,248</p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-bold text-gray-400 mb-1">顧客数</p>
-              <p className="text-4xl font-black text-slate-800 tracking-tighter">1,248</p>
+
+            {/* Card 2: 制作案件数 */}
+            <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl bg-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-100 group-hover:scale-105 transition-transform">
+                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-bold text-gray-400 mb-1">進行中の案件数</p>
+                <p className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tighter">754</p>
+              </div>
+            </div>
+
+            {/* Card 3: 月間売上 */}
+            <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all sm:col-span-2 lg:col-span-1">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl bg-emerald-500/90 flex items-center justify-center shadow-lg shadow-emerald-100 group-hover:scale-105 transition-transform">
+                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-bold text-gray-400 mb-1">月間削減コスト</p>
+                <p className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tighter">¥98,760</p>
+              </div>
             </div>
           </div>
-
-          {/* Card 2: 制作案件数 */}
-          <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
-            <div className="w-16 h-16 rounded-full bg-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-100 group-hover:scale-105 transition-transform">
-              <Zap className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-400 mb-1">現在進行中の案件数</p>
-              <p className="text-4xl font-black text-slate-800 tracking-tighter">754</p>
-            </div>
-          </div>
-
-          {/* Card 3: 月間売上 */}
-          <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
             <div className="w-16 h-16 rounded-full bg-amber-400 flex items-center justify-center shadow-lg shadow-amber-100 group-hover:scale-105 transition-transform">
               <DollarSign className="w-8 h-8 text-white" />
             </div>
@@ -1588,232 +1546,120 @@ export default function BannerDashboard() {
             </motion.div>
 
             {/* Step 3: Size */}
-            {/* Step 3: Size */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
               className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all"
             >
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-100">
-                  3
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                    03
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-xl text-slate-800 tracking-tight">サイズを選択</h2>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Canvas Dimensions</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-bold text-xl text-slate-800">サイズを選択</h2>
-                  <p className="text-sm text-slate-400">配信先に最適なアスペクト比を自動設定します</p>
+                <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-200">
+                  <button 
+                    onClick={() => setUseCustomSize(false)}
+                    className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${!useCustomSize ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    PRESET
+                  </button>
+                  <button 
+                    onClick={() => setUseCustomSize(true)}
+                    className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${useCustomSize ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    CUSTOM
+                  </button>
                 </div>
-              </div>
-              
-              {/* プリセット or カスタム 切り替え */}
-              <div className="flex gap-2 mb-4 p-1 bg-gray-100 rounded-xl">
-                <button
-                  onClick={() => setUseCustomSize(false)}
-                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                    !useCustomSize 
-                      ? 'bg-white text-gray-900 shadow-md' 
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  プリセット
-                </button>
-                <button
-                  onClick={() => setUseCustomSize(true)}
-                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
-                    useCustomSize 
-                      ? 'bg-white text-gray-900 shadow-md' 
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  カスタム
-                </button>
               </div>
 
-              <AnimatePresence mode="wait">
-                {useCustomSize ? (
-                  <motion.div
-                    key="custom"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="space-y-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <label className="text-xs text-gray-500 mb-1 block">幅 (px)</label>
-                        <input
-                          type="number"
-                          value={customWidth}
-                          onChange={(e) => setCustomWidth(e.target.value)}
-                          min={100}
-                          max={4096}
-                          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-center text-lg font-bold focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                          placeholder="1080"
-                        />
-                      </div>
-                      <span className="text-gray-300 text-xl mt-5">×</span>
-                      <div className="flex-1">
-                        <label className="text-xs text-gray-500 mb-1 block">高さ (px)</label>
-                        <input
-                          type="number"
-                          value={customHeight}
-                          onChange={(e) => setCustomHeight(e.target.value)}
-                          min={100}
-                          max={4096}
-                          className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-center text-lg font-bold focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                          placeholder="1080"
-                        />
-                      </div>
-                    </div>
-                    
-                    {/* アスペクト比プレビュー */}
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="bg-gradient-to-br from-blue-200 to-blue-200 border border-blue-300 rounded"
-                          style={{
-                            width: `${Math.min(40, 40 * (parseInt(customWidth) || 1) / (parseInt(customHeight) || 1))}px`,
-                            height: `${Math.min(40, 40 * (parseInt(customHeight) || 1) / (parseInt(customWidth) || 1))}px`,
-                            minWidth: '16px',
-                            minHeight: '16px',
-                          }}
-                        />
-                        <span className="text-sm text-gray-600">
-                          {customWidth} × {customHeight}
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-400">
-                        {(() => {
-                          const w = parseInt(customWidth) || 1
-                          const h = parseInt(customHeight) || 1
-                          const gcd = (a: number, b: number): number => b ? gcd(b, a % b) : a
-                          const g = gcd(w, h)
-                          return `${w/g}:${h/g}`
-                        })()}
-                      </span>
-                    </div>
-                    
-                    {/* よく使うサイズ */}
-                    <div>
-                      <p className="text-xs text-gray-400 mb-2">よく使うサイズ</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[
-                          { w: 1080, h: 1080, label: 'インスタ' },
-                          { w: 1200, h: 628, label: 'OGP' },
-                          { w: 1280, h: 720, label: 'YouTube' },
-                          { w: 1920, h: 1080, label: 'FHD' },
-                          { w: 800, h: 418, label: 'X/Twitter' },
-                          { w: 1200, h: 900, label: 'note' },
-                        ].map((preset) => (
-                          <button
-                            key={`${preset.w}x${preset.h}`}
-                            onClick={() => {
-                              setCustomWidth(preset.w.toString())
-                              setCustomHeight(preset.h.toString())
-                            }}
-                            className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900 text-xs rounded-md transition-colors"
-                          >
-                            {preset.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {!isValidCustomSize && (
-                      <p className="text-red-500 text-xs">
-                        サイズは100〜4096pxの範囲で指定してください
-                      </p>
-                    )}
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="preset"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="flex flex-wrap gap-1.5 sm:gap-2"
-                  >
-                    <div className="grid lg:grid-cols-2 gap-4">
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              <div className="grid lg:grid-cols-[1fr,280px] gap-8 mt-8">
+                <div className="space-y-4">
+                  <AnimatePresence mode="wait">
+                    {useCustomSize ? (
+                      <motion.div
+                        key="custom"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="space-y-4"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Width (px)</label>
+                            <input
+                              type="number"
+                              value={customWidth}
+                              onChange={(e) => setCustomWidth(e.target.value)}
+                              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-lg font-black focus:border-blue-600 focus:bg-white outline-none transition-all"
+                            />
+                          </div>
+                          <div className="pt-6 text-slate-300 font-black">×</div>
+                          <div className="flex-1">
+                            <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-widest">Height (px)</label>
+                            <input
+                              type="number"
+                              value={customHeight}
+                              onChange={(e) => setCustomHeight(e.target.value)}
+                              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-lg font-black focus:border-blue-600 focus:bg-white outline-none transition-all"
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="preset"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="flex flex-wrap gap-2"
+                      >
                         {currentSizes.map((s) => {
                           const isSelected = size === s.value
                           return (
                             <button
                               key={s.value}
                               onClick={() => setSize(s.value)}
-                              onMouseEnter={() => setHoveredSize(s.value)}
-                              onMouseLeave={() => setHoveredSize(null)}
-                              className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl transition-all flex items-center gap-1.5 sm:gap-2 ${
+                              className={`px-4 py-3 rounded-xl border transition-all text-xs font-black uppercase tracking-tighter ${
                                 isSelected 
-                                  ? 'bg-blue-50 border-2 border-blue-400 text-blue-800 shadow-sm' 
-                                  : 'bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                  ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200' 
+                                  : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'
                               }`}
                             >
-                              {isSelected && <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600" />}
-                              <span className="font-medium text-xs sm:text-sm">{s.label}</span>
-                              <span className="text-[10px] sm:text-xs text-gray-400 hidden sm:inline">{s.ratio}</span>
+                              {s.label} <span className="opacity-60 ml-1">{s.ratio}</span>
                             </button>
                           )
                         })}
-                      </div>
-                      <AnimatePresence mode="wait">
-                        {(() => {
-                          const displaySize = hoveredSize || size
-                          const sizeData = SIZE_INFO[displaySize]
-                          if (!sizeData) return (
-                            <motion.div
-                              key="none"
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              className="bg-gray-50 rounded-2xl p-4 border border-gray-200 flex items-center justify-center h-full min-h-[100px]"
-                            >
-                              <p className="text-gray-400 text-sm">サイズを選択するとイメージが表示されます</p>
-                            </motion.div>
-                          )
-                          return (
-                            <motion.div
-                              key={displaySize}
-                              initial={{ opacity: 0, x: 10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: -10 }}
-                              className="relative bg-gray-50 rounded-2xl p-4 border border-gray-200 overflow-hidden"
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent z-0" />
-                              <div className="relative z-10">
-                                <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
-                                  <Sparkles className="w-4 h-4 text-blue-500" />
-                                  <span className="text-blue-600">レイアウト:</span> {displaySize}
-                                </h3>
-                                <p className="text-xs text-gray-600 mb-3">
-                                  {sizeData.description}
-                                </p>
-                                {sizeData.sample && (
-                                  <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border border-gray-200 shadow-md">
-                                    <img
-                                      src={sizeData.sample}
-                                      alt={displaySize}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        const el = e.currentTarget
-                                        if (el.dataset.fallbackApplied === '1') return
-                                        el.dataset.fallbackApplied = '1'
-                                        el.src = String(sizeData.sample || '').replace(/\.png(\?.*)?$/, '.svg')
-                                      }}
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-2">
-                                      <span className="text-white text-[10px] font-bold">サイズイメージ</span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </motion.div>
-                          )
-                        })()}
-                      </AnimatePresence>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col justify-center items-center text-center">
+                  <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center mb-4 overflow-hidden relative">
+                    <div 
+                      className="bg-blue-600/10 border border-blue-600/20 rounded-sm"
+                      style={{
+                        width: useCustomSize 
+                          ? `${Math.min(48, 48 * (parseInt(customWidth) || 1) / (parseInt(customHeight) || 1))}px` 
+                          : `${Math.min(48, 48 * (SIZE_INFO[size]?.w || 1) / (SIZE_INFO[size]?.h || 1))}px`,
+                        height: useCustomSize 
+                          ? `${Math.min(48, 48 * (parseInt(customHeight) || 1) / (parseInt(customWidth) || 1))}px` 
+                          : `${Math.min(48, 48 * (SIZE_INFO[size]?.h || 1) / (SIZE_INFO[size]?.w || 1))}px`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-slate-800 font-black text-sm">
+                    {useCustomSize ? `${customWidth} × ${customHeight}` : size}
+                  </p>
+                  <p className="text-slate-400 text-[10px] font-bold mt-1 uppercase">Aspect Ratio Preview</p>
+                </div>
+              </div>
             </motion.div>
 
             {/* Step 4: Keyword */}
@@ -1825,79 +1671,62 @@ export default function BannerDashboard() {
             >
               <div className="flex items-center justify-between gap-4 mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-100">
-                    4
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                    04
                   </div>
                   <div>
-                    <h2 className="font-bold text-xl text-slate-800">キャッチコピー</h2>
-                    <p className="text-sm text-slate-400">CTRを高める効果的な言葉を選びます</p>
+                    <h2 className="font-bold text-xl text-slate-800 tracking-tight">キャッチコピー</h2>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Message Design</p>
                   </div>
                 </div>
 
                 <button
                   onClick={handleSmartCopySample}
                   disabled={isSuggestingCopy}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all text-sm font-bold disabled:opacity-60 shadow-lg shadow-blue-100"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all text-xs font-black uppercase shadow-lg shadow-blue-200 disabled:opacity-60"
                 >
                   {isSuggestingCopy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  <span className="hidden sm:inline">AIでコピー提案</span>
-                  <span className="sm:hidden">AI提案</span>
+                  <span>AI Copy Assist</span>
                 </button>
               </div>
-              <div className="relative">
-                <textarea
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="例: 月額990円〜 乗り換えで最大2万円キャッシュバック"
-                  className="w-full px-4 sm:px-5 py-4 sm:py-5 bg-gray-50/50 border-2 border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:bg-white focus:shadow-lg focus:shadow-blue-500/10 outline-none transition-all resize-none text-base sm:text-lg leading-relaxed"
-                  rows={3}
-                  maxLength={200}
-                />
-                <div className="absolute bottom-4 right-4 px-2 py-1 bg-white rounded-md text-xs text-gray-400 font-medium">
-                  {keyword.length}/200
-                </div>
-              </div>
-
-              {/* 詳細テキスト（イメージ説明） */}
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-medium text-gray-700">イメージ説明（任意）</span>
-                  <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded-full">NEW</span>
-                </div>
-                <p className="text-xs text-gray-400 mb-2">
-                  バナーに表現したいビジュアルイメージを自由に記述してください。AIがこの説明を元に画像を生成します。
-                </p>
+              
+              <div className="space-y-6">
                 <div className="relative">
+                  <textarea
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    placeholder="例: 月額990円〜 乗り換えで最大2万円キャッシュバック"
+                    className="w-full px-6 py-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:border-blue-600 focus:bg-white outline-none transition-all resize-none text-lg font-bold leading-relaxed shadow-inner"
+                    rows={3}
+                  />
+                  <div className="absolute bottom-4 right-6 text-[10px] font-black text-slate-300 uppercase">
+                    {keyword.length} / 200
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-100">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles className="w-4 h-4 text-blue-600" />
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Visual Description (Optional)</span>
+                  </div>
                   <textarea
                     value={imageDescription}
                     onChange={(e) => setImageDescription(e.target.value)}
-                    placeholder="例: 青空の下で笑顔でジャンプする若い女性、モダンなオフィスで働くビジネスマン、自然光が差し込む明るいリビングルーム..."
-                    className="w-full px-4 py-3 bg-blue-50/30 border border-blue-200/50 rounded-xl text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none text-sm"
+                    placeholder="例: 青空の下で笑顔でジャンプする若い女性、モダンなオフィスで働くビジネスマン..."
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:border-blue-600 focus:bg-white outline-none transition-all resize-none text-sm font-medium"
                     rows={2}
-                    maxLength={300}
                   />
-                  <div className="absolute bottom-2 right-3 px-1.5 py-0.5 bg-white rounded text-[10px] text-gray-400">
-                    {imageDescription.length}/300
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {['笑顔の人物', 'モダンなオフィス', 'スマホを操作', '未来的・デジタル'].map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => setImageDescription(prev => prev ? `${prev}、${tag}` : tag)}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-[10px] font-black rounded-lg transition-all border border-slate-200/50"
+                      >
+                        + {tag}
+                      </button>
+                    ))}
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {[
-                    '笑顔の人物',
-                    'モダンなオフィス',
-                    'スマホを操作',
-                    '自然光・明るい',
-                    '未来的・デジタル',
-                    '商品が目立つ',
-                  ].map((tag) => (
-                    <button
-                      key={tag}
-                      onClick={() => setImageDescription(prev => prev ? `${prev}、${tag}` : tag)}
-                      className="px-2 py-1 bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-700 text-[10px] rounded-md transition-colors"
-                    >
-                      + {tag}
-                    </button>
-                  ))}
                 </div>
               </div>
             </motion.div>
@@ -2213,41 +2042,39 @@ export default function BannerDashboard() {
           {/* ========================================
               Right Column - Results
               ======================================== */}
-          <div className="space-y-5 sm:space-y-6">
+          <div className="space-y-6">
             {/* Recent History (when no generation result) */}
             {generatedBanners.length === 0 && recentHistory.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-sm"
+                className="bg-white rounded-3xl border border-gray-100 p-6 shadow-sm"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-sm text-gray-900 flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-gray-500" />
-                    最近の生成履歴
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-600" />
+                    RECENT ACTIVITY
                   </h3>
-                  <Link href="/banner/dashboard/history" className="text-xs text-blue-600 hover:underline font-medium">
-                    すべて見る →
+                  <Link href="/banner/dashboard/history" className="text-[10px] font-black text-blue-600 hover:text-blue-700 tracking-widest uppercase">
+                    VIEW ALL →
                   </Link>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-3">
                   {recentHistory.slice(0, 3).map((item) => (
-                    <div key={item.id} className="space-y-1.5">
+                    <div key={item.id} className="group cursor-pointer">
                       {item.banners?.[0] && (
-                        <div className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 group">
+                        <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm group-hover:shadow-md transition-all">
                           <img
                             src={item.banners[0]}
                             alt={item.keyword}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all"
                           />
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <span className="text-white text-xs font-bold">{item.banners.length}案</span>
+                          <div className="absolute inset-0 bg-blue-600/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <ArrowUpRight className="w-5 h-5 text-white" />
                           </div>
                         </div>
                       )}
-                      <p className="text-[10px] text-gray-500 truncate" title={item.keyword}>
-                        {item.keyword.length > 16 ? `${item.keyword.slice(0, 16)}…` : item.keyword}
-                      </p>
+                      <p className="text-[9px] font-bold text-slate-400 mt-2 truncate px-1">{item.keyword}</p>
                     </div>
                   ))}
                 </div>
@@ -2257,63 +2084,50 @@ export default function BannerDashboard() {
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="space-y-3 sm:space-y-4"
+              className="space-y-4"
             >
                   {generatedBanners.length > 0 ? (
                     <>
-                      {/* Text Overlay Notice */}
-                      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                            <Pencil className="w-4 h-4 text-blue-600" />
+                      {/* Integrated Action Card */}
+                      <div className="bg-slate-900 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/20 rounded-full blur-3xl" />
+                        <div className="relative z-10 flex items-start gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg">
+                            <Zap className="w-5 h-5 text-white" />
                           </div>
-                          <div className="text-sm text-gray-700">
-                            <span className="font-semibold text-blue-900">ヒント：</span>
-                            生成されたバナーにはテキスト用スペースが確保されています。Canvaなどでテキストを追加するか、下の「テキストレイヤー」をONにして文字を重ねてください。
+                          <div>
+                            <h3 className="text-white font-black text-sm mb-1 tracking-tight">GENERATION COMPLETE</h3>
+                            <p className="text-slate-400 text-[11px] leading-relaxed">
+                              A/B/C 3つの異なる戦略に基づいたバナーを生成しました。気に入ったバナーを選択してダウンロード、またはAIチャットで微調整が可能です。
+                            </p>
                           </div>
                         </div>
                       </div>
                       
-                      {/* Banner Grid */}
-                      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                      {/* Banner Grid - Professional Presentation */}
+                      <div className="grid grid-cols-3 gap-3">
                         {generatedBanners.map((banner, i) => {
                           const insights = BANNER_INSIGHTS[purpose] || BANNER_INSIGHTS.default
                           const insight = insights[i]
                           return (
                             <motion.div
                               key={i}
-                              initial={{ opacity: 0, scale: 0.9 }}
+                              initial={{ opacity: 0, scale: 0.95 }}
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ delay: i * 0.1 }}
                               onClick={() => setSelectedBanner(i)}
-                              className={`relative aspect-square rounded-lg sm:rounded-xl overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-shadow ${
+                              className={`relative aspect-square rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300 border-2 ${
                                 selectedBanner === i 
-                                  ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-white' 
-                                  : ''
+                                  ? 'border-blue-600 shadow-xl shadow-blue-600/20 scale-105 z-10' 
+                                  : 'border-white shadow-sm hover:border-slate-200'
                               }`}
                             >
                               <img src={banner} alt={`Banner ${i + 1}`} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                              {/* バッジ：A/B/C + アイコン */}
-                              <div className="absolute top-1.5 sm:top-2 left-1.5 sm:left-2 flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-white/90 backdrop-blur-sm rounded-md sm:rounded-lg shadow-sm">
-                                <span className="text-sm sm:text-base">{insight.icon}</span>
-                                <span className="text-[10px] sm:text-xs font-bold text-gray-800">{insight.type}案</span>
+                              <div className="absolute top-2 left-2 px-2 py-1 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-slate-100 flex items-center gap-1.5">
+                                <span className="text-xs">{insight.icon}</span>
+                                <span className="text-[9px] font-black text-slate-800 uppercase tracking-tighter">{insight.type}</span>
                               </div>
-                              {/* ホバー時：訴求タイプ名 */}
-                              <div className="absolute bottom-0 inset-x-0 p-2 sm:p-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <p className="text-[10px] sm:text-xs font-medium text-white truncate">
-                                  {insight.title}
-                                </p>
-                              </div>
-                              {/* ダウンロードボタン */}
-                              <div className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDownload(banner, i) }}
-                                  className="w-7 h-7 sm:w-8 sm:h-8 bg-white/90 backdrop-blur-sm rounded-md sm:rounded-lg flex items-center justify-center hover:bg-white shadow-sm"
-                                >
-                                  <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-700" />
-                                </button>
-                              </div>
+                              <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </motion.div>
                           )
                         })}
@@ -2975,6 +2789,6 @@ export default function BannerDashboard() {
         )}
       </AnimatePresence>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }

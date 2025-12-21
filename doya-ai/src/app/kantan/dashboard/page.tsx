@@ -113,7 +113,7 @@ export default function KantanDashboardPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Rocket className="w-6 h-6 text-white" />
@@ -125,7 +125,7 @@ export default function KantanDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-white flex">
       {/* モバイルオーバーレイ */}
       {isMobileMenuOpen && (
         <div 
