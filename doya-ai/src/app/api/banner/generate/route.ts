@@ -62,6 +62,8 @@ export async function POST(request: NextRequest) {
       personImage,
       referenceImages,
       brandColors,
+      shareToGallery,
+      shareProfile,
     } = body
 
     // バリデーション
@@ -226,6 +228,45 @@ export async function POST(request: NextRequest) {
         { error: result.error },
         { status: 500 }
       )
+    }
+
+    // ==============================
+    // ギャラリー公開（任意・ログインユーザーのみ）
+    // ==============================
+    if (shareToGallery === true && !isGuest) {
+      const userId = (session?.user as any)?.id as string | undefined
+      if (userId) {
+        try {
+          const banners = Array.isArray(result.banners) ? result.banners : []
+          const images = banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/'))
+          if (images.length > 0) {
+            const nowIso = new Date().toISOString()
+            const patterns = ['A', 'B', 'C']
+            await prisma.generation.createMany({
+              data: images.map((img: string, idx: number) => ({
+                userId,
+                serviceId: 'banner',
+                input: { category, keyword: keyword.trim(), size: size || '1080x1080', purpose: purpose || 'sns_ad' },
+                output: img,
+                outputType: 'IMAGE',
+                metadata: {
+                  shared: true,
+                  sharedAt: nowIso,
+                  category,
+                  purpose: purpose || 'sns_ad',
+                  size: size || '1080x1080',
+                  keyword: keyword.trim(),
+                  pattern: patterns[idx] || String(idx + 1),
+                  shareProfile: shareProfile === true,
+                },
+              })),
+            })
+          }
+        } catch (e: any) {
+          console.error('Gallery persist failed:', e)
+          // ギャラリー保存失敗でも生成自体は成功しているので落とさない
+        }
+      }
     }
 
     // 成功時のみ使用回数を加算（1リクエスト=1回）

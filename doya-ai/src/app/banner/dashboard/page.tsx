@@ -656,6 +656,10 @@ export default function BannerDashboard() {
   const [customColors, setCustomColors] = useState<string[]>([])
   const [colorDraft, setColorDraft] = useState('#8B5CF6')
 
+  // ギャラリー公開（任意）
+  const [shareToGallery, setShareToGallery] = useState(false)
+  const [shareProfile, setShareProfile] = useState(false)
+
   // 生成履歴（ローカルストレージから読み込み）
   interface HistoryItem {
     id: string
@@ -890,6 +894,8 @@ export default function BannerDashboard() {
           brandColors: useCustomColors
             ? uniqStrings(customColors.map((c) => normalizeHexClient(c) || '').filter(Boolean)).slice(0, 8)
             : undefined,
+          shareToGallery: shareToGallery && !isGuest ? true : undefined,
+          shareProfile: shareToGallery && !isGuest ? (shareProfile ? true : false) : undefined,
         }),
       })
 
@@ -1931,6 +1937,65 @@ export default function BannerDashboard() {
               transition={{ delay: 0.35 }}
             >
             <div className="pt-10">
+              {/* Share to Gallery */}
+              <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-black text-slate-800">ギャラリーに公開</p>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      他のユーザーが見られる「公開ギャラリー」に掲載します（デフォルトOFF）。
+                      {isGuest ? ' 公開にはログインが必要です。' : ''}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isGuest) {
+                        toast.error('ギャラリー公開にはログインが必要です')
+                        return
+                      }
+                      const next = !shareToGallery
+                      setShareToGallery(next)
+                      if (!next) setShareProfile(false)
+                    }}
+                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                      shareToGallery && !isGuest ? 'bg-blue-600' : 'bg-slate-200'
+                    } ${isGuest ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    aria-pressed={shareToGallery && !isGuest}
+                    disabled={isGuest}
+                  >
+                    <span
+                      className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-sm transition-transform ${
+                        shareToGallery && !isGuest ? 'translate-x-7' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {shareToGallery && !isGuest && (
+                  <div className="mt-3 flex items-center justify-between gap-4 rounded-xl bg-slate-50 border border-slate-100 p-3">
+                    <div>
+                      <p className="text-xs font-black text-slate-700">プロフィール名も表示</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">OFFのままだと匿名で表示されます。</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShareProfile((v) => !v)}
+                      className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                        shareProfile ? 'bg-slate-900' : 'bg-slate-300'
+                      }`}
+                      aria-pressed={shareProfile}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform ${
+                          shareProfile ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating || !canGenerate}
