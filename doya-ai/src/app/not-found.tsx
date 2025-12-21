@@ -50,7 +50,7 @@ export default function NotFound() {
               カンタンドヤAI
             </Link>
             <Link href="/banner/dashboard" className="text-violet-600 hover:underline">
-              ドヤバナーAI
+              Bunridge AI
             </Link>
             <Link href="/auth/signin" className="text-violet-600 hover:underline">
               ログイン

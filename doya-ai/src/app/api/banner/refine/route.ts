@@ -5,11 +5,11 @@ import { NextRequest, NextResponse } from 'next/server'
 // ========================================
 // POST /api/banner/refine
 // 修正指示に基づいて「元画像 + 指示」で画像を修正（再生成）
-// Nano Banana Pro（Gemini 3 Pro Image）+ Google AI Studio APIキー
+// Nano Banana Pro（Gemini 2.0 Flash Experimental）+ Google AI Studio APIキー
 // 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-const NANO_BANANA_PRO_MODEL = 'gemini-3-pro-image-preview'
+const NANO_BANANA_PRO_MODEL = 'gemini-2.0-flash-exp'
 
 interface RefineRequest {
   originalImage: string
@@ -26,7 +26,12 @@ interface RefineResponse {
 }
 
 function getApiKey(): string {
-  const apiKey = process.env.GOOGLE_GENAI_API_KEY
+  const apiKey = 
+    process.env.GOOGLE_GENAI_API_KEY || 
+    process.env.GOOGLE_AI_API_KEY || 
+    process.env.GEMINI_API_KEY ||
+    process.env.NANOBANNER_API_KEY
+
   if (!apiKey) throw new Error('GOOGLE_GENAI_API_KEY が設定されていません')
   return apiKey
 }

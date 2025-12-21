@@ -1,17 +1,17 @@
 // ============================================
-// Gemini 3.0 Flash Text Generation
+// Gemini 2.0 Flash Text Generation
 // ============================================
 // カンタンマーケAI用のテキスト生成
-// 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
+// 参考: https://ai.google.dev/gemini-api/docs/models?hl=ja
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
-// Gemini 3.0 Flash（高速・高品質テキスト生成）
-// 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
-const GEMINI_3_MODEL = 'gemini-3-flash-preview'
+// Gemini 2.0 Flash（高速・高品質テキスト生成）
+// 参考: https://ai.google.dev/gemini-api/docs/models?hl=ja
+const GEMINI_3_MODEL = 'gemini-2.0-flash'
 
-// フォールバック用モデル（環境や利用枠によっては3.0が利用できない可能性があるため）
-const GEMINI_FALLBACK_MODEL = 'gemini-2.0-flash'
+// フォールバック用モデル
+const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
 
 export interface GeminiTextOptions {
   temperature?: number
@@ -21,7 +21,7 @@ export interface GeminiTextOptions {
 }
 
 /**
- * Gemini 3.0でテキスト生成
+ * Gemini 2.0でテキスト生成
  * マーケティング業務に最適化されたシステムプロンプト付き
  */
 export async function generateTextWithGemini(
@@ -29,10 +29,13 @@ export async function generateTextWithGemini(
   userInput: Record<string, string>,
   options: GeminiTextOptions = {}
 ): Promise<string> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY
+  const apiKey = 
+    process.env.GOOGLE_GENAI_API_KEY || 
+    process.env.GOOGLE_AI_API_KEY || 
+    process.env.GEMINI_API_KEY
   
   if (!apiKey) {
-    throw new Error('GOOGLE_AI_API_KEY または GEMINI_API_KEY 環境変数が設定されていません')
+    throw new Error('GOOGLE_GENAI_API_KEY または GEMINI_API_KEY 環境変数が設定されていません')
   }
 
   // プロンプト内の変数を置換
@@ -71,7 +74,7 @@ export async function generateTextWithGemini(
 - 抽象的な説明ではなく、すぐに使える具体的な文章を提供
 - マーケティングのベストプラクティスに基づいて回答`
 
-  // まずGemini 3.0を試行、失敗したらフォールバック
+  // まずGemini 2.0を試行、失敗したらフォールバック
   const models = [GEMINI_3_MODEL, GEMINI_FALLBACK_MODEL]
   
   for (const model of models) {
@@ -140,10 +143,13 @@ export async function generateChatWithGemini(
   systemPrompt?: string,
   options: GeminiTextOptions = {}
 ): Promise<string> {
-  const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY
+  const apiKey = 
+    process.env.GOOGLE_GENAI_API_KEY || 
+    process.env.GOOGLE_AI_API_KEY || 
+    process.env.GEMINI_API_KEY
   
   if (!apiKey) {
-    throw new Error('GOOGLE_AI_API_KEY または GEMINI_API_KEY 環境変数が設定されていません')
+    throw new Error('GOOGLE_GENAI_API_KEY または GEMINI_API_KEY 環境変数が設定されていません')
   }
 
   const {
@@ -210,6 +216,6 @@ export async function generateChatWithGemini(
 
 // 使用しているモデル名を取得（UI表示用）
 export function getGeminiModelName(): string {
-  return 'Gemini 3.0 Flash'
+  return 'Gemini 2.0 Flash'
 }
 

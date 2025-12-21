@@ -89,36 +89,43 @@ const PURPOSES = [
   { 
     value: 'sns_ad', label: 'SNS広告', icon: Target, desc: 'FB/IG/X', hot: true,
     sample: '/banner-samples/purpose-sns_ad.png',
+    color: '#2563EB',
     description: '【スクロール停止】フィード上で指を止めさせる大胆なビジュアルと、3秒で理解できる明快なCTA配置。'
   },
   { 
     value: 'youtube', label: 'YouTube', icon: Play, desc: 'サムネイル', hot: true,
     sample: '/banner-samples/purpose-youtube.png',
+    color: '#2563EB',
     description: '【クリック誘発】表情豊かな人物＋強調文字で「見なきゃ損」感を演出。関連動画の中で埋もれないコントラスト設計。'
   },
   { 
     value: 'display', label: 'ディスプレイ', icon: Layout, desc: 'GDN/YDA', hot: false,
     sample: '/banner-samples/purpose-display.png',
+    color: '#2563EB',
     description: '【視認性重視】小さなサイズでも読みやすい太字フォントと、ブランドカラーを活かしたシンプル構成。'
   },
   { 
     value: 'webinar', label: 'ウェビナー', icon: Video, desc: 'セミナー', hot: false,
     sample: '/banner-samples/purpose-webinar.png',
+    color: '#2563EB',
     description: '【権威性＋緊急性】登壇者の写真と「参加無料」「残席わずか」で申し込みを後押しするレイアウト。'
   },
   { 
     value: 'lp_hero', label: 'LP', icon: Megaphone, desc: 'ヒーロー', hot: false,
     sample: '/banner-samples/purpose-lp_hero.png',
+    color: '#2563EB',
     description: '【ファーストビュー】ページを開いた瞬間に価値提案が伝わる、余白を活かした大胆なヘッドライン配置。'
   },
   { 
     value: 'email', label: 'メール', icon: Mail, desc: 'ヘッダー', hot: false,
     sample: '/banner-samples/purpose-email.png',
+    color: '#2563EB',
     description: '【開封後の導線】メール上部で目を引き、本文へスムーズに誘導するシンプルで軽量なデザイン。'
   },
   { 
     value: 'campaign', label: 'セール', icon: Gift, desc: 'キャンペーン', hot: false,
     sample: '/banner-samples/purpose-campaign.png',
+    color: '#F97316',
     description: '【衝動喚起】「今だけ」「限定」を強調するバースト装飾と、お得感が一目でわかる価格表示レイアウト。'
   },
 ]
@@ -1046,7 +1053,7 @@ export default function BannerDashboard() {
       const out = canvas.toDataURL('image/png')
       const link = document.createElement('a')
       link.href = out
-      link.download = `doya-banner-text-${Date.now()}.png`
+      link.download = `bunridge-banner-text-${Date.now()}.png`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -1146,7 +1153,7 @@ export default function BannerDashboard() {
   const handleDownload = (url: string, index: number) => {
     const link = document.createElement('a')
     link.href = url
-    link.download = `doya-banner-${['A', 'B', 'C'][index]}-${Date.now()}.png`
+    link.download = `bunridge-banner-${['A', 'B', 'C'][index]}-${Date.now()}.png`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -1314,14 +1321,6 @@ export default function BannerDashboard() {
                 <p className="text-xs sm:text-sm font-bold text-gray-400 mb-1">月間削減コスト</p>
                 <p className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tighter">¥98,760</p>
               </div>
-            </div>
-          </div>
-            <div className="w-16 h-16 rounded-full bg-amber-400 flex items-center justify-center shadow-lg shadow-amber-100 group-hover:scale-105 transition-transform">
-              <DollarSign className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-400 mb-1">月間売上</p>
-              <p className="text-4xl font-black text-slate-800 tracking-tighter">¥98,760</p>
             </div>
           </div>
         </div>
@@ -2526,43 +2525,43 @@ export default function BannerDashboard() {
                   )}
             </motion.div>
 
-            {/* ドヤマーケ CV Banner */}
-            <a 
-              href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1" 
-              target="_blank" 
-              rel="noopener noreferrer"
-            >
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-blue-500 to-blue-500 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all cursor-pointer"
-              >
-                <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-white/10 rounded-full blur-2xl" />
-                <div className="absolute bottom-0 left-0 w-16 sm:w-24 h-16 sm:h-24 bg-white/10 rounded-full blur-xl" />
-                
-                <div className="relative flex items-center gap-3 sm:gap-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                    <span className="text-xl sm:text-2xl">💬</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                      <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 rounded text-[9px] sm:text-[10px] font-bold">無料相談</span>
-                      <span className="text-white/80 text-[10px] sm:text-xs">by ドヤマーケ</span>
-                    </div>
-                    <h4 className="font-bold text-white text-xs sm:text-sm mb-0.5 truncate">
-                      マーケティングのお悩み、いつでも相談OK！
-                    </h4>
-                    <p className="text-white/70 text-[10px] sm:text-xs hidden xs:block">
-                      バナー制作・広告運用・SNS戦略なんでも →
-                    </p>
-                  </div>
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </a>
+           {/* Bunridge CV Banner */}
+           <a 
+             href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1" 
+             target="_blank" 
+             rel="noopener noreferrer"
+           >
+             <motion.div
+               whileHover={{ scale: 1.02 }}
+               className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-blue-500 to-blue-500 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all cursor-pointer"
+             >
+               <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-white/10 rounded-full blur-2xl" />
+               <div className="absolute bottom-0 left-0 w-16 sm:w-24 h-16 sm:h-24 bg-white/10 rounded-full blur-xl" />
+               
+               <div className="relative flex items-center gap-3 sm:gap-4">
+                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                   <span className="text-xl sm:text-2xl">💬</span>
+                 </div>
+                 <div className="flex-1 min-w-0">
+                   <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                     <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 rounded text-[9px] sm:text-[10px] font-bold">無料相談</span>
+                     <span className="text-white/80 text-[10px] sm:text-xs">by ドヤマーケ</span>
+                   </div>
+                   <h4 className="font-bold text-white text-xs sm:text-sm mb-0.5 truncate">
+                     マーケティングのお悩み、いつでも相談OK！
+                   </h4>
+                   <p className="text-white/70 text-[10px] sm:text-xs hidden xs:block">
+                     バナー制作・広告運用・SNS戦略なんでも →
+                   </p>
+                 </div>
+                 <div className="flex-shrink-0">
+                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                     <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                   </div>
+                 </div>
+               </div>
+             </motion.div>
+           </a>
 
         {/* ========================================
             Bottom Grid: Customers & Calendar

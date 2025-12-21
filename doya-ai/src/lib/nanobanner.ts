@@ -22,17 +22,22 @@
 
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-// Gemini 3 Flash（テキスト生成・プロンプト作成用）
-// 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
-const GEMINI_3_FLASH_MODEL = 'gemini-3-flash-preview'
+// Gemini 2.0 Flash（テキスト生成・プロンプト作成用）
+// 参考: https://ai.google.dev/gemini-api/docs/models?hl=ja
+const GEMINI_3_FLASH_MODEL = 'gemini-2.0-flash'
 
-// Nano Banana Pro（Gemini 3 Pro Image / 画像生成用）
+// Nano Banana Pro（Gemini 2.0 Flash Experimental / 画像生成用）
 // 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
-const NANO_BANANA_PRO_MODEL = 'gemini-3-pro-image-preview'
+const NANO_BANANA_PRO_MODEL = 'gemini-2.0-flash-exp'
 
-// APIキーを取得
+// APIキーを取得（複数の環境変数に対応）
 function getApiKey(): string {
-  const apiKey = process.env.GOOGLE_GENAI_API_KEY
+  const apiKey = 
+    process.env.GOOGLE_GENAI_API_KEY || 
+    process.env.GOOGLE_AI_API_KEY || 
+    process.env.GEMINI_API_KEY ||
+    process.env.NANOBANNER_API_KEY
+    
   if (!apiKey) {
     throw new Error('GOOGLE_GENAI_API_KEY が設定されていません')
   }
@@ -106,14 +111,14 @@ const CATEGORY_STYLES: Record<string, { style: string; colors: string; elements:
 // 用途別のデザインガイドライン
 const PURPOSE_STYLES: Record<string, { layout: string; emphasis: string; cta: string }> = {
   sns_ad: {
-    layout: 'eye-catching social media ad, thumb-stopping design, mobile-first',
-    emphasis: 'bold headline centered, clear value proposition',
-    cta: 'prominent CTA button like "詳しくはこちら" or "今すぐチェック"',
+    layout: 'high-conversion SNS advertisement, eye-catching social media ad, thumb-stopping design, mobile-first optimization',
+    emphasis: 'bold headline area with high contrast, vibrant visual hook, emotional connection',
+    cta: 'prominent, clickable-looking CTA button like "詳しくはこちら" or "今すぐチェック"',
   },
   youtube: {
-    layout: 'YouTube thumbnail, 16:9 aspect ratio, maximum visual impact, designed to get clicks in search results and recommendations',
-    emphasis: 'HUGE bold text that fills most of the frame, expressive face/reaction shot area, bright contrasting colors, dramatic lighting effects',
-    cta: 'NO CTA button needed - focus on emotional hook and curiosity gap, use arrows or circles to draw attention if needed',
+    layout: 'YouTube thumbnail, 16:9 aspect ratio, maximum visual impact, designed to compete in search results and recommendations',
+    emphasis: 'massive focal point, huge text placeholder area (40%+), expressive faces, high saturation, dramatic lighting',
+    cta: 'NO CTA button - focus on curiosity gap and high-impact visuals',
   },
   display: {
     layout: 'web display banner, clean layout respecting ad dimensions',
@@ -197,7 +202,7 @@ const YOUTUBE_APPEAL_TYPES = [
 ]
 
 // 生成オプションの型定義
-interface GenerateOptions {
+export interface GenerateOptions {
   purpose?: string
   companyName?: string
   imageDescription?: string  // ユーザーが入力したイメージ説明（例: "青空の下でジャンプする女性"）
@@ -563,7 +568,8 @@ Generate a HIGH-QUALITY banner with PERFECT Japanese text rendering now.`
 // ========================================
 async function generateSingleBanner(
   prompt: string,
-  size: string = '1080x1080'
+  size: string = '1080x1080',
+  options: GenerateOptions = {}
 ): Promise<string> {
   const apiKey = getApiKey()
   
@@ -575,14 +581,12 @@ async function generateSingleBanner(
   const maxSide = Math.max(w || 0, h || 0)
   const imageSize = maxSide >= 2500 ? '4K' : '2K'
 
-  // Nano Banana Pro generateContent エンドポイント（APIキーはヘッダで渡す）
-  // 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
+  // Nano Banana Pro generateContent エンドポイント
   const endpoint = `${GEMINI_API_BASE}/models/${NANO_BANANA_PRO_MODEL}:generateContent`
 
-  // 参考画像/ロゴ/人物を「画像→テキスト」の順で渡す（参考画像を元に生成させる）
+  // 参考画像/ロゴ/人物を「画像→テキスト」の順で渡す
   const imageParts: any[] = []
-  const opts = optionsForGeneration.current
-  const refs = (opts?.referenceImages || []).slice(0, 2)
+  const refs = (options?.referenceImages || []).slice(0, 2)
   for (const ref of refs) {
     try {
       const parsed = parseDataUrl(ref)
@@ -591,17 +595,17 @@ async function generateSingleBanner(
       // ignore
     }
   }
-  if (opts?.logoImage) {
+  if (options?.logoImage) {
     try {
-      const parsed = parseDataUrl(opts.logoImage)
+      const parsed = parseDataUrl(options.logoImage)
       imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
     } catch {
       // ignore
     }
   }
-  if (opts?.personImage) {
+  if (options?.personImage) {
     try {
-      const parsed = parseDataUrl(opts.personImage)
+      const parsed = parseDataUrl(options.personImage)
       imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
     } catch {
       // ignore
@@ -619,10 +623,7 @@ async function generateSingleBanner(
       }
     ],
     generationConfig: {
-      // 画像を必ず返してほしいので IMAGE を優先
       responseModalities: ["IMAGE", "TEXT"],
-      // Nano Banana Pro の画像設定（SDK の config.imageConfig 相当）
-      // ※ generativelanguage API の generationConfig として扱う
       imageConfig: {
         aspectRatio,
         imageSize,
@@ -650,7 +651,7 @@ async function generateSingleBanner(
   const result = await response.json()
   console.log('Nano Banana Pro API Response received')
   
-  // レスポンスから画像を抽出（Gemini generateContent形式）
+  // レスポンスから画像を抽出
   if (result.candidates && result.candidates[0]?.content?.parts) {
     for (const part of result.candidates[0].content.parts) {
       if (part.inlineData) {
@@ -665,10 +666,7 @@ async function generateSingleBanner(
   throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
 }
 
-// generateSingleBanner に参照画像などを渡すための一時バッファ
-const optionsForGeneration: { current: GenerateOptions | null } = { current: null }
-
-// Gemini 3 Flash で「画像生成用プロンプト」を短く最適化（失敗したら元プロンプトを使う）
+// Gemini 2.0 Flash で「画像生成用プロンプト」を短く最適化（失敗したら元プロンプトを使う）
 async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<string> {
   const apiKey = getApiKey()
   const endpoint = `${GEMINI_API_BASE}/models/${GEMINI_3_FLASH_MODEL}:generateContent`
@@ -702,7 +700,7 @@ async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<str
 
   if (!res.ok) {
     const t = await res.text()
-    throw new Error(`Gemini 3 Flash error: ${res.status} - ${t.substring(0, 300)}`)
+    throw new Error(`Gemini prompt error: ${res.status} - ${t.substring(0, 300)}`)
   }
 
   const json = await res.json()
@@ -711,7 +709,7 @@ async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<str
     ? parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
     : ''
 
-  if (!text) throw new Error('Gemini 3 Flash returned empty text')
+  if (!text) throw new Error('Gemini returned empty text')
   return text
 }
 
@@ -738,7 +736,12 @@ export async function generateBanners(
   options: GenerateOptions = {}
 ): Promise<{ banners: string[]; error?: string }> {
   // APIキーの確認
-  const apiKey = process.env.GOOGLE_GENAI_API_KEY
+  const apiKey = 
+    process.env.GOOGLE_GENAI_API_KEY || 
+    process.env.GOOGLE_AI_API_KEY || 
+    process.env.GEMINI_API_KEY ||
+    process.env.NANOBANNER_API_KEY
+
   if (!apiKey) {
     console.error('GOOGLE_GENAI_API_KEY not configured')
     return { 
@@ -764,17 +767,14 @@ export async function generateBanners(
         const basePrompt = createBannerPrompt(category, keyword, size, appealType, options)
         console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} type ${appealType.type} (${appealType.japanese})...`)
         
-        // Nano Banana Pro で生成（他のモデルは使用しない）
         let finalPrompt = basePrompt
         try {
           finalPrompt = await refinePromptWithGemini3Flash(basePrompt)
         } catch (e: any) {
-          console.warn('Gemini 3 Flash prompt refine failed. Using base prompt.', e?.message || e)
+          console.warn('Gemini prompt refine failed. Using base prompt.', e?.message || e)
         }
 
-        optionsForGeneration.current = options
-        const banner = await generateSingleBanner(finalPrompt, size)
-        optionsForGeneration.current = null
+        const banner = await generateSingleBanner(finalPrompt, size, options)
         
         banners.push(banner)
         console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generated successfully!`)
@@ -823,5 +823,10 @@ export async function generateBanners(
 
 // 環境変数のチェック
 export function isNanobannerConfigured(): boolean {
-  return !!(process.env.GOOGLE_GENAI_API_KEY || process.env.NANOBANNER_API_KEY)
+  return !!(
+    process.env.GOOGLE_GENAI_API_KEY || 
+    process.env.GOOGLE_AI_API_KEY || 
+    process.env.GEMINI_API_KEY ||
+    process.env.NANOBANNER_API_KEY
+  )
 }

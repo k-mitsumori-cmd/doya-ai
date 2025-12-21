@@ -47,7 +47,7 @@ export default function KantanPricingPage() {
           
           <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-full text-xs font-bold">
             <Cpu className="w-3 h-3 text-purple-400" />
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Gemini 3.0</span>
+            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Gemini 2.0</span>
           </div>
         </div>
       </header>

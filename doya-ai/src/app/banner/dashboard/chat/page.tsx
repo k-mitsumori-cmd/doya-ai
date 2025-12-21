@@ -162,7 +162,7 @@ export default function BannerChatPage() {
                 </Link>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
                   <MessageSquare className="w-6 h-6 text-blue-600" />
-                  AIチャット生成
+                  Bunridge AI チャット
                 </h1>
               </div>
               

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-const GEMINI_MODEL = 'gemini-3-flash-preview'
-const GEMINI_FALLBACK_MODEL = 'gemini-2.0-flash'
+const GEMINI_MODEL = 'gemini-2.0-flash'
+const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
 
 const ALLOWED_PURPOSES = ['sns_ad', 'youtube', 'display', 'webinar', 'lp_hero', 'email', 'campaign'] as const
 const ALLOWED_CATEGORIES = [

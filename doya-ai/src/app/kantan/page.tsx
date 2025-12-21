@@ -143,7 +143,7 @@ export default function KantanTopPage() {
                 <span className="font-black text-xl tracking-tight bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">カンタンマーケAI</span>
                 <div className="flex items-center gap-1.5 text-[10px] text-cyan-400 font-medium">
                   <Cpu className="w-3 h-3" />
-                  Gemini 3.0 Powered
+                  Gemini 2.0 Powered
                 </div>
               </div>
             </div>
@@ -199,7 +199,7 @@ export default function KantanTopPage() {
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-full text-xs font-bold">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Gemini 3.0 Flash</span>
+              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Gemini 2.0 Flash</span>
             </div>
           </div>
           
@@ -561,7 +561,7 @@ export default function KantanTopPage() {
                     <span className="text-2xl">🎨</span>
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-white">ドヤバナーAI</h4>
+                    <h4 className="font-bold text-white">Bunridge AI</h4>
                     <p className="text-sm text-white/40">A/B/Cの3案を同時に作成</p>
                   </div>
                   <ArrowRight className="w-5 h-5 text-white/20 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
@@ -593,7 +593,7 @@ export default function KantanTopPage() {
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/30">
             <Link href="/" className="hover:text-white/60 transition-colors">ポータル</Link>
             <span className="text-white/10">•</span>
-            <Link href="/banner" className="hover:text-purple-400 transition-colors">ドヤバナーAI</Link>
+            <Link href="/banner" className="hover:text-purple-400 transition-colors">Bunridge AI</Link>
             <span className="text-white/10">•</span>
             <Link href="/seo" className="hover:text-white/60 transition-colors">ドヤSEO</Link>
             <span className="text-white/10">•</span>

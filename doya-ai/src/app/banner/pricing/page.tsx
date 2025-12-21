@@ -23,7 +23,7 @@ export default function BannerPricingPage() {
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center">
               <span className="text-xl">🎨</span>
             </div>
-            <span className="font-bold text-gray-800">ドヤバナーAI</span>
+            <span className="font-bold text-gray-800">Bunridge AI</span>
           </div>
         </div>
       </header>
