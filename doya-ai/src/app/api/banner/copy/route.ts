@@ -7,7 +7,8 @@ function getPrimaryTextModel(): string {
     process.env.GEMINI_PRO3_MODEL ||
     process.env.GEMINI_PRO_3_MODEL ||
     process.env.GEMINI_TEXT_MODEL ||
-    'gemini-2.0-flash'
+    // 未設定時は Gemini 3.0（Pro3想定）を優先
+    'gemini-3.0-pro'
   )
 }
 const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
@@ -68,7 +69,7 @@ function uniqStrings(arr: string[]) {
 }
 
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  const models = [getPrimaryTextModel(), GEMINI_FALLBACK_MODEL]
+  const models = [getPrimaryTextModel(), 'gemini-2.0-flash', GEMINI_FALLBACK_MODEL]
   let lastError: string | null = null
 
   for (const model of models) {
