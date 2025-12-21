@@ -38,6 +38,7 @@ interface NavItem {
 
 const bannerNavItems: NavItem[] = [
   { href: '/banner/dashboard', label: 'バナー作成', icon: Palette },
+  { href: '/banner/gallery', label: 'ギャラリー', icon: Layers },
   { href: '/banner/dashboard/chat', label: 'AIチャット', icon: MessageSquare },
   { href: '/banner/dashboard/stats', label: '統計・分析', icon: BarChart3 },
   { href: '/banner/dashboard/history', label: '履歴', icon: Clock },
