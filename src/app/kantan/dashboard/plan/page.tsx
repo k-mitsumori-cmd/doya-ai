@@ -7,7 +7,8 @@ import {
   Star, TrendingUp, Users, CheckCircle2, Building2,
   Home, Cpu, Clock, Settings, HelpCircle, DollarSign, Bell,
   MessageSquare, Rocket, BarChart3, ArrowUpRight, Quote,
-  Zap, Shield, RefreshCw, Database, Crown, Info, Mail, Calendar, UserCircle
+  Zap, Shield, RefreshCw, Database, Crown, Info, Mail, Calendar, UserCircle,
+  Menu, X
 } from 'lucide-react'
 
 // サイドバーメニュー
@@ -235,6 +236,7 @@ export default function KantanPlanPage() {
   const [hoveredFeature, setHoveredFeature] = useState<number | null>(null)
   const [hoveredCost, setHoveredCost] = useState<number | null>(null)
   const [hoveredTestimonial, setHoveredTestimonial] = useState<string | null>(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   const userName = session?.user?.name || 'ゲスト'
   const userInitial = userName[0]?.toUpperCase() || 'G'
@@ -255,22 +257,41 @@ export default function KantanPlanPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
+      {/* モバイルオーバーレイ */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* サイドバー */}
-      <aside className="w-52 bg-[#3B5998] text-white flex flex-col fixed h-full z-40">
+      <aside className={`
+        w-64 lg:w-52 bg-[#3B5998] text-white flex flex-col fixed h-full z-50
+        transform transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         {/* ロゴ */}
-        <div className="p-5">
+        <div className="p-5 flex items-center justify-between">
           <Link href="/kantan" className="flex items-center gap-2">
             <span className="text-xl font-bold tracking-tight">カンタンマーケ</span>
           </Link>
+          <button 
+            className="lg:hidden p-1 hover:bg-white/10 rounded"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* メインメニュー */}
-        <nav className="flex-1 px-3">
+        <nav className="flex-1 px-3 overflow-y-auto">
           <ul className="space-y-1">
             {SIDEBAR_MENU.map((item) => (
               <li key={item.id}>
                 <Link
                   href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${
                     item.active
                       ? 'bg-white/20 text-white font-medium'
@@ -297,6 +318,7 @@ export default function KantanPlanPage() {
                 <li key={item.id}>
                   <Link
                     href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all text-sm"
                   >
                     {item.icon}
@@ -310,11 +332,11 @@ export default function KantanPlanPage() {
 
         {/* 他サービス */}
         <div className="p-3 border-t border-white/10">
-          <Link href="/banner" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
+          <Link href="/banner" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🎨</span>
             <span>ドヤバナーAI</span>
           </Link>
-          <Link href="/seo" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
+          <Link href="/seo" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🧠</span>
             <span>ドヤSEO</span>
           </Link>
@@ -327,25 +349,35 @@ export default function KantanPlanPage() {
       </aside>
 
       {/* メインコンテンツ */}
-      <main className="flex-1 ml-52">
+      <main className="flex-1 lg:ml-52">
         {/* ヘッダー */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-          <div className="px-8 h-16 flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">サービスプラン</h1>
-              <p className="text-xs text-gray-500">各項目にカーソルを当てると詳細が表示されます</p>
+          <div className="px-4 lg:px-8 h-16 flex items-center justify-between">
+            {/* モバイルメニューボタン */}
+            <button 
+              className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            
+            <div className="hidden sm:block">
+              <h1 className="text-lg lg:text-xl font-bold text-gray-800">サービスプラン</h1>
+              <p className="text-xs text-gray-500 hidden lg:block">各項目にカーソルを当てると詳細が表示されます</p>
             </div>
-            <div className="flex items-center gap-4">
+            <h1 className="sm:hidden text-lg font-bold text-gray-800">サービスプラン</h1>
+            
+            <div className="flex items-center gap-2 lg:gap-4">
               <button className="relative p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+              <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                 <Settings className="w-5 h-5" />
               </button>
 
-              <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                <div className="text-right">
+              <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
+                <div className="text-right hidden md:block">
                   <div className="text-sm font-medium text-gray-800">{userName}</div>
                   <div className="text-xs text-gray-400">Admin</div>
                 </div>
@@ -358,7 +390,7 @@ export default function KantanPlanPage() {
         </header>
 
         {/* コンテンツ */}
-        <div className="p-8 flex gap-8">
+        <div className="p-4 lg:p-8 flex flex-col lg:flex-row gap-4 lg:gap-8">
           {/* 左側メイン */}
           <div className="flex-1">
             {/* プランカード */}

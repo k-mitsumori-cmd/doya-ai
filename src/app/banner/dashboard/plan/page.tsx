@@ -20,6 +20,12 @@ import {
   MessageSquare,
   Image as ImageIcon,
   Zap,
+  Bell,
+  Settings,
+  DollarSign,
+  ChevronDown,
+  CreditCard,
+  ArrowRight
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -137,269 +143,228 @@ export default function BannerPlanPage() {
     <div className="min-h-screen bg-slate-50 text-gray-900">
       <DashboardSidebar />
       <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <Layers className="w-5 h-5 text-white" />
+        {/* ========================================
+            Header - Bunridge Style
+            ======================================== */}
+        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
+            <div className="h-16 sm:h-20 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                  <ArrowRight className="w-5 h-5 text-slate-400 rotate-180" />
+                </Link>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                  <CreditCard className="w-6 h-6 text-blue-600" />
+                  サービスプラン
+                </h1>
               </div>
-              <div>
-                <h1 className="text-xl sm:text-2xl font-black text-gray-900">現在契約中のプラン</h1>
-                <p className="text-xs text-gray-500">利用状況・上限・アップグレード/管理</p>
-              </div>
-            </div>
-            <Link
-              href="/banner/pricing"
-              className="text-sm font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
-            >
-              料金プランを見る
-              <ArrowUpRight className="w-4 h-4" />
-            </Link>
-          </div>
-
-          <div className="grid lg:grid-cols-[1fr_360px] gap-5">
-            {/* Main card */}
-            <div className="bg-white rounded-3xl border border-gray-200 shadow-lg shadow-gray-200/20 overflow-hidden">
-              <div className="p-6 sm:p-7 bg-blue-50/50 border-b border-gray-200">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`px-2 py-1 rounded-full text-[11px] font-black ${planBadge.cls}`}>
-                        {planBadge.text}
-                      </span>
-                      {isPro && (
-                        <span className="px-2 py-1 rounded-full text-[11px] font-black bg-orange-50 text-orange-700 border border-orange-200/60">
-                          人気
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="text-lg sm:text-xl font-black text-gray-900">{currentPlanLabel}</h2>
-                    <p className="text-sm text-gray-600 mt-1">
-                      日次上限: <span className="font-black text-gray-900">{dailyLimit}</span> 回 / 今日の残り: <span className="font-black text-blue-600">{remaining}</span> 回
-                    </p>
+              
+              <div className="flex items-center gap-3 sm:gap-6">
+                <div className="hidden md:flex items-center gap-2">
+                  <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all relative">
+                    <Bell className="w-5 h-5" />
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                  </button>
+                  <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
+                    <Settings className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+                <div className="flex items-center gap-3 pl-2">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || '田中 太郎'}</p>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">Admin</p>
                   </div>
-
-                  <div className="text-right">
-                    {isPro ? (
-                      <div className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-500/20">
-                        <Crown className="w-4 h-4" />
-                        <span className="text-sm font-black">¥4,980/月</span>
-                      </div>
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
+                    {session?.user?.image ? (
+                      <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
                     ) : (
-                      <div className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-gray-100 text-gray-700">
-                        <Star className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm font-black">¥0</span>
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                        {session?.user?.name?.[0]?.toUpperCase() || 'U'}
                       </div>
                     )}
                   </div>
                 </div>
-
-                {/* CTA */}
-                <div className="mt-5 flex flex-col sm:flex-row gap-2">
-                  {isGuest ? (
-                    <Link
-                      href="/api/auth/signin"
-                      className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-blue-600 text-white font-black shadow-lg shadow-blue-500/20"
-                    >
-                      <Sparkles className="w-5 h-5" />
-                      ログインして回数を増やす
-                    </Link>
-                  ) : isPro ? (
-                    <button
-                      onClick={handleOpenPortal}
-                      disabled={isPortalLoading}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gray-900 text-white font-black hover:bg-black transition-colors disabled:opacity-60"
-                    >
-                      {isPortalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
-                      サブスク管理（Stripe）
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleUpgrade}
-                      disabled={isCheckoutLoading}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-blue-600 text-white font-black shadow-lg shadow-blue-500/20 disabled:opacity-60"
-                    >
-                      {isCheckoutLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-                      有料版へアップグレード
-                    </button>
-                  )}
-
-                  <Link
-                    href={HIGH_USAGE_CONTACT_URL || '/banner/pricing'}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white border border-gray-200 text-gray-800 font-black hover:bg-gray-50 transition-colors"
-                  >
-                    <ArrowUpRight className="w-5 h-5 text-blue-600" />
-                    上位利用（要相談）
-                  </Link>
-                </div>
               </div>
+            </div>
+          </div>
+        </header>
 
-              {/* Metrics */}
-              <div className="p-6 sm:p-7">
-                <div className="grid sm:grid-cols-3 gap-3">
-                  <div className="rounded-2xl border border-gray-200 p-4 bg-white">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 font-bold">
-                      <Clock className="w-4 h-4 text-blue-600" />
-                      推定削減時間
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8">
+
+          <div className="grid lg:grid-cols-[1fr,360px] gap-8">
+            {/* Main card */}
+            <div className="space-y-8">
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-8 bg-slate-50/50 border-b border-gray-100">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${planBadge.cls}`}>
+                          {planBadge.text}
+                        </span>
+                        {isPro && (
+                          <span className="px-3 py-1 rounded-full text-[10px] font-black bg-blue-600 text-white shadow-lg shadow-blue-200 uppercase tracking-widest">
+                            Official Plan
+                          </span>
+                        )}
+                      </div>
+                      <h2 className="text-2xl font-black text-slate-800">{currentPlanLabel}</h2>
+                      <p className="text-sm text-slate-500 mt-2 font-medium">
+                        日次上限: <span className="font-bold text-slate-800">{dailyLimit}</span> 回 / 今日の残り: <span className="font-bold text-blue-600">{remaining}</span> 回
+                      </p>
                     </div>
-                    <div className="mt-1 text-2xl font-black text-gray-900">
-                      {savedHours}<span className="text-sm text-gray-500 font-bold ml-1">時間</span>
+
+                    <div className="text-right">
+                      {isPro ? (
+                        <div className="text-3xl font-black text-slate-800 tracking-tighter">
+                          ¥4,980<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
+                        </div>
+                      ) : (
+                        <div className="text-3xl font-black text-slate-800 tracking-tighter">
+                          ¥0<span className="text-sm text-slate-400 font-bold ml-1">/free</span>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">※ 1枚=45分で概算</p>
                   </div>
-                  <div className="rounded-2xl border border-gray-200 p-4 bg-white">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 font-bold">
-                      <BarChart3 className="w-4 h-4 text-blue-600" />
-                      生成枚数（累計）
-                    </div>
-                    <div className="mt-1 text-2xl font-black text-gray-900">
-                      {totalBanners}<span className="text-sm text-gray-500 font-bold ml-1">枚</span>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">ローカル履歴から集計</p>
-                  </div>
-                  <div className="rounded-2xl border border-gray-200 p-4 bg-white">
-                    <div className="flex items-center gap-2 text-sm text-gray-600 font-bold">
-                      <Zap className="w-4 h-4 text-amber-600" />
-                      推定コスト削減
-                    </div>
-                    <div className="mt-1 text-2xl font-black text-gray-900">
-                      ¥{savedCost.toLocaleString()}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">※ 時給3,000円で概算</p>
+
+                  {/* CTA */}
+                  <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                    {isGuest ? (
+                      <Link
+                        href="/api/auth/signin"
+                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95"
+                      >
+                        <Sparkles className="w-5 h-5" />
+                        ログインして利用を開始
+                      </Link>
+                    ) : isPro ? (
+                      <button
+                        onClick={handleOpenPortal}
+                        disabled={isPortalLoading}
+                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-200 disabled:opacity-60"
+                      >
+                        {isPortalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
+                        Stripeで契約を管理する
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleUpgrade}
+                        disabled={isCheckoutLoading}
+                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60"
+                      >
+                        {isCheckoutLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                        PROプランへアップグレード
+                      </button>
+                    )}
+
+                    <Link
+                      href={HIGH_USAGE_CONTACT_URL || '/banner/pricing'}
+                      className="inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white border border-gray-200 text-slate-800 font-black hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                      <ArrowUpRight className="w-5 h-5 text-blue-600" />
+                      法人・一括契約相談
+                    </Link>
                   </div>
                 </div>
 
-                <div className="mt-5 rounded-2xl bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200/60 p-4">
-                  <p className="text-sm font-black text-blue-900">この画面の狙い</p>
-                  <p className="mt-1 text-sm text-gray-700">
-                    「どれだけ制作時間を削減できているか」を見える化し、必要なときに最短でアップグレード・管理できる導線を用意しています。
-                  </p>
+                {/* Metrics */}
+                <div className="p-8">
+                  <div className="grid sm:grid-cols-3 gap-6">
+                    <div className="rounded-3xl border border-gray-100 p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <Clock className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">推定削減時間</p>
+                      <p className="text-3xl font-black text-slate-800 tracking-tighter">
+                        {savedHours}<span className="text-sm text-slate-400 font-bold ml-1">時間</span>
+                      </p>
+                    </div>
+                    <div className="rounded-3xl border border-gray-100 p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
+                      <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <Layers className="w-6 h-6 text-orange-500" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">累計生成枚数</p>
+                      <p className="text-3xl font-black text-slate-800 tracking-tighter">
+                        {totalBanners}<span className="text-sm text-slate-400 font-bold ml-1">枚</span>
+                      </p>
+                    </div>
+                    <div className="rounded-3xl border border-gray-100 p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <DollarSign className="w-6 h-6 text-amber-500" />
+                      </div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">推定コスト削減</p>
+                      <p className="text-3xl font-black text-slate-800 tracking-tighter">
+                        ¥{savedCost.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Side panel */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* Recommended usage */}
-              <div className="bg-white rounded-3xl border border-gray-200/70 shadow-sm p-5">
-                <p className="text-sm font-black text-gray-900 mb-3 flex items-center gap-2">
-                  <Target className="w-4 h-4 text-blue-600" />
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+                <p className="text-sm font-black text-slate-800 mb-6 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-blue-600" />
                   おすすめの使い方
                 </p>
 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {[
                     {
-                      title: '1分で要件を固める（最短）',
-                      desc: 'AIチャットで「用途/業種/訴求/雰囲気」を会話で整理→そのまま生成。',
+                      title: '最短1分。AIと会話して生成',
+                      desc: 'チャットで「用途や雰囲気」を伝えるだけで、AIが最適なプランを構成します。',
                       href: '/banner/dashboard/chat',
                       icon: MessageSquare,
-                      color: 'from-blue-600 to-blue-600',
-                      cta: 'AIチャットを開く',
+                      color: 'bg-blue-600',
+                      cta: 'チャットを開く',
                     },
                     {
-                      title: 'A/B/Cを比較してCTRを上げる',
-                      desc: 'まず3案生成→良い案をベースに、色や訴求を微調整して2回目で完成度UP。',
+                      title: 'A/B/C 3案を同時に比較',
+                      desc: '異なるアプローチの3案を生成し、最も反応が良さそうなものを選びます。',
                       href: '/banner',
                       icon: Sparkles,
-                      color: 'from-blue-600 to-blue-600',
-                      cta: 'バナー生成へ',
-                    },
-                    {
-                      title: '履歴から“当たり”を再利用する',
-                      desc: '過去の当たり構図・配色を見返して、次の制作に転用。',
-                      href: '/banner/dashboard/history',
-                      icon: Clock,
-                      color: 'from-slate-700 to-slate-900',
-                      cta: '履歴を見る',
-                    },
+                      color: 'bg-orange-500',
+                      cta: 'バナー作成',
+                    }
                   ].map((s, i) => {
                     const Icon = s.icon
                     return (
-                      <div key={i} className="rounded-2xl border border-gray-200 p-4 bg-gray-50/50">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${s.color} flex items-center justify-center shadow-sm`}>
-                                <Icon className="w-4 h-4 text-white" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-black text-gray-900">{s.title}</p>
-                                <p className="mt-0.5 text-xs text-gray-600">{s.desc}</p>
-                              </div>
-                            </div>
-                          </div>
-                          <Link
-                            href={s.href}
-                            className="shrink-0 inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-900 text-xs font-black hover:bg-gray-50"
-                          >
-                            {s.cta}
-                            <ArrowUpRight className="w-3.5 h-3.5 text-blue-600" />
-                          </Link>
+                      <div key={i} className="rounded-2xl border border-gray-100 p-5 bg-slate-50/50 hover:bg-white hover:border-blue-100 transition-all group">
+                        <div className={`w-10 h-10 rounded-xl ${s.color} flex items-center justify-center shadow-lg shadow-blue-100 mb-4 group-hover:scale-110 transition-transform`}>
+                          <Icon className="w-5 h-5 text-white" />
                         </div>
+                        <p className="text-sm font-black text-slate-800 mb-1">{s.title}</p>
+                        <p className="text-xs text-slate-500 leading-relaxed mb-4">{s.desc}</p>
+                        <Link
+                          href={s.href}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800"
+                        >
+                          {s.cta}
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
                       </div>
                     )
                   })}
                 </div>
 
-                <div className="mt-4 rounded-2xl bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200/60 p-4">
-                  <p className="text-xs font-black text-blue-900 mb-2">“CTRが上がる”ための型（チェックリスト）</p>
-                  <div className="grid grid-cols-1 gap-1.5">
+                <div className="mt-6 p-5 rounded-2xl bg-blue-600 text-white shadow-xl shadow-blue-200">
+                  <p className="text-xs font-black uppercase tracking-widest mb-3 opacity-80">CTR Checklist</p>
+                  <div className="space-y-2.5">
                     {[
-                      '数字（%OFF / 期間 / 価格）を入れる',
-                      'ベネフィットを先頭に置く（例:「予約が3倍に」）',
-                      'イメージ説明で主役（人物/商品/背景）を明確化',
-                      '色は3〜5色に絞ってコントラストを強める',
+                      '数字（価格・％）を際立たせる',
+                      'ベネフィットを大きく配置',
+                      'ターゲットへの問いかけを入れる',
                     ].map((t) => (
-                      <div key={t} className="flex items-center gap-2 text-xs text-gray-700">
-                        <CheckCircle2 className="w-4 h-4 text-blue-600" />
-                        <span className="font-medium">{t}</span>
+                      <div key={t} className="flex items-center gap-2 text-xs font-bold">
+                        <CheckCircle2 className="w-4 h-4 text-white" />
+                        <span>{t}</span>
                       </div>
                     ))}
                   </div>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-3xl border border-gray-200/70 shadow-sm p-5">
-                <p className="text-sm font-black text-gray-900 mb-3">導入ユーザーの声</p>
-                <div className="space-y-3">
-                  {[
-                    { name: '広告代理店・運用担当', text: '制作の初速が速くなり、ABテストの回転数が上がりました。' },
-                    { name: 'EC・マーケ責任者', text: 'セールの訴求を即日で量産でき、機会損失が減りました。' },
-                    { name: 'SaaS・インサイドセールス', text: 'ウェビナー告知が短時間で作れて、集客が安定しました。' },
-                  ].map((t, i) => (
-                    <div key={i} className="rounded-2xl border border-gray-200 p-4 bg-gray-50/50">
-                      <p className="text-sm text-gray-800 font-medium">“{t.text}”</p>
-                      <p className="mt-2 text-xs text-gray-500 font-bold">— {t.name}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-3xl border border-gray-200/70 shadow-sm p-5">
-                <p className="text-sm font-black text-gray-900 mb-3">次の一手</p>
-                <div className="space-y-2">
-                  <Link
-                    href="/banner/dashboard/chat"
-                    className="flex items-center justify-between px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-600 text-white font-black"
-                  >
-                    AIチャットで要件整理 → 生成
-                    <ArrowUpRight className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href="/banner/dashboard/stats"
-                    className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white border border-gray-200 text-gray-900 font-black hover:bg-gray-50"
-                  >
-                    効果分析を見る
-                    <ArrowUpRight className="w-4 h-4 text-blue-600" />
-                  </Link>
-                  <Link
-                    href="/banner"
-                    className="flex items-center justify-between px-4 py-3 rounded-2xl bg-white border border-gray-200 text-gray-900 font-black hover:bg-gray-50"
-                  >
-                    生成画面へ（A/B/C）
-                    <ArrowUpRight className="w-4 h-4 text-blue-600" />
-                  </Link>
                 </div>
               </div>
             </div>

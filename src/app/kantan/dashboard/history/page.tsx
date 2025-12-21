@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { 
   ArrowLeft, Clock, Copy, Trash2, FileText, Home, Bell, Mail, Calendar,
-  MessageSquare, TrendingUp, Cpu, Settings, UserCircle
+  MessageSquare, TrendingUp, Cpu, Settings, UserCircle, Menu, X
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -68,6 +68,7 @@ export default function KantanHistoryPage() {
   const { data: session } = useSession()
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const userName = session?.user?.name || '田中 太郎'
 
@@ -98,22 +99,41 @@ export default function KantanHistoryPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
+      {/* モバイルオーバーレイ */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* サイドバー */}
-      <aside className="w-52 bg-[#3B5998] text-white flex flex-col fixed h-full z-40">
+      <aside className={`
+        w-64 lg:w-52 bg-[#3B5998] text-white flex flex-col fixed h-full z-50
+        transform transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         {/* ロゴ */}
-        <div className="p-5">
+        <div className="p-5 flex items-center justify-between">
           <Link href="/kantan" className="flex items-center gap-2">
             <span className="text-xl font-bold tracking-tight">カンタンマーケ</span>
           </Link>
+          <button 
+            className="lg:hidden p-1 hover:bg-white/10 rounded"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* メインメニュー */}
-        <nav className="flex-1 px-3">
+        <nav className="flex-1 px-3 overflow-y-auto">
           <ul className="space-y-1">
             {SIDEBAR_MENU.map((item) => (
               <li key={item.id}>
                 <Link
                   href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all text-sm"
                 >
                   {item.icon}
@@ -136,6 +156,7 @@ export default function KantanHistoryPage() {
                 <li key={item.id}>
                   <Link
                     href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all text-sm"
                   >
                     {item.icon}
@@ -149,11 +170,11 @@ export default function KantanHistoryPage() {
 
         {/* 他サービス */}
         <div className="p-3 border-t border-white/10">
-          <Link href="/banner" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
+          <Link href="/banner" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🎨</span>
             <span>ドヤバナーAI</span>
           </Link>
-          <Link href="/seo" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
+          <Link href="/seo" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🧠</span>
             <span>ドヤSEO</span>
           </Link>
@@ -166,22 +187,30 @@ export default function KantanHistoryPage() {
       </aside>
 
       {/* メインコンテンツ */}
-      <main className="flex-1 ml-52">
+      <main className="flex-1 lg:ml-52">
         {/* ヘッダー */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-          <div className="px-8 h-16 flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-800">作成履歴</h1>
+          <div className="px-4 lg:px-8 h-16 flex items-center justify-between">
+            {/* モバイルメニューボタン */}
+            <button 
+              className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
             
-            <div className="flex items-center gap-4">
+            <h1 className="text-lg lg:text-xl font-bold text-gray-800">作成履歴</h1>
+            
+            <div className="flex items-center gap-2 lg:gap-4">
               <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                 <Bell className="w-5 h-5" />
               </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+              <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                 <Settings className="w-5 h-5" />
               </button>
               
-              <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                <div className="text-right">
+              <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
+                <div className="text-right hidden md:block">
                   <div className="text-sm font-medium text-gray-800">{userName}</div>
                   <div className="text-xs text-gray-400">Admin</div>
                 </div>
@@ -194,7 +223,7 @@ export default function KantanHistoryPage() {
         </header>
 
         {/* コンテンツ */}
-        <div className="p-8">
+        <div className="p-4 lg:p-8">
           {history.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 shadow-sm">
               <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />

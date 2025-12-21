@@ -10,7 +10,8 @@ import {
   User, Building2, Video, Mail, Gift, Megaphone, Target,
   ChevronDown, Check, Star, Eye, Copy, 
   Play, Crown, ArrowUpRight, Palette,
-  MessageSquare, Send, RotateCcw, Pencil, BarChart3
+  MessageSquare, Send, RotateCcw, Pencil, BarChart3,
+  Users, DollarSign, Bell, Settings, Search, ArrowUpDown, ChevronRight
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
@@ -1279,95 +1280,47 @@ export default function BannerDashboard() {
         />
       
       {/* ========================================
-          Header - Ultra Modern Glass Morphism
+          Header - Bunridge Professional Style
           ======================================== */}
-      <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-2xl border-b border-gray-200/50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8">
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
           <div className="h-16 sm:h-20 flex items-center justify-between">
-            <Link href="/banner" className="flex items-center gap-3 sm:gap-4 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-blue-600 rounded-xl blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
-                <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg">
-                  <Zap className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                ダッシュボード
+              </h1>
+            </div>
+            
+            <div className="flex items-center gap-3 sm:gap-6">
+              <div className="hidden md:flex items-center gap-2">
+                <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all relative">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                </button>
+                <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
+                  <Settings className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+
+              <div className="flex items-center gap-3 pl-2">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-bold text-slate-800 leading-none">
+                    {session?.user?.name || '田中 太郎'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">Admin</p>
+                </div>
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
+                  {session?.user?.image ? (
+                    <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                      {session?.user?.name?.[0]?.toUpperCase() || 'U'}
+                    </div>
+                  )}
                 </div>
               </div>
-              <div>
-                <h1 className="font-black text-lg sm:text-2xl tracking-tighter text-blue-600">
-                  Bunridge
-                </h1>
-                <p className="hidden sm:block text-[10px] text-gray-400 font-bold tracking-widest uppercase mt-0.5">Professional Suite</p>
-              </div>
-            </Link>
-            
-            <div className="flex items-center gap-3 sm:gap-4">
-              {isGuest ? (
-                <>
-                  <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50">
-                    <div className={`w-2 h-2 rounded-full bg-amber-400 ${guestRemaining <= 0 ? '' : 'animate-pulse'}`} />
-                    {guestRemaining <= 0 ? (
-                      <span className="text-xs sm:text-sm font-black text-amber-800">本日の上限</span>
-                    ) : (
-                      <>
-                        <span className="text-xs sm:text-sm font-bold text-amber-700">{guestRemaining}</span>
-                        <span className="text-xs text-amber-600 hidden sm:inline">回残り</span>
-                      </>
-                    )}
-                  </div>
-                  <Link href="/auth/signin?callbackUrl=/banner/dashboard">
-                    <button className="group flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-gray-800 transition-all text-xs sm:text-sm shadow-lg shadow-gray-900/20">
-                      <LogIn className="w-4 h-4" />
-                      <span>ログイン</span>
-                      <ArrowRight className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
-                    </button>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/banner/dashboard/stats">
-                    <button className="flex items-center gap-2 px-3 py-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all text-sm">
-                      <BarChart3 className="w-4 h-4" />
-                      <span className="hidden sm:inline">効果</span>
-                    </button>
-                  </Link>
-                  <Link href="/banner/dashboard/history">
-                    <button className="flex items-center gap-2 px-3 py-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all text-sm">
-                      <Clock className="w-4 h-4" />
-                      <span className="hidden sm:inline">履歴</span>
-                    </button>
-                  </Link>
-                  <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl border ${
-                    userRemaining <= 5
-                      ? 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200/50'
-                      : 'bg-gradient-to-r from-blue-50 to-blue-50 border-blue-200/60'
-                  }`}>
-                    <div className={`w-2 h-2 rounded-full ${userRemaining <= 5 ? 'bg-amber-400' : 'bg-blue-400'} ${userRemaining <= 5 ? 'animate-pulse' : ''}`} />
-                    {userRemaining <= 0 ? (
-                      <span className="text-xs sm:text-sm font-black text-amber-800">本日の上限</span>
-                    ) : (
-                      <>
-                        <span className={`text-xs sm:text-sm font-bold ${userRemaining <= 5 ? 'text-amber-700' : 'text-blue-800'}`}>{userRemaining}</span>
-                        <span className={`text-xs hidden sm:inline ${userRemaining <= 5 ? 'text-amber-600' : 'text-blue-700'}`}>回残り</span>
-                      </>
-                    )}
-                    {userRemaining <= 0 && (
-                      <a
-                        href={HIGH_USAGE_CONTACT_URL}
-                        target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
-                        rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
-                        className="ml-2 px-2 py-1 rounded-lg bg-gray-900 text-white text-[10px] font-bold hover:bg-gray-800"
-                      >
-                        上位利用
-                      </a>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-100 to-blue-100 border border-blue-200/60">
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                      {session.user?.name?.[0]?.toUpperCase() || 'U'}
-                    </div>
-                    <span className="text-sm font-semibold text-gray-700 max-w-[80px] truncate hidden sm:block">{session.user?.name?.split(' ')[0]}</span>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -1376,7 +1329,99 @@ export default function BannerDashboard() {
       {/* ========================================
           Main Content
           ======================================== */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-6 sm:py-10">
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-6 sm:py-8">
+        {/* ========================================
+            Top Stats Cards - Bunridge Style
+            ======================================== */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Card 1: 顧客数 */}
+          <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
+            <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100 group-hover:scale-105 transition-transform">
+              <Users className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-400 mb-1">顧客数</p>
+              <p className="text-4xl font-black text-slate-800 tracking-tighter">1,248</p>
+            </div>
+          </div>
+
+          {/* Card 2: 制作案件数 */}
+          <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
+            <div className="w-16 h-16 rounded-full bg-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-100 group-hover:scale-105 transition-transform">
+              <Zap className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-400 mb-1">現在進行中の案件数</p>
+              <p className="text-4xl font-black text-slate-800 tracking-tighter">754</p>
+            </div>
+          </div>
+
+          {/* Card 3: 月間売上 */}
+          <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
+            <div className="w-16 h-16 rounded-full bg-amber-400 flex items-center justify-center shadow-lg shadow-amber-100 group-hover:scale-105 transition-transform">
+              <DollarSign className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-400 mb-1">月間売上</p>
+              <p className="text-4xl font-black text-slate-800 tracking-tighter">¥98,760</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================
+            Main Chart Section - Bunridge Style
+            ======================================== */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 mb-10 overflow-hidden relative">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-lg font-bold text-slate-800 mb-4">売上と営業コストの推移</h2>
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-black text-slate-800 tracking-tighter">64,23%</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl flex items-center gap-2 shadow-md">
+                Month <ChevronDown className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Chart Placeholder (Visual Match) */}
+          <div className="relative h-[300px] w-full flex items-end justify-between gap-4 pt-10">
+            {/* Grid lines */}
+            <div className="absolute inset-0 flex flex-col justify-between py-2 pointer-events-none opacity-50">
+              {[100, 75, 50, 25, 0].map((v) => (
+                <div key={v} className="flex items-center gap-4 w-full">
+                  <span className="text-[10px] font-bold text-gray-400 w-8">{v}%</span>
+                  <div className="flex-1 border-t border-dashed border-gray-200" />
+                </div>
+              ))}
+            </div>
+
+            {/* Bars */}
+            <div className="relative flex-1 h-full flex items-end justify-around px-8 z-10">
+              {[
+                { o: 70, y: 90 }, { o: 55, y: 40 }, { o: 30, y: 35 }, { o: 38, y: 48 }, 
+                { o: 22, y: 28 }, { o: 78, y: 65 }, { o: 52, y: 72 }, { o: 40, y: 55 }, 
+                { o: 42, y: 55 }, { o: 40, y: 52 }, { o: 40, y: 55 }
+              ].map((bar, i) => (
+                <div key={i} className="flex items-end gap-1.5 h-full">
+                  <motion.div 
+                    initial={{ height: 0 }} 
+                    animate={{ height: `${bar.o}%` }} 
+                    className="w-4 bg-orange-500/80 rounded-t-sm" 
+                  />
+                  <motion.div 
+                    initial={{ height: 0 }} 
+                    animate={{ height: `${bar.y}%` }} 
+                    className="w-4 bg-amber-400/80 rounded-t-sm" 
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <div className="grid lg:grid-cols-[1fr,440px] gap-6 sm:gap-10">
           
           {/* ========================================
@@ -2823,30 +2868,84 @@ export default function BannerDashboard() {
               </motion.div>
             </a>
 
-            {/* Quick Links */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <Link href="/seo">
-                <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-200 rounded-lg sm:rounded-xl p-3 sm:p-4 hover:border-blue-400 hover:shadow-md transition-all group">
-                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                    <span className="text-xl sm:text-2xl">🔎</span>
-                    <span className="font-bold text-xs sm:text-sm text-gray-800">ドヤSEO</span>
+        {/* ========================================
+            Bottom Grid: Customers & Calendar
+            ======================================== */}
+        <div className="grid lg:grid-cols-[1fr,440px] gap-6 sm:gap-10 mt-10">
+          {/* Customer Table */}
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 overflow-hidden">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-slate-800">顧客情報</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-gray-50">
+                    <th className="px-4 py-3">会社名 <ArrowUpDown className="w-3 h-3 inline ml-1" /></th>
+                    <th className="px-4 py-3">業界 <ArrowUpDown className="w-3 h-3 inline ml-1" /></th>
+                    <th className="px-4 py-3">Location <ArrowUpDown className="w-3 h-3 inline ml-1" /></th>
+                    <th className="px-4 py-3">Status <ArrowUpDown className="w-3 h-3 inline ml-1" /></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {[
+                    { name: '株式会社テーマミュ...', industry: 'webデザイン', loc: '東京', status: 'Active' },
+                    { name: '株式会社スマートリ...', industry: 'Webデザイン', loc: '京都', status: 'Active' },
+                    { name: '株式会社セダールン...', industry: '運送', loc: '神奈川', status: 'Active' },
+                  ].map((row, i) => (
+                    <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-4 text-sm font-bold text-slate-700">{row.name}</td>
+                      <td className="px-4 py-4 text-xs text-slate-500">{row.industry}</td>
+                      <td className="px-4 py-4 text-xs text-slate-500 flex items-center gap-1">
+                        <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center">📍</span>
+                        {row.loc}
+                      </td>
+                      <td className="px-4 py-4 text-xs">
+                        <span className="px-3 py-1 rounded-full bg-blue-600 text-white font-bold flex items-center gap-1.5 w-fit">
+                          <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Calendar Widget */}
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 overflow-hidden">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-slate-800">カレンダー</h2>
+              <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest">
+                March 2025 <ChevronDown className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center mb-4">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                <div key={d} className="text-[10px] font-bold text-slate-300 uppercase py-2">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center">
+              {Array.from({ length: 31 }).map((_, i) => {
+                const day = i + 1
+                const isSelected = day === 8
+                const isHighlighted = day === 20
+                return (
+                  <div 
+                    key={i} 
+                    className={`aspect-square flex items-center justify-center text-xs font-bold rounded-full transition-all cursor-pointer ${
+                      isSelected 
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110' 
+                        : isHighlighted
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'text-slate-400 hover:bg-slate-50'
+                    }`}
+                  >
+                    {day}
                   </div>
-                  <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-gray-700 transition-colors">
-                    SEO記事も作成する →
-                  </p>
-                </div>
-              </Link>
-              <Link href="/banner/pricing">
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-lg sm:rounded-xl p-3 sm:p-4 hover:border-amber-400 hover:shadow-md transition-all group">
-                  <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                    <Crown className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
-                    <span className="font-bold text-xs sm:text-sm text-gray-800">プランを見る</span>
-                  </div>
-                  <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-gray-700 transition-colors">
-                    もっと使いたい方へ →
-                  </p>
-                </div>
-              </Link>
+                )
+              })}
             </div>
           </div>
         </div>

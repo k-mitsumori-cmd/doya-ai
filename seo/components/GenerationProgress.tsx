@@ -1,86 +1,60 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { Sparkles, FileText, Layout, Layers, Wand2, CheckCircle, Clock, Zap, PenTool, Image } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  Sparkles, 
+  Clock, 
+  Zap, 
+  FileText, 
+  ImageIcon, 
+  CheckCircle2, 
+  Loader2,
+  ChevronRight
+} from 'lucide-react'
 
-const STEPS = [
-  { key: 'queued', label: '待機中', icon: Clock, description: 'ジョブを開始する準備をしています...' },
-  { key: 'outline', label: 'アウトライン作成', icon: Layout, description: '記事の構成を設計しています...' },
-  { key: 'sections', label: 'セクション執筆', icon: PenTool, description: '各セクションを順番に執筆しています...' },
-  { key: 'integrate', label: '統合・調整', icon: Layers, description: '全体を統合して品質を調整しています...' },
-  { key: 'media', label: '画像生成', icon: Image, description: 'バナーや図解を生成しています...' },
-  { key: 'done', label: '完成', icon: CheckCircle, description: '記事の生成が完了しました！' },
-]
-
-const TIPS = [
-  '💡 50,000字の記事は、通常5〜15分かかります',
-  '📊 アウトラインは記事の骨格。ここで構造が決まります',
-  '✍️ 各セクションは個別に生成され、整合性チェックを受けます',
-  '🎯 LLMO最適化により、AI検索にも強い記事構造になります',
-  '🔄 途中で止まった場合は「生成を開始」で再開できます',
-  '📝 生成後は「編集」タブで自由に修正できます',
-  '🎨 バナー画像と図解も自動生成されます',
-  '✅ 品質監査で弱点を発見し、自動修正できます',
-]
-
-const MOTIVATIONAL = [
-  '高品質な記事を生成中...',
-  'SEO最適化された構造を構築中...',
-  'LLMO対応の記事構造を設計中...',
-  '読者を惹きつけるコンテンツを作成中...',
-  '専門性の高い記事を執筆中...',
-]
-
-export function GenerationProgress({
-  status,
-  step,
-  progress,
-  sectionsDone = 0,
-  sectionsTotal = 0,
-}: {
-  status: string
-  step: string
+interface GenerationProgressProps {
   progress: number
-  sectionsDone?: number
-  sectionsTotal?: number
-}) {
+  step: string
+  title: string
+}
+
+const steps = [
+  { id: 'init', label: '準備中', icon: Zap },
+  { id: 'outline', label: '構成案作成', icon: FileText },
+  { id: 'sections', label: '本文執筆', icon: Sparkles },
+  { id: 'integrate', label: '記事統合', icon: FileText },
+  { id: 'media', label: '図解・サムネ生成', icon: ImageIcon },
+  { id: 'done', label: '完成', icon: CheckCircle2 },
+]
+
+const loadingTips = [
+  "Gemini 3.0 Pro が最適な構成を練っています...",
+  "分割生成により、5万字を超える長文でも崩れません。",
+  "記事の内容に合わせた図解を自動でデザイン中...",
+  "検索エンジンだけでなく、AI検索（LLMO）にも最適化しています。",
+  "プロ級のライティングスキルをAIが再現しています。",
+  "完成まであと少しです。お茶でも飲んでお待ちください☕️",
+]
+
+export function GenerationProgress({ progress, step, title }: GenerationProgressProps) {
   const [tipIndex, setTipIndex] = useState(0)
-  const [dots, setDots] = useState('')
-  const [motivationalIndex, setMotivationalIndex] = useState(0)
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [elapsedTime, setElapsedTime] = useState(0)
 
-  // ドットアニメーション
   useEffect(() => {
-    const t = setInterval(() => {
-      setDots((d) => (d.length >= 3 ? '' : d + '.'))
-    }, 500)
-    return () => clearInterval(t)
-  }, [])
-
-  // ヒントのローテーション
-  useEffect(() => {
-    const t = setInterval(() => {
-      setTipIndex((i) => (i + 1) % TIPS.length)
-    }, 5000)
-    return () => clearInterval(t)
-  }, [])
-
-  // モチベーションメッセージのローテーション
-  useEffect(() => {
-    const t = setInterval(() => {
-      setMotivationalIndex((i) => (i + 1) % MOTIVATIONAL.length)
-    }, 3000)
-    return () => clearInterval(t)
-  }, [])
-
-  // 経過時間カウンター
-  useEffect(() => {
-    if (status === 'done' || status === 'error') return
-    const t = setInterval(() => {
-      setElapsedSeconds((s) => s + 1)
+    const timer = setInterval(() => {
+      setTipIndex((prev) => (prev + 1) % loadingTips.length)
+    }, 6000)
+    
+    const elapsedTimer = setInterval(() => {
+      setElapsedTime((prev) => prev + 1)
     }, 1000)
-    return () => clearInterval(t)
-  }, [status])
+
+    return () => {
+      clearInterval(timer)
+      clearInterval(elapsedTimer)
+    }
+  }, [])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -88,194 +62,116 @@ export function GenerationProgress({
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const currentStepIndex = STEPS.findIndex((s) => s.key === step)
-  const currentStep = STEPS.find((s) => s.key === step) || STEPS[0]
-  const StepIcon = currentStep.icon
-
-  if (status === 'done') {
-    return (
-      <div className="p-6 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-            <CheckCircle className="w-8 h-8 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-emerald-800">記事の生成が完了しました！ 🎉</h3>
-            <p className="text-emerald-600 mt-1">プレビュータブで内容を確認してください</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (status === 'error') {
-    return (
-      <div className="p-6 rounded-2xl bg-gradient-to-br from-red-50 to-red-100/50 border border-red-200">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-red-500 flex items-center justify-center">
-            <span className="text-3xl">⚠️</span>
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-red-800">生成中にエラーが発生しました</h3>
-            <p className="text-red-600 mt-1">「生成を開始」ボタンで再試行してください</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
+  const currentStepIndex = steps.findIndex(s => s.id === step) || 0
 
   return (
-    <div className="space-y-6">
-      {/* メインプログレス */}
-      <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-white to-violet-50 border border-blue-200/50 shadow-lg">
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shadow-lg shadow-blue-500/30 animate-pulse">
-                <StepIcon className="w-8 h-8 text-white" />
-              </div>
-              {/* パルスリング */}
-              <div className="absolute inset-0 rounded-2xl bg-blue-400 animate-ping opacity-20" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-800">
-                {currentStep.label}{dots}
-              </h3>
-              <p className="text-gray-500 mt-0.5">{currentStep.description}</p>
-            </div>
+    <div className="flex flex-col items-center justify-center py-12 px-4 max-w-2xl mx-auto">
+      {/* Animated Icon Header */}
+      <div className="relative mb-12">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="w-32 h-32 rounded-[40px] border-4 border-blue-500/20 flex items-center justify-center bg-white shadow-2xl shadow-blue-500/10"
+        >
+          <div className="w-24 h-24 rounded-[32px] bg-gradient-to-br from-[#2563EB] to-blue-600 flex items-center justify-center shadow-lg">
+            <Sparkles className="w-12 h-12 text-white animate-pulse" />
           </div>
-          <div className="text-right">
-            <div className="text-3xl font-bold text-blue-600">{progress}%</div>
-            <div className="text-sm text-gray-400">経過時間: {formatTime(elapsedSeconds)}</div>
+        </motion.div>
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 3, repeat: Infinity }}
+          className="absolute -top-4 -right-4 w-12 h-12 rounded-2xl bg-amber-400 flex items-center justify-center text-white shadow-lg shadow-amber-500/30 rotate-12"
+        >
+          <Zap className="w-6 h-6" />
+        </motion.div>
+      </div>
+
+      {/* Title and Info */}
+      <div className="text-center mb-10">
+        <h2 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">記事を生成しています</h2>
+        <p className="text-blue-600 font-bold text-lg mb-1">{title}</p>
+        <div className="flex items-center justify-center gap-4 text-gray-400 text-sm font-bold">
+          <div className="flex items-center gap-1.5">
+            <Clock className="w-4 h-4" />
+            経過時間: {formatTime(elapsedTime)}
           </div>
+          <div className="w-1.5 h-1.5 rounded-full bg-gray-200" />
+          <p>長文につき 3〜10分 ほどかかります</p>
         </div>
+      </div>
 
-        {/* プログレスバー */}
-        <div className="relative h-4 bg-gray-100 rounded-full overflow-hidden mb-4">
-          <div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 via-violet-500 to-fuchsia-500 rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${progress}%` }}
-          >
-            {/* シマーエフェクト */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-          </div>
-          {/* 輝きドット */}
-          <div
-            className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg transition-all duration-500"
-            style={{ left: `calc(${Math.min(progress, 98)}% - 6px)` }}
-          />
-        </div>
+      {/* Progress Bar */}
+      <div className="w-full bg-gray-100 h-4 rounded-full overflow-hidden mb-4 border border-gray-200 shadow-inner p-1">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          className="h-full bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 rounded-full relative"
+        >
+          <div className="absolute inset-0 bg-white/20 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+        </motion.div>
+      </div>
+      <div className="flex justify-between w-full text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
+        <span>Progress</span>
+        <span className="text-blue-600">{progress}%</span>
+      </div>
 
-        {/* セクション進捗（セクション執筆中のみ） */}
-        {step === 'sections' && sectionsTotal > 0 && (
-          <div className="mt-4 p-4 rounded-xl bg-white/60 border border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-bold text-gray-600">セクション進捗</span>
-              <span className="text-sm text-gray-500">{sectionsDone} / {sectionsTotal}</span>
-            </div>
-            <div className="flex gap-1">
-              {Array.from({ length: sectionsTotal }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-2 flex-1 rounded-full transition-all duration-300 ${
-                    i < sectionsDone
-                      ? 'bg-gradient-to-r from-emerald-400 to-emerald-500'
-                      : i === sectionsDone
-                      ? 'bg-blue-400 animate-pulse'
-                      : 'bg-gray-200'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ステップインジケーター */}
-        <div className="mt-6 flex items-center justify-between">
-          {STEPS.slice(0, -1).map((s, i) => {
-            const isComplete = i < currentStepIndex
-            const isCurrent = i === currentStepIndex
-            const Icon = s.icon
-            return (
-              <div key={s.key} className="flex items-center">
-                <div
-                  className={`flex flex-col items-center transition-all duration-300 ${
-                    isComplete ? 'opacity-100' : isCurrent ? 'opacity-100' : 'opacity-40'
-                  }`}
-                >
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
-                      isComplete
-                        ? 'bg-emerald-100 text-emerald-600'
-                        : isCurrent
-                        ? 'bg-blue-100 text-blue-600 ring-2 ring-blue-300 ring-offset-2'
-                        : 'bg-gray-100 text-gray-400'
-                    }`}
-                  >
-                    {isComplete ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
-                  </div>
-                  <span className={`text-xs mt-1.5 font-medium ${isCurrent ? 'text-blue-600' : 'text-gray-500'}`}>
-                    {s.label}
-                  </span>
-                </div>
-                {i < STEPS.length - 2 && (
-                  <div
-                    className={`w-8 h-0.5 mx-2 transition-all duration-300 ${
-                      isComplete ? 'bg-emerald-300' : 'bg-gray-200'
-                    }`}
-                  />
+      {/* Step Indicators */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 w-full mt-12">
+        {steps.map((s, i) => {
+          const isActive = i <= currentStepIndex
+          const isCurrent = i === currentStepIndex
+          const Icon = s.icon
+          
+          return (
+            <div key={s.id} className="flex flex-col items-center gap-2">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                isCurrent 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-110' 
+                  : isActive 
+                    ? 'bg-blue-50 text-blue-600' 
+                    : 'bg-gray-50 text-gray-300'
+              }`}>
+                {isCurrent && !isActive ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Icon className="w-5 h-5" />
                 )}
               </div>
-            )
-          })}
-        </div>
+              <span className={`text-[10px] font-bold text-center ${
+                isCurrent ? 'text-blue-600' : isActive ? 'text-gray-600' : 'text-gray-300'
+              }`}>
+                {s.label}
+              </span>
+            </div>
+          )
+        })}
       </div>
 
-      {/* モチベーションメッセージ */}
-      <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-amber-600" />
-          </div>
-          <p className="text-amber-800 font-medium animate-fadeIn">
-            {MOTIVATIONAL[motivationalIndex]}
-          </p>
-        </div>
-      </div>
-
-      {/* ヒント */}
-      <div className="p-4 rounded-xl bg-white border border-gray-200 shadow-sm">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-            <Zap className="w-4 h-4 text-gray-600" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-gray-600 mb-1">ヒント</p>
-            <p className="text-sm text-gray-500 transition-opacity duration-300">
-              {TIPS[tipIndex]}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 注意事項 */}
-      <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-        <div className="flex items-start gap-3">
-          <Clock className="w-5 h-5 text-gray-400 mt-0.5" />
-          <div className="text-sm text-gray-500">
-            <p className="font-medium text-gray-600 mb-1">⏱️ 生成には時間がかかります</p>
-            <ul className="space-y-0.5 text-xs">
-              <li>• 10,000字: 約1〜3分</li>
-              <li>• 30,000字: 約3〜8分</li>
-              <li>• 50,000字: 約5〜15分</li>
-            </ul>
-            <p className="mt-2 text-xs">このページを開いたまま自動で進行します。別タブで作業しても大丈夫です！</p>
-          </div>
+      {/* Rotating Tips */}
+      <div className="mt-16 w-full">
+        <div className="bg-gray-50 rounded-[32px] p-8 border border-gray-100 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500" />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={tipIndex}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-start gap-4"
+            >
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Doya Tip</p>
+                <p className="text-sm text-gray-600 font-medium leading-relaxed">
+                  {loadingTips[tipIndex]}
+                </p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </div>
   )
 }
-
-

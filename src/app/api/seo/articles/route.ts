@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
         // 新機能：依頼テキストと参考画像
         requestText: input.requestText || null,
         referenceImages: input.referenceImages || null,
+        autoBundle: (body.autoBundle ?? true) as boolean, // 追加
       },
     })
 

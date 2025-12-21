@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
-import { Send, Sparkles, Bot, User, Wand2, Image as ImageIcon, Download } from 'lucide-react'
+import { Send, Sparkles, Bot, User, Wand2, Image as ImageIcon, Download, MessageSquare, ArrowRight, Bell, Settings } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 type ChatMsg = {
@@ -150,72 +150,103 @@ export default function BannerChatPage() {
       <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
         <LoadingProgress isLoading={isThinking || isGenerating} />
 
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <Sparkles className="w-5 h-5 text-white" />
+        {/* ========================================
+            Header - Bunridge Style
+            ======================================== */}
+        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
+            <div className="h-16 sm:h-20 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                  <ArrowRight className="w-5 h-5 text-slate-400 rotate-180" />
+                </Link>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                  <MessageSquare className="w-6 h-6 text-blue-600" />
+                  AIチャット生成
+                </h1>
               </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-black text-gray-900">AIチャット生成</h1>
-                <p className="text-xs text-gray-500">会話からバナー条件を整理して、そのまま生成できます</p>
+              
+              <div className="flex items-center gap-3 sm:gap-6">
+                <div className="hidden md:flex items-center gap-2">
+                  <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all relative">
+                    <Bell className="w-5 h-5" />
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                  </button>
+                  <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
+                    <Settings className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+                <div className="flex items-center gap-3 pl-2">
+                  <div className="text-right hidden sm:block">
+                    <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || '田中 太郎'}</p>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">Admin</p>
+                  </div>
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
+                    {session?.user?.image ? (
+                      <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
+                        {session?.user?.name?.[0]?.toUpperCase() || 'U'}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
-              <Wand2 className="w-4 h-4 text-blue-500" />
-              例: 「美容院の新規向け。ストーリー広告。上品で明るい。笑顔の女性。ピンク系」
             </div>
           </div>
+        </header>
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
 
           <div className="grid lg:grid-cols-[1fr_360px] gap-4">
             {/* Chat */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-              <div className="px-4 py-4 border-b border-gray-100 bg-slate-50 flex items-center justify-between">
-                <p className="text-sm font-bold text-gray-800">会話リクエスト</p>
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[700px]">
+              <div className="px-6 py-4 border-b border-gray-100 bg-slate-50/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                  <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Active AI</span>
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <p className="text-sm font-bold text-slate-800">AIアドバイザー</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live Support</span>
                 </div>
               </div>
 
-              <div className="h-[55vh] overflow-y-auto p-5 space-y-4 bg-white">
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-white">
                 {messages.map((m) => (
                   <div
                     key={m.id}
-                    className={`flex items-start gap-3 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {m.role === 'assistant' && (
-                      <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
-                        <Bot className="w-5 h-5 text-white" />
+                    <div className={`flex gap-3 max-w-[85%] ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center border-2 border-white shadow-sm ${
+                        m.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'
+                      }`}>
+                        {m.role === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
                       </div>
-                    )}
-                    <div
-                      className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
-                        m.role === 'user'
-                          ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                          : 'bg-slate-50 text-gray-800 border border-slate-100'
-                      }`}
-                    >
-                      {m.content}
+                      <div
+                        className={`rounded-2xl px-5 py-3 text-sm leading-relaxed shadow-sm ${
+                          m.role === 'user'
+                            ? 'bg-blue-600 text-white rounded-tr-none font-medium'
+                            : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none font-medium'
+                        }`}
+                      >
+                        {m.content}
+                      </div>
                     </div>
-                    {m.role === 'user' && (
-                      <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 border border-slate-200">
-                        <User className="w-5 h-5 text-slate-500" />
-                      </div>
-                    )}
                   </div>
                 ))}
                 <div ref={endRef} />
               </div>
 
-              <div className="p-4 border-t border-gray-100 bg-white">
-                <div className="flex items-end gap-3">
+              <div className="p-6 border-t border-gray-100 bg-slate-50/30">
+                <div className="relative">
                   <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="例: IT企業の採用バナー。ターゲットは30代エンジニア。青ベースで信頼感のある感じ。"
+                    placeholder="こちらにバナーの要件を入力してください..."
                     rows={2}
-                    className="flex-1 resize-none px-4 py-3 rounded-xl border border-gray-200 bg-slate-50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 outline-none text-sm transition-all"
+                    className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-6 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm font-medium resize-none"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault()
@@ -226,95 +257,70 @@ export default function BannerChatPage() {
                   <button
                     onClick={handleSend}
                     disabled={!canSend}
-                    className="w-12 h-12 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center hover:bg-blue-700 transition-all flex-shrink-0 active:scale-95"
+                    className="absolute right-3 bottom-4 w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-200 hover:bg-blue-700 disabled:opacity-50 disabled:shadow-none transition-all"
                   >
                     <Send className="w-5 h-5" />
                   </button>
                 </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <p className="text-[10px] text-gray-400 font-medium">
-                    Shift+Enterで改行 / Enterで送信
-                  </p>
-                  <div className="flex gap-2">
-                    {['#SNS', '#YouTube', '#LP'].map(tag => (
-                      <button 
-                        key={tag}
-                        onClick={() => setInput(prev => prev + (prev ? ' ' : '') + tag)}
-                        className="text-[10px] font-bold text-blue-600 hover:text-blue-800 px-1.5 py-0.5 rounded-md bg-blue-50"
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
+                <div className="mt-3 flex items-center gap-4 px-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Suggested:</span>
+                  <button onClick={() => setInput("Instagram向けの美容系バナー")} className="text-[10px] font-bold text-blue-600 hover:underline">美容系バナー</button>
+                  <button onClick={() => setInput("求人募集のSNS広告")} className="text-[10px] font-bold text-blue-600 hover:underline">求人募集</button>
                 </div>
               </div>
             </div>
 
             {/* Proposal / Result */}
-            <div className="space-y-4">
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 overflow-hidden relative">
+            <div className="space-y-6">
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-60" />
                 
                 <div className="relative">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm font-black text-gray-900 flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4 text-blue-600" />
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                      <ImageIcon className="w-5 h-5 text-blue-600" />
                       生成プラン案
                     </p>
                     {proposedSpec && (
-                      <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-black rounded-full uppercase tracking-wider">
-                        Ready
+                      <span className="px-3 py-1 bg-orange-100 text-orange-700 text-[10px] font-black rounded-full uppercase tracking-wider animate-pulse">
+                        Ready to Generate
                       </span>
                     )}
                   </div>
 
                   {!proposedSpec ? (
-                    <div className="py-8 text-center px-4">
-                      <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-slate-100">
-                        <Wand2 className="w-6 h-6 text-slate-300" />
+                    <div className="py-12 text-center px-6">
+                      <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                        <Wand2 className="w-8 h-8 text-slate-300" />
                       </div>
-                      <p className="text-xs text-slate-500 leading-relaxed font-medium">
-                        チャットに要件を入力してください。<br />AIが自動で最適な生成プランを構成します。
+                      <p className="text-sm text-slate-500 leading-relaxed font-bold">
+                        チャットに要件を入力してください。<br />AIが自動で最適なプランを構成します。
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-3">
-                        <div className="flex flex-wrap gap-1.5">
+                    <div className="space-y-6">
+                      <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
+                        <div className="flex flex-wrap gap-2">
                           {summary.split(' / ').map((s, i) => (
-                            <span key={i} className="px-2 py-1 bg-white rounded-lg text-[10px] font-bold text-slate-600 border border-slate-200 shadow-sm">
+                            <span key={i} className="px-3 py-1.5 bg-white rounded-xl text-[11px] font-bold text-slate-600 border border-slate-100 shadow-sm">
                               {s}
                             </span>
                           ))}
                         </div>
                         
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">訴求キーワード</p>
-                          <p className="text-sm font-bold text-slate-800 leading-relaxed">
+                        <div className="pt-2">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">訴求キーワード</p>
+                          <p className="text-base font-black text-slate-800 leading-relaxed">
                             {proposedSpec.keyword}
                           </p>
                         </div>
 
                         {proposedSpec.imageDescription && (
-                          <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">ビジュアル指示</p>
-                            <p className="text-[11px] text-slate-600 leading-relaxed italic">
+                          <div className="pt-2 border-t border-slate-200">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">ビジュアル指示</p>
+                            <p className="text-xs text-slate-600 leading-relaxed italic font-medium">
                               "{proposedSpec.imageDescription}"
                             </p>
-                          </div>
-                        )}
-
-                        {Array.isArray(proposedSpec.brandColors) && proposedSpec.brandColors.length > 0 && (
-                          <div className="pt-2 border-t border-slate-200">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">使用カラー</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {proposedSpec.brandColors.slice(0, 8).map((c) => (
-                                <div key={c} className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-slate-200 shadow-sm">
-                                  <span className="w-3 h-3 rounded-sm" style={{ background: c }} />
-                                  <span className="text-[10px] text-slate-600 font-mono font-medium uppercase">{c}</span>
-                                </div>
-                              ))}
-                            </div>
                           </div>
                         )}
                       </div>
@@ -322,10 +328,10 @@ export default function BannerChatPage() {
                       <button
                         onClick={handleGenerate}
                         disabled={isThinking || isGenerating}
-                        className="w-full px-6 py-4 rounded-xl bg-blue-600 text-white font-black text-sm shadow-xl shadow-blue-500/30 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                        className="w-full px-6 py-5 rounded-2xl bg-blue-600 text-white font-black text-sm shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
                       >
                         <Sparkles className="w-5 h-5" />
-                        このプランで生成を開始する
+                        このプランでバナーを生成する
                       </button>
                     </div>
                   )}
@@ -333,36 +339,29 @@ export default function BannerChatPage() {
               </div>
 
               {generatedBanners.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-sm font-black text-gray-900">生成結果 (A/B/C)</p>
-                    <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">Select to Download</span>
+                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-sm font-black text-slate-800">生成結果 (A/B/C)</p>
                   </div>
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 gap-6">
                     {generatedBanners.slice(0, 3).map((b, i) => (
-                      <div key={i} className="group relative rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm transition-all hover:shadow-xl hover:scale-[1.02]">
+                      <div key={i} className="group relative rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm transition-all hover:shadow-2xl hover:scale-[1.02]">
                         <img src={b} alt={`banner-${i}`} className="w-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-6 text-center">
-                          <p className="text-white font-black text-lg mb-4">
-                            {String.fromCharCode(65 + i)}案
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-8 text-center">
+                          <p className="text-white font-black text-xl mb-6 tracking-tighter">
+                            PATTERN {String.fromCharCode(65 + i)}
                           </p>
                           <button
-                            onClick={() => downloadImage(b, `banner-${String.fromCharCode(65 + i)}.png`)}
-                            className="px-6 py-3 rounded-xl bg-white text-blue-600 font-black text-sm flex items-center gap-2 shadow-2xl transition-all active:scale-95"
+                            onClick={() => downloadImage(b, `banner-${proposedSpec?.keyword || 'ai'}-${i + 1}.png`)}
+                            className="px-8 py-3 bg-white text-slate-900 font-black rounded-xl text-sm shadow-xl hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2"
                           >
-                            <Download className="w-5 h-5" />
-                            高画質で保存
+                            <Download className="w-4 h-4" />
+                            ダウンロード
                           </button>
-                        </div>
-                        <div className="absolute top-3 left-3 px-2 py-1 rounded-lg bg-white/90 backdrop-blur-sm text-blue-600 text-[10px] font-black shadow-sm">
-                          PROPOSAL {String.fromCharCode(65 + i)}
                         </div>
                       </div>
                     ))}
                   </div>
-                  <p className="mt-4 text-[10px] text-center text-slate-400 font-medium">
-                    ※ テキストの微調整が必要な場合はダッシュボードから行えます。
-                  </p>
                 </div>
               )}
             </div>
