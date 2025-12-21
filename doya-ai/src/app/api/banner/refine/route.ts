@@ -143,11 +143,14 @@ ${instruction}
 ${category ? `INDUSTRY: ${category}` : ''}
 ${size ? `TARGET SIZE: ${size}` : ''}
 
-IMPORTANT RULES:
+=== DESIGN RULES ===
+- DESIGN STYLE: Bunridge Analytics Suite (Professional, Modern, Trustworthy).
+- MAIN COLOR: Professional Blue (#2563EB).
+- ACCENT COLORS: Vibrant Orange (#F97316) and Amber (#FBBF24).
 - Keep the overall layout unless the instruction explicitly asks to change it.
 - Do NOT add ANY logos, emblems, seals, badges, watermarks, or random brand marks.
 - Do NOT invent a company logo.
-- Prefer leaving a clean solid area for text overlay instead of rendering lots of text.
+- Prefer leaving a clean solid area for text overlay instead of rendering lots of Japanese text (which AI often gets wrong).
 - Output ONE refined image.
 `
 }

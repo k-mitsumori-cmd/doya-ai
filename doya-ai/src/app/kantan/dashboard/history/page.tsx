@@ -2,8 +2,27 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Clock, Copy, Trash2, FileText } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { 
+  ArrowLeft, Clock, Copy, Trash2, FileText, Home, Bell, Mail, Calendar,
+  MessageSquare, TrendingUp, Cpu, Settings, UserCircle
+} from 'lucide-react'
 import toast from 'react-hot-toast'
+
+// サイドバーメニュー
+const SIDEBAR_MENU = [
+  { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
+  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
+  { id: 'mail', label: 'メール', icon: <Mail className="w-5 h-5" />, href: '#' },
+  { id: 'calendar', label: 'カレンダー', icon: <Calendar className="w-5 h-5" />, href: '#' },
+  { id: 'chat', label: 'AIチャット', icon: <MessageSquare className="w-5 h-5" />, href: '/kantan/dashboard/chat' },
+  { id: 'plan', label: 'サービスプラン', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/plan' },
+]
+
+const SIDEBAR_DATA_MENU = [
+  { id: 'analytics', label: 'アナリティクス', icon: <TrendingUp className="w-5 h-5" />, href: '#' },
+  { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text' },
+]
 
 interface HistoryItem {
   id: string

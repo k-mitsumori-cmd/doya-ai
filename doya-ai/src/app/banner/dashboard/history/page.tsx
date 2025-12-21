@@ -128,7 +128,7 @@ export default function BannerHistoryPage() {
               <div key={item.id} className="bg-white rounded-2xl p-5 border border-gray-200">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <span className="px-3 py-1 bg-sky-100 text-sky-800 text-sm font-medium rounded-full">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
                       {item.category}
                     </span>
                     <span className="ml-3 text-sm text-gray-500">
