@@ -7,8 +7,9 @@ function getPrimaryTextModel(): string {
     process.env.GEMINI_PRO3_MODEL ||
     process.env.GEMINI_PRO_3_MODEL ||
     process.env.GEMINI_TEXT_MODEL ||
-    // 未設定時は Gemini 3.0（Pro3想定）を優先
-    'gemini-3.0-pro'
+    // 未設定時は Gemini 3 Pro Preview を優先（公式モデルID）
+    // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
+    'gemini-3-pro-preview'
   )
 }
 const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
@@ -69,7 +70,7 @@ function uniqStrings(arr: string[]) {
 }
 
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  const models = [getPrimaryTextModel(), 'gemini-2.0-flash', GEMINI_FALLBACK_MODEL]
+  const models = [getPrimaryTextModel(), 'gemini-3-flash-preview', 'gemini-2.0-flash', GEMINI_FALLBACK_MODEL]
   let lastError: string | null = null
 
   for (const model of models) {
