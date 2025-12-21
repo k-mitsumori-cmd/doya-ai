@@ -152,6 +152,35 @@ export default function DashboardSidebar({
     </AnimatePresence>
   )
 
+  const SidebarBanner = () => (
+    <AnimatePresence>
+      {!isCollapsed && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          className="mx-4 my-6 p-4 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/10 backdrop-blur-md relative overflow-hidden group"
+        >
+          <div className="absolute -right-2 -top-2 w-16 h-16 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-500" />
+          <div className="relative z-10">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center mb-3 shadow-lg">
+              <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
+            </div>
+            <h4 className="text-xs font-black text-white mb-1">PRO PLAN</h4>
+            <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
+              AI生成機能を無制限に。<br />高度な分析とチーム共有も。
+            </p>
+            <Link href="/pricing">
+              <button className="mt-3 w-full py-2 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
+                アップグレード
+              </button>
+            </Link>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+
   return (
     <motion.aside
       initial={false}
@@ -210,6 +239,9 @@ export default function DashboardSidebar({
           </div>
         </div>
       </nav>
+
+      {/* Side Banner */}
+      <SidebarBanner />
 
       {/* User Profile */}
       <div className="p-4 border-t border-white/5 bg-blue-700/30">
