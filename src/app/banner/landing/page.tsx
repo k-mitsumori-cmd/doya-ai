@@ -353,6 +353,7 @@ export default function BannerLandingPage() {
             
             <div className="flex items-center gap-8">
               <Link href="/" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">ポータル</Link>
+              <Link href="/seo" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">ドヤSEO</Link>
               <Link href="/kantan" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">カンタン</Link>
               <Link href="/admin" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">管理者</Link>
             </div>

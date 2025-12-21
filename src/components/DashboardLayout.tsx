@@ -84,34 +84,31 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-gray-400 w-64 lg:w-96 focus-within:border-blue-500 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-50 transition-all">
-                <Search className="w-4 h-4" />
-                <input 
-                  type="text" 
-                  placeholder="検索..." 
-                  className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-gray-400"
-                />
-              </div>
+              {/* 検索バーは削除 - ツールに集中するため */}
             </div>
 
             <div className="flex items-center gap-2 lg:gap-4">
-              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full relative transition-colors">
+              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full relative transition-colors" title="通知">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
               </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="設定">
                 <Settings className="w-5 h-5" />
               </button>
               <div className="h-8 w-px bg-gray-200 mx-1 lg:mx-2" />
               <div className="flex items-center gap-3 pl-1">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-bold text-gray-900 leading-none mb-1">{session?.user?.name || '田中 太郎'}</p>
-                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
+                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">
                     {session?.user?.email === 'admin@bunridge.ai' || session?.user?.email === 'admin@doya-ai.com' ? 'Administrator' : 'General Member'}
                   </p>
                 </div>
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
-                  <User className="w-5 h-5" />
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm overflow-hidden">
+                  {session?.user?.image ? (
+                    <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-5 h-5" />
+                  )}
                 </div>
               </div>
             </div>

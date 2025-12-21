@@ -36,17 +36,27 @@ interface NavItem {
   hot?: boolean
 }
 
+const bannerNavItems: NavItem[] = [
+  { href: '/banner/dashboard', label: 'バナー作成', icon: Palette },
+  { href: '/banner/dashboard/chat', label: 'AIチャット', icon: MessageSquare },
+  { href: '/banner/dashboard/stats', label: '統計・分析', icon: BarChart3 },
+  { href: '/banner/dashboard/history', label: '履歴', icon: Clock },
+  { href: '/banner/dashboard/plan', label: 'プラン・使用量', icon: CreditCard },
+]
+
+const seoNavItems: NavItem[] = [
+  { href: '/seo', label: 'SEOツール', icon: LayoutDashboard },
+  { href: '/seo/new', label: '新規作成', icon: Sparkles },
+  { href: '/seo/articles', label: '生成履歴', icon: Clock },
+]
+
 const mainNavItems: NavItem[] = [
-  { href: '/seo', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/news', label: 'お知らせ', icon: Bell },
   { href: '/mail', label: 'メール', icon: Mail },
   { href: '/calendar', label: 'カレンダー', icon: Calendar },
-  { href: '/chat', label: 'AIチャット', icon: MessageSquare },
-  { href: '/pricing', label: 'サービスプラン', icon: CreditCard },
 ]
 
 const dataNavItems: NavItem[] = [
-  { href: '/analytics', label: 'アナリティクス', icon: BarChart3 },
   { href: '/customers', label: '顧客情報', icon: Users },
 ]
 
@@ -70,6 +80,9 @@ export default function DashboardSidebar({
   const { data: session } = useSession()
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false)
 
+  const isBanner = pathname.startsWith('/banner')
+  const activeNavItems = isBanner ? bannerNavItems : seoNavItems
+
   const isCollapsed = forceExpanded ? false : (controlledIsCollapsed ?? internalIsCollapsed)
   const toggle = () => {
     const next = !isCollapsed
@@ -78,10 +91,10 @@ export default function DashboardSidebar({
   }
 
   const isActive = (href: string) => {
-    if (href === '/banner') {
-      return pathname === '/banner' || pathname === '/banner/dashboard'
+    if (href === '/banner/dashboard' || href === '/seo') {
+      return pathname === href
     }
-    return pathname === href || pathname.startsWith(href + '/')
+    return pathname.startsWith(href)
   }
 
   const NavLink = ({ item }: { item: NavItem }) => {
@@ -212,11 +225,22 @@ export default function DashboardSidebar({
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
-        {/* Main Navigation */}
+        {/* Active Tool Navigation */}
         <div className="space-y-1">
-          {mainNavItems.map((item) => (
+          <SectionTitle title={isBanner ? "Bunridge AI" : "Doya SEO"} />
+          {activeNavItems.map((item) => (
             <NavLink key={item.href + item.label} item={item} />
           ))}
+        </div>
+
+        {/* System Navigation */}
+        <div className="pt-6">
+          <SectionTitle title="システム" />
+          <div className="space-y-1">
+            {mainNavItems.map((item) => (
+              <NavLink key={item.href + item.label} item={item} />
+            ))}
+          </div>
         </div>
 
         {/* Data Section */}

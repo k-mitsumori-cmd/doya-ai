@@ -11,7 +11,8 @@ import {
   ChevronDown, Check, Star, Eye, Copy, 
   Play, Crown, ArrowUpRight, Palette,
   MessageSquare, Send, RotateCcw, Pencil, BarChart3,
-  Users, DollarSign, Bell, Settings, Search, ArrowUpDown, ChevronRight
+  Users, DollarSign, Bell, Settings, Search, ArrowUpDown, ChevronRight,
+  TrendingUp, Layers
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
@@ -1267,7 +1268,10 @@ export default function BannerDashboard() {
   // ========================================
   return (
     <DashboardLayout>
-      <div className="text-gray-900">
+      <div className="text-gray-900 relative">
+        {/* Page Background Accent */}
+        <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none -z-10" />
+        
         <Toaster 
           position="top-center" 
           toastOptions={{
@@ -1285,100 +1289,6 @@ export default function BannerDashboard() {
         {/* ========================================
             Main Content
             ======================================== */}
-        <div className="py-2">
-          {/* ========================================
-              Top Stats Cards - Bunridge Style
-              ======================================== */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {/* Card 1: 顧客数 */}
-            <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100 group-hover:scale-105 transition-transform">
-                <Users className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-bold text-gray-400 mb-1">生成回数</p>
-                <p className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tighter">1,248</p>
-              </div>
-            </div>
-
-            {/* Card 2: 制作案件数 */}
-            <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl bg-orange-500/90 flex items-center justify-center shadow-lg shadow-orange-100 group-hover:scale-105 transition-transform">
-                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-bold text-gray-400 mb-1">進行中の案件数</p>
-                <p className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tighter">754</p>
-              </div>
-            </div>
-
-            {/* Card 3: 月間売上 */}
-            <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all sm:col-span-2 lg:col-span-1">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl bg-emerald-500/90 flex items-center justify-center shadow-lg shadow-emerald-100 group-hover:scale-105 transition-transform">
-                <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-              </div>
-              <div>
-                <p className="text-xs sm:text-sm font-bold text-gray-400 mb-1">月間削減コスト</p>
-                <p className="text-2xl sm:text-4xl font-black text-slate-800 tracking-tighter">¥98,760</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================
-            Main Chart Section - Bunridge Style
-            ======================================== */}
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 mb-10 overflow-hidden relative">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-lg font-bold text-slate-800 mb-4">売上と営業コストの推移</h2>
-              <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-black text-slate-800 tracking-tighter">64,23%</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-xl flex items-center gap-2 shadow-md">
-                Month <ChevronDown className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
-
-          {/* Chart Placeholder (Visual Match) */}
-          <div className="relative h-[300px] w-full flex items-end justify-between gap-4 pt-10">
-            {/* Grid lines */}
-            <div className="absolute inset-0 flex flex-col justify-between py-2 pointer-events-none opacity-50">
-              {[100, 75, 50, 25, 0].map((v) => (
-                <div key={v} className="flex items-center gap-4 w-full">
-                  <span className="text-[10px] font-bold text-gray-400 w-8">{v}%</span>
-                  <div className="flex-1 border-t border-dashed border-gray-200" />
-                </div>
-              ))}
-            </div>
-
-            {/* Bars */}
-            <div className="relative flex-1 h-full flex items-end justify-around px-8 z-10">
-              {[
-                { o: 70, y: 90 }, { o: 55, y: 40 }, { o: 30, y: 35 }, { o: 38, y: 48 }, 
-                { o: 22, y: 28 }, { o: 78, y: 65 }, { o: 52, y: 72 }, { o: 40, y: 55 }, 
-                { o: 42, y: 55 }, { o: 40, y: 52 }, { o: 40, y: 55 }
-              ].map((bar, i) => (
-                <div key={i} className="flex items-end gap-1.5 h-full">
-                  <motion.div 
-                    initial={{ height: 0 }} 
-                    animate={{ height: `${bar.o}%` }} 
-                    className="w-4 bg-orange-500/80 rounded-t-sm" 
-                  />
-                  <motion.div 
-                    initial={{ height: 0 }} 
-                    animate={{ height: `${bar.y}%` }} 
-                    className="w-4 bg-amber-400/80 rounded-t-sm" 
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
         <div className="grid lg:grid-cols-[1fr,440px] gap-6 sm:gap-10">
           
           {/* ========================================
@@ -1390,26 +1300,42 @@ export default function BannerDashboard() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="relative bg-white rounded-3xl border border-gray-100 p-8 sm:p-10 shadow-sm overflow-hidden"
+              className="relative bg-white rounded-[2rem] border border-blue-50 p-8 sm:p-10 shadow-sm overflow-hidden"
             >
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-60" />
-              <div className="relative">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider mb-6">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Bunridge AI Engine
+              <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex-1">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider mb-6">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Bunridge AI Engine v2.0
+                  </div>
+                  
+                  <h2 className="text-3xl sm:text-4xl font-black text-slate-800 mb-4 tracking-tighter leading-tight">
+                    プロ品質のバナーを
+                    <br />
+                    <span className="text-blue-600">
+                      数クリックで自動生成
+                    </span>
+                  </h2>
+                  
+                  <p className="text-slate-400 text-sm sm:text-base max-w-md font-medium">
+                    最新のAIエンジンが、あなたのビジネスに最適な高CTRバナーを3パターン提案します。
+                  </p>
                 </div>
                 
-                <h2 className="text-3xl sm:text-4xl font-black text-slate-800 mb-4 tracking-tighter leading-tight">
-                  プロ品質のバナーを
-                  <br />
-                  <span className="text-blue-600">
-                    数クリックで自動生成
-                  </span>
-                </h2>
-                
-                <p className="text-slate-400 text-sm sm:text-base max-w-md font-medium">
-                  最新のAIエンジンが、あなたのビジネスに最適な高CTRバナーを3パターン提案します。
-                </p>
+                <div className="flex-shrink-0 grid grid-cols-2 gap-3">
+                  {[
+                    { label: '高CTR', icon: TrendingUp, color: 'text-blue-600', bg: 'bg-blue-50' },
+                    { label: '爆速生成', icon: Zap, color: 'text-orange-500', bg: 'bg-orange-50' },
+                    { label: '修正自在', icon: Wand2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                    { label: 'マルチサイズ', icon: Layers, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+                  ].map((f) => (
+                    <div key={f.label} className={`${f.bg} p-3 rounded-2xl flex flex-col items-center justify-center text-center w-24 h-24 transition-transform hover:scale-105 cursor-default`}>
+                      <f.icon className={`w-6 h-6 ${f.color} mb-2`} />
+                      <span className="text-[10px] font-black text-slate-600 uppercase tracking-tighter">{f.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </motion.div>
 
@@ -1418,21 +1344,21 @@ export default function BannerDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all"
+              className="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all group"
             >
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black text-xl shadow-xl group-hover:rotate-3 transition-transform">
                     01
                   </div>
                   <div>
-                    <h2 className="font-bold text-xl text-slate-800 tracking-tight">用途を選択</h2>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Channel Strategy</p>
+                    <h2 className="font-bold text-2xl text-slate-800 tracking-tight">用途を選択</h2>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Channel Strategy</p>
                   </div>
                 </div>
                 <button 
                   onClick={handleSample}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl transition-all text-sm font-bold border border-slate-200"
+                  className="flex items-center gap-2 px-5 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm active:scale-95"
                 >
                   <Wand2 className="w-4 h-4" />
                   <span>サンプル入力</span>
@@ -1488,15 +1414,15 @@ export default function BannerDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all"
+              className="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all group"
             >
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black text-xl shadow-xl group-hover:rotate-3 transition-transform">
                   02
                 </div>
                 <div>
-                  <h2 className="font-bold text-xl text-slate-800 tracking-tight">業種を選択</h2>
-                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Industry Design</p>
+                  <h2 className="font-bold text-2xl text-slate-800 tracking-tight">業種を選択</h2>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Industry Design</p>
                 </div>
               </div>
 
@@ -1508,27 +1434,28 @@ export default function BannerDashboard() {
                       <button
                         key={cat.value}
                         onClick={() => setCategory(cat.value)}
-                        className={`p-3 rounded-2xl text-center transition-all ${
+                        className={`p-3 rounded-2xl text-center transition-all group/btn active:scale-95 ${
                           isSelected 
-                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105' 
-                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-blue-600'
+                            ? 'bg-blue-600 text-white shadow-xl shadow-blue-200 ring-2 ring-blue-600 ring-offset-2' 
+                            : 'bg-slate-50 text-slate-500 hover:bg-white hover:text-blue-600 hover:shadow-lg border border-transparent hover:border-blue-100'
                         }`}
                       >
-                        <span className="text-2xl block mb-1">{cat.icon}</span>
+                        <span className={`text-2xl block mb-1 transition-transform group-hover/btn:scale-110 ${isSelected ? 'scale-110' : ''}`}>{cat.icon}</span>
                         <span className="text-[10px] font-black block truncate uppercase tracking-tighter">{cat.label}</span>
                       </button>
                     )
                   })}
                 </div>
-                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col">
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col justify-center">
                   {category ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest">
-                        <Palette className="w-3.5 h-3.5" /> Color Palette
+                        <Palette className="w-3.5 h-3.5" /> Color Palette & Strategy
                       </div>
+                      <h3 className="text-slate-800 font-bold text-base">{CATEGORIES.find(c => c.value === category)?.label}向けの推奨配色</h3>
                       <div className="flex items-center gap-2">
                         {CATEGORIES.find(c => c.value === category)?.bg?.split(' ').map((cl, idx) => (
-                          <div key={idx} className={`w-6 h-6 rounded-full bg-gradient-to-br ${cl}`} />
+                          <div key={idx} className={`w-8 h-8 rounded-full shadow-sm bg-gradient-to-br ${cl} border border-white/20`} />
                         ))}
                       </div>
                       <p className="text-slate-500 text-[11px] leading-relaxed font-bold mt-2">
@@ -1537,7 +1464,10 @@ export default function BannerDashboard() {
                     </div>
                   ) : (
                     <div className="flex-1 flex flex-col items-center justify-center py-4 text-slate-400 text-[11px] font-bold italic text-center">
-                      業種を選択してください
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                        <Palette className="w-5 h-5 text-slate-200" />
+                      </div>
+                      業種を選択すると<br />推奨配色が表示されます
                     </div>
                   )}
                 </div>
@@ -1549,28 +1479,28 @@ export default function BannerDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all"
+              className="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all group"
             >
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black text-xl shadow-xl group-hover:rotate-3 transition-transform">
                     03
                   </div>
                   <div>
-                    <h2 className="font-bold text-xl text-slate-800 tracking-tight">サイズを選択</h2>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Canvas Dimensions</p>
+                    <h2 className="font-bold text-2xl text-slate-800 tracking-tight">サイズを選択</h2>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Canvas Dimensions</p>
                   </div>
                 </div>
-                <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-200">
+                <div className="flex bg-slate-50 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
                   <button 
                     onClick={() => setUseCustomSize(false)}
-                    className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${!useCustomSize ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-5 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase ${!useCustomSize ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     PRESET
                   </button>
                   <button 
                     onClick={() => setUseCustomSize(true)}
-                    className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${useCustomSize ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-5 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase ${useCustomSize ? 'bg-white text-blue-600 shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     CUSTOM
                   </button>
@@ -1661,68 +1591,87 @@ export default function BannerDashboard() {
               </div>
             </motion.div>
 
-            {/* Step 4: Keyword */}
+            {/* Step 4: Keyword & Description */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
-              className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all"
+              className="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all group"
             >
-              <div className="flex items-center justify-between gap-4 mb-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black text-xl shadow-xl group-hover:rotate-3 transition-transform">
                     04
                   </div>
                   <div>
-                    <h2 className="font-bold text-xl text-slate-800 tracking-tight">キャッチコピー</h2>
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Message Design</p>
+                    <h2 className="font-bold text-2xl text-slate-800 tracking-tight">内容とイメージ</h2>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Message & Visuals</p>
                   </div>
                 </div>
 
                 <button
                   onClick={handleSmartCopySample}
                   disabled={isSuggestingCopy}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all text-xs font-black uppercase shadow-lg shadow-blue-200 disabled:opacity-60"
+                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all text-xs font-black uppercase shadow-lg shadow-blue-200 disabled:opacity-60 active:scale-95"
                 >
                   {isSuggestingCopy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                   <span>AI Copy Assist</span>
                 </button>
               </div>
               
-              <div className="space-y-6">
-                <div className="relative">
+              <div className="space-y-8">
+                {/* Catchphrase */}
+                <div className="relative group/input">
+                  <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-[0.2em] ml-1">Catchphrase</label>
                   <textarea
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
                     placeholder="例: 月額990円〜 乗り換えで最大2万円キャッシュバック"
-                    className="w-full px-6 py-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:border-blue-600 focus:bg-white outline-none transition-all resize-none text-lg font-bold leading-relaxed shadow-inner"
-                    rows={3}
+                    className="w-full px-6 py-6 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 focus:border-blue-600 focus:bg-white outline-none transition-all resize-none text-lg font-black leading-relaxed shadow-inner min-h-[140px]"
+                    maxLength={200}
                   />
-                  <div className="absolute bottom-4 right-6 text-[10px] font-black text-slate-300 uppercase">
+                  <div className="absolute bottom-4 right-6 text-[10px] font-black text-slate-300 uppercase tracking-widest bg-white/50 backdrop-blur-sm px-2 py-1 rounded-md border border-white/50">
                     {keyword.length} / 200
                   </div>
                 </div>
 
-                <div className="pt-6 border-t border-slate-100">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Sparkles className="w-4 h-4 text-blue-600" />
-                    <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Visual Description (Optional)</span>
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  {createCopyVariants(keyword, purpose).map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setKeyword(v)}
+                      className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] rounded-xl font-bold border border-blue-100 transition-all active:scale-95 shadow-sm"
+                    >
+                      {v.length > 25 ? v.slice(0, 25) + '...' : v}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Visual Description */}
+                <div className="pt-8 border-t border-slate-100">
+                  <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-[0.2em] ml-1 flex items-center gap-2">
+                    Visual Description <span className="text-[8px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded tracking-normal">Optional</span>
+                  </label>
                   <textarea
                     value={imageDescription}
                     onChange={(e) => setImageDescription(e.target.value)}
                     placeholder="例: 青空の下で笑顔でジャンプする若い女性、モダンなオフィスで働くビジネスマン..."
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 focus:border-blue-600 focus:bg-white outline-none transition-all resize-none text-sm font-medium"
-                    rows={2}
+                    className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 focus:border-blue-600 focus:bg-white outline-none transition-all resize-none text-base font-bold leading-relaxed shadow-inner min-h-[100px]"
                   />
                   <div className="flex flex-wrap gap-2 mt-4">
-                    {['笑顔の人物', 'モダンなオフィス', 'スマホを操作', '未来的・デジタル'].map((tag) => (
+                    {[
+                      { text: '笑顔の人物', icon: '😊' },
+                      { text: 'モダンなオフィス', icon: '🏢' },
+                      { text: 'スマホを操作', icon: '📱' },
+                      { text: '未来的・デジタル', icon: '✨' },
+                    ].map((tag) => (
                       <button
-                        key={tag}
-                        onClick={() => setImageDescription(prev => prev ? `${prev}、${tag}` : tag)}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-[10px] font-black rounded-lg transition-all border border-slate-200/50"
+                        key={tag.text}
+                        onClick={() => setImageDescription(prev => prev ? `${prev}、${tag.text}` : tag.text)}
+                        className="px-4 py-2 bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-[10px] font-black rounded-xl transition-all border border-slate-200 hover:border-blue-200 shadow-sm flex items-center gap-1.5"
                       >
-                        + {tag}
+                        <span>{tag.icon}</span>
+                        <span>{tag.text}</span>
                       </button>
                     ))}
                   </div>
@@ -1981,36 +1930,37 @@ export default function BannerDashboard() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
             >
+            <div className="pt-10">
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating || !canGenerate}
-                className={`group w-full py-5 sm:py-6 rounded-2xl sm:rounded-3xl font-black text-lg sm:text-xl transition-all flex items-center justify-center gap-3 relative overflow-hidden ${
+                className={`group w-full py-6 rounded-[2rem] font-black text-xl transition-all flex items-center justify-center gap-4 relative overflow-hidden active:scale-[0.98] ${
                   canGenerate && !isGenerating
-                    ? 'bg-gray-900 text-white shadow-2xl shadow-gray-900/30 hover:shadow-gray-900/50 hover:scale-[1.01]'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/30 hover:shadow-blue-600/40 hover:bg-blue-600'
+                    : 'bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200'
                 }`}
               >
                 {isGenerating ? (
                   <>
-                    <div className="absolute inset-0 bg-gray-900" />
+                    <div className="absolute inset-0 bg-slate-900" />
                     <div 
-                      className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600 transition-all duration-300"
+                      className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 transition-all duration-300"
                       style={{ clipPath: `inset(0 ${100 - progress}% 0 0)` }}
                     />
-                    <div className="relative flex items-center gap-3">
-                      <div className="relative">
-                        <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      </div>
-                      <span className="text-base sm:text-lg">{GENERATION_PHASES[phaseIndex].icon} {GENERATION_PHASES[phaseIndex].label}</span>
-                      <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs sm:text-sm font-bold">{Math.round(progress)}%</span>
+                    <div className="relative flex items-center gap-4">
+                      <Loader2 className="w-7 h-7 animate-spin text-white" />
+                      <span className="text-lg uppercase tracking-widest">{GENERATION_PHASES[phaseIndex].label}</span>
+                      <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-black tabular-nums">{Math.round(progress)}%</span>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-blue-600/10 to-blue-600/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                    <Sparkles className="w-6 h-6 sm:w-7 sm:h-7" />
-                    <span>バナーを生成する</span>
-                    <ArrowRight className="w-5 h-5 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
+                      <Sparkles className="w-7 h-7" />
+                    </div>
+                    <span className="tracking-tight">プロ品質バナーを生成する</span>
+                    <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
                   </>
                 )}
               </button>
@@ -2035,6 +1985,7 @@ export default function BannerDashboard() {
                   <p className="text-red-600 text-sm text-center font-medium">{error}</p>
                 </motion.div>
               )}
+            </div>
             </motion.div>
           </div>
 
@@ -2654,13 +2605,12 @@ export default function BannerDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-sm text-gray-500">
-              <Link href="/" className="hover:text-gray-900 transition-colors">ポータル</Link>
-              <Link href="/seo" className="hover:text-gray-900 transition-colors">ドヤSEO</Link>
+              <Link href="/banner" className="hover:text-gray-900 transition-colors">Bunridgeポータル</Link>
               <Link href="/terms" className="hover:text-gray-900 transition-colors">利用規約</Link>
               <Link href="/privacy" className="hover:text-gray-900 transition-colors">プライバシー</Link>
             </div>
-            <p className="text-xs text-gray-400">
-              © 2025 ドヤAI. All rights reserved.
+            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+              © 2025 Bunridge AI. All rights reserved.
             </p>
           </div>
         </div>
