@@ -876,35 +876,35 @@ ${inputMessage}
           {/* 左側：入力フォーム */}
           <div className={`lg:col-span-2 ${output && !showInputs ? 'hidden lg:block' : ''}`}>
             {/* テンプレート説明 */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-5 mb-4 shadow-sm">
-              <div className="flex items-center gap-3 mb-3">
-                <FileText className="w-5 h-5 text-blue-500" />
-                <h2 className="font-bold text-gray-800">このエージェントについて</h2>
+            <div className="bg-white border border-gray-200 rounded-xl lg:rounded-2xl p-4 lg:p-5 mb-3 lg:mb-4 shadow-sm">
+              <div className="flex items-center gap-2 lg:gap-3 mb-2 lg:mb-3">
+                <FileText className="w-4 h-4 lg:w-5 lg:h-5 text-blue-500" />
+                <h2 className="font-bold text-gray-800 text-sm lg:text-base">このエージェントについて</h2>
               </div>
-              <p className="text-gray-500 text-sm">{template.description}</p>
+              <p className="text-gray-500 text-xs lg:text-sm">{template.description}</p>
             </div>
 
             {/* サンプル入力ボタン */}
             <button
               onClick={handleSampleInput}
-              className="group w-full mb-4 py-3 px-5 bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 border border-blue-200 text-gray-700 font-bold rounded-2xl transition-all flex items-center justify-center gap-3"
+              className="group w-full mb-3 lg:mb-4 py-2.5 lg:py-3 px-4 lg:px-5 bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 border border-blue-200 text-gray-700 font-bold rounded-xl lg:rounded-2xl transition-all flex items-center justify-center gap-2 lg:gap-3"
             >
-              <Wand2 className="w-5 h-5 text-blue-500 group-hover:rotate-12 transition-transform" />
-              <span className="text-sm">ワンクリックでサンプル入力</span>
+              <Wand2 className="w-4 h-4 lg:w-5 lg:h-5 text-blue-500 group-hover:rotate-12 transition-transform" />
+              <span className="text-xs lg:text-sm">ワンクリックでサンプル入力</span>
             </button>
 
             {/* 入力フォーム */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold text-gray-800 flex items-center gap-2">
+            <div className="bg-white border border-gray-200 rounded-xl lg:rounded-2xl p-4 lg:p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-3 lg:mb-4">
+                <h2 className="font-bold text-gray-800 text-sm lg:text-base flex items-center gap-2">
                   <span>入力項目</span>
-                  <span className="text-xs text-gray-400 font-normal">（{template.inputFields.filter(f => f.required).length}項目必須）</span>
+                  <span className="text-[10px] lg:text-xs text-gray-400 font-normal">（{template.inputFields.filter(f => f.required).length}項目必須）</span>
                 </h2>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3 lg:space-y-4">
                 {template.inputFields.map((field) => (
                   <div key={field.name}>
-                    <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                    <label className="block text-[10px] lg:text-xs font-medium text-gray-600 mb-1 lg:mb-1.5">
                       {field.label}
                       {field.required && <span className="text-blue-500 ml-1">*</span>}
                     </label>
@@ -913,7 +913,7 @@ ${inputMessage}
                       <select
                         value={inputs[field.name] || ''}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
-                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                        className="w-full px-3 py-2 lg:py-2.5 bg-gray-50 border border-gray-200 rounded-lg lg:rounded-xl text-gray-800 text-xs lg:text-sm focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                       >
                         <option value="">選択してください</option>
                         {field.options?.map((option) => (
@@ -926,7 +926,7 @@ ${inputMessage}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
                         placeholder={field.placeholder}
                         rows={3}
-                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
+                        className="w-full px-3 py-2 lg:py-2.5 bg-gray-50 border border-gray-200 rounded-lg lg:rounded-xl text-gray-800 text-xs lg:text-sm placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none"
                       />
                     ) : (
                       <input
@@ -934,7 +934,7 @@ ${inputMessage}
                         value={inputs[field.name] || ''}
                         onChange={(e) => setInputs({ ...inputs, [field.name]: e.target.value })}
                         placeholder={field.placeholder}
-                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 text-sm placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
+                        className="w-full px-3 py-2 lg:py-2.5 bg-gray-50 border border-gray-200 rounded-lg lg:rounded-xl text-gray-800 text-xs lg:text-sm placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
                       />
                     )}
                   </div>
@@ -946,7 +946,7 @@ ${inputMessage}
               onClick={handleGenerate}
               disabled={isGenerating || !canGenerate}
               className={`
-                  group w-full mt-6 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-3
+                  group w-full mt-4 lg:mt-6 py-3 lg:py-4 rounded-xl lg:rounded-2xl font-bold text-sm lg:text-base transition-all flex items-center justify-center gap-2 lg:gap-3
                 ${canGenerate && !isGenerating
                     ? 'bg-gradient-to-r from-blue-500 via-cyan-500 to-teal-500 text-white shadow-xl shadow-blue-500/25 hover:scale-[1.02]'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -955,12 +955,12 @@ ${inputMessage}
             >
               {isGenerating ? (
                 <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-4 h-4 lg:w-5 lg:h-5 animate-spin" />
                   生成中...
                 </>
               ) : (
                 <>
-                    <Zap className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                    <Zap className="w-4 h-4 lg:w-5 lg:h-5 group-hover:rotate-12 transition-transform" />
                     AIで生成する
                 </>
               )}

@@ -628,24 +628,24 @@ ${inputValue}
               </div>
 
               {/* 検索バー */}
-              <div className="mb-6">
+              <div className="mb-4 lg:mb-6">
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Search className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-gray-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="カテゴリを検索..."
-                    className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                    className="w-full pl-10 lg:pl-12 pr-4 py-2.5 lg:py-3 bg-white border border-gray-200 rounded-lg lg:rounded-xl text-gray-800 text-sm placeholder-gray-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
                   />
                 </div>
               </div>
 
               {/* カテゴリグループタブ */}
-              <div className="flex flex-wrap gap-2 mb-6">
+              <div className="flex flex-wrap gap-1.5 lg:gap-2 mb-4 lg:mb-6 overflow-x-auto pb-2">
                 <button
                   onClick={() => setSelectedGroup(null)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-medium transition-all whitespace-nowrap ${
                     selectedGroup === null
                       ? 'bg-blue-500 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -657,7 +657,7 @@ ${inputValue}
                   <button
                     key={group.id}
                     onClick={() => setSelectedGroup(group.name)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-full text-xs lg:text-sm font-medium transition-all whitespace-nowrap ${
                       selectedGroup === group.name
                         ? `bg-gradient-to-r ${group.color} text-white`
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -669,7 +669,7 @@ ${inputValue}
               </div>
 
               {/* カテゴリグリッド */}
-              <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-4 pb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 lg:gap-4 pb-8">
                 {CHAT_CATEGORIES
                   .filter((category) => {
                     // 検索フィルター
@@ -690,16 +690,16 @@ ${inputValue}
                     <button
                       key={category.id}
                       onClick={() => handleSelectCategory(category)}
-                      className="group text-left p-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-blue-200 hover:-translate-y-1 transition-all"
+                      className="group text-left p-3 lg:p-5 bg-white rounded-xl lg:rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-blue-200 hover:-translate-y-1 transition-all"
                     >
-                      <div className={`w-11 h-11 ${category.color} rounded-xl flex items-center justify-center text-white mb-3 group-hover:scale-110 transition-transform shadow-lg`}>
-                        {category.icon}
+                      <div className={`w-9 h-9 lg:w-11 lg:h-11 ${category.color} rounded-lg lg:rounded-xl flex items-center justify-center text-white mb-2 lg:mb-3 group-hover:scale-110 transition-transform shadow-lg`}>
+                        <span className="scale-75 lg:scale-100">{category.icon}</span>
                       </div>
-                      <h3 className="font-bold text-gray-800 mb-1 text-sm group-hover:text-blue-600 transition-colors">
+                      <h3 className="font-bold text-gray-800 mb-0.5 lg:mb-1 text-xs lg:text-sm group-hover:text-blue-600 transition-colors">
                         {category.title}
                       </h3>
-                      <p className="text-xs text-gray-500 line-clamp-2">{category.description}</p>
-                      <div className="mt-3 flex items-center text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <p className="text-[10px] lg:text-xs text-gray-500 line-clamp-2">{category.description}</p>
+                      <div className="mt-2 lg:mt-3 flex items-center text-[10px] lg:text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity">
                         <span>相談を始める</span>
                         <ChevronRight className="w-3 h-3 ml-1" />
                       </div>
@@ -729,59 +729,59 @@ ${inputValue}
           ) : (
             <>
               {/* 選択中のカテゴリ */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm mb-4 flex-1 flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
+              <div className="bg-white rounded-xl lg:rounded-2xl border border-gray-100 shadow-sm mb-3 lg:mb-4 flex-1 flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between p-3 lg:p-4 border-b border-gray-100">
+                  <div className="flex items-center gap-2 lg:gap-3">
                     <button 
                       onClick={() => {
                         setSelectedCategory(null)
                         setMessages([])
                       }}
-                      className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                      className="p-1.5 lg:p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
                     >
-                      <ArrowLeft className="w-5 h-5" />
+                      <ArrowLeft className="w-4 h-4 lg:w-5 lg:h-5" />
                     </button>
-                    <div className={`w-10 h-10 ${selectedCategory.color} rounded-xl flex items-center justify-center text-white shadow-lg`}>
-                      {selectedCategory.icon}
+                    <div className={`w-8 h-8 lg:w-10 lg:h-10 ${selectedCategory.color} rounded-lg lg:rounded-xl flex items-center justify-center text-white shadow-lg`}>
+                      <span className="scale-75 lg:scale-100">{selectedCategory.icon}</span>
                     </div>
                     <div>
-                      <h2 className="font-bold text-gray-800">{selectedCategory.title}</h2>
-                      <p className="text-xs text-gray-500">{selectedCategory.category}</p>
+                      <h2 className="font-bold text-gray-800 text-sm lg:text-base">{selectedCategory.title}</h2>
+                      <p className="text-[10px] lg:text-xs text-gray-500">{selectedCategory.category}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400">{messages.length}メッセージ</span>
+                    <span className="text-[10px] lg:text-xs text-gray-400 hidden sm:inline">{messages.length}メッセージ</span>
                     <button 
                       onClick={() => {
                         setSelectedCategory(null)
                         setMessages([])
                       }}
-                      className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                      className="p-1.5 lg:p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
                     >
-                      <MoreHorizontal className="w-5 h-5" />
+                      <MoreHorizontal className="w-4 h-4 lg:w-5 lg:h-5" />
                     </button>
                   </div>
                 </div>
 
                 {/* チャットメッセージ */}
-                <div className="p-6 flex-1 overflow-y-auto">
-                  <div className="space-y-4">
+                <div className="p-3 lg:p-6 flex-1 overflow-y-auto">
+                  <div className="space-y-3 lg:space-y-4">
                     {messages.map((msg) => (
                       <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[70%] ${
+                        <div className={`max-w-[85%] lg:max-w-[70%] ${
                           msg.role === 'user' 
-                            ? 'bg-blue-500 text-white rounded-2xl rounded-br-md px-5 py-3' 
-                            : 'bg-gray-100 text-gray-800 rounded-2xl rounded-bl-md px-5 py-3'
+                            ? 'bg-blue-500 text-white rounded-xl lg:rounded-2xl rounded-br-md px-3 lg:px-5 py-2 lg:py-3' 
+                            : 'bg-gray-100 text-gray-800 rounded-xl lg:rounded-2xl rounded-bl-md px-3 lg:px-5 py-2 lg:py-3'
                         }`}>
-                          <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+                          <p className="whitespace-pre-wrap text-xs lg:text-sm">{msg.content}</p>
                         </div>
                       </div>
                     ))}
                     
                     {isLoading && (
                       <div className="flex justify-start">
-                        <div className="bg-gray-100 text-gray-800 rounded-2xl rounded-bl-md px-5 py-3">
-                          <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+                        <div className="bg-gray-100 text-gray-800 rounded-xl lg:rounded-2xl rounded-bl-md px-3 lg:px-5 py-2 lg:py-3">
+                          <Loader2 className="w-4 h-4 lg:w-5 lg:h-5 animate-spin text-blue-500" />
                         </div>
                       </div>
                     )}
@@ -795,26 +795,26 @@ ${inputValue}
 
           {/* 入力エリア */}
           {selectedCategory && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-              <div className="flex items-center gap-3">
+            <div className="bg-white rounded-xl lg:rounded-2xl border border-gray-200 shadow-sm p-3 lg:p-4">
+              <div className="flex items-center gap-2 lg:gap-3">
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                   placeholder="入力"
-                  className="flex-1 bg-transparent text-gray-800 placeholder-gray-400 outline-none"
+                  className="flex-1 bg-transparent text-gray-800 text-sm placeholder-gray-400 outline-none"
                   disabled={isLoading}
                 />
-                <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+                <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                   <Paperclip className="w-5 h-5" />
                 </button>
                 <button
                   onClick={handleSendMessage}
                   disabled={!inputValue.trim() || isLoading}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white font-medium rounded-xl transition-colors"
+                  className="flex items-center gap-1.5 lg:gap-2 px-3 lg:px-5 py-2 lg:py-2.5 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white text-sm font-medium rounded-lg lg:rounded-xl transition-colors"
                 >
-                  送信
+                  <span className="hidden sm:inline">送信</span>
                   <Send className="w-4 h-4" />
                 </button>
               </div>
@@ -823,16 +823,16 @@ ${inputValue}
 
           {/* ゲストバナー */}
           {isGuest && (
-            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-2xl">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  <Sparkles className="w-5 h-5 text-blue-500" />
-                  <p className="text-sm text-gray-700">
+            <div className="mt-3 lg:mt-4 p-3 lg:p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl lg:rounded-2xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 lg:gap-3">
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-blue-500" />
+                  <p className="text-xs lg:text-sm text-gray-700">
                     🆓 お試しモード：残り <strong className="text-blue-600">{guestRemainingCount}回</strong>
                   </p>
                 </div>
                 <Link href="/auth/signin?service=kantan">
-                  <button className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors">
+                  <button className="w-full sm:w-auto px-3 lg:px-4 py-1.5 lg:py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs lg:text-sm font-medium rounded-lg transition-colors">
                     ログインで10回/日に！
                   </button>
                 </Link>
