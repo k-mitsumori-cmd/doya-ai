@@ -46,8 +46,9 @@ function getGeminiTextModel(): string {
     process.env.GEMINI_PRO3_MODEL ||
     process.env.GEMINI_PRO_3_MODEL ||
     process.env.GEMINI_TEXT_MODEL ||
-    // 未設定時は Gemini 3.0（Pro3想定）を優先
-    'gemini-3.0-pro'
+    // 未設定時は Gemini 3 Pro Preview を優先（公式モデルID）
+    // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
+    'gemini-3-pro-preview'
   )
 }
 
@@ -58,7 +59,7 @@ function getImageFallbackModel(): string {
 
 // 最後の保険（古い環境でも画像生成できる可能性が高い）
 const LAST_RESORT_IMAGE_MODEL = 'gemini-2.0-flash-exp'
-const DEFAULT_TEXT_FALLBACKS = ['gemini-2.0-flash', 'gemini-1.5-flash'] as const
+const DEFAULT_TEXT_FALLBACKS = ['gemini-3-flash-preview', 'gemini-2.0-flash', 'gemini-1.5-flash'] as const
 
 // APIキーを取得（複数の環境変数に対応）
 function getApiKey(): string {
@@ -604,7 +605,7 @@ async function generateSingleBanner(
   const apiKey = getApiKey()
   const preferredModel = getNanoBananaImageModel()
   const fallbackModel = getImageFallbackModel()
-  const modelsToTry = Array.from(new Set([preferredModel, fallbackModel, LAST_RESORT_IMAGE_MODEL]))
+  const modelsToTry = Array.from(new Set([preferredModel, fallbackModel, 'gemini-3-pro-preview', LAST_RESORT_IMAGE_MODEL]))
   
   console.log('Calling Nano Banana Pro...')
   console.log('Preferred Model:', preferredModel)
