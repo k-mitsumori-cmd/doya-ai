@@ -8,7 +8,16 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 // Gemini 2.0 Flash（高速・高品質テキスト生成）
 // 参考: https://ai.google.dev/gemini-api/docs/models?hl=ja
-const GEMINI_3_MODEL = 'gemini-2.0-flash'
+function getPrimaryTextModel(): string {
+  return (
+    process.env.DOYA_BANNER_TEXT_MODEL ||
+    process.env.DOYA_TEXT_MODEL ||
+    process.env.GEMINI_PRO3_MODEL ||
+    process.env.GEMINI_PRO_3_MODEL ||
+    process.env.GEMINI_TEXT_MODEL ||
+    'gemini-2.0-flash'
+  )
+}
 
 // フォールバック用モデル
 const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
@@ -75,7 +84,7 @@ export async function generateTextWithGemini(
 - マーケティングのベストプラクティスに基づいて回答`
 
   // まずGemini 2.0を試行、失敗したらフォールバック
-  const models = [GEMINI_3_MODEL, GEMINI_FALLBACK_MODEL]
+  const models = [getPrimaryTextModel(), GEMINI_FALLBACK_MODEL]
   
   for (const model of models) {
     try {

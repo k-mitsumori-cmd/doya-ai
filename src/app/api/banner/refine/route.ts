@@ -9,7 +9,14 @@ import { NextRequest, NextResponse } from 'next/server'
 // 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-const NANO_BANANA_PRO_MODEL = 'gemini-2.0-flash-exp'
+function getNanoBananaImageModel(): string {
+  return (
+    process.env.DOYA_BANNER_IMAGE_MODEL ||
+    process.env.NANO_BANANA_PRO_MODEL ||
+    process.env.GEMINI_IMAGE_MODEL ||
+    'gemini-2.0-flash-exp'
+  )
+}
 
 interface RefineRequest {
   originalImage: string
@@ -81,7 +88,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
     const img = parseDataUrl(originalImage)
 
     const prompt = createEditPrompt(instruction, category, size)
-    const endpoint = `${GEMINI_API_BASE}/models/${NANO_BANANA_PRO_MODEL}:generateContent`
+    const endpoint = `${GEMINI_API_BASE}/models/${getNanoBananaImageModel()}:generateContent`
 
     const requestBody: any = {
       contents: [

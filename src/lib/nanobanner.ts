@@ -22,13 +22,33 @@
 
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-// Gemini 2.0 Flash（テキスト生成・プロンプト作成用）
-// 参考: https://ai.google.dev/gemini-api/docs/models?hl=ja
-const GEMINI_3_FLASH_MODEL = 'gemini-2.0-flash'
 
-// Nano Banana Pro（Gemini 2.0 Flash Experimental / 画像生成用）
-// 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
-const NANO_BANANA_PRO_MODEL = 'gemini-2.0-flash-exp'
+/**
+ * モデルは環境変数で切り替え可能にする（Vercel側で geminiPro3 / NanoBananaPro を指定できるように）
+ *
+ * - 画像生成（Nano Banana Pro想定）:
+ *   - DOYA_BANNER_IMAGE_MODEL / NANO_BANANA_PRO_MODEL / GEMINI_IMAGE_MODEL
+ * - テキスト（プロンプト整形・チャット・コピー等、Gemini Pro 3想定）:
+ *   - DOYA_BANNER_TEXT_MODEL / GEMINI_PRO3_MODEL / GEMINI_PRO_3_MODEL / GEMINI_TEXT_MODEL
+ */
+function getNanoBananaImageModel(): string {
+  return (
+    process.env.DOYA_BANNER_IMAGE_MODEL ||
+    process.env.NANO_BANANA_PRO_MODEL ||
+    process.env.GEMINI_IMAGE_MODEL ||
+    'gemini-2.0-flash-exp'
+  )
+}
+
+function getGeminiTextModel(): string {
+  return (
+    process.env.DOYA_BANNER_TEXT_MODEL ||
+    process.env.GEMINI_PRO3_MODEL ||
+    process.env.GEMINI_PRO_3_MODEL ||
+    process.env.GEMINI_TEXT_MODEL ||
+    'gemini-2.0-flash'
+  )
+}
 
 // APIキーを取得（複数の環境変数に対応）
 function getApiKey(): string {
@@ -572,9 +592,10 @@ async function generateSingleBanner(
   options: GenerateOptions = {}
 ): Promise<string> {
   const apiKey = getApiKey()
+  const imageModel = getNanoBananaImageModel()
   
   console.log('Calling Nano Banana Pro...')
-  console.log('Model:', NANO_BANANA_PRO_MODEL)
+  console.log('Model:', imageModel)
   
   const aspectRatio = getAspectRatio(size)
   const [w, h] = size.split('x').map((v) => Number(v))
@@ -582,7 +603,7 @@ async function generateSingleBanner(
   const imageSize = maxSide >= 2500 ? '4K' : '2K'
 
   // Nano Banana Pro generateContent エンドポイント
-  const endpoint = `${GEMINI_API_BASE}/models/${NANO_BANANA_PRO_MODEL}:generateContent`
+  const endpoint = `${GEMINI_API_BASE}/models/${imageModel}:generateContent`
 
   // 参考画像/ロゴ/人物を「画像→テキスト」の順で渡す
   const imageParts: any[] = []
@@ -666,10 +687,11 @@ async function generateSingleBanner(
   throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
 }
 
-// Gemini 2.0 Flash で「画像生成用プロンプト」を短く最適化（失敗したら元プロンプトを使う）
+// Gemini（テキストモデル）で「画像生成用プロンプト」を短く最適化（失敗したら元プロンプトを使う）
 async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<string> {
   const apiKey = getApiKey()
-  const endpoint = `${GEMINI_API_BASE}/models/${GEMINI_3_FLASH_MODEL}:generateContent`
+  const model = getGeminiTextModel()
+  const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
 
   const instruction = [
     'You are a prompt engineer for a premium image generation model.',
@@ -735,6 +757,9 @@ export async function generateBanners(
   size: string = '1080x1080',
   options: GenerateOptions = {}
 ): Promise<{ banners: string[]; error?: string }> {
+  const imageModel = getNanoBananaImageModel()
+  const textModel = getGeminiTextModel()
+
   // APIキーの確認
   const apiKey = 
     process.env.GOOGLE_GENAI_API_KEY || 
@@ -755,7 +780,8 @@ export async function generateBanners(
 
   console.log(`Starting ${isYouTube ? 'YouTube thumbnail' : 'banner'} generation with Nano Banana Pro`)
   console.log(`Category: ${category}, Purpose: ${options.purpose}, Size: ${size}`)
-  console.log(`Model: ${NANO_BANANA_PRO_MODEL}`)
+  console.log(`Model(Image/NanoBanana): ${imageModel}`)
+  console.log(`Model(Text/Gemini): ${textModel}`)
 
   try {
     const banners: string[] = []
