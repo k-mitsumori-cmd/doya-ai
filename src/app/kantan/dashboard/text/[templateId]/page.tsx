@@ -68,7 +68,7 @@ const SAMPLE_INPUTS: Record<string, Record<string, string>> = {
   'google-ad-description': {
     productName: 'AIマーケティングツール',
     target: 'マーケター、広告運用担当者',
-    appeal: 'LP構成案を4時間→10分で作成。広告コピー40案を1分で生成。Gemini 3.0搭載で高品質。',
+    appeal: 'LP構成案を4時間→10分で作成。広告コピー40案を1分で生成。Gemini 2.0搭載で高品質。',
     cta: '無料で試す',
   },
   'facebook-ad-copy': {
@@ -93,7 +93,7 @@ const SAMPLE_INPUTS: Record<string, Record<string, string>> = {
     description: 'LP構成案4時間→10分、バナーコピー40案を1分で生成できるAIツール',
     targetAudience: 'マーケティング業務を効率化したい中小企業のマーケター',
     price: '月額4,980円〜',
-    differentiator: 'Gemini 3.0搭載、チャット形式でブラッシュアップ可能、68種類以上のAIエージェント',
+    differentiator: 'Gemini 2.0搭載、チャット形式でブラッシュアップ可能、68種類以上のAIエージェント',
   },
   'lp-headline': {
     product: 'AIマーケティングツール',
@@ -238,7 +238,7 @@ const SAMPLE_INPUTS: Record<string, Record<string, string>> = {
   },
   'press-release': {
     title: 'AIマーケティングツール「カンタンマーケAI」正式リリース',
-    content: 'Gemini 3.0を搭載し、LP構成案やSNS投稿文など68種類以上のマーケティングコンテンツをAIが自動生成。チャット形式でブラッシュアップも可能。',
+    content: 'Gemini 2.0を搭載し、LP構成案やSNS投稿文など68種類以上のマーケティングコンテンツをAIが自動生成。チャット形式でブラッシュアップも可能。',
     company: '株式会社ドヤテック',
     date: '2024年12月21日',
   },
@@ -790,7 +790,7 @@ ${inputMessage}
         <div className="p-3 border-t border-white/10">
           <Link href="/banner" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🎨</span>
-            <span>ドヤバナーAI</span>
+            <span>Bunridge AI</span>
           </Link>
           <Link href="/seo" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🧠</span>

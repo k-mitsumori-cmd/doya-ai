@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Gemini 3.0 Flashを使用してテキスト生成（高速・高品質）
+    // Gemini 2.0 Flashを使用してテキスト生成（高速・高品質）
     const output = await generateTextWithGemini(prompt, inputs, {
       temperature: 0.8,
       maxOutputTokens: 8192,

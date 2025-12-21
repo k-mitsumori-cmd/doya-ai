@@ -206,11 +206,9 @@ export async function POST(request: NextRequest) {
             dailyRemaining: dailyLimit === -1 ? -1 : Math.max(0, dailyLimit - normalized.dailyUsage),
           }
         } catch (e: any) {
-          console.error('Banner usage limit check failed:', e)
-          return NextResponse.json(
-            { error: '現在サーバ側の使用回数確認に失敗しました。時間をおいてお試しください。' },
-            { status: 503 }
-          )
+          console.error('Banner usage limit check failed (Prisma error):', e)
+          // データベースエラー時は制限を緩和して生成を続行（ユーザー体験を優先）
+          // usageInfo は null のまま
         }
       }
     }

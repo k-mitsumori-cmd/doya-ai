@@ -148,7 +148,7 @@ export default function PortalPage() {
               </div>
             </Link>
 
-            {/* ドヤバナーAI */}
+            {/* Bunridge AI */}
             <Link href="/banner/dashboard" className="group">
               <div className="relative h-full bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-3xl p-6 sm:p-8 overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-violet-500/20">
                 {/* Decorations */}
@@ -163,7 +163,7 @@ export default function PortalPage() {
                 <div className="relative">
                   <span className="text-5xl mb-4 block">🎨</span>
                   <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                    ドヤバナーAI
+                    Bunridge AI
                   </h2>
                   <p className="text-white/80 mb-6">
                     プロ品質のバナーを自動生成<br />

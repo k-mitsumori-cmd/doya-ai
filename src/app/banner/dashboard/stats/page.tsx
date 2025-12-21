@@ -130,7 +130,7 @@ export default function StatsPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
       <DashboardSidebar />
       <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+        <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
           <div className="h-16 sm:h-20 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -193,34 +193,6 @@ export default function StatsPage() {
             </div>
           </div>
         </div>
-                <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <DollarSign className="w-4 h-4 text-blue-600" />
-                </div>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl sm:text-3xl font-black text-gray-900">¥{totalCostSaved.toLocaleString()}</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">推定コスト削減額</p>
-            </div>
-          </div>
-
-          {/* 生成バナー数 */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-gray-200 shadow-lg relative overflow-hidden group hover:shadow-xl transition-all">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <Layers className="w-4 h-4 text-blue-600" />
-                </div>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl sm:text-3xl font-black text-gray-900">{totalBanners}</span>
-                <span className="text-sm text-gray-400">枚</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">生成バナー総数</p>
-            </div>
-          </div>
-        </motion.div>
 
         {/* Charts Row */}
         <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">

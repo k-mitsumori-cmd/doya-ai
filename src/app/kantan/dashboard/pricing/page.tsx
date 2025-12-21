@@ -222,7 +222,7 @@ export default function KantanPricingPage() {
         <div className="p-3 border-t border-white/10">
           <Link href="/banner" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🎨</span>
-            <span>ドヤバナーAI</span>
+            <span>Bunridge AI</span>
           </Link>
           <Link href="/seo" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🧠</span>

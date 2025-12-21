@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import DashboardSidebar from './DashboardSidebar'
 import { 
   Bell, 
@@ -106,7 +107,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-bold text-gray-900 leading-none mb-1">{session?.user?.name || '田中 太郎'}</p>
                   <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest">
-                    {session?.user?.email === 'admin@doya-ai.com' ? 'Administrator' : 'General Member'}
+                    {session?.user?.email === 'admin@bunridge.ai' || session?.user?.email === 'admin@doya-ai.com' ? 'Administrator' : 'General Member'}
                   </p>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm">

@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-const GEMINI_MODEL = 'gemini-3-flash-preview'
-const GEMINI_FALLBACK_MODEL = 'gemini-2.0-flash'
+const GEMINI_MODEL = 'gemini-2.0-flash'
+const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
 
 const ALLOWED_PURPOSES = ['sns_ad', 'youtube', 'display', 'webinar', 'lp_hero', 'email', 'campaign'] as const
 const ALLOWED_CATEGORIES = [
@@ -109,7 +109,7 @@ function coerceSpec(raw: any): { spec?: BannerSpec; needsMoreInfo: boolean; ques
 
 async function callGemini(messages: ChatMessage[], apiKey: string): Promise<string> {
   const system = [
-    'あなたは「Doya Banner AI」のバナー制作アシスタントです。',
+    'あなたは「Bunridge AI」のバナー制作アシスタントです。',
     'ユーザーの要望から、バナー生成に必要な情報を抽出して、必ずJSONのみを返してください（前後に文章を付けない）。',
     '',
     '【許可される値】',

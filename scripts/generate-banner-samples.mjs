@@ -4,6 +4,9 @@ import path from 'node:path'
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 const MODEL = 'gemini-2.0-flash-exp' // Nano Banana Pro (Gemini 2.0 Flash)
 
+// Bunridge AI branding
+const BRAND_NAME = 'Bunridge AI'
+
 const apiKey = process.env.GOOGLE_GENAI_API_KEY || null
 
 const outDir = path.resolve(process.cwd(), 'public', 'banner-samples')
@@ -29,6 +32,7 @@ function getAspectRatio(size) {
 }
 
 function buildPrompt({
+  id,
   title,
   keyword,
   subText,
@@ -39,10 +43,49 @@ function buildPrompt({
 }) {
   const [w, h] = String(size).split('x')
   const aspect = getAspectRatio(size)
+  const isYouTube = id.includes('youtube')
+  const isSnsAd = id.includes('sns_ad')
 
-  // IMPORTANT: This sample prompt explicitly requests Japanese text in-image.
+  if (isYouTube) {
+    return [
+      'Create a HIGH-CLICK-RATE YouTube thumbnail image WITH BOLD TEXT.',
+      '',
+      '=== YOUTUBE THUMBNAIL SPEC ===',
+      `Canvas: ${w}x${h} pixels (16:9)`,
+      'Market: Japan',
+      '',
+      '=== REQUIRED TEXT (MAXIMUM IMPACT) ===',
+      `MAIN HEADLINE: "${keyword}" (Make this HUGE and expressive)`,
+      subText ? `SUB TEXT: "${subText}"` : '',
+      '',
+      '=== DESIGN GOAL ===',
+      'This must look like a high-performing YouTube thumbnail that stops the scroll.',
+      'Use bright, saturated colors and high contrast.',
+      '',
+      '=== STYLE ===',
+      'YouTube thumbnail style: extreme high-impact, big emotional hook, expressive layout.',
+      'Include a placeholder for an expressive human face or reaction on the left side.',
+      '',
+      '=== COLOR PALETTE ===',
+      colors && colors.length ? colors.join(', ') : 'vibrant yellow, red, and blue',
+      '',
+      '=== TYPOGRAPHY RULES ===',
+      '- Use EXTREMELY BOLD, thick Gothic Japanese font',
+      '- Add thick borders/outlines to text (e.g., white text with black/red border)',
+      '- Tilt text slightly for dynamic feel',
+      '- Ensure text is readable even at small size',
+      '',
+      '=== COMPOSITION ===',
+      '- Center-right: Massive headline text',
+      '- Left side: Impactful visual element (human reaction/expressive icon)',
+      '- Use rays, gradients, or arrows to direct attention',
+      '',
+      'Generate the YouTube thumbnail now.',
+    ].join('\n')
+  }
+
   return [
-    'Create a high-CTR Japanese advertisement banner image WITH TEXT included in the image.',
+    `Create a professional ${isSnsAd ? 'SNS advertisement' : 'marketing'} banner image WITH TEXT.`,
     '',
     '=== BANNER SPEC ===',
     `Canvas: ${w}x${h} pixels, aspect ${aspect}`,
@@ -54,29 +97,28 @@ function buildPrompt({
     cta ? `CTA button text: "${cta}"` : '',
     '',
     '=== DESIGN GOAL ===',
-    `This is a SAMPLE banner for UI preview: ${title}`,
-    'Make it look like a real marketing banner (not a photo).',
-    'Use modern layout, panels, gradients, and geometric shapes. Keep it premium.',
+    `This is a professional SAMPLE banner: ${title}`,
+    'Make it look like a real high-conversion ad (not a stock photo).',
+    'Use modern ad layout, clean panels, and high-impact visual hierarchy.',
     '',
     '=== STYLE ===',
-    style || 'modern, clean, high-contrast, premium',
+    style || 'modern, clean, high-contrast, premium ad style',
+    isSnsAd ? 'SNS ad style: eye-catching, mobile-first, vibrant colors.' : '',
     '',
-    '=== COLOR PALETTE (USE THESE) ===',
-    colors && colors.length ? colors.join(', ') : 'blue/cyan gradient with white and dark navy accents',
+    '=== COLOR PALETTE ===',
+    colors && colors.length ? colors.join(', ') : 'Bunridge blue (#2563EB), orange (#F97316), and white',
     '',
-    '=== TYPOGRAPHY RULES (CRITICAL) ===',
-    '- Use bold Gothic (sans-serif) Japanese font',
-    '- Place all text on SOLID/near-solid rectangles for readability',
-    '- No distorted characters, no garbled kanji, no missing strokes',
-    '- Keep hierarchy: headline > sub > CTA',
-    '- Do NOT add any extra text beyond the required text',
+    '=== TYPOGRAPHY RULES ===',
+    '- Use bold, modern Gothic (sans-serif) Japanese font',
+    '- Place text on solid or semi-transparent rectangular panels for 100% legibility',
+    '- Clear hierarchy: Headline must be 2x larger than sub text',
     '',
     '=== COMPOSITION ===',
-    '- Left side: headline block',
-    '- Right side: illustration/abstract motif related to theme',
-    '- CTA button: bottom-right, high contrast',
+    '- Clear visual focal point (product, person, or icon)',
+    '- Structured text area with high contrast',
+    '- CTA button must look clickable with depth/shadow',
     '',
-    'Generate the final banner now.',
+    'Generate the professional ad banner now.',
   ]
     .filter(Boolean)
     .join('\n')

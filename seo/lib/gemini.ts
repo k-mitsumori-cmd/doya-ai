@@ -1,8 +1,8 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
-// SEO用途は Gemini 3 系を前提にする（必要なら環境変数で上書き）
-export const GEMINI_TEXT_MODEL_DEFAULT = process.env.SEO_GEMINI_TEXT_MODEL || 'gemini-3-flash-preview'
-export const GEMINI_IMAGE_MODEL_DEFAULT = process.env.SEO_GEMINI_IMAGE_MODEL || 'gemini-3-pro-image-preview'
+// SEO用途は Gemini 2.0 系を前提にする（必要なら環境変数で上書き）
+export const GEMINI_TEXT_MODEL_DEFAULT = process.env.SEO_GEMINI_TEXT_MODEL || 'gemini-2.0-flash'
+export const GEMINI_IMAGE_MODEL_DEFAULT = process.env.SEO_GEMINI_IMAGE_MODEL || 'gemini-2.0-flash-exp'
 
 type GeminiPart =
   | { text: string }
