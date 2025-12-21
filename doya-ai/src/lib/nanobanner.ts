@@ -51,6 +51,9 @@ function getGeminiTextModel(): string {
   )
 }
 
+const DEFAULT_IMAGE_MODEL = 'gemini-2.0-flash-exp'
+const DEFAULT_TEXT_FALLBACKS = ['gemini-2.0-flash', 'gemini-1.5-flash'] as const
+
 // APIキーを取得（複数の環境変数に対応）
 function getApiKey(): string {
   const apiKey = 
@@ -593,106 +596,120 @@ async function generateSingleBanner(
   options: GenerateOptions = {}
 ): Promise<string> {
   const apiKey = getApiKey()
-  const imageModel = getNanoBananaImageModel()
+  const preferredModel = getNanoBananaImageModel()
+  const modelsToTry = Array.from(new Set([preferredModel, DEFAULT_IMAGE_MODEL]))
   
   console.log('Calling Nano Banana Pro...')
-  console.log('Model:', imageModel)
+  console.log('Preferred Model:', preferredModel)
   
   const aspectRatio = getAspectRatio(size)
   const [w, h] = size.split('x').map((v) => Number(v))
   const maxSide = Math.max(w || 0, h || 0)
   const imageSize = maxSide >= 2500 ? '4K' : '2K'
 
-  // Nano Banana Pro generateContent エンドポイント
-  const endpoint = `${GEMINI_API_BASE}/models/${imageModel}:generateContent`
+  let lastErr: any = null
+  for (const model of modelsToTry) {
+    try {
+      console.log('Model:', model)
 
-  // 参考画像/ロゴ/人物を「画像→テキスト」の順で渡す
-  const imageParts: any[] = []
-  const refs = (options?.referenceImages || []).slice(0, 2)
-  for (const ref of refs) {
-    try {
-      const parsed = parseDataUrl(ref)
-      imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
-    } catch {
-      // ignore
-    }
-  }
-  if (options?.logoImage) {
-    try {
-      const parsed = parseDataUrl(options.logoImage)
-      imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
-    } catch {
-      // ignore
-    }
-  }
-  if (options?.personImage) {
-    try {
-      const parsed = parseDataUrl(options.personImage)
-      imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
-    } catch {
-      // ignore
+      // Nano Banana Pro generateContent エンドポイント
+      const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+
+      // 参考画像/ロゴ/人物を「画像→テキスト」の順で渡す
+      const imageParts: any[] = []
+      const refs = (options?.referenceImages || []).slice(0, 2)
+      for (const ref of refs) {
+        try {
+          const parsed = parseDataUrl(ref)
+          imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
+        } catch {
+          // ignore
+        }
+      }
+      if (options?.logoImage) {
+        try {
+          const parsed = parseDataUrl(options.logoImage)
+          imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
+        } catch {
+          // ignore
+        }
+      }
+      if (options?.personImage) {
+        try {
+          const parsed = parseDataUrl(options.personImage)
+          imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
+        } catch {
+          // ignore
+        }
+      }
+
+      // Gemini generateContent リクエスト形式（画像生成）
+      const requestBody = {
+        contents: [
+          {
+            parts: [
+              ...imageParts,
+              { text: prompt }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseModalities: ["IMAGE", "TEXT"],
+          imageConfig: {
+            aspectRatio,
+            imageSize,
+          },
+        }
+      }
+      
+      console.log('Calling Nano Banana Pro API...')
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify(requestBody),
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Nano Banana Pro API error:', response.status, errorText)
+        throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 500)}`)
+      }
+      
+      const result = await response.json()
+      console.log('Nano Banana Pro API Response received')
+      
+      // レスポンスから画像を抽出
+      if (result.candidates && result.candidates[0]?.content?.parts) {
+        for (const part of result.candidates[0].content.parts) {
+          if (part.inlineData) {
+            console.log('Image found in Nano Banana Pro response!')
+            const mimeType = part.inlineData.mimeType || 'image/png'
+            return `data:${mimeType};base64,${part.inlineData.data}`
+          }
+        }
+      }
+      
+      console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 800))
+      throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
+    } catch (e: any) {
+      lastErr = e
+      console.warn(`Image generation failed with model "${model}".`, e?.message || e)
+      continue
     }
   }
 
-  // Gemini generateContent リクエスト形式（画像生成）
-  const requestBody = {
-    contents: [
-      {
-        parts: [
-          ...imageParts,
-          { text: prompt }
-        ]
-      }
-    ],
-    generationConfig: {
-      responseModalities: ["IMAGE", "TEXT"],
-      imageConfig: {
-        aspectRatio,
-        imageSize,
-      },
-    }
-  }
-  
-  console.log('Calling Nano Banana Pro API...')
-  
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify(requestBody),
-  })
-  
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('Nano Banana Pro API error:', response.status, errorText)
-    throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 500)}`)
-  }
-  
-  const result = await response.json()
-  console.log('Nano Banana Pro API Response received')
-  
-  // レスポンスから画像を抽出
-  if (result.candidates && result.candidates[0]?.content?.parts) {
-    for (const part of result.candidates[0].content.parts) {
-      if (part.inlineData) {
-        console.log('Image found in Nano Banana Pro response!')
-        const mimeType = part.inlineData.mimeType || 'image/png'
-        return `data:${mimeType};base64,${part.inlineData.data}`
-      }
-    }
-  }
-  
-  console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 800))
-  throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
+  throw lastErr || new Error('画像生成に失敗しました')
 }
 
 // Gemini（テキストモデル）で「画像生成用プロンプト」を短く最適化（失敗したら元プロンプトを使う）
 async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<string> {
   const apiKey = getApiKey()
-  const model = getGeminiTextModel()
-  const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+  const primary = getGeminiTextModel()
+  const models = Array.from(new Set([primary, ...DEFAULT_TEXT_FALLBACKS]))
 
   const instruction = [
     'You are a prompt engineer for a premium image generation model.',
@@ -712,28 +729,38 @@ async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<str
     },
   }
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify(requestBody),
-  })
+  let lastErr: any = null
+  for (const model of models) {
+    try {
+      const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify(requestBody),
+      })
 
-  if (!res.ok) {
-    const t = await res.text()
-    throw new Error(`Gemini prompt error: ${res.status} - ${t.substring(0, 300)}`)
+      if (!res.ok) {
+        const t = await res.text()
+        throw new Error(`Gemini prompt error: ${res.status} - ${t.substring(0, 300)}`)
+      }
+
+      const json = await res.json()
+      const parts = json?.candidates?.[0]?.content?.parts
+      const text = Array.isArray(parts)
+        ? parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
+        : ''
+      if (!text) throw new Error('Gemini prompt returned empty')
+      return text
+    } catch (e: any) {
+      lastErr = e
+      continue
+    }
   }
 
-  const json = await res.json()
-  const parts = json?.candidates?.[0]?.content?.parts
-  const text = Array.isArray(parts)
-    ? parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
-    : ''
-
-  if (!text) throw new Error('Gemini returned empty text')
-  return text
+  throw lastErr || new Error('Gemini prompt refine failed')
 }
 
 // サイズからアスペクト比を計算
