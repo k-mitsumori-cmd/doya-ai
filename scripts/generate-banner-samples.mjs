@@ -4,8 +4,8 @@ import path from 'node:path'
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 const MODEL = 'gemini-2.0-flash-exp' // Nano Banana Pro (Gemini 2.0 Flash)
 
-// Bunridge AI branding
-const BRAND_NAME = 'Bunridge AI'
+// ドヤバナーAI branding
+const BRAND_NAME = 'ドヤバナーAI'
 
 const apiKey = process.env.GOOGLE_GENAI_API_KEY || null
 

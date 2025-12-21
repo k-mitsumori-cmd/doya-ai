@@ -109,7 +109,7 @@ function coerceSpec(raw: any): { spec?: BannerSpec; needsMoreInfo: boolean; ques
 
 async function callGemini(messages: ChatMessage[], apiKey: string): Promise<string> {
   const system = [
-    'あなたは「Bunridge AI」のバナー制作アシスタントです。',
+    'あなたは「ドヤバナーAI」のバナー制作アシスタントです。',
     'ユーザーの要望から、バナー生成に必要な情報を抽出して、必ずJSONのみを返してください（前後に文章を付けない）。',
     '',
     '【許可される値】',

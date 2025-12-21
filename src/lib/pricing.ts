@@ -211,14 +211,14 @@ export function getSeoDailyLimitByUserPlan(plan: string | null | undefined): num
 }
 
 // ========================================
-// Bunridge AI 料金設定
+// ドヤバナーAI 料金設定
 // ========================================
 // 画像生成はAPIコストが高いため、適正価格を設定
 // 3案同時生成 = 約25円/生成 → 月50回で約1,250円のコスト
 // 競合: Canva Pro ¥1,000/月、Adobe Express ¥1,078/月
 export const BANNER_PRICING: ServicePricing = {
   serviceId: 'banner',
-  serviceName: 'Bunridge AI',
+  serviceName: 'ドヤバナーAI',
   serviceIcon: '🎨',
   guestLimit: 2,      // ゲスト: 1日2回（コスト管理）
   freeLimit: 3,       // 無料会員: 1日3回
@@ -286,7 +286,7 @@ export const BUNDLE_PRICING = {
   description: '両方使うなら断然お得',
   features: [
     { text: 'ドヤSEO プロ（通常¥3,000）', included: true },
-    { text: 'Bunridge AI プロ（通常¥4,980）', included: true },
+    { text: 'ドヤバナーAI プロ（通常¥4,980）', included: true },
     { text: '今後追加される新サービスも利用可能', included: true },
     { text: '優先サポート', included: true },
   ],

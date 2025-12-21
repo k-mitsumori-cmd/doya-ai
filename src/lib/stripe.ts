@@ -35,7 +35,7 @@ export const STRIPE_PRICE_IDS = {
       yearly: process.env.STRIPE_PRICE_SEO_BUSINESS_YEARLY || 'price_seo_business_yearly',
     },
   },
-  // Bunridge AI
+  // ドヤバナーAI
   banner: {
     starter: {
       monthly: process.env.STRIPE_PRICE_BANNER_STARTER_MONTHLY || 'price_banner_starter_monthly',

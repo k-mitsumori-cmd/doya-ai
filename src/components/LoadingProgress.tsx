@@ -15,7 +15,7 @@ const loadingTips = [
   { icon: Brain, text: 'Tip: 複数回生成して、一番良いものを選ぶのがコツ！', color: 'text-purple-400' },
   { icon: Rocket, text: 'Tip: コピーボタンで一発コピー、すぐに使えます！', color: 'text-pink-400' },
   { icon: Coffee, text: 'Tip: 生成中にコーヒーでも飲んでリラックス☕', color: 'text-orange-400' },
-  { icon: Sparkles, text: 'Bunridge AIで仕事をもっとスマートに！', color: 'text-green-400' },
+  { icon: Sparkles, text: 'ドヤバナーAIで仕事をもっとスマートに！', color: 'text-green-400' },
 ];
 
 // 処理ステップ

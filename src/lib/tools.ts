@@ -23,7 +23,7 @@ export const TOOLS: Tool[] = [
   },
   {
     id: 'banner',
-    name: 'Bunridge AI',
+    name: 'ドヤバナーAI',
     description: 'プロ品質のバナーをワンボタンで自動生成',
     icon: '🎨',
     color: 'from-purple-500 to-pink-500',

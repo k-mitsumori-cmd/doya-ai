@@ -561,7 +561,7 @@ export default function KantanTopPage() {
                     <span className="text-2xl">🎨</span>
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-white">Bunridge AI</h4>
+                    <h4 className="font-bold text-white">ドヤバナーAI</h4>
                     <p className="text-sm text-white/40">A/B/Cの3案を同時に作成</p>
                   </div>
                   <ArrowRight className="w-5 h-5 text-white/20 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
@@ -593,7 +593,7 @@ export default function KantanTopPage() {
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-white/30">
             <Link href="/" className="hover:text-white/60 transition-colors">ポータル</Link>
             <span className="text-white/10">•</span>
-            <Link href="/banner" className="hover:text-purple-400 transition-colors">Bunridge AI</Link>
+            <Link href="/banner" className="hover:text-purple-400 transition-colors">ドヤバナーAI</Link>
             <span className="text-white/10">•</span>
             <Link href="/seo" className="hover:text-white/60 transition-colors">ドヤSEO</Link>
             <span className="text-white/10">•</span>

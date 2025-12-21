@@ -149,7 +149,7 @@ ${category ? `INDUSTRY: ${category}` : ''}
 ${size ? `TARGET SIZE: ${size}` : ''}
 
 === DESIGN RULES ===
-- DESIGN STYLE: Bunridge Analytics Suite (Professional, Modern, Trustworthy).
+- DESIGN STYLE: Doya Banner Analytics Suite (Professional, Modern, Trustworthy).
 - MAIN COLOR: Professional Blue (#2563EB).
 - ACCENT COLORS: Vibrant Orange (#F97316) and Amber (#FBBF24).
 - Keep the overall layout unless the instruction explicitly asks to change it.

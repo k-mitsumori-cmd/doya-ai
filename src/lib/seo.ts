@@ -7,7 +7,7 @@ import { SEO_PRICING, BANNER_PRICING, KANTAN_PRICING } from './pricing'
 export const SITE_CONFIG = {
   name: 'ドヤAI',
   tagline: 'ビジネスを加速するAIツール群',
-  description: 'SEO記事生成、バナー作成、LP制作など、ビジネスに必要なAIツールを1つのアカウントで利用可能。ドヤSEO、Bunridge AIなど続々追加中。',
+  description: 'SEO記事生成、バナー作成、LP制作など、ビジネスに必要なAIツールを1つのアカウントで利用可能。ドヤSEO、ドヤバナーAIなど続々追加中。',
   url: process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.vercel.app',
   locale: 'ja_JP',
   twitter: '@doya_ai',
@@ -20,7 +20,7 @@ export const SERVICE_SEO = {
   // ポータル
   portal: {
     title: 'ドヤAIポータル | ビジネスを加速するAIツール群',
-    description: 'SEO記事生成、バナー作成、LP制作など、ビジネスに必要なAIツールを1つのアカウントで利用可能。ドヤSEO、Bunridge AIなど続々追加中。',
+    description: 'SEO記事生成、バナー作成、LP制作など、ビジネスに必要なAIツールを1つのアカウントで利用可能。ドヤSEO、ドヤバナーAIなど続々追加中。',
     keywords: ['AI', 'ビジネスツール', '文章生成', 'バナー作成', 'LP作成', '自動化'],
     ogImage: '/og/portal.png',
   },
@@ -70,32 +70,32 @@ export const SERVICE_SEO = {
     },
   },
   
-  // Bunridge AI
+  // ドヤバナーAI
   banner: {
-    title: 'Bunridge AI | AIでプロ品質バナーを自動生成',
+    title: 'ドヤバナーAI | AIでプロ品質バナーを自動生成',
     description: 'AIがあなたのビジネスに最適なバナーをA/B/Cの3案で提案。デザイン知識不要で効果的な広告バナーを素早く作成。',
     keywords: ['AIバナー生成', 'バナー作成', '広告バナー', 'ABテスト', 'デザイン自動化', 'Facebook広告', 'Instagram広告'],
     ogImage: '/og/banner.png',
     sections: {
       dashboard: {
-        title: 'バナー生成 | Bunridge AI',
+        title: 'バナー生成 | ドヤバナーAI',
         description: 'カテゴリを選んでキーワードを入力するだけ。AIがA/B/Cの3案を自動生成。',
       },
       history: {
-        title: '生成履歴 | Bunridge AI',
+        title: '生成履歴 | ドヤバナーAI',
         description: '過去に生成したバナーの一覧。ダウンロード、再編集が可能。',
       },
       brand: {
-        title: 'ブランド設定 | Bunridge AI',
+        title: 'ブランド設定 | ドヤバナーAI',
         description: 'ロゴ、カラー、フォントを設定してブランドイメージに合ったバナーを生成。',
       },
       pricing: {
-        title: '料金プラン | Bunridge AI',
+        title: '料金プラン | ドヤバナーAI',
         description: `無料プランはゲスト1日${BANNER_PRICING.guestLimit}回、ログイン後1日${BANNER_PRICING.freeLimit}回まで。プロプランは無制限に生成可能。月額${BANNER_PRICING.plans[1].priceLabel}。`,
       },
       guide: {
-        title: '使い方ガイド | Bunridge AI',
-        description: 'Bunridge AIの使い方を詳しく解説。カテゴリの選び方、キーワードのコツなど。',
+        title: '使い方ガイド | ドヤバナーAI',
+        description: 'ドヤバナーAIの使い方を詳しく解説。カテゴリの選び方、キーワードのコツなど。',
       },
     },
   },
@@ -147,7 +147,7 @@ export function generateSoftwareApplicationSchema(service: 'seo' | 'banner' | 'k
       },
     },
     banner: {
-      name: 'Bunridge AI',
+      name: 'ドヤバナーAI',
       applicationCategory: 'DesignApplication',
       offers: {
         '@type': 'Offer',
