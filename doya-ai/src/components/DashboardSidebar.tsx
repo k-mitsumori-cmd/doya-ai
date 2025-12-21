@@ -141,8 +141,8 @@ export default function DashboardSidebar() {
     >
       {/* Logo */}
       <div className="px-4 py-6 flex items-center gap-3 border-b border-white/5">
-        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm border border-white/10">
-          <Sparkles className="w-6 h-6 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 shadow-sm border border-white/10">
+          <Zap className="w-6 h-6 text-white" />
         </div>
         <AnimatePresence>
           {!isCollapsed && (
@@ -152,7 +152,7 @@ export default function DashboardSidebar() {
               exit={{ opacity: 0, x: -10 }}
               className="overflow-hidden"
             >
-              <h1 className="text-2xl font-black text-white tracking-tight leading-none">Bunridge</h1>
+              <h1 className="text-2xl font-black text-white tracking-tight leading-none italic">Bunridge</h1>
             </motion.div>
           )}
         </AnimatePresence>

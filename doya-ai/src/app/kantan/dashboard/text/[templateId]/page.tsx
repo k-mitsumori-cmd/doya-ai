@@ -8,7 +8,8 @@ import {
   ArrowLeft, Sparkles, Loader2, Copy, Check, 
   RefreshCw, Wand2, LogIn, Send, ChevronRight, Rocket, Cpu, User, Bot, MessageSquare,
   Timer, FileText, Download, Zap, CheckCircle2, ChevronDown, History, Star,
-  Home, DollarSign, Settings, HelpCircle, Bell, BarChart3, Clock, Calendar, Mail, UserCircle, TrendingUp
+  Home, DollarSign, Settings, HelpCircle, Bell, BarChart3, Clock, Calendar, Mail, UserCircle, TrendingUp,
+  Menu, X
 } from 'lucide-react'
 
 // サイドバーメニュー
@@ -460,6 +461,7 @@ export default function TemplateDetailPage() {
   const [guestUsageCount, setGuestUsageCount] = useState(0)
   const [generationTime, setGenerationTime] = useState(0)
   const [showInputs, setShowInputs] = useState(true)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   // チャット状態
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
@@ -713,22 +715,41 @@ ${inputMessage}
         }}
       />
 
+      {/* モバイルオーバーレイ */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* サイドバー */}
-      <aside className="w-52 bg-[#3B5998] text-white flex flex-col fixed h-full z-40">
+      <aside className={`
+        w-64 lg:w-52 bg-[#3B5998] text-white flex flex-col fixed h-full z-50
+        transform transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         {/* ロゴ */}
-        <div className="p-5">
+        <div className="p-5 flex items-center justify-between">
           <Link href="/kantan" className="flex items-center gap-2">
             <span className="text-xl font-bold tracking-tight">カンタンマーケ</span>
           </Link>
+          <button 
+            className="lg:hidden p-1 hover:bg-white/10 rounded"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* メインメニュー */}
-        <nav className="flex-1 px-3">
+        <nav className="flex-1 px-3 overflow-y-auto">
           <ul className="space-y-1">
             {SIDEBAR_MENU.map((item) => (
               <li key={item.id}>
                 <Link
                   href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all text-sm"
                 >
                   {item.icon}
@@ -751,6 +772,7 @@ ${inputMessage}
                 <li key={item.id}>
                   <Link
                     href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${
                       item.active
                         ? 'bg-white/20 text-white font-medium'
@@ -768,11 +790,11 @@ ${inputMessage}
 
         {/* 他サービス */}
         <div className="p-3 border-t border-white/10">
-          <Link href="/banner" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
+          <Link href="/banner" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🎨</span>
             <span>ドヤバナーAI</span>
           </Link>
-          <Link href="/seo" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
+          <Link href="/seo" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🧠</span>
             <span>ドヤSEO</span>
             </Link>
@@ -785,27 +807,34 @@ ${inputMessage}
       </aside>
 
       {/* メインコンテンツ */}
-      <div className="flex-1 ml-52 flex flex-col min-h-screen">
+      <div className="flex-1 lg:ml-52 flex flex-col min-h-screen">
         {/* ヘッダー */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-          <div className="px-6 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="px-4 lg:px-6 h-16 flex items-center justify-between">
+            <div className="flex items-center gap-2 lg:gap-3">
+              {/* モバイルメニューボタン */}
+              <button 
+                className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                onClick={() => setIsMobileMenuOpen(true)}
+              >
+                <Menu className="w-6 h-6" />
+              </button>
               <Link href="/kantan/dashboard/text" className="flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-all">
                 <ChevronRight className="w-4 h-4 rotate-180" />
               </Link>
-              <h1 className="font-bold text-gray-800 truncate max-w-[300px]">{template.name}</h1>
+              <h1 className="font-bold text-gray-800 truncate max-w-[150px] lg:max-w-[300px] text-sm lg:text-base">{template.name}</h1>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 lg:gap-4">
               <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                 <Bell className="w-5 h-5" />
               </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+              <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                 <Settings className="w-5 h-5" />
               </button>
               
-              <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                <div className="text-right">
+              <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
+                <div className="text-right hidden md:block">
                   <div className="text-sm font-medium text-gray-800">{userName}</div>
                   <div className="text-xs text-gray-400">Admin</div>
                 </div>
@@ -817,24 +846,24 @@ ${inputMessage}
         </div>
       </header>
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 lg:p-6">
         {/* ゲストバナー */}
         {isGuest && (
-          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-2xl">
-            <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="mb-4 lg:mb-6 p-3 lg:p-4 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-xl lg:rounded-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-blue-500" />
+                <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-blue-100 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-blue-500" />
                 </div>
                 <div>
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-xs font-bold rounded-full">FREE TRIAL</span>
-                  <p className="text-gray-500 text-sm mt-1">
+                  <span className="px-2 py-0.5 bg-blue-100 text-blue-600 text-[10px] lg:text-xs font-bold rounded-full">FREE TRIAL</span>
+                  <p className="text-gray-500 text-xs lg:text-sm mt-1">
                     残り <span className="font-bold text-blue-600">{guestRemainingCount}回</span>
                   </p>
                 </div>
               </div>
               <Link href="/auth/signin?service=kantan">
-                <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-sm font-bold rounded-xl flex items-center gap-2 hover:scale-105 transition-transform shadow-lg">
+                <button className="w-full sm:w-auto px-3 lg:px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs lg:text-sm font-bold rounded-lg lg:rounded-xl flex items-center justify-center gap-2 hover:scale-105 transition-transform shadow-lg">
                   <LogIn className="w-4 h-4" />
                   ログインで10回に！
                 </button>
@@ -843,7 +872,7 @@ ${inputMessage}
           </div>
         )}
 
-        <div className="grid lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
           {/* 左側：入力フォーム */}
           <div className={`lg:col-span-2 ${output && !showInputs ? 'hidden lg:block' : ''}`}>
             {/* テンプレート説明 */}

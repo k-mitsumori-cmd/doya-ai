@@ -153,6 +153,9 @@ export async function ensureSeoSchema(): Promise<void> {
     try {
       await prisma.$executeRawUnsafe(`ALTER TABLE "SeoArticle" ADD COLUMN IF NOT EXISTS "referenceImages" JSONB;`)
     } catch { /* column might already exist */ }
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "SeoArticle" ADD COLUMN IF NOT EXISTS "autoBundle" BOOLEAN DEFAULT true;`)
+    } catch { /* column might already exist */ }
 
     // indexes / uniques（冪等）
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SeoArticle_userId_createdAt_idx" ON "SeoArticle" ("userId", "createdAt");`)

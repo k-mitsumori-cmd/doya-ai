@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, Search, Sparkles, FileText, Lightbulb, BarChart3, Target, MessageSquare, TrendingUp, Users, PenTool, Mail, Megaphone, Layers, Briefcase, Palette, Globe, Zap, BookOpen, Settings, Scale, Languages, Edit3, Cpu, ChevronRight, Rocket, Clock, Star, CheckCircle2, Timer, Crown, Flame, Home, DollarSign, HelpCircle, Bell, Calendar, UserCircle } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Search, Sparkles, FileText, Lightbulb, BarChart3, Target, MessageSquare, TrendingUp, Users, PenTool, Mail, Megaphone, Layers, Briefcase, Palette, Globe, Zap, BookOpen, Settings, Scale, Languages, Edit3, Cpu, ChevronRight, Rocket, Clock, Star, CheckCircle2, Timer, Crown, Flame, Home, DollarSign, HelpCircle, Bell, Calendar, UserCircle, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 
@@ -142,6 +142,7 @@ export default function KantanTextListPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('すべて')
   const [showOnlyPopular, setShowOnlyPopular] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   const userName = session?.user?.name || 'ゲスト'
   const userInitial = userName[0]?.toUpperCase() || 'G'
@@ -167,22 +168,41 @@ export default function KantanTextListPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
+      {/* モバイルオーバーレイ */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* サイドバー */}
-      <aside className="w-52 bg-[#3B5998] text-white flex flex-col fixed h-full z-40">
+      <aside className={`
+        w-64 lg:w-52 bg-[#3B5998] text-white flex flex-col fixed h-full z-50
+        transform transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
         {/* ロゴ */}
-        <div className="p-5">
+        <div className="p-5 flex items-center justify-between">
           <Link href="/kantan" className="flex items-center gap-2">
             <span className="text-xl font-bold tracking-tight">カンタンマーケ</span>
           </Link>
+          <button 
+            className="lg:hidden p-1 hover:bg-white/10 rounded"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* メインメニュー */}
-        <nav className="flex-1 px-3">
+        <nav className="flex-1 px-3 overflow-y-auto">
           <ul className="space-y-1">
             {SIDEBAR_MENU.map((item) => (
               <li key={item.id}>
                 <Link
                   href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all text-sm"
                 >
                   {item.icon}
@@ -205,6 +225,7 @@ export default function KantanTextListPage() {
                 <li key={item.id}>
                   <Link
                     href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${
                       item.active
                         ? 'bg-white/20 text-white font-medium'
@@ -222,11 +243,11 @@ export default function KantanTextListPage() {
 
         {/* 他サービス */}
         <div className="p-3 border-t border-white/10">
-          <Link href="/banner" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
+          <Link href="/banner" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🎨</span>
             <span>ドヤバナーAI</span>
           </Link>
-          <Link href="/seo" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
+          <Link href="/seo" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🧠</span>
             <span>ドヤSEO</span>
           </Link>
@@ -239,22 +260,30 @@ export default function KantanTextListPage() {
       </aside>
 
       {/* メインコンテンツ */}
-      <main className="flex-1 ml-52">
+      <main className="flex-1 lg:ml-52">
         {/* ヘッダー */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-          <div className="px-8 h-16 flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-800">AIエージェント</h1>
+          <div className="px-4 lg:px-8 h-16 flex items-center justify-between">
+            {/* モバイルメニューボタン */}
+            <button 
+              className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
             
-            <div className="flex items-center gap-4">
+            <h1 className="text-lg lg:text-xl font-bold text-gray-800">AIエージェント</h1>
+            
+            <div className="flex items-center gap-2 lg:gap-4">
               <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                 <Bell className="w-5 h-5" />
               </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+              <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                 <Settings className="w-5 h-5" />
               </button>
               
-              <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                <div className="text-right">
+              <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
+                <div className="text-right hidden md:block">
                   <div className="text-sm font-medium text-gray-800">{userName}</div>
                   <div className="text-xs text-gray-400">Admin</div>
                 </div>
@@ -267,63 +296,63 @@ export default function KantanTextListPage() {
         </header>
 
         {/* コンテンツ */}
-        <div className="p-8">
+        <div className="p-4 lg:p-8">
         {/* 統計カード */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center">
-                <Cpu className="w-5 h-5 text-white" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6 lg:mb-8">
+          <div className="bg-white border border-gray-200 rounded-xl lg:rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 lg:gap-3">
+              <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center">
+                <Cpu className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-black text-gray-800">{ALL_AGENTS.length}</p>
-                <p className="text-xs text-gray-400">AIエージェント</p>
+                <p className="text-lg lg:text-2xl font-black text-gray-800">{ALL_AGENTS.length}</p>
+                <p className="text-[10px] lg:text-xs text-gray-400">AIエージェント</p>
               </div>
             </div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-                <Timer className="w-5 h-5 text-white" />
+          <div className="bg-white border border-gray-200 rounded-xl lg:rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 lg:gap-3">
+              <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                <Timer className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-black text-gray-800">{Math.round(totalTimeSavedNum)}h+</p>
-                <p className="text-xs text-gray-400">総削減時間</p>
+                <p className="text-lg lg:text-2xl font-black text-gray-800">{Math.round(totalTimeSavedNum)}h+</p>
+                <p className="text-[10px] lg:text-xs text-gray-400">総削減時間</p>
               </div>
             </div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <Flame className="w-5 h-5 text-white" />
+          <div className="bg-white border border-gray-200 rounded-xl lg:rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 lg:gap-3">
+              <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Flame className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-black text-gray-800">{POPULAR_AGENTS.length}</p>
-                <p className="text-xs text-gray-400">人気エージェント</p>
+                <p className="text-lg lg:text-2xl font-black text-gray-800">{POPULAR_AGENTS.length}</p>
+                <p className="text-[10px] lg:text-xs text-gray-400">人気エージェント</p>
               </div>
             </div>
           </div>
-          <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-                <Layers className="w-5 h-5 text-white" />
+          <div className="bg-white border border-gray-200 rounded-xl lg:rounded-2xl p-3 lg:p-4 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-2 lg:gap-3">
+              <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                <Layers className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
               </div>
               <div>
-                <p className="text-2xl font-black text-gray-800">{CATEGORIES.length - 1}</p>
-                <p className="text-xs text-gray-400">カテゴリ</p>
+                <p className="text-lg lg:text-2xl font-black text-gray-800">{CATEGORIES.length - 1}</p>
+                <p className="text-[10px] lg:text-xs text-gray-400">カテゴリ</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* 人気エージェント */}
-        <div className="mb-10">
-          <div className="flex items-center gap-2 mb-4">
-            <Flame className="w-5 h-5 text-amber-500" />
-            <h2 className="font-bold text-gray-800">人気エージェント</h2>
-            <span className="text-xs text-gray-400">- 最もよく使われています</span>
+        <div className="mb-6 lg:mb-10">
+          <div className="flex items-center gap-2 mb-3 lg:mb-4">
+            <Flame className="w-4 h-4 lg:w-5 lg:h-5 text-amber-500" />
+            <h2 className="text-sm lg:text-base font-bold text-gray-800">人気エージェント</h2>
+            <span className="text-[10px] lg:text-xs text-gray-400 hidden sm:inline">- 最もよく使われています</span>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {POPULAR_AGENTS.slice(0, 4).map((agent) => (
               <Link key={agent.id} href={`/kantan/dashboard/text/${agent.id}`} className="group">
                 <div className="relative h-full">
@@ -372,7 +401,7 @@ export default function KantanTextListPage() {
         </div>
 
         {/* カテゴリフィルタ */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        <div className="flex flex-wrap gap-1.5 lg:gap-2 mb-6 lg:mb-8">
           {CATEGORIES.map((category) => (
             <button
               key={category.id}
@@ -408,7 +437,7 @@ export default function KantanTextListPage() {
         </div>
 
         {/* エージェント一覧 */}
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mb-8 lg:mb-12">
           {filteredAgents.map((agent) => (
             <Link key={agent.id} href={`/kantan/dashboard/text/${agent.id}`} className="group">
               <div className="relative h-full">

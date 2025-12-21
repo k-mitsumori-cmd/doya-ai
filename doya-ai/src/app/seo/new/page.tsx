@@ -80,666 +80,397 @@ const TEMPLATES = [
   },
 ]
 
-export default function SeoNewPage() {
-  const router = useRouter()
-  const [showAdvanced, setShowAdvanced] = useState(false)
+import { DashboardLayout } from '@/components/DashboardLayout'
+import { FeatureGuide } from '@/components/FeatureGuide'
 
-  const [title, setTitle] = useState('')
-  const [keywords, setKeywords] = useState('')
-  const [persona, setPersona] = useState('')
-  const [searchIntent, setSearchIntent] = useState('')
-  const [targetChars, setTargetChars] = useState<number>(30000)
-  const [referenceUrls, setReferenceUrls] = useState('')
-  const [tone, setTone] = useState<(typeof TONES)[number]>('ビジネス')
-  const [forbidden, setForbidden] = useState('')
-  const [llmo, setLlmo] = useState({
-    tldr: true,
-    conclusionFirst: true,
-    faq: true,
-    glossary: true,
-    comparison: true,
-    quotes: true,
-    templates: true,
-    objections: true,
-  })
-
-  // 新機能：依頼テキストと参考画像
+const TARGETS = [10000, 20000, 30000, 40000, 50000, 60000]
+// ...
   const [requestText, setRequestText] = useState('')
   const [referenceImages, setReferenceImages] = useState<{ name: string; dataUrl: string }[]>([])
+  const [autoBundle, setAutoBundle] = useState(true) // セット生成フラグ
 
   const [loading, setLoading] = useState(false)
-  const [predicting, setPredicting] = useState(false)
-  const [predictedOnce, setPredictedOnce] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
-
-  // 画像アップロード処理
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files
-    if (!files) return
-    
-    Array.from(files).forEach((file) => {
-      if (!file.type.startsWith('image/')) return
-      if (referenceImages.length >= 5) {
-        setError('参考画像は最大5枚までです')
-        return
-      }
-      const reader = new FileReader()
-      reader.onload = () => {
-        setReferenceImages((prev) => [
-          ...prev,
-          { name: file.name, dataUrl: reader.result as string },
-        ])
-      }
-      reader.readAsDataURL(file)
-    })
-    e.target.value = '' // reset input
-  }
-
-  function removeImage(index: number) {
-    setReferenceImages((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  function applyTemplate(t: (typeof TEMPLATES)[number]) {
-    setTitle(t.title)
-    setTargetChars(t.targetChars)
-    setSearchIntent(t.searchIntent)
-    setLlmo(t.llmo)
-    setNotice(`「${t.name}」テンプレートを適用しました`)
-    setTimeout(() => setNotice(null), 2500)
-  }
-
-  function fillSample() {
-    setTitle('採用代行（RPO）徹底比較！おすすめ50社の特徴・料金、委託できる業務内容')
-    setKeywords('採用代行, RPO, 採用アウトソーシング, 人事, 採用支援')
-    setPersona('中堅企業の人事責任者。採用工数が逼迫しており、母集団形成〜面接調整を外注したい。失敗例や相場、選び方を知りたい。')
-    setSearchIntent('定義/できること・できないこと/料金相場/比較表/選び方/失敗例/チェックリスト/FAQが欲しい')
-    setTargetChars(50000)
-    setReferenceUrls('')
-    setTone('ビジネス')
-    setForbidden('誇大表現NG, 競合名の断定的批判NG')
-    setLlmo({
-      tldr: true,
-      conclusionFirst: true,
-      faq: true,
-      glossary: true,
-      comparison: true,
-      quotes: true,
-      templates: true,
-      objections: true,
-    })
-    setShowAdvanced(true)
-    setNotice('サンプルを入力しました')
-    setTimeout(() => setNotice(null), 2500)
-  }
-
-  const keywordList = useMemo(
-    () =>
-      keywords
-        .split(/[,\n]/)
-        .map((s) => s.trim())
-        .filter(Boolean),
-    [keywords]
-  )
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (!raw) return
-      const d = JSON.parse(raw)
-      setTitle(d.title || '')
-      setKeywords(d.keywords || '')
-      setPersona(d.persona || '')
-      setSearchIntent(d.searchIntent || '')
-      setTargetChars(Number(d.targetChars || 30000))
-      setReferenceUrls(d.referenceUrls || '')
-      setTone(d.tone || 'ビジネス')
-      setForbidden(d.forbidden || '')
-      setLlmo({ ...llmo, ...(d.llmo || {}) })
-    } catch {
-      // ignore
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  async function predictFromTitle(opts?: { silent?: boolean }) {
-    const t = title.trim()
-    if (t.length < 3) return
-
-    setPredicting(true)
-    if (!opts?.silent) setNotice(null)
-    setError(null)
-    try {
-      const res = await fetch('/api/seo/predict', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: t,
-          seedKeywords: keywordList,
-          tone,
-        }),
-      })
-      const json = await res.json()
-      if (!json.success) throw new Error(json.error || '推定に失敗しました')
-
-      const p = json.predicted || {}
-      const personaText = String(p.persona || '').trim()
-      const intentText = String(p.searchIntent || '').trim()
-      const kws = Array.isArray(p.keywords) ? p.keywords.map((s: any) => String(s).trim()).filter(Boolean) : []
-
-      if (!persona.trim() && personaText) setPersona(personaText)
-      if (!searchIntent.trim() && intentText) setSearchIntent(intentText)
-      if (!keywords.trim() && kws.length) setKeywords(kws.slice(0, 12).join(', '))
-
-      setPredictedOnce(true)
-      if (!opts?.silent) {
-        setNotice('タイトルから読者/意図を推定して入力しました ✨')
-        setTimeout(() => setNotice(null), 2500)
-      }
-    } catch (e: any) {
-      if (!opts?.silent) setError(e?.message || '不明なエラー')
-    } finally {
-      setPredicting(false)
-    }
-  }
-
-  useEffect(() => {
-    if (predictedOnce) return
-    if (!title.trim()) return
-    if (persona.trim() || searchIntent.trim()) return
-
-    const timer = setTimeout(() => {
-      predictFromTitle({ silent: true })
-    }, 900)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title])
-
-  function saveDraft() {
-    const payload = { title, keywords, persona, searchIntent, targetChars, referenceUrls, tone, forbidden, llmo }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-    setNotice('下書きを保存しました 💾')
-    setTimeout(() => setNotice(null), 2500)
-  }
-
-  function clearDraft() {
-    localStorage.removeItem(STORAGE_KEY)
-    setNotice('下書きを削除しました')
-    setTimeout(() => setNotice(null), 2500)
-  }
-
-  async function submit() {
-    setLoading(true)
-    setError(null)
-    try {
-      const payload = {
-        title,
-        keywords: keywordList,
-        persona,
-        searchIntent,
-        targetChars,
-        referenceUrls: referenceUrls
-          .split(/\n/)
-          .map((s) => s.trim())
-          .filter(Boolean),
-        tone,
-        forbidden: forbidden
-          .split(/[,\n]/)
-          .map((s) => s.trim())
-          .filter(Boolean),
-        llmoOptions: llmo,
-        // 新機能：依頼テキストと参考画像
-        requestText: requestText.trim() || null,
-        referenceImages: referenceImages.length > 0 ? referenceImages : null,
-      }
-      const res = await fetch('/api/seo/articles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const json = await res.json()
-      if (!json.success) throw new Error(json.error || '作成に失敗しました')
-      router.push(`/seo/articles/${json.articleId}?auto=1`)
-    } catch (e: any) {
-      setError(e?.message || '不明なエラー')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const canSubmit = title.trim().length > 0 && keywordList.length > 0
-
+// ...
   return (
-    <main className="max-w-4xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <button
-          onClick={() => router.push('/seo')}
-          className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          一覧へ戻る
-        </button>
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center shadow-lg">
-                <FileText className="w-6 h-6 text-white" />
-              </div>
-              新規記事作成
-            </h1>
-            <p className="text-gray-500 mt-2">
-              タイトルとキーワードを入力するだけで、高品質なSEO記事を自動生成します。
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); fillSample() }}>
-              <Sparkles className="w-4 h-4" />
-              サンプル
-            </Button>
-            <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); saveDraft() }}>
-              <Save className="w-4 h-4" />
-              保存
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Notices */}
-      {notice && (
-        <div className="mb-4 p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-sm flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
-          {notice}
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-sm">
-          <p className="font-bold">エラー</p>
-          <p className="mt-1 whitespace-pre-wrap">{error}</p>
-        </div>
-      )}
-
-      {/* Template Picker */}
-      <div className="mb-6">
-        <p className="text-sm font-bold text-gray-600 mb-3 flex items-center gap-2">
-          <Lightbulb className="w-4 h-4 text-amber-500" />
-          テンプレートから始める
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {TEMPLATES.map((t) => (
+    <DashboardLayout>
+      <main className="max-w-4xl mx-auto py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
             <button
-              key={t.id}
-              onClick={() => applyTemplate(t)}
-              className={`p-4 rounded-xl border transition-all text-left group shadow-sm hover:shadow-md ${
-                t.id === 'note'
-                  ? 'border-amber-200 bg-amber-50 hover:border-amber-300 hover:bg-amber-100'
-                  : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50'
-              }`}
+              onClick={() => router.push('/seo')}
+              className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm transition-colors"
             >
-              <span className="text-2xl">{t.icon}</span>
-              <p className={`text-sm font-bold mt-2 transition-colors ${
-                t.id === 'note'
-                  ? 'text-amber-800 group-hover:text-amber-900'
-                  : 'text-gray-900 group-hover:text-blue-600'
-              }`}>
-                {t.name}
-              </p>
-              <p className={`text-xs mt-1 ${t.id === 'note' ? 'text-amber-600' : 'text-gray-500'}`}>
-                {t.targetChars.toLocaleString()}字
-              </p>
-              {t.id === 'note' && (
-                <span className="inline-block mt-2 text-[10px] px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 font-bold">
-                  おすすめ
-                </span>
-              )}
+              <ArrowLeft className="w-4 h-4" />
+              一覧へ戻る
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Main Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-blue-500" />
-            記事の基本設定
-          </CardTitle>
-          <CardDesc>タイトルとキーワードは必須です。入力するとペルソナ・検索意図を自動推定します。</CardDesc>
-        </CardHeader>
-        <CardBody className="space-y-5">
-          {/* Title */}
-          <div>
-            <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
-              <label className="block text-sm font-bold text-gray-700">
-                記事タイトル <span className="text-red-500">*</span>
-              </label>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => predictFromTitle()}
-                disabled={predicting || !title.trim()}
-              >
-                <Wand2 className="w-4 h-4" />
-                {predicting ? '推定中...' : 'AI推定'}
+            <FeatureGuide 
+              featureId="seo-new-guide"
+              title="記事のセット作成"
+              description="タイトルとキーワードを入力するだけで、記事本文だけでなく、記事内の図解画像やサムネイル画像もAIが自動的に一括作成します。プロ級のコンテンツ制作がこれ一つで完結します。"
+              steps={[
+                "作りたい記事のタイトルと主要なキーワードを入力します。",
+                "「AI推定」ボタンで、AIがターゲットや検索意図を自動で提案します。",
+                "「セット作成（画像・サムネ込み）」がONになっていることを確認します。",
+                "「記事を生成」をクリックすると、全工程が自動で始まります。",
+                "完成後、記事本文と生成されたすべてのアセットを確認・保存できます。"
+              ]}
+            />
+          </div>
+          
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                新規記事作成
+              </h1>
+              <p className="text-gray-500 mt-2">
+                最新のAIモデルが、高品質な記事とクリエイティブを同時に生成します。
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); fillSample() }}>
+                <Sparkles className="w-4 h-4" />
+                サンプル
+              </Button>
+              <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); saveDraft() }}>
+                <Save className="w-4 h-4" />
+                保存
               </Button>
             </div>
-            <input
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="例）LLMOとは？SEOとの違いと実務で勝つための設計"
-            />
           </div>
-
-          {/* Keywords */}
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              キーワード <span className="text-red-500">*</span>
-            </label>
-            <input
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-colors"
-              value={keywords}
-              onChange={(e) => setKeywords(e.target.value)}
-              placeholder="例）LLMO, AI検索最適化, SEO（カンマ区切り）"
-            />
-            {keywordList.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {keywordList.slice(0, 8).map((k) => (
-                  <Badge key={k} tone="blue">{k}</Badge>
-                ))}
-                {keywordList.length > 8 && <Badge tone="gray">+{keywordList.length - 8}</Badge>}
-              </div>
-            )}
-          </div>
-
-          {/* Target & Tone */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">目標文字数</label>
-              <select
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-blue-500"
-                value={targetChars}
-                onChange={(e) => setTargetChars(Number(e.target.value))}
-              >
-                {TARGETS.map((n) => (
-                  <option key={n} value={n}>
-                    {n.toLocaleString('ja-JP')}字
-                    {n >= 50000 && ' 🔥'}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">トーン</label>
-              <select
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-blue-500"
-                value={tone}
-                onChange={(e) => setTone(e.target.value as any)}
-              >
-                {TONES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* AI Generated Fields */}
-          <div className="p-4 rounded-xl border border-violet-200 bg-violet-50 space-y-4">
-            <div className="flex items-center gap-2">
-              <Wand2 className="w-4 h-4 text-violet-500" />
-              <p className="text-sm font-bold text-violet-700">AI自動入力（編集可）</p>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">想定読者（ペルソナ）</label>
-              <textarea
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm min-h-20 focus:outline-none focus:border-violet-500"
-                value={persona}
-                onChange={(e) => setPersona(e.target.value)}
-                placeholder="タイトル入力で自動推定されます"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-gray-600 mb-1">検索意図</label>
-              <textarea
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm min-h-16 focus:outline-none focus:border-violet-500"
-                value={searchIntent}
-                onChange={(e) => setSearchIntent(e.target.value)}
-                placeholder="タイトル入力で自動推定されます"
-              />
-            </div>
-          </div>
-
-          {/* 依頼テキスト */}
-          <div className="p-4 rounded-xl border border-cyan-200 bg-cyan-50 space-y-4">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-cyan-600" />
-              <p className="text-sm font-bold text-cyan-700">依頼テキスト（任意）</p>
-            </div>
-            <p className="text-xs text-cyan-600">
-              記事に含めたい内容、参考にしてほしいテキスト、具体的な要望などを入力してください。
-              AIが記事生成時に参考にします。
-            </p>
-            <textarea
-              className="w-full px-3 py-3 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm min-h-32 focus:outline-none focus:border-cyan-500"
-              value={requestText}
-              onChange={(e) => setRequestText(e.target.value)}
-              placeholder={`例）
-・自社の強みとして「導入実績300社以上」「24時間サポート」を強調してください
-・以下の事例を記事内で紹介してください：
-  - A社様：導入後3ヶ月で採用コスト30%削減
-  - B社様：面接調整工数を月40時間削減
-・競合との違いとして「専任担当制」をアピールしたい
-・読者が行動に移せるよう、無料相談への誘導を入れてください`}
-            />
-            {requestText.length > 0 && (
-              <p className="text-xs text-cyan-600">
-                {requestText.length}文字入力済み
-              </p>
-            )}
-          </div>
-
-          {/* 参考画像 */}
-          <div className="p-4 rounded-xl border border-orange-200 bg-orange-50 space-y-4">
-            <div className="flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-orange-600" />
-              <p className="text-sm font-bold text-orange-700">参考画像（任意・最大5枚）</p>
-            </div>
-            <p className="text-xs text-orange-600">
-              記事のイメージとなる画像、参考にしたいデザイン、図解の元になる画像などをアップロードしてください。
-              AIがバナーや図解を生成する際の参考にします。
-            </p>
-            
-            <div className="flex items-center gap-3 flex-wrap">
-              <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-300 bg-white text-orange-700 text-sm font-bold cursor-pointer hover:bg-orange-100 transition-colors">
-                <UploadCloud className="w-4 h-4" />
-                画像を選択
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-              <span className="text-xs text-orange-600">
-                {referenceImages.length}/5 枚アップロード済み
-              </span>
-            </div>
-
-            {referenceImages.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-                {referenceImages.map((img, i) => (
-                  <div key={i} className="relative group">
-                    <img
-                      src={img.dataUrl}
-                      alt={img.name}
-                      className="w-full h-24 object-cover rounded-lg border border-orange-200"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(i)}
-                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                    <p className="text-[10px] text-orange-600 truncate mt-1">{img.name}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </CardBody>
-      </Card>
-
-      {/* Advanced Options Toggle */}
-      <button
-        onClick={() => setShowAdvanced(!showAdvanced)}
-        className="w-full mt-4 p-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-between text-left transition-colors shadow-sm"
-      >
-        <div className="flex items-center gap-3">
-          <Settings2 className="w-5 h-5 text-gray-500" />
-          <span className="font-bold text-gray-900">詳細設定</span>
-          <span className="text-xs text-gray-500">参考URL・禁止事項・LLMO要素</span>
         </div>
-        {showAdvanced ? (
-          <ChevronUp className="w-5 h-5 text-gray-400" />
-        ) : (
-          <ChevronDown className="w-5 h-5 text-gray-400" />
+
+        {/* Notices */}
+        {notice && (
+          <div className="mb-6 p-4 rounded-2xl bg-blue-50 text-blue-700 text-sm font-bold flex items-center gap-3 border border-blue-100 shadow-sm animate-fade-in-up">
+            <CheckCircle2 className="w-5 h-5" />
+            {notice}
+          </div>
         )}
-      </button>
 
-      {/* Advanced Options */}
-      {showAdvanced && (
-        <div className="mt-4 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-cyan-500" />
-                参考URL・制約
-              </CardTitle>
-              <CardDesc>競合記事のURLを入力すると、要点を抽出してより良い記事を生成します。</CardDesc>
-            </CardHeader>
-            <CardBody className="space-y-4">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">参考URL（複数入力可）</label>
-                <textarea
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 min-h-24 focus:outline-none focus:border-blue-500"
-                  value={referenceUrls}
-                  onChange={(e) => setReferenceUrls(e.target.value)}
-                  placeholder={`https://example.com/article\nhttps://example.com/another`}
-                />
+        {error && (
+          <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm animate-fade-in-up">
+            <p className="font-bold flex items-center gap-2">
+              <X className="w-4 h-4" />
+              エラーが発生しました
+            </p>
+            <p className="mt-1 ml-6 whitespace-pre-wrap">{error}</p>
+          </div>
+        )}
+
+        {/* Template Picker */}
+        <div className="mb-10">
+          <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <Lightbulb className="w-4 h-4 text-amber-400" />
+            おすすめテンプレート
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => applyTemplate(t)}
+                className={`p-5 rounded-3xl border-2 transition-all text-left group relative overflow-hidden ${
+                  t.id === 'note'
+                    ? 'border-amber-100 bg-amber-50/50 hover:border-amber-300'
+                    : 'border-gray-100 bg-white hover:border-[#2563EB]/30'
+                }`}
+              >
+                <div className="relative z-10">
+                  <span className="text-3xl mb-3 block">{t.icon}</span>
+                  <p className="text-sm font-black text-gray-900 leading-tight">
+                    {t.name}
+                  </p>
+                  <p className="text-[10px] text-gray-400 mt-1 font-bold">
+                    APPROX. {t.targetChars.toLocaleString()} CHARS
+                  </p>
+                </div>
+                {t.id === 'note' && (
+                  <div className="absolute top-0 right-0 p-1">
+                    <div className="bg-amber-400 text-white text-[8px] font-black px-2 py-0.5 rounded-bl-lg rounded-tr-lg uppercase tracking-tighter">
+                      HOT
+                    </div>
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Form */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-[32px] border border-gray-100 p-8 shadow-2xl shadow-blue-500/5">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
+                <Target className="w-5 h-5" />
               </div>
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">禁止事項</label>
-                <textarea
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 min-h-16 focus:outline-none focus:border-blue-500"
-                  value={forbidden}
-                  onChange={(e) => setForbidden(e.target.value)}
-                  placeholder="例）競合A社名を出さない, 誇大表現NG"
+                <h2 className="text-xl font-black text-gray-900 tracking-tight">基本設定</h2>
+                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Base Configuration</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Title */}
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <label className="text-sm font-black text-gray-700 tracking-tight">
+                    記事タイトル <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    onClick={() => predictFromTitle()}
+                    disabled={predicting || !title.trim()}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-full text-xs font-black transition-all disabled:opacity-50"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" />
+                    {predicting ? '推定中...' : 'AIで自動入力'}
+                  </button>
+                </div>
+                <input
+                  className="w-full px-6 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-lg font-bold"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="例）LLMOとは？SEOとの違いと実務で勝つための設計"
                 />
               </div>
-            </CardBody>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-amber-500" />
-                LLMO要素（ON/OFF）
-              </CardTitle>
-              <CardDesc>AI検索に強い記事構造をスイッチで制御します。</CardDesc>
-            </CardHeader>
-            <CardBody>
-              <div className="grid md:grid-cols-2 gap-3">
-                <Toggle checked={llmo.tldr} onChange={(v) => setLlmo({ ...llmo, tldr: v })} label="TL;DR" description="冒頭に要点を箇条書きで出力" />
-                <Toggle checked={llmo.conclusionFirst} onChange={(v) => setLlmo({ ...llmo, conclusionFirst: v })} label="結論ファースト＋根拠" description="結論→理由→補足で迷子を防ぐ" />
-                <Toggle checked={llmo.faq} onChange={(v) => setLlmo({ ...llmo, faq: v })} label="FAQ" description="構造化を意識したQ/A" />
-                <Toggle checked={llmo.glossary} onChange={(v) => setLlmo({ ...llmo, glossary: v })} label="用語集" description="定義を固めて誤解を減らす" />
-                <Toggle checked={llmo.comparison} onChange={(v) => setLlmo({ ...llmo, comparison: v })} label="比較表" description="意思決定を支える表を追加" />
-                <Toggle checked={llmo.quotes} onChange={(v) => setLlmo({ ...llmo, quotes: v })} label="引用・根拠（言い換え）" description="参考URLの要点をオリジナルに整理" />
-                <Toggle checked={llmo.templates} onChange={(v) => setLlmo({ ...llmo, templates: v })} label="実務テンプレ" description="チェックリスト/手順/例文" />
-                <Toggle checked={llmo.objections} onChange={(v) => setLlmo({ ...llmo, objections: v })} label="反論に答える" description="読者の不安を先回りで潰す" />
+              {/* Keywords */}
+              <div>
+                <label className="block text-sm font-black text-gray-700 mb-3 tracking-tight">
+                  メインキーワード <span className="text-red-500">*</span>
+                </label>
+                <input
+                  className="w-full px-6 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-bold"
+                  value={keywords}
+                  onChange={(e) => setKeywords(e.target.value)}
+                  placeholder="例）LLMO, AI検索最適化, SEO（カンマ区切り）"
+                />
+                {keywordList.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {keywordList.slice(0, 12).map((k) => (
+                      <span key={k} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold border border-blue-100">
+                        {k}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              <div className="mt-4 p-3 rounded-xl bg-gray-50 border border-gray-200">
-                <p className="text-xs font-bold text-gray-600 mb-2">クイック設定</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setLlmo({ tldr: true, conclusionFirst: true, faq: true, glossary: true, comparison: true, quotes: true, templates: true, objections: true })}
+              {/* Target & Tone */}
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-black text-gray-700 mb-3 tracking-tight">目標文字数</label>
+                  <select
+                    className="w-full px-6 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-bold appearance-none"
+                    value={targetChars}
+                    onChange={(e) => setTargetChars(Number(e.target.value))}
                   >
-                    フル装備
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setLlmo({ tldr: true, conclusionFirst: true, faq: true, glossary: false, comparison: true, quotes: true, templates: true, objections: true })}
+                    {TARGETS.map((n) => (
+                      <option key={n} value={n}>
+                        {n.toLocaleString('ja-JP')}字
+                        {n >= 50000 ? ' (ULTRA LONG)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-black text-gray-700 mb-3 tracking-tight">文章トーン</label>
+                  <select
+                    className="w-full px-6 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-bold appearance-none"
+                    value={tone}
+                    onChange={(e) => setTone(e.target.value as any)}
                   >
-                    実務寄り
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setLlmo({ tldr: true, conclusionFirst: true, faq: true, glossary: true, comparison: false, quotes: true, templates: false, objections: false })}
-                  >
-                    読み物寄り
-                  </Button>
+                    {TONES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-            </CardBody>
-          </Card>
-        </div>
-      )}
-
-      {/* Submit Area */}
-      <div className="mt-8 p-6 rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white shadow-sm">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-sm text-gray-500">
-              準備完了
-              {canSubmit && (
-                <span className="ml-2 text-blue-600 font-medium">
-                  ✓ {title.slice(0, 30)}{title.length > 30 ? '...' : ''} ({targetChars.toLocaleString()}字)
-                </span>
-              )}
-            </p>
-            <div className="mt-1 flex flex-wrap gap-2">
-              {Object.entries(llmo).filter(([, v]) => v).slice(0, 5).map(([k]) => (
-                <Badge key={k} tone="purple">{k}</Badge>
-              ))}
-              {Object.values(llmo).filter(Boolean).length > 5 && (
-                <Badge tone="gray">+{Object.values(llmo).filter(Boolean).length - 5}</Badge>
-              )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" onClick={() => router.push('/seo')}>
+
+          {/* AI Bundle Option - ユーザーの要望: セット作成 */}
+          <div className="bg-gradient-to-br from-[#2563EB] to-blue-700 rounded-[32px] p-8 text-white shadow-2xl shadow-blue-500/20">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-lg">
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black tracking-tight">セット作成（画像・サムネ込み）</h2>
+                  <p className="text-blue-100 text-sm opacity-80">記事本文に加えて、図解とアイキャッチも全自動で作成します</p>
+                </div>
+              </div>
+              <div className="flex-shrink-0 scale-125 mr-4">
+                <Toggle 
+                  checked={autoBundle} 
+                  onChange={setAutoBundle} 
+                  label=""
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Persona & Intent */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-white rounded-[32px] border border-gray-100 p-6 shadow-xl shadow-gray-200/20">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="w-4 h-4 text-violet-500" />
+                <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">想定ターゲット</h3>
+              </div>
+              <textarea
+                className="w-full px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50/50 text-gray-900 placeholder:text-gray-300 text-sm min-h-[120px] focus:outline-none focus:border-violet-500 focus:bg-white transition-all font-medium leading-relaxed"
+                value={persona}
+                onChange={(e) => setPersona(e.target.value)}
+                placeholder="誰に向けて書く記事ですか？タイトル入力でAIが提案します。"
+              />
+            </div>
+            <div className="bg-white rounded-[32px] border border-gray-100 p-6 shadow-xl shadow-gray-200/20">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider">検索意図・ニーズ</h3>
+              </div>
+              <textarea
+                className="w-full px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50/50 text-gray-900 placeholder:text-gray-300 text-sm min-h-[120px] focus:outline-none focus:border-emerald-500 focus:bg-white transition-all font-medium leading-relaxed"
+                value={searchIntent}
+                onChange={(e) => setSearchIntent(e.target.value)}
+                placeholder="読者は何を知りたいですか？AIが自動で整理します。"
+              />
+            </div>
+          </div>
+
+          {/* Advanced Options Toggle */}
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full p-6 rounded-[32px] border-2 border-dashed border-gray-200 text-gray-400 hover:border-[#2563EB]/30 hover:text-[#2563EB] flex items-center justify-center gap-3 transition-all font-black"
+          >
+            <Settings2 className="w-5 h-5" />
+            {showAdvanced ? '詳細設定を閉じる' : '詳細設定（参考URL・禁止事項など）'}
+          </button>
+
+          {/* Advanced Options */}
+          {showAdvanced && (
+            <div className="space-y-6 animate-fade-in-up">
+              <div className="bg-white rounded-[32px] border border-gray-100 p-8 shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <BookOpen className="w-5 h-5 text-cyan-500" />
+                  <h3 className="text-lg font-black text-gray-900">参考URL・制約</h3>
+                </div>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-black text-gray-700 mb-3">参考URL（競合サイトなど）</label>
+                    <textarea
+                      className="w-full px-6 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 text-gray-900 placeholder:text-gray-300 min-h-[100px] focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-medium"
+                      value={referenceUrls}
+                      onChange={(e) => setReferenceUrls(e.target.value)}
+                      placeholder={`https://example.com/article\nhttps://example.com/another`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-black text-gray-700 mb-3">禁止事項・NGワード</label>
+                    <textarea
+                      className="w-full px-6 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 text-gray-900 placeholder:text-gray-300 min-h-[80px] focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-medium"
+                      value={forbidden}
+                      onChange={(e) => setForbidden(e.target.value)}
+                      placeholder="例）競合A社名を出さない, 誇大表現NG"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* LLMO Toggles */}
+              <div className="bg-white rounded-[32px] border border-gray-100 p-8 shadow-xl">
+                <div className="flex items-center gap-3 mb-6">
+                  <Zap className="w-5 h-5 text-amber-500" />
+                  <h3 className="text-lg font-black text-gray-900">LLMO（AI最適化）要素</h3>
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <Toggle checked={llmo.tldr} onChange={(v) => setLlmo({ ...llmo, tldr: v })} label="要約 (TL;DR)" description="冒頭に要点を箇条書きで出力" />
+                  <Toggle checked={llmo.conclusionFirst} onChange={(v) => setLlmo({ ...llmo, conclusionFirst: v })} label="結論ファースト" description="結論→理由→補足の黄金構造" />
+                  <Toggle checked={llmo.faq} onChange={(v) => setLlmo({ ...llmo, faq: v })} label="FAQ (Q&A)" description="構造化データを意識した回答" />
+                  <Toggle checked={llmo.glossary} onChange={(v) => setLlmo({ ...llmo, glossary: v })} label="用語集" description="重要キーワードの正確な定義" />
+                  <Toggle checked={llmo.comparison} onChange={(v) => setLlmo({ ...llmo, comparison: v })} label="比較表" description="一目でわかる比較データの挿入" />
+                  <Toggle checked={llmo.quotes} onChange={(v) => setLlmo({ ...llmo, quotes: v })} label="引用・根拠" description="客観的データに基づく信頼性向上" />
+                  <Toggle checked={llmo.templates} onChange={(v) => setLlmo({ ...llmo, templates: v })} label="実務テンプレート" description="読者がすぐ使える資料の提供" />
+                  <Toggle checked={llmo.objections} onChange={(v) => setLlmo({ ...llmo, objections: v })} label="不安払拭 (反論)" description="読者の懸念点への先回り回答" />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Submit Area */}
+        <div className="sticky bottom-8 mt-12 p-8 rounded-[40px] border border-gray-100 bg-white/80 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] flex items-center justify-between gap-6 z-40">
+          <div className="hidden md:block">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1">Status</p>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${canSubmit ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`} />
+              <p className="text-sm font-bold text-gray-900">
+                {canSubmit ? '生成準備が整いました' : '必須項目を入力してください'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-4 flex-1 md:flex-none">
+            <Button 
+              variant="ghost" 
+              onClick={() => router.push('/seo')}
+              className="px-8 h-14 rounded-2xl text-gray-500 font-bold"
+            >
               キャンセル
             </Button>
             <Button
               variant="primary"
               onClick={submit}
               disabled={loading || !canSubmit}
-              className="shadow-lg"
+              className="flex-1 md:flex-none px-12 h-14 rounded-2xl bg-[#2563EB] text-white font-black text-lg shadow-2xl shadow-blue-500/30 hover:bg-blue-700 hover:translate-y-[-2px] transition-all disabled:opacity-50"
             >
-              <UploadCloud className="w-4 h-4" />
-              {loading ? '作成中...' : '記事を生成'}
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  生成中...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-5 h-5 mr-2" />
+                  記事を生成
+                </>
+              )}
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Tips */}
-      <div className="mt-6 p-4 rounded-xl border border-gray-200 bg-white shadow-sm">
-        <p className="text-xs font-bold text-gray-500 mb-2">💡 ヒント</p>
-        <ul className="text-xs text-gray-500 space-y-1">
-          <li>• タイトルを入力するとAIがペルソナ・検索意図を自動推定します</li>
-          <li>• 50,000字以上の長文記事も分割生成で安定して生成できます</li>
-          <li>• 参考URLを入力すると、競合記事を分析してより良い記事を生成します</li>
-        </ul>
-      </div>
-    </main>
+        {/* Tips */}
+        <div className="mt-12 grid md:grid-cols-3 gap-6">
+          <div className="p-6 rounded-[32px] bg-gray-50 border border-gray-100">
+            <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm mb-4">
+              <CheckCircle2 className="w-5 h-5 text-blue-500" />
+            </div>
+            <h4 className="font-bold text-gray-900 mb-2">全自動パイプライン</h4>
+            <p className="text-xs text-gray-500 leading-relaxed font-medium">
+              構成案作成から執筆、統合、アセット生成まで全工程をAIが自律的に進めます。
+            </p>
+          </div>
+          <div className="p-6 rounded-[32px] bg-gray-50 border border-gray-100">
+            <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm mb-4">
+              <ImageIcon className="w-5 h-5 text-orange-500" />
+            </div>
+            <h4 className="font-bold text-gray-900 mb-2">クリエイティブ統合</h4>
+            <p className="text-xs text-gray-500 leading-relaxed font-medium">
+              Nano Banana Pro（Gemini 3.0 Pro）により、記事の内容に即した高品質な画像を挿入。
+            </p>
+          </div>
+          <div className="p-6 rounded-[32px] bg-gray-50 border border-gray-100">
+            <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm mb-4">
+              <Sparkles className="w-5 h-5 text-violet-500" />
+            </div>
+            <h4 className="font-bold text-gray-900 mb-2">LLMO最適化</h4>
+            <p className="text-xs text-gray-500 leading-relaxed font-medium">
+              Google GeminiやOpenAIなどのAI検索エンジンに見つけてもらいやすい構造を自動生成。
+            </p>
+          </div>
+        </div>
+      </main>
+    </DashboardLayout>
   )
 }
+

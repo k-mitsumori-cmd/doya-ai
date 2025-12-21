@@ -327,6 +327,7 @@ model SeoArticle {
   // 依頼テキスト・参考画像（新機能）
   requestText      String?  @db.Text  // ユーザーが入力した依頼内容・参考テキスト
   referenceImages  Json?    // [{name:string, dataUrl:string}] 参考画像のBase64
+  autoBundle       Boolean  @default(true) // 記事+図解+サムネを自動生成するか
 
   // 途中成果物
   outline       String?  @db.Text
