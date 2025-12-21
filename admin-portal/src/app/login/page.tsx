@@ -133,7 +133,7 @@ export default function LoginPage() {
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10">
               <span className="text-lg">🎨</span>
-              <span className="text-purple-200 text-sm">ドヤバナーAI</span>
+              <span className="text-purple-200 text-sm">Bunridge AI</span>
             </div>
           </div>
           <p className="text-xs text-blue-200/50 mt-4">

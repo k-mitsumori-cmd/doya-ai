@@ -2562,6 +2562,8 @@ export default function BannerDashboard() {
                </div>
              </motion.div>
            </a>
+          </div>
+        </div>
 
         {/* ========================================
             Bottom Grid: Customers & Calendar
@@ -2644,7 +2646,6 @@ export default function BannerDashboard() {
             </div>
           </div>
         </div>
-      </main>
 
       {/* ========================================
           Footer

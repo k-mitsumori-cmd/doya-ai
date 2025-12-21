@@ -343,7 +343,7 @@ export default function DashboardPage() {
             <span className="text-lg">🎨</span>
           </div>
           <div className="flex-1">
-            <p className="font-medium text-gray-900">ドヤバナーAI</p>
+            <p className="font-medium text-gray-900">Bunridge AI</p>
             <p className="text-sm text-gray-500">サービスを開く</p>
           </div>
           <ArrowUpRight className="w-5 h-5 text-gray-400" />

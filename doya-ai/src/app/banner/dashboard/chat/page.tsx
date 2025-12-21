@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
 import { Send, Sparkles, Bot, User, Wand2, Image as ImageIcon, Download, MessageSquare, ArrowRight, Bell, Settings } from 'lucide-react'
@@ -23,6 +25,7 @@ type BannerSpec = {
 }
 
 export default function BannerChatPage() {
+  const { data: session } = useSession()
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
       id: 'hello-1',
