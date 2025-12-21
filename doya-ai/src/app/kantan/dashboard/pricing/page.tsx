@@ -278,32 +278,32 @@ export default function KantanPricingPage() {
         {/* コンテンツ */}
         <div className="p-4 lg:p-8">
           {/* 現在のプラン */}
-          <div className="mb-8">
-            <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-blue-500" />
+          <div className="mb-6 lg:mb-8">
+            <h2 className="text-base lg:text-lg font-bold text-gray-800 mb-3 lg:mb-4 flex items-center gap-2">
+              <CreditCard className="w-4 h-4 lg:w-5 lg:h-5 text-blue-500" />
               現在のプラン
             </h2>
             
-            <div className={`bg-white rounded-2xl border-2 ${PLAN_COLORS[currentPlanId]?.border || 'border-gray-200'} shadow-sm p-6`}>
-              <div className="flex items-start justify-between flex-wrap gap-4">
+            <div className={`bg-white rounded-xl lg:rounded-2xl border-2 ${PLAN_COLORS[currentPlanId]?.border || 'border-gray-200'} shadow-sm p-4 lg:p-6`}>
+              <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                 {/* プラン情報 */}
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${PLAN_COLORS[currentPlanId]?.gradient || 'from-gray-400 to-gray-500'} flex items-center justify-center text-white`}>
+                <div className="flex items-center gap-3 lg:gap-4">
+                  <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-xl lg:rounded-2xl bg-gradient-to-br ${PLAN_COLORS[currentPlanId]?.gradient || 'from-gray-400 to-gray-500'} flex items-center justify-center text-white`}>
                     {PLAN_ICONS[currentPlanId]}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-xl font-bold text-gray-800">{currentPlan?.name || '無料'}プラン</h3>
+                      <h3 className="text-lg lg:text-xl font-bold text-gray-800">{currentPlan?.name || '無料'}プラン</h3>
                       {isPro && (
-                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-xs font-bold rounded-full">
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-600 text-[10px] lg:text-xs font-bold rounded-full">
                           アクティブ
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">{currentPlan?.description}</p>
+                    <p className="text-xs lg:text-sm text-gray-500 mt-1">{currentPlan?.description}</p>
                     {isPro && (
-                      <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5" />
+                      <p className="text-[10px] lg:text-xs text-gray-400 mt-2 flex items-center gap-1">
+                        <Calendar className="w-3 h-3 lg:w-3.5 lg:h-3.5" />
                         次回更新日: 2025年1月21日
                       </p>
                     )}
@@ -311,13 +311,13 @@ export default function KantanPricingPage() {
                 </div>
 
                 {/* 利用状況 */}
-                <div className="flex-shrink-0">
-                  <div className="text-right mb-2">
-                    <span className="text-2xl font-black text-gray-800">{todayUsage}</span>
-                    <span className="text-gray-400 text-sm"> / {dailyLimit}回</span>
-                    <p className="text-xs text-gray-400">本日の使用</p>
+                <div className="flex-shrink-0 w-full sm:w-auto">
+                  <div className="text-left sm:text-right mb-2">
+                    <span className="text-xl lg:text-2xl font-black text-gray-800">{todayUsage}</span>
+                    <span className="text-gray-400 text-xs lg:text-sm"> / {dailyLimit}回</span>
+                    <p className="text-[10px] lg:text-xs text-gray-400">本日の使用</p>
                   </div>
-                  <div className="w-48 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-full sm:w-48 h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div 
                       className={`h-full rounded-full transition-all ${
                         usagePercent >= 90 ? 'bg-red-500' : usagePercent >= 70 ? 'bg-amber-500' : 'bg-emerald-500'
@@ -325,7 +325,7 @@ export default function KantanPricingPage() {
                       style={{ width: `${usagePercent}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-400 mt-1 text-right">
+                  <p className="text-[10px] lg:text-xs text-gray-400 mt-1 text-left sm:text-right">
                     残り {remainingToday}回
                   </p>
                 </div>
@@ -333,22 +333,22 @@ export default function KantanPricingPage() {
 
               {/* アップグレード提案（無料プランの場合） */}
               {!isPro && isLoggedIn && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-white" />
+                <div className="mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-gray-100">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 lg:gap-4">
+                    <div className="flex items-center gap-2 lg:gap-3">
+                      <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-bold text-gray-800">プロプランにアップグレードしませんか？</p>
-                        <p className="text-sm text-gray-500">1日100回まで生成、全機能解放</p>
+                        <p className="font-bold text-gray-800 text-sm lg:text-base">プロプランにアップグレード</p>
+                        <p className="text-xs lg:text-sm text-gray-500">1日100回まで生成、全機能解放</p>
                       </div>
                     </div>
                     <a 
                       href="#plans" 
-                      className="px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+                      className="w-full sm:w-auto text-center px-4 lg:px-6 py-2 lg:py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-bold rounded-lg lg:rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
                     >
-                      <Crown className="w-5 h-5" />
+                      <Crown className="w-4 h-4 lg:w-5 lg:h-5" />
                       アップグレード
                     </a>
                   </div>
@@ -357,23 +357,23 @@ export default function KantanPricingPage() {
 
               {/* ログイン提案（ゲストの場合） */}
               {!isLoggedIn && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center">
-                        <Users className="w-5 h-5 text-white" />
+                <div className="mt-4 lg:mt-6 pt-4 lg:pt-6 border-t border-gray-100">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 lg:gap-4">
+                    <div className="flex items-center gap-2 lg:gap-3">
+                      <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg lg:rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center">
+                        <Users className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
                       </div>
                       <div>
-                        <p className="font-bold text-gray-800">ログインで1日10回まで無料！</p>
-                        <p className="text-sm text-gray-500">Googleアカウントで簡単ログイン</p>
+                        <p className="font-bold text-gray-800 text-sm lg:text-base">ログインで1日10回まで無料！</p>
+                        <p className="text-xs lg:text-sm text-gray-500">Googleアカウントで簡単ログイン</p>
                       </div>
                     </div>
                     <Link 
                       href="/auth/signin?service=kantan"
-                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-bold rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20"
+                      className="w-full sm:w-auto text-center px-4 lg:px-6 py-2 lg:py-3 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white text-sm font-bold rounded-lg lg:rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
                     >
                       無料でログイン
-                      <ArrowRight className="w-5 h-5" />
+                      <ArrowRight className="w-4 h-4 lg:w-5 lg:h-5" />
                     </Link>
                   </div>
                 </div>
@@ -422,18 +422,18 @@ export default function KantanPricingPage() {
           )}
 
           {/* 料金プラン比較 */}
-          <div id="plans" className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                <Star className="w-5 h-5 text-amber-500" />
+          <div id="plans" className="mb-6 lg:mb-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+              <h2 className="text-base lg:text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Star className="w-4 h-4 lg:w-5 lg:h-5 text-amber-500" />
                 料金プラン
               </h2>
               
               {/* 月額/年額切り替え */}
-              <div className="flex items-center gap-2 p-1 bg-gray-100 rounded-xl">
+              <div className="flex items-center gap-1 lg:gap-2 p-1 bg-gray-100 rounded-lg lg:rounded-xl">
                 <button
                   onClick={() => setBillingCycle('monthly')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-md lg:rounded-lg text-xs lg:text-sm font-medium transition-all ${
                     billingCycle === 'monthly' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
                   }`}
                 >
@@ -441,17 +441,17 @@ export default function KantanPricingPage() {
                 </button>
                 <button
                   onClick={() => setBillingCycle('annual')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
+                  className={`px-3 lg:px-4 py-1.5 lg:py-2 rounded-md lg:rounded-lg text-xs lg:text-sm font-medium transition-all flex items-center gap-1 lg:gap-1.5 ${
                     billingCycle === 'annual' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500'
                   }`}
                 >
                   年額
-                  <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-600 text-[10px] font-bold rounded">20%OFF</span>
+                  <span className="px-1 lg:px-1.5 py-0.5 bg-emerald-100 text-emerald-600 text-[8px] lg:text-[10px] font-bold rounded">20%OFF</span>
                 </button>
               </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
               {KANTAN_PRICING.plans.map((plan) => {
                 const isCurrentPlan = plan.id === currentPlanId
                 const colors = PLAN_COLORS[plan.id] || PLAN_COLORS['kantan-free']
@@ -462,14 +462,14 @@ export default function KantanPricingPage() {
                 return (
                   <div 
                     key={plan.id}
-                    className={`bg-white rounded-2xl border-2 ${
+                    className={`bg-white rounded-xl lg:rounded-2xl border-2 ${
                       isCurrentPlan ? colors.border : 'border-gray-100'
-                    } shadow-sm p-6 relative ${plan.popular ? 'ring-2 ring-emerald-500 ring-offset-2' : ''}`}
+                    } shadow-sm p-4 lg:p-6 relative ${plan.popular ? 'ring-2 ring-emerald-500 ring-offset-2' : ''}`}
                   >
                     {/* 現在のプランバッジ */}
                     {isCurrentPlan && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <span className={`px-3 py-1 ${colors.bg} ${colors.text} text-xs font-bold rounded-full border ${colors.border}`}>
+                        <span className={`px-2 lg:px-3 py-0.5 lg:py-1 ${colors.bg} ${colors.text} text-[10px] lg:text-xs font-bold rounded-full border ${colors.border}`}>
                           現在のプラン
                         </span>
                       </div>
@@ -478,20 +478,20 @@ export default function KantanPricingPage() {
                     {/* 人気バッジ */}
                     {plan.popular && !isCurrentPlan && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <span className="px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full">
+                        <span className="px-2 lg:px-3 py-0.5 lg:py-1 bg-emerald-500 text-white text-[10px] lg:text-xs font-bold rounded-full">
                           人気
                         </span>
                       </div>
                     )}
 
                     {/* プラン名 */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors.gradient} flex items-center justify-center text-white`}>
+                    <div className="flex items-center gap-2 lg:gap-3 mb-3 lg:mb-4">
+                      <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-lg lg:rounded-xl bg-gradient-to-br ${colors.gradient} flex items-center justify-center text-white`}>
                         {PLAN_ICONS[plan.id]}
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-gray-800">{plan.name}</h3>
-                        <p className="text-xs text-gray-500">{plan.description}</p>
+                        <h3 className="text-base lg:text-lg font-bold text-gray-800">{plan.name}</h3>
+                        <p className="text-[10px] lg:text-xs text-gray-500">{plan.description}</p>
                       </div>
                     </div>
 

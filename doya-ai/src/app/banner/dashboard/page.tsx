@@ -1489,29 +1489,24 @@ export default function BannerDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/60 p-5 sm:p-6 shadow-lg shadow-gray-200/50 hover:shadow-xl transition-all"
+              className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all"
             >
-              <div className="flex items-center justify-between mb-4 sm:mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center text-white font-black text-sm sm:text-base shadow-lg shadow-blue-500/30">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-100">
                     1
                   </div>
                   <div>
-                    <h2 className="font-bold text-base sm:text-lg text-gray-900">用途を選択</h2>
-                    <p className="text-xs text-gray-400 hidden sm:block">どこで使うバナーですか？</p>
+                    <h2 className="font-bold text-xl text-slate-800">用途を選択</h2>
+                    <p className="text-sm text-slate-400">バナーの使用チャネルを最適化します</p>
                   </div>
                 </div>
                 <button 
                   onClick={handleSample}
-                  className="flex items-center gap-2 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-800 rounded-xl transition-colors text-sm font-bold"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl transition-colors text-sm font-bold border border-slate-200"
                 >
                   <Wand2 className="w-4 h-4" />
                   <span>サンプル入力</span>
-                  <span className="px-2 py-0.5 rounded-full bg-white/70 border border-blue-200 text-[11px] font-black text-blue-800">
-                    {category
-                      ? `${Math.max(1, sampleCopyIndex + 1)}/${Math.max(1, sampleCopyTotal)}`
-                      : `${Math.max(1, sampleScenarioIndex + 1)}/${SAMPLE_SCENARIOS.length}`}
-                  </span>
                 </button>
               </div>
               <div className="grid lg:grid-cols-2 gap-4">
@@ -1600,20 +1595,19 @@ export default function BannerDashboard() {
             </motion.div>
 
             {/* Step 2: Category */}
-            {/* Step 2: Category */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/60 p-5 sm:p-6 shadow-lg shadow-gray-200/50 hover:shadow-xl transition-all"
+              className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all"
             >
-              <div className="flex items-center gap-3 mb-4 sm:mb-5">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center text-white font-black text-sm sm:text-base shadow-lg shadow-blue-500/30">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-100">
                   2
                 </div>
                 <div>
-                  <h2 className="font-bold text-base sm:text-lg text-gray-900">業種を選択</h2>
-                  <p className="text-xs text-gray-400 hidden sm:block">デザインテイストに影響します</p>
+                  <h2 className="font-bold text-xl text-slate-800">業種を選択</h2>
+                  <p className="text-sm text-slate-400">業界特有のデザインパターンを適用します</p>
                 </div>
               </div>
 
@@ -1707,19 +1701,20 @@ export default function BannerDashboard() {
             </motion.div>
 
             {/* Step 3: Size */}
+            {/* Step 3: Size */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/60 p-5 sm:p-6 shadow-lg shadow-gray-200/50 hover:shadow-xl transition-all"
+              className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all"
             >
-              <div className="flex items-center gap-3 mb-4 sm:mb-5">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center text-white font-black text-sm sm:text-base shadow-lg shadow-blue-500/30">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-100">
                   3
                 </div>
                 <div>
-                  <h2 className="font-bold text-base sm:text-lg text-gray-900">サイズを選択</h2>
-                  <p className="text-xs text-gray-400 hidden sm:block">用途に合わせた最適サイズ</p>
+                  <h2 className="font-bold text-xl text-slate-800">サイズを選択</h2>
+                  <p className="text-sm text-slate-400">配信先に最適なアスペクト比を自動設定します</p>
                 </div>
               </div>
               
@@ -1939,27 +1934,27 @@ export default function BannerDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
-              className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/60 p-5 sm:p-6 shadow-lg shadow-gray-200/50 hover:shadow-xl transition-all"
+              className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all"
             >
-              <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-orange-600 to-amber-600 flex items-center justify-center text-white font-black text-sm sm:text-base shadow-lg shadow-orange-500/30">
+              <div className="flex items-center justify-between gap-4 mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-100">
                     4
                   </div>
                   <div>
-                    <h2 className="font-bold text-base sm:text-lg text-gray-900">キャッチコピー</h2>
-                    <p className="text-xs text-gray-400 hidden sm:block">業種×用途に合わせてCTRを上げる</p>
+                    <h2 className="font-bold text-xl text-slate-800">キャッチコピー</h2>
+                    <p className="text-sm text-slate-400">CTRを高める効果的な言葉を選びます</p>
                   </div>
                 </div>
 
                 <button
                   onClick={handleSmartCopySample}
                   disabled={isSuggestingCopy}
-                  className="flex items-center gap-2 px-3.5 py-2 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-xl transition-colors text-sm font-black disabled:opacity-60"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all text-sm font-bold disabled:opacity-60 shadow-lg shadow-blue-100"
                 >
                   {isSuggestingCopy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  <span className="hidden sm:inline">AIサンプル</span>
-                  <span className="sm:hidden">AI</span>
+                  <span className="hidden sm:inline">AIでコピー提案</span>
+                  <span className="sm:hidden">AI提案</span>
                 </button>
               </div>
               <div className="relative">

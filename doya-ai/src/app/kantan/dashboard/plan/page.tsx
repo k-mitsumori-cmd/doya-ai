@@ -394,14 +394,14 @@ export default function KantanPlanPage() {
           {/* 左側メイン */}
           <div className="flex-1">
             {/* プランカード */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-8">
-              <div className="flex gap-6">
+            <div className="bg-white rounded-xl lg:rounded-2xl border border-gray-100 shadow-sm p-4 lg:p-6 mb-6 lg:mb-8">
+              <div className="flex flex-col sm:flex-row gap-4 lg:gap-6">
                 {/* 左：ミニダッシュボード風 */}
-                <div className="w-48 bg-[#1e3a5f] rounded-xl p-4 text-white">
-                  <div className="text-xs text-white/60 mb-2">カンタンマーケ</div>
-                  <div className="text-[10px] text-white/40 mb-3">ダッシュボード</div>
+                <div className="w-full sm:w-48 bg-[#1e3a5f] rounded-lg lg:rounded-xl p-3 lg:p-4 text-white">
+                  <div className="text-[10px] lg:text-xs text-white/60 mb-1 lg:mb-2">カンタンマーケ</div>
+                  <div className="text-[8px] lg:text-[10px] text-white/40 mb-2 lg:mb-3">ダッシュボード</div>
                   {/* ミニ棒グラフ */}
-                  <div className="flex items-end gap-1 h-16 mb-2">
+                  <div className="flex items-end gap-0.5 lg:gap-1 h-12 lg:h-16 mb-2">
                     {MONTHLY_DATA.map((d, i) => (
                       <div 
                         key={i} 
@@ -410,47 +410,47 @@ export default function KantanPlanPage() {
                       />
                     ))}
                   </div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-0.5 lg:gap-1">
                     {['月', '火', '水', '木', '金', '土'].map((d, i) => (
-                      <div key={i} className="flex-1 text-[8px] text-white/40 text-center">{d}</div>
+                      <div key={i} className="flex-1 text-[6px] lg:text-[8px] text-white/40 text-center">{d}</div>
                     ))}
                   </div>
                 </div>
 
                 {/* 右：プラン情報 */}
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h2 className="text-lg font-bold text-gray-800">スモールチーム向け〜エンタープライズ対応</h2>
-                    <button className="text-gray-400 hover:text-gray-600">
+                  <div className="flex items-center gap-2 mb-1 lg:mb-2">
+                    <h2 className="text-sm lg:text-lg font-bold text-gray-800">スモールチーム向け〜エンタープライズ対応</h2>
+                    <button className="text-gray-400 hover:text-gray-600 hidden sm:block">
                       <span className="text-lg">•••</span>
                     </button>
                   </div>
-                  <div className="text-3xl font-black text-gray-900 mb-4">¥18,760</div>
+                  <div className="text-2xl lg:text-3xl font-black text-gray-900 mb-3 lg:mb-4">¥18,760</div>
                   
-                  <button className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors mb-4">
+                  <button className="w-full sm:w-auto px-4 lg:px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors mb-3 lg:mb-4">
                     登録
                   </button>
 
-                  <p className="text-sm text-gray-500 mb-6">
-                    成長フェーズやチーム規模に応じて柔軟に最適化。<br />
+                  <p className="text-xs lg:text-sm text-gray-500 mb-4 lg:mb-6">
+                    成長フェーズやチーム規模に応じて柔軟に最適化。<br className="hidden lg:block" />
                     「使った分だけ」でも、「月額固定」でも、あなたのビジネスに合わせて設計可能です。
                   </p>
 
                   {/* 統計 */}
-                  <div className="flex gap-8">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-500">ユーザー満足度</span>
+                  <div className="flex flex-wrap gap-3 lg:gap-8">
+                    <div className="flex items-center gap-1 lg:gap-2">
+                      <span className="text-xs lg:text-sm text-gray-500">満足度</span>
                       <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                        <span className="font-bold text-gray-800">4.9</span>
+                        <Star className="w-3 h-3 lg:w-4 lg:h-4 text-amber-400 fill-amber-400" />
+                        <span className="font-bold text-gray-800 text-sm lg:text-base">4.9</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-emerald-500" />
-                      <span className="font-bold text-gray-800">1,456</span>
-                      <span className="text-sm text-gray-500">導入企業数</span>
+                    <div className="flex items-center gap-1 lg:gap-2">
+                      <TrendingUp className="w-3 h-3 lg:w-4 lg:h-4 text-emerald-500" />
+                      <span className="font-bold text-gray-800 text-sm lg:text-base">1,456</span>
+                      <span className="text-xs lg:text-sm text-gray-500">導入企業</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="hidden lg:flex items-center gap-2">
                       <ArrowUpRight className="w-4 h-4 text-blue-500" />
                       <span className="font-bold text-gray-800">26%</span>
                       <span className="text-sm text-gray-500">利用成長率</span>
