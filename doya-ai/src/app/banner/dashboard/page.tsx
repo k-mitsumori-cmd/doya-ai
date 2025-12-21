@@ -861,11 +861,12 @@ export default function BannerDashboard() {
   const handleGenerate = async () => {
     if (!canGenerate) return
 
-    // 上限に達している場合は上位利用へ誘導
+    // 上限に達している場合はプロプランへ誘導
     if (remainingCount <= 0) {
-      toast.error('本日の上限に達しました。上位利用をご希望の場合はリンクからご相談ください。', { duration: 6000 })
+      toast.error('本日の上限に達しました。プロプランにアップグレードしてください。', { duration: 6000 })
       try {
-        if (HIGH_USAGE_CONTACT_URL) window.open(HIGH_USAGE_CONTACT_URL, HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : '_self')
+        const upgradeUrl = '/banner/pricing'
+        window.open(upgradeUrl, '_self')
       } catch {}
       return
     }
@@ -2036,7 +2037,7 @@ export default function BannerDashboard() {
                   {isGuest ? (
                     <span className="ml-1">ログインしてプランをご確認ください。</span>
                   ) : (
-                    <span className="ml-1">必要なら「上位利用」からご相談ください。</span>
+                    <span className="ml-1">プロプランにアップグレードしてください。</span>
                   )}
                 </div>
               )}

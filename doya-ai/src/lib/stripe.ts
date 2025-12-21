@@ -37,6 +37,17 @@ export const STRIPE_PRICE_IDS = {
   },
   // ドヤバナーAI
   banner: {
+    // Basic: 月額¥3,980（1日30回）※ドヤバナーAIの標準有料プラン
+    basic: {
+      monthly:
+        process.env.STRIPE_PRICE_BANNER_BASIC_MONTHLY ||
+        process.env.STRIPE_PRICE_BANNER_STARTER_MONTHLY || // 互換（旧starterを使っている環境）
+        'price_banner_basic_monthly',
+      yearly:
+        process.env.STRIPE_PRICE_BANNER_BASIC_YEARLY ||
+        process.env.STRIPE_PRICE_BANNER_STARTER_YEARLY || // 互換（旧starterを使っている環境）
+        'price_banner_basic_yearly',
+    },
     starter: {
       monthly: process.env.STRIPE_PRICE_BANNER_STARTER_MONTHLY || 'price_banner_starter_monthly',
       yearly: process.env.STRIPE_PRICE_BANNER_STARTER_YEARLY || 'price_banner_starter_yearly',
@@ -60,7 +71,7 @@ export const STRIPE_PRICE_IDS = {
 // ========================================
 // 価格ID ↔ プランID 変換（厳密マッピング）
 // ========================================
-export type PlanId = 'seo-pro' | 'seo-business' | 'banner-pro' | 'bundle'
+export type PlanId = 'seo-pro' | 'seo-business' | 'banner-basic' | 'banner-pro' | 'bundle'
 export type ServiceId = 'seo' | 'banner' | 'bundle'
 
 export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
@@ -72,6 +83,7 @@ export function getPlanIdFromStripePriceId(priceId: string | null | undefined): 
   const entries: Array<[PlanId, { monthly: string; yearly: string }]> = [
     ['seo-pro', STRIPE_PRICE_IDS.seo.pro],
     ['seo-business', STRIPE_PRICE_IDS.seo.business],
+    ['banner-basic', STRIPE_PRICE_IDS.banner.basic],
     ['banner-pro', STRIPE_PRICE_IDS.banner.pro],
     ['bundle', STRIPE_PRICE_IDS.bundle],
   ]

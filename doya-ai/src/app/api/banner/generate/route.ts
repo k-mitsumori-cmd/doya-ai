@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
           if (dailyLimit !== -1 && normalized.dailyUsage >= dailyLimit) {
             return NextResponse.json(
               {
-                error: '本日の使用回数上限に達しました。上位利用をご希望の場合はお問い合わせください。',
+                error: '本日の使用回数上限に達しました。プロプランにアップグレードしてください。',
                 code: 'DAILY_LIMIT_REACHED',
                 usage: {
                   dailyLimit,
