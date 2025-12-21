@@ -12,19 +12,17 @@ import {
 } from 'lucide-react'
 import { KANTAN_PRICING, getUserUsage, getGuestUsage } from '@/lib/pricing'
 
-// サイドバーメニュー
+// サイドバーメニュー - AIエージェント中心に再構成
 const SIDEBAR_MENU = [
-  { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
-  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
-  { id: 'mail', label: 'メール', icon: <Calendar className="w-5 h-5" />, href: '#' },
-  { id: 'calendar', label: 'カレンダー', icon: <Calendar className="w-5 h-5" />, href: '#' },
+  { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text' },
   { id: 'chat', label: 'AIチャット', icon: <MessageSquare className="w-5 h-5" />, href: '/kantan/dashboard/chat' },
-  { id: 'plan', label: 'サービスプラン', icon: <Users className="w-5 h-5" />, href: '/kantan/dashboard/plan' },
+  { id: 'history', label: '生成履歴', icon: <Timer className="w-5 h-5" />, href: '/kantan/dashboard/history' },
+  { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
 ]
 
 const SIDEBAR_DATA_MENU = [
-  { id: 'analytics', label: 'アナリティクス', icon: <TrendingUp className="w-5 h-5" />, href: '#' },
-  { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text' },
+  { id: 'plan', label: 'プラン・料金', icon: <Users className="w-5 h-5" />, href: '/kantan/dashboard/pricing', active: true },
+  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
 ]
 
 // プランのアイコン

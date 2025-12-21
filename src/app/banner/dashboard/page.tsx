@@ -1429,58 +1429,30 @@ export default function BannerDashboard() {
               ======================================== */}
           <div className="space-y-6">
             
-            {/* Feature Guide */}
-            <div className="flex justify-end">
-              <FeatureGuide 
-                featureId="banner-overview"
-                title="ドヤバナーAI"
-                description="プロのデザイナーが作成したような高品質なバナーを、AIが3パターン同時に生成します。SNS広告、YouTubeサムネイル、ディスプレイ広告など、用途に合わせた最適なレイアウトを自動設計します。"
-                steps={[
-                  "「用途を選択」から、SNS広告やYouTubeサムネイルなど、バナーをどこで使うか選びます。",
-                  "「カテゴリを選択」から、あなたのビジネスに近い業種を選びます。デザインの方向性が決まります。",
-                  "「ターゲットとキーワード」を入力します。誰に、何を伝えたいかを書くだけでOKです。",
-                  "「バナーを生成する」をクリック！AIが数秒で3つの異なるアプローチのバナーを作成します。",
-                  "気に入ったバナーをダウンロード。必要に応じて微調整（リファイン）も可能です。"
-                ]}
-              />
-            </div>
-
-            {/* Hero Section - Premium Minimal Design */}
+            {/* Hero Card - Bunridge Professional */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-hidden"
+              className="relative bg-white rounded-3xl border border-gray-100 p-8 sm:p-10 shadow-sm overflow-hidden"
             >
-              {/* Main Card */}
-              <div className="relative bg-white rounded-3xl border border-gray-200/60 p-6 sm:p-10 shadow-2xl shadow-blue-500/5">
-                {/* Subtle Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.02] via-transparent to-blue-500/[0.02] rounded-3xl" />
-                
-                {/* Decorative Shapes */}
-                <div className="absolute -top-20 -right-20 w-60 h-60 bg-gradient-to-br from-blue-100 to-blue-100 rounded-full blur-3xl opacity-60" />
-                <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-gradient-to-tr from-blue-100 to-blue-100 rounded-full blur-3xl opacity-40" />
-                
-                <div className="relative">
-                  {/* Badge */}
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/30 mb-6">
-                    <Sparkles className="w-4 h-4" />
-                    A/B/C 3パターン同時生成
-                  </div>
-                  
-                  {/* Title */}
-                  <h1 className="text-3xl sm:text-4xl font-black mb-4 tracking-tight leading-tight">
-                    プロ品質バナーを
-                    <br />
-                    <span className="bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600 bg-clip-text text-transparent">
-                      数クリックで自動生成
-                    </span>
-                  </h1>
-                  
-                  {/* Subtitle */}
-                  <p className="text-gray-500 text-sm sm:text-base max-w-md">
-                    カテゴリとキーワードを入力するだけ。AIがプロのデザイナー品質のバナーを3パターン作成します。
-                  </p>
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-60" />
+              <div className="relative">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider mb-6">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Bunridge AI Engine
                 </div>
+                
+                <h2 className="text-3xl sm:text-4xl font-black text-slate-800 mb-4 tracking-tighter leading-tight">
+                  プロ品質のバナーを
+                  <br />
+                  <span className="text-blue-600">
+                    数クリックで自動生成
+                  </span>
+                </h2>
+                
+                <p className="text-slate-400 text-sm sm:text-base max-w-md font-medium">
+                  最新のAIエンジンが、あなたのビジネスに最適な高CTRバナーを3パターン提案します。
+                </p>
               </div>
             </motion.div>
 
@@ -1493,24 +1465,24 @@ export default function BannerDashboard() {
             >
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-100">
-                    1
+                  <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                    01
                   </div>
                   <div>
-                    <h2 className="font-bold text-xl text-slate-800">用途を選択</h2>
-                    <p className="text-sm text-slate-400">バナーの使用チャネルを最適化します</p>
+                    <h2 className="font-bold text-xl text-slate-800 tracking-tight">用途を選択</h2>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Channel Strategy</p>
                   </div>
                 </div>
                 <button 
                   onClick={handleSample}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl transition-colors text-sm font-bold border border-slate-200"
+                  className="flex items-center gap-2 px-5 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl transition-all text-sm font-bold border border-slate-200"
                 >
                   <Wand2 className="w-4 h-4" />
                   <span>サンプル入力</span>
                 </button>
               </div>
-              <div className="grid lg:grid-cols-2 gap-4">
-                <div className="grid grid-cols-4 sm:grid-cols-4 gap-2 sm:gap-3">
+              <div className="grid lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-4 gap-3">
                   {PURPOSES.map((p) => {
                     const Icon = p.icon
                     const isSelected = purpose === p.value
@@ -1518,79 +1490,39 @@ export default function BannerDashboard() {
                       <button
                         key={p.value}
                         onClick={() => setPurpose(p.value)}
-                        onMouseEnter={() => setHoveredPurpose(p.value)}
-                        onMouseLeave={() => setHoveredPurpose(null)}
-                        className={`relative p-3 sm:p-4 rounded-xl sm:rounded-2xl text-center transition-all ${
+                        className={`relative p-4 rounded-2xl text-center transition-all group ${
                           isSelected 
-                            ? 'bg-gradient-to-br from-blue-600 to-blue-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]' 
-                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:scale-[1.02]'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105' 
+                            : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-blue-600'
                         }`}
                       >
-                        {p.hot && (
-                          <span className="absolute -top-1 -right-1 w-3 h-3 bg-gradient-to-r from-amber-400 to-orange-400 rounded-full shadow-md flex items-center justify-center">
-                            <span className="text-[6px] text-white font-bold">★</span>
-                          </span>
-                        )}
-                        <Icon className={`w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 ${isSelected ? 'text-white' : ''}`} />
-                        <span className="text-[10px] sm:text-xs font-bold block truncate">{p.label}</span>
+                        <Icon className={`w-6 h-6 mx-auto mb-2 ${isSelected ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'}`} />
+                        <span className="text-[10px] font-black block truncate uppercase tracking-tighter">{p.label}</span>
                       </button>
                     )
                   })}
                 </div>
-                <AnimatePresence mode="wait">
-                  {(() => {
-                    const displayPurpose = hoveredPurpose || purpose
-                    const purposeData = PURPOSES.find(p => p.value === displayPurpose)
-                    if (!purposeData) return (
-                      <motion.div
-                        key="none"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="bg-gray-50 rounded-2xl p-4 border border-gray-200 flex items-center justify-center h-full min-h-[120px]"
-                      >
-                        <p className="text-gray-400 text-sm">用途を選択するとイメージが表示されます</p>
-                      </motion.div>
-                    )
-                    return (
-                      <motion.div
-                        key={purposeData.value}
-                        initial={{ opacity: 0, x: 10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -10 }}
-                        className="relative bg-gray-50 rounded-2xl p-4 border border-gray-200 overflow-hidden"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent z-0" />
-                        <div className="relative z-10">
-                          <h3 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-blue-500" />
-                            <span className="text-blue-600">CTR戦略:</span> {purposeData.label}
-                          </h3>
-                          <p className="text-xs text-gray-600 mb-3">
-                            {purposeData.description}
-                          </p>
-                          {purposeData.sample && (
-                            <div className="relative w-full aspect-[4/3] rounded-lg overflow-hidden border border-gray-200 shadow-md">
-                              <img
-                                src={purposeData.sample}
-                                alt={purposeData.label}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const el = e.currentTarget
-                                  if (el.dataset.fallbackApplied === '1') return
-                                  el.dataset.fallbackApplied = '1'
-                                  el.src = String(purposeData.sample || '').replace(/\.png(\?.*)?$/, '.svg')
-                                }}
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent flex items-end p-2">
-                                <span className="text-white text-[10px] font-bold">広告デザインイメージ</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )
-                  })()}
-                </AnimatePresence>
+
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col justify-center">
+                  {purpose ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest">
+                        <Target className="w-3.5 h-3.5" /> Recommended Strategy
+                      </div>
+                      <h3 className="text-slate-800 font-bold text-sm">{PURPOSES.find(p => p.value === purpose)?.label}特化レイアウト</h3>
+                      <p className="text-slate-500 text-[11px] leading-relaxed font-medium">
+                        {PURPOSES.find(p => p.value === purpose)?.description}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                        <ArrowRight className="w-5 h-5 text-slate-300" />
+                      </div>
+                      <p className="text-slate-400 text-[11px] font-bold italic">用途を選択すると戦略が表示されます</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
 
@@ -1602,100 +1534,55 @@ export default function BannerDashboard() {
               className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all"
             >
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg shadow-lg shadow-blue-100">
-                  2
+                <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                  02
                 </div>
                 <div>
-                  <h2 className="font-bold text-xl text-slate-800">業種を選択</h2>
-                  <p className="text-sm text-slate-400">業界特有のデザインパターンを適用します</p>
+                  <h2 className="font-bold text-xl text-slate-800 tracking-tight">業種を選択</h2>
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Industry Design</p>
                 </div>
               </div>
 
-              <div className="grid lg:grid-cols-[1fr,240px] gap-6">
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 sm:gap-3">
+              <div className="grid lg:grid-cols-[1fr,280px] gap-8">
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
                   {CATEGORIES.map((cat) => {
                     const isSelected = category === cat.value
                     return (
                       <button
                         key={cat.value}
                         onClick={() => setCategory(cat.value)}
-                        onMouseEnter={() => setHoveredCategory(cat.value)}
-                        onMouseLeave={() => setHoveredCategory(null)}
-                        className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl text-center transition-all ${
+                        className={`p-3 rounded-2xl text-center transition-all ${
                           isSelected 
-                            ? 'bg-white shadow-lg scale-[1.02] outline outline-2 outline-offset-2' 
-                            : 'bg-gray-50/50 hover:bg-gray-100 hover:scale-[1.02]'
+                            ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105' 
+                            : 'bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-blue-600'
                         }`}
-                        style={{ 
-                          outlineColor: isSelected ? cat.color : undefined,
-                          boxShadow: isSelected ? `0 10px 40px -10px ${cat.color}40` : undefined
-                        }}
                       >
-                        <span className="text-xl sm:text-2xl block mb-1">{cat.icon}</span>
-                        <span className={`text-[10px] sm:text-xs font-bold ${isSelected ? 'text-gray-900' : 'text-gray-500'}`}>
-                          {cat.label}
-                        </span>
+                        <span className="text-2xl block mb-1">{cat.icon}</span>
+                        <span className="text-[10px] font-black block truncate uppercase tracking-tighter">{cat.label}</span>
                       </button>
                     )
                   })}
                 </div>
-
-                {/* Design Style Preview Panel (Visible on Desktop) */}
-                <div className="hidden lg:block relative min-h-[180px]">
-                  <AnimatePresence mode="wait">
-                    {(() => {
-                      const displayCat = hoveredCategory || category
-                      const catData = CATEGORIES.find(c => c.value === displayCat)
-                      if (!catData) return (
-                        <motion.div
-                          key="none"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="h-full border-2 border-dashed border-gray-100 rounded-2xl flex flex-col items-center justify-center p-4 text-center"
-                        >
-                          <Palette className="w-8 h-8 text-gray-200 mb-2" />
-                          <p className="text-[10px] text-gray-400 font-medium">業種を選ぶと<br />デザイン傾向を表示</p>
-                        </motion.div>
-                      )
-
-                      return (
-                        <motion.div
-                          key={catData.value}
-                          initial={{ opacity: 0, x: 10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          className="h-full bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 shadow-inner flex flex-col"
-                        >
-                          <div className="relative aspect-[4/3] bg-gray-200 overflow-hidden">
-                            <img 
-                              src={catData.sample} 
-                              alt={catData.label} 
-                              className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
-                              onError={(e) => {
-                                const el = e.currentTarget
-                                if (el.dataset.fallbackApplied === '1') return
-                                el.dataset.fallbackApplied = '1'
-                                el.src = String(catData.sample || '').replace(/\.png(\?.*)?$/, '.svg')
-                              }}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-3">
-                              <span className="text-white text-[10px] font-black tracking-widest uppercase">Design Taste</span>
-                            </div>
-                          </div>
-                          <div className="p-3">
-                            <div className="flex items-center gap-1.5 mb-1">
-                              <span className="text-xs">{catData.icon}</span>
-                              <span className="text-xs font-bold text-gray-800">{catData.label}のデザイン</span>
-                            </div>
-                            <p className="text-[10px] leading-relaxed text-gray-500 font-medium">
-                              {catData.description}
-                            </p>
-                          </div>
-                        </motion.div>
-                      )
-                    })()}
-                  </AnimatePresence>
+                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col">
+                  {category ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest">
+                        <Palette className="w-3.5 h-3.5" /> Color Palette
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {CATEGORIES.find(c => c.value === category)?.bg?.split(' ').map((cl, idx) => (
+                          <div key={idx} className={`w-6 h-6 rounded-full bg-gradient-to-br ${cl}`} />
+                        ))}
+                      </div>
+                      <p className="text-slate-500 text-[11px] leading-relaxed font-bold mt-2">
+                        {CATEGORIES.find(c => c.value === category)?.description}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center py-4 text-slate-400 text-[11px] font-bold italic text-center">
+                      業種を選択してください
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
