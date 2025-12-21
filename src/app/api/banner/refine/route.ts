@@ -18,6 +18,8 @@ function getNanoBananaImageModel(): string {
   )
 }
 
+const DEFAULT_IMAGE_MODEL = 'gemini-2.0-flash-exp'
+
 interface RefineRequest {
   originalImage: string
   instruction: string
@@ -88,54 +90,67 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
     const img = parseDataUrl(originalImage)
 
     const prompt = createEditPrompt(instruction, category, size)
-    const endpoint = `${GEMINI_API_BASE}/models/${getNanoBananaImageModel()}:generateContent`
+    const preferred = getNanoBananaImageModel()
+    const modelsToTry = Array.from(new Set([preferred, DEFAULT_IMAGE_MODEL]))
+    let lastError: any = null
 
-    const requestBody: any = {
-      contents: [
-        {
-          parts: [
-            { inlineData: { mimeType: img.mimeType, data: img.data } },
-            { text: prompt },
+    for (const model of modelsToTry) {
+      try {
+        const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+
+        const requestBody: any = {
+          contents: [
+            {
+              parts: [
+                { inlineData: { mimeType: img.mimeType, data: img.data } },
+                { text: prompt },
+              ],
+            },
           ],
-        },
-      ],
-      generationConfig: {
-        responseModalities: ['IMAGE', 'TEXT'],
-        imageConfig: {
-          aspectRatio,
-          imageSize: '2K',
-        },
-      },
+          generationConfig: {
+            responseModalities: ['IMAGE', 'TEXT'],
+            imageConfig: {
+              aspectRatio,
+              imageSize: '2K',
+            },
+          },
+        }
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
+          body: JSON.stringify(requestBody),
+        })
+
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error('Nano Banana Pro refine error:', response.status, errorText)
+          throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 300)}`)
+        }
+
+        const data = await response.json()
+
+        const parts = data?.candidates?.[0]?.content?.parts
+        const imgPart = Array.isArray(parts) ? parts.find((p: any) => p?.inlineData?.data) : null
+        if (!imgPart?.inlineData?.data) throw new Error('画像が生成されませんでした')
+        const mimeType = imgPart.inlineData.mimeType || 'image/png'
+        const refinedImage = `data:${mimeType};base64,${imgPart.inlineData.data}`
+
+        return NextResponse.json({
+          success: true,
+          refinedImage,
+          message: `Nano Banana Pro で画像を修正しました（model: ${model}${model === preferred ? '' : ' / fallback'}）`,
+        })
+      } catch (e: any) {
+        lastError = e
+        continue
+      }
     }
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify(requestBody),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Nano Banana Pro refine error:', response.status, errorText)
-      throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 300)}`)
-    }
-
-    const data = await response.json()
-
-    const parts = data?.candidates?.[0]?.content?.parts
-    const imgPart = Array.isArray(parts) ? parts.find((p: any) => p?.inlineData?.data) : null
-    if (!imgPart?.inlineData?.data) throw new Error('画像が生成されませんでした')
-    const mimeType = imgPart.inlineData.mimeType || 'image/png'
-    const refinedImage = `data:${mimeType};base64,${imgPart.inlineData.data}`
-
-    return NextResponse.json({
-      success: true,
-      refinedImage,
-      message: 'Nano Banana Pro で画像を修正しました',
-    })
+    throw lastError || new Error('バナーの再生成に失敗しました')
 
   } catch (error: any) {
     console.error('Banner refine error:', error)
