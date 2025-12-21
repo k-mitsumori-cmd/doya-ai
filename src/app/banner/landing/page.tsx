@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { ArrowRight, Sparkles, Crown, LogIn, Check, Zap, MessageSquare, BarChart3, Layers, Clock, ShieldCheck, Zap as ZapIcon } from 'lucide-react'
+import { ArrowRight, Sparkles, Crown, LogIn, Check, Zap, MessageSquare, BarChart3, Layers, Clock, ShieldCheck, Zap as ZapIcon, Users } from 'lucide-react'
 import { getServiceById } from '@/lib/services'
 import { BANNER_PRICING } from '@/lib/pricing'
 import { motion } from 'framer-motion'
