@@ -46,7 +46,8 @@ function getGeminiTextModel(): string {
     process.env.GEMINI_PRO3_MODEL ||
     process.env.GEMINI_PRO_3_MODEL ||
     process.env.GEMINI_TEXT_MODEL ||
-    'gemini-2.0-flash'
+    // 未設定時は Gemini 3.0（Pro3想定）を優先
+    'gemini-3.0-pro'
   )
 }
 

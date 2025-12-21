@@ -15,7 +15,8 @@ function getPrimaryTextModel(): string {
     process.env.GEMINI_PRO3_MODEL ||
     process.env.GEMINI_PRO_3_MODEL ||
     process.env.GEMINI_TEXT_MODEL ||
-    'gemini-2.0-flash'
+    // 未設定時は Gemini 3.0（Pro3想定）を優先
+    'gemini-3.0-pro'
   )
 }
 
@@ -83,8 +84,8 @@ export async function generateTextWithGemini(
 - 抽象的な説明ではなく、すぐに使える具体的な文章を提供
 - マーケティングのベストプラクティスに基づいて回答`
 
-  // まずGemini 2.0を試行、失敗したらフォールバック
-  const models = [getPrimaryTextModel(), GEMINI_FALLBACK_MODEL]
+  // 未設定時は Gemini 3.0 → 2.0 Flash → 1.5 Flash の順で試す
+  const models = [getPrimaryTextModel(), 'gemini-2.0-flash', GEMINI_FALLBACK_MODEL]
   
   for (const model of models) {
     try {
