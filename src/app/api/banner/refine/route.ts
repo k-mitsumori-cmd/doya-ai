@@ -18,7 +18,11 @@ function getNanoBananaImageModel(): string {
   )
 }
 
-const DEFAULT_IMAGE_MODEL = 'gemini-2.0-flash-exp'
+function getImageFallbackModel(): string {
+  return process.env.DOYA_BANNER_IMAGE_FALLBACK_MODEL || 'gemini-4.0'
+}
+
+const LAST_RESORT_IMAGE_MODEL = 'gemini-2.0-flash-exp'
 
 interface RefineRequest {
   originalImage: string
@@ -91,7 +95,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
 
     const prompt = createEditPrompt(instruction, category, size)
     const preferred = getNanoBananaImageModel()
-    const modelsToTry = Array.from(new Set([preferred, DEFAULT_IMAGE_MODEL]))
+    const modelsToTry = Array.from(new Set([preferred, getImageFallbackModel(), LAST_RESORT_IMAGE_MODEL]))
     let lastError: any = null
 
     for (const model of modelsToTry) {
