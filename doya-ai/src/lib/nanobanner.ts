@@ -51,7 +51,13 @@ function getGeminiTextModel(): string {
   )
 }
 
-const DEFAULT_IMAGE_MODEL = 'gemini-2.0-flash-exp'
+// 画像モデルのフォールバック（品質優先で4.0系をデフォルトに）
+function getImageFallbackModel(): string {
+  return process.env.DOYA_BANNER_IMAGE_FALLBACK_MODEL || 'gemini-4.0'
+}
+
+// 最後の保険（古い環境でも画像生成できる可能性が高い）
+const LAST_RESORT_IMAGE_MODEL = 'gemini-2.0-flash-exp'
 const DEFAULT_TEXT_FALLBACKS = ['gemini-2.0-flash', 'gemini-1.5-flash'] as const
 
 // APIキーを取得（複数の環境変数に対応）
@@ -597,7 +603,8 @@ async function generateSingleBanner(
 ): Promise<string> {
   const apiKey = getApiKey()
   const preferredModel = getNanoBananaImageModel()
-  const modelsToTry = Array.from(new Set([preferredModel, DEFAULT_IMAGE_MODEL]))
+  const fallbackModel = getImageFallbackModel()
+  const modelsToTry = Array.from(new Set([preferredModel, fallbackModel, LAST_RESORT_IMAGE_MODEL]))
   
   console.log('Calling Nano Banana Pro...')
   console.log('Preferred Model:', preferredModel)
