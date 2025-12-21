@@ -243,7 +243,7 @@ export default function KantanTextListPage() {
         <div className="p-3 border-t border-white/10">
           <Link href="/banner" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🎨</span>
-            <span>Bunridge AI</span>
+            <span>ドヤバナーAI</span>
           </Link>
           <Link href="/seo" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🧠</span>
@@ -495,7 +495,7 @@ export default function KantanTextListPage() {
                       <span className="text-xl">🎨</span>
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-bold text-gray-800">Bunridge AI</h4>
+                      <h4 className="font-bold text-gray-800">ドヤバナーAI</h4>
                       <p className="text-xs text-gray-400">A/B/Cの3案を同時に作成</p>
                     </div>
                     <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" />

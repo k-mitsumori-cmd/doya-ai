@@ -2,12 +2,12 @@ import { Metadata } from 'next'
 import { SITE_CONFIG, SERVICE_SEO, generateSoftwareApplicationSchema } from '@/lib/seo'
 
 // ============================================
-// Bunridge AI メタデータ
+// ドヤバナーAI メタデータ
 // ============================================
 export const metadata: Metadata = {
   title: {
     default: SERVICE_SEO.banner.title,
-    template: `%s | Bunridge AI`,
+    template: `%s | ドヤバナーAI`,
   },
   description: SERVICE_SEO.banner.description,
   keywords: SERVICE_SEO.banner.keywords,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
         url: SERVICE_SEO.banner.ogImage,
         width: 1200,
         height: 630,
-        alt: 'Bunridge AI - AIでプロ品質バナーを自動生成',
+        alt: 'ドヤバナーAI - AIでプロ品質バナーを自動生成',
       },
     ],
   },

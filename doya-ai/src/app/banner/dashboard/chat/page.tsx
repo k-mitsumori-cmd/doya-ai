@@ -154,7 +154,7 @@ export default function BannerChatPage() {
         <LoadingProgress isLoading={isThinking || isGenerating} />
 
         {/* ========================================
-            Header - Bunridge Style
+            Header - Doya Banner Style
             ======================================== */}
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
           <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
@@ -165,7 +165,7 @@ export default function BannerChatPage() {
                 </Link>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
                   <MessageSquare className="w-6 h-6 text-blue-600" />
-                  Bunridge AI チャット
+                  ドヤバナーAI チャット
                 </h1>
               </div>
               

@@ -144,7 +144,7 @@ export default function BannerPlanPage() {
       <DashboardSidebar />
       <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
         {/* ========================================
-            Header - Bunridge Style
+            Header - Doya Banner Style
             ======================================== */}
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
           <div className="max-w-[1600px] mx-auto px-4 sm:px-8">

@@ -1,7 +1,7 @@
 {
   "name": "doya-admin-portal",
   "version": "1.0.0",
-  "description": "ドヤシリーズ統合管理ポータル - カンタンドヤAI / Bunridge AI",
+  "description": "ドヤシリーズ統合管理ポータル - カンタンドヤAI / ドヤバナーAI",
   "private": true,
   "scripts": {
     "dev": "next dev -p 3100",

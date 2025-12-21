@@ -4,7 +4,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'ドヤシリーズ 統合管理ポータル',
-  description: 'カンタンドヤAI / Bunridge AI の統合管理画面',
+  description: 'カンタンドヤAI / ドヤバナーAI の統合管理画面',
 }
 
 export default function RootLayout({

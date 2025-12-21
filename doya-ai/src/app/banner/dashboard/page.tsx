@@ -299,7 +299,7 @@ const BANNER_INSIGHTS: Record<string, {
       features: [
         '「〜の方法」「完全解説」の学び訴求',
         '具体性を持たせた数字の強調',
-        'Bunridgeブルーの信頼感カラー',
+        'ドヤバナーブルーの信頼感カラー',
       ],
       color: 'from-blue-600 to-blue-800',
       icon: '📚',
@@ -622,7 +622,7 @@ export default function BannerDashboard() {
   const [overlaySubhead, setOverlaySubhead] = useState('')
   const [overlayCta, setOverlayCta] = useState('')
   const [overlayTextColor, setOverlayTextColor] = useState('#FFFFFF')
-  const [overlayBgColor, setOverlayBgColor] = useState('#2563EB') // Bunridge Blue
+  const [overlayBgColor, setOverlayBgColor] = useState('#2563EB') // Doya Banner Blue
   const [overlayBgOpacity, setOverlayBgOpacity] = useState(82)
   const [overlayPosition, setOverlayPosition] = useState<'bottom' | 'center'>('bottom')
   const [overlayFontScale, setOverlayFontScale] = useState(1)
@@ -1296,7 +1296,7 @@ export default function BannerDashboard() {
               ======================================== */}
           <div className="space-y-6">
             
-            {/* Hero Card - Bunridge Professional */}
+            {/* Hero Card - Professional */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1307,7 +1307,7 @@ export default function BannerDashboard() {
                 <div className="flex-1">
                   <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider mb-6">
                     <Sparkles className="w-3.5 h-3.5" />
-                    Bunridge AI Engine v2.0
+                    ドヤバナーAI Engine v2.0
                   </div>
                   
                   <h2 className="text-3xl sm:text-4xl font-black text-slate-800 mb-4 tracking-tighter leading-tight">
@@ -2476,7 +2476,7 @@ export default function BannerDashboard() {
                   )}
             </motion.div>
 
-           {/* Bunridge CV Banner */}
+           {/* CV Banner */}
            <a 
              href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1" 
              target="_blank" 
@@ -2605,12 +2605,12 @@ export default function BannerDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4 text-sm text-gray-500">
-              <Link href="/banner" className="hover:text-gray-900 transition-colors">Bunridgeポータル</Link>
+              <Link href="/banner" className="hover:text-gray-900 transition-colors">ドヤバナーAIポータル</Link>
               <Link href="/terms" className="hover:text-gray-900 transition-colors">利用規約</Link>
               <Link href="/privacy" className="hover:text-gray-900 transition-colors">プライバシー</Link>
             </div>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
-              © 2025 Bunridge AI. All rights reserved.
+              © 2025 ドヤバナーAI. All rights reserved.
             </p>
           </div>
         </div>

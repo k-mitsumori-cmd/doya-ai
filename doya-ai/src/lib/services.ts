@@ -117,11 +117,11 @@ export const SERVICES: Service[] = [
   },
   
   // ----------------------------------------
-  // Bunridge AI（画像生成）
+  // ドヤバナーAI（画像生成）
   // ----------------------------------------
   {
     id: 'banner',
-    name: 'Bunridge AI',
+    name: 'ドヤバナーAI',
     shortName: 'バナー',
     description: 'プロ品質のバナーを自動生成',
     longDescription: 'AIがあなたのビジネスに最適なバナーをA/B/Cの3案で提案。デザイン知識不要で、効果的な広告を素早く作成。',

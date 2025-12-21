@@ -217,7 +217,7 @@ export default function DashboardSidebar({
               exit={{ opacity: 0, x: -10 }}
               className="overflow-hidden"
             >
-              <h1 className="text-2xl font-black text-white tracking-tighter leading-none">Bunridge</h1>
+              <h1 className="text-2xl font-black text-white tracking-tighter leading-none">ドヤバナーAI</h1>
             </motion.div>
           )}
         </AnimatePresence>
@@ -227,7 +227,7 @@ export default function DashboardSidebar({
       <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
         {/* Active Tool Navigation */}
         <div className="space-y-1">
-          <SectionTitle title={isBanner ? "Bunridge AI" : "Doya SEO"} />
+          <SectionTitle title={isBanner ? "ドヤバナーAI" : "Doya SEO"} />
           {activeNavItems.map((item) => (
             <NavLink key={item.href + item.label} item={item} />
           ))}

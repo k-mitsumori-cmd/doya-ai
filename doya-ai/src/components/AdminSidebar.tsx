@@ -33,7 +33,7 @@ const mainNavItems = [
 
 const serviceLinks = [
   { emoji: '📝', label: 'カンタンドヤAI', href: '/kantan/dashboard', gradient: 'from-blue-500 to-cyan-500' },
-  { emoji: '🎨', label: 'Bunridge AI', href: '/banner/dashboard', gradient: 'from-violet-500 to-fuchsia-500' },
+  { emoji: '🎨', label: 'ドヤバナーAI', href: '/banner/dashboard', gradient: 'from-violet-500 to-fuchsia-500' },
 ]
 
 export function AdminSidebar() {

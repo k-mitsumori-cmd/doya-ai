@@ -110,7 +110,7 @@ export default function AdminDashboard() {
           },
           {
             id: 'banner',
-            name: 'Bunridge AI',
+            name: 'ドヤバナーAI',
             icon: '🎨',
             gradient: 'from-violet-500 to-fuchsia-500',
             users: 355,
@@ -379,7 +379,7 @@ export default function AdminDashboard() {
                     <span className="text-sm font-medium text-white">{Math.floor(stats.activeUsers * 0.65)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-white/40">Bunridge AI</span>
+                    <span className="text-xs text-white/40">ドヤバナーAI</span>
                     <span className="text-sm font-medium text-white">{Math.floor(stats.activeUsers * 0.35)}</span>
                   </div>
                 </div>

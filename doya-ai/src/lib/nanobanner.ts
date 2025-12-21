@@ -47,63 +47,63 @@ function getApiKey(): string {
 // 業種カテゴリ別のデザインガイドライン
 const CATEGORY_STYLES: Record<string, { style: string; colors: string; elements: string }> = {
   telecom: {
-    style: 'modern technology, Bunridge blue theme, professional',
+    style: 'modern technology, Doya Banner blue theme, professional',
     colors: 'primary blue (#2563EB), light blue highlights (#DBEAFE), white, dark navy (#0F172A)',
     elements: 'smartphone, signal waves, cloud icons, speed arrows',
   },
   marketing: {
-    style: 'sophisticated business, Bunridge analytics style',
+    style: 'sophisticated business, Doya Banner analytics style',
     colors: 'primary blue (#2563EB), orange accent (#F97316), yellow accent (#FBBF24), white',
     elements: 'rising graphs, growth arrows, chart icons, data visualization',
   },
   ec: {
-    style: 'vibrant sale, urgency, Bunridge shopping theme',
-    colors: 'orange (#F97316), amber (#FBBF24), Bunridge blue (#2563EB), white',
+    style: 'vibrant sale, urgency, Doya Banner shopping theme',
+    colors: 'orange (#F97316), amber (#FBBF24), Doya Banner blue (#2563EB), white',
     elements: 'shopping cart, gift boxes, sale tags, percent signs, ribbons',
   },
   recruit: {
-    style: 'bright hopeful, Bunridge career portal style',
+    style: 'bright hopeful, Doya Banner career portal style',
     colors: 'primary blue (#2563EB), green accent (#22C55E), white, gray-50',
     elements: 'office buildings, handshake, teamwork silhouettes, career ladder',
   },
   beauty: {
-    style: 'elegant refined, feminine premium, Bunridge soft theme',
-    colors: 'pink (#EC4899), Bunridge blue (#2563EB), amber accent (#FBBF24), white',
+    style: 'elegant refined, feminine premium, Doya Banner soft theme',
+    colors: 'pink (#EC4899), Doya Banner blue (#2563EB), amber accent (#FBBF24), white',
     elements: 'flowers, cosmetic bottles, sparkles, ribbons, elegant patterns',
   },
   food: {
-    style: 'delicious appetizing, Bunridge warm inviting style',
+    style: 'delicious appetizing, Doya Banner warm inviting style',
     colors: 'red (#EF4444), orange (#F97316), amber (#FBBF24), white',
     elements: 'food imagery, steam effects, fresh ingredients, restaurant ambiance',
   },
   realestate: {
-    style: 'trustworthy stable, Bunridge property portal style',
-    colors: 'teal (#14B8A6), Bunridge blue (#2563EB), amber accent (#FBBF24), white',
+    style: 'trustworthy stable, Doya Banner property portal style',
+    colors: 'teal (#14B8A6), Doya Banner blue (#2563EB), amber accent (#FBBF24), white',
     elements: 'buildings, houses, keys, location pins, modern architecture',
   },
   education: {
-    style: 'inspiring learning, Bunridge academic style',
-    colors: 'indigo (#6366F1), Bunridge blue (#2563EB), yellow accent (#FBBF24), white',
+    style: 'inspiring learning, Doya Banner academic style',
+    colors: 'indigo (#6366F1), Doya Banner blue (#2563EB), yellow accent (#FBBF24), white',
     elements: 'books, graduation caps, light bulbs, academic icons',
   },
   finance: {
-    style: 'trustworthy secure, Bunridge financial portal style',
-    colors: 'navy blue (#0F172A), amber (#FBBF24), Bunridge blue (#2563EB), white',
+    style: 'trustworthy secure, Doya Banner financial portal style',
+    colors: 'navy blue (#0F172A), amber (#FBBF24), Doya Banner blue (#2563EB), white',
     elements: 'coins, graphs, secure locks, growth charts, financial icons',
   },
   health: {
-    style: 'caring professional, Bunridge medical style',
-    colors: 'cyan (#06B6D4), Bunridge blue (#2563EB), white, slate-50',
+    style: 'caring professional, Doya Banner medical style',
+    colors: 'cyan (#06B6D4), Doya Banner blue (#2563EB), white, slate-50',
     elements: 'medical crosses, hearts, caring hands, health icons',
   },
   it: {
-    style: 'innovative tech, Bunridge digital style',
-    colors: 'Bunridge blue (#2563EB), dark navy (#0F172A), amber accent (#FBBF24), white',
+    style: 'innovative tech, Doya Banner digital style',
+    colors: 'Doya Banner blue (#2563EB), dark navy (#0F172A), amber accent (#FBBF24), white',
     elements: 'code snippets, circuits, cloud, AI icons, digital patterns',
   },
   other: {
-    style: 'professional clean, Bunridge versatile style',
-    colors: 'Bunridge blue (#2563EB), slate-50, orange accent (#F97316), amber (#FBBF24)',
+    style: 'professional clean, Doya Banner versatile style',
+    colors: 'Doya Banner blue (#2563EB), slate-50, orange accent (#F97316), amber (#FBBF24)',
     elements: 'abstract geometric shapes, professional icons',
   },
 }

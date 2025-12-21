@@ -38,7 +38,7 @@ export default function BannerLandingPage() {
               <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <span className="font-black text-slate-800 text-xl tracking-tighter uppercase">Bunridge</span>
+              <span className="font-black text-slate-800 text-xl tracking-tighter uppercase">ドヤバナーAI</span>
             </div>
           </div>
 
@@ -98,7 +98,7 @@ export default function BannerLandingPage() {
             className="text-lg sm:text-xl text-slate-500 mb-12 leading-relaxed max-w-2xl mx-auto font-medium"
           >
             カテゴリを選んでキーワードを入力するだけ。<br />
-            Bunridge AIが戦略に基づいた3つのクリエイティブを瞬時に提案。
+            ドヤバナーAIが戦略に基づいた3つのクリエイティブを瞬時に提案。
           </motion.p>
 
           <motion.div 
@@ -279,7 +279,7 @@ export default function BannerLandingPage() {
         </div>
       </section>
 
-      {/* Bunridge Marketing CTA */}
+      {/* Marketing CTA */}
       <section className="py-24 px-4 bg-blue-600 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
@@ -348,7 +348,7 @@ export default function BannerLandingPage() {
               <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <span className="font-black text-slate-800 text-xl tracking-tighter uppercase">Bunridge</span>
+              <span className="font-black text-slate-800 text-xl tracking-tighter uppercase">ドヤバナーAI</span>
             </div>
             
             <div className="flex items-center gap-8">
@@ -361,7 +361,7 @@ export default function BannerLandingPage() {
           
           <div className="pt-8 border-t border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
-              © 2025 Bunridge AI. Powered by DOYA AI.
+              © 2025 ドヤバナーAI. Powered by DOYA AI.
             </p>
             <div className="flex items-center gap-6 text-[10px] font-black text-slate-300 uppercase tracking-widest">
               <Link href="#" className="hover:text-slate-400">Privacy Policy</Link>

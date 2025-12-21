@@ -26,7 +26,7 @@ const SERVICE_DESIGNS = {
     features: ['ビジネスメール', 'ブログ記事', 'SNS投稿', 'キャッチコピー'],
   },
   banner: {
-    title: 'Bunridge AI',
+    title: 'ドヤバナーAI',
     subtitle: 'プロ品質バナーを自動生成',
     icon: '🎨',
     gradient: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',

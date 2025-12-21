@@ -30,7 +30,7 @@ export const SERVICES: ServiceConfig[] = [
   },
   {
     id: 'doya-banner',
-    name: 'Bunridge AI',
+    name: 'ドヤバナーAI',
     shortName: 'バナーAI',
     description: 'AIバナー生成ツール - ワンボタンでプロ品質バナー',
     color: 'text-purple-600',
