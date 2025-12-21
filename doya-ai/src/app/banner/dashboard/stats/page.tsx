@@ -130,73 +130,69 @@ export default function StatsPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
       <DashboardSidebar />
       <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
-        {/* Header */}
-        <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-gray-200/50">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <Link 
-                  href="/banner"
-                  className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                  <span className="hidden sm:inline text-sm font-medium">戻る</span>
-                </Link>
-                <div className="h-6 w-px bg-gray-200" />
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                    <BarChart3 className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <h1 className="text-base sm:text-lg font-black text-gray-900">効率化ダッシュボード</h1>
-                    <p className="text-[10px] sm:text-xs text-gray-400 hidden sm:block">制作時間の削減効果を可視化</p>
-                  </div>
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
+          <div className="h-16 sm:h-20 flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                <ArrowLeft className="w-5 h-5 text-slate-400" />
+              </Link>
+              <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                パフォーマンス分析
+              </h1>
+            </div>
+            
+            <div className="flex items-center gap-3 sm:gap-6">
+              <div className="flex items-center gap-3 pl-2">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-bold text-slate-800 leading-none">田中 太郎</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">Admin</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
+                  <span className="text-blue-600 font-black text-xs">TT</span>
                 </div>
               </div>
-              <Link 
-                href="/banner/dashboard/history"
-                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                履歴を見る
-                <ChevronRight className="w-4 h-4" />
-              </Link>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Hero Stats */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"
-        >
-          {/* 削減時間 */}
-          <div className="col-span-2 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-600 rounded-2xl sm:rounded-3xl p-5 sm:p-6 text-white shadow-xl shadow-blue-500/30 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-3">
-                <Timer className="w-5 h-5 text-blue-200" />
-                <span className="text-sm font-medium text-blue-100">削減できた制作時間</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl sm:text-5xl font-black">{totalTimeSavedHours}</span>
-                <span className="text-xl sm:text-2xl font-bold text-blue-200">時間</span>
-                <span className="text-lg text-blue-300">
-                  {totalTimeSavedMinutes % 60 > 0 && `${totalTimeSavedMinutes % 60}分`}
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-blue-200 mt-2">
-                ※ デザイナーが1バナー制作に平均45分かかる前提で算出
-              </p>
+      <main className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8">
+        {/* Summary Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          {/* Total Banners */}
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
+            <div className="w-16 h-16 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100 group-hover:scale-105 transition-transform">
+              <Layers className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Total Banners</p>
+              <p className="text-4xl font-black text-slate-800 tracking-tighter">{totalBanners}</p>
             </div>
           </div>
 
-          {/* コスト削減 */}
-          <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-gray-200 shadow-lg relative overflow-hidden group hover:shadow-xl transition-all">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-2">
+          {/* Time Saved */}
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
+            <div className="w-16 h-16 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-100 group-hover:scale-105 transition-transform">
+              <Timer className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Time Saved</p>
+              <p className="text-4xl font-black text-slate-800 tracking-tighter">{totalTimeSavedHours}<span className="text-xl ml-1">h</span></p>
+            </div>
+          </div>
+
+          {/* Cost Reduction */}
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-6 group hover:shadow-md transition-all">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-100 group-hover:scale-105 transition-transform">
+              <DollarSign className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Cost Reduction</p>
+              <p className="text-4xl font-black text-slate-800 tracking-tighter">¥{totalCostSaved.toLocaleString()}</p>
+            </div>
+          </div>
+        </div>
                 <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
                   <DollarSign className="w-4 h-4 text-blue-600" />
                 </div>

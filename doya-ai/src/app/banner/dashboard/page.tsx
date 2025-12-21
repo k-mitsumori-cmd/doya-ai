@@ -24,12 +24,12 @@ import { FeatureGuide } from '@/components/FeatureGuide'
 // ========================================
 const CATEGORIES = [
   { 
-    value: 'telecom', label: '通信', icon: '📱', color: '#2563EB', bg: 'from-blue-500/10 to-blue-600/10',
+    value: 'telecom', label: '通信', icon: '📱', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '【視線誘導】スマホを持つ手元を強調し、月額料金や「乗り換え0円」などの数字が瞬時に目に入る、コンバージョン重視のレイアウト。',
     sample: '/banner-samples/cat-telecom.png'
   },
   { 
-    value: 'marketing', label: 'マーケ', icon: '📊', color: '#3B82F6', bg: 'from-blue-400/10 to-blue-500/10',
+    value: 'marketing', label: 'マーケ', icon: '📊', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '【権威性】プロフェッショナルな人物と実績グラフを組み合わせ、「このサービスなら解決できる」という信頼感を醸成するB2B特化スタイル。',
     sample: '/banner-samples/cat-marketing.png'
   },
@@ -39,47 +39,47 @@ const CATEGORIES = [
     sample: '/banner-samples/cat-ec.png'
   },
   { 
-    value: 'recruit', label: '採用', icon: '👥', color: '#22C55E', bg: 'from-green-500/10 to-green-600/10',
+    value: 'recruit', label: '採用', icon: '👥', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '【共感訴求】自然な笑顔のチーム写真を背景に、クリーンな白文字を配置。職場の雰囲気と「自分もここで働きたい」という期待感を高めます。',
     sample: '/banner-samples/cat-recruit.png'
   },
   { 
-    value: 'beauty', label: '美容', icon: '💄', color: '#EC4899', bg: 'from-blue-500/10 to-blue-600/10',
+    value: 'beauty', label: '美容', icon: '💄', color: '#FBBF24', bg: 'from-amber-400/10 to-amber-500/10',
     description: '【憧れ喚起】透明感のある人物アップと洗練された余白。高級感のあるフォントが映える、自分磨きの意欲を刺激するビューティースタイル。',
     sample: '/banner-samples/cat-beauty.png'
   },
   { 
-    value: 'food', label: '飲食', icon: '🍽️', color: '#EF4444', bg: 'from-red-500/10 to-red-600/10',
+    value: 'food', label: '飲食', icon: '🍽️', color: '#F97316', bg: 'from-orange-500/10 to-orange-600/10',
     description: '【シズル感】料理の「美味しそう」を最大限に引き出す接写構図。食欲を刺激する暖色背景で、店舗予約や注文ボタンへのクリックを促します。',
     sample: '/banner-samples/cat-food.png'
   },
   { 
-    value: 'realestate', label: '不動産', icon: '🏠', color: '#14B8A6', bg: 'from-blue-500/10 to-blue-600/10',
+    value: 'realestate', label: '不動産', icon: '🏠', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '【安心・理想】開放感のある内装イメージ。落ち着いたトーンで「一生の買い物」をサポートする誠実さと、理想の暮らしを視覚化します。',
     sample: '/banner-samples/cat-realestate.png'
   },
   { 
-    value: 'education', label: '教育', icon: '📚', color: '#6366F1', bg: 'from-indigo-500/10 to-indigo-600/10',
+    value: 'education', label: '教育', icon: '📚', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '【未来への自己投資】真剣に学ぶ姿と明るい光の演出。習得できるスキルをステップ形式で見せる、申し込みへのハードルを下げる構成。',
     sample: '/banner-samples/cat-education.png'
   },
   { 
-    value: 'finance', label: '金融', icon: '💰', color: '#F59E0B', bg: 'from-amber-500/10 to-amber-600/10',
+    value: 'finance', label: '金融', icon: '💰', color: '#FBBF24', bg: 'from-amber-400/10 to-amber-500/10',
     description: '【堅実な資産形成】スマホアプリの操作感と資産増を想起させるアイコン。ダークネイビーと金の対比で、プロフェッショナルな品質を担保。',
     sample: '/banner-samples/cat-finance.png'
   },
   { 
-    value: 'health', label: '医療', icon: '🏥', color: '#06B6D4', bg: 'from-blue-500/10 to-blue-600/10',
+    value: 'health', label: '医療', icon: '🏥', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '【清潔感と安全】専門家の優しそうな表情と、機能性を感じさせる青のグラデーション。健康課題の解決をストレートに伝えるデザイン。',
     sample: '/banner-samples/cat-health.png'
   },
   { 
-    value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-500/10 to-blue-600/10',
+    value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '【先進・スピード】サーバーやネットワークの抽象的な光。デジタル領域での圧倒的な優位性と、最新技術の導入効果をクールに伝えます。',
     sample: '/banner-samples/cat-it.png'
   },
   { 
-    value: 'other', label: 'その他', icon: '✨', color: '#64748B', bg: 'from-slate-500/10 to-slate-600/10',
+    value: 'other', label: 'その他', icon: '✨', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '【万能・モダン】特定の業種に縛られない自由なキャンバス。どんなキャッチコピーでも主役になれる、引き算の美学を活かした配置。',
     sample: '/banner-samples/cat-other.png'
   },
