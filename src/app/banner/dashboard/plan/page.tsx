@@ -84,9 +84,9 @@ export default function BannerPlanPage() {
     isGuest ? 'ゲスト' : isPro ? '有料版（PRO）' : '無料版'
 
   const planBadge =
-    isPro ? { text: 'PRO', cls: 'bg-gradient-to-r from-amber-400 to-orange-500' }
+    isPro ? { text: 'PRO', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
       : isGuest ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
-        : { text: 'FREE', cls: 'bg-sky-100 text-sky-700' }
+        : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
 
   const handleOpenPortal = async () => {
     if (isPortalLoading) return
@@ -124,7 +124,7 @@ export default function BannerPlanPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50/40">
+      <div className="min-h-screen bg-slate-50">
         <DashboardSidebar />
         <div className="pl-[72px] lg:pl-[240px] min-h-screen flex items-center justify-center">
           <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
@@ -134,13 +134,13 @@ export default function BannerPlanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50/40 text-gray-900">
+    <div className="min-h-screen bg-slate-50 text-gray-900">
       <DashboardSidebar />
       <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
           <div className="flex items-start justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <Layers className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -159,8 +159,8 @@ export default function BannerPlanPage() {
 
           <div className="grid lg:grid-cols-[1fr_360px] gap-5">
             {/* Main card */}
-            <div className="bg-white rounded-3xl border border-gray-200/70 shadow-lg shadow-gray-200/40 overflow-hidden">
-              <div className="p-6 sm:p-7 bg-gradient-to-r from-sky-50 to-cyan-50 border-b border-gray-200/50">
+            <div className="bg-white rounded-3xl border border-gray-200 shadow-lg shadow-gray-200/20 overflow-hidden">
+              <div className="p-6 sm:p-7 bg-blue-50/50 border-b border-gray-200">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -168,20 +168,20 @@ export default function BannerPlanPage() {
                         {planBadge.text}
                       </span>
                       {isPro && (
-                        <span className="px-2 py-1 rounded-full text-[11px] font-black bg-amber-50 text-amber-700 border border-amber-200/60">
+                        <span className="px-2 py-1 rounded-full text-[11px] font-black bg-orange-50 text-orange-700 border border-orange-200/60">
                           人気
                         </span>
                       )}
                     </div>
                     <h2 className="text-lg sm:text-xl font-black text-gray-900">{currentPlanLabel}</h2>
                     <p className="text-sm text-gray-600 mt-1">
-                      日次上限: <span className="font-black text-gray-900">{dailyLimit}</span> 回 / 今日の残り: <span className="font-black text-blue-700">{remaining}</span> 回
+                      日次上限: <span className="font-black text-gray-900">{dailyLimit}</span> 回 / 今日の残り: <span className="font-black text-blue-600">{remaining}</span> 回
                     </p>
                   </div>
 
                   <div className="text-right">
                     {isPro ? (
-                      <div className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-orange-400/25">
+                      <div className="inline-flex items-center gap-2 px-3 py-2 rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-500/20">
                         <Crown className="w-4 h-4" />
                         <span className="text-sm font-black">¥4,980/月</span>
                       </div>
@@ -199,7 +199,7 @@ export default function BannerPlanPage() {
                   {isGuest ? (
                     <Link
                       href="/api/auth/signin"
-                      className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-black shadow-lg shadow-blue-500/20"
+                      className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-blue-600 text-white font-black shadow-lg shadow-blue-500/20"
                     >
                       <Sparkles className="w-5 h-5" />
                       ログインして回数を増やす
@@ -217,7 +217,7 @@ export default function BannerPlanPage() {
                     <button
                       onClick={handleUpgrade}
                       disabled={isCheckoutLoading}
-                      className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-black shadow-lg shadow-blue-500/20 disabled:opacity-60"
+                      className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-blue-600 text-white font-black shadow-lg shadow-blue-500/20 disabled:opacity-60"
                     >
                       {isCheckoutLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
                       有料版へアップグレード

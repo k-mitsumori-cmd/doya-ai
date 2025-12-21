@@ -20,7 +20,11 @@ import {
   User,
   Zap,
   TrendingUp,
-  Layers
+  Layers,
+  Mail,
+  Calendar,
+  CreditCard,
+  Users
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 
@@ -33,22 +37,21 @@ interface NavItem {
 }
 
 const mainNavItems: NavItem[] = [
-  { href: '/banner', label: 'バナー生成', icon: Sparkles, hot: true },
-  { href: '/banner/dashboard/chat', label: 'AIチャット', icon: MessageSquare },
-  { href: '/banner/dashboard/history', label: '生成履歴', icon: Clock },
-  { href: '/banner/dashboard/stats', label: '効果分析', icon: BarChart3 },
+  { href: '/seo', label: 'ダッシュボード', icon: LayoutDashboard },
+  { href: '/news', label: 'お知らせ', icon: Bell },
+  { href: '/mail', label: 'メール', icon: Mail },
+  { href: '/calendar', label: 'カレンダー', icon: Calendar },
+  { href: '/chat', label: 'AIチャット', icon: MessageSquare },
+  { href: '/pricing', label: 'サービスプラン', icon: CreditCard },
 ]
 
 const dataNavItems: NavItem[] = [
-  { href: '/banner/dashboard/stats', label: 'アナリティクス', icon: TrendingUp },
-  { href: '/banner/dashboard/plan', label: 'プラン', icon: Layers },
+  { href: '/analytics', label: 'アナリティクス', icon: BarChart3 },
+  { href: '/customers', label: '顧客情報', icon: Users },
 ]
 
-const settingsNavItems: NavItem[] = [
-  { href: '/banner/dashboard/brand', label: 'ブランド設定', icon: Palette },
-  { href: '#', label: 'お知らせ', icon: Bell },
-  { href: '#', label: 'ヘルプ', icon: HelpCircle },
-]
+// 以前の設定項目は削除
+const settingsNavItems: NavItem[] = []
 
 export default function DashboardSidebar() {
   const pathname = usePathname()
@@ -138,8 +141,8 @@ export default function DashboardSidebar() {
     >
       {/* Logo */}
       <div className="px-4 py-6 flex items-center gap-3 border-b border-white/5">
-        <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0 shadow-sm border border-white/10">
-          <Zap className="w-6 h-6 text-white" />
+        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm border border-white/10">
+          <Sparkles className="w-6 h-6 text-white" />
         </div>
         <AnimatePresence>
           {!isCollapsed && (
@@ -149,8 +152,7 @@ export default function DashboardSidebar() {
               exit={{ opacity: 0, x: -10 }}
               className="overflow-hidden"
             >
-              <h1 className="text-xl font-black text-white tracking-tight leading-none">Bunridge</h1>
-              <p className="text-[10px] text-blue-100/60 mt-1 font-medium tracking-wider uppercase">Analytics Portal</p>
+              <h1 className="text-2xl font-black text-white tracking-tight leading-none">Bunridge</h1>
             </motion.div>
           )}
         </AnimatePresence>

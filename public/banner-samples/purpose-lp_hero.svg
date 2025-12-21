@@ -3,8 +3,8 @@
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#0B1220"/>
-      <stop offset="45%" stop-color="#2563EB"/>
-      <stop offset="100%" stop-color="#06B6D4"/>
+      <stop offset="60%" stop-color="#2563EB"/>
+      <stop offset="100%" stop-color="#1E40AF"/>
     </linearGradient>
     <linearGradient id="panel" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.16"/>
@@ -18,7 +18,7 @@
   <rect width="1920" height="600" rx="30" fill="url(#bg)"/>
 
   <!-- abstract grid -->
-  <g opacity="0.18">
+  <g opacity="0.1">
     <line x1="0" y1="0" x2="0" y2="600" stroke="#FFFFFF" stroke-width="1" />
 <line x1="160" y1="0" x2="160" y2="600" stroke="#FFFFFF" stroke-width="1" />
 <line x1="320" y1="0" x2="320" y2="600" stroke="#FFFFFF" stroke-width="1" />
@@ -49,11 +49,11 @@
     AIで毎日の作業を自動化
   </text>
 
-  <!-- right illustration blocks -->
-  <g transform="translate(1344 108)" opacity="0.95">
-    <rect x="0" y="0" width="461" height="168" rx="36" fill="#FFFFFF" fill-opacity="0.18" stroke="#FFFFFF" stroke-opacity="0.14"/>
-    <rect x="38" y="24" width="384" height="120" rx="30" fill="#FFFFFF" fill-opacity="0.10"/>
-    <rect x="0" y="192" width="461" height="108" rx="36" fill="#FFFFFF" fill-opacity="0.10" stroke="#FFFFFF" stroke-opacity="0.10"/>
+  <!-- right decoration: accent bars (Bunridge style) -->
+  <g transform="translate(1344 108)">
+    <rect x="0" y="0" width="77" height="168" rx="4" fill="#06B6D4"/>
+    <rect x="115" y="48" width="77" height="120" rx="4" fill="#FBBF24"/>
+    <rect x="230" y="72" width="77" height="96" rx="4" fill="#06B6D4" opacity="0.6"/>
   </g>
 
   <!-- CTA -->
@@ -61,7 +61,7 @@
   <g filter="url(#shadow)">
     <rect x="1306" y="432"
           width="499" height="96"
-          rx="36" fill="#06B6D4"/>
+          rx="36" fill="#FBBF24"/>
     <text x="1344" y="492"
           fill="#0B1220" font-family="ui-sans-serif, system-ui, -apple-system, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', sans-serif"
           font-size="39" font-weight="900">

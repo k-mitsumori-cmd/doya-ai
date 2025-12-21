@@ -10,25 +10,23 @@ import {
   MessageSquare, Rocket, Bot, User, Loader2, ChevronRight, Star,
   Megaphone, PenTool, Mail, Search, Share2, ShoppingCart, Globe,
   Zap, BookOpen, Heart, Palette, Video, Mic, Camera, Gift,
-  Building, Briefcase, Award, Headphones, Shield, Layers, ArrowLeft
+  Building, Briefcase, Award, Headphones, Shield, Layers, ArrowLeft, Calendar, UserCircle
 } from 'lucide-react'
 import { KANTAN_PRICING, getGuestRemainingCount } from '@/lib/pricing'
 
 // サイドバーメニュー
 const SIDEBAR_MENU = [
   { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
-  { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text' },
+  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
+  { id: 'mail', label: 'メール', icon: <Mail className="w-5 h-5" />, href: '#' },
+  { id: 'calendar', label: 'カレンダー', icon: <Calendar className="w-5 h-5" />, href: '#' },
   { id: 'chat', label: 'AIチャット', icon: <MessageSquare className="w-5 h-5" />, href: '/kantan/dashboard/chat', active: true },
-  { id: 'history', label: '生成履歴', icon: <Clock className="w-5 h-5" />, href: '/kantan/dashboard/history' },
-  { id: 'plan', label: 'サービスプラン', icon: <Star className="w-5 h-5" />, href: '/kantan/dashboard/plan' },
-  { id: 'pricing', label: '料金プラン', icon: <DollarSign className="w-5 h-5" />, href: '/kantan/dashboard/pricing' },
-  { id: 'analytics', label: 'アナリティクス', icon: <BarChart3 className="w-5 h-5" />, href: '#', disabled: true },
+  { id: 'plan', label: 'サービスプラン', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/plan' },
 ]
 
-const SIDEBAR_MENU_BOTTOM = [
-  { id: 'pricing', label: '料金プラン', icon: <DollarSign className="w-5 h-5" />, href: '/kantan/pricing' },
-  { id: 'settings', label: '設定', icon: <Settings className="w-5 h-5" />, href: '#', disabled: true },
-  { id: 'help', label: 'ヘルプ', icon: <HelpCircle className="w-5 h-5" />, href: '#', disabled: true },
+const SIDEBAR_DATA_MENU = [
+  { id: 'analytics', label: 'アナリティクス', icon: <TrendingUp className="w-5 h-5" />, href: '#' },
+  { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text' },
 ]
 
 // チャットカテゴリ（課題解決テンプレート）- 全24カテゴリ
@@ -484,62 +482,53 @@ ${inputValue}
   }
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen bg-gray-100 flex">
       {/* サイドバー */}
-      <aside className="w-64 bg-[#1e3a5f] text-white flex flex-col fixed h-full z-40">
+      <aside className="w-52 bg-[#3B5998] text-white flex flex-col fixed h-full z-40">
         {/* ロゴ */}
-        <div className="p-5 border-b border-white/10">
-          <Link href="/kantan" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center">
-              <Rocket className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <div className="font-bold text-lg">カンタンマーケ</div>
-              <div className="text-[10px] text-cyan-300 font-medium">Powered by Gemini 3.0</div>
-            </div>
+        <div className="p-5">
+          <Link href="/kantan" className="flex items-center gap-2">
+            <span className="text-xl font-bold tracking-tight">カンタンマーケ</span>
           </Link>
         </div>
 
         {/* メインメニュー */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 px-3">
           <ul className="space-y-1">
             {SIDEBAR_MENU.map((item) => (
               <li key={item.id}>
                 <Link
-                  href={item.disabled ? '#' : item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm ${
                     item.active
-                      ? 'bg-white/10 text-white'
-                      : item.disabled
-                      ? 'text-white/30 cursor-not-allowed'
-                      : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      ? 'bg-white/20 text-white font-medium'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   {item.icon}
-                  <span className="font-medium">{item.label}</span>
-                  {item.disabled && (
-                    <span className="ml-auto text-[10px] bg-white/10 px-2 py-0.5 rounded-full">Soon</span>
+                  <span>{item.label}</span>
+                  {item.badge && (
+                    <span className="ml-auto bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                      {item.badge}
+                    </span>
                   )}
                 </Link>
               </li>
             ))}
           </ul>
 
-          <div className="mt-8 pt-6 border-t border-white/10">
-            <p className="text-xs text-white/40 uppercase tracking-wider mb-3 px-4">その他</p>
+          {/* データベースセクション */}
+          <div className="mt-6">
+            <p className="px-3 text-xs text-white/50 uppercase tracking-wider mb-2">データベース</p>
             <ul className="space-y-1">
-              {SIDEBAR_MENU_BOTTOM.map((item) => (
+              {SIDEBAR_DATA_MENU.map((item) => (
                 <li key={item.id}>
                   <Link
-                    href={item.disabled ? '#' : item.href}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                      item.disabled
-                        ? 'text-white/30 cursor-not-allowed'
-                        : 'text-white/70 hover:bg-white/5 hover:text-white'
-                    }`}
+                    href={item.href}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-all text-sm"
                   >
                     {item.icon}
-                    <span className="font-medium">{item.label}</span>
+                    <span>{item.label}</span>
                   </Link>
                 </li>
               ))}
@@ -547,57 +536,48 @@ ${inputValue}
           </div>
         </nav>
 
-        {/* 他サービスへのリンク */}
-        <div className="p-4 border-t border-white/10">
-          <p className="text-xs text-white/40 uppercase tracking-wider mb-3 px-2">他のAIツール</p>
-          <div className="space-y-2">
-            <Link href="/banner" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 transition-colors">
-              <span className="text-lg">🎨</span>
-              <span className="text-sm text-white/80">ドヤバナーAI</span>
-            </Link>
-            <Link href="/seo" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-500/20 hover:bg-gray-500/30 transition-colors">
-              <span className="text-lg">🧠</span>
-              <span className="text-sm text-white/80">ドヤSEO</span>
-            </Link>
-          </div>
+        {/* 他サービス */}
+        <div className="p-3 border-t border-white/10">
+          <Link href="/banner" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
+            <span>🎨</span>
+            <span>ドヤバナーAI</span>
+          </Link>
+          <Link href="/seo" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
+            <span>🧠</span>
+            <span>ドヤSEO</span>
+          </Link>
+        </div>
+
+        {/* ロゴマーク */}
+        <div className="p-4 text-white/30 text-xs">
+          @カンタンマーケAI
         </div>
       </aside>
 
       {/* メインコンテンツ */}
-      <main className="flex-1 ml-64 flex flex-col h-screen">
+      <main className="flex-1 ml-52 flex flex-col h-screen">
         {/* ヘッダー */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
           <div className="px-8 h-16 flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">AIチャット</h1>
-            </div>
+            <h1 className="text-xl font-bold text-gray-800">AIチャット</h1>
+            
             <div className="flex items-center gap-4">
-              <button className="relative p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
+              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                 <Settings className="w-5 h-5" />
               </button>
 
-              {session ? (
-                <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-gray-800">{userName}</div>
-                    <div className="text-xs text-gray-400">Admin</div>
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
-                    {userInitial}
-                  </div>
+              <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+                <div className="text-right">
+                  <div className="text-sm font-medium text-gray-800">{userName}</div>
+                  <div className="text-xs text-gray-400">Admin</div>
                 </div>
-              ) : (
-                <Link href="/auth/signin?service=kantan">
-                  <button className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors">
-                    <LogIn className="w-4 h-4" />
-                    ログイン
-                  </button>
-                </Link>
-              )}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                  <UserCircle className="w-6 h-6 text-white" />
+                </div>
+              </div>
             </div>
           </div>
         </header>

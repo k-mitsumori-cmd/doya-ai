@@ -145,7 +145,7 @@ export default function BannerChatPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-sky-50/40 text-gray-900">
+    <div className="min-h-screen bg-slate-50 text-gray-900">
       <DashboardSidebar />
       <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
         <LoadingProgress isLoading={isThinking || isGenerating} />
@@ -153,7 +153,7 @@ export default function BannerChatPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <div>
