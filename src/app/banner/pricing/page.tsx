@@ -2,188 +2,118 @@
 
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { Check, ArrowLeft, Sparkles, Crown } from 'lucide-react'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
 export default function BannerPricingPage() {
   const { data: session } = useSession()
   const plans = BANNER_PRICING.plans
+  const free = plans.find((p) => p.id === 'banner-free')
+  const basic = plans.find((p) => p.id === 'banner-basic')
+  const enterprise = plans.find((p) => p.id === 'banner-enterprise')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-cyan-50">
-      {/* ヘッダー */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-sky-100">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/banner" className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="w-5 h-5" />
-            <span>戻る</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center">
-              <span className="text-xl">🎨</span>
-            </div>
-            <span className="font-bold text-gray-800">ドヤバナーAI</span>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-white">
+      {/* Small top link (like screenshot) */}
+      <div className="pt-6 flex justify-center">
+        <Link href="/banner/dashboard/plan" className="text-xs font-bold text-blue-600 hover:text-blue-700">
+          Plan
+        </Link>
+      </div>
 
-      {/* メイン */}
-      <main className="max-w-6xl mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            料金プラン
-          </h1>
-          <p className="text-lg text-gray-600">
-            無料版と有料版（¥4,980 / 1日30回）だけのシンプル設計
-          </p>
-        </div>
+      <main className="max-w-[720px] mx-auto px-6 pb-12">
+        <h1 className="text-center text-3xl sm:text-4xl font-black text-slate-900 mt-6 mb-10">
+          料金プラン
+        </h1>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {plans.map((plan, index) => {
-            const isPopular = plan.popular
-            const Icon = index === 0 ? Sparkles : Crown
-            
-            return (
-              <div 
-                key={plan.id}
-                className={`rounded-2xl p-5 relative ${
-                  isPopular 
-                    ? 'bg-gradient-to-br from-sky-50 to-cyan-50 border-2 border-sky-300 shadow-lg' 
-                    : 'bg-white border-2 border-gray-200'
-                }`}
-              >
-                {isPopular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span className="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
-                      人気No.1
-                    </span>
-                  </div>
-                )}
-                
-                <div className="text-center mb-5">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3 ${
-                    isPopular 
-                      ? 'bg-gradient-to-br from-blue-600 to-cyan-600' 
-                      : 'bg-gray-100'
-                  }`}>
-                    <Icon className={`w-5 h-5 ${isPopular ? 'text-white' : 'text-gray-600'}`} />
-                  </div>
-                  <h2 className="text-lg font-bold text-gray-900">{plan.name}</h2>
-                  <p className="text-xs text-gray-500 mt-1">{plan.description}</p>
-                  <div className="mt-3">
-                    <span className={`text-2xl font-bold ${isPopular ? 'text-blue-600' : 'text-gray-900'}`}>
-                      {plan.priceLabel}
-                    </span>
-                    {plan.period && (
-                      <span className="text-gray-500 text-xs">{plan.period}</span>
-                    )}
-                  </div>
-                  {/* 年払い表記は一旦非表示（混乱防止） */}
-                </div>
-                
-                <ul className="space-y-2 mb-5">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-2 text-gray-700 text-xs">
-                      <Check className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${isPopular ? 'text-sky-500' : 'text-green-500'}`} />
-                      <span>{feature.text}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {plan.price === 0 ? (
+        <div className="space-y-6">
+          {/* おためし */}
+          <div className="rounded-3xl bg-[#F7F6F1] p-8">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">{free?.name || 'おためしプラン'}</h2>
+                <p className="text-sm text-slate-600 mt-2">{free?.description || `1日${BANNER_PRICING.freeLimit}回までの生成をすることができます`}</p>
+                <div className="mt-5">
                   <Link href="/banner/dashboard">
-                    <button className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold rounded-xl transition-colors">
-                      {plan.cta}
+                    <button className="px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors">
+                      {free?.cta || '3回生成'}
                     </button>
                   </Link>
-                ) : (
-                  <CheckoutButton
-                    planId={plan.id}
-                    className={`w-full py-2.5 text-sm ${
-                      isPopular
-                        ? 'bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white'
-                        : 'bg-sky-100 hover:bg-sky-200 text-sky-800'
-                    }`}
-                    variant={isPopular ? 'primary' : 'secondary'}
-                  >
-                    {plan.cta}
-                  </CheckoutButton>
-                )}
+                </div>
               </div>
-            )
-          })}
-        </div>
-
-        {/* 30回/日を超える導線 */}
-        <div className="mt-10 max-w-3xl mx-auto">
-          <div className="bg-white border border-gray-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <p className="font-bold text-gray-900">30回/日を超えて使いたい場合</p>
-              <p className="text-sm text-gray-600 mt-1">チーム運用・大量生成・法人契約などは別途ご案内します。</p>
+              <div className="flex-shrink-0">
+                <div className="px-6 py-4 rounded-2xl bg-white text-slate-900 font-black text-2xl">
+                  {free?.priceLabel || '無料'}
+                </div>
+              </div>
             </div>
-            <a
-              href={HIGH_USAGE_CONTACT_URL}
-              target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
-              rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
-              className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-gray-900 text-white font-bold text-sm hover:bg-gray-800 transition-colors"
-            >
-              上位利用はこちら
-            </a>
           </div>
-        </div>
 
-        {/* 比較表 */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <h3 className="text-xl font-bold text-gray-900 text-center mb-8">プラン比較</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4">機能</th>
-                  <th className="text-center py-3 px-4">無料版</th>
-                  <th className="text-center py-3 px-4 bg-sky-50">有料版</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { feature: '1日の生成回数', values: [`（ゲスト）${BANNER_PRICING.guestLimit}回 / （ログイン）${BANNER_PRICING.freeLimit}回`, `${BANNER_PRICING.proLimit}回`] },
-                  { feature: '1日の生成案数', values: [`（最大）${BANNER_PRICING.freeLimit * 3}案`, `${BANNER_PRICING.proLimit * 3}案`] },
-                  { feature: 'カテゴリ', values: ['基本カテゴリ', '全カテゴリ'] },
-                  { feature: 'ロゴ組み込み', values: ['×', '○'] },
-                  { feature: '人物画像組み込み', values: ['×', '○'] },
-                ].map((row, i) => (
-                  <tr key={i} className="border-b border-gray-100">
-                    <td className="py-3 px-4 font-medium text-gray-700">{row.feature}</td>
-                    {row.values.map((val, j) => (
-                      <td key={j} className={`text-center py-3 px-4 ${j === 1 ? 'bg-sky-50' : ''}`}>
-                        {val === '○' ? <Check className="w-4 h-4 text-green-500 mx-auto" /> : 
-                         val === '×' ? <span className="text-gray-300">−</span> : val}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* FAQ */}
-        <div className="mt-16 max-w-2xl mx-auto">
-          <h3 className="text-xl font-bold text-gray-900 text-center mb-8">よくある質問</h3>
-          <div className="space-y-4">
-            {[
-              { q: '無料版でどこまで使えますか？', a: `ゲストは1日${BANNER_PRICING.guestLimit}回、ログイン後は1日${BANNER_PRICING.freeLimit}回まで生成できます。` },
-              { q: '生成した画像の著作権は？', a: '生成した画像の著作権はお客様に帰属します。商用利用も可能です。' },
-              // 年払い表記は一旦非表示（混乱防止）
-              { q: '30回/日以上使いたい場合は？', a: '上位利用（チーム/法人/大量生成など）は別リンクからご相談ください。' },
-            ].map((faq, i) => (
-              <div key={i} className="bg-white rounded-xl p-5 border border-gray-200">
-                <h4 className="font-bold text-gray-900 mb-2">{faq.q}</h4>
-                <p className="text-gray-600 text-sm">{faq.a}</p>
+          {/* Basic */}
+          <div className="rounded-3xl bg-[#F7F6F1] p-8">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">{basic?.name || 'Basicプラン'}</h2>
+                <p className="text-sm text-slate-600 mt-2">{basic?.description || '個人事業主におすすめのプラン'}</p>
+                <div className="mt-5">
+                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
+                    1日30回までの生成が可能
+                  </div>
+                </div>
               </div>
-            ))}
+              <div className="flex-shrink-0">
+                <div className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-black text-xl">
+                  {basic?.priceLabel || '月額 ¥3,980'}
+                </div>
+              </div>
+            </div>
+            <div className="mt-6">
+              <CheckoutButton
+                planId="banner-basic"
+                className="w-full py-4 rounded-2xl text-base"
+                variant="secondary"
+              >
+                Basicプランを始める
+              </CheckoutButton>
+            </div>
           </div>
+
+          {/* Enterprise */}
+          <div className="rounded-3xl bg-[#F7F6F1] p-8">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">{enterprise?.name || 'Enterpriseプラン'}</h2>
+                <p className="text-sm text-slate-600 mt-2">{enterprise?.description || 'スタートアップや中小企業におすすめ'}</p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
+                    すべての機能
+                  </div>
+                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
+                    ＋ まるなげマーケティング支援
+                  </div>
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                <a
+                  href={HIGH_USAGE_CONTACT_URL}
+                  target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
+                  rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+                  className="px-6 py-4 rounded-2xl bg-white text-slate-900 font-black text-xl hover:bg-slate-50 transition-colors inline-flex items-center justify-center"
+                >
+                  お問い合わせ
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="mt-10 flex justify-center">
+          <Link href="/banner/dashboard">
+            <button className="px-8 py-4 rounded-full bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
+              おためしプランを使ってみる
+            </button>
+          </Link>
         </div>
       </main>
     </div>
