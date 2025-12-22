@@ -26,62 +26,62 @@ import { FeatureGuide } from '@/components/FeatureGuide'
 const CATEGORIES = [
   { 
     value: 'telecom', label: '通信', icon: '📱', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '【視線誘導】スマホを持つ手元を強調し、月額料金や「乗り換え0円」などの数字が瞬時に目に入る、コンバージョン重視のレイアウト。',
+    description: '✓ スマホを持つ手元をメインビジュアルに\n✓ 月額料金・割引額を大きく目立たせる\n✓ 「乗り換え0円」等の数字訴求を配置\n✓ 今すぐ申し込めるCTAボタンを強調',
     sample: '/banner-samples/cat-telecom.png'
   },
   { 
     value: 'marketing', label: 'マーケ', icon: '📊', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '【権威性】プロフェッショナルな人物と実績グラフを組み合わせ、「このサービスなら解決できる」という信頼感を醸成するB2B特化スタイル。',
+    description: '✓ プロフェッショナルな人物写真を使用\n✓ 実績グラフ・数値データを見せる\n✓ 「導入○○社」等の権威性を強調\n✓ B2B向けの信頼感あるトーン',
     sample: '/banner-samples/cat-marketing.png'
   },
   { 
     value: 'ec', label: 'EC', icon: '🛒', color: '#F97316', bg: 'from-orange-500/10 to-orange-600/10',
-    description: '【購買意欲】商品の質感を大胆に見せつつ、セールバッジや期間限定の赤を効かせた、衝動買いを誘発するダイナミックなデザイン。',
+    description: '✓ 商品の質感・細部を大胆にアップ\n✓ セールバッジ・期間限定の赤を効かせる\n✓ 「本日限り」等の緊急性を訴求\n✓ 衝動買いを誘発する配色',
     sample: '/banner-samples/cat-ec.png'
   },
   { 
     value: 'recruit', label: '採用', icon: '👥', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '【共感訴求】自然な笑顔のチーム写真を背景に、クリーンな白文字を配置。職場の雰囲気と「自分もここで働きたい」という期待感を高めます。',
+    description: '✓ 笑顔のチームメンバー写真を使用\n✓ 職場の雰囲気が伝わる背景\n✓ 「働きやすさ」を視覚的に表現\n✓ 共感と期待感を高めるコピー',
     sample: '/banner-samples/cat-recruit.png'
   },
   { 
     value: 'beauty', label: '美容', icon: '💄', color: '#FBBF24', bg: 'from-amber-400/10 to-amber-500/10',
-    description: '【憧れ喚起】透明感のある人物アップと洗練された余白。高級感のあるフォントが映える、自分磨きの意欲を刺激するビューティースタイル。',
+    description: '✓ 透明感のある人物アップショット\n✓ 洗練された余白で高級感を演出\n✓ ビフォーアフターを効果的に配置\n✓ 「自分磨き」意欲を刺激するコピー',
     sample: '/banner-samples/cat-beauty.png'
   },
   { 
     value: 'food', label: '飲食', icon: '🍽️', color: '#F97316', bg: 'from-orange-500/10 to-orange-600/10',
-    description: '【シズル感】料理の「美味しそう」を最大限に引き出す接写構図。食欲を刺激する暖色背景で、店舗予約や注文ボタンへのクリックを促します。',
+    description: '✓ 料理の接写で「シズル感」を最大化\n✓ 暖色背景で食欲を刺激\n✓ 湯気・ツヤ等のリアルな質感\n✓ 予約・注文への導線を明確に',
     sample: '/banner-samples/cat-food.png'
   },
   { 
     value: 'realestate', label: '不動産', icon: '🏠', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '【安心・理想】開放感のある内装イメージ。落ち着いたトーンで「一生の買い物」をサポートする誠実さと、理想の暮らしを視覚化します。',
+    description: '✓ 開放感のある内装・外観写真\n✓ 落ち着いた青系トーンで誠実さを演出\n✓ 「理想の暮らし」をビジュアル化\n✓ 相談・問い合わせへの安心感',
     sample: '/banner-samples/cat-realestate.png'
   },
   { 
     value: 'education', label: '教育', icon: '📚', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '【未来への自己投資】真剣に学ぶ姿と明るい光の演出。習得できるスキルをステップ形式で見せる、申し込みへのハードルを下げる構成。',
+    description: '✓ 真剣に学ぶ姿・明るい光の演出\n✓ 習得スキルをステップ形式で提示\n✓ 「未来への自己投資」感を醸成\n✓ 申し込みハードルを下げるコピー',
     sample: '/banner-samples/cat-education.png'
   },
   { 
     value: 'finance', label: '金融', icon: '💰', color: '#FBBF24', bg: 'from-amber-400/10 to-amber-500/10',
-    description: '【堅実な資産形成】スマホアプリの操作感と資産増を想起させるアイコン。ダークネイビーと金の対比で、プロフェッショナルな品質を担保。',
+    description: '✓ スマホアプリの操作画面イメージ\n✓ 資産増をイメージさせるアイコン\n✓ ダークネイビー×ゴールドの高級感\n✓ 信頼・安心・専門性を強調',
     sample: '/banner-samples/cat-finance.png'
   },
   { 
     value: 'health', label: '医療', icon: '🏥', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '【清潔感と安全】専門家の優しそうな表情と、機能性を感じさせる青のグラデーション。健康課題の解決をストレートに伝えるデザイン。',
+    description: '✓ 専門家の優しい表情を見せる\n✓ 清潔感のある青系グラデーション\n✓ 機能性・安全性を視覚的に表現\n✓ 健康課題の解決を具体的に訴求',
     sample: '/banner-samples/cat-health.png'
   },
   { 
     value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '【先進・スピード】サーバーやネットワークの抽象的な光。デジタル領域での圧倒的な優位性と、最新技術の導入効果をクールに伝えます。',
+    description: '✓ サーバー・ネットワークの抽象光\n✓ デジタル感あるクールなトーン\n✓ 最新技術・スピード感を演出\n✓ 課題解決・効率化を数値で訴求',
     sample: '/banner-samples/cat-it.png'
   },
   { 
     value: 'other', label: 'その他', icon: '✨', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '【万能・モダン】特定の業種に縛られない自由なキャンバス。どんなキャッチコピーでも主役になれる、引き算の美学を活かした配置。',
+    description: '✓ シンプルで汎用性の高いレイアウト\n✓ どんなコピーも映える余白設計\n✓ 引き算の美学でメッセージを際立たせる\n✓ 業種を問わないモダンなデザイン',
     sample: '/banner-samples/cat-other.png'
   },
 ]
@@ -603,6 +603,7 @@ export default function BannerDashboard() {
   
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
+  const [usedModelDisplay, setUsedModelDisplay] = useState<string | null>(null) // 使用モデル名
   const [error, setError] = useState('')
   const [progress, setProgress] = useState(0)
   const [phaseIndex, setPhaseIndex] = useState(0)
@@ -908,6 +909,7 @@ export default function BannerDashboard() {
       setProgress(100)
       await new Promise(r => setTimeout(r, 500))
       setGeneratedBanners(data.banners || [])
+      setUsedModelDisplay(data.usedModelDisplay || null)
       
       if (isGuest) {
         const serverUsed = Number(data?.usage?.dailyUsed)
@@ -1470,26 +1472,21 @@ export default function BannerDashboard() {
                 </div>
                 <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col justify-center">
                   {category ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       <div className="flex items-center gap-2 text-blue-600 font-black text-[10px] uppercase tracking-widest">
-                        <Palette className="w-3.5 h-3.5" /> Color Palette & Strategy
+                        <Zap className="w-3.5 h-3.5" /> CTR最大化のポイント
                       </div>
-                      <h3 className="text-slate-800 font-bold text-base">{CATEGORIES.find(c => c.value === category)?.label}向けの推奨配色</h3>
-                      <div className="flex items-center gap-2">
-                        {CATEGORIES.find(c => c.value === category)?.bg?.split(' ').map((cl, idx) => (
-                          <div key={idx} className={`w-8 h-8 rounded-full shadow-sm bg-gradient-to-br ${cl} border border-white/20`} />
-                        ))}
-                      </div>
-                      <p className="text-slate-500 text-[11px] leading-relaxed font-bold mt-2">
+                      <h3 className="text-slate-800 font-bold text-base">{CATEGORIES.find(c => c.value === category)?.label}向け 画像戦略</h3>
+                      <p className="text-slate-600 text-xs leading-relaxed whitespace-pre-line">
                         {CATEGORIES.find(c => c.value === category)?.description}
                       </p>
                     </div>
                   ) : (
                     <div className="flex-1 flex flex-col items-center justify-center py-4 text-slate-400 text-[11px] font-bold italic text-center">
                       <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                        <Palette className="w-5 h-5 text-slate-200" />
+                        <Zap className="w-5 h-5 text-slate-200" />
                       </div>
-                      業種を選択すると<br />推奨配色が表示されます
+                      業種を選択すると<br />CTR最大化のポイントが表示されます
                     </div>
                   )}
                 </div>
@@ -2129,9 +2126,21 @@ export default function BannerDashboard() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <h3 className="text-white font-black text-sm tracking-tight">GENERATION COMPLETE</h3>
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[10px] font-bold text-white shadow-lg animate-pulse">
-                                <span className="text-[12px]">🍌</span> Nano Banana Pro
-                              </span>
+                              {usedModelDisplay ? (
+                                usedModelDisplay.toLowerCase().includes('nano banana') ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[10px] font-bold text-white shadow-lg animate-pulse">
+                                    <span className="text-[12px]">🍌</span> {usedModelDisplay}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-[10px] font-bold text-white shadow-lg">
+                                    <span className="text-[12px]">🤖</span> {usedModelDisplay}
+                                  </span>
+                                )
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full text-[10px] font-bold text-white shadow-lg">
+                                  <span className="text-[12px]">🤖</span> AI生成
+                                </span>
+                              )}
                             </div>
                             <p className="text-slate-400 text-[11px] leading-relaxed">
                               A/B/C 3つの異なる戦略に基づいたバナーを生成しました。気に入ったバナーを選択してダウンロード、またはAIチャットで微調整が可能です。
@@ -2229,9 +2238,17 @@ export default function BannerDashboard() {
                                 <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
                                 {['A', 'B', 'C'][selectedBanner]}案 プレビュー
                               </h3>
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[9px] font-bold text-white shadow">
-                                <span className="text-[11px]">🍌</span> Nano Banana Pro
-                              </span>
+                              {usedModelDisplay ? (
+                                usedModelDisplay.toLowerCase().includes('nano banana') ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[9px] font-bold text-white shadow">
+                                    <span className="text-[11px]">🍌</span> {usedModelDisplay}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-[9px] font-bold text-white shadow">
+                                    <span className="text-[11px]">🤖</span> {usedModelDisplay}
+                                  </span>
+                                )
+                              ) : null}
                             </div>
                             <div className="flex gap-2">
                               {refineHistory.length > 0 && (

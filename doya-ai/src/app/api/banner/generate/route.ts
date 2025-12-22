@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { generateBanners, isNanobannerConfigured } from '@/lib/nanobanner'
+import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 
@@ -352,6 +352,8 @@ export async function POST(request: NextRequest) {
       isGuest,
       warning: result.error, // 一部失敗した場合の警告
       usage: usageInfo || undefined,
+      usedModel: result.usedModel || undefined,
+      usedModelDisplay: result.usedModel ? getModelDisplayName(result.usedModel) : undefined,
     })
 
     if (!disableLimits && isGuest && guestUsage) {
