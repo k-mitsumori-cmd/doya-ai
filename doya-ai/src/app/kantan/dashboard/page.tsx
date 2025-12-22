@@ -83,20 +83,6 @@ const CHART_DATA = [
   { day: '24', sales: 52, cost: 48 },
 ]
 
-// 顧客情報データ
-const CUSTOMER_DATA = [
-  { id: 1, name: '株式会社テーマミュ...', industry: 'Webデザイン', location: '東京', status: 'Active' },
-  { id: 2, name: '株式会社スマートリ...', industry: 'Webデザイン', location: '京都', status: 'Active' },
-  { id: 3, name: '株式会社セダールン...', industry: '運送', location: '神奈川', status: 'Active' },
-]
-
-// カレンダーデータ
-const CALENDAR_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const CALENDAR_DATES = [
-  [31, 1, 2, 3, 4, 5, 6],
-  [7, 8, 9, 10, 11, 12, 13],
-  [14, 15, 16, 17, 18, 19, 20],
-]
 
 export default function KantanDashboardPage() {
   const { data: session, status } = useSession()
@@ -184,97 +170,6 @@ export default function KantanDashboardPage() {
             </div>
           </div>
 
-          {/* 下部セクション */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            {/* 顧客情報テーブル */}
-            <div className="lg:col-span-3 bg-white rounded-3xl p-8 shadow-sm border border-gray-100 overflow-x-auto">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-lg font-black text-gray-900">アクティブ顧客</h2>
-                <button className="text-xs font-black text-blue-600 hover:underline">すべて見る</button>
-              </div>
-              <table className="w-full min-w-[400px]">
-                <thead>
-                  <tr className="text-left text-[10px] text-gray-400 font-black uppercase tracking-widest border-b border-gray-50">
-                    <th className="pb-4">会社名</th>
-                    <th className="pb-4 hidden sm:table-cell">業界</th>
-                    <th className="pb-4">所在地</th>
-                    <th className="pb-4">ステータス</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {CUSTOMER_DATA.map((customer) => (
-                    <tr key={customer.id} className="border-b border-gray-50 last:border-0 group hover:bg-gray-50/50 transition-colors">
-                      <td className="py-4 text-sm font-bold text-gray-900">{customer.name}</td>
-                      <td className="py-4 text-xs font-bold text-gray-400 hidden sm:table-cell">{customer.industry}</td>
-                      <td className="py-4 text-xs font-bold text-gray-400">
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-blue-500 opacity-30 text-lg">📍</span>
-                          {customer.location}
-                        </span>
-                      </td>
-                      <td className="py-4">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100">
-                          <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                          {customer.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* カレンダー */}
-            <div className="lg:col-span-2 bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-lg font-black text-gray-900">スケジュール</h2>
-                <div className="text-xs font-black text-gray-400">2025年 3月</div>
-              </div>
-              
-              <div className="grid grid-cols-7 gap-1 mb-4">
-                {CALENDAR_DAYS.map((day) => (
-                  <div key={day} className="text-center text-[10px] font-black text-gray-300 uppercase">
-                    {day}
-                  </div>
-                ))}
-              </div>
-              
-              <div className="grid gap-2">
-                {CALENDAR_DATES.map((week, weekIndex) => (
-                  <div key={weekIndex} className="grid grid-cols-7 gap-1">
-                    {week.map((date, dateIndex) => {
-                      const isToday = date === 8
-                      const isPrevMonth = weekIndex === 0 && date === 31
-                      
-                      return (
-                        <div
-                          key={dateIndex}
-                          className={`
-                            aspect-square rounded-xl flex items-center justify-center text-xs font-bold transition-all
-                            ${isToday ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-110' : ''}
-                            ${isPrevMonth ? 'text-gray-200' : 'text-gray-700'}
-                            ${!isToday && !isPrevMonth ? 'hover:bg-blue-50 hover:text-blue-600' : ''}
-                          `}
-                        >
-                          {date}
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
-              </div>
-              <div className="mt-8 pt-6 border-t border-gray-50">
-                <div className="flex items-center gap-4">
-                  <div className="w-2 h-2 rounded-full bg-blue-600" />
-                  <div className="flex-1">
-                    <p className="text-xs font-black text-gray-900">定例ミーティング</p>
-                    <p className="text-[10px] font-bold text-gray-400">14:00 - 15:00</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-200" />
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* ゲストバナー */}
           {isGuest && (

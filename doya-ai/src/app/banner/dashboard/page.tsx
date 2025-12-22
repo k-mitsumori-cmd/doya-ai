@@ -909,9 +909,15 @@ export default function BannerDashboard() {
       setGeneratedBanners(data.banners || [])
       
       if (isGuest) {
-        const newCount = guestUsageCount + 1
-        setGuestUsageCount(newCount)
-        setGuestUsage('banner', newCount)
+        const serverUsed = Number(data?.usage?.dailyUsed)
+        if (Number.isFinite(serverUsed)) {
+          setGuestUsageCount(serverUsed)
+          setGuestUsage('banner', serverUsed)
+        } else {
+          const newCount = guestUsageCount + 1
+          setGuestUsageCount(newCount)
+          setGuestUsage('banner', newCount)
+        }
       } else {
         const serverUsed = Number(data?.usage?.dailyUsed)
         if (Number.isFinite(serverUsed)) {
@@ -2582,87 +2588,6 @@ export default function BannerDashboard() {
           </div>
         </div>
 
-        {/* ========================================
-            Bottom Grid: Customers & Calendar
-            ======================================== */}
-        <div className="grid lg:grid-cols-[1fr,440px] gap-6 sm:gap-10 mt-10">
-          {/* Customer Table */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-slate-800">顧客情報</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="bg-slate-50/50 text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-gray-50">
-                    <th className="px-4 py-3">会社名 <ArrowUpDown className="w-3 h-3 inline ml-1" /></th>
-                    <th className="px-4 py-3">業界 <ArrowUpDown className="w-3 h-3 inline ml-1" /></th>
-                    <th className="px-4 py-3">Location <ArrowUpDown className="w-3 h-3 inline ml-1" /></th>
-                    <th className="px-4 py-3">Status <ArrowUpDown className="w-3 h-3 inline ml-1" /></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {[
-                    { name: '株式会社テーマミュ...', industry: 'webデザイン', loc: '東京', status: 'Active' },
-                    { name: '株式会社スマートリ...', industry: 'Webデザイン', loc: '京都', status: 'Active' },
-                    { name: '株式会社セダールン...', industry: '運送', loc: '神奈川', status: 'Active' },
-                  ].map((row, i) => (
-                    <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-4 text-sm font-bold text-slate-700">{row.name}</td>
-                      <td className="px-4 py-4 text-xs text-slate-500">{row.industry}</td>
-                      <td className="px-4 py-4 text-xs text-slate-500 flex items-center gap-1">
-                        <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center">📍</span>
-                        {row.loc}
-                      </td>
-                      <td className="px-4 py-4 text-xs">
-                        <span className="px-3 py-1 rounded-full bg-blue-600 text-white font-bold flex items-center gap-1.5 w-fit">
-                          <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                          {row.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Calendar Widget */}
-          <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 overflow-hidden">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-slate-800">カレンダー</h2>
-              <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest">
-                March 2025 <ChevronDown className="w-4 h-4" />
-              </div>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center mb-4">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                <div key={d} className="text-[10px] font-bold text-slate-300 uppercase py-2">{d}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {Array.from({ length: 31 }).map((_, i) => {
-                const day = i + 1
-                const isSelected = day === 8
-                const isHighlighted = day === 20
-                return (
-                  <div 
-                    key={i} 
-                    className={`aspect-square flex items-center justify-center text-xs font-bold rounded-full transition-all cursor-pointer ${
-                      isSelected 
-                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-110' 
-                        : isHighlighted
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'text-slate-400 hover:bg-slate-50'
-                    }`}
-                  >
-                    {day}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
 
       {/* ========================================
           Footer
