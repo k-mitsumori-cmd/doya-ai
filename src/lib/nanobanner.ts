@@ -38,7 +38,8 @@ function getNanoBananaImageModel(): string {
     process.env.DOYA_BANNER_IMAGE_MODEL ||
     process.env.NANO_BANANA_PRO_MODEL ||
     process.env.GEMINI_IMAGE_MODEL ||
-    'gemini-2.0-flash-exp'
+    // 未設定時は Gemini 3 Pro Preview をデフォルトにする（要望）
+    'gemini-3-pro-preview'
   )
 }
 
