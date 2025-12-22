@@ -1451,7 +1451,7 @@ export default function BannerDashboard() {
               </div>
 
               <div className="grid lg:grid-cols-[1fr,280px] gap-8">
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                <div className="grid grid-cols-4 gap-3">
                   {CATEGORIES.map((cat) => {
                     const isSelected = category === cat.value
                     return (
