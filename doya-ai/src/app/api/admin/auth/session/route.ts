@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 
-// cookies() を使用するため、静的最適化を無効化
+// cookies() を使用するため静的最適化を無効化
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
