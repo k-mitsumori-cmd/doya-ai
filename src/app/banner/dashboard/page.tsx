@@ -889,9 +889,15 @@ export default function BannerDashboard() {
     setPredictedRemainingMs(predicted)
 
     try {
+      // “終わらない”体感を潰す：フロント側でタイムアウト検知
+      const controller = new AbortController()
+      const timeoutMs = Math.max(60_000, Math.min(240_000, predictedTotalMs * 3))
+      const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
+
       const response = await fetch('/api/banner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           category,
           keyword: keyword.trim(),
@@ -912,6 +918,7 @@ export default function BannerDashboard() {
           shareProfile: shareToGallery && !isGuest ? (shareProfile ? true : false) : undefined,
         }),
       })
+      window.clearTimeout(timeout)
 
       const data = await response.json()
       
@@ -969,8 +976,13 @@ export default function BannerDashboard() {
         toast.success('バナーが完成しました！', { icon: '🎉' })
       }
     } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        setError('生成に時間がかかっています。タブは開いたまま、しばらく待つか再試行してください。')
+        toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
+      } else {
       setError(err.message)
       toast.error('生成に失敗しました', { icon: '❌', duration: 5000 })
+      }
     } finally {
       setIsGenerating(false)
     }

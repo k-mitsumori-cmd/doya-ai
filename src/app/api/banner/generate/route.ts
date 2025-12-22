@@ -5,6 +5,10 @@ import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 
+// Vercel上で画像生成が長引くことがあるため、実行時間上限を引き上げる
+// （環境/プランによって上限は異なります）
+export const maxDuration = 300
+
 // レート制限用（簡易的な実装）
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 const RATE_LIMIT_WINDOW = 60 * 1000 // 1分
