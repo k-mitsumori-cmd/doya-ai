@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { 
   Check, X, Star, Zap, Crown, Rocket, ArrowRight, Sparkles,
-  Home, Cpu, Clock, Settings, HelpCircle, DollarSign, Bell,
+  Home, Cpu, Clock, Settings, HelpCircle, DollarSign,
   MessageSquare, BarChart3, ChevronRight, Shield, Users,
-  TrendingUp, Gift, ArrowUpRight, CheckCircle2, Timer, Calendar,
+  TrendingUp, Gift, ArrowUpRight, CheckCircle2, Timer,
   CreditCard, Receipt, AlertCircle, RefreshCw, Menu
 } from 'lucide-react'
 import { KANTAN_PRICING, getUserUsage, getGuestUsage } from '@/lib/pricing'
@@ -22,7 +22,6 @@ const SIDEBAR_MENU = [
 
 const SIDEBAR_DATA_MENU = [
   { id: 'plan', label: 'プラン・料金', icon: <Users className="w-5 h-5" />, href: '/kantan/dashboard/pricing', active: true },
-  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
 ]
 
 // プランのアイコン
@@ -256,10 +255,6 @@ export default function KantanPricingPage() {
             <h1 className="sm:hidden text-lg font-bold text-gray-800">料金プラン</h1>
             
             <div className="flex items-center gap-2 lg:gap-4">
-              <button className="relative p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
-                <Bell className="w-5 h-5" />
-              </button>
-
               <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200">
                 <div className="text-right hidden md:block">
                   <div className="text-sm font-medium text-gray-800">{userName}</div>

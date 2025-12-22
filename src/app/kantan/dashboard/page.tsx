@@ -9,7 +9,7 @@ import {
   TrendingUp, Users, PenTool, Mail, Search, Megaphone,
   Layers, Briefcase, Palette, Globe, Zap, Cpu, Rocket,
   ChevronRight, Star, Clock, Activity, Home, Settings,
-  Bell, HelpCircle, ChevronDown, Calendar, DollarSign,
+  HelpCircle, ChevronDown, DollarSign,
   Timer, CheckCircle2, ArrowUpRight, MoreHorizontal, Database,
   UserCircle, ChevronLeft, Menu, X
 } from 'lucide-react'
@@ -27,7 +27,6 @@ const SIDEBAR_MENU = [
 
 const SIDEBAR_DATA_MENU = [
   { id: 'plan', label: 'プラン・料金', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/pricing' },
-  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
 ]
 
 // 統計カードデータ
