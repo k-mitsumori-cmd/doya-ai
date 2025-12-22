@@ -617,7 +617,8 @@ export default function BannerDashboard() {
   const [refineHistory, setRefineHistory] = useState<{ instruction: string; image: string }[]>([])
   
   // テキストオーバーレイ機能
-  const [showTextOverlay, setShowTextOverlay] = useState(false)
+  // 文字化け/崩れ対策として、デフォルトはテキストレイヤーON
+  const [showTextOverlay, setShowTextOverlay] = useState(true)
   const [overlayHeadline, setOverlayHeadline] = useState('')
   const [overlaySubhead, setOverlaySubhead] = useState('')
   const [overlayCta, setOverlayCta] = useState('')
@@ -961,8 +962,9 @@ export default function BannerDashboard() {
       })
 
       // 画像サイズ
-      canvas.width = img.naturalWidth || sizeInfo.w
-      canvas.height = img.naturalHeight || sizeInfo.h
+      // 出力サイズは「選択されたサイズ」に必ず合わせる（実ピクセル）
+      canvas.width = sizeInfo.w
+      canvas.height = sizeInfo.h
       ctx.clearRect(0, 0, canvas.width, canvas.height)
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
 
@@ -1067,7 +1069,7 @@ export default function BannerDashboard() {
       const out = canvas.toDataURL('image/png')
       const link = document.createElement('a')
       link.href = out
-      link.download = `bunridge-banner-text-${Date.now()}.png`
+      link.download = `doya-banner-${sizeInfo.w}x${sizeInfo.h}-text-${Date.now()}.png`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -1165,9 +1167,14 @@ export default function BannerDashboard() {
   }
 
   const handleDownload = (url: string, index: number) => {
+    // テキストレイヤーONなら、合成画像を優先してDL（文字崩れ/サイズずれ対策）
+    if (showTextOverlay) {
+      downloadWithTextOverlay(url)
+      return
+    }
     const link = document.createElement('a')
     link.href = url
-    link.download = `bunridge-banner-${['A', 'B', 'C'][index]}-${Date.now()}.png`
+    link.download = `doya-banner-${['A', 'B', 'C'][index]}-${Date.now()}.png`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -1378,7 +1385,7 @@ export default function BannerDashboard() {
                 </button>
               </div>
               <div className="grid lg:grid-cols-2 gap-8">
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                   {PURPOSES.map((p) => {
                     const Icon = p.icon
                     const isSelected = purpose === p.value
@@ -1386,14 +1393,16 @@ export default function BannerDashboard() {
                       <button
                         key={p.value}
                         onClick={() => setPurpose(p.value)}
-                        className={`relative p-4 rounded-2xl text-center transition-all group ${
+                        className={`relative p-3 sm:p-4 rounded-2xl text-center transition-all group ${
                           isSelected 
                             ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105' 
                             : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-blue-600'
                         }`}
                       >
                         <Icon className={`w-6 h-6 mx-auto mb-2 ${isSelected ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'}`} />
-                        <span className="text-[10px] font-black block truncate uppercase tracking-tighter">{p.label}</span>
+                        <span className="text-[11px] font-black block leading-tight whitespace-normal break-words tracking-tight">
+                          {p.label}
+                        </span>
                       </button>
                     )
                   })}

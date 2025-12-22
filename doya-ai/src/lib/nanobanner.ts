@@ -20,6 +20,8 @@
 //
 // ========================================
 
+import sharp from 'sharp'
+
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
@@ -390,12 +392,9 @@ function createBannerPrompt(
     return createYouTubeThumbnailPrompt(keyword, size, appealType, options)
   }
 
-  // テキストの複雑さに基づいて戦略を決定
-  const hasComplexJapanese = /[一-龯]/.test(keyword) // 漢字を含む
-  const textLength = keyword.length
-  
-  // 短いテキストのみ直接レンダリング、それ以外はテキストエリアを確保
-  const shouldRenderText = textLength <= 8 && !hasComplexJapanese
+  // NOTE:
+  // テキストは「アプリ側のテキストレイヤー」で合成するため、
+  // 画像モデルに文字を描かせない（英語っぽい謎文字/日本語崩れを根絶する）
 
   const brandColors = Array.isArray(options.brandColors)
     ? options.brandColors.filter((c) => typeof c === 'string' && c.trim().length > 0).slice(0, 8)
@@ -433,40 +432,19 @@ The user has specifically requested the following visual elements:
 IMPORTANT: Incorporate these visual elements prominently in the banner design.
 This overrides default imagery suggestions. Make these elements the main visual focus.
 ` : ''}
-=== ⚠️⚠️⚠️ TEXT HANDLING - VERY IMPORTANT ⚠️⚠️⚠️ ===
+=== ⚠️ TEXT POLICY (VERY IMPORTANT) ⚠️ ===
+DO NOT render ANY text in the image:
+- No Japanese characters
+- No English letters
+- No numbers
+- No punctuation
 
-${shouldRenderText ? `
-**SHORT TEXT MODE**: Render this short text directly:
-"${keyword}"
-- Use VERY LARGE, BOLD sans-serif font
-- Place on solid color background
-- Maximum contrast
-` : `
-**DESIGN-FOCUSED MODE**: 
-DO NOT render any Japanese text or complex characters.
-Instead, create a visually striking banner with:
+Instead, design the banner with a clear text-safe area for overlay:
+1) A LARGE solid/gradient panel (40%+ of the banner) reserved for headline/sub/CTA overlay
+2) A CTA BUTTON SHAPE (no text inside)
+3) Visual storytelling that matches this theme/concept (visual only): "${keyword}"
 
-1. **LARGE SOLID COLOR AREA** for text overlay (40% of banner)
-   - Clean, flat color area at center or bottom
-   - Semi-transparent gradient acceptable
-   - This is where text will be added later
-
-2. **VISUAL STORYTELLING**
-   - Use imagery, icons, and graphics to convey the message
-   - Theme/concept: "${keyword}"
-   - Express the emotion and appeal through visuals, not text
-
-3. **SIMPLE CTA BUTTON PLACEHOLDER**
-   - Include a colorful button shape (no text inside)
-   - Contrasting color from background
-   - Positioned at bottom-right or center-bottom
-
-4. **ABSOLUTELY NO TEXT**
-   - No Japanese characters
-   - No English text
-   - No numbers
-   - Just pure visual design with text placeholder areas
-`}
+If purpose is "webinar": include event-like layout cues (speaker photo area, date/time badge SHAPES) but still NO TEXT.
 
 === DESIGN REQUIREMENTS ===
 - Professional, modern, clean design
@@ -538,60 +516,9 @@ The person should match the banner's professional tone and target audience
   }
 
   prompt += `
-=== 🔴🔴🔴 MOST IMPORTANT: JAPANESE TEXT QUALITY 🔴🔴🔴 ===
-
-**THE TEXT QUALITY IS THE #1 PRIORITY - MORE IMPORTANT THAN DESIGN**
-
-REQUIRED TEXT: "${keyword}"
-
-ABSOLUTE RULES FOR TEXT (MUST FOLLOW):
-
-1. **TEXT STYLE**:
-   - Use ONLY simple, clean BLOCK letters/characters
-   - Japanese: Use thick, bold ゴシック (Gothic) style ONLY
-   - NO cursive, NO handwriting, NO decorative fonts
-   - Each character must be a simple, geometric shape
-
-2. **TEXT SIZE**:
-   - Main text: At least 15% of image HEIGHT
-   - Each character must be clearly visible even at thumbnail size
-   - If text is long, split into 2 lines maximum
-
-3. **TEXT BACKGROUND**:
-   - ALWAYS place text on a SOLID COLOR rectangle
-   - The rectangle should have 90-100% opacity
-   - Color contrast: White text on dark bg, OR dark text on light bg
-   - Add 20px+ padding around all text
-
-4. **TEXT RENDERING**:
-   - Each Japanese character must be PERFECT and COMPLETE
-   - 漢字 (Kanji): Every stroke must be visible and correct
-   - ひらがな (Hiragana): Smooth, complete curves
-   - カタカナ (Katakana): Sharp, complete angles
-   - NO blurry, distorted, or partial characters
-
-5. **TEXT POSITION**:
-   - Center the main text horizontally
-   - Keep text HORIZONTAL only (no rotation)
-   - Never place text on busy/complex backgrounds without solid backing
-
-6. **FORBIDDEN**:
-   ❌ Decorative or stylized fonts
-   ❌ Text smaller than 10% of image height
-   ❌ Rotated or tilted text
-   ❌ Text on transparent or semi-transparent backgrounds
-   ❌ Overlapping text
-   ❌ More than 3 text elements total
-   ❌ Any text without solid color backing
-
-=== FINAL CHECK ===
-Before generating, verify:
-1. Main text "${keyword}" will be large and perfectly readable
-2. Text has solid color background
-3. No decorative fonts
-4. Maximum 3 text elements
-
-Generate a HIGH-QUALITY banner with PERFECT Japanese text rendering now.`
+=== FINAL OUTPUT ===
+Return a high-quality ad banner image with NO TEXT.
+Make sure there is a clear overlay area for text (solid/gradient panel) and a CTA button shape (no text).`
 
   return prompt
 }
@@ -714,8 +641,18 @@ async function generateSingleBanner(
           const inline = (part as any)?.inlineData || (part as any)?.inline_data
           if (inline?.data) {
             console.log('Image found in Nano Banana Pro response!')
-            const mimeType = inline?.mimeType || inline?.mime_type || 'image/png'
-            return `data:${mimeType};base64,${inline.data}`
+            // どのモデルでも「指定サイズ」で揃うように、ここで必ずリサイズしてPNGに正規化する
+            // （表示・DLともにサイズがズレないようにする）
+            const rawBase64 = String(inline.data)
+            const resized = await sharp(Buffer.from(rawBase64, 'base64'))
+              .resize(
+                Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0
+                  ? { width: w, height: h, fit: 'cover', position: 'centre' }
+                  : undefined
+              )
+              .png()
+              .toBuffer()
+            return `data:image/png;base64,${resized.toString('base64')}`
           }
         }
       }
