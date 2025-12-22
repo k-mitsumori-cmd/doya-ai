@@ -6,8 +6,32 @@ import { Menu, Plus, X } from 'lucide-react'
 import Link from 'next/link'
 import { SeoSidebar } from '@/components/SeoSidebar'
 
-export function SeoAppLayout({ children }: { children: React.ReactNode }) {
+type SeoPlanCode = 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
+
+export function SeoAppLayout({
+  children,
+  currentPlan,
+}: {
+  children: React.ReactNode
+  currentPlan?: SeoPlanCode
+}) {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false)
+
+  const planLabel =
+    currentPlan === 'PRO'
+      ? 'プロ'
+      : currentPlan === 'ENTERPRISE'
+        ? 'エンタープライズ'
+        : currentPlan === 'FREE'
+          ? '無料'
+          : '不明'
+
+  const planTone =
+    currentPlan === 'ENTERPRISE'
+      ? 'bg-violet-50 text-violet-700 border-violet-100'
+      : currentPlan === 'PRO'
+        ? 'bg-amber-50 text-amber-700 border-amber-100'
+        : 'bg-gray-50 text-gray-600 border-gray-100'
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -64,6 +88,11 @@ export function SeoAppLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link href="/pricing" className="hidden sm:block">
+              <div className={`h-10 px-4 rounded-xl border text-xs font-black inline-flex items-center ${planTone}`}>
+                現在のプラン：{planLabel}
+              </div>
+            </Link>
             <Link href="/seo/new">
               <button className="h-10 px-4 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
                 <Plus className="w-4 h-4" />
