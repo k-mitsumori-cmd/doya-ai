@@ -247,11 +247,12 @@ export default function BannerChatPage() {
                   <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    placeholder="こちらにバナーの要件を入力してください..."
+                    placeholder="こちらにバナーの要件を入力してください...（Enter=改行 / Ctrl+Enter or ⌘+Enter=送信）"
                     rows={2}
                     className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-6 pr-14 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm font-medium resize-none"
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      // Enter は改行。送信は Ctrl/⌘+Enter のみ。
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                         e.preventDefault()
                         void handleSend()
                       }

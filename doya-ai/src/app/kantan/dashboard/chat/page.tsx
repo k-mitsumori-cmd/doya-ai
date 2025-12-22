@@ -791,13 +791,19 @@ ${inputValue}
           {selectedCategory && (
             <div className="bg-white rounded-xl lg:rounded-2xl border border-gray-200 shadow-sm p-3 lg:p-4">
               <div className="flex items-center gap-2 lg:gap-3">
-                <input
-                  type="text"
+                <textarea
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
-                  placeholder="入力"
-                  className="flex-1 bg-transparent text-gray-800 text-sm placeholder-gray-400 outline-none"
+                  onKeyDown={(e) => {
+                    // Enter は改行。送信は Ctrl/⌘+Enter のみ。
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
+                  placeholder="入力（Enter=改行 / Ctrl+Enter or ⌘+Enter=送信）"
+                  rows={2}
+                  className="flex-1 bg-transparent text-gray-800 text-sm placeholder-gray-400 outline-none resize-none"
                   disabled={isLoading}
                 />
                 <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
