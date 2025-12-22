@@ -8,7 +8,7 @@ import {
   ArrowLeft, Sparkles, Loader2, Copy, Check, 
   RefreshCw, Wand2, LogIn, Send, ChevronRight, Rocket, Cpu, User, Bot, MessageSquare,
   Timer, FileText, Download, Zap, CheckCircle2, ChevronDown, History, Star,
-  Home, DollarSign, Settings, HelpCircle, Bell, BarChart3, Clock, Calendar, Mail, UserCircle, TrendingUp,
+  Home, DollarSign, Settings, HelpCircle, BarChart3, Clock, UserCircle, TrendingUp,
   Menu, X
 } from 'lucide-react'
 
@@ -22,7 +22,6 @@ const SIDEBAR_MENU = [
 
 const SIDEBAR_DATA_MENU = [
   { id: 'plan', label: 'プラン・料金', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/pricing' },
-  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
 ]
 import toast, { Toaster } from 'react-hot-toast'
 import { SAMPLE_TEMPLATES } from '@/lib/templates'
@@ -824,9 +823,6 @@ ${inputMessage}
             </div>
             
             <div className="flex items-center gap-2 lg:gap-4">
-              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
-                <Bell className="w-5 h-5" />
-              </button>
               <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                 <Settings className="w-5 h-5" />
               </button>

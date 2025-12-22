@@ -5,9 +5,9 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { 
   Star, TrendingUp, Users, CheckCircle2, Building2,
-  Home, Cpu, Clock, Settings, HelpCircle, DollarSign, Bell,
+  Home, Cpu, Clock, Settings, HelpCircle, DollarSign,
   MessageSquare, Rocket, BarChart3, ArrowUpRight, Quote,
-  Zap, Shield, RefreshCw, Database, Crown, Info, Mail, Calendar, UserCircle,
+  Zap, Shield, RefreshCw, Database, Crown, Info, UserCircle,
   Menu, X
 } from 'lucide-react'
 
@@ -21,7 +21,6 @@ const SIDEBAR_MENU = [
 
 const SIDEBAR_DATA_MENU = [
   { id: 'plan', label: 'プラン・料金', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/pricing', active: true },
-  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
 ]
 
 // プラン特徴（詳細説明付き）
@@ -366,10 +365,6 @@ export default function KantanPlanPage() {
             <h1 className="sm:hidden text-lg font-bold text-gray-800">サービスプラン</h1>
             
             <div className="flex items-center gap-2 lg:gap-4">
-              <button className="relative p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-              </button>
               <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors">
                 <Settings className="w-5 h-5" />
               </button>

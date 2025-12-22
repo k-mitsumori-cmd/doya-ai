@@ -6,11 +6,11 @@ import { useState, useEffect, useRef } from 'react'
 import { 
   Send, Paperclip, MoreHorizontal, Sparkles, LogIn,
   FileText, Target, TrendingUp, Users, BarChart3, Lightbulb,
-  Home, Cpu, Clock, Settings, HelpCircle, DollarSign, Bell,
+  Home, Cpu, Clock, Settings, HelpCircle, DollarSign,
   MessageSquare, Rocket, Bot, User, Loader2, ChevronRight, Star,
   Megaphone, PenTool, Mail, Search, Share2, ShoppingCart, Globe,
   Zap, BookOpen, Heart, Palette, Video, Mic, Camera, Gift,
-  Building, Briefcase, Award, Headphones, Shield, Layers, ArrowLeft, Calendar, UserCircle,
+  Building, Briefcase, Award, Headphones, Shield, Layers, ArrowLeft, UserCircle,
   Menu, X
 } from 'lucide-react'
 import { KANTAN_PRICING, getGuestRemainingCount } from '@/lib/pricing'
@@ -25,7 +25,6 @@ const SIDEBAR_MENU = [
 
 const SIDEBAR_DATA_MENU = [
   { id: 'plan', label: 'プラン・料金', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/pricing' },
-  { id: 'notifications', label: 'お知らせ', icon: <Bell className="w-5 h-5" />, href: '#', badge: 3 },
 ]
 
 // チャットカテゴリ（課題解決テンプレート）- 全24カテゴリ
@@ -590,9 +589,6 @@ ${inputValue}
             <h1 className="text-lg lg:text-xl font-bold text-gray-800">AIチャット</h1>
             
             <div className="flex items-center gap-2 lg:gap-4">
-              <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
-                <Bell className="w-5 h-5" />
-              </button>
               <button className="hidden sm:block p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
                 <Settings className="w-5 h-5" />
               </button>
