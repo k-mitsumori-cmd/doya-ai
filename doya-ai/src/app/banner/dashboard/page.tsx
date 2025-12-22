@@ -617,18 +617,10 @@ export default function BannerDashboard() {
   const [showRefineInput, setShowRefineInput] = useState(false)
   const [refineHistory, setRefineHistory] = useState<{ instruction: string; image: string }[]>([])
   
-  // テキストオーバーレイ機能
-  // 文字化け/崩れ対策として、デフォルトはテキストレイヤーON
-  const [showTextOverlay, setShowTextOverlay] = useState(true)
+  // 画像内テキスト（AIが画像に直接描画する）
   const [overlayHeadline, setOverlayHeadline] = useState('')
   const [overlaySubhead, setOverlaySubhead] = useState('')
   const [overlayCta, setOverlayCta] = useState('')
-  const [overlayTextColor, setOverlayTextColor] = useState('#FFFFFF')
-  const [overlayBgColor, setOverlayBgColor] = useState('#2563EB') // Doya Banner Blue
-  const [overlayBgOpacity, setOverlayBgOpacity] = useState(82)
-  const [overlayPosition, setOverlayPosition] = useState<'bottom' | 'center'>('bottom')
-  const [overlayFontScale, setOverlayFontScale] = useState(1)
-  const compositeCanvasRef = useRef<HTMLCanvasElement | null>(null)
   const [tipIndex, setTipIndex] = useState(0)
   
   const [guestUsageCount, setGuestUsageCount] = useState(0)
@@ -673,10 +665,7 @@ export default function BannerDashboard() {
   }
   const [recentHistory, setRecentHistory] = useState<HistoryItem[]>([])
 
-  // テキストレイヤー：プレビューの計測（DLと比率を揃える）
-  const overlayPreviewRef = useRef<HTMLDivElement | null>(null)
-  const overlayImgRef = useRef<HTMLImageElement | null>(null)
-  const [overlayPreviewBox, setOverlayPreviewBox] = useState<{ w: number; h: number }>({ w: 0, h: 0 })
+  // （旧）テキストレイヤー合成のためのプレビュー計測は廃止
   
   const isGuest = !session
   const bannerPlan = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
@@ -703,11 +692,7 @@ export default function BannerDashboard() {
     return { w, h, ratio: w / h }
   }, [effectiveSize])
 
-  const overlayPreviewMetrics = useMemo(() => {
-    const w = overlayPreviewBox.w || 640
-    const h = overlayPreviewBox.h || Math.round(w / (sizeInfo.ratio || 1))
-    return computeOverlayMetrics(w, h, overlayFontScale, overlayPosition)
-  }, [overlayPreviewBox.w, overlayPreviewBox.h, overlayFontScale, overlayPosition, sizeInfo.ratio])
+  // （旧）テキストレイヤー合成の計算は廃止
 
   // Effects
   useEffect(() => {
@@ -804,31 +789,13 @@ export default function BannerDashboard() {
     return () => clearInterval(t)
   }, [isGenerating])
 
-  // 生成結果が入ったらテキストレイヤー初期値をセット（独自機能）
+  // 画像内テキストの初期値（入力が空のときだけ自動セット）
   useEffect(() => {
-    if (generatedBanners.length === 0) return
     const d = buildDefaultOverlay(keyword, purpose)
-    setOverlayHeadline(d.headline)
-    setOverlaySubhead(d.subhead)
-    setOverlayCta(d.cta)
-    // ベースはOFF（自動でONにしない）
-  }, [generatedBanners.length, keyword, purpose])
-
-  // プレビュー領域（画像そのもの）のサイズを追跡
-  useEffect(() => {
-    const el = overlayImgRef.current || overlayPreviewRef.current
-    if (!el || typeof ResizeObserver === 'undefined') return
-
-    const update = () => {
-      const target = overlayImgRef.current || overlayPreviewRef.current
-      setOverlayPreviewBox({ w: target?.clientWidth || 0, h: target?.clientHeight || 0 })
-    }
-    update()
-
-    const ro = new ResizeObserver(() => update())
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [selectedBanner, showTextOverlay, generatedBanners.length])
+    setOverlayHeadline((prev) => (prev.trim() ? prev : d.headline))
+    setOverlaySubhead((prev) => (prev.trim() ? prev : d.subhead))
+    setOverlayCta((prev) => (prev.trim() ? prev : d.cta))
+  }, [keyword, purpose])
 
   // Handlers
   const handleSample = () => {
@@ -891,6 +858,9 @@ export default function BannerDashboard() {
           purpose,
           companyName: companyName.trim() || undefined,
           imageDescription: imageDescription.trim() || undefined,
+          headlineText: (overlayHeadline || keyword).trim() || undefined,
+          subheadText: overlaySubhead.trim() || undefined,
+          ctaText: overlayCta.trim() || undefined,
           logoImage: logoImage || undefined,
           personImage: personImage || undefined,
           referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
@@ -949,137 +919,7 @@ export default function BannerDashboard() {
     }
   }
 
-  const downloadWithTextOverlay = async (imageUrl: string) => {
-    try {
-      const canvas = compositeCanvasRef.current || document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      if (!ctx) throw new Error('Canvasの初期化に失敗しました')
-
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
-        img.src = imageUrl
-      })
-
-      // 画像サイズ
-      // 出力サイズは「選択されたサイズ」に必ず合わせる（実ピクセル）
-      canvas.width = sizeInfo.w
-      canvas.height = sizeInfo.h
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-
-      // テキストレイヤー
-      const padding = Math.round(canvas.width * 0.045)
-      const panelW = canvas.width - padding * 2
-      const panelH = Math.round(canvas.height * 0.28)
-      const panelX = padding
-      const panelY = overlayPosition === 'center'
-        ? Math.round((canvas.height - panelH) * 0.55)
-        : canvas.height - padding - panelH
-
-      const opacity = clamp(overlayBgOpacity, 0, 100) / 100
-      ctx.save()
-      ctx.globalAlpha = opacity
-      ctx.fillStyle = overlayBgColor
-      const r = Math.round(canvas.width * 0.03)
-      // rounded rect
-      ctx.beginPath()
-      ctx.moveTo(panelX + r, panelY)
-      ctx.arcTo(panelX + panelW, panelY, panelX + panelW, panelY + panelH, r)
-      ctx.arcTo(panelX + panelW, panelY + panelH, panelX, panelY + panelH, r)
-      ctx.arcTo(panelX, panelY + panelH, panelX, panelY, r)
-      ctx.arcTo(panelX, panelY, panelX + panelW, panelY, r)
-      ctx.closePath()
-      ctx.fill()
-      ctx.restore()
-
-      const baseFont = Math.round(canvas.height * 0.06 * overlayFontScale)
-      const subFont = Math.round(baseFont * 0.55)
-      const ctaFont = Math.round(baseFont * 0.58)
-
-      ctx.fillStyle = overlayTextColor
-      ctx.textBaseline = 'top'
-      ctx.font = `900 ${baseFont}px ${OVERLAY_FONT_FAMILY_CANVAS}`
-
-      const textX = panelX + Math.round(panelW * 0.06)
-      let y = panelY + Math.round(panelH * 0.14)
-
-      // headline（自動改行：2行まで）
-      const headline = overlayHeadline.trim()
-      const maxWidth = panelW * 0.88
-      const lines: string[] = []
-      if (headline) {
-        const words = headline.split('')
-        let line = ''
-        for (const ch of words) {
-          const test = line + ch
-          if (ctx.measureText(test).width > maxWidth && line) {
-            lines.push(line)
-            line = ch
-          } else {
-            line = test
-          }
-          if (lines.length >= 2) break
-        }
-        if (lines.length < 2 && line) lines.push(line)
-      }
-      for (const line of lines) {
-        ctx.fillText(line, textX, y)
-        y += Math.round(baseFont * 1.1)
-      }
-
-      // subhead
-      const sub = overlaySubhead.trim()
-      if (sub) {
-        ctx.globalAlpha = 0.92
-        ctx.font = `700 ${subFont}px ${OVERLAY_FONT_FAMILY_CANVAS}`
-        ctx.fillText(sub, textX, y + Math.round(baseFont * 0.12))
-        ctx.globalAlpha = 1
-      }
-
-      // CTA pill
-      const cta = overlayCta.trim()
-      if (cta) {
-        const pillPaddingX = Math.round(panelW * 0.04)
-        const pillPaddingY = Math.round(panelH * 0.08)
-        ctx.font = `900 ${ctaFont}px ${OVERLAY_FONT_FAMILY_CANVAS}`
-        const tw = ctx.measureText(cta).width
-        const pillW = Math.round(tw + pillPaddingX * 2)
-        const pillH = Math.round(ctaFont + pillPaddingY * 1.6)
-        const pillX = panelX + panelW - pillW - Math.round(panelW * 0.06)
-        const pillY = panelY + panelH - pillH - Math.round(panelH * 0.14)
-        ctx.save()
-        ctx.fillStyle = overlayTextColor
-        ctx.globalAlpha = 0.12
-        // rounded rect for CTA
-        const pr = Math.round(pillH / 2)
-        ctx.beginPath()
-        ctx.moveTo(pillX + pr, pillY)
-        ctx.arcTo(pillX + pillW, pillY, pillX + pillW, pillY + pillH, pr)
-        ctx.arcTo(pillX + pillW, pillY + pillH, pillX, pillY + pillH, pr)
-        ctx.arcTo(pillX, pillY + pillH, pillX, pillY, pr)
-        ctx.arcTo(pillX, pillY, pillX + pillW, pillY, pr)
-        ctx.closePath()
-        ctx.fill()
-        ctx.restore()
-        ctx.fillStyle = overlayTextColor
-        ctx.fillText(cta, pillX + pillPaddingX, pillY + Math.round(pillPaddingY * 0.6))
-      }
-
-      const out = canvas.toDataURL('image/png')
-      const link = document.createElement('a')
-      link.href = out
-      link.download = `doya-banner-${sizeInfo.w}x${sizeInfo.h}-text-${Date.now()}.png`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      toast.success('テキスト入りでダウンロードしました', { icon: '⬇️' })
-    } catch (e: any) {
-      toast.error(e?.message || '合成に失敗しました')
-    }
-  }
+  // （旧）テキストレイヤー合成DLは廃止（画像生成AIが文字まで描画する）
 
   const handleSmartCopySample = async () => {
     if (!category) {
@@ -1164,11 +1004,6 @@ export default function BannerDashboard() {
   }
 
   const handleDownload = (url: string, index: number) => {
-    // テキストレイヤーONなら、合成画像を優先してDL（文字崩れ/サイズずれ対策）
-    if (showTextOverlay) {
-      downloadWithTextOverlay(url)
-      return
-    }
     const link = document.createElement('a')
     link.href = url
     link.download = `doya-banner-${['A', 'B', 'C'][index]}-${Date.now()}.png`
@@ -2276,219 +2111,66 @@ export default function BannerDashboard() {
                             </div>
                           </div>
                           
-                          {/* プレビュー画像 */}
+                          {/* プレビュー画像（生成画像にテキストも含めるため、アプリ側の重ね表示はしない） */}
                           <div className="rounded-xl overflow-hidden mb-3 shadow-md">
-                            <div className="relative" ref={overlayPreviewRef}>
-                              <img 
-                                ref={overlayImgRef}
-                                src={generatedBanners[selectedBanner]} 
-                                alt="Selected Banner" 
-                                className="w-full"
-                                onLoad={() => {
-                                  const el = overlayImgRef.current
-                                  if (el) setOverlayPreviewBox({ w: el.clientWidth || 0, h: el.clientHeight || 0 })
-                                }}
-                              />
-                              
-                              {/* Text Layer Preview (独自性) */}
-                              {showTextOverlay && (
-                                <div className="absolute inset-0 pointer-events-none">
-                                  <div
-                                    className="absolute overflow-hidden"
-                                    style={{
-                                      left: `${overlayPreviewMetrics.panelX}px`,
-                                      top: `${overlayPreviewMetrics.panelY}px`,
-                                      width: `${overlayPreviewMetrics.panelW}px`,
-                                      height: `${overlayPreviewMetrics.panelH}px`,
-                                      backgroundColor: overlayBgColor,
-                                      opacity: clamp(overlayBgOpacity, 0, 100) / 100,
-                                      borderRadius: `${overlayPreviewMetrics.radius}px`,
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        padding: `${overlayPreviewMetrics.textPadTop}px ${overlayPreviewMetrics.textPadX}px`,
-                                      }}
-                                    >
-                                      <div
-                                        className="font-black leading-tight"
-                                        style={{
-                                          color: overlayTextColor,
-                                          fontSize: `${overlayPreviewMetrics.baseFont}px`,
-                                          fontFamily: OVERLAY_FONT_FAMILY_CSS,
-                                          fontWeight: 900,
-                                          lineHeight: 1.1,
-                                          maxWidth: `${overlayPreviewMetrics.maxTextWidth}px`,
-                                          display: '-webkit-box',
-                                          WebkitLineClamp: 2,
-                                          WebkitBoxOrient: 'vertical',
-                                          overflow: 'hidden',
-                                        }}
-                                      >
-                                        {overlayHeadline || ' '}
-                                      </div>
-                                      {overlaySubhead && (
-                                        <div
-                                          className="font-semibold opacity-90"
-                                          style={{
-                                            color: overlayTextColor,
-                                            fontSize: `${overlayPreviewMetrics.subFont}px`,
-                                            fontFamily: OVERLAY_FONT_FAMILY_CSS,
-                                            fontWeight: 700,
-                                            marginTop: `${Math.round(overlayPreviewMetrics.baseFont * 0.12)}px`,
-                                            maxWidth: `${overlayPreviewMetrics.maxTextWidth}px`,
-                                            whiteSpace: 'nowrap',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                          }}
-                                        >
-                                          {overlaySubhead}
-                                        </div>
-                                      )}
-                                      {overlayCta && (
-                                        <div
-                                          className="flex justify-end"
-                                          style={{ marginTop: `${Math.round(overlayPreviewMetrics.baseFont * 0.18)}px` }}
-                                        >
-                                          <div
-                                            className="rounded-full font-black"
-                                            style={{
-                                              color: overlayTextColor,
-                                              backgroundColor: 'rgba(255,255,255,0.14)',
-                                              fontSize: `${overlayPreviewMetrics.ctaFont}px`,
-                                              fontFamily: OVERLAY_FONT_FAMILY_CSS,
-                                              fontWeight: 900,
-                                              padding: `${Math.round(overlayPreviewMetrics.panelH * 0.08)}px ${Math.round(overlayPreviewMetrics.panelW * 0.04)}px`,
-                                            }}
-                                          >
-                                            {overlayCta}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                            <img
+                              src={generatedBanners[selectedBanner]}
+                              alt="Selected Banner"
+                              className="w-full"
+                            />
                           </div>
 
-                          {/* 独自性：テキストレイヤー編集＆合成DL */}
+                          {/* 画像内テキスト（AIが画像に直接描画） */}
                           <div className="border-t border-gray-100 pt-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <Pencil className="w-4 h-4 text-blue-600" />
-                                <span className="text-sm font-bold text-gray-900">テキストレイヤー（アプリ独自）</span>
-                                <span className="text-[11px] text-gray-500 hidden sm:inline">日本語文字化け対策にも◎</span>
-                              </div>
-                              <button
-                                onClick={() => setShowTextOverlay(!showTextOverlay)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                                  showTextOverlay ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                              >
-                                {showTextOverlay ? 'ON' : 'OFF'}
-                              </button>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Pencil className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm font-bold text-gray-900">画像内テキスト（AIが描画）</span>
+                              <span className="text-[11px] text-gray-500 hidden sm:inline">生成画像に直接文字が入ります</span>
                             </div>
 
-                            {showTextOverlay && (
-                              <div className="space-y-2">
-                                <input
-                                  value={overlayHeadline}
-                                  onChange={(e) => setOverlayHeadline(e.target.value)}
-                                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                  placeholder="見出し（例: 月額990円〜 乗り換えで最大2万円）"
-                                />
-                                <input
-                                  value={overlaySubhead}
-                                  onChange={(e) => setOverlaySubhead(e.target.value)}
-                                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                  placeholder="サブ（任意）"
-                                />
-                                <div className="grid grid-cols-2 gap-2">
-                                  <input
-                                    value={overlayCta}
-                                    onChange={(e) => setOverlayCta(e.target.value)}
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                    placeholder="CTA（例: 詳しくはこちら）"
-                                  />
-                                  <select
-                                    value={overlayPosition}
-                                    onChange={(e) => setOverlayPosition(e.target.value as any)}
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900"
-                                  >
-                                    <option value="bottom">下</option>
-                                    <option value="center">中央</option>
-                                  </select>
-                                </div>
+                            <div className="space-y-2">
+                              <input
+                                value={overlayHeadline}
+                                onChange={(e) => setOverlayHeadline(e.target.value)}
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+                                placeholder="見出し（例: 月額990円〜 乗り換えで最大2万円）"
+                              />
+                              <input
+                                value={overlaySubhead}
+                                onChange={(e) => setOverlaySubhead(e.target.value)}
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+                                placeholder="サブ（任意）"
+                              />
+                              <input
+                                value={overlayCta}
+                                onChange={(e) => setOverlayCta(e.target.value)}
+                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
+                                placeholder="CTA（任意・例: 詳しくはこちら）"
+                              />
 
-                                <div className="grid grid-cols-3 gap-2">
-                                  <div className="col-span-2 flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl">
-                                    <span className="text-xs font-bold text-gray-600">サイズ</span>
-                                    <input
-                                      type="range"
-                                      min={0.8}
-                                      max={1.5}
-                                      step={0.05}
-                                      value={overlayFontScale}
-                                      onChange={(e) => setOverlayFontScale(Number(e.target.value))}
-                                      className="w-full"
-                                    />
-                                  </div>
-                                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl">
-                                    <span className="text-xs font-bold text-gray-600">濃さ</span>
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      max={100}
-                                      value={overlayBgOpacity}
-                                      onChange={(e) => setOverlayBgOpacity(Number(e.target.value))}
-                                      className="w-14 bg-transparent text-sm font-bold text-gray-900 outline-none"
-                                    />
-                                  </div>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  onClick={() => {
+                                    const d = buildDefaultOverlay(keyword, purpose)
+                                    setOverlayHeadline(d.headline)
+                                    setOverlaySubhead(d.subhead)
+                                    setOverlayCta(d.cta)
+                                  }}
+                                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-lg font-bold"
+                                >
+                                  自動セット
+                                </button>
+                                {createCopyVariants(keyword, purpose).map((v) => (
                                   <button
-                                    onClick={() => {
-                                      const d = buildDefaultOverlay(keyword, purpose)
-                                      setOverlayHeadline(d.headline)
-                                      setOverlaySubhead(d.subhead)
-                                      setOverlayCta(d.cta)
-                                    }}
-                                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-lg font-bold"
+                                    key={v}
+                                    onClick={() => setOverlayHeadline(v)}
+                                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs rounded-lg font-bold"
                                   >
-                                    自動セット
+                                    {v.length > 18 ? `${v.slice(0, 18)}…` : v}
                                   </button>
-                                  {createCopyVariants(keyword, purpose).map((v) => (
-                                    <button
-                                      key={v}
-                                      onClick={() => setOverlayHeadline(v)}
-                                      className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs rounded-lg font-bold"
-                                    >
-                                      {v.length > 18 ? `${v.slice(0, 18)}…` : v}
-                                    </button>
-                                  ))}
-                                </div>
-
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => downloadWithTextOverlay(generatedBanners[selectedBanner])}
-                                    className="flex-1 py-2.5 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-800 transition-colors"
-                                  >
-                                    テキスト入りでDL（合成）
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText([overlayHeadline, overlaySubhead, overlayCta].filter(Boolean).join('\n'))
-                                      toast.success('テキストをコピーしました')
-                                    }}
-                                    className="px-3 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-bold text-sm hover:bg-gray-200 transition-colors"
-                                  >
-                                    <Copy className="w-4 h-4" />
-                                  </button>
-                                </div>
+                                ))}
                               </div>
-                            )}
+                            </div>
                           </div>
 
                           {/* 修正入力フォーム */}
@@ -2639,7 +2321,7 @@ export default function BannerDashboard() {
       </footer>
 
       {/* Hidden canvas for composite download */}
-      <canvas ref={compositeCanvasRef} className="hidden" />
+      {/* （旧）テキストレイヤー合成用canvasは廃止 */}
 
       {/* ========================================
           Generation Fullscreen Overlay (飽きさせない演出)
