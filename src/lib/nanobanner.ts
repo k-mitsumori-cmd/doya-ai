@@ -26,13 +26,13 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 /**
  * 画像生成モデルを設定する
  * - デフォルト: gemini-3-pro-image-preview（Gemini 3 Pro Image、最新の画像生成モデル）
- * - Gemini 3系のNano Banana Proを活用
+ * - Gemini 3系のみ使用（Gemini 2.5以下は使用しない）
  *
  * 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
  * 
  * 利用可能な画像生成モデル:
  * - gemini-3-pro-image-preview (Gemini 3 Pro Image, 推奨)
- * - gemini-3-flash-preview (Gemini 3 Flash, テキスト用だが画像理解も可能)
+ * - gemini-3-flash-preview (Gemini 3 Flash)
  */
 const IMAGE_MODEL_DEFAULT = 'gemini-3-pro-image-preview'
 
@@ -40,9 +40,9 @@ function assertImageModel(model: string): void {
   const m = String(model || '').trim()
   const lower = m.toLowerCase()
   
-  // Gemini 2.0系は使用しない（要望）
-  if (lower.includes('gemini-2.0')) {
-    console.warn(`Gemini 2.0 (${m}) は使用しません。Gemini 3 Pro Image を使用します。`)
+  // Gemini 2.5以下は使用しない
+  if (lower.includes('gemini-2') || lower.includes('gemini-1')) {
+    console.warn(`Gemini 2.5以下 (${m}) は使用しません。Gemini 3 Pro Image を使用します。`)
   }
 }
 
@@ -56,12 +56,12 @@ function getImageModel(): string {
   assertImageModel(model)
   
   const lower = model.toLowerCase()
-  // Gemini 2.0系は使用しないのでデフォルト（Gemini 3）を使用
-  if (lower.includes('gemini-2.0')) {
+  // Gemini 2.5以下は使用しないのでデフォルト（Gemini 3）を使用
+  if (lower.includes('gemini-2') || lower.includes('gemini-1')) {
     return IMAGE_MODEL_DEFAULT
   }
 
-  // Gemini 3系、またはユーザー指定のものを使用
+  // Gemini 3系のみ使用
   return model
 }
 
@@ -77,8 +77,8 @@ function getGeminiTextModel(): string {
   )
 }
 
-// テキスト生成のフォールバックモデル（Gemini 3系を優先）
-const DEFAULT_TEXT_FALLBACKS = ['gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-1.5-flash'] as const
+// テキスト生成のフォールバックモデル（Gemini 3系のみ）
+const DEFAULT_TEXT_FALLBACKS = ['gemini-3-pro-preview', 'gemini-3-flash-preview'] as const
 
 // APIキーを取得（複数の環境変数に対応）
 function getApiKey(): string {
