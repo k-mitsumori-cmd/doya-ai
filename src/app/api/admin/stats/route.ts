@@ -18,14 +18,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '管理者認証が必要です' }, { status: 401 })
     }
 
-    // 今日の開始時刻
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
+    // 今日の開始時刻（UTC）
+    const now = new Date()
+    const todayStart = new Date(now)
+    todayStart.setUTCHours(0, 0, 0, 0)
 
     // 今月の開始時刻
-    const monthStart = new Date()
-    monthStart.setDate(1)
-    monthStart.setHours(0, 0, 0, 0)
+    const monthStart = new Date(now.getUTCFullYear(), now.getUTCMonth(), 1)
 
     // 先月の開始・終了
     const lastMonthStart = new Date(monthStart)
@@ -35,13 +34,12 @@ export async function GET(request: NextRequest) {
 
     // 各統計を個別に取得（エラーハンドリング付き）
     let totalUsers = 0
-    let premiumUsers = 0
-    let enterpriseUsers = 0
+    let proUsers = 0
+    let stripeUsers = 0
     let totalGenerations = 0
     let todayGenerations = 0
     let monthGenerations = 0
     let lastMonthGenerations = 0
-    let activeTemplates = 0
     let recentUsers = 0
     let recentGenerations: any[] = []
     let adminLoginAttempts = 0
@@ -53,18 +51,27 @@ export async function GET(request: NextRequest) {
       console.log('User count failed:', e)
     }
 
+    // PRO/BUSINESS/ENTERPRISEユーザー
     try {
-      premiumUsers = await prisma.user.count({ where: { plan: 'PREMIUM' } })
+      proUsers = await prisma.user.count({ 
+        where: { 
+          plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] }
+        } 
+      })
     } catch (e) {
-      console.log('Premium user count failed:', e)
+      console.log('Pro user count failed:', e)
     }
 
+    // Stripe連携ユーザー
     try {
-      enterpriseUsers = await prisma.user.count({ where: { stripeSubscriptionId: { not: null } } })
+      stripeUsers = await prisma.user.count({ 
+        where: { stripeSubscriptionId: { not: null } } 
+      })
     } catch (e) {
-      console.log('Enterprise user count failed:', e)
+      console.log('Stripe user count failed:', e)
     }
 
+    // 今週の新規ユーザー
     try {
       recentUsers = await prisma.user.count({
         where: { createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
@@ -73,11 +80,11 @@ export async function GET(request: NextRequest) {
       console.log('Recent user count failed:', e)
     }
 
-    // 生成統計（Generationテーブルが存在しない場合はスキップ）
+    // 生成統計
     try {
       totalGenerations = await prisma.generation.count()
     } catch (e) {
-      console.log('Generation count failed (table may not exist):', e)
+      console.log('Generation count failed:', e)
     }
 
     try {
@@ -106,25 +113,18 @@ export async function GET(request: NextRequest) {
       console.log('Last month generation count failed:', e)
     }
 
+    // 最近の生成（24時間）
     try {
       recentGenerations = await prisma.generation.findMany({
         where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
         include: {
           user: { select: { name: true, email: true } },
-          template: { select: { name: true } },
         },
         orderBy: { createdAt: 'desc' },
         take: 10,
       })
     } catch (e) {
       console.log('Recent generations failed:', e)
-    }
-
-    // テンプレート統計
-    try {
-      activeTemplates = await prisma.template.count({ where: { isActive: true } })
-    } catch (e) {
-      console.log('Template count failed (table may not exist):', e)
     }
 
     // 管理者ログイン試行
@@ -136,32 +136,121 @@ export async function GET(request: NextRequest) {
       console.log('Admin login attempt count failed:', e)
     }
 
-    // 月間売上計算（プレミアム: 2,980円/月）
-    const premiumPrice = 2980
-    const monthlyRevenue = premiumUsers * premiumPrice
-    const mrr = monthlyRevenue
+    // サービス別統計
+    const serviceStats: any[] = []
+    const serviceIds = ['banner', 'kantan', 'seo']
+    const serviceLabels: Record<string, { name: string; icon: string; gradient: string }> = {
+      banner: { name: 'ドヤバナーAI', icon: '🎨', gradient: 'from-violet-500 to-fuchsia-500' },
+      kantan: { name: 'カンタンドヤAI', icon: '📝', gradient: 'from-blue-500 to-cyan-500' },
+      seo: { name: 'ドヤSEO', icon: '🧠', gradient: 'from-emerald-500 to-green-500' },
+    }
 
-    // コンバージョン率（無料→有料）
-    const freeUsers = Math.max(0, totalUsers - premiumUsers - enterpriseUsers)
+    for (const serviceId of serviceIds) {
+      try {
+        // サービス別ユーザー数
+        const serviceUsers = await prisma.userServiceSubscription.count({
+          where: { serviceId },
+        })
+
+        // サービス別PROユーザー
+        const serviceProUsers = await prisma.userServiceSubscription.count({
+          where: { serviceId, plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] } },
+        })
+
+        // サービス別生成数
+        const serviceGenerations = await prisma.generation.count({
+          where: { serviceId },
+        })
+
+        // サービス別今日の生成
+        const serviceTodayGenerations = await prisma.generation.count({
+          where: { serviceId, createdAt: { gte: todayStart } },
+        })
+
+        // サービス別先月の生成
+        const serviceLastMonthGenerations = await prisma.generation.count({
+          where: { serviceId, createdAt: { gte: lastMonthStart, lte: lastMonthEnd } },
+        })
+
+        // サービス別今月の生成
+        const serviceMonthGenerations = await prisma.generation.count({
+          where: { serviceId, createdAt: { gte: monthStart } },
+        })
+
+        // 成長率
+        const growth = serviceLastMonthGenerations > 0
+          ? ((serviceMonthGenerations - serviceLastMonthGenerations) / serviceLastMonthGenerations * 100)
+          : (serviceMonthGenerations > 0 ? 100 : 0)
+
+        // 売上計算（PRO: banner=3980, seo=3000, kantan=4980）
+        const priceMap: Record<string, number> = { banner: 3980, seo: 3000, kantan: 4980 }
+        const revenue = serviceProUsers * (priceMap[serviceId] || 0)
+
+        const label = serviceLabels[serviceId]
+        serviceStats.push({
+          id: serviceId,
+          name: label.name,
+          icon: label.icon,
+          gradient: label.gradient,
+          users: serviceUsers,
+          proUsers: serviceProUsers,
+          generations: serviceGenerations,
+          todayGenerations: serviceTodayGenerations,
+          revenue,
+          growth: parseFloat(growth.toFixed(1)),
+        })
+      } catch (e) {
+        console.log(`Service stats failed for ${serviceId}:`, e)
+      }
+    }
+
+    // 時系列データ（過去12時間の生成数）
+    const hourlyData: number[] = []
+    try {
+      for (let i = 11; i >= 0; i--) {
+        const hourStart = new Date(now.getTime() - i * 60 * 60 * 1000)
+        hourStart.setMinutes(0, 0, 0)
+        const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000)
+        
+        const count = await prisma.generation.count({
+          where: {
+            createdAt: { gte: hourStart, lt: hourEnd },
+          },
+        })
+        hourlyData.push(count)
+      }
+    } catch (e) {
+      console.log('Hourly data failed:', e)
+      // フォールバック: 0埋め
+      for (let i = 0; i < 12; i++) hourlyData.push(0)
+    }
+
+    // 無料ユーザー数
+    const freeUsers = Math.max(0, totalUsers - proUsers)
+
+    // コンバージョン率
     const conversionRate = totalUsers > 0 
-      ? ((premiumUsers + enterpriseUsers) / totalUsers * 100).toFixed(1)
-      : '0'
+      ? parseFloat(((proUsers / totalUsers) * 100).toFixed(1))
+      : 0
 
     // 生成数の前月比
     const generationGrowth = lastMonthGenerations > 0
-      ? (((monthGenerations - lastMonthGenerations) / lastMonthGenerations) * 100).toFixed(1)
-      : (monthGenerations > 0 ? '100' : '0')
+      ? parseFloat((((monthGenerations - lastMonthGenerations) / lastMonthGenerations) * 100).toFixed(1))
+      : (monthGenerations > 0 ? 100 : 0)
 
     // 平均生成数/ユーザー
     const avgGenerationsPerUser = totalUsers > 0
-      ? (totalGenerations / totalUsers).toFixed(1)
-      : '0'
+      ? parseFloat((totalGenerations / totalUsers).toFixed(1))
+      : 0
+
+    // 月間売上計算（サービス別合計）
+    const monthlyRevenue = serviceStats.reduce((sum, s) => sum + s.revenue, 0)
 
     return NextResponse.json({
       // 基本統計
       totalUsers,
-      premiumUsers,
-      enterpriseUsers,
+      premiumUsers: proUsers,
+      enterpriseUsers: stripeUsers,
       freeUsers,
       
       // 生成統計
@@ -169,27 +258,29 @@ export async function GET(request: NextRequest) {
       todayGenerations,
       monthGenerations,
       lastMonthGenerations,
-      generationGrowth: parseFloat(generationGrowth),
-      avgGenerationsPerUser: parseFloat(avgGenerationsPerUser),
+      generationGrowth,
+      avgGenerationsPerUser,
       
       // 収益統計
       monthlyRevenue,
-      mrr,
+      mrr: monthlyRevenue,
       
       // KPI
-      conversionRate: parseFloat(conversionRate),
-      churnRate: 0,
-      avgSessionTime: 0,
+      conversionRate,
       
-      // テンプレート
-      activeTemplates,
+      // サービス別
+      services: serviceStats,
+      
+      // 時系列（過去12時間）
+      chartData: hourlyData,
       
       // 最近のアクティビティ
       recentUsers,
       recentGenerations: recentGenerations.map((g: any) => ({
         id: g.id,
         userName: g.user?.name || g.user?.email || '匿名',
-        templateName: g.template?.name || '不明',
+        service: g.serviceId || 'unknown',
+        action: g.serviceId === 'banner' ? 'バナーを生成' : g.serviceId === 'seo' ? 'SEO記事を生成' : 'テキストを生成',
         createdAt: g.createdAt,
       })),
       

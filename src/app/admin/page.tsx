@@ -8,25 +8,34 @@ import {
   Users,
   FileText,
   Activity,
-  TrendingUp,
   Crown,
   RefreshCw,
   Zap,
   DollarSign,
   AlertTriangle,
-  Sparkles,
   Image,
   ExternalLink,
   ArrowUpRight,
   ArrowDownRight,
   Clock,
-  Eye,
-  MoreHorizontal,
   ChevronRight,
   Calendar,
   Target,
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
+
+interface ServiceStats {
+  id: string
+  name: string
+  icon: string
+  gradient: string
+  users: number
+  proUsers: number
+  generations: number
+  todayGenerations: number
+  revenue: number
+  growth: number
+}
 
 interface Stats {
   // 基本統計
@@ -50,15 +59,19 @@ interface Stats {
   // KPI
   conversionRate: number
   
-  // テンプレート
-  activeTemplates: number
+  // サービス別
+  services: ServiceStats[]
+  
+  // 時系列
+  chartData: number[]
   
   // 最近のアクティビティ
   recentUsers: number
   recentGenerations: Array<{
     id: string
     userName: string
-    templateName: string
+    service: string
+    action: string
     createdAt: string
   }>
   
@@ -159,6 +172,9 @@ export default function AdminDashboard() {
     )
   }
 
+  // アクティブユーザー（直近生成したユニークユーザー数を概算）
+  const activeUsers = stats?.recentGenerations?.length || 0
+
   return (
     <div className="min-h-screen bg-[#0A0A0F] text-white p-6">
       <Toaster position="top-right" />
@@ -209,8 +225,8 @@ export default function AdminDashboard() {
                   subValue: `+${stats.recentUsers} 今週`,
                   icon: Users, 
                   gradient: 'from-blue-500 to-cyan-500',
-                  trend: stats.recentUsers,
-                  trendUp: stats.recentUsers > 0
+                  trend: stats.recentUsers > 0 ? stats.recentUsers : null,
+                  trendUp: true
                 },
                 { 
                   label: 'プロ会員', 
@@ -218,7 +234,7 @@ export default function AdminDashboard() {
                   subValue: `CVR ${stats.conversionRate}%`,
                   icon: Crown, 
                   gradient: 'from-amber-500 to-orange-500',
-                  trend: stats.conversionRate,
+                  trend: stats.conversionRate > 0 ? stats.conversionRate : null,
                   trendUp: stats.conversionRate > 0
                 },
                 { 
@@ -227,7 +243,7 @@ export default function AdminDashboard() {
                   subValue: `総計 ${stats.totalGenerations.toLocaleString()}`,
                   icon: Zap, 
                   gradient: 'from-emerald-500 to-green-500',
-                  trend: stats.generationGrowth,
+                  trend: stats.generationGrowth !== 0 ? stats.generationGrowth : null,
                   trendUp: stats.generationGrowth > 0
                 },
                 { 
@@ -236,7 +252,7 @@ export default function AdminDashboard() {
                   subValue: 'MRR',
                   icon: DollarSign, 
                   gradient: 'from-violet-500 to-fuchsia-500',
-                  trend: stats.mrr > 0 ? 100 : 0,
+                  trend: stats.mrr > 0 ? 100 : null,
                   trendUp: stats.mrr > 0
                 },
               ].map((kpi, index) => (
@@ -245,16 +261,13 @@ export default function AdminDashboard() {
                   whileHover={{ y: -4, scale: 1.02 }}
                   className="relative overflow-hidden bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-5"
                 >
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br opacity-10 rounded-full blur-2xl"
-                    style={{ background: `linear-gradient(to bottom right, var(--tw-gradient-stops))` }}
-                  />
                   <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.gradient} flex items-center justify-center mb-4 shadow-lg`}>
                     <kpi.icon className="w-5 h-5 text-white" />
                   </div>
                   <p className="text-2xl font-bold text-white mb-1">{kpi.value}</p>
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-white/40">{kpi.label}</p>
-                    {kpi.trend !== 0 && (
+                    {kpi.trend !== null && (
                       <div className={`flex items-center gap-0.5 text-xs font-medium ${kpi.trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
                         {kpi.trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                         {typeof kpi.trend === 'number' ? kpi.trend.toFixed(1) : kpi.trend}%
@@ -266,48 +279,51 @@ export default function AdminDashboard() {
               ))}
             </motion.div>
 
-            {/* Stats Grid */}
+            {/* Chart + Active Users Grid */}
             <div className="grid lg:grid-cols-3 gap-6 mb-8">
-              {/* Generation Stats */}
+              {/* Chart */}
               <motion.div variants={itemVariants} className="lg:col-span-2 bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="font-bold text-lg text-white">生成統計</h2>
-                    <p className="text-xs text-white/40">リアルタイムデータ</p>
+                    <h2 className="font-bold text-lg text-white">生成数の推移</h2>
+                    <p className="text-xs text-white/40">過去12時間（実データ）</p>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white/5 rounded-xl p-4">
-                    <p className="text-2xl font-bold text-white">{stats.totalGenerations.toLocaleString()}</p>
-                    <p className="text-xs text-white/40">総生成数</p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-4">
-                    <p className="text-2xl font-bold text-emerald-400">{stats.todayGenerations}</p>
-                    <p className="text-xs text-white/40">今日の生成</p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-4">
-                    <p className="text-2xl font-bold text-blue-400">{stats.monthGenerations}</p>
-                    <p className="text-xs text-white/40">今月の生成</p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-4">
-                    <p className="text-2xl font-bold text-violet-400">{stats.avgGenerationsPerUser}</p>
-                    <p className="text-xs text-white/40">平均生成/ユーザー</p>
-                  </div>
+                {/* Bar Chart */}
+                <div className="h-48 flex items-end gap-2">
+                  {(stats.chartData || []).map((value, index) => {
+                    const maxValue = Math.max(...(stats.chartData || [1]), 1)
+                    const height = maxValue > 0 ? (value / maxValue) * 100 : 0
+                    const isLast = index === (stats.chartData?.length || 0) - 1
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ height: 0 }}
+                        animate={{ height: `${Math.max(height, 2)}%` }}
+                        transition={{ delay: index * 0.05, duration: 0.5 }}
+                        className={`flex-1 rounded-t-lg ${
+                          isLast 
+                            ? 'bg-gradient-to-t from-violet-500 to-fuchsia-500' 
+                            : 'bg-white/10 hover:bg-white/20'
+                        } transition-colors relative group cursor-pointer min-h-[4px]`}
+                      >
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-white/10 rounded text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          {value}件
+                        </div>
+                      </motion.div>
+                    )
+                  })}
                 </div>
-
-                <div className="mt-6 p-4 bg-white/5 rounded-xl">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-white/60">前月比成長率</span>
-                    <div className={`flex items-center gap-1 ${stats.generationGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {stats.generationGrowth >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-                      <span className="font-bold">{stats.generationGrowth >= 0 ? '+' : ''}{stats.generationGrowth}%</span>
-                    </div>
-                  </div>
+                <div className="flex justify-between mt-2 text-[10px] text-white/30">
+                  {Array.from({ length: 6 }).map((_, i) => {
+                    const hour = new Date(Date.now() - (11 - i * 2) * 60 * 60 * 1000).getHours()
+                    return <span key={i}>{hour}:00</span>
+                  })}
                 </div>
               </motion.div>
 
-              {/* User Breakdown */}
+              {/* Active Users / User Breakdown */}
               <motion.div variants={itemVariants} className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-6">
                 <h2 className="font-bold text-lg text-white mb-4">ユーザー内訳</h2>
                 <div className="space-y-4">
@@ -316,14 +332,14 @@ export default function AdminDashboard() {
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
                         <Crown className="w-4 h-4 text-white" />
                       </div>
-                      <span className="text-sm text-white">プロ会員</span>
+                      <span className="text-sm text-white">有料会員</span>
                     </div>
                     <span className="font-bold text-amber-400">{stats.premiumUsers}</span>
                   </div>
                   <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
-                        <Sparkles className="w-4 h-4 text-white" />
+                        <Zap className="w-4 h-4 text-white" />
                       </div>
                       <span className="text-sm text-white">Stripe連携</span>
                     </div>
@@ -353,17 +369,86 @@ export default function AdminDashboard() {
               </motion.div>
             </div>
 
+            {/* Service Cards */}
+            {stats.services && stats.services.length > 0 && (
+              <motion.div variants={itemVariants} className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-bold text-lg text-white flex items-center gap-2">
+                    <Target className="w-5 h-5 text-violet-400" />
+                    サービス別パフォーマンス
+                  </h2>
+                </div>
+                
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {stats.services.map((service) => (
+                    <motion.div
+                      key={service.id}
+                      whileHover={{ y: -4 }}
+                      className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 overflow-hidden"
+                    >
+                      <div className={`p-4 bg-gradient-to-r ${service.gradient}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">{service.icon}</span>
+                            <div>
+                              <h3 className="text-base font-bold text-white">{service.name}</h3>
+                              <p className="text-white/70 text-xs flex items-center gap-1">
+                                <Zap className="w-3 h-3" />
+                                今日 {service.todayGenerations} 生成
+                              </p>
+                            </div>
+                          </div>
+                          <Link href={`/${service.id}/dashboard`} className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
+                            <ExternalLink className="w-4 h-4 text-white" />
+                          </Link>
+                        </div>
+                      </div>
+
+                      <div className="p-4">
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <p className="text-lg font-bold text-white">{service.users}</p>
+                            <p className="text-[10px] text-white/40">ユーザー</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-bold text-amber-400">{service.proUsers}</p>
+                            <p className="text-[10px] text-white/40">有料</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-bold text-white">{service.generations.toLocaleString()}</p>
+                            <p className="text-[10px] text-white/40">総生成数</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-bold text-emerald-400">{formatCurrency(service.revenue)}</p>
+                            <p className="text-[10px] text-white/40">売上</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-2 bg-white/5 rounded-lg">
+                          <span className="text-[10px] text-white/50">前月比</span>
+                          <div className={`flex items-center gap-1 text-xs ${service.growth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {service.growth >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                            <span className="font-bold">{service.growth >= 0 ? '+' : ''}{service.growth}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
             {/* Recent Activity */}
             <motion.div variants={itemVariants} className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-bold text-lg text-white flex items-center gap-2">
                   <Activity className="w-5 h-5 text-emerald-400" />
-                  最近の生成アクティビティ
+                  最近のアクティビティ
                 </h2>
                 <span className="text-xs text-white/40">過去24時間</span>
               </div>
 
-              {stats.recentGenerations.length > 0 ? (
+              {stats.recentGenerations && stats.recentGenerations.length > 0 ? (
                 <div className="space-y-1">
                   {stats.recentGenerations.map((activity, index) => (
                     <motion.div
@@ -374,12 +459,21 @@ export default function AdminDashboard() {
                       className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group"
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                          <FileText className="w-5 h-5 text-blue-400" />
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          activity.service === 'banner' 
+                            ? 'bg-violet-500/20' 
+                            : activity.service === 'seo'
+                            ? 'bg-emerald-500/20'
+                            : 'bg-blue-500/20'
+                        }`}>
+                          {activity.service === 'banner' 
+                            ? <Image className="w-5 h-5 text-violet-400" /> 
+                            : <FileText className="w-5 h-5 text-blue-400" />
+                          }
                         </div>
                         <div>
                           <p className="font-medium text-white text-sm">{activity.userName}</p>
-                          <p className="text-xs text-white/40">{activity.templateName}</p>
+                          <p className="text-xs text-white/40">{activity.action}</p>
                         </div>
                       </div>
                       <span className="text-xs text-white/30 flex items-center gap-1">
@@ -397,26 +491,10 @@ export default function AdminDashboard() {
               )}
             </motion.div>
 
-            {/* Security Info */}
-            <motion.div variants={itemVariants} className="mt-6 p-4 bg-white/[0.02] backdrop-blur rounded-xl border border-white/5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                    <Eye className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-white">管理者ログイン試行（24時間）</p>
-                    <p className="text-xs text-white/40">セキュリティ監視</p>
-                  </div>
-                </div>
-                <span className="text-lg font-bold text-emerald-400">{stats.adminLoginAttempts}</span>
-              </div>
-            </motion.div>
-
             {/* Last Updated */}
             <motion.div variants={itemVariants} className="mt-4 text-center">
               <p className="text-xs text-white/30">
-                最終更新: {new Date(stats.lastUpdated).toLocaleString('ja-JP')}
+                最終更新: {new Date(stats.lastUpdated).toLocaleString('ja-JP')} | 管理者ログイン試行(24h): {stats.adminLoginAttempts}回
               </p>
             </motion.div>
           </>
