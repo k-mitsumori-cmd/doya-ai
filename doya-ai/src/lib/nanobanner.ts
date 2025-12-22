@@ -54,7 +54,10 @@ function getGeminiTextModel(): string {
 
 // 画像モデルのフォールバック（品質優先で4.0系をデフォルトに）
 function getImageFallbackModel(): string {
-  return process.env.DOYA_BANNER_IMAGE_FALLBACK_MODEL || 'gemini-4.0'
+  // NOTE:
+  // - 'gemini-4.0' のような曖昧なIDは環境によって存在せず、画像生成が全滅する原因になりうる。
+  // - ここは「存在しやすい」モデルをデフォルトにし、より高品質モデルは環境変数で明示指定してもらう。
+  return process.env.DOYA_BANNER_IMAGE_FALLBACK_MODEL || 'gemini-2.0-flash'
 }
 
 // 最後の保険（古い環境でも画像生成できる可能性が高い）
@@ -652,22 +655,36 @@ async function generateSingleBanner(
       }
 
       // Gemini generateContent リクエスト形式（画像生成）
+      //
+      // 重要:
+      // - モデル/バージョンによって imageConfig / responseModalities の取り扱いが異なり、
+      //   不正フィールドがあると 400 で全滅 → UI が "Error: Pattern A/B/C" になる。
+      // - そのため「最小限の安定フォーマット」をまず試し、必要条件（サイズ・比率）はプロンプト側で担保する。
       const requestBody = {
         contents: [
           {
             parts: [
               ...imageParts,
-              { text: prompt }
-            ]
-          }
+              {
+                text: [
+                  prompt,
+                  '',
+                  '--- OUTPUT CONSTRAINTS ---',
+                  `Aspect ratio: ${aspectRatio}`,
+                  `Target size: ${size}px`,
+                  `Return an IMAGE output (PNG)`,
+                ].join('\n'),
+              },
+            ],
+          },
         ],
         generationConfig: {
-          responseModalities: ["IMAGE", "TEXT"],
-          imageConfig: {
-            aspectRatio,
-            imageSize,
-          },
-        }
+          // responseModalities が未対応のモデルもあるため最小限にしつつ、
+          // 対応しているモデルでは画像を返しやすくする。
+          responseModalities: ['IMAGE', 'TEXT'],
+          temperature: 0.4,
+          maxOutputTokens: 1024,
+        },
       }
       
       console.log('Calling Nano Banana Pro API...')
@@ -690,13 +707,15 @@ async function generateSingleBanner(
       const result = await response.json()
       console.log('Nano Banana Pro API Response received')
       
-      // レスポンスから画像を抽出
-      if (result.candidates && result.candidates[0]?.content?.parts) {
-        for (const part of result.candidates[0].content.parts) {
-          if (part.inlineData) {
+      // レスポンスから画像を抽出（モデル/SDK差異に耐える）
+      const parts = result?.candidates?.[0]?.content?.parts
+      if (Array.isArray(parts)) {
+        for (const part of parts) {
+          const inline = (part as any)?.inlineData || (part as any)?.inline_data
+          if (inline?.data) {
             console.log('Image found in Nano Banana Pro response!')
-            const mimeType = part.inlineData.mimeType || 'image/png'
-            return `data:${mimeType};base64,${part.inlineData.data}`
+            const mimeType = inline?.mimeType || inline?.mime_type || 'image/png'
+            return `data:${mimeType};base64,${inline.data}`
           }
         }
       }
