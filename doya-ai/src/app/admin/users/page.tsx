@@ -132,18 +132,6 @@ export default function AdminUsersPage() {
     }
   }
 
-  const handleTogglePlan = async (userId: string, currentPlan: string) => {
-    const plans = ['FREE', 'PRO']
-    const currentIndex = plans.indexOf(currentPlan)
-    const newPlan = plans[(currentIndex + 1) % plans.length]
-    await handleUpdateUser(userId, { plan: newPlan })
-  }
-
-  const handleToggleRole = async (userId: string, currentRole: string) => {
-    const newRole = currentRole === 'USER' ? 'ADMIN' : 'USER'
-    await handleUpdateUser(userId, { role: newRole })
-  }
-
   const handleResetUsage = async (userId: string, serviceId: string, type: 'daily' | 'monthly') => {
     const updates = type === 'daily' 
       ? { serviceId, resetDailyUsage: true }
@@ -353,57 +341,79 @@ export default function AdminUsersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => handleTogglePlan(user.id, user.plan)}
+                      <select
+                        value={user.plan}
+                        onChange={async (e) => {
+                          await handleUpdateUser(user.id, { plan: e.target.value })
+                        }}
                         disabled={isSaving}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border ${planBadge.bg} ${planBadge.text} ${planBadge.border} text-xs font-medium hover:opacity-80 transition-opacity disabled:opacity-50`}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 ${planBadge.bg} ${planBadge.text} ${planBadge.border}`}
                       >
-                        {planBadge.icon && <planBadge.icon className="w-3 h-3" />}
-                        {user.plan}
-                      </button>
+                        {PLAN_OPTIONS.map((p) => (
+                          <option key={p} value={p} className="bg-[#0A0A0F]">{p}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => handleToggleRole(user.id, user.role)}
+                      <select
+                        value={user.role}
+                        onChange={async (e) => {
+                          await handleUpdateUser(user.id, { role: e.target.value })
+                        }}
                         disabled={isSaving}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium hover:opacity-80 transition-opacity disabled:opacity-50 ${
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 ${
                           user.role === 'ADMIN'
                             ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                             : 'bg-white/5 text-white/50 border-white/10'
                         }`}
                       >
-                        {user.role === 'ADMIN' && <Shield className="w-3 h-3" />}
-                        {user.role === 'ADMIN' ? '管理者' : 'ユーザー'}
-                      </button>
+                        <option value="USER" className="bg-[#0A0A0F]">ユーザー</option>
+                        <option value="ADMIN" className="bg-[#0A0A0F]">管理者</option>
+                      </select>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="space-y-1">
-                        {user.serviceSubscriptions.length > 0 ? (
-                          user.serviceSubscriptions.map((sub) => {
-                            const svc = SERVICE_LABELS[sub.serviceId] || { name: sub.serviceId, icon: '📦', color: 'gray' }
-                            return (
-                              <div key={sub.id} className="flex items-center gap-2 text-xs">
-                                <span>{svc.icon}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-${svc.color}-400 bg-${svc.color}-500/10`}>
-                                  {sub.plan}
-                                </span>
-                                <span className="text-white/40">
-                                  {sub.dailyUsage}回/日
-                                </span>
-                                <button
-                                  onClick={() => handleResetUsage(user.id, sub.serviceId, 'daily')}
-                                  disabled={isSaving}
-                                  className="p-0.5 hover:bg-white/10 rounded text-white/30 hover:text-white transition-colors disabled:opacity-50"
-                                  title="日次使用回数をリセット"
-                                >
-                                  <RotateCcw className="w-3 h-3" />
-                                </button>
-                              </div>
-                            )
-                          })
-                        ) : (
-                          <span className="text-white/30 text-xs">-</span>
-                        )}
+                      <div className="space-y-2">
+                        {['banner', 'kantan', 'seo'].map((serviceId) => {
+                          const svc = SERVICE_LABELS[serviceId]
+                          const sub = user.serviceSubscriptions.find((s) => s.serviceId === serviceId)
+                          const currentPlan = sub?.plan || 'FREE'
+                          return (
+                            <div key={serviceId} className="flex items-center gap-2 text-xs">
+                              <span title={svc.name}>{svc.icon}</span>
+                              <select
+                                value={currentPlan}
+                                onChange={async (e) => {
+                                  await handleUpdateServicePlan(user.id, serviceId, e.target.value)
+                                }}
+                                disabled={isSaving}
+                                className={`px-2 py-1 rounded text-xs font-medium appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 ${
+                                  currentPlan === 'FREE' 
+                                    ? 'bg-white/5 text-white/50 border border-white/10' 
+                                    : currentPlan === 'STARTER'
+                                    ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                                }`}
+                              >
+                                {PLAN_OPTIONS.map((p) => (
+                                  <option key={p} value={p} className="bg-[#0A0A0F]">{p}</option>
+                                ))}
+                              </select>
+                              {sub && (
+                                <>
+                                  <span className="text-white/40">{sub.dailyUsage}回</span>
+                                  <button
+                                    onClick={() => handleResetUsage(user.id, serviceId, 'daily')}
+                                    disabled={isSaving}
+                                    className="p-0.5 hover:bg-white/10 rounded text-white/30 hover:text-white transition-colors disabled:opacity-50"
+                                    title="リセット"
+                                  >
+                                    <RotateCcw className="w-3 h-3" />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     </td>
                     <td className="px-6 py-4">
