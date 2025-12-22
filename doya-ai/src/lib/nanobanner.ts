@@ -1,5 +1,5 @@
 // ========================================
-// Nano Banana Pro でバナー画像生成
+// 画像生成（固定モデル: gemini-3-pro-image-preview）
 // ========================================
 // 
 // 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
@@ -14,9 +14,7 @@
 // 4. 生成されたAPIキーをコピー
 //
 // 【使用モデル】
-// - gemini-2.0-flash-exp: Nano Banana Pro（画像生成対応）
-// - テキストと画像の両方を出力可能
-// - 高品質な画像生成
+// - gemini-3-pro-image-preview（画像生成）
 //
 // ========================================
 
@@ -26,41 +24,32 @@ import sharp from 'sharp'
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 /**
- * 画像生成は Nano Banana Pro のみ許可する（要望）
+ * 画像生成モデルを 1つに固定する（要望）
+ * - デフォルト: gemini-3-pro-image-preview
+ * - それ以外は生成できない（= 他モデルで生成されない保証）
+ *
  * 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
- *
- * - 許可する環境変数:
- *   - DOYA_BANNER_IMAGE_MODEL / NANO_BANANA_PRO_MODEL / GEMINI_IMAGE_MODEL
- *
- * NOTE:
- * - モデルIDは環境や時期で変わり得るため、以下の条件に合うものを「Nano Banana系」として許可する。
- * - 設定値が Nano Banana系でない場合は、安全のため明示的にエラーにする（他モデルで生成されない保証）。
  */
-const NANO_BANANA_IMAGE_MODEL_DEFAULT = 'gemini-2.0-flash-exp-image-generation'
+const IMAGE_MODEL_DEFAULT = 'gemini-3-pro-image-preview'
 
-function assertNanoBananaModel(model: string): void {
+function assertFixedImageModel(model: string): void {
   const m = String(model || '').trim()
-  const lower = m.toLowerCase()
-  const looksNanoBanana =
-    lower.includes('nano') ||
-    lower.includes('banana') ||
-    lower.includes('image-generation') ||
-    lower.includes('imagen')
-  if (!looksNanoBanana) {
+  if (m !== IMAGE_MODEL_DEFAULT) {
     throw new Error(
-      `画像生成モデルが Nano Banana Pro ではありません: "${m}". ` +
-        `Nano Banana Pro の画像生成モデルIDを DOYA_BANNER_IMAGE_MODEL（または NANO_BANANA_PRO_MODEL）に設定してください。`
+      `画像生成モデルが許可されていません: "${m}". ` +
+        `画像生成は "${IMAGE_MODEL_DEFAULT}" のみに固定されています。` +
+        `Vercelの環境変数 DOYA_BANNER_IMAGE_MODEL（または NANO_BANANA_PRO_MODEL / GEMINI_IMAGE_MODEL）を "${IMAGE_MODEL_DEFAULT}" に設定してください。`
     )
   }
 }
 
-function getNanoBananaImageModel(): string {
+function getImageModel(): string {
   const model =
     process.env.DOYA_BANNER_IMAGE_MODEL ||
     process.env.NANO_BANANA_PRO_MODEL ||
     process.env.GEMINI_IMAGE_MODEL ||
-    NANO_BANANA_IMAGE_MODEL_DEFAULT
-  assertNanoBananaModel(model)
+    IMAGE_MODEL_DEFAULT
+  assertFixedImageModel(model)
   return model
 }
 
@@ -76,7 +65,7 @@ function getGeminiTextModel(): string {
   )
 }
 
-// 画像生成は Nano Banana Pro のみに固定するため、画像フォールバックは廃止
+// 画像生成は固定モデルのみにするため、画像フォールバックは廃止
 const DEFAULT_TEXT_FALLBACKS = ['gemini-3-flash-preview', 'gemini-2.0-flash', 'gemini-1.5-flash'] as const
 
 // APIキーを取得（複数の環境変数に対応）
@@ -574,7 +563,7 @@ async function generateSingleBanner(
   options: GenerateOptions = {}
 ): Promise<{ image: string; model: string }> {
   const apiKey = getApiKey()
-  const model = getNanoBananaImageModel()
+  const model = getImageModel()
   
   console.log('Calling Nano Banana Pro...')
   console.log('Model:', model)
@@ -698,11 +687,7 @@ async function generateSingleBanner(
 export function getModelDisplayName(model: string): string {
   if (!model) return '不明'
   const lower = model.toLowerCase()
-  // Nano Banana Pro（画像生成）
-  if (lower.includes('nano') || lower.includes('banana') || lower.includes('image-generation')) {
-    return 'Nano Banana Pro'
-  }
-  if (lower.includes('imagen')) return 'Nano Banana Pro'
+  if (lower === 'gemini-3-pro-image-preview') return 'Gemini 3 Pro Image Preview'
   if (lower.includes('gemini-2.0-flash-exp')) return 'Gemini 2.0 Flash (Exp)'
   if (lower.includes('gemini-3-pro')) {
     return 'Gemini 3 Pro Preview'
@@ -799,7 +784,7 @@ export async function generateBanners(
   size: string = '1080x1080',
   options: GenerateOptions = {}
 ): Promise<{ banners: string[]; error?: string; usedModel?: string }> {
-  const imageModel = getNanoBananaImageModel()
+  const imageModel = getImageModel()
   const textModel = getGeminiTextModel()
 
   // APIキーの確認
