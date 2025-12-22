@@ -24,11 +24,95 @@ import sharp from 'sharp'
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
+type GeminiModel = {
+  name?: string
+  supportedGenerationMethods?: string[]
+} & Record<string, any>
+
 async function fetchAsBase64(url: string): Promise<string> {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`fileUri fetch failed: ${res.status}`)
   const ab = await res.arrayBuffer()
   return Buffer.from(ab).toString('base64')
+}
+
+function normalizeModelId(model: string): string {
+  const m = String(model || '').trim()
+  if (!m) return ''
+  return m.startsWith('models/') ? m.slice('models/'.length) : m
+}
+
+let modelsCache: { at: number; models: GeminiModel[] } | null = null
+const MODELS_CACHE_TTL_MS = 10 * 60 * 1000 // 10分
+
+async function listModels(apiKey: string): Promise<GeminiModel[]> {
+  const now = Date.now()
+  if (modelsCache && now - modelsCache.at < MODELS_CACHE_TTL_MS) return modelsCache.models
+
+  const res = await fetch(`${GEMINI_API_BASE}/models`, {
+    method: 'GET',
+    headers: {
+      'x-goog-api-key': apiKey,
+    },
+  })
+  if (!res.ok) {
+    const t = await res.text()
+    throw new Error(`ListModels failed: ${res.status} - ${t.substring(0, 300)}`)
+  }
+  const json = await res.json()
+  const models = Array.isArray(json?.models) ? (json.models as GeminiModel[]) : []
+  modelsCache = { at: now, models }
+  return models
+}
+
+function isGenerateContentSupported(m: GeminiModel): boolean {
+  const methods = m?.supportedGenerationMethods
+  return Array.isArray(methods) && methods.includes('generateContent')
+}
+
+async function resolveNanoBananaImageModel(apiKey: string, configured: string): Promise<string> {
+  const cfg = normalizeModelId(configured)
+  const lower = cfg.toLowerCase()
+
+  // 明示的に指定されていて "banana" を含むならそのまま（存在可否はAPIが検証）
+  if (lower.includes('banana') && cfg) return cfg
+
+  // エイリアス（ユーザーの設定値）: nano-banana-pro / nanobanana-pro 等
+  const isAlias =
+    lower === 'nano-banana-pro' ||
+    lower === 'nanobanana-pro' ||
+    lower === 'nano_banana_pro' ||
+    lower === 'nano-banana'
+
+  if (!isAlias) return cfg
+
+  // ListModels から「Nano Bananaっぽい」+ generateContent 対応モデルを探す
+  const models = await listModels(apiKey)
+  const names = models
+    .map((m) => String(m?.name || ''))
+    .filter(Boolean)
+
+  const candidates = models
+    .filter((m) => isGenerateContentSupported(m))
+    .map((m) => String(m?.name || ''))
+    .filter(Boolean)
+    .map((full) => normalizeModelId(full))
+
+  const banana = candidates.find((n) => n.toLowerCase().includes('banana'))
+  if (banana) return banana
+
+  // 次点: image generation に関連しそうな名称
+  const imagey =
+    candidates.find((n) => n.toLowerCase().includes('image')) ||
+    candidates.find((n) => n.toLowerCase().includes('nano')) ||
+    ''
+  if (imagey) return imagey
+
+  throw new Error(
+    `Nano Banana Pro のモデルIDを自動解決できませんでした。` +
+      `ListModels上の候補が見つかりません。` +
+      `（models=${names.slice(0, 20).join(', ')}${names.length > 20 ? ', ...' : ''}）`
+  )
 }
 
 function pickFirstText(parts: any[] | undefined): string {
@@ -93,7 +177,14 @@ function assertNanoBananaOnly(model: string): void {
   }
 
   // Nano Banana Pro のみ許可（ゆらぎに強くするため "banana" を必須にする）
-  if (!lower.includes('banana')) {
+  // ただしユーザーが "nano-banana-pro" を設定している場合はエイリアスとして許可し、実モデルIDへ自動解決する
+  const isAlias =
+    lower === 'nano-banana-pro' ||
+    lower === 'nanobanana-pro' ||
+    lower === 'nano_banana_pro' ||
+    lower === 'nano-banana'
+
+  if (!lower.includes('banana') && !isAlias) {
     throw new Error(
       `画像生成モデル（${m}）は Nano Banana Pro ではありません。Nano Banana Pro のモデルIDを設定してください。`
     )
@@ -621,9 +712,13 @@ async function generateSingleBanner(
   options: GenerateOptions = {}
 ): Promise<{ image: string; model: string }> {
   const apiKey = getApiKey()
-  const model = getImageModel()
+  const configuredModel = getImageModel()
+  const model = await resolveNanoBananaImageModel(apiKey, configuredModel)
 
-  console.log(`Calling Image Generation (Nano Banana Pro) with model: ${model}...`)
+  console.log(
+    `Calling Image Generation (Nano Banana Pro) with model: ${model}...` +
+      (normalizeModelId(configuredModel) !== model ? ` (resolved from ${configuredModel})` : '')
+  )
 
   const aspectRatio = getAspectRatio(size)
   const [w, h] = size.split('x').map((v) => Number(v))
@@ -701,7 +796,7 @@ async function generateSingleBanner(
         throw new Error(
           `画像生成に失敗しました（Nano Banana Pro / ${model}）。` +
           `環境変数のモデルIDとAPIキーをご確認ください。` +
-          ` 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja` +
+          ` 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja#image_generation` +
           ` / status=${response.status} / ${errorText.substring(0, 200)}`
         )
       }
