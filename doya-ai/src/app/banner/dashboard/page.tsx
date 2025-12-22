@@ -592,15 +592,14 @@ export default function BannerDashboard() {
   const [useCustomSize, setUseCustomSize] = useState(false)
   const [customWidth, setCustomWidth] = useState('1080')
   const [customHeight, setCustomHeight] = useState('1080')
-  const [companyName, setCompanyName] = useState('')
-  const [logoImage, setLogoImage] = useState<string | null>(null)
-  const [personImage, setPersonImage] = useState<string | null>(null)
-  const [referenceImages, setReferenceImages] = useState<string[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   // const [showCoach, setShowCoach] = useState(false) // removed
   
   const [isGenerating, setIsGenerating] = useState(false)
   const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
+  const [generatedCopies, setGeneratedCopies] = useState<
+    { variant: 'A' | 'B' | 'C'; headline: string; subhead: string; cta: string }[]
+  >([])
   const [usedModelDisplay, setUsedModelDisplay] = useState<string | null>(null) // 使用モデル名
   const [error, setError] = useState('')
   const [progress, setProgress] = useState(0)
@@ -616,13 +615,8 @@ export default function BannerDashboard() {
   // 修正機能
   const [refineInstruction, setRefineInstruction] = useState('')
   const [isRefining, setIsRefining] = useState(false)
-  const [showRefineInput, setShowRefineInput] = useState(false)
   const [refineHistory, setRefineHistory] = useState<{ instruction: string; image: string }[]>([])
   
-  // 画像内テキスト（AIが画像に直接描画する）
-  const [overlayHeadline, setOverlayHeadline] = useState('')
-  const [overlaySubhead, setOverlaySubhead] = useState('')
-  const [overlayCta, setOverlayCta] = useState('')
   const [tipIndex, setTipIndex] = useState(0)
   
   const [guestUsageCount, setGuestUsageCount] = useState(0)
@@ -818,14 +812,6 @@ export default function BannerDashboard() {
     return () => clearInterval(t)
   }, [isGenerating])
 
-  // 画像内テキストの初期値（入力が空のときだけ自動セット）
-  useEffect(() => {
-    const d = buildDefaultOverlay(keyword, purpose)
-    setOverlayHeadline((prev) => (prev.trim() ? prev : d.headline))
-    setOverlaySubhead((prev) => (prev.trim() ? prev : d.subhead))
-    setOverlayCta((prev) => (prev.trim() ? prev : d.cta))
-  }, [keyword, purpose])
-
   // Handlers
   const handleSample = () => {
     // 業種を選択中なら「いまの業種に合わせたキャッチコピー」だけ切り替える
@@ -903,14 +889,7 @@ export default function BannerDashboard() {
           keyword: keyword.trim(),
           size: effectiveSize,
           purpose,
-          companyName: companyName.trim() || undefined,
           imageDescription: imageDescription.trim() || undefined,
-          headlineText: (overlayHeadline || keyword).trim() || undefined,
-          subheadText: overlaySubhead.trim() || undefined,
-          ctaText: overlayCta.trim() || undefined,
-          logoImage: logoImage || undefined,
-          personImage: personImage || undefined,
-          referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
           brandColors: useCustomColors
             ? uniqStrings(customColors.map((c) => normalizeHexClient(c) || '').filter(Boolean)).slice(0, 8)
             : undefined,
@@ -927,6 +906,7 @@ export default function BannerDashboard() {
       setProgress(100)
       await new Promise(r => setTimeout(r, 500))
       setGeneratedBanners(data.banners || [])
+      setGeneratedCopies(Array.isArray(data.copies) ? data.copies : [])
       setUsedModelDisplay(data.usedModelDisplay || null)
 
       // 実績時間を保存（次回以降の予測に使用）
@@ -1027,7 +1007,6 @@ export default function BannerDashboard() {
             category,
             purpose,
             base: base || undefined,
-            companyName: companyName.trim() || undefined,
           }),
         })
         const data = await res.json()
@@ -1082,48 +1061,6 @@ export default function BannerDashboard() {
     toast.success('ダウンロード開始')
   }
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'person') => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('5MB以下の画像を選択してください')
-      return
-    }
-    try {
-      const base64 = await imageToBase64(file)
-      if (type === 'logo') setLogoImage(base64)
-      else setPersonImage(base64)
-      toast.success('画像をアップロードしました')
-    } catch {
-      toast.error('アップロードに失敗しました')
-    }
-  }
-
-  const handleReferenceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-    if (files.length === 0) return
-    if (referenceImages.length >= 2) {
-      toast.error('参考画像は最大2枚までです')
-      return
-    }
-
-    const toAdd = files.slice(0, 2 - referenceImages.length)
-    try {
-      const converted = await Promise.all(
-        toAdd.map(async (file) => {
-          if (file.size > 5 * 1024 * 1024) throw new Error('5MB以下の画像を選択してください')
-          return await imageToBase64(file)
-        })
-      )
-      setReferenceImages((prev) => [...prev, ...converted])
-      toast.success('参考画像を追加しました', { icon: '🖼️' })
-    } catch (err: any) {
-      toast.error(err?.message || '参考画像の追加に失敗しました')
-    } finally {
-      e.target.value = ''
-    }
-  }
-
   // 画像修正ハンドラー（外部から指示文を渡して実行もできる）
   const handleRefine = async (overrideInstruction?: string) => {
     if (selectedBanner === null) return
@@ -1163,7 +1100,6 @@ export default function BannerDashboard() {
       setGeneratedBanners(newBanners)
       
       setRefineInstruction('')
-      setShowRefineInput(false)
       toast.success('バナーを修正しました！', { icon: '✨' })
     } catch (err: any) {
       toast.error(err.message)
@@ -1608,7 +1544,7 @@ export default function BannerDashboard() {
                 className="flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors text-sm mb-3 font-medium"
               >
                 <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-                詳細設定（会社名・ロゴ・人物・参考画像）
+                カラー設定
               </button>
               
               <AnimatePresence>
@@ -1619,134 +1555,11 @@ export default function BannerDashboard() {
                     exit={{ opacity: 0, height: 0 }}
                     className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4 shadow-sm"
                   >
-                    {/* Company Name */}
-                    <div>
-                      <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 font-medium">
-                        <Building2 className="w-4 h-4" />
-                        会社名・ブランド名
-                      </label>
-                      <input
-                        type="text"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        placeholder="例: 株式会社〇〇"
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all"
-                      />
-                    </div>
-                    
-                    {/* Image Uploads */}
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Logo */}
-                      <div>
-                        <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 font-medium">
-                          <ImageIcon className="w-4 h-4" />
-                          ロゴ
-                        </label>
-                        <div className="relative">
-                          {logoImage ? (
-                            <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-200">
-                              <img src={logoImage} alt="Logo" className="w-full h-full object-contain p-2" />
-                              <button
-                                onClick={() => setLogoImage(null)}
-                                className="absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow-sm"
-                              >
-                                <X className="w-4 h-4 text-gray-600" />
-                              </button>
-                            </div>
-                          ) : (
-                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-200 hover:border-blue-400 cursor-pointer transition-colors bg-gray-50 hover:bg-blue-50">
-                              <Building2 className="w-8 h-8 text-gray-300 mb-2" />
-                              <span className="text-xs text-gray-400">アップロード</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => handleImageUpload(e, 'logo')}
-                                className="hidden"
-                              />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Person */}
-                      <div>
-                        <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 font-medium">
-                          <User className="w-4 h-4" />
-                          人物
-                        </label>
-                        <div className="relative">
-                          {personImage ? (
-                            <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-200">
-                              <img src={personImage} alt="Person" className="w-full h-full object-cover" />
-                              <button
-                                onClick={() => setPersonImage(null)}
-                                className="absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow-sm"
-                              >
-                                <X className="w-4 h-4 text-gray-600" />
-                              </button>
-                            </div>
-                          ) : (
-                            <label className="flex flex-col items-center justify-center aspect-square rounded-xl border-2 border-dashed border-gray-200 hover:border-blue-400 cursor-pointer transition-colors bg-gray-50 hover:bg-blue-50">
-                              <User className="w-8 h-8 text-gray-300 mb-2" />
-                              <span className="text-xs text-gray-400">アップロード</span>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => handleImageUpload(e, 'person')}
-                                className="hidden"
-                              />
-                            </label>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Reference Images */}
-                    <div>
-                      <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 font-medium">
-                        <Eye className="w-4 h-4" />
-                        参考画像（テイスト/構図の指定）
-                        <span className="text-xs text-gray-400 font-semibold">最大2枚</span>
-                      </label>
-
-                      {referenceImages.length > 0 && (
-                        <div className="grid grid-cols-2 gap-3 mb-3">
-                          {referenceImages.map((img, idx) => (
-                            <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-200">
-                              <img src={img} alt={`Reference ${idx + 1}`} className="w-full h-full object-cover" />
-                              <button
-                                onClick={() => setReferenceImages((prev) => prev.filter((_, i) => i !== idx))}
-                                className="absolute top-2 right-2 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center hover:bg-white shadow-sm"
-                              >
-                                <X className="w-4 h-4 text-gray-600" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <label className="flex items-center justify-center w-full h-12 rounded-xl border-2 border-dashed border-gray-200 hover:border-blue-400 cursor-pointer transition-colors bg-gray-50 hover:bg-blue-50">
-                        <span className="text-sm font-bold text-gray-600">参考画像を追加</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={handleReferenceUpload}
-                          className="hidden"
-                          disabled={referenceImages.length >= 2}
-                        />
-                      </label>
-
-                      <p className="text-xs text-gray-400 mt-2">
-                        参考画像のロゴ/透かしはコピーしません。雰囲気・配色・構図の参考として使います。
-                      </p>
-                    </div>
-
                     {/* Manual Colors */}
                     <div>
                       <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 font-medium">
                         <Palette className="w-4 h-4" />
-                        使用カラー（任意）
+                        使用カラー
                       </label>
                       <div className="p-4 bg-gray-50 border border-gray-200 rounded-2xl">
                         <div className="flex items-center justify-between gap-3">
@@ -2160,17 +1973,6 @@ export default function BannerDashboard() {
                                 </button>
                               )}
                               <button
-                                onClick={() => setShowRefineInput(!showRefineInput)}
-                                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                                  showRefineInput 
-                                    ? 'bg-blue-100 text-blue-800' 
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-800'
-                                }`}
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                                修正
-                              </button>
-                              <button
                                 onClick={() => handleDownload(generatedBanners[selectedBanner], selectedBanner)}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm"
                               >
@@ -2189,122 +1991,108 @@ export default function BannerDashboard() {
                             />
                           </div>
 
-                          {/* 画像内テキスト（AIが画像に直接描画） */}
-                          <div className="border-t border-gray-100 pt-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Pencil className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm font-bold text-gray-900">画像内テキスト（AIが描画）</span>
-                              <span className="text-[11px] text-gray-500 hidden sm:inline">生成画像に直接文字が入ります</span>
-                            </div>
+                          {/* この画像に使われたテキスト（用途/業種/訴求タイプに合わせて自動生成） */}
+                          {(() => {
+                            const v = ['A', 'B', 'C'][selectedBanner] as 'A' | 'B' | 'C'
+                            const c = generatedCopies.find((x) => x.variant === v)
+                            if (!c) return null
+                            return (
+                              <div className="border-t border-gray-100 pt-3">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <MessageSquare className="w-4 h-4 text-blue-600" />
+                                  <span className="text-sm font-bold text-gray-900">画像内テキスト（自動）</span>
+                                </div>
+                                <div className="grid gap-2">
+                                  <div className="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
+                                    <div className="text-[11px] font-bold text-gray-500 mb-0.5">見出し（キーワード）</div>
+                                    <div className="text-sm font-black text-gray-900 break-words">{c.headline}</div>
+                                  </div>
+                                  <div className="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
+                                    <div className="text-[11px] font-bold text-gray-500 mb-0.5">サブ（訴求を一致させます）</div>
+                                    <div className="text-sm font-bold text-gray-900 break-words">{c.subhead}</div>
+                                  </div>
+                                  <div className="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
+                                    <div className="text-[11px] font-bold text-gray-500 mb-0.5">CTA</div>
+                                    <div className="text-sm font-bold text-gray-900 break-words">{c.cta}</div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })()}
 
-                            <div className="space-y-2">
-                              <input
-                                value={overlayHeadline}
-                                onChange={(e) => setOverlayHeadline(e.target.value)}
-                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                placeholder="見出し（例: 月額990円〜 乗り換えで最大2万円）"
-                              />
-                              <input
-                                value={overlaySubhead}
-                                onChange={(e) => setOverlaySubhead(e.target.value)}
-                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                placeholder="サブ（任意）"
-                              />
-                              <input
-                                value={overlayCta}
-                                onChange={(e) => setOverlayCta(e.target.value)}
-                                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none"
-                                placeholder="CTA（任意・例: 詳しくはこちら）"
-                              />
-
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  onClick={() => {
-                                    const d = buildDefaultOverlay(keyword, purpose)
-                                    setOverlayHeadline(d.headline)
-                                    setOverlaySubhead(d.subhead)
-                                    setOverlayCta(d.cta)
-                                  }}
-                                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-lg font-bold"
-                                >
-                                  自動セット
-                                </button>
-                                {createCopyVariants(keyword, purpose).map((v) => (
-                                  <button
-                                    key={v}
-                                    onClick={() => setOverlayHeadline(v)}
-                                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-800 text-xs rounded-lg font-bold"
-                                  >
-                                    {v.length > 18 ? `${v.slice(0, 18)}…` : v}
-                                  </button>
-                                ))}
+                          {/* 生成画像の下で、チャット文を入力して画像を編集 */}
+                          <div className="pt-3 border-t border-gray-100">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4 text-blue-600" />
+                                <span className="text-sm font-bold text-gray-900">チャットで画像を編集</span>
+                              </div>
+                              <div className="text-[11px] text-gray-500 font-semibold">
+                                例: 背景を明るく / 文字を太く / CTAをもっと目立たせて
                               </div>
                             </div>
-                          </div>
 
-                          {/* 修正入力フォーム */}
-                          <AnimatePresence>
-                            {showRefineInput && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="pt-3 border-t border-gray-100">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <MessageSquare className="w-4 h-4 text-blue-600" />
-                                    <span className="text-sm font-medium text-gray-800">AIに修正指示</span>
-                                  </div>
-                                  <div className="relative">
-                                    <textarea
-                                      value={refineInstruction}
-                                      onChange={(e) => setRefineInstruction(e.target.value)}
-                                      placeholder="例: 背景を青に変更して、文字をもっと大きくして"
-                                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none text-sm pr-12"
-                                      rows={2}
-                                      maxLength={200}
-                                      disabled={isRefining}
-                                    />
+                            {refineHistory.length > 0 && (
+                              <div className="mb-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
+                                <div className="text-[11px] font-bold text-gray-500 mb-1">直近の編集履歴</div>
+                                <div className="space-y-1">
+                                  {refineHistory.slice(-3).reverse().map((h, idx) => (
+                                    <div key={`${h.instruction}-${idx}`} className="text-xs text-gray-700 font-semibold">
+                                      - {h.instruction}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="relative">
+                              <textarea
+                                value={refineInstruction}
+                                onChange={(e) => setRefineInstruction(e.target.value)}
+                                placeholder="例: 上下の余白をなくして、文字を枠内に収めつつ大きく。医療っぽく清潔感のある写真に寄せて。"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none text-sm pr-12"
+                                rows={2}
+                                maxLength={220}
+                                disabled={isRefining}
+                              />
                               <button
                                 onClick={() => handleRefine()}
-                                      disabled={isRefining || !refineInstruction.trim()}
-                                      className="absolute right-2 bottom-2 w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-600 rounded-lg flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      {isRefining ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                      ) : (
-                                        <Send className="w-4 h-4" />
-                                      )}
-                                    </button>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1.5 mt-2">
-                                    {[
-                                      '背景を変更',
-                                      '文字を大きく',
-                                      '色を鮮やかに',
-                                      'CTAを目立たせて',
-                                      'シンプルに',
-                                    ].map((suggestion) => (
-                                      <button
-                                        key={suggestion}
-                                        onClick={() => setRefineInstruction(suggestion)}
-                                        className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 text-xs rounded-md transition-colors"
-                                      >
-                                        {suggestion}
-                                      </button>
-                                    ))}
-                                  </div>
-                                  {isRefining && (
-                                    <div className="mt-3 flex items-center gap-2 text-blue-700 text-sm">
-                                      <Loader2 className="w-4 h-4 animate-spin" />
-                                      <span>AIが修正中...</span>
-                                    </div>
-)}
-                                  </div>
-                              </motion.div>
+                                disabled={isRefining || !refineInstruction.trim()}
+                                className="absolute right-2 bottom-2 w-8 h-8 bg-gradient-to-r from-blue-600 to-blue-600 rounded-lg flex items-center justify-center hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isRefining ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Send className="w-4 h-4" />
+                                )}
+                              </button>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {[
+                                '上下の余白をなくして、文字を枠内に収めて',
+                                '文字を太くして読みやすく',
+                                '背景をもっと明るくして',
+                                'CTAをもっと目立たせて',
+                                '要素を減らしてシンプルに',
+                              ].map((suggestion) => (
+                                <button
+                                  key={suggestion}
+                                  onClick={() => setRefineInstruction(suggestion)}
+                                  className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 text-xs rounded-md transition-colors font-semibold"
+                                >
+                                  {suggestion}
+                                </button>
+                              ))}
+                            </div>
+
+                            {isRefining && (
+                              <div className="mt-3 flex items-center gap-2 text-blue-700 text-sm font-semibold">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                <span>AIが修正中...</span>
+                              </div>
                             )}
-                          </AnimatePresence>
+                          </div>
                           </div>
                         </motion.div>
                       )}
@@ -2330,43 +2118,7 @@ export default function BannerDashboard() {
                   )}
             </motion.div>
 
-           {/* CV Banner */}
-           <a 
-             href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1" 
-             target="_blank" 
-             rel="noopener noreferrer"
-           >
-             <motion.div
-               whileHover={{ scale: 1.02 }}
-               className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-blue-500 to-blue-500 rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xl shadow-blue-500/20 hover:shadow-blue-500/40 transition-all cursor-pointer"
-             >
-               <div className="absolute top-0 right-0 w-24 sm:w-32 h-24 sm:h-32 bg-white/10 rounded-full blur-2xl" />
-               <div className="absolute bottom-0 left-0 w-16 sm:w-24 h-16 sm:h-24 bg-white/10 rounded-full blur-xl" />
-               
-               <div className="relative flex items-center gap-3 sm:gap-4">
-                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                   <span className="text-xl sm:text-2xl">💬</span>
-                 </div>
-                 <div className="flex-1 min-w-0">
-                   <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                     <span className="px-1.5 sm:px-2 py-0.5 bg-white/20 rounded text-[9px] sm:text-[10px] font-bold">無料相談</span>
-                     <span className="text-white/80 text-[10px] sm:text-xs">by ドヤマーケ</span>
-                   </div>
-                   <h4 className="font-bold text-white text-xs sm:text-sm mb-0.5 truncate">
-                     マーケティングのお悩み、いつでも相談OK！
-                   </h4>
-                   <p className="text-white/70 text-[10px] sm:text-xs hidden xs:block">
-                     バナー制作・広告運用・SNS戦略なんでも →
-                   </p>
-                 </div>
-                 <div className="flex-shrink-0">
-                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                     <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
-                   </div>
-                 </div>
-               </div>
-             </motion.div>
-           </a>
+{/* CV Banner（削除済み・謎リンク問題解消） */}
           </div>
         </div>
 
