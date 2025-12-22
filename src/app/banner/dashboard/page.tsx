@@ -608,6 +608,10 @@ export default function BannerDashboard() {
   const [selectedBanner, setSelectedBanner] = useState<number | null>(null)
   const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null)
   const [elapsedSec, setElapsedSec] = useState(0)
+  const [predictedTotalMs, setPredictedTotalMs] = useState<number>(DEFAULT_PREDICT_MS)
+  const [predictedRemainingMs, setPredictedRemainingMs] = useState<number>(DEFAULT_PREDICT_MS)
+  const [notifyOnComplete, setNotifyOnComplete] = useState(false)
+  const [isHidden, setIsHidden] = useState(false)
   
   // 修正機能
   const [refineInstruction, setRefineInstruction] = useState('')
@@ -675,6 +679,25 @@ export default function BannerDashboard() {
   const userRemaining = Math.max(0, userDailyLimit - userUsageCount)
   const remainingCount = isGuest ? guestRemaining : userRemaining
   
+  // タブ状態（バックグラウンドでも進行するが、閉じる/更新すると中断される可能性が高い）
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const onVis = () => setIsHidden(!!document.hidden)
+    onVis()
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [])
+
+  useEffect(() => {
+    if (!isGenerating) return
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isGenerating])
+
   // カスタムサイズの場合は入力値を使用
   const effectiveSize = useCustomSize ? `${customWidth}x${customHeight}` : size
   const isValidCustomSize = !useCustomSize || (
@@ -751,33 +774,41 @@ export default function BannerDashboard() {
       setPhaseIndex(0)
       setGenerationStartedAt(null)
       setElapsedSec(0)
+      setPredictedRemainingMs(predictedTotalMs)
       return
     }
-    // 経過時間の追跡（秒数は表示しないが、メッセージ切替に使う）
-    const start = Date.now()
-    setGenerationStartedAt(start)
-    const tick = setInterval(() => setElapsedSec(Math.floor((Date.now() - start) / 1000)), 1000)
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) return 100
-        const increment = Math.random() * 3 + 1
-        // 生成中は85%で止める（完了時にのみ100%へ到達させる）
-        return Math.min(prev + increment, 85)
-      })
-    }, 500)
+    // 経過時間の追跡（表示用）
+    const started = generationStartedAt ?? Date.now()
+    if (!generationStartedAt) setGenerationStartedAt(started)
+    const tick = setInterval(() => setElapsedSec(Math.floor((Date.now() - started) / 1000)), 1000)
     return () => {
-      clearInterval(interval)
       clearInterval(tick)
     }
-  }, [isGenerating])
+  }, [isGenerating, generationStartedAt, predictedTotalMs])
 
   useEffect(() => {
-    if (!isGenerating) return
-    const phaseInterval = setInterval(() => {
-      setPhaseIndex(prev => (prev + 1) % GENERATION_PHASES.length)
-    }, 6000)
-    return () => clearInterval(phaseInterval)
-  }, [isGenerating])
+    if (!isGenerating || !generationStartedAt) return
+    const t = setInterval(() => {
+      const elapsedMs = Date.now() - generationStartedAt
+      const remaining = Math.max(0, predictedTotalMs - elapsedMs)
+      setPredictedRemainingMs(remaining)
+
+      // 予測に追従する進捗（完了時にのみ100へ）
+      const p = Math.min(85, (elapsedMs / Math.max(1, predictedTotalMs)) * 85)
+      setProgress(Math.max(2, Math.min(85, p)))
+
+      // フェーズも予測時間に合わせて切り替え
+      const r = elapsedMs / Math.max(1, predictedTotalMs)
+      const idx =
+        r < 0.12 ? 0 :
+        r < 0.24 ? 1 :
+        r < 0.46 ? 2 :
+        r < 0.68 ? 3 :
+        r < 0.88 ? 4 : 5
+      setPhaseIndex(idx)
+    }, 350)
+    return () => clearInterval(t)
+  }, [isGenerating, generationStartedAt, predictedTotalMs])
 
   useEffect(() => {
     if (!isGenerating) return
@@ -840,10 +871,22 @@ export default function BannerDashboard() {
     
     setError('')
     setIsGenerating(true)
-    // テキストレイヤーはベースOFF（必要な時だけユーザーがON）
-    setShowTextOverlay(false)
     setGeneratedBanners([])
     setSelectedBanner(null)
+    const startedAt = Date.now()
+    setGenerationStartedAt(startedAt)
+
+    // 予測時間（平均/EMA）を読み込み
+    const stats = readGenStats()
+    const byPurpose = stats.byPurpose?.[purpose]
+    const base = byPurpose?.emaMs || stats.global?.emaMs || DEFAULT_PREDICT_MS
+    // サイズが大きいほど時間が伸びる傾向があるので軽く補正
+    const [wStr, hStr] = effectiveSize.split('x')
+    const px = safeNumber(wStr, 1080) * safeNumber(hStr, 1080)
+    const scale = clamp(px / (1080 * 1080), 0.6, 3.0)
+    const predicted = clampMs(base * (0.85 + 0.15 * scale), 8_000, 180_000)
+    setPredictedTotalMs(predicted)
+    setPredictedRemainingMs(predicted)
 
     try {
       const response = await fetch('/api/banner/generate', {
@@ -878,6 +921,22 @@ export default function BannerDashboard() {
       await new Promise(r => setTimeout(r, 500))
       setGeneratedBanners(data.banners || [])
       setUsedModelDisplay(data.usedModelDisplay || null)
+
+      // 実績時間を保存（次回以降の予測に使用）
+      const actualMs = Date.now() - startedAt
+      const nextStats = readGenStats()
+      nextStats.global = updateEma(nextStats.global, actualMs)
+      nextStats.byPurpose = nextStats.byPurpose || {}
+      nextStats.byPurpose[purpose] = updateEma(nextStats.byPurpose[purpose], actualMs)
+      writeGenStats(nextStats)
+
+      // 完了通知（任意）
+      if (notifyOnComplete && typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'granted') {
+          // eslint-disable-next-line no-new
+          new Notification('ドヤバナーAI', { body: 'バナー生成が完了しました（A/B/C）', silent: true })
+        }
+      }
       
       if (isGuest) {
         const serverUsed = Number(data?.usage?.dailyUsed)
@@ -2428,12 +2487,45 @@ export default function BannerDashboard() {
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span className="font-semibold">高品質生成中（Nano Banana Pro）</span>
                 </div>
-                <div className="font-semibold">
-                  {elapsedSec >= 25
-                    ? '少し時間がかかっています（品質優先で前後します）'
-                    : elapsedSec >= 10
-                      ? 'A/B/Cを順に生成中…（進捗は目安）'
-                      : '最適なデザインを探索中…'}
+                <div className="font-semibold tabular-nums">
+                  予測残り: 約{formatSec(predictedRemainingMs)}（平均から算出）
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-700">
+                <div className="font-bold text-gray-900 mb-1">このタブを開いたままにしてください</div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  <span className="font-semibold">- バックグラウンドでも進行します（別タブで作業OK）</span>
+                  <span className="font-semibold">- ただし「閉じる/更新」すると中断される可能性があります</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <button
+                    onClick={async () => {
+                      if (!('Notification' in window)) {
+                        toast.error('このブラウザは通知に対応していません')
+                        return
+                      }
+                      if (Notification.permission === 'granted') {
+                        setNotifyOnComplete((v) => !v)
+                        return
+                      }
+                      const perm = await Notification.requestPermission()
+                      if (perm === 'granted') {
+                        setNotifyOnComplete(true)
+                        toast.success('完了通知をONにしました')
+                      } else {
+                        toast.error('通知が許可されませんでした')
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-xl font-black transition-colors ${
+                      notifyOnComplete ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-100'
+                    }`}
+                  >
+                    完了通知 {notifyOnComplete ? 'ON' : 'OFF'}
+                  </button>
+                  <div className="text-gray-500 font-semibold">
+                    予測合計: 約{formatSec(predictedTotalMs)} / 経過: {elapsedSec}秒{isHidden ? '（バックグラウンド）' : ''}
+                  </div>
                 </div>
               </div>
             </motion.div>
