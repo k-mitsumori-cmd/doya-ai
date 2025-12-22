@@ -313,13 +313,19 @@ export function AIAssistant() {
                 {/* 入力エリア */}
                 <div className="p-3 border-t border-gray-100 bg-white">
                   <div className="flex gap-2">
-                    <input
-                      type="text"
+                    <textarea
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                      placeholder="質問を入力..."
-                      className="flex-1 px-4 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#635bff]/50"
+                      onKeyDown={(e) => {
+                        // Enter は改行。送信は Ctrl/⌘+Enter のみ。
+                        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                          e.preventDefault()
+                          void handleSend()
+                        }
+                      }}
+                      placeholder="質問を入力...（Enter=改行 / Ctrl+Enter or ⌘+Enter=送信）"
+                      rows={2}
+                      className="flex-1 px-4 py-2.5 bg-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#635bff]/50 resize-none"
                     />
                     <button
                       onClick={handleSend}

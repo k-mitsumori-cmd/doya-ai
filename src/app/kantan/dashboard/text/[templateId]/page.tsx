@@ -1073,13 +1073,19 @@ ${inputMessage}
                 <div className="relative">
                   <div className="bg-white border border-gray-200 rounded-2xl p-3 shadow-sm">
                     <div className="flex gap-3">
-                      <input
-                        type="text"
+                      <textarea
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleChatSubmit()}
-                        placeholder="修正依頼を入力... 例：もっとカジュアルに"
-                        className="flex-1 bg-transparent text-gray-800 text-sm placeholder-gray-400 outline-none"
+                        onKeyDown={(e) => {
+                          // Enter は改行。送信は Ctrl/⌘+Enter のみ。
+                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                            e.preventDefault()
+                            handleChatSubmit()
+                          }
+                        }}
+                        placeholder="修正依頼を入力...（Enter=改行 / Ctrl+Enter or ⌘+Enter=送信）"
+                        rows={2}
+                        className="flex-1 bg-transparent text-gray-800 text-sm placeholder-gray-400 outline-none resize-none"
                         disabled={isChatting}
                       />
                       <button
