@@ -4,10 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  Search, Crown, Mail, Shield, Trash2, Users, 
-  ChevronDown, MoreHorizontal, Download, 
-  ArrowUpDown, Check, Zap, X, Edit3, RotateCcw,
-  Save, AlertCircle
+  Search, Crown, Mail, Shield, Users, 
+  ChevronDown, Download, Check, X, Edit3, RotateCcw
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -37,10 +35,18 @@ interface User {
   services: string[]
 }
 
-const SERVICE_LABELS: Record<string, { name: string; icon: string; color: string }> = {
-  banner: { name: 'ドヤバナー', icon: '🎨', color: 'violet' },
-  kantan: { name: 'カンタンドヤ', icon: '📝', color: 'blue' },
-  seo: { name: 'ドヤSEO', icon: '🧠', color: 'emerald' },
+const SERVICE_LABELS: Record<string, { name: string; shortName: string; icon: string; bgColor: string; textColor: string }> = {
+  banner: { name: 'ドヤバナー', shortName: 'バナー', icon: '🎨', bgColor: 'bg-violet-500/20', textColor: 'text-violet-400' },
+  kantan: { name: 'カンタンドヤ', shortName: 'カンタン', icon: '📝', bgColor: 'bg-blue-500/20', textColor: 'text-blue-400' },
+  seo: { name: 'ドヤSEO', shortName: 'SEO', icon: '🧠', bgColor: 'bg-emerald-500/20', textColor: 'text-emerald-400' },
+}
+
+const PLAN_STYLES: Record<string, { bg: string; text: string; border: string }> = {
+  FREE: { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30' },
+  STARTER: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30' },
+  PRO: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' },
+  BUSINESS: { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' },
+  ENTERPRISE: { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/30' },
 }
 
 const PLAN_OPTIONS = ['FREE', 'STARTER', 'PRO', 'BUSINESS', 'ENTERPRISE']
@@ -156,19 +162,6 @@ export default function AdminUsersPage() {
       setSelectedUsers([])
     } else {
       setSelectedUsers(filteredUsers.map(u => u.id))
-    }
-  }
-
-  const getPlanBadge = (plan: string) => {
-    switch (plan) {
-      case 'PRO':
-      case 'BUSINESS':
-      case 'ENTERPRISE':
-        return { bg: 'bg-gradient-to-r from-amber-500/20 to-orange-500/20', text: 'text-amber-400', border: 'border-amber-500/30', icon: Crown }
-      case 'STARTER':
-        return { bg: 'bg-violet-500/20', text: 'text-violet-400', border: 'border-violet-500/30', icon: Zap }
-      default:
-        return { bg: 'bg-white/5', text: 'text-white/50', border: 'border-white/10', icon: null }
     }
   }
 
@@ -303,7 +296,6 @@ export default function AdminUsersPage() {
             </thead>
             <motion.tbody variants={containerVariants} initial="hidden" animate="visible">
               {filteredUsers.map((user) => {
-                const planBadge = getPlanBadge(user.plan)
                 const isSelected = selectedUsers.includes(user.id)
                 return (
                   <motion.tr
@@ -347,7 +339,13 @@ export default function AdminUsersPage() {
                           await handleUpdateUser(user.id, { plan: e.target.value })
                         }}
                         disabled={isSaving}
-                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 ${planBadge.bg} ${planBadge.text} ${planBadge.border}`}
+                        className={`px-3 py-2 rounded-lg border text-xs font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 min-w-[100px] ${
+                          PLAN_STYLES[user.plan]?.bg || PLAN_STYLES.FREE.bg
+                        } ${
+                          PLAN_STYLES[user.plan]?.text || PLAN_STYLES.FREE.text
+                        } ${
+                          PLAN_STYLES[user.plan]?.border || PLAN_STYLES.FREE.border
+                        }`}
                       >
                         {PLAN_OPTIONS.map((p) => (
                           <option key={p} value={p} className="bg-[#0A0A0F]">{p}</option>
@@ -372,45 +370,31 @@ export default function AdminUsersPage() {
                       </select>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="space-y-2">
+                      <div className="flex flex-wrap gap-1.5">
                         {['banner', 'kantan', 'seo'].map((serviceId) => {
                           const svc = SERVICE_LABELS[serviceId]
                           const sub = user.serviceSubscriptions.find((s) => s.serviceId === serviceId)
                           const currentPlan = sub?.plan || 'FREE'
+                          const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
                           return (
-                            <div key={serviceId} className="flex items-center gap-2 text-xs">
-                              <span title={svc.name}>{svc.icon}</span>
+                            <div 
+                              key={serviceId} 
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${svc.bgColor} border border-white/10`}
+                            >
+                              <span className="text-xs" title={svc.name}>{svc.icon}</span>
+                              <span className={`text-[10px] font-medium ${svc.textColor}`}>{svc.shortName}</span>
                               <select
                                 value={currentPlan}
                                 onChange={async (e) => {
                                   await handleUpdateServicePlan(user.id, serviceId, e.target.value)
                                 }}
                                 disabled={isSaving}
-                                className={`px-2 py-1 rounded text-xs font-medium appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 ${
-                                  currentPlan === 'FREE' 
-                                    ? 'bg-white/5 text-white/50 border border-white/10' 
-                                    : currentPlan === 'STARTER'
-                                    ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
-                                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                }`}
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 border ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
                               >
                                 {PLAN_OPTIONS.map((p) => (
                                   <option key={p} value={p} className="bg-[#0A0A0F]">{p}</option>
                                 ))}
                               </select>
-                              {sub && (
-                                <>
-                                  <span className="text-white/40">{sub.dailyUsage}回</span>
-                                  <button
-                                    onClick={() => handleResetUsage(user.id, serviceId, 'daily')}
-                                    disabled={isSaving}
-                                    className="p-0.5 hover:bg-white/10 rounded text-white/30 hover:text-white transition-colors disabled:opacity-50"
-                                    title="リセット"
-                                  >
-                                    <RotateCcw className="w-3 h-3" />
-                                  </button>
-                                </>
-                              )}
                             </div>
                           )
                         })}
