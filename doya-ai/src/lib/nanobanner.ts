@@ -25,25 +25,30 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 /**
  * 画像生成モデルを 1つに固定する（要望）
- * - デフォルト: gemini-2.0-pro-exp-02-05（高品質なProモデル）
- * - それ以外は生成できない（= 他モデルで生成されない保証）
+ * - デフォルト: gemini-3-pro-image-preview
+ * - 2.0系（gemini-2.0-pro-exp-02-05等）は一切使用しない
  *
  * 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
  */
-const IMAGE_MODEL_DEFAULT = 'gemini-2.0-pro-exp-02-05'
+const IMAGE_MODEL_DEFAULT = 'gemini-3-pro-image-preview'
 
 function assertFixedImageModel(model: string): void {
   const m = String(model || '').trim()
   const lower = m.toLowerCase()
-  // 許可するモデルのキーワード（Gemini 3, Gemini 2.0 Pro, またはユーザー指定のID）
-  const isAllowed = 
-    lower.includes('gemini-3') || 
-    lower.includes('gemini-2.0-pro') ||
-    lower.includes('gemini-2.0-flash') || // 安定動作のため一応許可
-    lower === 'gemini-3-pro-image-preview'
+  
+  // Gemini 2.0 系の使用を厳格に禁止
+  if (lower.includes('gemini-2.0')) {
+    throw new Error(
+      `Gemini 2.0系モデル（${m}）での生成は現在制限されています。` +
+      `Gemini 3 Pro Image Preview を使用するか、管理者までお問い合わせください。`
+    )
+  }
+
+  // 許可するのは Gemini 3 系のみ
+  const isAllowed = lower.includes('gemini-3') || lower === 'gemini-3-pro-image-preview'
   
   if (!isAllowed) {
-    console.warn(`Disallowed model attempted: ${m}. Reverting to default.`)
+    console.warn(`Disallowed model attempted: ${m}. Reverting to Gemini 3 default.`)
   }
 }
 
@@ -55,14 +60,12 @@ function getImageModel(): string {
     IMAGE_MODEL_DEFAULT
   
   assertFixedImageModel(model)
-  // もし環境変数が不正なら、強制的にデフォルト（高品質Proモデル）を使う
+  
   const lower = model.toLowerCase()
-  const isAllowed = 
-    lower.includes('gemini-3') || 
-    lower.includes('gemini-2.0-pro') ||
-    lower.includes('gemini-2.0-flash') ||
-    lower === 'gemini-3-pro-image-preview'
+  // 2.0系なら強制的にデフォルト（Gemini 3）に切り替える（かつ上記 assert でエラーを投げる）
+  if (lower.includes('gemini-2.0')) return IMAGE_MODEL_DEFAULT
 
+  const isAllowed = lower.includes('gemini-3') || lower === 'gemini-3-pro-image-preview'
   return isAllowed ? model : IMAGE_MODEL_DEFAULT
 }
 
@@ -579,10 +582,10 @@ async function generateSingleBanner(
   const primaryModel = getImageModel()
   
   // ユーザーが要求する高品質モデルの候補（失敗時に順次試行）
-  // gemini-3, gemini-2.0-pro 系のみに限定
+  // 2.0系は一切含めない（要望）
   const modelsToTry = [
     primaryModel,
-    'gemini-2.0-pro-exp-02-05',
+    'gemini-3-pro-image-preview',
     'gemini-3-pro-preview',
     'gemini-3-flash-preview',
   ].filter((v, i, a) => a.indexOf(v) === i) // 重複除去
