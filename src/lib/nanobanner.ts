@@ -643,12 +643,18 @@ async function generateSingleBanner(
           },
         ],
         generationConfig: {
-          // モデルによって responseModalities の挙動が異なるため、
-          // 2.0系以外では設定せずに送信（エラー回避）
-          ...(model.includes('gemini-2.0') ? { responseModalities: ['IMAGE', 'TEXT'] } : {}),
+          // Gemini 2.0 / 3.0 では画像出力を明示的に指定
+          // それ以外のモデル（1.5等）でエラーになるのを防ぐため、2.0/3.0を含む場合のみ付与
+          ...(model.includes('gemini-2.0') || model.includes('gemini-3') ? { responseModalities: ['IMAGE', 'TEXT'] } : {}),
           temperature: 0.4,
           maxOutputTokens: 1024,
         },
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+        ],
       }
           
       const response = await fetch(endpoint, {

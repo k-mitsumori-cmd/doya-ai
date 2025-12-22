@@ -42,7 +42,6 @@ function getGeminiKey(): string | null {
     process.env.GOOGLE_AI_API_KEY ||
     process.env.GEMINI_API_KEY ||
     process.env.GOOGLE_GENAI_API_KEY ||
-    process.env.GOOGLE_GENAI_API_KEY ||
     null
   )
 }
@@ -76,12 +75,22 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
   for (const model of models) {
     try {
       const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+      
+      // JSONモードをサポートしているか簡易チェック
+      const isJsonSupported = model.includes('1.5') || model.includes('2.0') || model.includes('3')
+      
       const res = await fetch(`${endpoint}?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 800, topP: 0.95, topK: 40 },
+          generationConfig: { 
+            temperature: 0.7, 
+            maxOutputTokens: 800, 
+            topP: 0.95, 
+            topK: 40,
+            ...(isJsonSupported ? { responseMimeType: 'application/json' } : {})
+          },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
