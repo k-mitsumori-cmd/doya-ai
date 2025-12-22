@@ -1,28 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { cookies } from 'next/headers'
+import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 
-// getServerSession() が cookies を参照するため、静的最適化を無効化
+// cookies() を使用するため、静的最適化を無効化
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    // 管理者認証チェック
+    const cookieStore = await cookies()
+    const token = cookieStore.get(COOKIE_NAME)?.value
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+    const { valid } = await verifyAdminSession(token || null)
+    if (!valid) {
+      return NextResponse.json({ error: '管理者認証が必要です' }, { status: 401 })
     }
 
-    const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    })
-
-    if (currentUser?.role !== 'ADMIN') {
-      return NextResponse.json({ error: '管理者権限が必要です' }, { status: 403 })
-    }
-
+    // ユーザー一覧を取得（サービス別サブスクリプション情報も含む）
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -32,6 +28,20 @@ export async function GET() {
         plan: true,
         role: true,
         createdAt: true,
+        updatedAt: true,
+        stripeCustomerId: true,
+        stripeSubscriptionId: true,
+        serviceSubscriptions: {
+          select: {
+            id: true,
+            serviceId: true,
+            plan: true,
+            dailyUsage: true,
+            monthlyUsage: true,
+            lastUsageReset: true,
+            stripeSubscriptionId: true,
+          },
+        },
         _count: {
           select: { generations: true },
         },
@@ -40,9 +50,29 @@ export async function GET() {
     })
 
     const formattedUsers = users.map((user: any) => ({
-      ...user,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+      plan: user.plan,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      stripeCustomerId: user.stripeCustomerId,
+      stripeSubscriptionId: user.stripeSubscriptionId,
       totalGenerations: user._count.generations,
-      _count: undefined,
+      // サービス別の情報
+      serviceSubscriptions: user.serviceSubscriptions.map((sub: any) => ({
+        id: sub.id,
+        serviceId: sub.serviceId,
+        plan: sub.plan,
+        dailyUsage: sub.dailyUsage,
+        monthlyUsage: sub.monthlyUsage,
+        lastUsageReset: sub.lastUsageReset,
+        hasStripe: !!sub.stripeSubscriptionId,
+      })),
+      // 利用中のサービスID一覧
+      services: user.serviceSubscriptions.map((sub: any) => sub.serviceId),
     }))
 
     return NextResponse.json(formattedUsers)
@@ -57,27 +87,83 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    // 管理者認証チェック
+    const cookieStore = await cookies()
+    const token = cookieStore.get(COOKIE_NAME)?.value
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+    const { valid } = await verifyAdminSession(token || null)
+    if (!valid) {
+      return NextResponse.json({ error: '管理者認証が必要です' }, { status: 401 })
     }
 
-    const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-    })
+    const body = await req.json()
+    const { userId, plan, role, serviceId, servicePlan, resetDailyUsage, resetMonthlyUsage, setDailyUsage, setMonthlyUsage } = body
 
-    if (currentUser?.role !== 'ADMIN') {
-      return NextResponse.json({ error: '管理者権限が必要です' }, { status: 403 })
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
 
-    const { userId, plan, role } = await req.json()
+    // ユーザー基本情報の更新
+    if (plan !== undefined || role !== undefined) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(plan !== undefined && { plan }),
+          ...(role !== undefined && { role }),
+        },
+      })
+    }
 
-    const updatedUser = await prisma.user.update({
+    // サービス別プラン・使用回数の更新
+    if (serviceId) {
+      const existing = await prisma.userServiceSubscription.findUnique({
+        where: { userId_serviceId: { userId, serviceId } },
+      })
+
+      const updateData: any = {}
+      if (servicePlan !== undefined) updateData.plan = servicePlan
+      if (resetDailyUsage) updateData.dailyUsage = 0
+      if (resetMonthlyUsage) updateData.monthlyUsage = 0
+      if (typeof setDailyUsage === 'number') updateData.dailyUsage = setDailyUsage
+      if (typeof setMonthlyUsage === 'number') updateData.monthlyUsage = setMonthlyUsage
+      if (resetDailyUsage || resetMonthlyUsage) updateData.lastUsageReset = new Date()
+
+      if (existing) {
+        await prisma.userServiceSubscription.update({
+          where: { id: existing.id },
+          data: updateData,
+        })
+      } else if (servicePlan) {
+        // 存在しない場合は作成
+        await prisma.userServiceSubscription.create({
+          data: {
+            userId,
+            serviceId,
+            plan: servicePlan,
+            dailyUsage: 0,
+            monthlyUsage: 0,
+          },
+        })
+      }
+    }
+
+    // 更新後のユーザー情報を返す
+    const updatedUser = await prisma.user.findUnique({
       where: { id: userId },
-      data: {
-        ...(plan && { plan }),
-        ...(role && { role }),
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        plan: true,
+        role: true,
+        serviceSubscriptions: {
+          select: {
+            serviceId: true,
+            plan: true,
+            dailyUsage: true,
+            monthlyUsage: true,
+          },
+        },
       },
     })
 
@@ -90,4 +176,3 @@ export async function PATCH(req: NextRequest) {
     )
   }
 }
-

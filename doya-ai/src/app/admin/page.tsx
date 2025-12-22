@@ -21,7 +21,6 @@ import {
   ArrowDownRight,
   Clock,
   Eye,
-  MousePointer,
   MoreHorizontal,
   ChevronRight,
   Calendar,
@@ -29,36 +28,44 @@ import {
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
-interface ServiceStats {
-  id: string
-  name: string
-  icon: string
-  gradient: string
-  users: number
-  proUsers: number
-  generations: number
-  todayGenerations: number
-  revenue: number
-  growth: number
-}
-
 interface Stats {
+  // 基本統計
   totalUsers: number
-  totalRevenue: number
+  premiumUsers: number
+  enterpriseUsers: number
+  freeUsers: number
+  
+  // 生成統計
   totalGenerations: number
   todayGenerations: number
-  newUsersToday: number
-  activeUsers: number
+  monthGenerations: number
+  lastMonthGenerations: number
+  generationGrowth: number
+  avgGenerationsPerUser: number
+  
+  // 収益統計
+  monthlyRevenue: number
+  mrr: number
+  
+  // KPI
   conversionRate: number
-  services: ServiceStats[]
-  recentActivities: Array<{
+  
+  // テンプレート
+  activeTemplates: number
+  
+  // 最近のアクティビティ
+  recentUsers: number
+  recentGenerations: Array<{
     id: string
-    service: string
     userName: string
-    action: string
+    templateName: string
     createdAt: string
   }>
-  chartData: number[]
+  
+  // セキュリティ
+  adminLoginAttempts: number
+  
+  // メタ情報
   lastUpdated: string
 }
 
@@ -85,61 +92,29 @@ export default function AdminDashboard() {
   const fetchStats = async (showToast = false) => {
     try {
       setIsRefreshing(true)
+      setError(null)
       
-      // モックデータ
-      const mockStats: Stats = {
-        totalUsers: 1247,
-        totalRevenue: 498000,
-        totalGenerations: 8934,
-        todayGenerations: 431,
-        newUsersToday: 12,
-        activeUsers: 342,
-        conversionRate: 6.8,
-        services: [
-          {
-            id: 'kantan',
-            name: 'カンタンドヤAI',
-            icon: '📝',
-            gradient: 'from-blue-500 to-cyan-500',
-            users: 892,
-            proUsers: 45,
-            generations: 6234,
-            todayGenerations: 342,
-            revenue: 134100,
-            growth: 12.5,
-          },
-          {
-            id: 'banner',
-            name: 'ドヤバナーAI',
-            icon: '🎨',
-            gradient: 'from-violet-500 to-fuchsia-500',
-            users: 355,
-            proUsers: 38,
-            generations: 2700,
-            todayGenerations: 89,
-            revenue: 379240,
-            growth: 28.3,
-          },
-        ],
-        recentActivities: [
-          { id: '1', service: 'kantan', userName: '田中太郎', action: 'ビジネスメールを生成', createdAt: new Date().toISOString() },
-          { id: '2', service: 'banner', userName: '佐藤花子', action: 'ECバナーを生成', createdAt: new Date(Date.now() - 300000).toISOString() },
-          { id: '3', service: 'kantan', userName: '鈴木一郎', action: 'ブログ記事を生成', createdAt: new Date(Date.now() - 600000).toISOString() },
-          { id: '4', service: 'banner', userName: '高橋美咲', action: '採用バナーを生成', createdAt: new Date(Date.now() - 900000).toISOString() },
-          { id: '5', service: 'kantan', userName: '渡辺健太', action: 'SNS投稿を生成', createdAt: new Date(Date.now() - 1200000).toISOString() },
-        ],
-        chartData: [120, 180, 150, 210, 280, 320, 290, 350, 380, 420, 390, 431],
-        lastUpdated: new Date().toISOString(),
+      const response = await fetch('/api/admin/stats', {
+        credentials: 'include',
+      })
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/admin/login')
+          return
+        }
+        throw new Error('統計データの取得に失敗しました')
       }
       
-      setStats(mockStats)
-      setError(null)
+      const data = await response.json()
+      setStats(data)
+      
       if (showToast) {
         toast.success('データを更新しました', { icon: '🔄' })
       }
     } catch (err) {
       console.error('Stats load error:', err)
-      setError('統計データの取得中にエラーが発生しました')
+      setError(err instanceof Error ? err.message : '統計データの取得中にエラーが発生しました')
     } finally {
       setIsRefreshing(false)
       setIsLoading(false)
@@ -212,10 +187,6 @@ export default function AdminDashboard() {
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="text-sm">更新</span>
             </button>
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-xl hover:opacity-90 transition-all">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-bold">レポート出力</span>
-            </button>
           </div>
         </motion.div>
 
@@ -235,20 +206,20 @@ export default function AdminDashboard() {
                 { 
                   label: '総ユーザー', 
                   value: stats.totalUsers.toLocaleString(), 
-                  subValue: `+${stats.newUsersToday} 今日`,
+                  subValue: `+${stats.recentUsers} 今週`,
                   icon: Users, 
                   gradient: 'from-blue-500 to-cyan-500',
-                  trend: 12.5,
-                  trendUp: true
+                  trend: stats.recentUsers,
+                  trendUp: stats.recentUsers > 0
                 },
                 { 
                   label: 'プロ会員', 
-                  value: stats.services.reduce((sum, s) => sum + s.proUsers, 0).toString(), 
+                  value: stats.premiumUsers.toString(), 
                   subValue: `CVR ${stats.conversionRate}%`,
                   icon: Crown, 
                   gradient: 'from-amber-500 to-orange-500',
-                  trend: 8.2,
-                  trendUp: true
+                  trend: stats.conversionRate,
+                  trendUp: stats.conversionRate > 0
                 },
                 { 
                   label: '本日の生成', 
@@ -256,17 +227,17 @@ export default function AdminDashboard() {
                   subValue: `総計 ${stats.totalGenerations.toLocaleString()}`,
                   icon: Zap, 
                   gradient: 'from-emerald-500 to-green-500',
-                  trend: 15.3,
-                  trendUp: true
+                  trend: stats.generationGrowth,
+                  trendUp: stats.generationGrowth > 0
                 },
                 { 
                   label: '月間売上', 
-                  value: formatCurrency(stats.totalRevenue), 
+                  value: formatCurrency(stats.monthlyRevenue), 
                   subValue: 'MRR',
                   icon: DollarSign, 
                   gradient: 'from-violet-500 to-fuchsia-500',
-                  trend: 22.1,
-                  trendUp: true
+                  trend: stats.mrr > 0 ? 100 : 0,
+                  trendUp: stats.mrr > 0
                 },
               ].map((kpi, index) => (
                 <motion.div
@@ -283,234 +254,170 @@ export default function AdminDashboard() {
                   <p className="text-2xl font-bold text-white mb-1">{kpi.value}</p>
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-white/40">{kpi.label}</p>
-                    <div className={`flex items-center gap-0.5 text-xs font-medium ${kpi.trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {kpi.trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                      {kpi.trend}%
-                    </div>
+                    {kpi.trend !== 0 && (
+                      <div className={`flex items-center gap-0.5 text-xs font-medium ${kpi.trendUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {kpi.trendUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                        {typeof kpi.trend === 'number' ? kpi.trend.toFixed(1) : kpi.trend}%
+                      </div>
+                    )}
                   </div>
                   <p className="text-[10px] text-white/30 mt-1">{kpi.subValue}</p>
                 </motion.div>
               ))}
             </motion.div>
 
-            {/* Chart + Services Grid */}
+            {/* Stats Grid */}
             <div className="grid lg:grid-cols-3 gap-6 mb-8">
-              {/* Mini Chart */}
+              {/* Generation Stats */}
               <motion.div variants={itemVariants} className="lg:col-span-2 bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="font-bold text-lg text-white">生成数の推移</h2>
-                    <p className="text-xs text-white/40">過去12時間</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {['1H', '12H', '7D', '30D'].map((period) => (
-                      <button
-                        key={period}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                          period === '12H' 
-                            ? 'bg-violet-500/20 text-violet-300' 
-                            : 'text-white/40 hover:text-white'
-                        }`}
-                      >
-                        {period}
-                      </button>
-                    ))}
+                    <h2 className="font-bold text-lg text-white">生成統計</h2>
+                    <p className="text-xs text-white/40">リアルタイムデータ</p>
                   </div>
                 </div>
                 
-                {/* Simple Bar Chart */}
-                <div className="h-48 flex items-end gap-2">
-                  {stats.chartData.map((value, index) => {
-                    const maxValue = Math.max(...stats.chartData)
-                    const height = (value / maxValue) * 100
-                    const isLast = index === stats.chartData.length - 1
-                    return (
-                      <motion.div
-                        key={index}
-                        initial={{ height: 0 }}
-                        animate={{ height: `${height}%` }}
-                        transition={{ delay: index * 0.05, duration: 0.5 }}
-                        className={`flex-1 rounded-t-lg ${
-                          isLast 
-                            ? 'bg-gradient-to-t from-violet-500 to-fuchsia-500' 
-                            : 'bg-white/10 hover:bg-white/20'
-                        } transition-colors relative group cursor-pointer`}
-                      >
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-white/10 rounded text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                          {value}件
-                        </div>
-                      </motion.div>
-                    )
-                  })}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <p className="text-2xl font-bold text-white">{stats.totalGenerations.toLocaleString()}</p>
+                    <p className="text-xs text-white/40">総生成数</p>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <p className="text-2xl font-bold text-emerald-400">{stats.todayGenerations}</p>
+                    <p className="text-xs text-white/40">今日の生成</p>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <p className="text-2xl font-bold text-blue-400">{stats.monthGenerations}</p>
+                    <p className="text-xs text-white/40">今月の生成</p>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4">
+                    <p className="text-2xl font-bold text-violet-400">{stats.avgGenerationsPerUser}</p>
+                    <p className="text-xs text-white/40">平均生成/ユーザー</p>
+                  </div>
                 </div>
-                <div className="flex justify-between mt-2">
-                  {['12:00', '14:00', '16:00', '18:00', '20:00', '22:00'].map((time) => (
-                    <span key={time} className="text-[10px] text-white/30">{time}</span>
-                  ))}
-                </div>
-              </motion.div>
 
-              {/* Active Users */}
-              <motion.div variants={itemVariants} className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-6">
-                <h2 className="font-bold text-lg text-white mb-4">アクティブユーザー</h2>
-                <div className="text-center py-6">
-                  <div className="relative inline-flex items-center justify-center">
-                    <svg className="w-32 h-32 transform -rotate-90">
-                      <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="12" fill="none" className="text-white/5" />
-                      <circle cx="64" cy="64" r="56" stroke="url(#activeGradient)" strokeWidth="12" fill="none" strokeLinecap="round"
-                        strokeDasharray={`${(stats.activeUsers / stats.totalUsers) * 352} 352`}
-                      />
-                      <defs>
-                        <linearGradient id="activeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#8B5CF6" />
-                          <stop offset="100%" stopColor="#D946EF" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-3xl font-bold text-white">{stats.activeUsers}</span>
-                      <span className="text-xs text-white/40">オンライン</span>
+                <div className="mt-6 p-4 bg-white/5 rounded-xl">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-white/60">前月比成長率</span>
+                    <div className={`flex items-center gap-1 ${stats.generationGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {stats.generationGrowth >= 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                      <span className="font-bold">{stats.generationGrowth >= 0 ? '+' : ''}{stats.generationGrowth}%</span>
                     </div>
                   </div>
                 </div>
-                <div className="space-y-3 mt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-white/40">カンタンドヤAI</span>
-                    <span className="text-sm font-medium text-white">{Math.floor(stats.activeUsers * 0.65)}</span>
+              </motion.div>
+
+              {/* User Breakdown */}
+              <motion.div variants={itemVariants} className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-6">
+                <h2 className="font-bold text-lg text-white mb-4">ユーザー内訳</h2>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                        <Crown className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm text-white">プロ会員</span>
+                    </div>
+                    <span className="font-bold text-amber-400">{stats.premiumUsers}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-white/40">ドヤバナーAI</span>
-                    <span className="text-sm font-medium text-white">{Math.floor(stats.activeUsers * 0.35)}</span>
+                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center">
+                        <Sparkles className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm text-white">Stripe連携</span>
+                    </div>
+                    <span className="font-bold text-violet-400">{stats.enterpriseUsers}</span>
                   </div>
+                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                        <Users className="w-4 h-4 text-white/60" />
+                      </div>
+                      <span className="text-sm text-white">無料ユーザー</span>
+                    </div>
+                    <span className="font-bold text-white/60">{stats.freeUsers}</span>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <Link 
+                    href="/admin/users" 
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-violet-500/20 border border-violet-500/30 rounded-xl text-violet-400 hover:bg-violet-500/30 transition-colors"
+                  >
+                    <Users className="w-4 h-4" />
+                    ユーザー管理
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
                 </div>
               </motion.div>
             </div>
-
-            {/* Service Cards */}
-            <motion.div variants={itemVariants} className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold text-lg text-white flex items-center gap-2">
-                  <Target className="w-5 h-5 text-violet-400" />
-                  サービス別パフォーマンス
-                </h2>
-                <Link href="/admin/analytics" className="text-sm text-violet-400 hover:text-violet-300 flex items-center gap-1">
-                  詳細を見る <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                {stats.services.map((service) => (
-                  <motion.div
-                    key={service.id}
-                    whileHover={{ y: -4 }}
-                    className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 overflow-hidden"
-                  >
-                    <div className={`p-5 bg-gradient-to-r ${service.gradient}`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-4xl">{service.icon}</span>
-                          <div>
-                            <h3 className="text-lg font-bold text-white">{service.name}</h3>
-                            <p className="text-white/70 text-sm flex items-center gap-1">
-                              <Zap className="w-3 h-3" />
-                              今日 {service.todayGenerations} 生成
-                            </p>
-                          </div>
-                        </div>
-                        <Link href={`/${service.id}/dashboard`} className="p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors">
-                          <ExternalLink className="w-5 h-5 text-white" />
-                        </Link>
-                      </div>
-                    </div>
-
-                    <div className="p-5">
-                      <div className="grid grid-cols-4 gap-4 mb-4">
-                        <div>
-                          <p className="text-xl font-bold text-white">{service.users.toLocaleString()}</p>
-                          <p className="text-[10px] text-white/40">ユーザー</p>
-                        </div>
-                        <div>
-                          <p className="text-xl font-bold text-amber-400">{service.proUsers}</p>
-                          <p className="text-[10px] text-white/40">プロ</p>
-                        </div>
-                        <div>
-                          <p className="text-xl font-bold text-white">{(service.generations / 1000).toFixed(1)}K</p>
-                          <p className="text-[10px] text-white/40">生成数</p>
-                        </div>
-                        <div>
-                          <p className="text-xl font-bold text-emerald-400">{formatCurrency(service.revenue)}</p>
-                          <p className="text-[10px] text-white/40">売上</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl">
-                        <span className="text-xs text-white/50">前月比成長率</span>
-                        <div className="flex items-center gap-1 text-emerald-400">
-                          <ArrowUpRight className="w-4 h-4" />
-                          <span className="font-bold">+{service.growth}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
 
             {/* Recent Activity */}
             <motion.div variants={itemVariants} className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-bold text-lg text-white flex items-center gap-2">
                   <Activity className="w-5 h-5 text-emerald-400" />
-                  最近のアクティビティ
+                  最近の生成アクティビティ
                 </h2>
-                <button className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-                  <MoreHorizontal className="w-5 h-5 text-white/50" />
-                </button>
+                <span className="text-xs text-white/40">過去24時間</span>
               </div>
 
-              <div className="space-y-1">
-                {stats.recentActivities.map((activity, index) => (
-                  <motion.div
-                    key={activity.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                        activity.service === 'kantan' 
-                          ? 'bg-blue-500/20' 
-                          : 'bg-violet-500/20'
-                      }`}>
-                        {activity.service === 'kantan' 
-                          ? <FileText className="w-5 h-5 text-blue-400" /> 
-                          : <Image className="w-5 h-5 text-violet-400" />
-                        }
+              {stats.recentGenerations.length > 0 ? (
+                <div className="space-y-1">
+                  {stats.recentGenerations.map((activity, index) => (
+                    <motion.div
+                      key={activity.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-white text-sm">{activity.userName}</p>
+                          <p className="text-xs text-white/40">{activity.templateName}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-white text-sm">{activity.userName}</p>
-                        <p className="text-xs text-white/40">{activity.action}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
                       <span className="text-xs text-white/30 flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {formatDate(activity.createdAt)}
                       </span>
-                      <button className="p-1.5 opacity-0 group-hover:opacity-100 hover:bg-white/10 rounded-lg transition-all">
-                        <Eye className="w-4 h-4 text-white/50" />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-white/40">
+                  <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">過去24時間のアクティビティはありません</p>
+                </div>
+              )}
+            </motion.div>
 
-              <div className="mt-4 pt-4 border-t border-white/5 text-center">
-                <Link href="/admin/analytics" className="text-sm text-violet-400 hover:text-violet-300">
-                  すべてのアクティビティを表示 →
-                </Link>
+            {/* Security Info */}
+            <motion.div variants={itemVariants} className="mt-6 p-4 bg-white/[0.02] backdrop-blur rounded-xl border border-white/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                    <Eye className="w-4 h-4 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-white">管理者ログイン試行（24時間）</p>
+                    <p className="text-xs text-white/40">セキュリティ監視</p>
+                  </div>
+                </div>
+                <span className="text-lg font-bold text-emerald-400">{stats.adminLoginAttempts}</span>
               </div>
+            </motion.div>
+
+            {/* Last Updated */}
+            <motion.div variants={itemVariants} className="mt-4 text-center">
+              <p className="text-xs text-white/30">
+                最終更新: {new Date(stats.lastUpdated).toLocaleString('ja-JP')}
+              </p>
             </motion.div>
           </>
         )}
