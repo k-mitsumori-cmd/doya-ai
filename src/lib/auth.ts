@@ -17,21 +17,40 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, user }) {
       if (session.user && user) {
-        (session.user as any).id = user.id;
-        (session.user as any).role = (user as any).role || 'USER';
-        (session.user as any).plan = (user as any).plan || 'FREE';
-        // サービス別プラン（例: bannerPlan）をセッションに載せてUI/上限判定のブレを防ぐ
+        // 常にDBから最新のユーザー情報を取得（管理画面での変更を即反映）
         try {
-          const subs = await prisma.userServiceSubscription.findMany({
-            where: { userId: user.id },
-            select: { serviceId: true, plan: true },
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { 
+              id: true, 
+              role: true, 
+              plan: true,
+              serviceSubscriptions: {
+                select: { serviceId: true, plan: true }
+              }
+            }
           })
-          const byService = Object.fromEntries(subs.map((s) => [s.serviceId, s.plan]))
-          ;(session.user as any).bannerPlan = byService['banner'] || 'FREE'
-          ;(session.user as any).seoPlan = byService['seo'] || undefined
-          ;(session.user as any).kantanPlan = byService['kantan'] || undefined
-        } catch {
-          ;(session.user as any).bannerPlan = (session.user as any).bannerPlan || 'FREE'
+          
+          if (dbUser) {
+            (session.user as any).id = dbUser.id;
+            (session.user as any).role = dbUser.role || 'USER';
+            (session.user as any).plan = dbUser.plan || 'FREE';
+            
+            // サービス別プランをセッションに載せる
+            const byService = Object.fromEntries(
+              dbUser.serviceSubscriptions.map((s) => [s.serviceId, s.plan])
+            )
+            ;(session.user as any).bannerPlan = byService['banner'] || 'FREE'
+            ;(session.user as any).seoPlan = byService['seo'] || undefined
+            ;(session.user as any).kantanPlan = byService['kantan'] || undefined
+          }
+        } catch (error) {
+          console.error('Session callback DB error:', error)
+          // フォールバック: userオブジェクトの情報を使用
+          (session.user as any).id = user.id;
+          (session.user as any).role = (user as any).role || 'USER';
+          (session.user as any).plan = (user as any).plan || 'FREE';
+          (session.user as any).bannerPlan = 'FREE'
         }
       }
       return session;
@@ -40,6 +59,11 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/auth/signin',
     error: '/auth/signin',
+  },
+  session: {
+    // セッション更新間隔を短くして、プラン変更が素早く反映されるようにする
+    maxAge: 24 * 60 * 60, // 24時間
+    updateAge: 60, // 1分ごとにセッションを更新
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
