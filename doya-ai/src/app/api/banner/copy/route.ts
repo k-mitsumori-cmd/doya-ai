@@ -85,10 +85,7 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
       // JSONモードをサポートしているか簡易チェック
       const isJsonSupported = model.includes('1.5') || model.includes('2.0') || model.includes('3')
       
-      const res = await fetch(`${endpoint}?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const body = {
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: { 
             temperature: 0.7, 
@@ -103,12 +100,25 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
             { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
           ],
-        }),
-      })
+      }
+
+      const attempt = async () =>
+        fetch(`${endpoint}?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+
+      // 502/503 が出ることがあるため軽いリトライ
+      let res = await attempt()
+      if (res.status === 502 || res.status === 503) {
+        await new Promise((r) => setTimeout(r, 700))
+        res = await attempt()
+      }
 
       if (!res.ok) {
         const t = await res.text()
-        lastError = `Gemini ${model} error: ${res.status} - ${t.substring(0, 240)}`
+        lastError = `Gemini ${model} error: ${res.status} - ${t.substring(0, 600)}`
         continue
       }
 
