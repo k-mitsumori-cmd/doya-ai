@@ -26,21 +26,42 @@ import sharp from 'sharp'
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 /**
- * モデルは環境変数で切り替え可能にする（Vercel側で geminiPro3 / NanoBananaPro を指定できるように）
+ * 画像生成は Nano Banana Pro のみ許可する（要望）
+ * 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
  *
- * - 画像生成（Nano Banana Pro想定）:
+ * - 許可する環境変数:
  *   - DOYA_BANNER_IMAGE_MODEL / NANO_BANANA_PRO_MODEL / GEMINI_IMAGE_MODEL
- * - テキスト（プロンプト整形・チャット・コピー等、Gemini Pro 3想定）:
- *   - DOYA_BANNER_TEXT_MODEL / GEMINI_PRO3_MODEL / GEMINI_PRO_3_MODEL / GEMINI_TEXT_MODEL
+ *
+ * NOTE:
+ * - モデルIDは環境や時期で変わり得るため、以下の条件に合うものを「Nano Banana系」として許可する。
+ * - 設定値が Nano Banana系でない場合は、安全のため明示的にエラーにする（他モデルで生成されない保証）。
  */
+const NANO_BANANA_IMAGE_MODEL_DEFAULT = 'gemini-2.0-flash-exp-image-generation'
+
+function assertNanoBananaModel(model: string): void {
+  const m = String(model || '').trim()
+  const lower = m.toLowerCase()
+  const looksNanoBanana =
+    lower.includes('nano') ||
+    lower.includes('banana') ||
+    lower.includes('image-generation') ||
+    lower.includes('imagen')
+  if (!looksNanoBanana) {
+    throw new Error(
+      `画像生成モデルが Nano Banana Pro ではありません: "${m}". ` +
+        `Nano Banana Pro の画像生成モデルIDを DOYA_BANNER_IMAGE_MODEL（または NANO_BANANA_PRO_MODEL）に設定してください。`
+    )
+  }
+}
+
 function getNanoBananaImageModel(): string {
-  return (
+  const model =
     process.env.DOYA_BANNER_IMAGE_MODEL ||
     process.env.NANO_BANANA_PRO_MODEL ||
     process.env.GEMINI_IMAGE_MODEL ||
-    // 未設定時は Gemini 3 Pro Preview をデフォルトにする（要望）
-    'gemini-3-pro-preview'
-  )
+    NANO_BANANA_IMAGE_MODEL_DEFAULT
+  assertNanoBananaModel(model)
+  return model
 }
 
 function getGeminiTextModel(): string {
@@ -55,16 +76,7 @@ function getGeminiTextModel(): string {
   )
 }
 
-// 画像モデルのフォールバック（品質優先で4.0系をデフォルトに）
-function getImageFallbackModel(): string {
-  // NOTE:
-  // - 'gemini-4.0' のような曖昧なIDは環境によって存在せず、画像生成が全滅する原因になりうる。
-  // - ここは「存在しやすい」モデルをデフォルトにし、より高品質モデルは環境変数で明示指定してもらう。
-  return process.env.DOYA_BANNER_IMAGE_FALLBACK_MODEL || 'gemini-2.0-flash'
-}
-
-// 最後の保険（古い環境でも画像生成できる可能性が高い）
-const LAST_RESORT_IMAGE_MODEL = 'gemini-2.0-flash-exp'
+// 画像生成は Nano Banana Pro のみに固定するため、画像フォールバックは廃止
 const DEFAULT_TEXT_FALLBACKS = ['gemini-3-flash-preview', 'gemini-2.0-flash', 'gemini-1.5-flash'] as const
 
 // APIキーを取得（複数の環境変数に対応）
@@ -562,149 +574,136 @@ async function generateSingleBanner(
   options: GenerateOptions = {}
 ): Promise<{ image: string; model: string }> {
   const apiKey = getApiKey()
-  const preferredModel = getNanoBananaImageModel()
-  const fallbackModel = getImageFallbackModel()
-  const modelsToTry = Array.from(new Set([preferredModel, fallbackModel, 'gemini-3-pro-preview', LAST_RESORT_IMAGE_MODEL]))
+  const model = getNanoBananaImageModel()
   
   console.log('Calling Nano Banana Pro...')
-  console.log('Preferred Model:', preferredModel)
+  console.log('Model:', model)
   
   const aspectRatio = getAspectRatio(size)
   const [w, h] = size.split('x').map((v) => Number(v))
   const maxSide = Math.max(w || 0, h || 0)
   const imageSize = maxSide >= 2500 ? '4K' : '2K'
 
-  let lastErr: any = null
-  for (const model of modelsToTry) {
+  // Nano Banana Pro generateContent エンドポイント
+  const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+
+  // 参考画像/ロゴ/人物を「画像→テキスト」の順で渡す
+  const imageParts: any[] = []
+  const refs = (options?.referenceImages || []).slice(0, 2)
+  for (const ref of refs) {
     try {
-      console.log('Model:', model)
-
-      // Nano Banana Pro generateContent エンドポイント
-      const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
-
-      // 参考画像/ロゴ/人物を「画像→テキスト」の順で渡す
-      const imageParts: any[] = []
-      const refs = (options?.referenceImages || []).slice(0, 2)
-      for (const ref of refs) {
-        try {
-          const parsed = parseDataUrl(ref)
-          imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
-        } catch {
-          // ignore
-        }
-      }
-      if (options?.logoImage) {
-        try {
-          const parsed = parseDataUrl(options.logoImage)
-          imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
-        } catch {
-          // ignore
-        }
-      }
-      if (options?.personImage) {
-        try {
-          const parsed = parseDataUrl(options.personImage)
-          imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
-        } catch {
-          // ignore
-        }
-      }
-
-      // Gemini generateContent リクエスト形式（画像生成）
-      //
-      // 重要:
-      // - モデル/バージョンによって imageConfig / responseModalities の取り扱いが異なり、
-      //   不正フィールドがあると 400 で全滅 → UI が "Error: Pattern A/B/C" になる。
-      // - そのため「最小限の安定フォーマット」をまず試し、必要条件（サイズ・比率）はプロンプト側で担保する。
-      const requestBody = {
-        contents: [
-          {
-            parts: [
-              ...imageParts,
-              {
-                text: [
-                  prompt,
-                  '',
-                  '--- OUTPUT CONSTRAINTS ---',
-                  `Aspect ratio: ${aspectRatio}`,
-                  `Target size: ${size}px`,
-                  `Return an IMAGE output (PNG)`,
-                ].join('\n'),
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          // responseModalities が未対応のモデルもあるため最小限にしつつ、
-          // 対応しているモデルでは画像を返しやすくする。
-          responseModalities: ['IMAGE', 'TEXT'],
-          temperature: 0.4,
-          maxOutputTokens: 1024,
-        },
-      }
-      
-      console.log('Calling Nano Banana Pro API...')
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify(requestBody),
-      })
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Nano Banana Pro API error:', response.status, errorText)
-        throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 500)}`)
-      }
-      
-      const result = await response.json()
-      console.log('Nano Banana Pro API Response received')
-      
-      // レスポンスから画像を抽出（モデル/SDK差異に耐える）
-      const parts = result?.candidates?.[0]?.content?.parts
-      if (Array.isArray(parts)) {
-        for (const part of parts) {
-          const inline = (part as any)?.inlineData || (part as any)?.inline_data
-          if (inline?.data) {
-            console.log('Image found in Nano Banana Pro response!')
-            // どのモデルでも「指定サイズ」で揃うように、ここで必ずリサイズしてPNGに正規化する
-            // （表示・DLともにサイズがズレないようにする）
-            const rawBase64 = String(inline.data)
-            const resized = await sharp(Buffer.from(rawBase64, 'base64'))
-              .resize(
-                Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0
-                  ? { width: w, height: h, fit: 'cover', position: 'centre' }
-                  : undefined
-              )
-              .png()
-              .toBuffer()
-            return { image: `data:image/png;base64,${resized.toString('base64')}`, model }
-          }
-        }
-      }
-      
-      console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 800))
-      throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
-    } catch (e: any) {
-      lastErr = e
-      console.warn(`Image generation failed with model "${model}".`, e?.message || e)
-      continue
+      const parsed = parseDataUrl(ref)
+      imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
+    } catch {
+      // ignore
+    }
+  }
+  if (options?.logoImage) {
+    try {
+      const parsed = parseDataUrl(options.logoImage)
+      imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
+    } catch {
+      // ignore
+    }
+  }
+  if (options?.personImage) {
+    try {
+      const parsed = parseDataUrl(options.personImage)
+      imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
+    } catch {
+      // ignore
     }
   }
 
-  throw lastErr || new Error('画像生成に失敗しました')
+  // Gemini generateContent リクエスト形式（画像生成）
+  //
+  // 重要:
+  // - モデル/バージョンによって imageConfig / responseModalities の取り扱いが異なり、
+  //   不正フィールドがあると 400 で全滅 → UI が "Error: Pattern A/B/C" になる。
+  // - そのため「最小限の安定フォーマット」をまず試し、必要条件（サイズ・比率）はプロンプト側で担保する。
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          ...imageParts,
+          {
+            text: [
+              prompt,
+              '',
+              '--- OUTPUT CONSTRAINTS ---',
+              `Aspect ratio: ${aspectRatio}`,
+              `Target size: ${size}px`,
+              `Return an IMAGE output (PNG)`,
+            ].join('\n'),
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      // Nano Banana Pro で画像を返しやすくする
+      responseModalities: ['IMAGE', 'TEXT'],
+      temperature: 0.4,
+      maxOutputTokens: 1024,
+    },
+  }
+      
+  console.log('Calling Nano Banana Pro API...')
+      
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify(requestBody),
+  })
+      
+  if (!response.ok) {
+    const errorText = await response.text()
+    console.error('Nano Banana Pro API error:', response.status, errorText)
+    throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 500)}`)
+  }
+      
+  const result = await response.json()
+  console.log('Nano Banana Pro API Response received')
+      
+  // レスポンスから画像を抽出（モデル/SDK差異に耐える）
+  const parts = result?.candidates?.[0]?.content?.parts
+  if (Array.isArray(parts)) {
+    for (const part of parts) {
+      const inline = (part as any)?.inlineData || (part as any)?.inline_data
+      if (inline?.data) {
+        console.log('Image found in Nano Banana Pro response!')
+        // どのモデルでも「指定サイズ」で揃うように、ここで必ずリサイズしてPNGに正規化する
+        // （表示・DLともにサイズがズレないようにする）
+        const rawBase64 = String(inline.data)
+        const resized = await sharp(Buffer.from(rawBase64, 'base64'))
+          .resize(
+            Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0
+              ? { width: w, height: h, fit: 'cover', position: 'centre' }
+              : undefined
+          )
+          .png()
+          .toBuffer()
+        return { image: `data:image/png;base64,${resized.toString('base64')}`, model }
+      }
+    }
+  }
+      
+  console.error('No image in response:', JSON.stringify(result, null, 2).substring(0, 800))
+  throw new Error('画像が生成されませんでした。テキストのみの応答でした。')
 }
 
 // 使用モデルの表示名を取得
 export function getModelDisplayName(model: string): string {
   if (!model) return '不明'
   const lower = model.toLowerCase()
-  if (lower.includes('gemini-2.0-flash-exp') || lower.includes('imagen')) {
-    return 'Gemini 2.0 Flash (Imagen)'
+  // Nano Banana Pro（画像生成）
+  if (lower.includes('nano') || lower.includes('banana') || lower.includes('image-generation')) {
+    return 'Nano Banana Pro'
   }
+  if (lower.includes('imagen')) return 'Nano Banana Pro'
+  if (lower.includes('gemini-2.0-flash-exp')) return 'Gemini 2.0 Flash (Exp)'
   if (lower.includes('gemini-3-pro')) {
     return 'Gemini 3 Pro Preview'
   }
@@ -716,10 +715,6 @@ export function getModelDisplayName(model: string): string {
   }
   if (lower.includes('gemini-1.5-flash')) {
     return 'Gemini 1.5 Flash'
-  }
-  // Nano Banana Pro = gemini-2.0-flash-exp-image-generation
-  if (lower.includes('nano') || lower.includes('banana') || lower === 'gemini-2.0-flash-exp-image-generation') {
-    return 'Nano Banana Pro'
   }
   return model
 }
