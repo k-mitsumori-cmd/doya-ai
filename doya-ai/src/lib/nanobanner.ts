@@ -199,19 +199,36 @@ const APPEAL_TYPES = [
   { 
     type: 'A', 
     focus: 'Benefits focused', 
-    style: 'Emphasize user benefits and value, positive bright design, main copy prominently displayed',
+    style: [
+      'Visual strategy: benefit clarity (fast comprehension) WITHOUT text.',
+      '- Show the core benefit visually (product-in-use, clear outcome scene, before/after as imagery ONLY).',
+      '- Bright, optimistic lighting; clean background; one strong focal subject.',
+      '- Use supportive visual cues (icons/shapes/arrows WITHOUT text) to guide the eye to the CTA-shape.',
+    ].join('\n'),
     japanese: 'ベネフィット重視',
   },
   { 
     type: 'B', 
     focus: 'Urgency and scarcity', 
-    style: 'Create urgency with "now" "limited" "last chance" messaging, red/yellow accents, dynamic design',
+    style: [
+      'Visual strategy: urgency & scarcity (act-now energy) WITHOUT text.',
+      '- Dynamic composition (diagonal lines, motion blur accents, energetic shapes).',
+      '- Use urgency colors (red/yellow) as accents only; keep background readable for overlay.',
+      '- Add “limited/now” vibes via visual symbols: timers, streaks, burst shapes (NO numbers).',
+      '- Make the CTA-shape look extremely clickable through contrast and subtle glow.',
+    ].join('\n'),
     japanese: '緊急性・限定性',
   },
   { 
     type: 'C', 
     focus: 'Trust and credibility', 
-    style: 'Emphasize achievements "No.1" "used by millions" stats, calm professional colors, trustworthy feel',
+    style: [
+      'Visual strategy: trust & credibility (premium, safe) WITHOUT text.',
+      '- Calm, professional palette; controlled highlights; minimal clutter.',
+      '- Use credibility cues as SHAPES: award badge silhouettes, star shapes, certification-like seals (NO text).',
+      '- Product/service shown cleanly with realistic materials; high-end finish and depth.',
+      '- Strong grid alignment, generous whitespace, polished “enterprise” feel.',
+    ].join('\n'),
     japanese: '信頼性・実績',
   },
 ]
@@ -404,11 +421,13 @@ function createBannerPrompt(
     ? `${brandColors.join(', ')} (use these as the primary palette)`
     : categoryStyle.colors
 
-  let prompt = `Create a professional advertisement banner image for Japanese market.
+  let prompt = `You are a world-class performance ad art director for the Japanese market.
+Goal: generate a HIGH-CTR, premium-quality advertisement creative through VISUALS ONLY (no text).
 
 === BANNER SPECIFICATIONS ===
 Format: ${aspectRatio} banner (${width}x${height} pixels)
 Purpose: ${options.purpose || 'sns_ad'} - ${purposeStyle.layout}
+Primary KPI: maximize click-through rate (CTR) on mobile feeds.
 
 === DESIGN STYLE ===
 Industry: ${categoryStyle.style}
@@ -433,6 +452,12 @@ The user has specifically requested the following visual elements:
 IMPORTANT: Incorporate these visual elements prominently in the banner design.
 This overrides default imagery suggestions. Make these elements the main visual focus.
 ` : ''}
+
+=== CTR CREATIVE BLUEPRINT (DO THIS) ===
+1) Thumb-stopping focal point: one strong subject or outcome scene that reads in 0.5 seconds.
+2) High contrast & depth: clear foreground/background separation, premium lighting, crisp details.
+3) Clean hierarchy: minimal clutter, large simple shapes, strong directional lines guiding to CTA-shape.
+4) Mobile-first legibility: avoid tiny objects/patterns; keep negative space for overlay.
 === ⚠️ TEXT POLICY (VERY IMPORTANT) ⚠️ ===
 DO NOT render ANY text in the image:
 - No Japanese characters
@@ -442,24 +467,27 @@ DO NOT render ANY text in the image:
 
 Instead, design the banner with a clear text-safe area for overlay:
 1) A LARGE solid/gradient panel (40%+ of the banner) reserved for headline/sub/CTA overlay
-2) A CTA BUTTON SHAPE (no text inside)
+2) A CTA BUTTON SHAPE (no text inside) with high click affordance (contrast + subtle glow)
 3) Visual storytelling that matches this theme/concept (visual only): "${keyword}"
 
 If purpose is "webinar": include event-like layout cues (speaker photo area, date/time badge SHAPES) but still NO TEXT.
 
 === DESIGN REQUIREMENTS ===
 - Professional, modern, clean design
-- High contrast and vibrant colors
+- High contrast (feed-optimized) and premium color grading
 - Clear visual hierarchy
 - Mobile-friendly (elements not too small)
+- Avoid “generic stock photo” look; make it feel like a real high-performing Japanese paid ad
+- No watermark, no signature, no logos unless provided as an image, no UI screenshots
 `
 
-  // 会社名がある場合
+  // 会社名がある場合（テキスト合成はアプリ側で行うため、画像内には描かせない）
   if (options.companyName) {
     prompt += `
 === COMPANY/BRAND NAME ===
-Display "${options.companyName}" as plain brand TEXT only (smaller than main text, but visible).
-Do NOT create any logo mark, emblem, seal, watermark, or fake brand icon from the brand name.
+Do NOT render the company name as text (NO TEXT rule).
+Instead, keep a small clean corner area for potential brand overlay later.
+Do NOT create any logo mark, emblem, seal, watermark, or fake brand icon.
 `
   }
 
@@ -476,7 +504,7 @@ Maintain the logo's original colors and shape, blending it naturally with the ba
 === LOGO / BRAND MARK POLICY (VERY IMPORTANT) ===
 Do NOT include ANY logo, emblem, seal, watermark, badge, or random brand mark.
 Do NOT invent a logo or "logo-like icon".
-If a brand name is present, keep it as plain text only.
+If a brand name is present, do NOT render it (NO TEXT rule). Keep a clean corner area for overlay.
 `
   }
 
