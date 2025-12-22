@@ -601,6 +601,8 @@ export default function BannerDashboard() {
     { variant: 'A' | 'B' | 'C'; headline: string; subhead: string; cta: string }[]
   >([])
   const [usedModelDisplay, setUsedModelDisplay] = useState<string | null>(null) // 使用モデル名
+  // 初回生成直後のみアニメーションを発火（refine後はアニメーションを抑制して「ぱちぱち」防止）
+  const [justGenerated, setJustGenerated] = useState(false)
   const [error, setError] = useState('')
   const [progress, setProgress] = useState(0)
   const [phaseIndex, setPhaseIndex] = useState(0)
@@ -905,9 +907,13 @@ export default function BannerDashboard() {
       
       setProgress(100)
       await new Promise(r => setTimeout(r, 500))
+      // 初回生成時のみアニメーションを発火（refine後は抑制）
+      setJustGenerated(true)
       setGeneratedBanners(data.banners || [])
       setGeneratedCopies(Array.isArray(data.copies) ? data.copies : [])
       setUsedModelDisplay(data.usedModelDisplay || null)
+      // アニメーション完了後にフラグをリセット（ぱちぱち防止）
+      setTimeout(() => setJustGenerated(false), 600)
 
       // 実績時間を保存（次回以降の予測に使用）
       const actualMs = Date.now() - startedAt
@@ -1869,9 +1875,10 @@ export default function BannerDashboard() {
                           return (
                             <motion.div
                               key={i}
-                              initial={{ opacity: 0, scale: 0.95 }}
+                              // 初回生成時のみアニメーション発火（refine後は静かに更新）
+                              initial={justGenerated ? { opacity: 0, scale: 0.95 } : false}
                               animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: i * 0.1 }}
+                              transition={justGenerated ? { delay: i * 0.1 } : { duration: 0 }}
                               onClick={() => setSelectedBanner(i)}
                               className={`relative aspect-square rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300 border-2 ${
                                 selectedBanner === i 
@@ -1879,7 +1886,8 @@ export default function BannerDashboard() {
                                   : 'border-white shadow-sm hover:border-slate-200'
                               }`}
                             >
-                              <img src={banner} alt={`Banner ${i + 1}`} className="w-full h-full object-cover" />
+                              {/* 画像の切り替え時にぱちぱちしないようトランジション追加 */}
+                              <img src={banner} alt={`Banner ${i + 1}`} className="w-full h-full object-cover transition-opacity duration-200" />
                               <div className="absolute top-2 left-2 px-2 py-1 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-slate-100 flex items-center gap-1.5">
                                 <span className="text-xs">{insight.icon}</span>
                                 <span className="text-[9px] font-black text-slate-800 uppercase tracking-tighter">{insight.type}</span>
@@ -1982,12 +1990,12 @@ export default function BannerDashboard() {
                             </div>
                           </div>
                           
-                          {/* プレビュー画像（生成画像にテキストも含めるため、アプリ側の重ね表示はしない） */}
+                          {/* プレビュー画像（refine後も静かに切り替わるようトランジション追加） */}
                           <div className="rounded-xl overflow-hidden mb-3 shadow-md">
                             <img
                               src={generatedBanners[selectedBanner]}
                               alt="Selected Banner"
-                              className="w-full"
+                              className="w-full transition-opacity duration-300"
                             />
                           </div>
 
