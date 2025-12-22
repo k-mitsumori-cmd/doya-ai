@@ -148,10 +148,12 @@ ADMIN_BOOTSTRAP_PASSWORD=StrongP@ssw0rd123!
 有効化した場合、指定のメール/パスワードでログイン成功した瞬間に、そのメールの管理者をDBに作成/更新します。
 
 ```env
-ADMIN_BREAKGLASS_ENABLED=true
+ADMIN_BREAKGLASS_ENABLED=true  # true / 1 / on / yes でも可
 ADMIN_BREAKGLASS_EMAIL=k-mitsumori@surisuta.jp
 ADMIN_BREAKGLASS_PASSWORD=StrongP@ssw0rd123!
 ```
+
+※ `ADMIN_BREAKGLASS_PASSWORD` は **12文字以上** かつ **大文字/小文字/数字/記号** を含める必要があります。
 
 ⚠️ 使い終わったら必ず `ADMIN_BREAKGLASS_ENABLED` を `false` に戻してください。
 

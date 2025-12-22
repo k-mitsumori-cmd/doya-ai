@@ -67,7 +67,12 @@ export async function POST(request: NextRequest) {
     // - 本番で管理者の認証情報が不明になった場合の救済
     // - 有効化は明示的に ADMIN_BREAKGLASS_ENABLED=true を設定した場合のみ
     // - 指定のメールでログイン成功したら、そのメールのAdminUserをDBにupsertして復旧する
-    const breakglassEnabled = process.env.ADMIN_BREAKGLASS_ENABLED === 'true'
+    const isEnvTruthy = (v: string | undefined): boolean => {
+      const s = String(v || '').trim().toLowerCase()
+      return s === 'true' || s === '1' || s === 'yes' || s === 'y' || s === 'on'
+    }
+
+    const breakglassEnabled = isEnvTruthy(process.env.ADMIN_BREAKGLASS_ENABLED)
     const breakglassEmail = process.env.ADMIN_BREAKGLASS_EMAIL?.trim().toLowerCase()
     const breakglassPassword = process.env.ADMIN_BREAKGLASS_PASSWORD?.trim()
     if (breakglassEnabled && breakglassEmail && breakglassPassword) {
