@@ -25,7 +25,6 @@ import {
   MessageSquare,
   ArrowRight,
 } from 'lucide-react'
-import { DashboardLayout } from '@/components/DashboardLayout'
 import { FeatureGuide } from '@/components/FeatureGuide'
 
 const TARGETS = [10000, 20000, 30000, 40000, 50000, 60000]
@@ -240,8 +239,7 @@ export default function SeoNewArticlePage() {
   }
 
   return (
-    <DashboardLayout>
-      <main className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-0">
+    <main className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-0">
         {/* Header */}
         <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
@@ -468,7 +466,6 @@ export default function SeoNewArticlePage() {
             </Button>
           </div>
         </div>
-      </main>
-    </DashboardLayout>
+    </main>
   )
 }

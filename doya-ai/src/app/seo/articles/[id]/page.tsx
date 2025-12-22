@@ -9,7 +9,6 @@ import { GenerationProgress } from '@seo/components/GenerationProgress'
 import { Button } from '@seo/components/ui/Button'
 import { Badge } from '@seo/components/ui/Badge'
 import { analyzeMarkdown } from '@seo/lib/score'
-import { DashboardLayout } from '@/components/DashboardLayout'
 import {
   Download,
   Image as ImageIcon,
@@ -211,26 +210,22 @@ function SeoArticleInner() {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-            <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Loading Content...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+          <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Loading Content...</p>
         </div>
-      </DashboardLayout>
+      </div>
     )
   }
 
   if (!article) {
     return (
-      <DashboardLayout>
-        <div className="max-w-2xl mx-auto py-20 text-center">
-          <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-6" />
-          <h2 className="text-2xl font-black text-gray-900 mb-4">記事が見つかりません</h2>
-          <Button variant="primary" onClick={() => load({ showLoading: true })}>再試行</Button>
-        </div>
-      </DashboardLayout>
+      <div className="max-w-2xl mx-auto py-20 text-center">
+        <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-6" />
+        <h2 className="text-2xl font-black text-gray-900 mb-4">記事が見つかりません</h2>
+        <Button variant="primary" onClick={() => load({ showLoading: true })}>再試行</Button>
+      </div>
     )
   }
 
@@ -238,8 +233,7 @@ function SeoArticleInner() {
   const isGenerating = latestJob && latestJob.status !== 'done' && latestJob.status !== 'error'
 
   return (
-    <DashboardLayout>
-      <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-0">
+    <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-0">
         {/* Header */}
         <div className="mb-6 sm:mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="w-full md:w-auto">
@@ -469,8 +463,7 @@ function SeoArticleInner() {
             </div>
           </div>
         </div>
-      </main>
-    </DashboardLayout>
+    </main>
   )
 }
 

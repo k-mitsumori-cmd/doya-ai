@@ -22,7 +22,6 @@ import { Button } from '@seo/components/ui/Button'
 import { Card, CardBody, CardHeader, CardTitle, CardDesc } from '@seo/components/ui/Card'
 import { Badge } from '@seo/components/ui/Badge'
 import { ProgressBar } from '@seo/components/ui/ProgressBar'
-import { DashboardLayout } from '@/components/DashboardLayout'
 import { FeatureGuide } from '@/components/FeatureGuide'
 
 type SeoArticleRow = {
@@ -86,8 +85,7 @@ export default function SeoDashboardPage() {
   }, [articles, query, statusFilter])
 
   return (
-    <DashboardLayout>
-      <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-0">
+    <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-0">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8 sm:mb-10">
           <div>
@@ -232,7 +230,6 @@ export default function SeoDashboardPage() {
             )}
           </div>
         </div>
-      </main>
-    </DashboardLayout>
+    </main>
   )
 }

@@ -342,6 +342,56 @@ const GENERATION_TIPS = [
 // 生成中のアニメーション用アイコン
 const FLOATING_ICONS = ['🎨', '✨', '🚀', '💫', '🌟', '💎', '🎯', '⚡']
 
+// 生成時間の統計（ローカル保存）→ 予測時間表示に使用
+type GenStats = {
+  global?: { n: number; emaMs: number }
+  byPurpose?: Record<string, { n: number; emaMs: number }>
+}
+const GEN_STATS_KEY = 'doya_banner_gen_stats_v1'
+const GEN_STATS_ALPHA = 0.22
+const DEFAULT_PREDICT_MS = 55_000
+
+function clampMs(n: number, min: number, max: number) {
+  if (!Number.isFinite(n)) return min
+  return Math.min(Math.max(n, min), max)
+}
+
+function readGenStats(): GenStats {
+  if (typeof window === 'undefined') return {}
+  try {
+    const raw = localStorage.getItem(GEN_STATS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? (parsed as GenStats) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeGenStats(stats: GenStats) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(GEN_STATS_KEY, JSON.stringify(stats))
+  } catch {
+    // ignore
+  }
+}
+
+function updateEma(prev: { n: number; emaMs: number } | undefined, sampleMs: number) {
+  const s = clampMs(sampleMs, 3_000, 240_000)
+  if (!prev || !Number.isFinite(prev.emaMs) || prev.n <= 0) return { n: 1, emaMs: s }
+  const emaMs = prev.emaMs * (1 - GEN_STATS_ALPHA) + s * GEN_STATS_ALPHA
+  return { n: Math.min(prev.n + 1, 10_000), emaMs }
+}
+
+function formatSec(ms: number) {
+  const sec = Math.max(0, Math.round(ms / 1000))
+  if (sec < 60) return `${sec}秒`
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return `${m}分${s.toString().padStart(2, '0')}秒`
+}
+
 // ========================================
 // ヘルパー
 // ========================================
@@ -374,58 +424,6 @@ function normalizeHexClient(v: string): string | null {
   const raw = m[1]
   const hex = raw.length === 3 ? raw.split('').map((c) => c + c).join('') : raw
   return `#${hex.toUpperCase()}`
-}
-
-const OVERLAY_FONT_FAMILY_CSS =
-  'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", Helvetica, Arial'
-const OVERLAY_FONT_FAMILY_CANVAS =
-  'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", Helvetica, Arial'
-
-function computeOverlayMetrics(
-  w: number,
-  h: number,
-  fontScale: number,
-  position: 'bottom' | 'center'
-) {
-  const width = Math.max(1, Math.round(w))
-  const height = Math.max(1, Math.round(h))
-
-  const padding = Math.round(width * 0.045)
-  const panelW = width - padding * 2
-  const panelH = Math.round(height * 0.28)
-  const panelX = padding
-  const panelY =
-    position === 'center'
-      ? Math.round((height - panelH) * 0.55)
-      : height - padding - panelH
-
-  const radius = Math.round(width * 0.03)
-  const baseFont = clamp(Math.round(height * 0.06 * fontScale), 12, Math.round(height * 0.2))
-  const subFont = clamp(Math.round(baseFont * 0.55), 10, Math.round(height * 0.16))
-  const ctaFont = clamp(Math.round(baseFont * 0.58), 10, Math.round(height * 0.16))
-
-  const textPadX = Math.round(panelW * 0.06)
-  const textPadTop = Math.round(panelH * 0.14)
-  const textX = panelX + textPadX
-  const maxTextWidth = panelW * 0.88
-
-  return {
-    width,
-    height,
-    padding,
-    panelW,
-    panelH,
-    panelX,
-    panelY,
-    radius,
-    baseFont,
-    subFont,
-    ctaFont,
-    textPadX,
-    textPadTop,
-    textX,
-    maxTextWidth,
-  }
 }
 
 function buildDefaultOverlay(keyword: string, purpose: string) {
