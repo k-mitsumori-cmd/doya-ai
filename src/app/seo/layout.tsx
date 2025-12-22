@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { DashboardLayout } from '@/components/DashboardLayout'
+import { SeoAppLayout } from '@/components/SeoAppLayout'
 
 export const metadata: Metadata = {
   title: 'ドヤ記事作成',
@@ -8,8 +8,8 @@ export const metadata: Metadata = {
 
 export default function SeoLayout({ children }: { children: React.ReactNode }) {
   return (
-    <DashboardLayout>
+    <SeoAppLayout>
       {children}
-    </DashboardLayout>
+    </SeoAppLayout>
   )
 }
