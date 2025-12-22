@@ -19,7 +19,7 @@
 - **認証**: NextAuth.js (Google OAuth)
 - **データベース**: PostgreSQL (Supabase)
 - **決済**: Stripe
-- **AI**: OpenAI GPT-4
+- **AI**: Google Gemini API（Gemini 3 / Nano Banana Pro）
 
 ## URL固定ルール（重要）
 
