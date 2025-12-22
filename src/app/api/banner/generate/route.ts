@@ -11,6 +11,24 @@ const RATE_LIMIT_WINDOW = 60 * 1000 // 1分
 const RATE_LIMIT_MAX_GUEST = 3 // ゲストは1分あたり3リクエストまで
 const RATE_LIMIT_MAX_USER = 10 // ログインユーザーは1分あたり10リクエストまで
 
+// ゲストの日次上限（Cookieで簡易管理）
+const BANNER_GUEST_USAGE_COOKIE = 'doya_banner_guest_usage'
+type GuestDailyUsage = { date: string; count: number }
+
+function readGuestDailyUsage(request: NextRequest, today: string): GuestDailyUsage {
+  try {
+    const raw = request.cookies.get(BANNER_GUEST_USAGE_COOKIE)?.value
+    if (!raw) return { date: today, count: 0 }
+    const parsed = JSON.parse(raw) as any
+    const date = typeof parsed?.date === 'string' ? parsed.date : today
+    const count = Number(parsed?.count)
+    if (date !== today) return { date: today, count: 0 }
+    return { date, count: Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0 }
+  } catch {
+    return { date: today, count: 0 }
+  }
+}
+
 function checkRateLimit(ip: string, isGuest: boolean): boolean {
   const now = Date.now()
   const record = rateLimitMap.get(ip)
@@ -35,6 +53,7 @@ export async function POST(request: NextRequest) {
     // セッションチェック
     const session = await getServerSession(authOptions)
     const isGuest = !session
+    const today = new Date().toISOString().split('T')[0] // UTC日付
 
     // IPアドレスを取得
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
@@ -141,11 +160,35 @@ export async function POST(request: NextRequest) {
     // 日次上限（サーバ側で厳密に強制）
     // ==============================
     let usageInfo: null | { dailyLimit: number; dailyUsed: number; dailyRemaining: number } = null
-    if (!disableLimits && !isGuest) {
+    let guestUsage: GuestDailyUsage | null = null
+
+    if (!disableLimits && isGuest) {
+      guestUsage = readGuestDailyUsage(request, today)
+      const dailyLimit = BANNER_PRICING.guestLimit
+      const dailyUsed = guestUsage.count
+      if (dailyLimit !== -1 && dailyUsed >= dailyLimit) {
+        return NextResponse.json(
+          {
+            error: '本日の使用回数上限に達しました。プロプランにアップグレードしてください。',
+            code: 'DAILY_LIMIT_REACHED',
+            usage: {
+              dailyLimit,
+              dailyUsed,
+              dailyRemaining: 0,
+            },
+            upgradeUrl: '/banner/pricing',
+          },
+          { status: 429 }
+        )
+      }
+      usageInfo = {
+        dailyLimit,
+        dailyUsed,
+        dailyRemaining: dailyLimit === -1 ? -1 : Math.max(0, dailyLimit - dailyUsed),
+      }
+    } else if (!disableLimits && !isGuest) {
       const userId = (session?.user as any)?.id as string | undefined
       if (userId) {
-        const today = new Date().toISOString().split('T')[0] // UTC日付
-
         try {
           const current = await prisma.userServiceSubscription.upsert({
             where: { userId_serviceId: { userId, serviceId: 'banner' } },
@@ -270,7 +313,16 @@ export async function POST(request: NextRequest) {
     }
 
     // 成功時のみ使用回数を加算（1リクエスト=1回）
-    if (!disableLimits && !isGuest) {
+    if (!disableLimits && isGuest && guestUsage) {
+      guestUsage = { date: today, count: guestUsage.date === today ? guestUsage.count + 1 : 1 }
+      if (usageInfo) {
+        usageInfo = {
+          dailyLimit: usageInfo.dailyLimit,
+          dailyUsed: guestUsage.count,
+          dailyRemaining: usageInfo.dailyLimit === -1 ? -1 : Math.max(0, usageInfo.dailyLimit - guestUsage.count),
+        }
+      }
+    } else if (!disableLimits && !isGuest) {
       const userId = (session?.user as any)?.id as string | undefined
       if (userId) {
         try {
@@ -295,12 +347,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       banners: result.banners,
       isGuest,
       warning: result.error, // 一部失敗した場合の警告
       usage: usageInfo || undefined,
     })
+
+    if (!disableLimits && isGuest && guestUsage) {
+      res.cookies.set(BANNER_GUEST_USAGE_COOKIE, JSON.stringify(guestUsage), {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 45, // 45日
+      })
+    }
+
+    return res
 
   } catch (error: any) {
     console.error('Banner generation API error:', error)

@@ -14,17 +14,12 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
-  Bell,
   HelpCircle,
   LogOut,
   User,
   Zap,
-  TrendingUp,
   Layers,
-  Mail,
-  Calendar,
-  CreditCard,
-  Users
+  CreditCard
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 
@@ -49,16 +44,6 @@ const seoNavItems: NavItem[] = [
   { href: '/seo', label: 'SEOツール', icon: LayoutDashboard },
   { href: '/seo/new', label: '新規作成', icon: Sparkles },
   { href: '/seo/articles', label: '生成履歴', icon: Clock },
-]
-
-const mainNavItems: NavItem[] = [
-  { href: '/news', label: 'お知らせ', icon: Bell },
-  { href: '/mail', label: 'メール', icon: Mail },
-  { href: '/calendar', label: 'カレンダー', icon: Calendar },
-]
-
-const dataNavItems: NavItem[] = [
-  { href: '/customers', label: '顧客情報', icon: Users },
 ]
 
 // 以前の設定項目は削除
@@ -234,35 +219,6 @@ export default function DashboardSidebar({
           ))}
         </div>
 
-        {/* System Navigation */}
-        <div className="pt-6">
-          <SectionTitle title="システム" />
-          <div className="space-y-1">
-            {mainNavItems.map((item) => (
-              <NavLink key={item.href + item.label} item={item} />
-            ))}
-          </div>
-        </div>
-
-        {/* Data Section */}
-        <div className="pt-6">
-          <SectionTitle title="データベース" />
-          <div className="space-y-1">
-            {dataNavItems.map((item) => (
-              <NavLink key={item.href + item.label} item={item} />
-            ))}
-          </div>
-        </div>
-
-        {/* Settings Section */}
-        <div className="pt-6">
-          <SectionTitle title="設定" />
-          <div className="space-y-1">
-            {settingsNavItems.map((item) => (
-              <NavLink key={item.href + item.label} item={item} />
-            ))}
-          </div>
-        </div>
       </nav>
 
       {/* Side Banner */}
