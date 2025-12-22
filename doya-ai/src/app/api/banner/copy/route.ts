@@ -8,11 +8,13 @@ function getPrimaryTextModel(): string {
     process.env.GEMINI_PRO_3_MODEL ||
     process.env.GEMINI_TEXT_MODEL ||
     // 未設定時は Gemini 3 Flash（無料枠あり）を使用
+    // Gemini 2.5以下は使用しない
     // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
     'gemini-3-flash-preview'
   )
 }
-const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
+// フォールバックもGemini 3系のみ
+const GEMINI_FALLBACK_MODEL = 'gemini-3-pro-preview'
 
 const ALLOWED_PURPOSES = ['sns_ad', 'youtube', 'display', 'webinar', 'lp_hero', 'email', 'campaign'] as const
 const ALLOWED_CATEGORIES = [
@@ -69,9 +71,11 @@ function uniqStrings(arr: string[]) {
 }
 
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
-  // Gemini 3系を優先して使用（https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja）
+  // Gemini 3系のみ使用（Gemini 2.5以下は使用しない）
+  // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
   // gemini-3-flash-preview は無料枠あり
   const models = [getPrimaryTextModel(), 'gemini-3-pro-preview', 'gemini-3-flash-preview', GEMINI_FALLBACK_MODEL]
+    .filter((v, i, a) => a.indexOf(v) === i) // 重複除去
   let lastError: string | null = null
 
   for (const model of models) {
