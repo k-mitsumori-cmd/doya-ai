@@ -2126,8 +2126,13 @@ export default function BannerDashboard() {
                           <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg">
                             <Zap className="w-5 h-5 text-white" />
                           </div>
-                          <div>
-                            <h3 className="text-white font-black text-sm mb-1 tracking-tight">GENERATION COMPLETE</h3>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <h3 className="text-white font-black text-sm tracking-tight">GENERATION COMPLETE</h3>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[10px] font-bold text-white shadow-lg animate-pulse">
+                                <span className="text-[12px]">🍌</span> Nano Banana Pro
+                              </span>
+                            </div>
                             <p className="text-slate-400 text-[11px] leading-relaxed">
                               A/B/C 3つの異なる戦略に基づいたバナーを生成しました。気に入ったバナーを選択してダウンロード、またはAIチャットで微調整が可能です。
                             </p>
@@ -2219,10 +2224,15 @@ export default function BannerDashboard() {
                           {/* 画像プレビュー・操作エリア */}
                           <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 p-3 sm:p-4 shadow-sm">
                           <div className="flex items-center justify-between mb-2 sm:mb-3">
-                            <h3 className="font-bold flex items-center gap-2 text-sm sm:text-base text-gray-900">
-                              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
-                              {['A', 'B', 'C'][selectedBanner]}案 プレビュー
-                            </h3>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-bold flex items-center gap-2 text-sm sm:text-base text-gray-900">
+                                <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
+                                {['A', 'B', 'C'][selectedBanner]}案 プレビュー
+                              </h3>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[9px] font-bold text-white shadow">
+                                <span className="text-[11px]">🍌</span> Nano Banana Pro
+                              </span>
+                            </div>
                             <div className="flex gap-2">
                               {refineHistory.length > 0 && (
                                 <button
