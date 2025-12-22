@@ -10,19 +10,22 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 function getNanoBananaImageModel(): string {
+  // Nano Banana Pro ONLY（Gemini 3）
   return (
     process.env.DOYA_BANNER_IMAGE_MODEL ||
     process.env.NANO_BANANA_PRO_MODEL ||
     process.env.GEMINI_IMAGE_MODEL ||
-    'gemini-2.0-flash-exp'
+    'gemini-3-pro-image-preview'
   )
 }
 
 function getImageFallbackModel(): string {
-  return process.env.DOYA_BANNER_IMAGE_FALLBACK_MODEL || 'gemini-4.0'
+  // Nano Banana Pro の範囲内でフォールバック
+  return process.env.DOYA_BANNER_IMAGE_FALLBACK_MODEL || 'nano-banana-pro-preview'
 }
 
-const LAST_RESORT_IMAGE_MODEL = 'gemini-2.0-flash-exp'
+// 最終フォールバックも Gemini 3 系のみ（Gemini 2.0 は禁止）
+const LAST_RESORT_IMAGE_MODEL = 'gemini-3-flash-preview'
 
 interface RefineRequest {
   originalImage: string
@@ -166,22 +169,24 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
 }
 
 function createEditPrompt(instruction: string, category?: string, size?: string): string {
+  // サイズ情報から余白なし指定を作成
+  const [w, h] = (size || '').split('x').map(Number)
+  const sizeNote = w && h ? `Output dimensions: EXACTLY ${w}x${h} px. NO padding, NO letterboxing, NO borders.` : ''
   return `Edit the provided Japanese marketing banner image.
 
 USER INSTRUCTION:
 ${instruction}
 
 ${category ? `INDUSTRY: ${category}` : ''}
-${size ? `TARGET SIZE: ${size}` : ''}
+${sizeNote}
 
 === DESIGN RULES ===
-- DESIGN STYLE: Doya Banner Analytics Suite (Professional, Modern, Trustworthy).
-- MAIN COLOR: Professional Blue (#2563EB).
-- ACCENT COLORS: Vibrant Orange (#F97316) and Amber (#FBBF24).
-- Keep the overall layout unless the instruction explicitly asks to change it.
-- Do NOT add ANY logos, emblems, seals, badges, watermarks, or random brand marks.
-- Do NOT invent a company logo.
-- Prefer leaving a clean solid area for text overlay instead of rendering lots of Japanese text (which AI often gets wrong).
-- Output ONE refined image.
+- STYLE: High-CTR Japanese paid-ad creative (SNS, Display, Landing page).
+- LAYOUT: Keep text intact and readable. Update layout ONLY if user explicitly requests.
+- TEXT: If user asks to change text, render the NEW Japanese text clearly with legible font, solid/gradient panel for contrast, and NO pseudo-characters.
+- DIMENSIONS: Fill the ENTIRE canvas edge-to-edge. **ZERO** white-space or margin.
+- NO logos, emblems, seals, watermarks, or invented brand marks unless user explicitly provides or requests.
+- If user asks to add/remove elements, do so while maintaining visual hierarchy and text readability.
+- Output ONE refined image (PNG).
 `
 }
