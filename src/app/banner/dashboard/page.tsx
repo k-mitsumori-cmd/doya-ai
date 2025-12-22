@@ -1089,34 +1089,25 @@ export default function BannerDashboard() {
 
     const key = `${category}|${purpose}`
 
-    // 既に候補がある場合は「押すたびに切り替え」
+    // 既にAI生成の候補がある場合は「押すたびに切り替え」（ローカルテンプレートは混ぜない）
     if (aiSamplePool.length > 1 && aiSampleKey === key) {
       const next = (aiSampleIndex + 1) % aiSamplePool.length
       setAiSampleIndex(next)
       setKeyword(aiSamplePool[next])
-      toast.success(`サンプルを切り替えました（${next + 1}/${aiSamplePool.length}）`, { icon: '🔁' })
+      toast.success(`AIコピーを切り替えました（${next + 1}/${aiSamplePool.length}）`, { icon: '🔁' })
       return
     }
 
-    // 候補が1つしかない場合でも、テンプレ候補を足して「切り替え可能」にする
+    // 候補が1つしかない場合も、AIから再取得を試みる（ローカルテンプレートは追加しない）
     if (aiSamplePool.length === 1 && aiSampleKey === key) {
-      const expanded = uniqStrings([
-        ...aiSamplePool,
-        ...buildHighCtrSampleCopies(category, purpose),
-      ]).slice(0, 12)
-      const next = expanded.length > 1 ? 1 : 0
-      setAiSamplePool(expanded)
-      setAiSampleIndex(next)
-      setKeyword(expanded[next] || expanded[0] || '')
-      toast.success(`サンプルを切り替えました（${next + 1}/${expanded.length}）`, { icon: '🔁' })
-      return
+      // 1つしかない場合は再度AIに問い合わせてバリエーションを増やす
+      // フォールスルーして下のAI呼び出しを実行
     }
 
     try {
-      // CTR特化：AIで12案生成 → ローカルテンプレと合流して“切り替え可能”にする
+      // CTR特化：AIで12案生成（ローカルテンプレートは混ぜない）
       setIsSuggestingCopy(true)
       const base = keyword.trim()
-      const local = buildHighCtrSampleCopies(category, purpose)
 
       let ai: string[] = []
       try {
@@ -1132,37 +1123,41 @@ export default function BannerDashboard() {
         })
         const data = await res.json()
         if (res.ok && Array.isArray(data?.suggestions)) {
-          ai = data.suggestions.filter((s: any) => typeof s === 'string')
+          ai = data.suggestions.filter((s: any) => typeof s === 'string' && s.trim())
         }
       } catch {
-        // ignore (fallback to local)
+        // AI呼び出し失敗時は下でフォールバック処理
       }
 
-      const boosts = base
-        ? uniqStrings([
-            base,
-            `【今だけ】${base.replace(/^【[^】]+】/, '')}`,
-            `【無料】${base.replace(/^【[^】]+】/, '')}`,
-            `【先着】${base.replace(/^【[^】]+】/, '')}`,
-            `失敗しない：${base.replace(/^【[^】]+】/, '')}`,
-            `まずは1分で：${base.replace(/^【[^】]+】/, '')}`,
-          ])
-        : []
+      // AIが成功した場合：AIのコピーのみを使用（ローカルテンプレートは混ぜない）
+      if (ai.length > 0) {
+        // ベース文言がある場合のみ、それをバリエーションとして先頭に追加
+        const pool = base 
+          ? uniqStrings([base, ...ai]).slice(0, 24)
+          : uniqStrings(ai).slice(0, 24)
 
-      const pool = uniqStrings([...ai, ...boosts, ...local]).slice(0, 24)
-
-      setAiSampleKey(key)
-      setAiSamplePool(pool)
-      setAiSampleIndex(0)
-      setKeyword(pool[0] || local[0] || '')
-      toast.success(`クリックされやすいサンプルを入力しました（1/${Math.max(1, pool.length)}）`, { icon: '✅' })
+        setAiSampleKey(key)
+        setAiSamplePool(pool)
+        setAiSampleIndex(0)
+        setKeyword(pool[0])
+        toast.success(`AIがCTR最適化コピーを生成しました（1/${pool.length}）`, { icon: '✨' })
+      } else {
+        // AIが失敗した場合のみ、フォールバックとしてローカルテンプレートを使用
+        const local = buildHighCtrSampleCopies(category, purpose)
+        setAiSampleKey(key)
+        setAiSamplePool(local)
+        setAiSampleIndex(0)
+        setKeyword(local[0] || '')
+        toast.error('AI生成に失敗しました。テンプレートサンプルを表示しています', { icon: '⚠️' })
+      }
     } catch (e: any) {
+      // 例外発生時もフォールバック
       const pool = buildHighCtrSampleCopies(category, purpose)
       setAiSampleKey(key)
       setAiSamplePool(pool)
       setAiSampleIndex(0)
       setKeyword(pool[0])
-      toast.error(e?.message || 'サンプル生成に失敗したため、テンプレサンプルに切り替えました', { icon: '⚠️' })
+      toast.error(e?.message || 'サンプル生成に失敗しました', { icon: '⚠️' })
     } finally {
       setIsSuggestingCopy(false)
     }
