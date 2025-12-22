@@ -169,6 +169,11 @@ function assertNanoBananaOnly(model: string): void {
 
   const lower = m.toLowerCase()
 
+  // Nano Banana Pro の実モデルID（環境によりこちらが提示されることがある）
+  // 例: /api/banner/models の suggestedImageModels に出てくる
+  // - models/gemini-3-pro-image-preview
+  const isGemini3ProImagePreview = lower === 'gemini-3-pro-image-preview' || lower === 'models/gemini-3-pro-image-preview'
+
   // ユーザー要望: Gemini 2.5 以下は使用しない
   if (lower.includes('gemini-2') || lower.includes('gemini-1') || lower.includes('gemini-2.5')) {
     throw new Error(`Gemini 2.5以下（${m}）は使用できません。Nano Banana Pro のモデルIDを設定してください。`)
@@ -186,7 +191,7 @@ function assertNanoBananaOnly(model: string): void {
     lower === 'nano_banana_pro' ||
     lower === 'nano-banana'
 
-  if (!lower.includes('banana') && !isAlias) {
+  if (!lower.includes('banana') && !isAlias && !isGemini3ProImagePreview) {
     throw new Error(
       `画像生成モデル（${m}）は Nano Banana Pro ではありません。Nano Banana Pro のモデルIDを設定してください。`
     )
@@ -715,12 +720,23 @@ async function generateSingleBanner(
 ): Promise<{ image: string; model: string }> {
   const apiKey = getApiKey()
   const configuredModel = getImageModel()
-  const model = await resolveNanoBananaImageModel(apiKey, configuredModel)
+  const resolved = await resolveNanoBananaImageModel(apiKey, configuredModel)
 
-  console.log(
-    `Calling Image Generation (Nano Banana Pro) with model: ${model}...` +
-      (normalizeModelId(configuredModel) !== model ? ` (resolved from ${configuredModel})` : '')
+  // Nano Banana Pro 系モデルの範囲内でフォールバック（Gemini 3のみ）
+  const modelsToTry = Array.from(
+    new Set([
+      resolved,
+      resolved === 'nano-banana-pro-preview' ? 'gemini-3-pro-image-preview' : 'nano-banana-pro-preview',
+    ])
   )
+
+  let lastErr: any = null
+  for (const model of modelsToTry) {
+    try {
+      console.log(
+        `Calling Image Generation (Nano Banana Pro) with model: ${model}...` +
+          (normalizeModelId(configuredModel) !== model ? ` (resolved from ${configuredModel})` : '')
+      )
 
   const aspectRatio = getAspectRatio(size)
   const [w, h] = size.split('x').map((v) => Number(v))
@@ -753,6 +769,7 @@ async function generateSingleBanner(
       const requestBody = {
           contents: [
             {
+              role: 'user',
               parts: [
                 ...imageParts,
                 {
@@ -773,7 +790,7 @@ async function generateSingleBanner(
             // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja#image_generation
             responseModalities: ['IMAGE'],
             temperature: 0.4,
-            maxOutputTokens: 1024,
+            candidateCount: 1,
           },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
@@ -838,6 +855,13 @@ async function generateSingleBanner(
         .join(' / ')
 
       throw new Error(`Model ${model} returned no image data${hint ? ` (${hint})` : ''}`)
+    } catch (e: any) {
+      lastErr = e
+      continue
+    }
+  }
+
+  throw lastErr || new Error('Model returned no image data')
 }
 
 // 使用モデルの表示名を取得
@@ -845,6 +869,7 @@ export function getModelDisplayName(model: string): string {
   if (!model) return '不明'
   const lower = model.toLowerCase()
   if (lower.includes('banana')) return 'Nano Banana Pro'
+  if (lower === 'gemini-3-pro-image-preview') return 'Nano Banana Pro'
   return model
 }
 
