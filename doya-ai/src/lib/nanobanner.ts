@@ -74,9 +74,6 @@ async function resolveNanoBananaImageModel(apiKey: string, configured: string): 
   const cfg = normalizeModelId(configured)
   const lower = cfg.toLowerCase()
 
-  // 明示的に指定されていて "banana" を含むならそのまま（存在可否はAPIが検証）
-  if (lower.includes('banana') && cfg) return cfg
-
   // エイリアス（ユーザーの設定値）: nano-banana-pro / nanobanana-pro 等
   const isAlias =
     lower === 'nano-banana-pro' ||
@@ -84,7 +81,12 @@ async function resolveNanoBananaImageModel(apiKey: string, configured: string): 
     lower === 'nano_banana_pro' ||
     lower === 'nano-banana'
 
-  if (!isAlias) return cfg
+  // まずエイリアスは必ず実モデルIDへ解決する（"banana" を含むので素通りしない）
+  if (!isAlias) {
+    // 明示的に指定されていて "banana" を含むならそのまま（存在可否はAPIが検証）
+    if (lower.includes('banana') && cfg) return cfg
+    return cfg
+  }
 
   // ListModels から「Nano Bananaっぽい」+ generateContent 対応モデルを探す
   const models = await listModels(apiKey)
