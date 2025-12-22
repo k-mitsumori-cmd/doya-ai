@@ -24,6 +24,45 @@ import sharp from 'sharp'
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
+async function fetchAsBase64(url: string): Promise<string> {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`fileUri fetch failed: ${res.status}`)
+  const ab = await res.arrayBuffer()
+  return Buffer.from(ab).toString('base64')
+}
+
+function pickFirstText(parts: any[] | undefined): string {
+  if (!Array.isArray(parts)) return ''
+  const t = parts
+    .map((p: any) => (typeof p?.text === 'string' ? p.text : ''))
+    .join('\n')
+    .trim()
+  return t
+}
+
+async function extractImageBase64FromGeminiResult(result: any): Promise<{ base64: string; mimeType?: string } | null> {
+  const parts = result?.candidates?.[0]?.content?.parts
+  if (!Array.isArray(parts)) return null
+
+  for (const part of parts) {
+    // inlineData (most common)
+    const inline = (part as any)?.inlineData || (part as any)?.inline_data
+    if (inline?.data && typeof inline.data === 'string') {
+      return { base64: inline.data, mimeType: inline?.mimeType }
+    }
+
+    // fileData / file_data (some responses may return a URI)
+    const file = (part as any)?.fileData || (part as any)?.file_data
+    const fileUri = file?.fileUri || file?.file_uri
+    if (typeof fileUri === 'string' && fileUri.startsWith('http')) {
+      const b64 = await fetchAsBase64(fileUri)
+      return { base64: b64, mimeType: file?.mimeType }
+    }
+  }
+
+  return null
+}
+
 /**
  * 画像生成モデルを Nano Banana Pro のみに固定（要望）
  *
@@ -633,7 +672,9 @@ async function generateSingleBanner(
             },
           ],
           generationConfig: {
-            responseModalities: ['IMAGE', 'TEXT'],
+            // 画像生成は IMAGE のみを要求（テキストのみの返答を防ぐ）
+            // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja#image_generation
+            responseModalities: ['IMAGE'],
             temperature: 0.4,
             maxOutputTokens: 1024,
           },
@@ -667,29 +708,39 @@ async function generateSingleBanner(
             
       const result = await response.json()
             
-      // レスポンスから画像を抽出
-      const parts = result?.candidates?.[0]?.content?.parts
-      if (Array.isArray(parts)) {
-        for (const part of parts) {
-          const inline = (part as any)?.inlineData || (part as any)?.inline_data
-          if (inline?.data) {
-            console.log(`Image generated successfully with ${model}`)
-            const rawBase64 = String(inline.data)
-            const [w_num, h_num] = size.split('x').map(v => Number(v))
-            const resized = await sharp(Buffer.from(rawBase64, 'base64'))
-              .resize(
-                Number.isFinite(w_num) && Number.isFinite(h_num) && w_num > 0 && h_num > 0
-                  ? { width: w_num, height: h_num, fit: 'cover', position: 'centre' }
-                  : undefined
-              )
-              .png()
-              .toBuffer()
-            return { image: `data:image/png;base64,${resized.toString('base64')}`, model }
-          }
-        }
+      // ブロック/フィードバック（あれば原因に含める）
+      const blockReason =
+        result?.promptFeedback?.blockReason ||
+        result?.prompt_feedback?.block_reason ||
+        ''
+
+      // レスポンスから画像を抽出（inlineData / fileData 両対応）
+      const extracted = await extractImageBase64FromGeminiResult(result)
+      if (extracted?.base64) {
+        console.log(`Image generated successfully with ${model}`)
+        const rawBase64 = String(extracted.base64)
+        const [w_num, h_num] = size.split('x').map(v => Number(v))
+        const resized = await sharp(Buffer.from(rawBase64, 'base64'))
+          .resize(
+            Number.isFinite(w_num) && Number.isFinite(h_num) && w_num > 0 && h_num > 0
+              ? { width: w_num, height: h_num, fit: 'cover', position: 'centre' }
+              : undefined
+          )
+          .png()
+          .toBuffer()
+        return { image: `data:image/png;base64,${resized.toString('base64')}`, model }
       }
 
-      throw new Error(`Model ${model} returned no image data`)
+      const parts = result?.candidates?.[0]?.content?.parts
+      const text = pickFirstText(parts)
+      const hint = [
+        blockReason ? `blockReason=${blockReason}` : '',
+        text ? `text="${text.slice(0, 180)}"` : '',
+      ]
+        .filter(Boolean)
+        .join(' / ')
+
+      throw new Error(`Model ${model} returned no image data${hint ? ` (${hint})` : ''}`)
 }
 
 // 使用モデルの表示名を取得
