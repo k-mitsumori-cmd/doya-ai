@@ -531,7 +531,7 @@ async function generateSingleBanner(
   prompt: string,
   size: string = '1080x1080',
   options: GenerateOptions = {}
-): Promise<string> {
+): Promise<{ image: string; model: string }> {
   const apiKey = getApiKey()
   const preferredModel = getNanoBananaImageModel()
   const fallbackModel = getImageFallbackModel()
@@ -652,7 +652,7 @@ async function generateSingleBanner(
               )
               .png()
               .toBuffer()
-            return `data:image/png;base64,${resized.toString('base64')}`
+            return { image: `data:image/png;base64,${resized.toString('base64')}`, model }
           }
         }
       }
@@ -667,6 +667,32 @@ async function generateSingleBanner(
   }
 
   throw lastErr || new Error('画像生成に失敗しました')
+}
+
+// 使用モデルの表示名を取得
+export function getModelDisplayName(model: string): string {
+  if (!model) return '不明'
+  const lower = model.toLowerCase()
+  if (lower.includes('gemini-2.0-flash-exp') || lower.includes('imagen')) {
+    return 'Gemini 2.0 Flash (Imagen)'
+  }
+  if (lower.includes('gemini-3-pro')) {
+    return 'Gemini 3 Pro Preview'
+  }
+  if (lower.includes('gemini-3-flash')) {
+    return 'Gemini 3 Flash Preview'
+  }
+  if (lower.includes('gemini-2.0-flash')) {
+    return 'Gemini 2.0 Flash'
+  }
+  if (lower.includes('gemini-1.5-flash')) {
+    return 'Gemini 1.5 Flash'
+  }
+  // Nano Banana Pro = gemini-2.0-flash-exp-image-generation
+  if (lower.includes('nano') || lower.includes('banana') || lower === 'gemini-2.0-flash-exp-image-generation') {
+    return 'Nano Banana Pro'
+  }
+  return model
 }
 
 // Gemini（テキストモデル）で「画像生成用プロンプト」を短く最適化（失敗したら元プロンプトを使う）
@@ -748,7 +774,7 @@ export async function generateBanners(
   keyword: string,
   size: string = '1080x1080',
   options: GenerateOptions = {}
-): Promise<{ banners: string[]; error?: string }> {
+): Promise<{ banners: string[]; error?: string; usedModel?: string }> {
   const imageModel = getNanoBananaImageModel()
   const textModel = getGeminiTextModel()
 
@@ -778,6 +804,7 @@ export async function generateBanners(
   try {
     const banners: string[] = []
     const errors: string[] = []
+    let usedModel: string | undefined = undefined
     
     // 3パターン順次生成（Nano Banana Pro のみ使用）
     for (const appealType of appealTypes) {
@@ -792,10 +819,14 @@ export async function generateBanners(
           console.warn('Gemini prompt refine failed. Using base prompt.', e?.message || e)
         }
 
-        const banner = await generateSingleBanner(finalPrompt, size, options)
+        const result = await generateSingleBanner(finalPrompt, size, options)
         
-        banners.push(banner)
-        console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generated successfully!`)
+        banners.push(result.image)
+        // 最初に成功したモデルを記録
+        if (!usedModel) {
+          usedModel = result.model
+        }
+        console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generated successfully with model: ${result.model}`)
         
         // レート制限を避けるため待機
         if (appealTypes.indexOf(appealType) < appealTypes.length - 1) {
@@ -810,13 +841,14 @@ export async function generateBanners(
       }
     }
 
-    console.log(`Generation complete.`)
+    console.log(`Generation complete. Used model: ${usedModel || 'unknown'}`)
 
     // 全て失敗した場合
     if (banners.every(b => b.startsWith('https://placehold'))) {
       return {
         banners,
-        error: `⚠️ Nano Banana Pro で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・GOOGLE_GENAI_API_KEY が正しいか確認\n・APIキーが有効になっているか確認\n・Google AI Studio でAPIキーを再発行してみてください`
+        error: `⚠️ Nano Banana Pro で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・GOOGLE_GENAI_API_KEY が正しいか確認\n・APIキーが有効になっているか確認\n・Google AI Studio でAPIキーを再発行してみてください`,
+        usedModel: undefined,
       }
     }
 
@@ -825,11 +857,12 @@ export async function generateBanners(
     if (failedCount > 0) {
       return { 
         banners,
-        error: `⚠️ ${failedCount}件のパターンで生成に失敗しました。赤いプレースホルダーが表示されているパターンは再試行してください。`
+        error: `⚠️ ${failedCount}件のパターンで生成に失敗しました。赤いプレースホルダーが表示されているパターンは再試行してください。`,
+        usedModel,
       }
     }
 
-    return { banners }
+    return { banners, usedModel }
   } catch (error: any) {
     console.error('generateBanners error:', error)
     return { 
