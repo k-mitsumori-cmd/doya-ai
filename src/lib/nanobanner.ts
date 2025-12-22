@@ -417,6 +417,10 @@ export interface GenerateOptions {
   purpose?: string
   companyName?: string
   imageDescription?: string  // ユーザーが入力したイメージ説明（例: "青空の下でジャンプする女性"）
+  // 画像内に描画するテキスト（アプリ側のテキストレイヤーで合成しない）
+  headlineText?: string
+  subheadText?: string
+  ctaText?: string
   hasLogo?: boolean
   hasPerson?: boolean
   logoDescription?: string  // ロゴの説明（例: "青い円形のロゴ"）
@@ -443,16 +447,20 @@ function createYouTubeThumbnailPrompt(
 ): string {
   const [width, height] = size.split('x')
 
-  let prompt = `Create a highly clickable YouTube thumbnail image (NO TEXT - visual design only).
+  const headline = (options.headlineText || keyword || '').trim()
+  const subhead = (options.subheadText || '').trim()
+  const cta = (options.ctaText || '').trim()
+  const company = (options.companyName || '').trim()
+
+  let prompt = `Create a highly clickable YouTube thumbnail image WITH readable Japanese text.
 
 === YOUTUBE THUMBNAIL SPECIFICATIONS ===
 Format: 16:9 landscape thumbnail (${width}x${height} pixels)
 Platform: YouTube - must compete for attention among many thumbnails
-Goal: MAXIMIZE click-through rate (CTR) through VISUALS ONLY
+Goal: MAXIMIZE click-through rate (CTR) using bold visuals AND readable Japanese text
 
 === THUMBNAIL CONCEPT/THEME ===
 "${keyword}"
-Express this concept through visuals, NOT through text.
 ${options.imageDescription ? `
 === 🎨 USER-SPECIFIED VISUAL IMAGE (IMPORTANT) ===
 The user has specifically requested the following visual elements:
@@ -463,24 +471,19 @@ This is a high priority request from the user.
 === STYLE: ${appealType.focus} ===
 ${appealType.style}
 
-=== ⚠️⚠️⚠️ CRITICAL: NO TEXT RULE ⚠️⚠️⚠️ ===
-**ABSOLUTELY DO NOT INCLUDE ANY TEXT**
-- NO Japanese characters
-- NO English text  
-- NO numbers
-- NO letters of any kind
-- Text will be overlaid separately in post-production
+=== TEXT TO RENDER (MUST BE EXACT) ===
+Render these strings exactly as written. Do NOT translate, do NOT paraphrase, do NOT add extra words.
+- Headline (必須): ${headline || '(empty)'}
+${subhead ? `- Subhead (任意): ${subhead}` : ''}
+${cta ? `- CTA (任意): ${cta}` : ''}
+${company ? `- Brand (任意): ${company}` : ''}
 
-Instead, create PURE VISUAL DESIGN with:
-1. **LARGE TEXT PLACEHOLDER AREA** (40% of thumbnail)
-   - Solid color block or gradient area
-   - Position on right side or bottom
-   - High contrast background for text overlay later
-
-2. **VISUAL STORYTELLING**
-   - Express the concept through imagery only
-   - Use colors, shapes, and composition
-   - Include visual metaphors (arrows, icons, expressions)
+=== JAPANESE TEXT QUALITY RULES (CRITICAL) ===
+- Text must be PERFECTLY LEGIBLE Japanese (no garbling, no pseudo-characters)
+- Use a clean Japanese font style (Noto Sans JP-like)
+- Use strong contrast + solid/gradient panel behind text
+- Headline is very large, 1–2 lines max. Avoid long sentences.
+- Do NOT include any other text besides the provided strings above.
 
 === YOUTUBE THUMBNAIL DESIGN PRINCIPLES ===
 1. **HIGH CONTRAST & SATURATION**:
@@ -492,7 +495,7 @@ Instead, create PURE VISUAL DESIGN with:
    - One clear visual focal point
    - Use arrows, circles, or lines to direct attention
    - Left side for human faces
-   - Right side reserved for text overlay area
+   - Keep a clean, high-contrast area for the headline text block
 
 3. **EMOTIONAL IMPACT**:
    - Include space for expressive human face if relevant
@@ -500,8 +503,8 @@ Instead, create PURE VISUAL DESIGN with:
    - Use visual metaphors (glow effects, dramatic lighting)
 
 4. **AVOID**:
-   - Any text or characters
-   - Cluttered backgrounds
+   - Tiny/low-contrast text
+   - Cluttered backgrounds behind text
    - Generic stock photo feel
    - Too many competing elements
 `
@@ -514,14 +517,14 @@ Instead, create PURE VISUAL DESIGN with:
 I am providing a person's photo to include in this thumbnail.
 Position them on the left third of the frame.
 The person should have an engaging, expressive pose.
-Leave the right side completely clear for text overlay.
+Leave space for the headline/subhead/CTA text on the right or bottom.
 `
     } else {
       prompt += `
 === PERSON PLACEHOLDER ===
 Include space for an expressive human face on the left side.
 ${options.personDescription ? `Person appearance: ${options.personDescription}` : 'A person with an engaging, expressive reaction'}
-The right side must remain clear for text overlay.
+Leave space for the headline/subhead/CTA text on the right or bottom.
 `
     }
   }
@@ -535,13 +538,12 @@ Avoid introducing new dominant colors. Minor neutrals are allowed.
 ` : ''}
 === FINAL OUTPUT ===
 Generate a YouTube thumbnail that:
-1. Is instantly eye-catching with PURE VISUAL design
-2. Has NO text, NO characters, NO letters whatsoever
-3. Has a clear area reserved for text overlay (solid/gradient block)
-4. Conveys the emotion and theme through visuals only
-5. Would make viewers curious to click
+1. Is instantly eye-catching with bold visuals
+2. Has the provided Japanese text rendered clearly and correctly
+3. Uses a solid/gradient text panel for readability
+4. Would make viewers curious to click
 
-Create the thumbnail now - REMEMBER: NO TEXT AT ALL.`
+Create the thumbnail now.`
 
   return prompt
 }
@@ -567,9 +569,10 @@ function createBannerPrompt(
     return createYouTubeThumbnailPrompt(keyword, size, appealType, options)
   }
 
-  // NOTE:
-  // テキストは「アプリ側のテキストレイヤー」で合成するため、
-  // 画像モデルに文字を描かせない（英語っぽい謎文字/日本語崩れを根絶する）
+  const headline = (options.headlineText || keyword || '').trim()
+  const subhead = (options.subheadText || '').trim()
+  const cta = (options.ctaText || '').trim()
+  const company = (options.companyName || '').trim()
 
   const brandColors = Array.isArray(options.brandColors)
     ? options.brandColors.filter((c) => typeof c === 'string' && c.trim().length > 0).slice(0, 8)
@@ -579,7 +582,7 @@ function createBannerPrompt(
     : categoryStyle.colors
 
   let prompt = `You are a world-class performance ad art director for the Japanese market.
-Goal: generate a HIGH-CTR, premium-quality advertisement creative through VISUALS ONLY (no text).
+Goal: generate a HIGH-CTR, premium-quality advertisement creative WITH readable Japanese text.
 
 === BANNER SPECIFICATIONS ===
 Format: ${aspectRatio} banner (${width}x${height} pixels)
@@ -613,21 +616,22 @@ This overrides default imagery suggestions. Make these elements the main visual 
 === CTR CREATIVE BLUEPRINT (DO THIS) ===
 1) Thumb-stopping focal point: one strong subject or outcome scene that reads in 0.5 seconds.
 2) High contrast & depth: clear foreground/background separation, premium lighting, crisp details.
-3) Clean hierarchy: minimal clutter, large simple shapes, strong directional lines guiding to CTA-shape.
-4) Mobile-first legibility: avoid tiny objects/patterns; keep negative space for overlay.
-=== ⚠️ TEXT POLICY (VERY IMPORTANT) ⚠️ ===
-DO NOT render ANY text in the image:
-- No Japanese characters
-- No English letters
-- No numbers
-- No punctuation
+3) Clean hierarchy: minimal clutter, large simple shapes, strong directional lines guiding to CTA.
+4) Mobile-first legibility: avoid tiny objects/patterns; ensure text is readable on mobile feeds.
 
-Instead, design the banner with a clear text-safe area for overlay:
-1) A LARGE solid/gradient panel (40%+ of the banner) reserved for headline/sub/CTA overlay
-2) A CTA BUTTON SHAPE (no text inside) with high click affordance (contrast + subtle glow)
-3) Visual storytelling that matches this theme/concept (visual only): "${keyword}"
+=== TEXT TO RENDER (MUST BE EXACT) ===
+Render these strings exactly as written. Do NOT translate, do NOT paraphrase, do NOT add extra words.
+- Headline (必須): ${headline || '(empty)'}
+${subhead ? `- Subhead (任意): ${subhead}` : ''}
+${cta ? `- CTA (任意): ${cta}` : ''}
+${company ? `- Brand (任意): ${company}` : ''}
 
-If purpose is "webinar": include event-like layout cues (speaker photo area, date/time badge SHAPES) but still NO TEXT.
+=== JAPANESE TEXT QUALITY RULES (CRITICAL) ===
+- Text must be PERFECTLY LEGIBLE Japanese (no garbling, no pseudo-characters)
+- Use a clean Japanese font style (Noto Sans JP-like)
+- Use a solid/gradient panel behind text for contrast (no busy background behind letters)
+- Headline is very large, 1–2 lines max. Avoid long sentences.
+- Do NOT include any other text besides the provided strings above.
 
 === DESIGN REQUIREMENTS ===
 - Professional, modern, clean design
@@ -638,13 +642,13 @@ If purpose is "webinar": include event-like layout cues (speaker photo area, dat
 - No watermark, no signature, no logos unless provided as an image, no UI screenshots
 `
 
-  // 会社名がある場合（テキスト合成はアプリ側で行うため、画像内には描かせない）
+  // 会社名がある場合（画像内に描画してOK）
   if (options.companyName) {
     prompt += `
 === COMPANY/BRAND NAME ===
-Do NOT render the company name as text (NO TEXT rule).
-Instead, keep a small clean corner area for potential brand overlay later.
-Do NOT create any logo mark, emblem, seal, watermark, or fake brand icon.
+Render the provided company/brand name exactly (Japanese/English as provided).
+Keep it small and clean (e.g., bottom-left), so the headline remains dominant.
+Do NOT invent any logo mark, emblem, seal, watermark, or fake brand icon.
 `
   }
 
