@@ -25,24 +25,25 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 /**
  * 画像生成モデルを設定する
- * - デフォルト: gemini-3-pro-image-preview（Gemini 3 Pro Image、最新の画像生成モデル）
- * - Gemini 3系のみ使用（Gemini 2.5以下は使用しない）
+ * 
+ * Gemini 3系は現在テキスト生成専用で、画像生成には対応していません。
+ * 画像生成には gemini-2.0-flash-exp または Imagen 3 を使用する必要があります。
  *
- * 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
+ * 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
  * 
  * 利用可能な画像生成モデル:
- * - gemini-3-pro-image-preview (Gemini 3 Pro Image, 推奨)
- * - gemini-3-flash-preview (Gemini 3 Flash)
+ * - gemini-2.0-flash-exp (Gemini 2.0 Flash Experimental、画像生成対応)
+ * - imagen-3.0-generate-002 (Imagen 3、高品質画像生成)
  */
-const IMAGE_MODEL_DEFAULT = 'gemini-3-pro-image-preview'
+const IMAGE_MODEL_DEFAULT = 'gemini-2.0-flash-exp'
 
 function assertImageModel(model: string): void {
   const m = String(model || '').trim()
   const lower = m.toLowerCase()
   
-  // Gemini 2.5以下は使用しない
-  if (lower.includes('gemini-2') || lower.includes('gemini-1')) {
-    console.warn(`Gemini 2.5以下 (${m}) は使用しません。Gemini 3 Pro Image を使用します。`)
+  // Gemini 3系は画像生成に対応していない
+  if (lower.includes('gemini-3')) {
+    console.warn(`Gemini 3 (${m}) は画像生成に対応していません。Gemini 2.0 Flash Exp を使用します。`)
   }
 }
 
@@ -56,12 +57,11 @@ function getImageModel(): string {
   assertImageModel(model)
   
   const lower = model.toLowerCase()
-  // Gemini 2.5以下は使用しないのでデフォルト（Gemini 3）を使用
-  if (lower.includes('gemini-2') || lower.includes('gemini-1')) {
+  // Gemini 3系は画像生成に対応していないのでデフォルトを使用
+  if (lower.includes('gemini-3')) {
     return IMAGE_MODEL_DEFAULT
   }
 
-  // Gemini 3系のみ使用
   return model
 }
 
@@ -77,7 +77,7 @@ function getGeminiTextModel(): string {
   )
 }
 
-// テキスト生成のフォールバックモデル（Gemini 3系のみ）
+// テキスト生成のフォールバックモデル（Gemini 3系を使用）
 const DEFAULT_TEXT_FALLBACKS = ['gemini-3-pro-preview', 'gemini-3-flash-preview'] as const
 
 // APIキーを取得（複数の環境変数に対応）
@@ -578,11 +578,11 @@ async function generateSingleBanner(
   const primaryModel = getImageModel()
   
   // 画像生成モデルの候補（失敗時に順次試行）
-  // Gemini 3 Pro Image を優先（https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja）
+  // Gemini 2.0 Flash Exp が画像生成に対応（Gemini 3は画像生成非対応）
   const modelsToTry = [
     primaryModel,
-    'gemini-3-pro-image-preview',
-    'gemini-3-flash-preview',
+    'gemini-2.0-flash-exp',
+    'imagen-3.0-generate-002',
   ].filter((v, i, a) => a.indexOf(v) === i) // 重複除去
 
   let lastError: Error | null = null
@@ -594,7 +594,64 @@ async function generateSingleBanner(
       const aspectRatio = getAspectRatio(size)
       const [w, h] = size.split('x').map((v) => Number(v))
       
-      // Gemini 3 Pro Image / Flash 用のAPIコール（generateContent）
+      // Imagen API は predict エンドポイントを使用
+      const isImagen = model.includes('imagen')
+      
+      if (isImagen) {
+        // Imagen 3 用のAPIコール
+        const endpoint = `${GEMINI_API_BASE}/models/${model}:predict`
+        
+        const requestBody = {
+          instances: [
+            {
+              prompt: prompt + `\n\nAspect ratio: ${aspectRatio}, Target size: ${size}px`,
+            }
+          ],
+          parameters: {
+            sampleCount: 1,
+            aspectRatio: aspectRatio,
+          }
+        }
+        
+        const response = await fetch(`${endpoint}?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        })
+        
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.warn(`Model ${model} failed:`, response.status, errorText)
+          throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 200)}`)
+        }
+        
+        const result = await response.json()
+        
+        // Imagen のレスポンスから画像を抽出
+        const predictions = result?.predictions
+        if (Array.isArray(predictions) && predictions.length > 0) {
+          const imageData = predictions[0]?.bytesBase64Encoded || predictions[0]?.image?.bytesBase64Encoded
+          if (imageData) {
+            console.log(`Image generated successfully with ${model}`)
+            const [w_num, h_num] = size.split('x').map(v => Number(v))
+            const resized = await sharp(Buffer.from(imageData, 'base64'))
+              .resize(
+                Number.isFinite(w_num) && Number.isFinite(h_num) && w_num > 0 && h_num > 0
+                  ? { width: w_num, height: h_num, fit: 'cover', position: 'centre' }
+                  : undefined
+              )
+              .png()
+              .toBuffer()
+            return { image: `data:image/png;base64,${resized.toString('base64')}`, model }
+          }
+        }
+        
+        throw new Error(`Model ${model} returned no image data`)
+      }
+      
+      // Gemini 2.0 Flash Exp 用のAPIコール（generateContent）
       const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
 
       // 参考画像/ロゴ/人物を「画像→テキスト」の順で渡す

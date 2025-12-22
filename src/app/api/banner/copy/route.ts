@@ -13,8 +13,8 @@ function getPrimaryTextModel(): string {
     'gemini-3-flash-preview'
   )
 }
-// フォールバックもGemini 3系のみ
-const GEMINI_FALLBACK_MODEL = 'gemini-3-pro-preview'
+// フォールバックもGemini 3系（テキスト生成はGemini 3対応）
+const GEMINI_FALLBACK_MODEL = 'gemini-3-flash-preview'
 
 const ALLOWED_PURPOSES = ['sns_ad', 'youtube', 'display', 'webinar', 'lp_hero', 'email', 'campaign'] as const
 const ALLOWED_CATEGORIES = [
