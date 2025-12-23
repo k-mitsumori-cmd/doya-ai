@@ -1288,7 +1288,7 @@ export default function BannerDashboard() {
       } else {
         toast.error('本日の生成上限に達しました。プロプランにアップグレードしてください。', { duration: 6000 })
         try {
-          const upgradeUrl = '/banner/pricing'
+          const upgradeUrl = '/banner'
           window.open(upgradeUrl, '_self')
         } catch {}
       }

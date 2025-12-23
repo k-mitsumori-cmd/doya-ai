@@ -102,7 +102,7 @@ function PricingContent() {
       <header className="bg-white border-b-2 border-gray-100">
         <div className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link
-            href={session ? '/banner/dashboard' : '/'}
+            href={session ? '/banner' : '/'}
             className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -195,13 +195,13 @@ function PricingContent() {
                 </ul>
                 {!session ? (
                   <button
-                    onClick={() => signIn('google', { callbackUrl: '/banner/dashboard' })}
+                    onClick={() => signIn('google', { callbackUrl: '/banner' })}
                     className="w-full py-4 bg-white border-2 border-gray-300 hover:bg-gray-100 text-gray-900 font-bold rounded-xl transition-colors text-lg"
                   >
                     無料で登録する
                   </button>
                 ) : (
-                  <Link href="/banner/dashboard">
+                  <Link href="/banner">
                     <button className="w-full py-4 bg-white border-2 border-gray-300 hover:bg-gray-100 text-gray-900 font-bold rounded-xl transition-colors text-lg">
                       ダッシュボードへ
                     </button>

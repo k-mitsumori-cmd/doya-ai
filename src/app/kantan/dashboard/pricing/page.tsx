@@ -8,7 +8,7 @@ import {
   Home, Cpu, Clock, Settings, HelpCircle, DollarSign,
   MessageSquare, BarChart3, ChevronRight, Shield, Users,
   TrendingUp, Gift, ArrowUpRight, CheckCircle2, Timer,
-  CreditCard, Receipt, AlertCircle, RefreshCw, Menu
+  CreditCard, Receipt, AlertCircle, RefreshCw, Menu, Calendar
 } from 'lucide-react'
 import { KANTAN_PRICING, getUserUsage, getGuestUsage } from '@/lib/pricing'
 

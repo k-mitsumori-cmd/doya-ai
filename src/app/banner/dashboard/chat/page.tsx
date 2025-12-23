@@ -592,7 +592,7 @@ export default function BannerChatPage() {
                           <div className="pt-2 border-t border-slate-200">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">ビジュアル指示</p>
                             <p className="text-xs text-slate-600 leading-relaxed italic font-medium">
-                              "{proposedSpec.imageDescription}"
+                              「{proposedSpec.imageDescription}」
                             </p>
                           </div>
                         )}

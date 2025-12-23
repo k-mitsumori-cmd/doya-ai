@@ -790,7 +790,7 @@ export async function POST(request: NextRequest) {
                 error: '本日の生成上限に達しました。',
                 code: 'DAILY_LIMIT_REACHED',
                 usage: { dailyLimit, dailyUsed: used, dailyRemaining: Math.max(0, dailyLimit - used) },
-                upgradeUrl: planRaw === 'FREE' ? '/banner/pricing' : (HIGH_USAGE_CONTACT_URL || '/banner/pricing'),
+                upgradeUrl: planRaw === 'FREE' ? '/banner' : (HIGH_USAGE_CONTACT_URL || '/banner'),
               },
               { status: 429 }
             )
