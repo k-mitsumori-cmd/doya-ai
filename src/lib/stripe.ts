@@ -165,17 +165,109 @@ export async function createCustomerPortalSession({
   customerId: string
   returnUrl: string
 }) {
+  const configurationId = await getOrCreateCustomerPortalConfigurationId()
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
     return_url: returnUrl,
     // Stripeダッシュボードで作成した「カスタマーポータル設定」を指定すると、
     // 解約/プラン変更などの機能を確実に有効化できる
-    configuration: process.env.STRIPE_PORTAL_CONFIGURATION_ID || undefined,
+    configuration: configurationId || undefined,
     // 日本語化
     locale: 'ja',
   })
 
   return session
+}
+
+// ========================================
+// Customer Portal 設定（解約/プラン変更を有効化）
+// ========================================
+// - 環境変数 STRIPE_PORTAL_CONFIGURATION_ID があればそれを使う
+// - なければ Stripe 側に既存設定があれば再利用し、なければ作成する
+//   ※ Serverlessでも過剰作成にならないよう「list→metadata一致」を優先する
+async function getOrCreateCustomerPortalConfigurationId(): Promise<string | null> {
+  const configured = String(process.env.STRIPE_PORTAL_CONFIGURATION_ID || '').trim()
+  if (configured) return configured
+
+  // 価格IDが未設定（ダミー）の環境では、作成してもプラン変更の候補が空になるため
+  // 設定IDなしでセッションを作る（Stripe側のデフォルト設定に委ねる）
+  const realPriceIds = collectRealPriceIds()
+  if (realPriceIds.length === 0) return null
+
+  try {
+    const existing = await stripe.billingPortal.configurations.list({ limit: 100 })
+    const found = existing.data.find((c) => (c.metadata as any)?.app === 'doya-ai')
+    if (found?.id) return found.id
+
+    const created = await stripe.billingPortal.configurations.create({
+      business_profile: {
+        headline: '契約内容の変更・解約はこちらから行えます。',
+      },
+      features: {
+        // 支払い方法の更新
+        payment_method_update: { enabled: true },
+        // 請求履歴
+        invoice_history: { enabled: true },
+        // サブスクの解約（Stripe側で「解約」ボタンを表示）
+        subscription_cancel: {
+          enabled: true,
+          mode: 'at_period_end',
+          // Stripeがサポートしている範囲で理由入力を有効化
+          cancellation_reason: { enabled: true },
+        },
+        // サブスクのプラン変更（アップ/ダウン両方）
+        subscription_update: {
+          enabled: true,
+          default_allowed_updates: ['price'],
+          // 変更候補をこのアプリの価格に絞る（他商品を誤って表示しない）
+          products: [
+            {
+              product: process.env.STRIPE_PRODUCT_BANNER_ID || undefined,
+              prices: realPriceIds,
+            },
+          ].filter((p: any) => !!p.product || (p.prices?.length || 0) > 0),
+        },
+      },
+      metadata: {
+        app: 'doya-ai',
+      },
+    })
+
+    return created?.id || null
+  } catch {
+    return null
+  }
+}
+
+function collectRealPriceIds(): string[] {
+  const vals = [
+    // SEO
+    process.env.STRIPE_PRICE_SEO_PRO_MONTHLY,
+    process.env.STRIPE_PRICE_SEO_PRO_YEARLY,
+    process.env.STRIPE_PRICE_SEO_BUSINESS_MONTHLY,
+    process.env.STRIPE_PRICE_SEO_BUSINESS_YEARLY,
+    // Banner（新プラン）
+    process.env.STRIPE_PRICE_BANNER_PRO_MONTHLY,
+    process.env.STRIPE_PRICE_BANNER_PRO_YEARLY,
+    process.env.STRIPE_PRICE_BANNER_ENTERPRISE_MONTHLY,
+    process.env.STRIPE_PRICE_BANNER_ENTERPRISE_YEARLY,
+    // Banner（互換）
+    process.env.STRIPE_PRICE_BANNER_BASIC_MONTHLY,
+    process.env.STRIPE_PRICE_BANNER_BASIC_YEARLY,
+    process.env.STRIPE_PRICE_BANNER_STARTER_MONTHLY,
+    process.env.STRIPE_PRICE_BANNER_STARTER_YEARLY,
+    process.env.STRIPE_PRICE_BANNER_BUSINESS_MONTHLY,
+    process.env.STRIPE_PRICE_BANNER_BUSINESS_YEARLY,
+    // Bundle
+    process.env.STRIPE_PRICE_BUNDLE_MONTHLY,
+    process.env.STRIPE_PRICE_BUNDLE_YEARLY,
+  ]
+    .map((v) => String(v || '').trim())
+    .filter(Boolean)
+    .filter((v) => v.startsWith('price_'))
+
+  // 重複排除
+  return Array.from(new Set(vals))
 }
 
 // ========================================
