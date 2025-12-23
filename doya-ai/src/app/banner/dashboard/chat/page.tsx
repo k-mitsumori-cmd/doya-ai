@@ -64,6 +64,79 @@ function updateEma(prev: number, next: number, alpha = 0.25) {
   return Math.round(p * (1 - alpha) + n * alpha)
 }
 
+async function safeReadJson(res: Response): Promise<{ ok: boolean; status: number; data: any; text: string }> {
+  const status = res.status
+  const text = await res.text().catch(() => '')
+  let data: any = null
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = null
+  }
+  return { ok: res.ok, status, data, text }
+}
+
+function normalizeNonJsonApiError(status: number, text: string): string {
+  const t = String(text || '').trim()
+  if (status === 413 || /Request Entity Too Large/i.test(t) || /^Request En/i.test(t)) {
+    return '送信データが大きすぎます（人物写真/ロゴを小さめにして再試行してください）'
+  }
+  if (status === 502 || status === 503) return 'サーバが混雑しています。少し待って再試行してください。'
+  if (t) return t.slice(0, 180)
+  return 'エラーが発生しました'
+}
+
+async function readFileAsDataUrl(file: File): Promise<string> {
+  if (!file.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
+  if (file.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
+  return await new Promise<string>((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(String(r.result || ''))
+    r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+    r.readAsDataURL(file)
+  })
+}
+
+async function optimizeImageDataUrl(
+  dataUrl: string,
+  opts: { maxSide: number; mime: 'image/jpeg' | 'image/png'; quality?: number }
+): Promise<string> {
+  if (typeof document === 'undefined') return dataUrl
+  if (!String(dataUrl || '').startsWith('data:image/')) return dataUrl
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image()
+      el.onload = () => resolve(el)
+      el.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+      el.src = dataUrl
+    })
+    const w = img.naturalWidth || img.width
+    const h = img.naturalHeight || img.height
+    if (!w || !h) return dataUrl
+    const maxSide = Math.max(64, Math.floor(opts.maxSide))
+    const scale = Math.min(1, maxSide / Math.max(w, h))
+    const outW = Math.max(1, Math.round(w * scale))
+    const outH = Math.max(1, Math.round(h * scale))
+    const canvas = document.createElement('canvas')
+    canvas.width = outW
+    canvas.height = outH
+    const ctx = canvas.getContext('2d', { alpha: opts.mime === 'image/png' })
+    if (!ctx) return dataUrl
+    ctx.drawImage(img, 0, 0, outW, outH)
+    const quality = typeof opts.quality === 'number' ? opts.quality : 0.82
+    const out = canvas.toDataURL(opts.mime, quality)
+    return out && out.length > 200 ? out : dataUrl
+  } catch {
+    return dataUrl
+  }
+}
+
+async function readAndOptimizeImage(file: File, kind: 'logo' | 'person'): Promise<string> {
+  const raw = await readFileAsDataUrl(file)
+  if (kind === 'logo') return await optimizeImageDataUrl(raw, { maxSide: 512, mime: 'image/png' })
+  return await optimizeImageDataUrl(raw, { maxSide: 1024, mime: 'image/jpeg', quality: 0.8 })
+}
+
 export default function BannerChatPage() {
   const { data: session } = useSession()
   const [logoImage, setLogoImage] = useState<string | null>(null)
@@ -168,8 +241,9 @@ export default function BannerChatPage() {
             .map((m) => ({ role: m.role, content: m.content })),
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'AIチャットに失敗しました')
+      const parsed = await safeReadJson(res)
+      const data = parsed.data || {}
+      if (!parsed.ok) throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'AIチャットに失敗しました')
 
       pushAssistant(String(data.reply || '了解です。'))
       if (data.spec) {
@@ -223,8 +297,9 @@ export default function BannerChatPage() {
               .find((x) => x.startsWith('data:')) || undefined,
         }),
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '生成に失敗しました')
+      const parsed = await safeReadJson(res)
+      const data = parsed.data || {}
+      if (!parsed.ok) throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '生成に失敗しました')
       setGeneratedBanners(Array.isArray(data.banners) ? data.banners : [])
       setSelectedBannerIndex(0)
       pushAssistant('生成できました。気になる案をダウンロードして使えます。')
@@ -301,8 +376,9 @@ export default function BannerChatPage() {
           size: proposedSpec?.size,
         }),
       })
-      const data = await res.json()
-      if (!res.ok || !data?.success) throw new Error(data?.error || '修正に失敗しました')
+      const parsed = await safeReadJson(res)
+      const data = parsed.data || {}
+      if (!parsed.ok || !data?.success) throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '修正に失敗しました')
       const refined = String(data.refinedImage || '')
       if (!refined.startsWith('data:')) throw new Error('修正画像が取得できませんでした')
 
@@ -563,14 +639,7 @@ export default function BannerChatPage() {
                                       e.target.value = ''
                                       if (!f) return
                                       try {
-                                        if (!f.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
-                                        if (f.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
-                                        const url = await new Promise<string>((resolve, reject) => {
-                                          const r = new FileReader()
-                                          r.onload = () => resolve(String(r.result || ''))
-                                          r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
-                                          r.readAsDataURL(f)
-                                        })
+                                        const url = await readAndOptimizeImage(f, 'logo')
                                         setLogoImage(url)
                                         setLogoFileName(f.name)
                                         toast.success('ロゴを設定しました')
@@ -661,14 +730,7 @@ export default function BannerChatPage() {
                                               e.currentTarget.value = ''
                                               if (!f) return
                                               try {
-                                                if (!f.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
-                                                if (f.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
-                                                const url = await new Promise<string>((resolve, reject) => {
-                                                  const r = new FileReader()
-                                                  r.onload = () => resolve(String(r.result || ''))
-                                                  r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
-                                                  r.readAsDataURL(f)
-                                                })
+                                                const url = await readAndOptimizeImage(f, 'person')
                                                 setPersonImages((prev) => prev.map((v, i) => (i === idx ? url : v)))
                                                 setPersonFileNames((prev) => prev.map((v, i) => (i === idx ? f.name : v)))
                                                 toast.success(`人物写真（${idx + 1}人目）を設定しました`)
