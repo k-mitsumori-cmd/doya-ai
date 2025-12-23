@@ -70,6 +70,24 @@ function uniqStrings(arr: string[]) {
   return Array.from(new Set(arr.map((s) => s.trim()).filter(Boolean)))
 }
 
+function parseSuggestionsFallback(raw: string): string[] {
+  const lines = String(raw || '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    // コードフェンス等を除外
+    .filter((l) => l !== '```' && !l.startsWith('```'))
+    .map((l) => l.replace(/^[\-•\u2022]\s*/, ''))
+    .map((l) => l.replace(/^\d+[\.\)]\s*/, ''))
+    // 「suggestions:」みたいな行を除外
+    .filter((l) => !/^suggestions\s*[:：]/i.test(l))
+    // JSON断片っぽい行を除外
+    .filter((l) => !/^\{|\}$/.test(l))
+
+  // 文字数レンジ外の極端なものは落とす（過度に長い文章を避ける）
+  return uniqStrings(lines).filter((s) => s.length >= 4 && s.length <= 80).slice(0, 24)
+}
+
 async function callGemini(prompt: string, apiKey: string): Promise<string> {
   // Gemini 3系のみ使用（Gemini 2.5以下は使用しない）
   // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
@@ -82,42 +100,63 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
     try {
       const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
       
-      // JSONモードをサポートしているか簡易チェック
-      const isJsonSupported = model.includes('1.5') || model.includes('2.0') || model.includes('3')
-      
-      const body = {
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { 
-            temperature: 0.7, 
-            maxOutputTokens: 800, 
-            topP: 0.95, 
-            topK: 40,
-            ...(isJsonSupported ? { responseMimeType: 'application/json' } : {})
-          },
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-          ],
-      }
+      // JSONモード（responseMimeType）はモデル/タイミングで弾かれることがあるため、
+      // まずJSONモード→失敗したら自動で通常モードにフォールバックして安定性を上げる
+      const buildBody = (jsonMode: boolean) => ({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 800,
+          topP: 0.95,
+          topK: 40,
+          ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+        },
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+        ],
+      })
 
-      const attempt = async () =>
+      const attempt = async (jsonMode: boolean) =>
         fetch(`${endpoint}?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify(buildBody(jsonMode)),
         })
 
       // 502/503 が出ることがあるため軽いリトライ
-      let res = await attempt()
+      let res = await attempt(true)
       if (res.status === 502 || res.status === 503) {
         await new Promise((r) => setTimeout(r, 700))
-        res = await attempt()
+        res = await attempt(true)
       }
 
       if (!res.ok) {
         const t = await res.text()
+        // JSONモードが弾かれたら通常モードで再試行
+        if (
+          res.status === 400 &&
+          (t.includes('responseMimeType') || t.includes('response_mime_type') || t.includes('INVALID_ARGUMENT'))
+        ) {
+          let retry = await attempt(false)
+          if (retry.status === 502 || retry.status === 503) {
+            await new Promise((r) => setTimeout(r, 700))
+            retry = await attempt(false)
+          }
+          if (retry.ok) {
+            const json = await retry.json()
+            const text = Array.isArray(json?.candidates?.[0]?.content?.parts)
+              ? json.candidates[0].content.parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
+              : ''
+            if (text) return text
+          } else {
+            const t2 = await retry.text()
+            lastError = `Gemini ${model} error (retry): ${retry.status} - ${t2.substring(0, 600)}`
+            continue
+          }
+        }
         lastError = `Gemini ${model} error: ${res.status} - ${t.substring(0, 600)}`
         continue
       }
@@ -382,9 +421,15 @@ export async function POST(req: NextRequest) {
     const raw = await callGemini(prompt, apiKey)
     const parsed = extractJsonObject(raw)
     const suggestionsRaw = Array.isArray(parsed?.suggestions) ? parsed.suggestions : []
-    const suggestions = uniqStrings(
+    let suggestions = uniqStrings(
       suggestionsRaw.map((s: any) => String(s || '').trim()).filter(Boolean)
     ).slice(0, 12)
+
+    // JSONが崩れても「候補抽出」で成功させる（UIの“エラー”体験を減らす）
+    if (suggestions.length === 0) {
+      const fallback = parseSuggestionsFallback(raw)
+      suggestions = uniqStrings(fallback).slice(0, 12)
+    }
 
     if (suggestions.length === 0) {
       return NextResponse.json(
