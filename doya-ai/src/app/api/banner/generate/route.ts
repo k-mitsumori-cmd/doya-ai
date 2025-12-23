@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
       ctaText,
       logoImage,
       personImage,
+      personImages,
       referenceImages,
       brandColors,
       shareToGallery,
@@ -134,6 +135,7 @@ export async function POST(request: NextRequest) {
     if (imageDescription) console.log(`Image description: ${imageDescription.slice(0, 50)}...`)
     if (logoImage) console.log('Logo image provided')
     if (personImage) console.log('Person image provided')
+    if (Array.isArray(personImages) && personImages.length > 0) console.log(`Person images: ${personImages.length}`)
     if (Array.isArray(referenceImages) && referenceImages.length > 0) console.log(`Reference images: ${referenceImages.length}`)
     if (Array.isArray(brandColors) && brandColors.length > 0) console.log(`Brand colors: ${brandColors.length}`)
 
@@ -150,6 +152,9 @@ export async function POST(request: NextRequest) {
     }
 
     // バナー生成オプション
+    const normalizedPersonImages = Array.isArray(personImages)
+      ? personImages.filter((x: any) => typeof x === 'string' && x.startsWith('data:image/')).slice(0, 4)
+      : []
     const options = {
       purpose: purpose || 'sns_ad',
       companyName: companyName?.trim() || undefined,
@@ -158,9 +163,10 @@ export async function POST(request: NextRequest) {
       subheadText: typeof subheadText === 'string' ? subheadText.trim() || undefined : undefined,
       ctaText: typeof ctaText === 'string' ? ctaText.trim() || undefined : undefined,
       hasLogo: !!logoImage,
-      hasPerson: !!personImage,
+      hasPerson: !!(personImage || normalizedPersonImages.length > 0),
       logoImage: logoImage || undefined,
-      personImage: personImage || undefined,
+      personImage: personImage || undefined, // 互換用
+      personImages: normalizedPersonImages.length > 0 ? normalizedPersonImages : undefined,
       referenceImages: Array.isArray(referenceImages)
         ? referenceImages.filter((x: any) => typeof x === 'string').slice(0, 2)
         : undefined,
