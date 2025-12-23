@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import crypto from 'crypto'
 
 // Vercel上で画像生成が長引くことがあるため、実行時間上限を引き上げる
 // （環境/プランによって上限は異なります）
@@ -299,40 +300,48 @@ export async function POST(request: NextRequest) {
     }
 
     // ==============================
-    // ギャラリー公開（任意・ログインユーザーのみ）
+    // 履歴保存（ログインユーザーのみ / DB）
+    // ギャラリー公開の場合は metadata.shared=true を付与
     // ==============================
-    if (shareToGallery === true && !isGuest) {
-      if (userId) {
-        try {
-          const banners = Array.isArray(result.banners) ? result.banners : []
-          const images = banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/'))
-          if (images.length > 0) {
-            const nowIso = new Date().toISOString()
-            const patterns = 'ABCDEFGHIJ'.split('')
-            await prisma.generation.createMany({
-              data: images.map((img: string, idx: number) => ({
-                userId,
-                serviceId: 'banner',
-                input: { category, keyword: keyword.trim(), size: size || '1080x1080', purpose: purpose || 'sns_ad' },
-                output: img,
-                outputType: 'IMAGE',
-                metadata: {
-                  shared: true,
-                  sharedAt: nowIso,
-                  category,
-                  purpose: purpose || 'sns_ad',
-                  size: size || '1080x1080',
-                  keyword: keyword.trim(),
-                  pattern: patterns[idx] || String(idx + 1),
-                  shareProfile: shareProfile === true,
-                },
-              })),
-            })
-          }
-        } catch (e: any) {
-          console.error('Gallery persist failed:', e)
-          // ギャラリー保存失敗でも生成自体は成功しているので落とさない
+    if (!isGuest && userId) {
+      try {
+        const banners = Array.isArray(result.banners) ? result.banners : []
+        const images = banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/'))
+        if (images.length > 0) {
+          const nowIso = new Date().toISOString()
+          const patterns = 'ABCDEFGHIJ'.split('')
+          const batchId = crypto.randomUUID()
+          const shared = shareToGallery === true
+          await prisma.generation.createMany({
+            data: images.map((img: string, idx: number) => ({
+              userId,
+              serviceId: 'banner',
+              input: {
+                category,
+                keyword: keyword.trim(),
+                size: size || '1080x1080',
+                purpose: purpose || 'sns_ad',
+                count: desiredCount,
+              },
+              output: img,
+              outputType: 'IMAGE',
+              metadata: {
+                batchId,
+                category,
+                purpose: purpose || 'sns_ad',
+                size: size || '1080x1080',
+                keyword: keyword.trim(),
+                pattern: patterns[idx] || String(idx + 1),
+                usedModel: result.usedModel || null,
+                shared,
+                ...(shared ? { sharedAt: nowIso, shareProfile: shareProfile === true } : {}),
+              },
+            })),
+          })
         }
+      } catch (e: any) {
+        console.error('Banner history persist failed:', e)
+        // 履歴保存失敗でも生成自体は成功しているので落とさない
       }
     }
 
