@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
       keyword, 
       size, 
       purpose,
+      count,
       companyName,
       imageDescription,
       headlineText,
@@ -113,6 +114,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // 生成枚数（デフォルト3 / 有料は最大10）
+    const requestedCountRaw = Number(count)
+    const requestedCount = Number.isFinite(requestedCountRaw) ? Math.floor(requestedCountRaw) : 3
 
     // API設定チェック
     if (!isNanobannerConfigured()) {
@@ -172,19 +177,25 @@ export async function POST(request: NextRequest) {
     let usageInfo: null | { dailyLimit: number; dailyUsed: number; dailyRemaining: number } = null
     let guestUsage: GuestDailyUsage | null = null
 
+    // 生成枚数（サーバ側で厳密に強制する：フロント改ざん対策）
+    // - デフォルト3枚
+    // - 有料のみ最大10枚
+    const userId = !isGuest ? ((session?.user as any)?.id as string | undefined) : undefined
+    let desiredCount = Math.max(1, Math.min(3, requestedCount || 3))
+
     if (!disableLimits && isGuest) {
       guestUsage = readGuestDailyUsage(request, today)
       const dailyLimit = BANNER_PRICING.guestLimit
       const dailyUsed = guestUsage.count
-      if (dailyLimit !== -1 && dailyUsed >= dailyLimit) {
+      if (dailyLimit !== -1 && dailyUsed + desiredCount > dailyLimit) {
         return NextResponse.json(
           {
-            error: '本日の使用回数上限に達しました。プロプランにアップグレードしてください。',
+            error: '本日の生成上限に達しました。プロプランにアップグレードしてください。',
             code: 'DAILY_LIMIT_REACHED',
             usage: {
               dailyLimit,
               dailyUsed,
-              dailyRemaining: 0,
+              dailyRemaining: Math.max(0, dailyLimit - dailyUsed),
             },
             upgradeUrl: '/banner/pricing',
           },
@@ -197,7 +208,6 @@ export async function POST(request: NextRequest) {
         dailyRemaining: dailyLimit === -1 ? -1 : Math.max(0, dailyLimit - dailyUsed),
       }
     } else if (!disableLimits && !isGuest) {
-      const userId = (session?.user as any)?.id as string | undefined
       if (userId) {
         try {
           const current = await prisma.userServiceSubscription.upsert({
@@ -232,22 +242,24 @@ export async function POST(request: NextRequest) {
             : current
 
           const plan = String(normalized.plan || 'FREE').toUpperCase()
-          const dailyLimit =
-            plan === 'ENTERPRISE'
-              ? -1
-              : plan === 'PRO'
-                ? BANNER_PRICING.proLimit
-                : BANNER_PRICING.freeLimit
+          const isPaidPlan = plan === 'PRO' || plan === 'ENTERPRISE'
 
-          if (dailyLimit !== -1 && normalized.dailyUsage >= dailyLimit) {
+          // 有料のみ最大10枚まで
+          desiredCount = Math.max(1, Math.min(isPaidPlan ? 10 : 3, requestedCount || 3))
+          // NOTE: 生成上限は「画像枚数」ベース
+          // - 有料でも1日最大50枚まで
+          // - 無料は pricing.ts の freeLimit（枚数）に従う
+          const dailyLimit = isPaidPlan ? BANNER_PRICING.proLimit : BANNER_PRICING.freeLimit
+
+          if (dailyLimit !== -1 && normalized.dailyUsage + desiredCount > dailyLimit) {
             return NextResponse.json(
               {
-                error: '本日の使用回数上限に達しました。プロプランにアップグレードしてください。',
+                error: '本日の生成上限に達しました。プロプランにアップグレードしてください。',
                 code: 'DAILY_LIMIT_REACHED',
                 usage: {
                   dailyLimit,
                   dailyUsed: normalized.dailyUsage,
-                  dailyRemaining: 0,
+                  dailyRemaining: Math.max(0, dailyLimit - normalized.dailyUsage),
                 },
                 upgradeUrl: HIGH_USAGE_CONTACT_URL || '/banner/pricing',
               },
@@ -273,7 +285,10 @@ export async function POST(request: NextRequest) {
       category,
       keyword.trim(),
       size || '1080x1080',
-      options
+      options,
+      // 無料/ゲストは原則3枚固定。有料のみ最大10まで。
+      // プラン判定は usageInfo の dailyLimit と session から推定しているが、ここでは desiredCount を採用する。
+      desiredCount
     )
 
     if (result.error && result.banners.length === 0) {
@@ -287,14 +302,13 @@ export async function POST(request: NextRequest) {
     // ギャラリー公開（任意・ログインユーザーのみ）
     // ==============================
     if (shareToGallery === true && !isGuest) {
-      const userId = (session?.user as any)?.id as string | undefined
       if (userId) {
         try {
           const banners = Array.isArray(result.banners) ? result.banners : []
           const images = banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/'))
           if (images.length > 0) {
             const nowIso = new Date().toISOString()
-            const patterns = ['A', 'B', 'C']
+            const patterns = 'ABCDEFGHIJ'.split('')
             await prisma.generation.createMany({
               data: images.map((img: string, idx: number) => ({
                 userId,
@@ -322,9 +336,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 成功時のみ使用回数を加算（1リクエスト=1回）
+    // 成功時のみ使用回数を加算（画像枚数ベース）
+    const chargedCount = Math.max(1, Math.min(desiredCount, Array.isArray(result.banners) ? result.banners.length : desiredCount))
     if (!disableLimits && isGuest && guestUsage) {
-      guestUsage = { date: today, count: guestUsage.date === today ? guestUsage.count + 1 : 1 }
+      guestUsage = { date: today, count: guestUsage.date === today ? guestUsage.count + chargedCount : chargedCount }
       if (usageInfo) {
         usageInfo = {
           dailyLimit: usageInfo.dailyLimit,
@@ -333,14 +348,13 @@ export async function POST(request: NextRequest) {
         }
       }
     } else if (!disableLimits && !isGuest) {
-      const userId = (session?.user as any)?.id as string | undefined
       if (userId) {
         try {
           const updated = await prisma.userServiceSubscription.update({
             where: { userId_serviceId: { userId, serviceId: 'banner' } },
             data: {
-              dailyUsage: { increment: 1 },
-              monthlyUsage: { increment: 1 },
+              dailyUsage: { increment: chargedCount },
+              monthlyUsage: { increment: chargedCount },
             },
           })
           if (usageInfo) {
