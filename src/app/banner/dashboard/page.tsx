@@ -905,6 +905,55 @@ export default function BannerDashboard() {
     })
   }
 
+  const optimizeImageDataUrl = async (
+    dataUrl: string,
+    opts: { maxSide: number; mime: 'image/jpeg' | 'image/png'; quality?: number }
+  ): Promise<string> => {
+    if (typeof document === 'undefined') return dataUrl
+    if (!String(dataUrl || '').startsWith('data:image/')) return dataUrl
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image()
+        el.onload = () => resolve(el)
+        el.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+        el.src = dataUrl
+      })
+      const w = img.naturalWidth || img.width
+      const h = img.naturalHeight || img.height
+      if (!w || !h) return dataUrl
+
+      const maxSide = Math.max(64, Math.floor(opts.maxSide))
+      const scale = Math.min(1, maxSide / Math.max(w, h))
+      const outW = Math.max(1, Math.round(w * scale))
+      const outH = Math.max(1, Math.round(h * scale))
+
+      const canvas = document.createElement('canvas')
+      canvas.width = outW
+      canvas.height = outH
+      const ctx = canvas.getContext('2d', { alpha: opts.mime === 'image/png' })
+      if (!ctx) return dataUrl
+      ctx.drawImage(img, 0, 0, outW, outH)
+
+      const quality = typeof opts.quality === 'number' ? opts.quality : 0.82
+      const out = canvas.toDataURL(opts.mime, quality)
+
+      // 極端に大きい場合はそのまま返す（環境依存の失敗回避）
+      return out && out.length > 200 ? out : dataUrl
+    } catch {
+      return dataUrl
+    }
+  }
+
+  const readAndOptimizeImage = async (file: File, kind: 'logo' | 'person'): Promise<string> => {
+    const raw = await readFileAsDataUrl(file)
+    if (kind === 'logo') {
+      // ロゴは小さく（透過の可能性があるためPNG寄せ）
+      return await optimizeImageDataUrl(raw, { maxSide: 512, mime: 'image/png' })
+    }
+    // 人物写真は軽量化（JPEG）
+    return await optimizeImageDataUrl(raw, { maxSide: 1024, mime: 'image/jpeg', quality: 0.8 })
+  }
+
   const MAX_PERSON_IMAGES = 4
 
   const addPersonSlot = () => {
@@ -924,13 +973,35 @@ export default function BannerDashboard() {
   const setPersonFileAt = async (idx: number, file: File | null) => {
     if (!file) return
     try {
-      const url = await readFileAsDataUrl(file)
+      const url = await readAndOptimizeImage(file, 'person')
       setPersonImages((prev) => prev.map((v, i) => (i === idx ? url : v)))
       setPersonFileNames((prev) => prev.map((v, i) => (i === idx ? file.name : v)))
       toast.success(`人物写真（${idx + 1}人目）を設定しました`)
     } catch (e: any) {
       toast.error(e?.message || '人物写真の追加に失敗しました')
     }
+  }
+
+  const safeReadJson = async (res: Response): Promise<{ ok: boolean; status: number; data: any; text: string }> => {
+    const status = res.status
+    const text = await res.text().catch(() => '')
+    let data: any = null
+    try {
+      data = text ? JSON.parse(text) : null
+    } catch {
+      data = null
+    }
+    return { ok: res.ok, status, data, text }
+  }
+
+  const normalizeNonJsonApiError = (status: number, text: string): string => {
+    const t = String(text || '').trim()
+    if (status === 413 || /Request Entity Too Large/i.test(t) || /^Request En/i.test(t)) {
+      return '送信データが大きすぎます（人物写真/ロゴを小さめにして再試行してください）'
+    }
+    if (status === 502 || status === 503) return 'サーバが混雑しています。少し待って再試行してください。'
+    if (t) return t.slice(0, 180)
+    return '生成に失敗しました'
   }
 
   // ギャラリー公開（任意）
@@ -1264,9 +1335,12 @@ export default function BannerDashboard() {
       })
       window.clearTimeout(timeout)
 
-      const data = await response.json()
-      
-      if (!response.ok) throw new Error(data.error || '生成に失敗しました')
+      const parsed = await safeReadJson(response)
+      const data = parsed.data || {}
+      if (!parsed.ok) {
+        const msg = data?.error || data?.message || normalizeNonJsonApiError(parsed.status, parsed.text)
+        throw new Error(msg)
+      }
       
       setProgress(100)
       await new Promise(r => setTimeout(r, 500))
@@ -1323,8 +1397,8 @@ export default function BannerDashboard() {
         setError('生成に時間がかかっています。タブは開いたまま、しばらく待つか再試行してください。')
         toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
       } else {
-      setError(err.message)
-      toast.error('生成に失敗しました', { icon: '❌', duration: 5000 })
+        setError(err.message)
+        toast.error('生成に失敗しました', { icon: '❌', duration: 5000 })
       }
     } finally {
       setIsGenerating(false)
@@ -1478,10 +1552,12 @@ export default function BannerDashboard() {
         }),
       })
 
-      const data = await response.json()
+      const parsed = await safeReadJson(response)
+      const data = parsed.data || {}
       
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || '修正に失敗しました')
+      if (!parsed.ok || !data.success) {
+        const msg = data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '修正に失敗しました'
+        throw new Error(msg)
       }
 
       // 履歴に追加
@@ -2155,7 +2231,7 @@ export default function BannerDashboard() {
                               e.target.value = ''
                               if (!f) return
                               try {
-                                const url = await readFileAsDataUrl(f)
+                                const url = await readAndOptimizeImage(f, 'logo')
                                 setLogoImage(url)
                                 setLogoFileName(f.name)
                                 toast.success('ロゴを設定しました')
