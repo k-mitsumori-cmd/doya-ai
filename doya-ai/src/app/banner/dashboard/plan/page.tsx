@@ -25,7 +25,8 @@ import {
   DollarSign,
   ChevronDown,
   CreditCard,
-  ArrowRight
+  ArrowRight,
+  Info
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -102,6 +103,8 @@ export default function BannerPlanPage() {
   const savedMinutes = totalBanners * ESTIMATED_TIME_SAVED_PER_BANNER_MIN
   const savedHours = Math.floor(savedMinutes / 60)
   const savedCost = Math.floor((savedMinutes / 60) * HOURLY_DESIGNER_RATE_JPY)
+
+  const estimateBasisText = `根拠：\n- 1枚あたりの制作時間を ${ESTIMATED_TIME_SAVED_PER_BANNER_MIN} 分と仮定\n- デザイナー時給を ${HOURLY_DESIGNER_RATE_JPY.toLocaleString()} 円と仮定\n\n計算：\n- 推定削減時間 = 累計生成枚数 × ${ESTIMATED_TIME_SAVED_PER_BANNER_MIN} 分 ÷ 60\n- 推定コスト削減 = 推定削減時間（時間）× ${HOURLY_DESIGNER_RATE_JPY.toLocaleString()} 円`
 
   const currentPlanLabel =
     isGuest ? 'ゲスト' : isPro ? '有料版（PRO）' : '無料版'
@@ -292,7 +295,18 @@ export default function BannerPlanPage() {
                       <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         <Clock className="w-6 h-6 text-blue-600" />
                       </div>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">推定削減時間</p>
+                      <div className="mb-1 flex items-center gap-1.5">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">推定削減時間</p>
+                        <span className="relative group/tt">
+                          <Info className="w-4 h-4 text-slate-400 cursor-help" aria-label="根拠" />
+                          <span
+                            role="tooltip"
+                            className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[260px] whitespace-pre-line rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 shadow-xl opacity-0 group-hover/tt:opacity-100 transition-opacity"
+                          >
+                            {estimateBasisText}
+                          </span>
+                        </span>
+                      </div>
                       <p className="text-3xl font-black text-slate-800 tracking-tighter">
                         {savedHours}<span className="text-sm text-slate-400 font-bold ml-1">時間</span>
                       </p>
@@ -310,7 +324,18 @@ export default function BannerPlanPage() {
                       <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         <DollarSign className="w-6 h-6 text-amber-500" />
                       </div>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">推定コスト削減</p>
+                      <div className="mb-1 flex items-center gap-1.5">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">推定コスト削減</p>
+                        <span className="relative group/tt">
+                          <Info className="w-4 h-4 text-slate-400 cursor-help" aria-label="根拠" />
+                          <span
+                            role="tooltip"
+                            className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[260px] whitespace-pre-line rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 shadow-xl opacity-0 group-hover/tt:opacity-100 transition-opacity"
+                          >
+                            {estimateBasisText}
+                          </span>
+                        </span>
+                      </div>
                       <p className="text-3xl font-black text-slate-800 tracking-tighter">
                         ¥{savedCost.toLocaleString()}
                       </p>
