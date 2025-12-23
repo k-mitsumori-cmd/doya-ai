@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { BANNER_PRICING } from '@/lib/pricing'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,10 +20,27 @@ export async function GET(request: NextRequest) {
     const take = Math.min(Math.max(takeRaw, 1), 60)
     const cursor = searchParams.get('cursor') || undefined
 
+    // ギャラリーは直近6ヶ月分のみ表示（古い公開作品は自動削除）
+    const retentionDays = BANNER_PRICING.historyDays?.pro || 180
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays)
+
+    prisma.generation
+      .deleteMany({
+        where: {
+          serviceId: 'banner',
+          outputType: 'IMAGE',
+          createdAt: { lt: cutoffDate },
+          metadata: { path: ['shared'], equals: true },
+        },
+      })
+      .catch((e) => console.error('Gallery cleanup failed:', e))
+
     const items = await prisma.generation.findMany({
       where: {
         serviceId: 'banner',
         outputType: 'IMAGE',
+        createdAt: { gte: cutoffDate },
         metadata: {
           path: ['shared'],
           equals: true,
