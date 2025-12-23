@@ -76,7 +76,7 @@ export default function BannerChatPage() {
       id: 'hello-1',
       role: 'assistant',
       content:
-        'AIチャットでバナーを作れます。\n「何の商品/誰向け/どこで使う（SNS/YouTube/LPなど）/どんな雰囲気（人物・背景・色）」を自由に書いてください。',
+        'こんにちは！ドヤバナーAIの制作アドバイザーです。\n\nどんなバナーを作りましょうか？用途やイメージを教えていただければ、すぐにおすすめのプランをご提案します。\n\n例：「Instagram向けの美容系バナー」「採用LP用で人物写真入り」など',
       createdAt: Date.now(),
     },
   ])
