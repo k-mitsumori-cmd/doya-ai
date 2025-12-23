@@ -351,6 +351,51 @@ const GEN_STATS_KEY = 'doya_banner_gen_stats_v1'
 const GEN_STATS_ALPHA = 0.22
 const DEFAULT_PREDICT_MS = 55_000
 
+// ==============================
+// 修正（チャット編集）中の“飽きさせない”演出
+// ==============================
+const REFINE_TIPS = [
+  { icon: '🧩', text: 'レイアウトを崩さずに、意図した変更だけを反映しています' },
+  { icon: '🔎', text: '文字の可読性（太さ/コントラスト/背景パネル）を再最適化しています' },
+  { icon: '📏', text: '上下の余白ゼロ・文字のはみ出し防止をチェックしています' },
+  { icon: '🎯', text: 'CTAが“押せそう”に見えるように、立体感と色差を調整しています' },
+  { icon: '🧼', text: '余計な要素を減らして、視線誘導を強くしています' },
+]
+
+const REFINE_PHASES = [
+  { label: '指示を解釈中', sub: '意図の抽出・優先順位づけ' },
+  { label: '構図を微調整中', sub: '余白/整列/視線誘導' },
+  { label: '文字を最適化中', sub: '太さ/コントラスト/パネル' },
+  { label: 'CTAを強調中', sub: '押せそう感・色差・影' },
+  { label: '最終チェック中', sub: 'サイズ/はみ出し/仕上げ' },
+]
+
+type SimpleEma = { n: number; emaMs: number }
+const REFINE_STATS_KEY = 'doya_banner_refine_stats_v1'
+const DEFAULT_REFINE_PREDICT_MS = 18_000
+
+function readRefineStats(): SimpleEma | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(REFINE_STATS_KEY)
+    if (!raw) return null
+    const json = JSON.parse(raw)
+    if (typeof json?.emaMs === 'number' && typeof json?.n === 'number') return json as SimpleEma
+    return null
+  } catch {
+    return null
+  }
+}
+
+function writeRefineStats(v: SimpleEma) {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem(REFINE_STATS_KEY, JSON.stringify(v))
+  } catch {
+    // ignore
+  }
+}
+
 function clampMs(n: number, min: number, max: number) {
   if (!Number.isFinite(n)) return min
   return Math.min(Math.max(n, min), max)
@@ -618,6 +663,12 @@ export default function BannerDashboard() {
   const [refineInstruction, setRefineInstruction] = useState('')
   const [isRefining, setIsRefining] = useState(false)
   const [refineHistory, setRefineHistory] = useState<{ instruction: string; image: string }[]>([])
+  const [refineStartedAt, setRefineStartedAt] = useState<number | null>(null)
+  const [refineElapsedSec, setRefineElapsedSec] = useState(0)
+  const [refinePredictedTotalMs, setRefinePredictedTotalMs] = useState<number>(DEFAULT_REFINE_PREDICT_MS)
+  const [refinePredictedRemainingMs, setRefinePredictedRemainingMs] = useState<number>(DEFAULT_REFINE_PREDICT_MS)
+  const [refineTipIndex, setRefineTipIndex] = useState(0)
+  const [refinePhaseIndex, setRefinePhaseIndex] = useState(0)
   
   const [tipIndex, setTipIndex] = useState(0)
   
@@ -813,6 +864,49 @@ export default function BannerDashboard() {
     }, 5200)
     return () => clearInterval(t)
   }, [isGenerating])
+
+  // 修正中の“飽きさせない”演出（予測残り時間/フェーズ/チップ）
+  useEffect(() => {
+    if (!isRefining) {
+      setRefineStartedAt(null)
+      setRefineElapsedSec(0)
+      setRefinePhaseIndex(0)
+      setRefineTipIndex(0)
+      setRefinePredictedTotalMs(DEFAULT_REFINE_PREDICT_MS)
+      setRefinePredictedRemainingMs(DEFAULT_REFINE_PREDICT_MS)
+      return
+    }
+
+    const stats = readRefineStats()
+    const base = stats?.emaMs || DEFAULT_REFINE_PREDICT_MS
+    setRefinePredictedTotalMs(base)
+    setRefinePredictedRemainingMs(base)
+
+    const started = refineStartedAt ?? Date.now()
+    if (!refineStartedAt) setRefineStartedAt(started)
+
+    const t = setInterval(() => {
+      const elapsedMs = Date.now() - started
+      setRefineElapsedSec(Math.floor(elapsedMs / 1000))
+      const remaining = Math.max(0, base - elapsedMs)
+      setRefinePredictedRemainingMs(remaining)
+
+      // 予測に合わせて“フェーズ”を進める（実進捗が取れないため演出）
+      const r = elapsedMs / Math.max(1, base)
+      const idx = Math.min(REFINE_PHASES.length - 1, Math.floor(Math.min(0.999, r) * REFINE_PHASES.length))
+      setRefinePhaseIndex(idx)
+    }, 260)
+
+    return () => clearInterval(t)
+  }, [isRefining, refineStartedAt])
+
+  useEffect(() => {
+    if (!isRefining) return
+    const t = setInterval(() => {
+      setRefineTipIndex((prev) => (prev + 1) % REFINE_TIPS.length)
+    }, 3600)
+    return () => clearInterval(t)
+  }, [isRefining])
 
   // Handlers
   const handleSample = () => {
@@ -1076,6 +1170,9 @@ export default function BannerDashboard() {
     const originalImage = generatedBanners[selectedBanner]
     
     setIsRefining(true)
+    const startedAt = Date.now()
+    setRefineStartedAt(startedAt)
+    setRefineElapsedSec(0)
     try {
       const response = await fetch('/api/banner/refine', {
         method: 'POST',
@@ -1107,10 +1204,16 @@ export default function BannerDashboard() {
       
       setRefineInstruction('')
       toast.success('バナーを修正しました！', { icon: '✨' })
+
+      // 修正時間を保存（次回以降の予測に使用）
+      const actualMs = Date.now() - startedAt
+      const next = updateEma(readRefineStats() || undefined, actualMs) as SimpleEma
+      writeRefineStats(next)
     } catch (err: any) {
       toast.error(err.message)
     } finally {
       setIsRefining(false)
+      setRefineStartedAt(null)
     }
   }
 
@@ -2095,9 +2198,55 @@ export default function BannerDashboard() {
                             </div>
 
                             {isRefining && (
-                              <div className="mt-3 flex items-center gap-2 text-blue-700 text-sm font-semibold">
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                <span>AIが修正中...</span>
+                              <div className="mt-3 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 to-white p-4">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                    <div>
+                                      <div className="text-sm font-black text-slate-900">
+                                        AI修正中：{REFINE_PHASES[refinePhaseIndex]?.label}
+                                      </div>
+                                      <div className="text-[11px] text-slate-500 font-semibold">
+                                        {REFINE_PHASES[refinePhaseIndex]?.sub}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-[11px] text-slate-500 font-semibold">予測残り</div>
+                                    <div className="text-sm font-black text-blue-700">
+                                      約{formatSec(refinePredictedRemainingMs)}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 h-2 rounded-full bg-blue-100 overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full transition-all"
+                                    style={{
+                                      width: `${Math.max(
+                                        5,
+                                        Math.min(
+                                          95,
+                                          ((refinePredictedTotalMs - refinePredictedRemainingMs) /
+                                            Math.max(1, refinePredictedTotalMs)) *
+                                            100
+                                        )
+                                      )}%`,
+                                    }}
+                                  />
+                                </div>
+
+                                <div className="mt-3 flex items-center gap-2 text-[12px] font-semibold text-slate-700">
+                                  <span className="text-base leading-none">{REFINE_TIPS[refineTipIndex]?.icon}</span>
+                                  <span>{REFINE_TIPS[refineTipIndex]?.text}</span>
+                                  <span className="ml-auto text-[11px] text-slate-500 font-semibold">
+                                    経過 {refineElapsedSec}秒
+                                  </span>
+                                </div>
+
+                                <div className="mt-2 text-[11px] text-slate-500 font-semibold">
+                                  タブを開いたままお待ちください（バックグラウンドでも進行します）
+                                </div>
                               </div>
                             )}
                           </div>
