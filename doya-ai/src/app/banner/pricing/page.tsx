@@ -34,7 +34,7 @@ export default function BannerPricingPage() {
                 <h2 className="text-2xl font-black text-slate-900">{free?.name || 'おためしプラン'}</h2>
                 <p className="text-sm text-slate-600 mt-2">{free?.description || `1日${BANNER_PRICING.freeLimit}回までの生成をすることができます`}</p>
                 <div className="mt-5">
-                  <Link href="/banner/dashboard">
+                  <Link href="/banner">
                     <button className="px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors">
                       {free?.cta || '3回生成'}
                     </button>
@@ -70,6 +70,7 @@ export default function BannerPricingPage() {
             <div className="mt-6">
               <CheckoutButton
                 planId="banner-pro"
+                loginCallbackUrl="/banner/pricing"
                 className="w-full py-4 rounded-2xl text-base"
                 variant="secondary"
               >
@@ -100,7 +101,7 @@ export default function BannerPricingPage() {
               </div>
             </div>
             <div className="mt-6 grid gap-3">
-              <CheckoutButton planId="banner-enterprise" className="w-full py-4 rounded-2xl text-base">
+              <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner/pricing" className="w-full py-4 rounded-2xl text-base">
                 エンタープライズを始める
               </CheckoutButton>
               <a
@@ -117,7 +118,7 @@ export default function BannerPricingPage() {
 
         {/* Bottom CTA */}
         <div className="mt-10 flex justify-center">
-          <Link href="/banner/dashboard">
+          <Link href="/banner">
             <button className="px-8 py-4 rounded-full bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
               おためしプランを使ってみる
             </button>

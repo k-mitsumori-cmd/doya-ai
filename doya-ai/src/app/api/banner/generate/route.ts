@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
               dailyUsed,
               dailyRemaining: Math.max(0, dailyLimit - dailyUsed),
             },
-            upgradeUrl: '/banner/pricing',
+            upgradeUrl: '/banner',
           },
           { status: 429 }
         )
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
                   dailyUsed: normalized.dailyUsage,
                   dailyRemaining: Math.max(0, dailyLimit - normalized.dailyUsage),
                 },
-                upgradeUrl: isPaidPlan ? (HIGH_USAGE_CONTACT_URL || '/banner/pricing') : '/banner/pricing',
+                upgradeUrl: isPaidPlan ? (HIGH_USAGE_CONTACT_URL || '/banner') : '/banner',
               },
               { status: 429 }
             )

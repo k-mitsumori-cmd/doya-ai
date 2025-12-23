@@ -264,7 +264,7 @@ export default function BannerLandingPage() {
                   ))}
                 </ul>
 
-                <Link href={plan.price === 0 ? "/banner/dashboard" : "/banner/pricing"}>
+                <Link href={plan.price === 0 ? "/banner" : "/banner/pricing"}>
                   <button className={`w-full py-5 rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 ${
                     plan.popular
                       ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-900/20'

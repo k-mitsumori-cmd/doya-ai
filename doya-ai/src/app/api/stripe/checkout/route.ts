@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       service === 'seo'
         ? '/pricing?payment=cancelled'
         : service === 'banner'
-          ? '/banner/pricing?payment=cancelled'
+          ? '/banner?payment=cancelled'
           : '/pricing?payment=cancelled'
 
     const successUrl = `${baseUrl}${successPath}?payment=success`

@@ -32,7 +32,7 @@ export function CheckoutButton({
     if (status === 'unauthenticated') {
       const service = planId.split('-')[0]
       if (service === 'banner') {
-        router.push(`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(loginCallbackUrl || '/banner/pricing')}`)
+        router.push(`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(loginCallbackUrl || '/banner')}`)
       } else {
         router.push(`/auth/signin?callbackUrl=${encodeURIComponent(loginCallbackUrl || `/${service}/pricing`)}`)
       }
