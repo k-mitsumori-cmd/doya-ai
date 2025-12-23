@@ -43,6 +43,29 @@ interface DailyStats {
   count: number
 }
 
+const STATS_CACHE_KEY = 'doya-banner-stats-cache'
+const STATS_CACHE_TTL_MS = 5 * 60 * 1000 // 5分
+
+function readStatsCache(): { items: HistoryItem[]; ts: number } | null {
+  try {
+    const raw = sessionStorage.getItem(STATS_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed?.items)) return null
+    return { items: parsed.items, ts: parsed.ts || 0 }
+  } catch {
+    return null
+  }
+}
+
+function writeStatsCache(items: HistoryItem[]) {
+  try {
+    sessionStorage.setItem(STATS_CACHE_KEY, JSON.stringify({ items, ts: Date.now() }))
+  } catch {
+    // ignore
+  }
+}
+
 export default function StatsPage() {
   const { data: session, status } = useSession()
   const isGuest = status !== 'loading' && !session
@@ -52,6 +75,7 @@ export default function StatsPage() {
   const [requiresUpgrade, setRequiresUpgrade] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [tipIndex, setTipIndex] = useState(0)
+  const [isStale, setIsStale] = useState(false)
 
   const LOADING_TIPS = [
     '統計は直近6ヶ月分の履歴から集計しています',
@@ -69,6 +93,17 @@ export default function StatsPage() {
   // ログインユーザーはAPIから、ゲストは統計閲覧不可
   const loadHistory = useCallback(async () => {
     if (status === 'loading') return
+
+    // stale-while-revalidate: キャッシュがあれば即表示→期限切れなら裏で更新
+    const cached = readStatsCache()
+    if (cached && cached.items.length > 0) {
+      setHistory(cached.items)
+      setIsLoaded(true)
+      const expired = Date.now() - cached.ts > STATS_CACHE_TTL_MS
+      if (!expired) return
+      setIsStale(true)
+    }
+
     setIsLoading(true)
     setRequiresUpgrade(false)
     setErrorMessage(null)
@@ -92,14 +127,16 @@ export default function StatsPage() {
             setRequiresUpgrade(true)
           } else {
             const items = Array.isArray(data.items) ? data.items : []
-            setHistory(items.map((item: any) => ({
+            const mapped: HistoryItem[] = items.map((item: any) => ({
               id: item.id,
               category: item.category || '',
               keyword: item.keyword || '',
               size: item.size || '',
               createdAt: item.createdAt || new Date().toISOString(),
               bannerCount: Number(item.bannerCount) > 0 ? Number(item.bannerCount) : 1,
-            })))
+            }))
+            setHistory(mapped)
+            writeStatsCache(mapped)
           }
         } else {
           setHistory([])
@@ -116,6 +153,7 @@ export default function StatsPage() {
     } finally {
       setIsLoaded(true)
       setIsLoading(false)
+      setIsStale(false)
     }
   }, [isGuest, status])
 

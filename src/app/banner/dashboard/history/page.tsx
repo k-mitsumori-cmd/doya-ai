@@ -149,7 +149,7 @@ export default function BannerHistoryPage() {
         // ログインユーザーはAPIから取得
         const controller = new AbortController()
         const timeout = window.setTimeout(() => controller.abort(), 15_000)
-        // まず一覧（画像なし）を高速取得
+        // まず一覧（画像なし + 最初の3枚だけthumb URL）を高速取得
         const res = await fetch('/api/banner/history?take=30&images=0', { signal: controller.signal })
         window.clearTimeout(timeout)
         if (res.ok) {
@@ -166,37 +166,18 @@ export default function BannerHistoryPage() {
               keyword: item.keyword || '',
               size: item.size || '',
               createdAt: new Date(item.createdAt),
-              banners: [], // 画像は後から段階取得
+              // 最初の表示は previewThumbs を使う（追加リクエストを減らして爆速化）
+              banners: Array.isArray(item.previewThumbs) ? item.previewThumbs.map((x: any) => String(x || '')).filter(Boolean) : [],
               bannerCount:
                 Number(item.bannerCount) > 0
                   ? Number(item.bannerCount)
                   : Array.isArray(item.banners)
                     ? item.banners.length
                     : 1,
+              bannerIds: Array.isArray(item.previewIds) ? item.previewIds.filter((x: any) => typeof x === 'string') : undefined,
             }))
             setHistory(list)
             writeHistoryCache(list) // キャッシュ保存
-
-            // 先頭だけ軽く画像を段階取得（体感を損なわない範囲）
-            setPhase('images')
-            const first = list.slice(0, 6)
-            const CONCURRENCY = 2
-            let idx = 0
-            const worker = async () => {
-              while (idx < first.length) {
-                const cur = first[idx++]
-                try {
-                  const got = await fetchBatchImages(cur.id)
-                  setHistory((prev) =>
-                    prev.map((h) => (h.id === cur.id ? { ...h, banners: got.banners, bannerIds: got.bannerIds } : h))
-                  )
-                } catch {
-                  // ignore
-                }
-              }
-            }
-            await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()))
-            setPhase('idle')
           }
         } else {
           toast.error('履歴の取得に失敗しました')
@@ -503,6 +484,14 @@ export default function BannerHistoryPage() {
                                 loading="lazy"
                                 decoding="async"
                               className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
+                              onError={(e) => {
+                                // サムネ取得に失敗しても“壊れ画像”にしない
+                                const img = e.currentTarget
+                                if (!img.dataset.fallbackApplied) {
+                                  img.dataset.fallbackApplied = '1'
+                                  img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=='
+                                }
+                              }}
                             />
                           ) : (
                             <div className="absolute inset-0 flex items-center justify-center">
