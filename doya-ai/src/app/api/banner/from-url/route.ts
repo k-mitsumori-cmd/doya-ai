@@ -975,9 +975,85 @@ function extractLikelyHeroImages(html: string, baseUrl: string): string[] {
   return Array.from(new Set(urls)).slice(0, 6)
 }
 
+function extractProductLikeImages(html: string, baseUrl: string): string[] {
+  // 商品画像/プロダクト画像っぽいものを拾う（ECやLPを想定）
+  const urls: string[] = []
+  const re = /<img[^>]+src=["']([^"']{1,500})["'][^>]*>/gi
+  let m: RegExpExecArray | null
+  while ((m = re.exec(html))) {
+    const tag = m[0] || ''
+    const src = m[1] || ''
+    const abs = toAbsoluteUrl(src, baseUrl)
+    if (!abs) continue
+    const lowerTag = tag.toLowerCase()
+    const lowerUrl = abs.toLowerCase()
+
+    const alt = (tag.match(/\salt=["']([^"']{0,120})["']/i)?.[1] || '').toLowerCase()
+    const cls = (tag.match(/\sclass=["']([^"']{0,200})["']/i)?.[1] || '').toLowerCase()
+
+    const looksProduct =
+      alt.includes('商品') ||
+      alt.includes('製品') ||
+      alt.includes('プロダクト') ||
+      alt.includes('product') ||
+      alt.includes('item') ||
+      cls.includes('product') ||
+      cls.includes('item') ||
+      cls.includes('goods') ||
+      cls.includes('card') ||
+      lowerUrl.includes('/product') ||
+      lowerUrl.includes('/products') ||
+      lowerUrl.includes('/item') ||
+      lowerUrl.includes('/items') ||
+      lowerUrl.includes('/goods') ||
+      lowerUrl.includes('/sku') ||
+      lowerUrl.includes('product') ||
+      lowerUrl.includes('item')
+
+    // svg/icon系は避ける（参考画像としては弱い）
+    const isIconish = lowerUrl.endsWith('.svg') || lowerTag.includes('icon') || lowerTag.includes('logo')
+    if (looksProduct && !isIconish) {
+      urls.push(abs)
+      if (urls.length >= 10) break
+    }
+  }
+  return Array.from(new Set(urls)).slice(0, 10)
+}
+
 function rgbToHex(r: number, g: number, b: number): string {
   const to = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')
   return `#${to(r)}${to(g)}${to(b)}`.toUpperCase()
+}
+
+async function fetchImageAsReferenceDataUrl(url: string, timeoutMs = 7000): Promise<string | null> {
+  // 参照画像としてモデルに渡す用に軽量化（dataURL化）
+  try {
+    const controller = new AbortController()
+    const t = setTimeout(() => controller.abort(), timeoutMs)
+    const res = await fetch(url, {
+      method: 'GET',
+      redirect: 'follow',
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DoyaBannerAI/1.0)' },
+      signal: controller.signal,
+    })
+    clearTimeout(t)
+    if (!res.ok) return null
+    const buf = Buffer.from(await res.arrayBuffer())
+
+    // 画像が巨大な場合でもサーバ負荷/速度を抑えるため縮小
+    const out = await sharp(buf)
+      .rotate()
+      .resize(640, 640, { fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 72, mozjpeg: true })
+      .toBuffer()
+
+    const b64 = out.toString('base64')
+    // 参考画像は2枚まで使うので、1枚が大きすぎる場合は捨てる（安全側）
+    if (b64.length > 900_000) return null // ~675KB
+    return `data:image/jpeg;base64,${b64}`
+  } catch {
+    return null
+  }
 }
 
 async function extractPaletteFromImages(urls: string[], timeoutMs = 6000): Promise<string[]> {
@@ -1171,7 +1247,8 @@ export async function POST(request: NextRequest) {
     // 画像（OG/ICON + ページ内の主要img）から実色を抽出（補助：サイト全体の色とズレる場合もある）
     const imageCandidates = extractImageCandidates(html, targetUrl)
     const heroCandidates = extractLikelyHeroImages(html, targetUrl)
-    const imageSources = Array.from(new Set([...imageCandidates, ...heroCandidates])).slice(0, 6)
+    const productCandidates = extractProductLikeImages(html, targetUrl)
+    const imageSources = Array.from(new Set([...imageCandidates, ...heroCandidates, ...productCandidates])).slice(0, 8)
     const paletteFromImages = await extractPaletteFromImages(imageSources)
     const mergedPalette = Array.from(
       new Set([...(paletteFromHeadlessArea || []), ...(paletteFromCss || []), ...(paletteFromImages || [])].map((c) => String(c).toUpperCase()))
@@ -1190,6 +1267,7 @@ export async function POST(request: NextRequest) {
     const visualHints = [
       visual?.colorSummaryText ? `colors_by_area=${visual.colorSummaryText}` : '',
       visual?.imageSummaryText ? `visual_image=${visual.imageSummaryText}` : '',
+      productCandidates.length > 0 ? `product_image_candidates=${productCandidates.slice(0, 2).join(',')}` : '',
     ]
       .filter(Boolean)
       .join(' / ')
@@ -1222,12 +1300,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 画像生成（Nano Banana Pro）
+    // サイト内の主要画像（商品/サービス画像など）を参照画像として渡し、バナーに“素材感”を反映させる
+    const autoReferenceSources = Array.from(new Set([...productCandidates, ...imageCandidates, ...heroCandidates])).slice(0, 4)
+    const autoReferenceImages: string[] = []
+    for (const u of autoReferenceSources) {
+      const dataUrl = await fetchImageAsReferenceDataUrl(u)
+      if (dataUrl) autoReferenceImages.push(dataUrl)
+      if (autoReferenceImages.length >= 2) break
+    }
+
     const options = {
       purpose: appPurpose,
       logoImage: body.logoImage,
       // 人物写真は1名（1枚）に固定
       personImages: Array.isArray(body.personImages) ? body.personImages.slice(0, 1) : undefined,
-      referenceImages: Array.isArray(body.referenceImages) ? body.referenceImages : undefined,
+      // 明示指定があればそれを優先。なければサイトから自動抽出した参照画像を使用。
+      referenceImages: Array.isArray(body.referenceImages) && body.referenceImages.length > 0 ? body.referenceImages : (autoReferenceImages.length > 0 ? autoReferenceImages : undefined),
       // brandColors が未指定なら、抽出したパレットを使用（色抽出精度UP）
       brandColors: Array.isArray(body.brandColors)
         ? body.brandColors
