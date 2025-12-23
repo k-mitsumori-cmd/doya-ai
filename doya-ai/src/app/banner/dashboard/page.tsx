@@ -712,6 +712,24 @@ export default function BannerDashboard() {
   const [customColors, setCustomColors] = useState<string[]>([])
   const [colorDraft, setColorDraft] = useState('#8B5CF6')
 
+  // ロゴ/人物（任意・アップロード画像をAIに渡して反映）
+  const [logoImage, setLogoImage] = useState<string | null>(null)
+  const [logoFileName, setLogoFileName] = useState('')
+  const [personImage, setPersonImage] = useState<string | null>(null)
+  const [personFileName, setPersonFileName] = useState('')
+
+  const readFileAsDataUrl = async (file: File): Promise<string> => {
+    const maxBytes = 6 * 1024 * 1024 // 6MB
+    if (file.size > maxBytes) throw new Error('画像が大きすぎます（6MB以内）')
+    if (!file.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result || ''))
+      reader.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+      reader.readAsDataURL(file)
+    })
+  }
+
   // ギャラリー公開（任意）
   const [shareToGallery, setShareToGallery] = useState(false)
   const [shareProfile, setShareProfile] = useState(false)
@@ -999,6 +1017,8 @@ export default function BannerDashboard() {
           size: effectiveSize,
           purpose,
           imageDescription: imageDescription.trim() || undefined,
+          logoImage: logoImage || undefined,
+          personImage: personImage || undefined,
           brandColors: useCustomColors
             ? uniqStrings(customColors.map((c) => normalizeHexClient(c) || '').filter(Boolean)).slice(0, 8)
             : undefined,
@@ -1781,6 +1801,124 @@ export default function BannerDashboard() {
               transition={{ delay: 0.35 }}
             >
             <div className="pt-10">
+              {/* Logo / Person Upload */}
+              <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <div>
+                  <p className="text-sm font-black text-slate-800">ロゴ / 人物写真（任意）</p>
+                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                    アップロードした画像をバナーに反映します（AIが画像内に合成します）。
+                  </p>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Logo */}
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-black text-slate-700">ロゴ</p>
+                      {logoImage && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLogoImage(null)
+                            setLogoFileName('')
+                            toast('ロゴを解除しました')
+                          }}
+                          className="text-xs font-black text-slate-500 hover:text-slate-900"
+                        >
+                          解除
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-2 flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                        {logoImage ? (
+                          <img src={logoImage} alt="logo" className="h-full w-full object-contain" />
+                        ) : (
+                          <span className="text-[10px] font-black text-slate-400">LOGO</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-slate-600 font-bold truncate">{logoFileName || '未設定'}</p>
+                        <label className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const f = e.target.files?.[0]
+                              e.target.value = ''
+                              if (!f) return
+                              try {
+                                const url = await readFileAsDataUrl(f)
+                                setLogoImage(url)
+                                setLogoFileName(f.name)
+                                toast.success('ロゴを設定しました')
+                              } catch (err: any) {
+                                toast.error(err?.message || 'ロゴの設定に失敗しました')
+                              }
+                            }}
+                          />
+                          アップロード
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Person */}
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-black text-slate-700">人物写真</p>
+                      {personImage && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPersonImage(null)
+                            setPersonFileName('')
+                            toast('人物写真を解除しました')
+                          }}
+                          className="text-xs font-black text-slate-500 hover:text-slate-900"
+                        >
+                          解除
+                        </button>
+                      )}
+                    </div>
+                    <div className="mt-2 flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                        {personImage ? (
+                          <img src={personImage} alt="person" className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-[10px] font-black text-slate-400">PERSON</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] text-slate-600 font-bold truncate">{personFileName || '未設定'}</p>
+                        <label className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const f = e.target.files?.[0]
+                              e.target.value = ''
+                              if (!f) return
+                              try {
+                                const url = await readFileAsDataUrl(f)
+                                setPersonImage(url)
+                                setPersonFileName(f.name)
+                                toast.success('人物写真を設定しました')
+                              } catch (err: any) {
+                                toast.error(err?.message || '人物写真の設定に失敗しました')
+                              }
+                            }}
+                          />
+                          アップロード
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {/* Share to Gallery */}
               <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-4">
