@@ -721,26 +721,27 @@ export default function BannerDashboard() {
 
   const MAX_PERSON_IMAGES = 4
 
-  const addPersonFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return
-    const list = Array.from(files)
+  const addPersonSlot = () => {
+    if (personImages.length >= MAX_PERSON_IMAGES) {
+      toast.error(`人物写真は最大${MAX_PERSON_IMAGES}人までです`)
+      return
+    }
+    setPersonImages((prev) => prev.concat(['']))
+    setPersonFileNames((prev) => prev.concat(['']))
+  }
+
+  const removePersonSlot = (idx: number) => {
+    setPersonImages((prev) => prev.filter((_, i) => i !== idx))
+    setPersonFileNames((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const setPersonFileAt = async (idx: number, file: File | null) => {
+    if (!file) return
     try {
-      const remain = Math.max(0, MAX_PERSON_IMAGES - personImages.length)
-      if (remain <= 0) {
-        toast.error(`人物写真は最大${MAX_PERSON_IMAGES}枚までです`)
-        return
-      }
-      const toRead = list.slice(0, remain)
-      const urls: string[] = []
-      const names: string[] = []
-      for (const f of toRead) {
-        const url = await readFileAsDataUrl(f)
-        urls.push(url)
-        names.push(f.name)
-      }
-      setPersonImages((prev) => prev.concat(urls))
-      setPersonFileNames((prev) => prev.concat(names))
-      toast.success(`人物写真を${urls.length}枚追加しました`)
+      const url = await readFileAsDataUrl(file)
+      setPersonImages((prev) => prev.map((v, i) => (i === idx ? url : v)))
+      setPersonFileNames((prev) => prev.map((v, i) => (i === idx ? file.name : v)))
+      toast.success(`人物写真（${idx + 1}人目）を設定しました`)
     } catch (e: any) {
       toast.error(e?.message || '人物写真の追加に失敗しました')
     }
@@ -1050,9 +1051,15 @@ export default function BannerDashboard() {
           count: generateCount,
           imageDescription: imageDescription.trim() || undefined,
           logoImage: logoImage || undefined,
-          personImages: personImages.length > 0 ? personImages : undefined,
+          personImages: personImages
+            .map((x) => String(x || '').trim())
+            .filter((x) => x.startsWith('data:'))
+            .slice(0, 4),
           // 後方互換（念のため）
-          personImage: personImages[0] || undefined,
+          personImage:
+            personImages
+              .map((x) => String(x || '').trim())
+              .find((x) => x.startsWith('data:')) || undefined,
           brandColors: useCustomColors
             ? uniqStrings(customColors.map((c) => normalizeHexClient(c) || '').filter(Boolean)).slice(0, 8)
             : undefined,
@@ -1971,82 +1978,81 @@ export default function BannerDashboard() {
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-black text-slate-700">人物写真</p>
-                      {personImages.length > 0 && (
+                      <div className="flex items-center gap-3">
                         <button
                           type="button"
-                          onClick={() => {
-                            setPersonImages([])
-                            setPersonFileNames([])
-                            toast('人物写真をすべて解除しました')
-                          }}
-                          className="text-xs font-black text-slate-500 hover:text-slate-900"
+                          onClick={() => addPersonSlot()}
+                          className="text-xs font-black text-blue-600 hover:text-blue-800"
                         >
-                          全解除
+                          ＋ 枠を追加
                         </button>
-                      )}
-                    </div>
-                    <div className="mt-2 flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        {personImages.length > 0 ? (
-                          <div className="flex -space-x-2">
-                            {personImages.slice(0, 3).map((p, idx) => (
-                              <div key={idx} className="h-12 w-12 rounded-xl bg-white border border-slate-200 overflow-hidden">
-                                <img src={p} alt={`person-${idx}`} className="h-full w-full object-cover" />
-                              </div>
-                            ))}
-                            {personImages.length > 3 && (
-                              <div className="h-12 w-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">
-                                +{personImages.length - 3}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
-                            <span className="text-[10px] font-black text-slate-400">PERSON</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[11px] text-slate-600 font-bold truncate">
-                          {personImages.length > 0 ? `${personImages.length}枚設定済み` : '未設定'}
-                        </p>
-                        <span className="relative mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                            onChange={async (e) => {
-                              const files = e.currentTarget.files
-                              e.currentTarget.value = ''
-                              await addPersonFiles(files)
-                            }}
-                          />
-                          追加
-                        </span>
                         {personImages.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {personFileNames.map((name, idx) => (
-                              <button
-                                key={`${name}-${idx}`}
-                                type="button"
-                                onClick={() => {
-                                  setPersonImages((prev) => prev.filter((_, i) => i !== idx))
-                                  setPersonFileNames((prev) => prev.filter((_, i) => i !== idx))
-                                }}
-                                className="px-2 py-1 bg-white rounded-lg border border-slate-200 hover:bg-slate-100 text-[10px] font-bold text-slate-700"
-                                title="クリックで削除"
-                              >
-                                {name.length > 18 ? name.slice(0, 18) + '…' : name} ×
-                              </button>
-                            ))}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPersonImages([])
+                              setPersonFileNames([])
+                              toast('人物写真をすべて解除しました')
+                            }}
+                            className="text-xs font-black text-slate-500 hover:text-slate-900"
+                          >
+                            全解除
+                          </button>
                         )}
-                        <p className="mt-2 text-[10px] text-slate-500 font-bold">
-                          ※ 最大{MAX_PERSON_IMAGES}枚まで（人物は提供画像を優先して自然に合成します）
-                        </p>
                       </div>
                     </div>
+                    {personImages.length === 0 ? (
+                      <div className="mt-2 text-[11px] text-slate-600 font-bold">
+                        未設定（「＋ 枠を追加」で最大{MAX_PERSON_IMAGES}人まで追加できます）
+                      </div>
+                    ) : (
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {personImages.map((p, idx) => (
+                          <div key={idx} className="rounded-2xl bg-white border border-slate-200 p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[10px] font-black text-slate-500">人物 {idx + 1}</p>
+                              <button
+                                type="button"
+                                onClick={() => removePersonSlot(idx)}
+                                className="text-[10px] font-black text-red-500 hover:text-red-600"
+                              >
+                                削除
+                              </button>
+                            </div>
+                            <div className="mt-2 flex items-center gap-3">
+                              <div className="h-12 w-12 rounded-xl bg-slate-50 border border-slate-200 overflow-hidden flex items-center justify-center">
+                                {p && p.startsWith('data:') ? (
+                                  <img src={p} alt={`person-${idx}`} className="h-full w-full object-cover" />
+                                ) : (
+                                  <span className="text-[10px] font-black text-slate-400">PERSON</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] text-slate-600 font-bold truncate">
+                                  {personFileNames[idx] ? personFileNames[idx] : '未設定'}
+                                </p>
+                                <span className="relative mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                    onChange={async (e) => {
+                                      const f = e.currentTarget.files?.[0] || null
+                                      e.currentTarget.value = ''
+                                      await setPersonFileAt(idx, f)
+                                    }}
+                                  />
+                                  {p && p.startsWith('data:') ? '変更' : 'アップロード'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-2 text-[10px] text-slate-500 font-bold">
+                      ※ 1枠=1枚。必要なら「＋ 枠を追加」で最大{MAX_PERSON_IMAGES}人まで追加できます（人物は提供画像を優先して自然に合成します）
+                    </p>
                   </div>
                 </div>
               </div>
