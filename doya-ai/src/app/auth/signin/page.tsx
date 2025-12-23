@@ -1,9 +1,9 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Sparkles } from 'lucide-react'
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 
 // エラーコードに対応するメッセージ
@@ -22,11 +22,57 @@ const errorMessages: Record<string, string> = {
 
 function SignInContent() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const callbackUrl = searchParams.get('callbackUrl') || '/kantan/dashboard'
   const error = searchParams.get('error')
   const [isLoading, setIsLoading] = useState(false)
 
   const errorMessage = error ? (errorMessages[error] || errorMessages['Default']) : null
+
+  const shouldUseBannerLogin = useMemo(() => {
+    const raw = String(callbackUrl || '').trim()
+    if (!raw) return false
+    try {
+      // callbackUrl がフルURLで渡るケース
+      if (raw.startsWith('http')) {
+        const u = new URL(raw)
+        if (u.pathname.startsWith('/banner')) return true
+      }
+    } catch {}
+    // callbackUrl がパスで渡るケース
+    if (raw.startsWith('/banner')) return true
+    if (raw.includes('/banner')) return true
+    return false
+  }, [callbackUrl])
+
+  useEffect(() => {
+    // バナー側ログイン失敗時に /auth/signin に飛んできてしまうケースを救済
+    // （NextAuthの pages.error が共通のため）
+    if (typeof window === 'undefined') return
+    const ref = String(document.referrer || '')
+    const fromBanner = ref.includes('/banner') || ref.includes('/auth/doyamarke/signin')
+    if (shouldUseBannerLogin || fromBanner) {
+      const qs = new URLSearchParams()
+      if (callbackUrl) qs.set('callbackUrl', callbackUrl)
+      if (error) qs.set('error', error)
+      router.replace(`/auth/doyamarke/signin?${qs.toString()}`)
+    }
+  }, [router, shouldUseBannerLogin, callbackUrl, error])
+
+  if (typeof window !== 'undefined') {
+    const ref = String(document.referrer || '')
+    const fromBanner = ref.includes('/banner') || ref.includes('/auth/doyamarke/signin')
+    if (shouldUseBannerLogin || fromBanner) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4" />
+            <p className="text-gray-600">ログイン画面へ移動中...</p>
+          </div>
+        </div>
+      )
+    }
+  }
 
   const handleGoogleLogin = () => {
     setIsLoading(true)
