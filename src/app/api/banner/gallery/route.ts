@@ -46,6 +46,8 @@ export async function GET(request: NextRequest) {
         .catch((e) => console.error('Gallery cleanup failed:', e))
     }
 
+    // IMPORTANT: generation.output (dataURL) は巨大なので、一覧では絶対に取得しない
+    // -> select で必要最小限に絞って、タイムアウト/メモリ増を回避する
     const items = await prisma.generation.findMany({
       where: {
         serviceId: 'banner',
@@ -59,10 +61,11 @@ export async function GET(request: NextRequest) {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      include: {
-        user: {
-          select: { name: true, image: true },
-        },
+      select: {
+        id: true,
+        createdAt: true,
+        metadata: true,
+        user: { select: { name: true, image: true } },
       },
     })
 
