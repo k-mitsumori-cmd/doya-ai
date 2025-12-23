@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles } from 'lucide-react'
+import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
@@ -67,6 +67,7 @@ export default function BannerUrlAutoPage() {
   const [usedModelDisplay, setUsedModelDisplay] = useState<string>('')
   const [count, setCount] = useState<number>(3)
   const [size, setSize] = useState<string>(DEFAULT_FREE_SIZE)
+  const [showAdvanced, setShowAdvanced] = useState(false)
 
   const canGenerate = useMemo(() => targetUrl.trim().length > 8 && !isGenerating, [targetUrl, isGenerating])
 
@@ -221,73 +222,90 @@ export default function BannerUrlAutoPage() {
               </div>
 
               {/* 詳細設定 */}
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-black text-slate-900">詳細設定</p>
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                {/* collapsed header */}
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((v) => !v)}
+                  className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center">
+                      <SlidersHorizontal className="w-4 h-4 text-slate-700" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-black text-slate-900">詳細設定</p>
+                      <p className="text-[11px] text-slate-500 font-bold">
+                        作成枚数：<span className="text-slate-900">{isPaidUser ? `${count}枚` : '3枚（無料固定）'}</span>
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black text-slate-500 rounded-full bg-slate-100 px-3 py-1">
+                      {isPaidUser ? '有料' : isGuest ? 'ゲスト' : '無料'}
+                    </span>
+                    <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                  </div>
+                </button>
+
+                {showAdvanced && (
+                  <div className="px-4 pb-4">
                     <p className="text-[11px] text-slate-500 font-bold mt-1 leading-relaxed">
                       無料：<span className="text-slate-800">3枚固定 / 1080×1080のみ</span>　
                       有料：<span className="text-slate-800">最大10枚 / サイズ指定OK</span>
                     </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-[10px] font-black text-slate-500 rounded-full bg-slate-100 px-3 py-1">
-                      {isPaidUser ? '有料ユーザー' : isGuest ? 'ゲスト' : '無料プラン'}
-                    </div>
-                  </div>
-                </div>
 
-                <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {/* 枚数 */}
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-black text-slate-700">生成枚数</p>
-                      <p className="text-xs font-black text-slate-900 tabular-nums">{isPaidUser ? `${count}枚` : '3枚固定'}</p>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          disabled={!isPaidUser && n !== 3}
-                          onClick={() => setCount(n)}
-                          className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
-                            (!isPaidUser && n !== 3)
-                              ? 'bg-white text-slate-300 border-slate-200 cursor-not-allowed'
-                              : count === n
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                          }`}
+                    <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {/* 枚数 */}
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-black text-slate-700">生成枚数</p>
+                          <p className="text-xs font-black text-slate-900 tabular-nums">{isPaidUser ? `${count}枚` : '3枚固定'}</p>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                            <button
+                              key={n}
+                              type="button"
+                              disabled={!isPaidUser && n !== 3}
+                              onClick={() => setCount(n)}
+                              className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
+                                (!isPaidUser && n !== 3)
+                                  ? 'bg-white text-slate-300 border-slate-200 cursor-not-allowed'
+                                  : count === n
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* サイズ */}
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-xs font-black text-slate-700">サイズ</p>
+                          <p className="text-[10px] font-black text-slate-500">{isPaidUser ? '指定OK' : '無料は固定'}</p>
+                        </div>
+                        <select
+                          value={isPaidUser ? size : DEFAULT_FREE_SIZE}
+                          onChange={(e) => setSize(e.target.value)}
+                          disabled={!isPaidUser}
+                          className="mt-2 w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-black text-slate-800 disabled:opacity-60"
                         >
-                          {n}
-                        </button>
-                      ))}
+                          {SIZE_OPTIONS.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        {!isPaidUser && <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 有料プランでサイズ指定が可能です。</p>}
+                      </div>
                     </div>
                   </div>
-
-                  {/* サイズ */}
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-black text-slate-700">サイズ</p>
-                      <p className="text-[10px] font-black text-slate-500">{isPaidUser ? '指定OK' : '無料は固定'}</p>
-                    </div>
-                    <select
-                      value={isPaidUser ? size : DEFAULT_FREE_SIZE}
-                      onChange={(e) => setSize(e.target.value)}
-                      disabled={!isPaidUser}
-                      className="mt-2 w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-black text-slate-800 disabled:opacity-60"
-                    >
-                      {SIZE_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    {!isPaidUser && (
-                      <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 有料プランでサイズ指定が可能です。</p>
-                    )}
-                  </div>
-                </div>
+                )}
               </div>
 
               <button
