@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Loader2, ArrowLeft, Image as ImageIcon, Download } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { DashboardLayout } from '@/components/DashboardLayout'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 type GalleryItem = {
   id: string
@@ -158,6 +159,14 @@ export default function BannerGalleryPage() {
                 >
                   再読み込み
                 </button>
+                <a
+                  href={SUPPORT_CONTACT_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-6 py-3 rounded-2xl bg-white border border-gray-200 text-slate-800 font-black hover:bg-slate-50 transition-colors text-center"
+                >
+                  お問い合わせ
+                </a>
               </div>
             </div>
           ) : items.length === 0 ? (
