@@ -22,6 +22,9 @@ type HistoryBatch = {
   createdAt: string
   banners: string[]
   bannerCount: number
+  // 一覧表示用（最初の数枚だけ）: 画像は別APIでバイナリ配信
+  previewThumbs?: string[]
+  previewIds?: string[]
 }
 
 // ユーザーが有料プランかどうかを判定（DB優先。セッションにもフォールバック）
@@ -181,6 +184,7 @@ export async function GET(request: NextRequest) {
     const takeBatches = Math.min(Math.max(takeRaw, 1), 50)
     const takeRows = takeBatches * 12 // 1バッチ最大10枚を想定し余裕を持たせる
 
+    // images=0 の場合は output を取らず、レスポンスを極力軽くする
     const rows = await prisma.generation.findMany({
       where: {
         userId,
@@ -190,6 +194,9 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: takeRows,
+      select: includeImages
+        ? { id: true, output: true, createdAt: true, input: true, metadata: true }
+        : { id: true, createdAt: true, input: true, metadata: true },
     })
 
     const byBatch = new Map<string, HistoryBatch & { _createdAtMs: number }>()
@@ -207,6 +214,7 @@ export async function GET(request: NextRequest) {
       const createdAtMs = r.createdAt.getTime()
       const cur = byBatch.get(key)
       if (!cur) {
+        const previewIds = [r.id]
         byBatch.set(key, {
           id: batchId || key,
           category: String(input?.category || meta?.category || ''),
@@ -214,14 +222,21 @@ export async function GET(request: NextRequest) {
           size: String(input?.size || meta?.size || ''),
           purpose: String(input?.purpose || meta?.purpose || ''),
           createdAt: createdAtIso,
-          banners: includeImages && typeof r.output === 'string' ? [r.output] : [],
-          bannerCount: typeof r.output === 'string' ? 1 : 0,
+          banners: includeImages && typeof (r as any).output === 'string' ? [(r as any).output] : [],
+          bannerCount: 1,
+          previewIds,
+          previewThumbs: previewIds.map((id) => `/api/banner/history/thumb?id=${encodeURIComponent(id)}`),
           _createdAtMs: createdAtMs,
         })
       } else {
-        if (typeof r.output === 'string') {
-          cur.bannerCount += 1
-          if (includeImages) cur.banners.push(r.output)
+        cur.bannerCount += 1
+        if (includeImages && typeof (r as any).output === 'string') cur.banners.push((r as any).output)
+        // 一覧表示用に最初の3枚だけIDを保持（画像はthumb APIで取得）
+        const ids = Array.isArray(cur.previewIds) ? cur.previewIds : []
+        if (ids.length < 3) {
+          ids.push(r.id)
+          cur.previewIds = ids
+          cur.previewThumbs = ids.map((id) => `/api/banner/history/thumb?id=${encodeURIComponent(id)}`)
         }
         if (createdAtMs > cur._createdAtMs) {
           cur._createdAtMs = createdAtMs
