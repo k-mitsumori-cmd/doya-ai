@@ -9,7 +9,7 @@ import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 type GalleryItem = {
   id: string
-  image: string
+  thumb: string | null
   createdAt: string
   category: string
   purpose: string
@@ -79,6 +79,15 @@ export default function BannerGalleryPage() {
     return json as { items: GalleryItem[]; nextCursor: string | null }
   }
 
+  const fetchFullImage = async (id: string): Promise<string> => {
+    const res = await fetch(`/api/banner/image?id=${encodeURIComponent(id)}`)
+    const json = await res.json()
+    if (!res.ok) throw new Error(json?.error || '画像の取得に失敗しました')
+    const image = String(json?.image || '')
+    if (!image.startsWith('data:') && !/^https?:\/\//.test(image)) throw new Error('画像データが取得できませんでした')
+    return image
+  }
+
   useEffect(() => {
     let mounted = true
     ;(async () => {
@@ -140,6 +149,22 @@ export default function BannerGalleryPage() {
     }
   }
 
+  const downloadImage = async (id: string) => {
+    try {
+      toast.loading('画像を準備中...', { id: 'dl' })
+      const imageUrl = await fetchFullImage(id)
+      const link = document.createElement('a')
+      link.href = imageUrl
+      link.download = `doya_gallery_${id}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('ダウンロード開始', { id: 'dl' })
+    } catch (e: any) {
+      toast.error(e?.message || 'ダウンロードに失敗しました', { id: 'dl' })
+    }
+  }
+
   const retry = async () => {
     try {
       setLoading(true)
@@ -158,20 +183,7 @@ export default function BannerGalleryPage() {
     }
   }
 
-  const handleDownload = (imageUrl: string, keyword: string) => {
-    try {
-      const link = document.createElement('a')
-      link.href = imageUrl
-      const safeName = (keyword || 'banner').replace(/[^a-zA-Z0-9ぁ-んァ-ン一-龥]/g, '_').slice(0, 30)
-      link.download = `doya_gallery_${safeName}_${Date.now()}.png`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      toast.success('ダウンロードを開始しました')
-    } catch {
-      toast.error('ダウンロードに失敗しました')
-    }
-  }
+  // 互換：古い実装のハンドラは廃止（一覧はサムネのみ）
 
   return (
     <DashboardLayout>
@@ -249,11 +261,21 @@ export default function BannerGalleryPage() {
                 {items.map((it) => (
                   <div key={it.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden group">
                     <div className="relative aspect-square bg-slate-50">
-                      <img src={it.image} alt={it.keyword || 'banner'} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      {it.thumb ? (
+                        <img
+                          src={it.thumb}
+                          alt={it.keyword || 'banner'}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="animate-pulse w-20 h-20 rounded-3xl bg-slate-200" />
+                        </div>
+                      )}
                       {/* ダウンロードボタン（ホバー時表示） */}
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
                         <button
-                          onClick={() => handleDownload(it.image, it.keyword)}
+                          onClick={() => downloadImage(it.id)}
                           className="w-14 h-14 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
                           title="ダウンロード"
                         >
