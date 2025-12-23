@@ -70,7 +70,6 @@ export default function BannerChatPage() {
   const [logoFileName, setLogoFileName] = useState('')
   const [personImages, setPersonImages] = useState<string[]>([])
   const [personFileNames, setPersonFileNames] = useState<string[]>([])
-  const personInputRef = useRef<HTMLInputElement | null>(null)
   const [generateCount, setGenerateCount] = useState<number>(3)
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
@@ -600,59 +599,48 @@ export default function BannerChatPage() {
                                 <p className="text-[11px] text-slate-600 font-bold truncate">
                                   {personImages.length > 0 ? `${personImages.length}枚設定済み` : '未設定'}
                                 </p>
-                                <input
-                                  ref={personInputRef}
-                                  type="file"
-                                  accept="image/*"
-                                  multiple
-                                  style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
-                                  onChange={async (e) => {
-                                    console.log('[chat-person-input] onChange fired')
-                                    const files = e.target.files
-                                    console.log('[chat-person-input] files:', files?.length || 0)
-                                    e.target.value = ''
-                                    try {
-                                      if (!files || files.length === 0) return
-                                      const MAX_PERSON_IMAGES = 4
-                                      const remain = Math.max(0, MAX_PERSON_IMAGES - personImages.length)
-                                      if (remain <= 0) {
-                                        toast.error(`人物写真は最大${MAX_PERSON_IMAGES}枚までです`)
-                                        return
+                                <span className="relative mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                    onChange={async (e) => {
+                                      const files = e.currentTarget.files
+                                      e.currentTarget.value = ''
+                                      try {
+                                        if (!files || files.length === 0) return
+                                        const MAX_PERSON_IMAGES = 4
+                                        const remain = Math.max(0, MAX_PERSON_IMAGES - personImages.length)
+                                        if (remain <= 0) {
+                                          toast.error(`人物写真は最大${MAX_PERSON_IMAGES}枚までです`)
+                                          return
+                                        }
+                                        const list = Array.from(files).slice(0, remain)
+                                        const urls: string[] = []
+                                        const names: string[] = []
+                                        for (const f of list) {
+                                          if (!f.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
+                                          if (f.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
+                                          const url = await new Promise<string>((resolve, reject) => {
+                                            const r = new FileReader()
+                                            r.onload = () => resolve(String(r.result || ''))
+                                            r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+                                            r.readAsDataURL(f)
+                                          })
+                                          urls.push(url)
+                                          names.push(f.name)
+                                        }
+                                        setPersonImages((prev) => prev.concat(urls))
+                                        setPersonFileNames((prev) => prev.concat(names))
+                                        toast.success(`人物写真を${urls.length}枚追加しました`)
+                                      } catch (err: any) {
+                                        toast.error(err?.message || '人物写真の追加に失敗しました')
                                       }
-                                      const list = Array.from(files).slice(0, remain)
-                                      const urls: string[] = []
-                                      const names: string[] = []
-                                      for (const f of list) {
-                                        if (!f.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
-                                        if (f.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
-                                        const url = await new Promise<string>((resolve, reject) => {
-                                          const r = new FileReader()
-                                          r.onload = () => resolve(String(r.result || ''))
-                                          r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
-                                          r.readAsDataURL(f)
-                                        })
-                                        urls.push(url)
-                                        names.push(f.name)
-                                      }
-                                      setPersonImages((prev) => prev.concat(urls))
-                                      setPersonFileNames((prev) => prev.concat(names))
-                                      toast.success(`人物写真を${urls.length}枚追加しました`)
-                                    } catch (err: any) {
-                                      console.error('Person image upload error:', err)
-                                      toast.error(err?.message || '人物写真の追加に失敗しました')
-                                    }
-                                  }}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    console.log('[chat-person-input] button clicked, triggering input.click()')
-                                    personInputRef.current?.click()
-                                  }}
-                                  className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer"
-                                >
+                                    }}
+                                  />
                                   追加
-                                </button>
+                                </span>
                                 {personImages.length > 0 && (
                                   <div className="mt-2 flex flex-wrap gap-2">
                                     {personFileNames.map((name, idx) => (
