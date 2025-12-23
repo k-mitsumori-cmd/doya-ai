@@ -438,6 +438,85 @@ function parseDataUrl(dataUrl: string): { mimeType: string; data: string } {
   return { mimeType: m[1], data: m[2] }
 }
 
+function buildAgencyMasterPromptJP(params: {
+  catchCopy: string
+  subCopy?: string
+  cta?: string
+  purpose?: string
+  industry?: string
+  mainColor?: string
+  subColors?: string
+  hasLogo?: boolean
+  hasPerson?: boolean
+}): string {
+  const catchCopy = params.catchCopy || ''
+  const subCopy = params.subCopy || ''
+  const cta = params.cta || ''
+  const purpose = params.purpose || ''
+  const industry = params.industry || ''
+  const mainColor = params.mainColor || ''
+  const subColors = params.subColors || ''
+  const logo = params.hasLogo ? '（別途ロゴ画像データ添付済み）' : '（ロゴなし）'
+  const person = params.hasPerson ? '（別途人物画像データ添付済み）' : '（人物なし）'
+
+  // ユーザー指定の“制作チームプロンプト”を、画像生成に必ず混ぜるためのテンプレート
+  // ※ 画像データ（ロゴ/人物）は本文に貼らず、APIの画像パーツとして別途添付する
+  return `
+あなたは、広告代理店・デザイン制作会社・マーケターが合同で行う
+「商用マーケティングバナー制作チーム」です。
+
+以下の指示をすべて厳守し、
+Web広告・LP・SNS・キャンペーンで
+“そのまま使用できるプロ品質のバナー画像”を生成してください。
+
+■ 最重要ルール（必ず厳守）
+- 指定テキストは【一字一句変更せず】【省略せず】【誤字なく】画像内に正確に反映
+- 指定テキストは最優先要素。日本語可読性を最優先
+- 文字が潰れる/歪む/意味が変わる表現は禁止
+
+■ 画像内に必ず含めるテキスト
+【キャッチコピー】${catchCopy}
+【サブコピー（任意）】${subCopy}
+【CTA文言（任意）】${cta}
+※ 内容・表現・順序を一切変更しないこと
+
+■ 用途指定（必ず考慮）
+【用途】${purpose}
+- 用途に応じた情報量・視認距離・文字サイズ
+- スクロール中でも一瞬で伝わる構成
+- CTR・CVRを下げない広告表現
+
+■ 業種指定（必ず考慮）
+【業種】${industry}
+
+■ カラー指定（必ず反映）
+【メインカラー】${mainColor}
+【サブカラー（任意）】${subColors}
+- 指定カラーは必ずデザイン全体に反映
+- 文字と背景のコントラストを十分確保
+- 安っぽい配色/チープなグラデーションは禁止
+
+■ ロゴ画像の扱い
+【ロゴ画像】${logo}
+- ロゴは歪めず比率維持、色/形状は変更しない
+- 目立たせすぎず自然な位置に配置
+
+■ 人物画像の扱い
+【人物画像】${person}
+- 提供された人物画像を必ず使用（ある場合）
+- 顔/身体を不自然に変形・生成し直さない
+- ポジティブで自然に見えるよう調整
+
+■ 禁止事項
+- 指定テキストの改変・省略・誤字
+- 読めない日本語フォント、意味不明な英語、不要記号
+- ロゴや人物の破綻、透かし、無関係なブランド要素
+
+■ ゴール
+「修正したくならない」「そのまま広告配信できる」プロ品質のマーケティングバナー画像を生成してください。
+`.trim()
+}
+
 // YouTubeサムネイル専用プロンプト生成
 function createYouTubeThumbnailPrompt(
   keyword: string,
@@ -452,8 +531,24 @@ function createYouTubeThumbnailPrompt(
   const subhead = (options.subheadText || '').trim()
   const cta = (options.ctaText || '').trim()
   const company = (options.companyName || '').trim()
+  const brandColors = Array.isArray(options.brandColors)
+    ? options.brandColors.filter((c) => typeof c === 'string' && c.trim().length > 0).slice(0, 8)
+    : []
 
   let prompt = `Create a highly clickable YouTube thumbnail image WITH readable Japanese text.
+
+=== SYSTEM BRIEF (JP / MUST FOLLOW) ===
+${buildAgencyMasterPromptJP({
+  catchCopy: headline || keyword,
+  subCopy: subhead || undefined,
+  cta: cta || undefined,
+  purpose: 'YouTube サムネイル',
+  industry: options.purpose || '',
+  mainColor: brandColors[0] || '未指定',
+  subColors: brandColors.slice(1).join(', ') || '未指定',
+  hasLogo: !!options.logoImage,
+  hasPerson: !!(options.personImage || options.hasPerson),
+})}
 
 === YOUTUBE THUMBNAIL SPECIFICATIONS ===
 Format: 16:9 landscape thumbnail (${width}x${height} pixels)
@@ -538,10 +633,10 @@ Leave space for the headline/subhead/CTA text on the right or bottom.
   }
 
   prompt += `
-${Array.isArray(options.brandColors) && options.brandColors.length > 0 ? `
+${brandColors.length > 0 ? `
 === BRAND COLOR PALETTE (MUST USE) ===
 Use these exact brand colors as the main palette:
-${options.brandColors.slice(0, 8).join(', ')}
+${brandColors.slice(0, 8).join(', ')}
 Avoid introducing new dominant colors. Minor neutrals are allowed.
 ` : ''}
 === FINAL OUTPUT ===
@@ -592,6 +687,19 @@ function createBannerPrompt(
 
   let prompt = `You are a world-class performance ad art director for the Japanese market.
 Goal: generate a HIGH-CTR, premium-quality advertisement creative WITH readable Japanese text.
+
+=== SYSTEM BRIEF (JP / MUST FOLLOW) ===
+${buildAgencyMasterPromptJP({
+  catchCopy: headline || keyword,
+  subCopy: subhead || undefined,
+  cta: cta || undefined,
+  purpose: String(options.purpose || 'sns_ad'),
+  industry: category,
+  mainColor: brandColors[0] || categoryStyle.colors,
+  subColors: brandColors.slice(1).join(', ') || '未指定',
+  hasLogo: !!options.logoImage,
+  hasPerson: !!(options.personImage || options.hasPerson),
+})}
 
 === BANNER SPECIFICATIONS ===
 Format: ${aspectRatio} banner (${width}x${height} pixels)
