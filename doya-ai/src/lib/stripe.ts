@@ -37,7 +37,7 @@ export const STRIPE_PRICE_IDS = {
   },
   // ドヤバナーAI
   banner: {
-    // Basic: 月額¥3,980（1日30回）※ドヤバナーAIの標準有料プラン
+    // basic/starter/business は旧プラン互換（既存契約のpriceIdを解決するために残す）
     basic: {
       monthly:
         process.env.STRIPE_PRICE_BANNER_BASIC_MONTHLY ||
