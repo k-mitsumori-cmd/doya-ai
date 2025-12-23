@@ -1946,7 +1946,7 @@ export default function BannerDashboard() {
                           <input
                             type="file"
                             accept="image/*"
-                            className="hidden"
+                            className="sr-only"
                             onChange={async (e) => {
                               const f = e.target.files?.[0]
                               e.target.value = ''
@@ -2015,7 +2015,7 @@ export default function BannerDashboard() {
                             type="file"
                             accept="image/*"
                             multiple
-                            className="hidden"
+                            className="sr-only"
                             onChange={async (e) => {
                               const files = e.target.files
                               e.target.value = ''
