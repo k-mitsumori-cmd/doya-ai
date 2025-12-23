@@ -722,8 +722,13 @@ export default function BannerDashboard() {
   const MAX_PERSON_IMAGES = 4
 
   const addPersonFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return
+    console.log('[addPersonFiles] called, files:', files?.length || 0)
+    if (!files || files.length === 0) {
+      console.log('[addPersonFiles] no files selected')
+      return
+    }
     const list = Array.from(files)
+    console.log('[addPersonFiles] list:', list.map(f => ({ name: f.name, size: f.size, type: f.type })))
     try {
       const remain = Math.max(0, MAX_PERSON_IMAGES - personImages.length)
       if (remain <= 0) {
@@ -734,14 +739,22 @@ export default function BannerDashboard() {
       const urls: string[] = []
       const names: string[] = []
       for (const f of toRead) {
+        console.log('[addPersonFiles] reading:', f.name)
         const url = await readFileAsDataUrl(f)
+        console.log('[addPersonFiles] read success, url length:', url?.length || 0)
         urls.push(url)
         names.push(f.name)
       }
-      setPersonImages((prev) => prev.concat(urls))
+      console.log('[addPersonFiles] setting state, urls:', urls.length)
+      setPersonImages((prev) => {
+        const next = prev.concat(urls)
+        console.log('[addPersonFiles] personImages after:', next.length)
+        return next
+      })
       setPersonFileNames((prev) => prev.concat(names))
       toast.success(`人物写真を${urls.length}枚追加しました`)
     } catch (e: any) {
+      console.error('[addPersonFiles] error:', e)
       toast.error(e?.message || '人物写真の追加に失敗しました')
     }
   }
@@ -2017,7 +2030,9 @@ export default function BannerDashboard() {
                           multiple
                           className="sr-only"
                           onChange={async (e) => {
+                            console.log('[person-input] onChange fired')
                             const files = e.target.files
+                            console.log('[person-input] files:', files?.length || 0)
                             e.target.value = ''
                             await addPersonFiles(files)
                           }}
