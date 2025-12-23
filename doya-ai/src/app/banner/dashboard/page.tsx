@@ -858,12 +858,6 @@ export default function BannerDashboard() {
   const [tipIndex, setTipIndex] = useState(0)
   
   const [guestUsageCount, setGuestUsageCount] = useState(0)
-  const [isSuggestingCopy, setIsSuggestingCopy] = useState(false)
-
-  // AIサンプル（押すたびに切り替え）
-  const [aiSamplePool, setAiSamplePool] = useState<string[]>([])
-  const [aiSampleIndex, setAiSampleIndex] = useState(0)
-  const [aiSampleKey, setAiSampleKey] = useState('')
 
   // サンプル入力（用途/業種/サイズ/内容/イメージまで押すたびに切り替え）
   const [sampleScenarioIndex, setSampleScenarioIndex] = useState(-1)
@@ -1117,9 +1111,6 @@ export default function BannerDashboard() {
 
   useEffect(() => {
     // 条件が変わったらローテーション候補をリセット
-    setAiSamplePool([])
-    setAiSampleIndex(0)
-    setAiSampleKey(`${category}|${purpose}`)
     // 「サンプル入力」も業種×用途でカウントをリセット
     if (category) {
       const poolLen = buildHighCtrSampleCopies(category, purpose).length
@@ -1406,117 +1397,6 @@ export default function BannerDashboard() {
   }
 
   // （旧）テキストレイヤー合成DLは廃止（画像生成AIが文字まで描画する）
-
-  const handleSmartCopySample = async () => {
-    if (!category) {
-      toast.error('先に「業種」を選択してください', { icon: '👆' })
-      return
-    }
-
-    const key = `${category}|${purpose}`
-
-    const isValidCopyCandidate = (s: string) => {
-      const t = String(s || '').trim()
-      if (!t) return false
-      // JSON断片/解析エラーのゴミを混入させない
-      if (/suggestions/i.test(t)) return false
-      if (/"?items"?\s*[:：]\s*\[?/i.test(t)) return false
-      if (/^[\{\}\[\]"]+$/.test(t)) return false
-      if (/^\{.*\}$/.test(t)) return false
-      if (/^\[.*\]$/.test(t)) return false
-      return t.length >= 4 && t.length <= 80
-    }
-
-    // 既にAI生成の候補がある場合は「押すたびに切り替え」（ローカルテンプレートは混ぜない）
-    if (aiSamplePool.length > 1 && aiSampleKey === key) {
-      // 念のためサニタイズ（古い状態でゴミが混ざっていても再発しない）
-      const cleaned = aiSamplePool.filter((x) => isValidCopyCandidate(x))
-      if (cleaned.length === 0) {
-        setAiSamplePool([])
-        setAiSampleIndex(0)
-        // フォールスルーしてAI再取得
-      } else {
-        if (cleaned.length !== aiSamplePool.length) {
-          setAiSamplePool(cleaned)
-          setAiSampleIndex(0)
-          setKeyword(cleaned[0])
-          toast.success(`AIコピーを切り替えました（1/${cleaned.length}）`, { icon: '🔁' })
-          return
-        }
-        const next = (aiSampleIndex + 1) % cleaned.length
-        setAiSampleIndex(next)
-        setKeyword(cleaned[next])
-        toast.success(`AIコピーを切り替えました（${next + 1}/${cleaned.length}）`, { icon: '🔁' })
-        return
-      }
-    }
-
-    // 候補が1つしかない場合も、AIから再取得を試みる（ローカルテンプレートは追加しない）
-    if (aiSamplePool.length === 1 && aiSampleKey === key) {
-      // 1つしかない場合は再度AIに問い合わせてバリエーションを増やす
-      // フォールスルーして下のAI呼び出しを実行
-    }
-
-    try {
-      // CTR特化：AIで12案生成（ローカルテンプレートは混ぜない）
-      setIsSuggestingCopy(true)
-      const base = keyword.trim()
-
-      let ai: string[] = []
-      try {
-        const res = await fetch('/api/banner/copy', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            category,
-            purpose,
-            base: base || undefined,
-          }),
-        })
-        const data = await res.json()
-        if (res.ok && Array.isArray(data?.suggestions)) {
-          ai = data.suggestions
-            .filter((s: any) => typeof s === 'string')
-            .map((s: any) => String(s || '').trim())
-            .filter((s: string) => isValidCopyCandidate(s))
-        }
-      } catch {
-        // AI呼び出し失敗時は下でフォールバック処理
-      }
-
-      // AIが成功した場合：AIのコピーのみを使用（ローカルテンプレートは混ぜない）
-      if (ai.length > 0) {
-        // ベース文言がある場合のみ、それをバリエーションとして先頭に追加
-        const pool = base 
-          ? uniqStrings([base, ...ai]).filter((s) => isValidCopyCandidate(s)).slice(0, 24)
-          : uniqStrings(ai).filter((s) => isValidCopyCandidate(s)).slice(0, 24)
-
-        setAiSampleKey(key)
-        setAiSamplePool(pool)
-        setAiSampleIndex(0)
-        setKeyword(pool[0])
-        toast.success(`AIがCTR最適化コピーを生成しました（1/${pool.length}）`, { icon: '✨' })
-      } else {
-        // AIが失敗した場合のみ、フォールバックとしてローカルテンプレートを使用
-        const local = buildHighCtrSampleCopies(category, purpose)
-        setAiSampleKey(key)
-        setAiSamplePool(local)
-        setAiSampleIndex(0)
-        setKeyword(local[0] || '')
-        toast.error('AI生成に失敗しました。テンプレートサンプルを表示しています', { icon: '⚠️' })
-      }
-    } catch (e: any) {
-      // 例外発生時もフォールバック
-      const pool = buildHighCtrSampleCopies(category, purpose)
-      setAiSampleKey(key)
-      setAiSamplePool(pool)
-      setAiSampleIndex(0)
-      setKeyword(pool[0])
-      toast.error(e?.message || 'サンプル生成に失敗しました', { icon: '⚠️' })
-    } finally {
-      setIsSuggestingCopy(false)
-    }
-  }
 
   const handleDownload = (url: string, index: number) => {
     const link = document.createElement('a')
@@ -1940,15 +1820,6 @@ export default function BannerDashboard() {
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Message & Visuals</p>
                   </div>
                 </div>
-
-                <button
-                  onClick={handleSmartCopySample}
-                  disabled={isSuggestingCopy}
-                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-all text-xs font-black uppercase shadow-lg shadow-blue-200 disabled:opacity-60 active:scale-95"
-                >
-                  {isSuggestingCopy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                  <span>AI Copy Assist</span>
-                </button>
               </div>
               
               <div className="space-y-8">
