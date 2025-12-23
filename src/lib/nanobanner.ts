@@ -461,6 +461,7 @@ Platform: YouTube - must compete for attention among many thumbnails
 Goal: MAXIMIZE click-through rate (CTR) using bold visuals AND readable Japanese text
 
 === SIZE / CROPPING (CRITICAL) ===
+- Output dimensions: EXACTLY ${width}x${height} px. Do NOT change aspect ratio.
 - Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom bars, NO padding.
 - Keep all text fully inside the frame (no clipping). Use safe margins but do not create empty bands.
 
@@ -596,6 +597,7 @@ Purpose: ${options.purpose || 'sns_ad'} - ${purposeStyle.layout}
 Primary KPI: maximize click-through rate (CTR) on mobile feeds.
 
 === SIZE / CROPPING (CRITICAL) ===
+- Output dimensions: EXACTLY ${width}x${height} px. Do NOT change aspect ratio.
 - Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom margins, NO padding.
 - Keep all text fully inside the frame (no clipping). Use safe margins but do not create empty bands.
 
@@ -720,7 +722,7 @@ The person should match the banner's professional tone and target audience
 Return ONE high-quality ad banner image WITH the Japanese text rendered correctly.
 - The headline must include the catchphrase keyword exactly as provided.
 - All provided text must be fully readable Japanese (no garbling) and fully inside the frame (no clipping).
-- Fill the canvas edge-to-edge (no empty top/bottom bars, no padding, no borders).
+- Output dimensions: EXACTLY ${width}x${height} px. Fill the canvas edge-to-edge (no empty top/bottom bars, no padding, no borders).
 - CTA text should be placed inside a clickable-looking button.
 - No watermark, no signature.`
 

@@ -75,6 +75,10 @@ function updateEma(prev: number, next: number, alpha = 0.25) {
 export default function BannerChatPage() {
   const { data: session } = useSession()
   const [notifyOnComplete, setNotifyOnComplete] = useState(false)
+  const [logoImage, setLogoImage] = useState<string | null>(null)
+  const [logoFileName, setLogoFileName] = useState('')
+  const [personImage, setPersonImage] = useState<string | null>(null)
+  const [personFileName, setPersonFileName] = useState('')
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
       id: 'hello-1',
@@ -139,6 +143,7 @@ export default function BannerChatPage() {
     setProposedSpec(null)
     setSelectedBannerIndex(0)
     setRefineInstruction('')
+    // ロゴ/人物はチャット中に保持してOK（会話をまたいで使える）
 
     setMessages((prev) => [
       ...prev,
@@ -189,6 +194,8 @@ export default function BannerChatPage() {
           keyword: proposedSpec.keyword,
           imageDescription: proposedSpec.imageDescription,
           brandColors: proposedSpec.brandColors,
+          logoImage: logoImage || undefined,
+          personImage: personImage || undefined,
         }),
       })
       const data = await res.json()
@@ -529,6 +536,133 @@ export default function BannerChatPage() {
                             </p>
                           </div>
                         )}
+                      </div>
+
+                      {/* Logo / Person Upload */}
+                      <div className="rounded-2xl border border-slate-100 bg-white p-5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">ロゴ / 人物写真（任意）</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-black text-slate-700">ロゴ</p>
+                              {logoImage && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setLogoImage(null)
+                                    setLogoFileName('')
+                                    toast('ロゴを解除しました')
+                                  }}
+                                  className="text-xs font-black text-slate-500 hover:text-slate-900"
+                                >
+                                  解除
+                                </button>
+                              )}
+                            </div>
+                            <div className="mt-2 flex items-center gap-3">
+                              <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                                {logoImage ? (
+                                  <img src={logoImage} alt="logo" className="h-full w-full object-contain" />
+                                ) : (
+                                  <span className="text-[10px] font-black text-slate-400">LOGO</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] text-slate-600 font-bold truncate">{logoFileName || '未設定'}</p>
+                                <label className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                      const f = e.target.files?.[0]
+                                      e.target.value = ''
+                                      if (!f) return
+                                      try {
+                                        if (!f.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
+                                        if (f.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
+                                        const url = await new Promise<string>((resolve, reject) => {
+                                          const r = new FileReader()
+                                          r.onload = () => resolve(String(r.result || ''))
+                                          r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+                                          r.readAsDataURL(f)
+                                        })
+                                        setLogoImage(url)
+                                        setLogoFileName(f.name)
+                                        toast.success('ロゴを設定しました')
+                                      } catch (err: any) {
+                                        toast.error(err?.message || 'ロゴの設定に失敗しました')
+                                      }
+                                    }}
+                                  />
+                                  アップロード
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-black text-slate-700">人物写真</p>
+                              {personImage && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPersonImage(null)
+                                    setPersonFileName('')
+                                    toast('人物写真を解除しました')
+                                  }}
+                                  className="text-xs font-black text-slate-500 hover:text-slate-900"
+                                >
+                                  解除
+                                </button>
+                              )}
+                            </div>
+                            <div className="mt-2 flex items-center gap-3">
+                              <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                                {personImage ? (
+                                  <img src={personImage} alt="person" className="h-full w-full object-cover" />
+                                ) : (
+                                  <span className="text-[10px] font-black text-slate-400">PERSON</span>
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[11px] text-slate-600 font-bold truncate">{personFileName || '未設定'}</p>
+                                <label className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                      const f = e.target.files?.[0]
+                                      e.target.value = ''
+                                      if (!f) return
+                                      try {
+                                        if (!f.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
+                                        if (f.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
+                                        const url = await new Promise<string>((resolve, reject) => {
+                                          const r = new FileReader()
+                                          r.onload = () => resolve(String(r.result || ''))
+                                          r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+                                          r.readAsDataURL(f)
+                                        })
+                                        setPersonImage(url)
+                                        setPersonFileName(f.name)
+                                        toast.success('人物写真を設定しました')
+                                      } catch (err: any) {
+                                        toast.error(err?.message || '人物写真の設定に失敗しました')
+                                      }
+                                    }}
+                                  />
+                                  アップロード
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-[11px] text-slate-500 font-medium leading-relaxed">
+                          ※ ロゴは「提供されたロゴ画像のみ」を使用します。人物写真はアップした写真を自然に合成します。
+                        </p>
                       </div>
 
                       <button
