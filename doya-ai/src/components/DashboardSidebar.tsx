@@ -374,16 +374,70 @@ function DashboardSidebarImpl({
         </AnimatePresence>
       </motion.aside>
 
-      {/* 右下の?＋初回ログイン時のサイドバーツアー */}
+      {/* 右下の?＋初回ログイン時のサイドバー＋画面全体ツアー */}
       <SidebarTour
         storageKey={`doya_sidebar_tour_${isBanner ? 'banner' : 'seo'}_${String((session?.user as any)?.id || 'guest')}`}
         autoStart={!!session?.user}
         onEnsureExpanded={() => setInternalIsCollapsed(false)}
         items={[
+          // 画面全体イントロ（/bannerの場合に主要UI要素もガイド）
+          ...(isBanner
+            ? [
+                {
+                  id: 'url-input',
+                  label: 'URLを入力するだけでスタート',
+                  description:
+                    'バナーを作りたいサイトのURLを入力します。AIが内容を解析し、最適なバナーを自動生成します。',
+                  targetSelector: '[data-tour="url-input"]',
+                  allowMissing: true,
+                },
+                {
+                  id: 'advanced-settings',
+                  label: '詳細設定を開く',
+                  description:
+                    '生成枚数やサイズを指定できます。有料プランなら最大10枚・サイズ指定が可能です。',
+                  targetSelector: '[data-tour="advanced-settings"]',
+                  allowMissing: true,
+                },
+                {
+                  id: 'generate-button',
+                  label: '生成ボタンを押す',
+                  description:
+                    'ボタンを押すとAIがサイトを分析し、バナーを自動生成します。30秒〜1分ほどお待ちください。',
+                  targetSelector: '[data-tour="generate-button"]',
+                  allowMissing: true,
+                },
+                {
+                  id: 'analysis-result',
+                  label: '解析結果を確認',
+                  description:
+                    'AIが読み取ったサイトのポイントが表示されます。コピーや配色の根拠に使われます。',
+                  targetSelector: '[data-tour="analysis-result"]',
+                  allowMissing: true,
+                },
+                {
+                  id: 'generated-results',
+                  label: '生成されたバナーをダウンロード',
+                  description:
+                    '完成したバナーはここに表示されます。各画像のダウンロードボタンから保存できます。',
+                  targetSelector: '[data-tour="generated-results"]',
+                  allowMissing: true,
+                },
+                {
+                  id: 'pricing-plans',
+                  label: 'プランをアップグレード',
+                  description:
+                    '無料は1日3枚まで。有料プラン（PRO / Enterprise）なら最大500枚/日まで生成できます。',
+                  targetSelector: '[data-tour="pricing-plans"]',
+                  allowMissing: true,
+                },
+              ]
+            : []),
+          // サイドバー系（既存）
           {
             id: 'intro',
             label: 'サイドバーから機能を選ぶ',
-            description: '左のサイドバーから、使いたい機能にすぐ移動できます。まずは順番に見ていきましょう。',
+            description: '左のサイドバーから、使いたい機能にすぐ移動できます。順番に確認してみましょう。',
             targetSelector: '[data-tour-nav]',
           },
           ...activeNavItems.map((it) => ({
@@ -391,8 +445,8 @@ function DashboardSidebarImpl({
             label: it.label,
             description:
               it.href.startsWith('/banner')
-                ? 'この機能を使ってバナー制作を進めます。まずはクリックして画面を確認してみてください。'
-                : 'この機能からSEO制作を進めます。まずはクリックして画面を確認してみてください。',
+                ? 'この機能でバナー制作を進めます。クリックして画面を確認してみてください。'
+                : 'この機能でSEO制作を進めます。クリックして画面を確認してみてください。',
             targetSelector: `[data-tour-nav="${it.href.split('#')[0]}"]`,
           })),
         ]}

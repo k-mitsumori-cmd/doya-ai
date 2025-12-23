@@ -9,6 +9,8 @@ export type SidebarTourItem = {
   label: string
   description: string
   targetSelector: string
+  /** 対象が存在しない場合、スポットライト無しで表示する（既定: false） */
+  allowMissing?: boolean
 }
 
 function clamp(n: number, min: number, max: number) {
@@ -29,10 +31,11 @@ export default function SidebarTour({
   const [isOpen, setIsOpen] = useState(false)
   const [step, setStep] = useState(0)
   const [targetRect, setTargetRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const [resolvedItems, setResolvedItems] = useState<SidebarTourItem[]>(items)
 
-  const total = items.length
+  const total = resolvedItems.length
 
-  const current = useMemo(() => (step >= 0 && step < items.length ? items[step] : null), [step, items])
+  const current = useMemo(() => (step >= 0 && step < resolvedItems.length ? resolvedItems[step] : null), [step, resolvedItems])
 
   const close = (markSeen: boolean) => {
     setIsOpen(false)
@@ -47,6 +50,13 @@ export default function SidebarTour({
 
   const open = () => {
     onEnsureExpanded?.()
+    // その画面に存在するステップだけに絞る（ただし allowMissing は残す）
+    try {
+      const filtered = items.filter((it) => it.allowMissing || !!document.querySelector(it.targetSelector))
+      setResolvedItems(filtered.length > 0 ? filtered : items)
+    } catch {
+      setResolvedItems(items)
+    }
     setIsOpen(true)
     setStep(0)
   }
@@ -70,29 +80,58 @@ export default function SidebarTour({
     if (!isOpen || !current) return
     onEnsureExpanded?.()
 
+    let cancelled = false
+    let retry = 0
+    let raf = 0
+    let t: any = null
+
     const measure = () => {
+      if (cancelled) return
       const el = document.querySelector(current.targetSelector) as HTMLElement | null
       if (!el) {
         setTargetRect(null)
+        if (current.allowMissing) return
+        // 生成後に出る要素などのために少しリトライ
+        if (retry < 10) {
+          retry += 1
+          t = window.setTimeout(measure, 250)
+        }
         return
       }
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
-      const r = el.getBoundingClientRect()
-      setTargetRect({
-        x: r.left,
-        y: r.top,
-        w: r.width,
-        h: r.height,
-      })
+
+      try {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      } catch {}
+
+      // smooth scroll の完了を少し待ってから座標取得
+      t = window.setTimeout(() => {
+        if (cancelled) return
+        const r = el.getBoundingClientRect()
+        setTargetRect({
+          x: r.left,
+          y: r.top,
+          w: r.width,
+          h: r.height,
+        })
+      }, 220)
     }
 
     // レイアウト安定後に計測
-    const raf = requestAnimationFrame(measure)
+    raf = requestAnimationFrame(measure)
     const onResize = () => measure()
-    window.addEventListener('resize', onResize)
-    return () => {
+    const onScroll = () => {
+      // スクロール中の再計測はrafで間引く
       cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(measure)
+    }
+    window.addEventListener('resize', onResize)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(raf)
+      if (t) window.clearTimeout(t)
       window.removeEventListener('resize', onResize)
+      window.removeEventListener('scroll', onScroll as any)
     }
   }, [isOpen, current, onEnsureExpanded])
 
