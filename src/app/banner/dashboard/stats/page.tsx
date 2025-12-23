@@ -45,42 +45,38 @@ export default function StatsPage() {
   const isGuest = status !== 'loading' && !session
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [requiresUpgrade, setRequiresUpgrade] = useState(false)
 
-  // ログインユーザーはAPIから、ゲストはlocalStorageから読み込み
+  // ログインユーザーはAPIから、ゲストは統計閲覧不可
   const loadHistory = useCallback(async () => {
     if (status === 'loading') return
     setIsLoading(true)
+    setRequiresUpgrade(false)
     try {
       if (isGuest) {
-        // ゲストはlocalStorageから取得
-        const stored = localStorage.getItem('banner_history')
-        if (stored) {
-          const parsed = JSON.parse(stored) as any[]
-          setHistory(parsed.map((item: any) => ({
-            id: item.id || '',
-            category: item.category || '',
-            keyword: item.keyword || '',
-            size: item.size || '',
-            createdAt: item.createdAt || new Date().toISOString(),
-            bannerCount: Array.isArray(item.banners) ? item.banners.length : 1,
-          })))
-        } else {
-          setHistory([])
-        }
+        // ゲストは統計閲覧不可（有料プラン限定）
+        setHistory([])
+        setRequiresUpgrade(true)
       } else {
         // ログインユーザーはAPIから取得
         const res = await fetch('/api/banner/history?take=200') // 最大200バッチで集計
         if (res.ok) {
           const data = await res.json()
-          const items = Array.isArray(data.items) ? data.items : []
-          setHistory(items.map((item: any) => ({
-            id: item.id,
-            category: item.category || '',
-            keyword: item.keyword || '',
-            size: item.size || '',
-            createdAt: item.createdAt || new Date().toISOString(),
-            bannerCount: Array.isArray(item.banners) ? item.banners.length : 1,
-          })))
+          // 有料プラン限定チェック
+          if (data.requiresUpgrade) {
+            setHistory([])
+            setRequiresUpgrade(true)
+          } else {
+            const items = Array.isArray(data.items) ? data.items : []
+            setHistory(items.map((item: any) => ({
+              id: item.id,
+              category: item.category || '',
+              keyword: item.keyword || '',
+              size: item.size || '',
+              createdAt: item.createdAt || new Date().toISOString(),
+              bannerCount: Array.isArray(item.banners) ? item.banners.length : 1,
+            })))
+          }
         } else {
           setHistory([])
         }
@@ -161,6 +157,58 @@ export default function StatsPage() {
         <DashboardSidebar />
         <div className="pl-[72px] lg:pl-[240px] flex items-center justify-center min-h-screen">
           <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    )
+  }
+
+  // 有料プラン限定
+  if (requiresUpgrade) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
+        <DashboardSidebar />
+        <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+          <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
+            <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
+              <div className="h-16 sm:h-20 flex items-center gap-4">
+                <Link href="/banner/dashboard" className="p-2 hover:bg-slate-50 rounded-full transition-colors">
+                  <ArrowLeft className="w-5 h-5 text-slate-400" />
+                </Link>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+                  パフォーマンス分析
+                </h1>
+              </div>
+            </div>
+          </header>
+          <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-24 bg-white rounded-3xl border border-amber-200 shadow-sm"
+            >
+              <div className="w-24 h-24 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-amber-100">
+                <BarChart3 className="w-12 h-12 text-amber-400" />
+              </div>
+              <h2 className="text-2xl font-black text-slate-800 mb-3">有料プラン限定機能</h2>
+              <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
+                パフォーマンス分析は有料プラン限定です。<br />
+                プランをアップグレードすると、6ヶ月分の<br />
+                生成統計・削減効果を確認できます。
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/banner/dashboard/plan">
+                  <button className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl transition-all shadow-lg shadow-amber-100 hover:scale-105">
+                    プランをアップグレード
+                  </button>
+                </Link>
+                <Link href="/banner/dashboard">
+                  <button className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all">
+                    バナーを生成する
+                  </button>
+                </Link>
+              </div>
+            </motion.div>
+          </main>
         </div>
       </div>
     )
