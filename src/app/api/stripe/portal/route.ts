@@ -9,6 +9,16 @@ import { prisma } from '@/lib/prisma'
 // ========================================
 // POST /api/stripe/portal
 // サブスクリプション管理画面へのリンクを生成
+// body: { returnTo?: string }
+
+function safeReturnPath(raw: string | null | undefined): string {
+  const v = String(raw || '').trim()
+  if (!v) return '/banner/dashboard/plan'
+  // 同一オリジン内のパスのみ許可
+  if (!v.startsWith('/')) return '/banner/dashboard/plan'
+  if (v.startsWith('//')) return '/banner/dashboard/plan'
+  return v
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,12 +44,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.vercel.app'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
+    const body = await request.json().catch(() => ({}))
+    const returnTo = safeReturnPath(body?.returnTo)
 
     // カスタマーポータルセッション作成
     const portalSession = await createCustomerPortalSession({
       customerId: user.stripeCustomerId,
-      returnUrl: `${baseUrl}/settings`,
+      returnUrl: `${baseUrl}${returnTo}`,
     })
 
     return NextResponse.json({
