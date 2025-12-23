@@ -16,6 +16,7 @@ import {
   ChevronRight,
   HelpCircle,
   LogOut,
+  LogIn,
   User,
   Zap,
   Layers,
@@ -66,6 +67,7 @@ function DashboardSidebarImpl({
   const pathname = usePathname()
   const { data: session } = useSession()
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false)
+  const isLoggedIn = !!session?.user
 
   const isPro = useMemo(() => {
     const bannerPlan = String((session?.user as any)?.bannerPlan || '').toUpperCase()
@@ -300,22 +302,33 @@ function DashboardSidebarImpl({
                 className="flex-1 min-w-0"
               >
                 <p className="text-sm font-bold text-white truncate">
-                  {session?.user?.name || '田中 太郎'}
+                  {session?.user?.name || (isLoggedIn ? 'ユーザー' : 'ゲスト')}
                 </p>
                 <p className="text-[10px] text-blue-100/60 truncate font-medium">
-                  {session?.user?.email || 'Admin'}
+                  {session?.user?.email || '未ログイン'}
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
-          {!isCollapsed && session && (
-            <button
-              onClick={() => signOut()}
-              className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-              title="ログアウト"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+          {!isCollapsed && (
+            isLoggedIn ? (
+              <button
+                onClick={() => signOut()}
+                className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                title="ログアウト"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            ) : (
+              <Link
+                href={`/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/banner/dashboard')}`}
+                className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white text-[#2563EB] text-[11px] font-black hover:bg-blue-50 transition-colors shadow-sm"
+                title="ログイン"
+              >
+                <LogIn className="w-4 h-4" />
+                ログイン
+              </Link>
+            )
           )}
         </div>
       </div>

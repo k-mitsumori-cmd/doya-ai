@@ -9,14 +9,19 @@ import {
   Search, 
   User,
   Menu,
-  X
+  X,
+  LogIn
 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
+  const pathname = usePathname()
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false)
   const [isCollapsed, setIsCollapsed] = React.useState(false)
+  const isLoggedIn = !!session?.user
 
   // ローカルストレージから状態を復元（クライアントサイドのみ）
   React.useEffect(() => {
@@ -90,19 +95,29 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex items-center gap-2 md:gap-4">
-              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full relative transition-colors" title="通知">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="設定">
-                <Settings className="w-5 h-5" />
-              </button>
-              <div className="h-8 w-px bg-gray-200 mx-1 md:mx-2" />
+              {isLoggedIn && (
+                <>
+                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full relative transition-colors" title="通知">
+                    <Bell className="w-5 h-5" />
+                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                  </button>
+                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="設定">
+                    <Settings className="w-5 h-5" />
+                  </button>
+                  <div className="h-8 w-px bg-gray-200 mx-1 md:mx-2" />
+                </>
+              )}
               <div className="flex items-center gap-3 pl-1">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold text-gray-900 leading-none mb-1">{session?.user?.name || '田中 太郎'}</p>
+                  <p className="text-sm font-bold text-gray-900 leading-none mb-1">
+                    {session?.user?.name || (isLoggedIn ? 'ユーザー' : 'ゲスト')}
+                  </p>
                   <p className="text-[10px] text-gray-400 uppercase font-bold tracking-widest leading-none">
-                    {session?.user?.email === 'admin@bunridge.ai' || session?.user?.email === 'admin@doya-ai.com' ? 'Administrator' : 'General Member'}
+                    {isLoggedIn
+                      ? (session?.user?.email === 'admin@bunridge.ai' || session?.user?.email === 'admin@doya-ai.com'
+                          ? 'Administrator'
+                          : 'General Member')
+                      : 'Not signed in'}
                   </p>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm overflow-hidden">
@@ -112,6 +127,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     <User className="w-5 h-5" />
                   )}
                 </div>
+                {!isLoggedIn && (
+                  <Link
+                    href={`/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/banner/dashboard')}`}
+                    className="h-9 px-3 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    ログイン
+                  </Link>
+                )}
               </div>
             </div>
           </header>
