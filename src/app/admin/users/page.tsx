@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Search, Crown, Mail, Shield, Users, 
-  ChevronDown, Download, Check, X, Edit3, RotateCcw
+  ChevronDown, Download, Check, X, Edit3, RotateCcw, Zap
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -36,9 +36,22 @@ interface User {
 }
 
 const SERVICE_LABELS: Record<string, { name: string; shortName: string; icon: string; bgColor: string; textColor: string }> = {
-  banner: { name: 'ドヤバナー', shortName: 'バナー', icon: '🎨', bgColor: 'bg-violet-500/20', textColor: 'text-violet-400' },
-  kantan: { name: 'カンタンドヤ', shortName: 'カンタン', icon: '📝', bgColor: 'bg-blue-500/20', textColor: 'text-blue-400' },
+  banner: { name: 'ドヤバナーAI', shortName: 'バナー', icon: '🎨', bgColor: 'bg-violet-500/20', textColor: 'text-violet-400' },
   seo: { name: 'ドヤSEO', shortName: 'SEO', icon: '🧠', bgColor: 'bg-emerald-500/20', textColor: 'text-emerald-400' },
+}
+
+// サービス・プラン別の日次上限
+const SERVICE_DAILY_LIMITS: Record<string, Record<string, number>> = {
+  banner: { FREE: 9, STARTER: 50, PRO: 50, BUSINESS: 50, ENTERPRISE: 500 },
+  seo: { FREE: 1, STARTER: 5, PRO: 10, BUSINESS: 50, ENTERPRISE: 100 },
+}
+
+// 残り生成可能数を計算
+function getRemainingGenerations(serviceId: string, plan: string, dailyUsage: number): number {
+  const limits = SERVICE_DAILY_LIMITS[serviceId]
+  if (!limits) return 0
+  const limit = limits[plan] || limits.FREE
+  return Math.max(0, limit - dailyUsage)
 }
 
 const PLAN_STYLES: Record<string, { bg: string; text: string; border: string }> = {
@@ -371,30 +384,40 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1.5">
-                        {['banner', 'kantan', 'seo'].map((serviceId) => {
+                        {['banner', 'seo'].map((serviceId) => {
                           const svc = SERVICE_LABELS[serviceId]
                           const sub = user.serviceSubscriptions.find((s) => s.serviceId === serviceId)
                           const currentPlan = sub?.plan || 'FREE'
+                          const dailyUsage = sub?.dailyUsage || 0
+                          const remaining = getRemainingGenerations(serviceId, currentPlan, dailyUsage)
+                          const limit = SERVICE_DAILY_LIMITS[serviceId]?.[currentPlan] || SERVICE_DAILY_LIMITS[serviceId]?.FREE || 0
                           const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
                           return (
                             <div 
                               key={serviceId} 
-                              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${svc.bgColor} border border-white/10`}
+                              className={`flex flex-col gap-0.5 px-2 py-1.5 rounded-lg ${svc.bgColor} border border-white/10`}
                             >
-                              <span className="text-xs" title={svc.name}>{svc.icon}</span>
-                              <span className={`text-[10px] font-medium ${svc.textColor}`}>{svc.shortName}</span>
-                              <select
-                                value={currentPlan}
-                                onChange={async (e) => {
-                                  await handleUpdateServicePlan(user.id, serviceId, e.target.value)
-                                }}
-                                disabled={isSaving}
-                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 border ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
-                              >
-                                {PLAN_OPTIONS.map((p) => (
-                                  <option key={p} value={p} className="bg-[#0A0A0F]">{p}</option>
-                                ))}
-                              </select>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs" title={svc.name}>{svc.icon}</span>
+                                <span className={`text-[10px] font-medium ${svc.textColor}`}>{svc.shortName}</span>
+                                <select
+                                  value={currentPlan}
+                                  onChange={async (e) => {
+                                    await handleUpdateServicePlan(user.id, serviceId, e.target.value)
+                                  }}
+                                  disabled={isSaving}
+                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 border ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
+                                >
+                                  {PLAN_OPTIONS.map((p) => (
+                                    <option key={p} value={p} className="bg-[#0A0A0F]">{p}</option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div className="flex items-center gap-1 text-[9px]">
+                                <span className="text-white/40">残:</span>
+                                <span className={remaining > 0 ? 'text-emerald-400' : 'text-red-400'}>{remaining}</span>
+                                <span className="text-white/30">/ {limit}</span>
+                              </div>
                             </div>
                           )
                         })}
@@ -530,7 +553,7 @@ export default function AdminUsersPage() {
                 <div>
                   <h3 className="text-sm font-medium text-white mb-3">サービス別設定</h3>
                   <div className="space-y-3">
-                    {['banner', 'kantan', 'seo'].map((serviceId) => {
+                    {['banner', 'seo'].map((serviceId) => {
                       const svc = SERVICE_LABELS[serviceId]
                       const sub = editingUser.serviceSubscriptions.find((s) => s.serviceId === serviceId)
                       return (

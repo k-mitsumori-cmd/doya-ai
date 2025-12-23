@@ -1,47 +1,118 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   CreditCard,
   TrendingUp,
   DollarSign,
   Users,
-  Calendar,
   Download,
   ArrowUpRight,
-  Receipt,
   Crown,
-  Building,
+  RefreshCw,
+  Zap,
 } from 'lucide-react'
+import toast, { Toaster } from 'react-hot-toast'
 
-const revenueStats = [
-  { label: '今月の売上', value: '¥1,245,600', change: '+18.5%', up: true, icon: DollarSign },
-  { label: 'MRR', value: '¥1,156,800', change: '+12.3%', up: true, icon: TrendingUp },
-  { label: 'プレミアム会員', value: '234人', change: '+24', up: true, icon: Crown },
-  { label: 'エンタープライズ', value: '12社', change: '+3', up: true, icon: Building },
-]
+interface ServiceStats {
+  id: string
+  name: string
+  icon: string
+  proUsers: number
+  revenue: number
+  growth: number
+}
 
-const recentTransactions = [
-  { id: 'TXN001', user: '田中 太郎', plan: 'Premium', amount: 2980, date: '2024-12-15', status: '完了' },
-  { id: 'TXN002', user: '佐藤 花子', plan: 'Business', amount: 9800, date: '2024-12-15', status: '完了' },
-  { id: 'TXN003', user: '株式会社ABC', plan: 'Enterprise', amount: 29800, date: '2024-12-14', status: '完了' },
-  { id: 'TXN004', user: '鈴木 一郎', plan: 'Premium', amount: 2980, date: '2024-12-14', status: '完了' },
-  { id: 'TXN005', user: '高橋 美咲', plan: 'Business', amount: 9800, date: '2024-12-13', status: '完了' },
-]
-
-const planDistribution = [
-  { plan: 'Free', count: 1601, percentage: 87, color: 'bg-gray-500' },
-  { plan: 'Premium', count: 234, percentage: 13, color: 'bg-amber-500' },
-  { plan: 'Business', count: 45, percentage: 2, color: 'bg-purple-500' },
-  { plan: 'Enterprise', count: 12, percentage: 1, color: 'bg-primary-500' },
-]
+interface BillingData {
+  monthlyRevenue: number
+  mrr: number
+  premiumUsers: number
+  enterpriseUsers: number
+  totalUsers: number
+  freeUsers: number
+  conversionRate: number
+  services: ServiceStats[]
+}
 
 export default function BillingPage() {
+  const router = useRouter()
   const [period, setPeriod] = useState('month')
+  const [data, setData] = useState<BillingData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const fetchData = async (showToast = false) => {
+    try {
+      setIsRefreshing(true)
+      const response = await fetch('/api/admin/stats', {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/admin/login')
+          return
+        }
+        throw new Error('データの取得に失敗しました')
+      }
+
+      const result = await response.json()
+      setData(result)
+      
+      if (showToast) {
+        toast.success('データを更新しました', { icon: '🔄' })
+      }
+    } catch (error) {
+      console.error('Billing fetch error:', error)
+      toast.error('データの取得に失敗しました')
+    } finally {
+      setIsRefreshing(false)
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const formatCurrency = (value: number) => {
+    if (value >= 10000) {
+      return `¥${(value / 10000).toFixed(1)}万`
+    }
+    return `¥${value.toLocaleString()}`
+  }
+
+  if (isLoading || !data) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
+        <div className="relative w-16 h-16">
+          <div className="absolute inset-0 rounded-full border-4 border-violet-500/20" />
+          <div className="absolute inset-0 rounded-full border-4 border-violet-500 border-t-transparent animate-spin" />
+        </div>
+      </div>
+    )
+  }
+
+  const revenueStats = [
+    { label: '今月の売上', value: formatCurrency(data.monthlyRevenue), change: '+0%', up: true, icon: DollarSign },
+    { label: 'MRR', value: formatCurrency(data.mrr), change: '実績', up: true, icon: TrendingUp },
+    { label: 'プロ会員', value: `${data.premiumUsers}人`, change: `CVR ${data.conversionRate}%`, up: true, icon: Crown },
+    { label: 'Stripe連携', value: `${data.enterpriseUsers}人`, change: '実績', up: true, icon: Zap },
+  ]
+
+  const planDistribution = [
+    { plan: 'Free', count: data.freeUsers, percentage: data.totalUsers > 0 ? (data.freeUsers / data.totalUsers) * 100 : 0, color: 'bg-gray-500' },
+    { plan: 'Pro', count: data.premiumUsers, percentage: data.totalUsers > 0 ? (data.premiumUsers / data.totalUsers) * 100 : 0, color: 'bg-amber-500' },
+    { plan: 'Stripe連携', count: data.enterpriseUsers, percentage: data.totalUsers > 0 ? (data.enterpriseUsers / data.totalUsers) * 100 : 0, color: 'bg-violet-500' },
+  ]
+
+  const arpu = data.premiumUsers > 0 ? Math.round(data.monthlyRevenue / data.premiumUsers) : 0
 
   return (
-    <div className="p-6 sm:p-8 max-w-7xl mx-auto">
+    <div className="p-6 sm:p-8 max-w-7xl mx-auto min-h-screen bg-[#0A0A0F]">
+      <Toaster position="top-right" />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -50,21 +121,29 @@ export default function BillingPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-2xl font-bold text-white mb-1">売上・課金管理</h1>
-            <p className="text-gray-400 text-sm">収益とサブスクリプションの管理</p>
+            <p className="text-white/40 text-sm">収益とサブスクリプションの管理（実データ）</p>
           </div>
           <div className="flex gap-3">
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:border-primary-500"
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-violet-500"
             >
-              <option value="month">今月</option>
-              <option value="quarter">四半期</option>
-              <option value="year">年間</option>
+              <option value="month" className="bg-[#0A0A0F]">今月</option>
+              <option value="quarter" className="bg-[#0A0A0F]">四半期</option>
+              <option value="year" className="bg-[#0A0A0F]">年間</option>
             </select>
-            <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm text-white flex items-center gap-2 transition-colors">
+            <button className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-lg text-sm text-white flex items-center gap-2 transition-colors">
               <Download className="w-4 h-4" />
               レポート出力
+            </button>
+            <button 
+              onClick={() => fetchData(true)}
+              disabled={isRefreshing}
+              className="px-4 py-2 bg-violet-500 hover:bg-violet-600 rounded-lg text-sm text-white flex items-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              更新
             </button>
           </div>
         </div>
@@ -77,77 +156,81 @@ export default function BillingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50"
+              className="bg-white/[0.02] backdrop-blur rounded-xl p-5 border border-white/5"
             >
               <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <stat.icon className="w-5 h-5 text-green-400" />
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                  <stat.icon className="w-5 h-5 text-emerald-400" />
                 </div>
-                <span className="flex items-center gap-1 text-sm font-medium text-green-400">
+                <span className="flex items-center gap-1 text-sm font-medium text-emerald-400">
                   <ArrowUpRight className="w-4 h-4" />
                   {stat.change}
                 </span>
               </div>
               <p className="text-2xl font-bold text-white mb-1">{stat.value}</p>
-              <p className="text-sm text-gray-400">{stat.label}</p>
+              <p className="text-sm text-white/40">{stat.label}</p>
             </motion.div>
           ))}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* 最近の取引 */}
-          <div className="lg:col-span-2 bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden">
-            <div className="p-5 border-b border-gray-700/50 flex items-center justify-between">
+          {/* サービス別売上 */}
+          <div className="lg:col-span-2 bg-white/[0.02] backdrop-blur rounded-xl border border-white/5 overflow-hidden">
+            <div className="p-5 border-b border-white/5 flex items-center justify-between">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-primary-400" />
-                最近の取引
+                <CreditCard className="w-5 h-5 text-violet-400" />
+                サービス別売上
               </h2>
-              <button className="text-sm text-primary-400 hover:underline">すべて見る</button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-900/50">
-                  <tr>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-400">取引ID</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-400">ユーザー</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-400">プラン</th>
-                    <th className="text-right px-5 py-3 text-xs font-medium text-gray-400">金額</th>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-400">日付</th>
-                    <th className="text-center px-5 py-3 text-xs font-medium text-gray-400">状態</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentTransactions.map((txn) => (
-                    <tr key={txn.id} className="border-t border-gray-700/30 hover:bg-gray-700/20">
-                      <td className="px-5 py-3 text-sm text-gray-300">{txn.id}</td>
-                      <td className="px-5 py-3 text-sm text-white">{txn.user}</td>
-                      <td className="px-5 py-3">
-                        <span className={`text-xs px-2 py-1 rounded font-medium ${
-                          txn.plan === 'Enterprise' ? 'bg-primary-500/20 text-primary-400' :
-                          txn.plan === 'Business' ? 'bg-purple-500/20 text-purple-400' :
-                          'bg-amber-500/20 text-amber-400'
-                        }`}>
-                          {txn.plan}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-sm text-right font-medium text-white">¥{txn.amount.toLocaleString()}</td>
-                      <td className="px-5 py-3 text-sm text-gray-400">{txn.date}</td>
-                      <td className="px-5 py-3 text-center">
-                        <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-400">
-                          {txn.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="p-5">
+              <div className="space-y-4">
+                {(data.services || []).map((service) => {
+                  const maxRevenue = Math.max(...data.services.map(s => s.revenue), 1)
+                  const percentage = (service.revenue / maxRevenue) * 100
+                  return (
+                    <div key={service.id} className="p-4 bg-white/5 rounded-xl">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{service.icon}</span>
+                          <div>
+                            <p className="font-medium text-white">{service.name}</p>
+                            <p className="text-xs text-white/40">プロ会員: {service.proUsers}人</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-white">{formatCurrency(service.revenue)}</p>
+                          <p className={`text-xs ${service.growth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {service.growth >= 0 ? '+' : ''}{service.growth}%
+                          </p>
+                        </div>
+                      </div>
+                      <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.max(percentage, 5)}%` }}
+                          transition={{ duration: 0.5 }}
+                          className="h-full bg-gradient-to-r from-emerald-500 to-green-500 rounded-full"
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* 合計 */}
+              <div className="mt-6 p-4 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-white/60">合計月間売上</span>
+                  <span className="text-2xl font-bold text-white">{formatCurrency(data.monthlyRevenue)}</span>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* プラン分布 */}
-          <div className="bg-gray-800/50 rounded-xl p-5 border border-gray-700/50">
+          <div className="bg-white/[0.02] backdrop-blur rounded-xl p-5 border border-white/5">
             <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary-400" />
+              <Users className="w-5 h-5 text-violet-400" />
               プラン分布
             </h2>
             <div className="space-y-4">
@@ -155,22 +238,31 @@ export default function BillingPage() {
                 <div key={plan.plan}>
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm text-white">{plan.plan}</span>
-                    <span className="text-sm text-gray-400">{plan.count}人</span>
+                    <span className="text-sm text-white/40">{plan.count}人</span>
                   </div>
-                  <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                    <div
+                  <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.max(plan.percentage, 5)}%` }}
+                      transition={{ duration: 0.5 }}
                       className={`h-full ${plan.color} rounded-full`}
-                      style={{ width: `${Math.max(plan.percentage, 5)}%` }}
                     />
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-6 pt-6 border-t border-gray-700/50">
+            <div className="mt-6 pt-6 border-t border-white/5">
               <div className="text-center">
-                <p className="text-3xl font-bold text-white">¥2,456/人</p>
-                <p className="text-sm text-gray-400">平均顧客単価 (ARPU)</p>
+                <p className="text-3xl font-bold text-white">{formatCurrency(arpu)}</p>
+                <p className="text-sm text-white/40">平均顧客単価 (ARPU)</p>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-white/5">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-emerald-400">{data.conversionRate}%</p>
+                <p className="text-sm text-white/40">有料転換率 (CVR)</p>
               </div>
             </div>
           </div>
@@ -179,5 +271,3 @@ export default function BillingPage() {
     </div>
   )
 }
-
-

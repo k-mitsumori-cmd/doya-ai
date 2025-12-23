@@ -138,10 +138,9 @@ export async function GET(request: NextRequest) {
 
     // サービス別統計
     const serviceStats: any[] = []
-    const serviceIds = ['banner', 'kantan', 'seo']
+    const serviceIds = ['banner', 'seo']
     const serviceLabels: Record<string, { name: string; icon: string; gradient: string }> = {
       banner: { name: 'ドヤバナーAI', icon: '🎨', gradient: 'from-violet-500 to-fuchsia-500' },
-      kantan: { name: 'カンタンドヤAI', icon: '📝', gradient: 'from-blue-500 to-cyan-500' },
       seo: { name: 'ドヤSEO', icon: '🧠', gradient: 'from-emerald-500 to-green-500' },
     }
 
