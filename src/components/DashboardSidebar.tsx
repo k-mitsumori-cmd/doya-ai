@@ -22,7 +22,7 @@ import {
   CreditCard
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
-import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { HIGH_USAGE_CONTACT_URL, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 interface NavItem {
   href: string
@@ -66,6 +66,14 @@ function DashboardSidebarImpl({
   const pathname = usePathname()
   const { data: session } = useSession()
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false)
+
+  const isPro = useMemo(() => {
+    const bannerPlan = String((session?.user as any)?.bannerPlan || '').toUpperCase()
+    const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
+    if (bannerPlan) return bannerPlan !== 'FREE'
+    if (globalPlan) return globalPlan !== 'FREE'
+    return false
+  }, [session])
 
   // 入力中の親コンポーネント再レンダーでサイドバーが“ぱちぱち”しないよう、
   // derived values をメモ化して framer-motion の不要な更新を抑える
@@ -172,11 +180,23 @@ function DashboardSidebarImpl({
             <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
               AI生成機能を無制限に。<br />高度な分析とチーム共有も。
             </p>
-            <Link href="/pricing">
-              <button className="mt-3 w-full py-2 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
-                アップグレード
-              </button>
-            </Link>
+            {isPro ? (
+              <a
+                href={HIGH_USAGE_CONTACT_URL}
+                target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
+                rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+              >
+                <button className="mt-3 w-full py-2 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
+                  マーケティング施策を丸投げする
+                </button>
+              </a>
+            ) : (
+              <Link href="/pricing">
+                <button className="mt-3 w-full py-2 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
+                  アップグレード
+                </button>
+              </Link>
+            )}
           </div>
         </motion.div>
       )}
