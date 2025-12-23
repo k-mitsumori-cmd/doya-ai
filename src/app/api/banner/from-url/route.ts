@@ -5,6 +5,7 @@ import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan } from '@/lib/pricing'
 import crypto from 'crypto'
+import sharp from 'sharp'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -303,6 +304,85 @@ function extractColorHints(html: string): string {
   }
 }
 
+function isValidSizeString(v: string): boolean {
+  const s = String(v || '').trim()
+  if (!/^\d{2,4}x\d{2,4}$/.test(s)) return false
+  const [wStr, hStr] = s.split('x')
+  const w = Number(wStr)
+  const h = Number(hStr)
+  if (!Number.isFinite(w) || !Number.isFinite(h)) return false
+  if (w < 100 || h < 100) return false
+  if (w > 4096 || h > 4096) return false
+  return true
+}
+
+function toAbsoluteUrl(maybeUrl: string, baseUrl: string): string | null {
+  const raw = String(maybeUrl || '').trim()
+  if (!raw) return null
+  try {
+    return new URL(raw, baseUrl).toString()
+  } catch {
+    return null
+  }
+}
+
+function extractImageCandidates(html: string, baseUrl: string): string[] {
+  const picks: string[] = []
+  const take = (re: RegExp) => {
+    const m = html.match(re)
+    const u = m?.[1]?.trim()
+    const abs = u ? toAbsoluteUrl(u, baseUrl) : null
+    if (abs) picks.push(abs)
+  }
+  // og / twitter
+  take(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']{1,500})["'][^>]*>/i)
+  take(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']{1,500})["'][^>]*>/i)
+  // icons
+  take(/<link[^>]+rel=["']apple-touch-icon["'][^>]+href=["']([^"']{1,500})["'][^>]*>/i)
+  take(/<link[^>]+rel=["']icon["'][^>]+href=["']([^"']{1,500})["'][^>]*>/i)
+  take(/<link[^>]+rel=["']shortcut icon["'][^>]+href=["']([^"']{1,500})["'][^>]*>/i)
+  // 重複排除
+  return Array.from(new Set(picks)).slice(0, 4)
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const to = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')
+  return `#${to(r)}${to(g)}${to(b)}`.toUpperCase()
+}
+
+async function extractPaletteFromImages(urls: string[], timeoutMs = 6000): Promise<string[]> {
+  const colors: string[] = []
+  for (const u of urls) {
+    try {
+      const controller = new AbortController()
+      const t = setTimeout(() => controller.abort(), timeoutMs)
+      const res = await fetch(u, {
+        method: 'GET',
+        redirect: 'follow',
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DoyaBannerAI/1.0)' },
+        signal: controller.signal,
+      })
+      clearTimeout(t)
+      if (!res.ok) continue
+      const buf = Buffer.from(await res.arrayBuffer())
+      // 小さくしてから統計（高速化）
+      const stats = await sharp(buf).resize(128, 128, { fit: 'inside' }).stats()
+      const d = (stats as any)?.dominant
+      if (d && typeof d.r === 'number') {
+        colors.push(rgbToHex(d.r, d.g, d.b))
+      } else {
+        // フォールバック：平均値
+        const ch = stats.channels || []
+        if (ch.length >= 3) colors.push(rgbToHex(ch[0].mean, ch[1].mean, ch[2].mean))
+      }
+    } catch {
+      continue
+    }
+  }
+  // 上位3色まで
+  return Array.from(new Set(colors)).slice(0, 3)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const disableLimits = process.env.DOYA_DISABLE_LIMITS === '1'
@@ -313,11 +393,23 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as FromUrlRequest
     const targetUrl = safeTrim(body?.targetUrl || body?.target_url, 2000)
-    const size = safeTrim(body?.size, 32) || '1080x1080'
+    const requestedSizeRaw = safeTrim(body?.size, 32) || '1080x1080'
     const category = safeTrim(body?.industry, 40) || 'other'
     const appPurpose = safeTrim(body?.purpose, 32) || 'sns_ad'
     const requestedCountRaw = Number(body?.count)
     const requestedCount = Number.isFinite(requestedCountRaw) ? Math.floor(requestedCountRaw) : 3
+    const planRaw = !isGuest
+      ? String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
+      : 'GUEST'
+    const isPaidUser = !isGuest && planRaw !== 'FREE'
+
+    // ==============================
+    // 枚数/サイズの強制（改ざん対策）
+    // - 無料/ゲスト：3枚固定・1080x1080固定
+    // - 有料：3〜10枚、サイズ指定可（範囲チェック）
+    // ==============================
+    const desiredCount = isPaidUser ? Math.max(3, Math.min(10, requestedCount || 3)) : 3
+    const size = isPaidUser ? (isValidSizeString(requestedSizeRaw) ? requestedSizeRaw : '1080x1080') : '1080x1080'
 
     if (!targetUrl || !isValidHttpUrl(targetUrl)) {
       return NextResponse.json({ error: 'URLが不正です（https://〜 を入力してください）' }, { status: 400 })
@@ -330,7 +422,7 @@ export async function POST(request: NextRequest) {
     if (!disableLimits) {
       if (isGuest) {
         // ゲストは generate ルート側でcookie管理しているため、ここでは簡易に弾く（重複生成を避ける）
-        if (requestedCount > BANNER_PRICING.guestLimit) {
+        if (desiredCount > BANNER_PRICING.guestLimit) {
           return NextResponse.json(
             {
               error: 'ゲストは本日分の生成上限を超えています。ログインしてご利用ください。',
@@ -342,7 +434,6 @@ export async function POST(request: NextRequest) {
         }
       } else {
         const userId = (session?.user as any)?.id as string | undefined
-        const planRaw = String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
         const dailyLimit = getBannerDailyLimitByUserPlan(planRaw)
         if (userId && dailyLimit !== -1) {
           const sub = await prisma.userServiceSubscription.findUnique({
@@ -350,7 +441,7 @@ export async function POST(request: NextRequest) {
             select: { dailyUsage: true, lastUsageReset: true, plan: true },
           })
           const used = sub?.dailyUsage || 0
-          if (used + requestedCount > dailyLimit) {
+          if (used + desiredCount > dailyLimit) {
             return NextResponse.json(
               {
                 error: '本日の生成上限に達しました。',
@@ -391,7 +482,17 @@ export async function POST(request: NextRequest) {
 
     const meta = extractMeta(html)
     const pageText = stripHtmlToText(html)
-    const colorHints = extractColorHints(html)
+    const colorHintsFromHtml = extractColorHints(html)
+    // 画像（OG/ICON）から実色を抽出（HTMLだけだと外れるため）
+    const imageCandidates = extractImageCandidates(html, targetUrl)
+    const paletteFromImages = await extractPaletteFromImages(imageCandidates)
+    const colorHints = [
+      colorHintsFromHtml ? `html=${colorHintsFromHtml}` : '',
+      paletteFromImages.length > 0 ? `image_palette=${paletteFromImages.join(',')}` : '',
+      imageCandidates.length > 0 ? `image_sources=${imageCandidates.slice(0, 2).join(',')}` : '',
+    ]
+      .filter(Boolean)
+      .join(' / ')
 
     const apiKey = getApiKey()
     const specPrompt = buildWebsiteBannerPrompt({
@@ -426,7 +527,8 @@ export async function POST(request: NextRequest) {
       // 人物写真は1名（1枚）に固定
       personImages: Array.isArray(body.personImages) ? body.personImages.slice(0, 1) : undefined,
       referenceImages: Array.isArray(body.referenceImages) ? body.referenceImages : undefined,
-      brandColors: Array.isArray(body.brandColors) ? body.brandColors : undefined,
+      // brandColors が未指定なら、抽出したパレットを使用（色抽出精度UP）
+      brandColors: Array.isArray(body.brandColors) ? body.brandColors : (paletteFromImages.length > 0 ? paletteFromImages : undefined),
       // URLのみ入力のため、最終プロンプトをそのまま使用
       customImagePrompt: imagePrompt,
       negativePrompt,
@@ -434,7 +536,7 @@ export async function POST(request: NextRequest) {
 
     // keyword は履歴/メタ用途。なければ title を採用（customImagePromptを使うので生成品質には影響しない）
     const keywordForMeta = safeTrim(meta.title, 80) || 'URL自動生成'
-    const result = await generateBanners(category || 'other', keywordForMeta, size, options as any, requestedCount)
+    const result = await generateBanners(category || 'other', keywordForMeta, size, options as any, desiredCount)
 
     // ==============================
     // 履歴保存（ログインユーザーのみ / DB）
@@ -457,7 +559,7 @@ export async function POST(request: NextRequest) {
                 keyword: keywordForMeta,
                 size,
                 purpose: appPurpose || 'sns_ad',
-                count: requestedCount,
+                count: desiredCount,
                 source: 'url',
                 targetUrl,
                 bannerPurpose: 'auto',
@@ -493,8 +595,8 @@ export async function POST(request: NextRequest) {
         const chargedCount = Math.max(
           1,
           Math.min(
-            requestedCount,
-            Array.isArray(result.banners) ? result.banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/')).length : requestedCount
+            desiredCount,
+            Array.isArray(result.banners) ? result.banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/')).length : desiredCount
           )
         )
         await prisma.userServiceSubscription.update({

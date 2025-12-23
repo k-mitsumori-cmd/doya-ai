@@ -1,12 +1,23 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles } from 'lucide-react'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
+
+const DEFAULT_FREE_SIZE = '1080x1080'
+const SIZE_OPTIONS: { label: string; value: string }[] = [
+  { label: 'Instagram正方形（1080×1080）', value: '1080x1080' },
+  { label: 'Facebook/OG（1200×628）', value: '1200x628' },
+  { label: 'ストーリー（1080×1920）', value: '1080x1920' },
+  { label: 'YouTubeサムネ（1280×720）', value: '1280x720' },
+  { label: 'GDN横長（728×90）', value: '728x90' },
+  { label: 'GDNレクタングル（300×250）', value: '300x250' },
+  { label: 'GDNラージ（336×280）', value: '336x280' },
+]
 
 type ApiResponse = {
   banners?: string[]
@@ -42,6 +53,10 @@ function normalizeNonJsonApiError(status: number, text: string): string {
 export default function BannerUrlAutoPage() {
   const { data: session } = useSession()
   const isGuest = !session
+  const bannerPlan = !isGuest
+    ? String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
+    : 'GUEST'
+  const isPaidUser = !isGuest && bannerPlan !== 'FREE'
 
   const [targetUrl, setTargetUrl] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -50,8 +65,22 @@ export default function BannerUrlAutoPage() {
   const [bannerAnalysis, setBannerAnalysis] = useState<string>('')
   const [analysisJson, setAnalysisJson] = useState<ApiResponse['analysisJson']>(null)
   const [usedModelDisplay, setUsedModelDisplay] = useState<string>('')
+  const [count, setCount] = useState<number>(3)
+  const [size, setSize] = useState<string>(DEFAULT_FREE_SIZE)
 
   const canGenerate = useMemo(() => targetUrl.trim().length > 8 && !isGenerating, [targetUrl, isGenerating])
+
+  // 無料→固定に強制（UI改ざん防止/体験の一貫性）
+  useEffect(() => {
+    if (!isPaidUser) {
+      if (count !== 3) setCount(3)
+      if (size !== DEFAULT_FREE_SIZE) setSize(DEFAULT_FREE_SIZE)
+      return
+    }
+    if (count < 3) setCount(3)
+    if (count > 10) setCount(10)
+    if (!size) setSize(DEFAULT_FREE_SIZE)
+  }, [isPaidUser, count, size])
 
   const handleGenerate = async () => {
     const url = targetUrl.trim()
@@ -76,7 +105,12 @@ export default function BannerUrlAutoPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,
-        body: JSON.stringify({ targetUrl: url }),
+        body: JSON.stringify({
+          targetUrl: url,
+          // 詳細設定（API側でも無料/有料の制限を厳密に適用する）
+          count,
+          size,
+        }),
       })
 
       window.clearTimeout(timeout)
@@ -183,6 +217,76 @@ export default function BannerUrlAutoPage() {
                     placeholder="https://example.com/..."
                     className="w-full bg-transparent outline-none text-sm font-bold text-slate-800 placeholder-slate-300"
                   />
+                </div>
+              </div>
+
+              {/* 詳細設定 */}
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-black text-slate-900">詳細設定</p>
+                    <p className="text-[11px] text-slate-500 font-bold mt-1 leading-relaxed">
+                      無料：<span className="text-slate-800">3枚固定 / 1080×1080のみ</span>　
+                      有料：<span className="text-slate-800">最大10枚 / サイズ指定OK</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-black text-slate-500 rounded-full bg-slate-100 px-3 py-1">
+                      {isPaidUser ? '有料ユーザー' : isGuest ? 'ゲスト' : '無料プラン'}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {/* 枚数 */}
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-black text-slate-700">生成枚数</p>
+                      <p className="text-xs font-black text-slate-900 tabular-nums">{isPaidUser ? `${count}枚` : '3枚固定'}</p>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          disabled={!isPaidUser && n !== 3}
+                          onClick={() => setCount(n)}
+                          className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
+                            (!isPaidUser && n !== 3)
+                              ? 'bg-white text-slate-300 border-slate-200 cursor-not-allowed'
+                              : count === n
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* サイズ */}
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-black text-slate-700">サイズ</p>
+                      <p className="text-[10px] font-black text-slate-500">{isPaidUser ? '指定OK' : '無料は固定'}</p>
+                    </div>
+                    <select
+                      value={isPaidUser ? size : DEFAULT_FREE_SIZE}
+                      onChange={(e) => setSize(e.target.value)}
+                      disabled={!isPaidUser}
+                      className="mt-2 w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-black text-slate-800 disabled:opacity-60"
+                    >
+                      {SIZE_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    {!isPaidUser && (
+                      <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 有料プランでサイズ指定が可能です。</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
