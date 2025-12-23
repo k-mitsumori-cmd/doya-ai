@@ -477,6 +477,7 @@ Web広告・LP・SNS・キャンペーンで
 - 指定テキストは【一字一句変更せず】【省略せず】【誤字なく】画像内に正確に反映
 - 指定テキストは最優先要素。日本語可読性を最優先
 - 文字が潰れる/歪む/意味が変わる表現は禁止
+- 同一文言の重複表示は禁止（同じテキストを2回以上並べない）
 
 ■ 画像内に必ず含めるテキスト
 【キャッチコピー】${catchCopy}
@@ -513,6 +514,7 @@ Web広告・LP・SNS・キャンペーンで
 
 ■ 禁止事項
 - 指定テキストの改変・省略・誤字
+- 同じ文言の繰り返し（例：「クーポン配布中 クーポン配布中」など）
 - 読めない日本語フォント、意味不明な英語、不要記号
 - ロゴや人物の破綻、透かし、無関係なブランド要素
 
@@ -595,6 +597,7 @@ ${company ? `- Brand (任意): ${company}` : ''}
 - The Headline must appear as real Japanese text inside the image. Do NOT output an image without it.
 - If you struggle to render Japanese correctly, retry internally; do NOT omit the text.
 - Do NOT include any other text besides the provided strings above.
+- NO DUPLICATION: Do NOT repeat the same phrase. Each provided string (Headline/Subhead/CTA/Brand) must appear at most once in the image.
 
 === YOUTUBE THUMBNAIL DESIGN PRINCIPLES ===
 1. **HIGH CONTRAST & SATURATION**:
@@ -774,6 +777,7 @@ ${company ? `- Brand (任意): ${company}` : ''}
 - The Headline must appear as real Japanese text inside the image. Do NOT output an image without it.
 - If you struggle to render Japanese correctly, retry internally; do NOT omit the text.
 - Do NOT include any other text besides the provided strings above.
+- NO DUPLICATION: Do NOT repeat the same phrase. Each provided string (Headline/Subhead/CTA/Brand) must appear at most once in the image.
 
 === DESIGN REQUIREMENTS ===
 - Professional, modern, clean design
