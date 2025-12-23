@@ -3,6 +3,22 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createCheckoutSession, STRIPE_PRICE_IDS } from '@/lib/stripe'
 
+function getStripeKeyMode(): 'test' | 'live' | 'unknown' {
+  const key = String(process.env.STRIPE_SECRET_KEY || '').trim()
+  if (key.startsWith('sk_test_')) return 'test'
+  if (key.startsWith('sk_live_')) return 'live'
+  return 'unknown'
+}
+
+function looksLikeStripeModeMismatch(err: any): boolean {
+  const msg = String(err?.message || err?.raw?.message || '').toLowerCase()
+  return (
+    msg.includes('a similar object exists in live mode') ||
+    msg.includes('a similar object exists in test mode') ||
+    (msg.includes('no such price') && msg.includes('live mode') && msg.includes('test mode'))
+  )
+}
+
 // ========================================
 // Checkout Session作成API
 // ========================================
@@ -73,6 +89,24 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Checkout session error:', error)
+
+    // Stripeの「test/liveモード不一致」をユーザーが復旧できる形で案内
+    if (looksLikeStripeModeMismatch(error)) {
+      const mode = getStripeKeyMode()
+      return NextResponse.json(
+        {
+          code: 'STRIPE_MODE_MISMATCH',
+          error:
+            '決済設定エラー（Stripeのモード不一致）です。' +
+            'このPrice IDはライブモード側に存在しますが、サーバーがテスト用Stripeキーでリクエストしています。' +
+            'Vercel環境変数の STRIPE_SECRET_KEY / NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY / STRIPE_WEBHOOK_SECRET を同じモード（ライブ or テスト）に揃えてください。' +
+            '（例：本番なら sk_live_ / pk_live_ / liveのwebhook secret を設定）',
+          stripeKeyMode: mode,
+        },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { error: error.message || '決済セッションの作成に失敗しました' },
       { status: 500 }
