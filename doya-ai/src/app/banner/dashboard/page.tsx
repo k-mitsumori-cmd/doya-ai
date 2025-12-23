@@ -1269,11 +1269,16 @@ export default function BannerDashboard() {
 
     // 上限に達している場合はプロプランへ誘導
     if (remainingCount <= 0) {
-      toast.error('本日の上限に達しました。プロプランにアップグレードしてください。', { duration: 6000 })
-      try {
-        const upgradeUrl = '/banner/pricing'
-        window.open(upgradeUrl, '_self')
-      } catch {}
+      if (isProUser) {
+        toast.error('本日の生成上限に達しました。', { duration: 6000 })
+        // PROは「上限UP相談」導線を下に表示（自動遷移はしない）
+      } else {
+        toast.error('本日の生成上限に達しました。プロプランにアップグレードしてください。', { duration: 6000 })
+        try {
+          const upgradeUrl = '/banner/pricing'
+          window.open(upgradeUrl, '_self')
+        } catch {}
+      }
       return
     }
     
@@ -2308,9 +2313,22 @@ export default function BannerDashboard() {
 
               {!isGenerating && remainingCount <= 0 && (
                 <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm text-center font-medium">
-                  本日の使用回数上限に達しました。
+                  本日の生成上限に達しました。
                   {isGuest ? (
                     <span className="ml-1">ログインしてプランをご確認ください。</span>
+                  ) : isProUser ? (
+                    <span className="ml-1">
+                      上限をさらにUPしたい場合は{' '}
+                      <a
+                        href={HIGH_USAGE_CONTACT_URL}
+                        target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
+                        rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+                        className="font-black underline underline-offset-2 hover:opacity-80"
+                      >
+                        マーケティング施策を丸投げする
+                      </a>
+                      からご相談ください。
+                    </span>
                   ) : (
                     <span className="ml-1">プロプランにアップグレードしてください。</span>
                   )}
