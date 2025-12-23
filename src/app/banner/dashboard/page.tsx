@@ -1902,15 +1902,15 @@ export default function BannerDashboard() {
                   ))}
                 </div>
 
-                {/* Visual Description */}
+                {/* 内容詳細（イメージ） */}
                 <div className="pt-8 border-t border-slate-100">
                   <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-[0.2em] ml-1 flex items-center gap-2">
-                    Visual Description <span className="text-[8px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded tracking-normal">Optional</span>
+                    内容詳細（イメージ） <span className="text-[8px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded tracking-normal">任意</span>
                   </label>
                   <textarea
                     value={imageDescription}
                     onChange={(e) => setImageDescription(e.target.value)}
-                    placeholder="例: 青空の下で笑顔でジャンプする若い女性、モダンなオフィスで働くビジネスマン..."
+                    placeholder="例: 青空の下で笑顔の人物／モダンなオフィス／スマホを操作している手元…など"
                     className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 focus:border-blue-600 focus:bg-white outline-none transition-all resize-none text-base font-bold leading-relaxed shadow-inner min-h-[100px]"
                   />
                   <div className="flex flex-wrap gap-2 mt-4">
