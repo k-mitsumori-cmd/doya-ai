@@ -2291,7 +2291,7 @@ export default function BannerDashboard() {
               </div>
 
               {/* URL Auto Generate */}
-              <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
+              <div id="from-url" className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-black text-slate-800">サイトURLだけでバナー自動生成（β）</p>
