@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { HIGH_USAGE_CONTACT_URL, SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import SidebarTour from '@/components/SidebarTour'
 
 interface NavItem {
   href: string
@@ -102,11 +103,13 @@ function DashboardSidebarImpl({
   const NavLink = ({ item }: { item: NavItem }) => {
     const active = isActive(item.href)
     const Icon = item.icon
+    const tourId = item.href.split('#')[0]
 
     return (
       <Link href={item.href}>
         <motion.div
           whileHover={{ x: 4 }}
+          data-tour-nav={tourId}
           className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer group ${
             active
               ? 'bg-white/15 text-white'
@@ -210,15 +213,16 @@ function DashboardSidebarImpl({
   )
 
   return (
-    <motion.aside
-      initial={false}
-      animate={{
-        width: isCollapsed ? 72 : 240,
-        x: 0, // モバイル時はコンテナ側で制御
-      }}
-      transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className={`${isMobile ? 'relative' : 'fixed left-0 top-0'} h-screen bg-[#2563EB] flex flex-col z-50 shadow-xl`}
-    >
+    <>
+      <motion.aside
+        initial={false}
+        animate={{
+          width: isCollapsed ? 72 : 240,
+          x: 0, // モバイル時はコンテナ側で制御
+        }}
+        transition={{ duration: 0.2, ease: 'easeInOut' }}
+        className={`${isMobile ? 'relative' : 'fixed left-0 top-0'} h-screen bg-[#2563EB] flex flex-col z-50 shadow-xl`}
+      >
       {/* Logo */}
       <div className="px-6 py-8 flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-md">
@@ -355,22 +359,45 @@ function DashboardSidebarImpl({
         </button>
       )}
 
-      {/* Branding */}
-      <AnimatePresence>
-        {!isCollapsed && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="px-4 py-4 text-center border-t border-white/5"
-          >
-            <p className="text-[10px] text-blue-100/30 font-bold tracking-widest">
-              @GORO
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.aside>
+        {/* Branding */}
+        <AnimatePresence>
+          {!isCollapsed && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="px-4 py-4 text-center border-t border-white/5"
+            >
+              <p className="text-[10px] text-blue-100/30 font-bold tracking-widest">@GORO</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.aside>
+
+      {/* 右下の?＋初回ログイン時のサイドバーツアー */}
+      <SidebarTour
+        storageKey={`doya_sidebar_tour_${isBanner ? 'banner' : 'seo'}_${String((session?.user as any)?.id || 'guest')}`}
+        autoStart={!!session?.user}
+        onEnsureExpanded={() => setInternalIsCollapsed(false)}
+        items={[
+          {
+            id: 'intro',
+            label: 'サイドバーから機能を選ぶ',
+            description: '左のサイドバーから、使いたい機能にすぐ移動できます。まずは順番に見ていきましょう。',
+            targetSelector: '[data-tour-nav]',
+          },
+          ...activeNavItems.map((it) => ({
+            id: it.href,
+            label: it.label,
+            description:
+              it.href.startsWith('/banner')
+                ? 'この機能を使ってバナー制作を進めます。まずはクリックして画面を確認してみてください。'
+                : 'この機能からSEO制作を進めます。まずはクリックして画面を確認してみてください。',
+            targetSelector: `[data-tour-nav="${it.href.split('#')[0]}"]`,
+          })),
+        ]}
+      />
+    </>
   )
 }
 
