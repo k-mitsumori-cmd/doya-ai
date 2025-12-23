@@ -56,7 +56,11 @@ export function CheckoutButton({
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || '決済セッションの作成に失敗しました')
+        // 代表的な設定ミス（Stripeのtest/live不一致）は分かりやすい文言で出す
+        if (data?.code === 'STRIPE_MODE_MISMATCH') {
+          throw new Error(data.error || '決済設定（Stripeのモード）が一致していません。管理者にお問い合わせください。')
+        }
+        throw new Error(data?.error || '決済セッションの作成に失敗しました')
       }
 
       // Stripeの決済ページにリダイレクト
