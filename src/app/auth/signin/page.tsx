@@ -9,6 +9,9 @@ import Link from 'next/link'
 // エラーコードに対応するメッセージ
 const errorMessages: Record<string, string> = {
   'Configuration': 'サーバー設定に問題があります。',
+  // NextAuthはプロバイダ初期化に失敗すると error=<providerId> を返すことがある
+  // 例: Google OAuthの clientId / clientSecret が未設定
+  'google': 'Googleログイン設定が未完了です（GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET）。運用環境の環境変数を確認してください。',
   'AccessDenied': 'アクセスが拒否されました。',
   'OAuthSignin': 'ログインを開始できませんでした。',
   'OAuthCallback': 'ログイン処理に失敗しました。',
