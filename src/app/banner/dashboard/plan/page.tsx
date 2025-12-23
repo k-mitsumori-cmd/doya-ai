@@ -29,7 +29,7 @@ import {
   ArrowRight,
   Info
 } from 'lucide-react'
-import { Toaster } from 'react-hot-toast'
+import toast, { Toaster } from 'react-hot-toast'
 
 type HistoryItem = {
   id: string
@@ -65,7 +65,32 @@ export default function BannerPlanPage() {
   const [totalBanners, setTotalBanners] = useState(0)
   const [usageCount, setUsageCount] = useState(0)
   const [isPortalLoading, setIsPortalLoading] = useState(false)
+  const [isCanceling, setIsCanceling] = useState(false)
   const [statsLoaded, setStatsLoaded] = useState(false)
+
+  const handleCancelSubscription = async () => {
+    if (isGuest) {
+      toast.error('ログインが必要です')
+      return
+    }
+    if (!confirm('解約（期間末で停止）しますか？\n※ 次回更新日までは引き続き利用できます。')) return
+    try {
+      setIsCanceling(true)
+      const res = await fetch('/api/stripe/subscription/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serviceId: 'banner', mode: 'period_end' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || '解約に失敗しました')
+      const end = data?.currentPeriodEnd ? new Date(Number(data.currentPeriodEnd) * 1000) : null
+      toast.success(end ? `解約を受け付けました（${end.toLocaleDateString()}で停止）` : '解約を受け付けました')
+    } catch (e: any) {
+      toast.error(e?.message || '解約に失敗しました')
+    } finally {
+      setIsCanceling(false)
+    }
+  }
 
   // APIから統計情報を取得（ログインユーザーの場合）
   useEffect(() => {
@@ -312,6 +337,23 @@ export default function BannerPlanPage() {
                       </Link>
                     )}
                   </div>
+
+                  {/* 契約解除（ポータルが機能しない場合の直通） */}
+                  {!isGuest && isPaid && (
+                    <div className="mt-3">
+                      <button
+                        onClick={handleCancelSubscription}
+                        disabled={isCanceling}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 font-black hover:bg-red-100 transition-colors disabled:opacity-60"
+                      >
+                        {isCanceling ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        プランを解約する
+                      </button>
+                      <p className="mt-2 text-[11px] text-slate-500 font-bold">
+                        ※ 解約は「次回更新日で停止」です（即時停止が必要な場合はお問い合わせください）
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Metrics */}
