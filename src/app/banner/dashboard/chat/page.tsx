@@ -77,8 +77,8 @@ export default function BannerChatPage() {
   const [notifyOnComplete, setNotifyOnComplete] = useState(false)
   const [logoImage, setLogoImage] = useState<string | null>(null)
   const [logoFileName, setLogoFileName] = useState('')
-  const [personImage, setPersonImage] = useState<string | null>(null)
-  const [personFileName, setPersonFileName] = useState('')
+  const [personImages, setPersonImages] = useState<string[]>([])
+  const [personFileNames, setPersonFileNames] = useState<string[]>([])
   const [generateCount, setGenerateCount] = useState<number>(3)
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
@@ -212,7 +212,9 @@ export default function BannerChatPage() {
           imageDescription: proposedSpec.imageDescription,
           brandColors: proposedSpec.brandColors,
           logoImage: logoImage || undefined,
-          personImage: personImage || undefined,
+          personImages: personImages.length > 0 ? personImages : undefined,
+          // 後方互換（念のため）
+          personImage: personImages[0] || undefined,
         }),
       })
       const data = await res.json()
@@ -621,58 +623,108 @@ export default function BannerChatPage() {
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-black text-slate-700">人物写真</p>
-                              {personImage && (
+                              {personImages.length > 0 && (
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setPersonImage(null)
-                                    setPersonFileName('')
-                                    toast('人物写真を解除しました')
+                                    setPersonImages([])
+                                    setPersonFileNames([])
+                                    toast('人物写真をすべて解除しました')
                                   }}
                                   className="text-xs font-black text-slate-500 hover:text-slate-900"
                                 >
-                                  解除
+                                  全解除
                                 </button>
                               )}
                             </div>
                             <div className="mt-2 flex items-center gap-3">
-                              <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
-                                {personImage ? (
-                                  <img src={personImage} alt="person" className="h-full w-full object-cover" />
+                              <div className="flex items-center gap-2">
+                                {personImages.length > 0 ? (
+                                  <div className="flex -space-x-2">
+                                    {personImages.slice(0, 3).map((p, idx) => (
+                                      <div key={idx} className="h-12 w-12 rounded-xl bg-white border border-slate-200 overflow-hidden">
+                                        <img src={p} alt={`person-${idx}`} className="h-full w-full object-cover" />
+                                      </div>
+                                    ))}
+                                    {personImages.length > 3 && (
+                                      <div className="h-12 w-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600">
+                                        +{personImages.length - 3}
+                                      </div>
+                                    )}
+                                  </div>
                                 ) : (
-                                  <span className="text-[10px] font-black text-slate-400">PERSON</span>
+                                  <div className="h-12 w-12 rounded-xl bg-white border border-slate-200 overflow-hidden flex items-center justify-center">
+                                    <span className="text-[10px] font-black text-slate-400">PERSON</span>
+                                  </div>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-[11px] text-slate-600 font-bold truncate">{personFileName || '未設定'}</p>
+                                <p className="text-[11px] text-slate-600 font-bold truncate">
+                                  {personImages.length > 0 ? `${personImages.length}枚設定済み` : '未設定'}
+                                </p>
                                 <label className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
                                   <input
                                     type="file"
                                     accept="image/*"
+                                    multiple
                                     className="hidden"
                                     onChange={async (e) => {
-                                      const f = e.target.files?.[0]
+                                      const files = e.target.files
                                       e.target.value = ''
-                                      if (!f) return
                                       try {
-                                        if (!f.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
-                                        if (f.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
-                                        const url = await new Promise<string>((resolve, reject) => {
-                                          const r = new FileReader()
-                                          r.onload = () => resolve(String(r.result || ''))
-                                          r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
-                                          r.readAsDataURL(f)
-                                        })
-                                        setPersonImage(url)
-                                        setPersonFileName(f.name)
-                                        toast.success('人物写真を設定しました')
+                                        if (!files || files.length === 0) return
+                                        const MAX_PERSON_IMAGES = 4
+                                        const remain = Math.max(0, MAX_PERSON_IMAGES - personImages.length)
+                                        if (remain <= 0) {
+                                          toast.error(`人物写真は最大${MAX_PERSON_IMAGES}枚までです`)
+                                          return
+                                        }
+                                        const list = Array.from(files).slice(0, remain)
+                                        const urls: string[] = []
+                                        const names: string[] = []
+                                        for (const f of list) {
+                                          if (!f.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
+                                          if (f.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
+                                          const url = await new Promise<string>((resolve, reject) => {
+                                            const r = new FileReader()
+                                            r.onload = () => resolve(String(r.result || ''))
+                                            r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+                                            r.readAsDataURL(f)
+                                          })
+                                          urls.push(url)
+                                          names.push(f.name)
+                                        }
+                                        setPersonImages((prev) => prev.concat(urls))
+                                        setPersonFileNames((prev) => prev.concat(names))
+                                        toast.success(`人物写真を${urls.length}枚追加しました`)
                                       } catch (err: any) {
-                                        toast.error(err?.message || '人物写真の設定に失敗しました')
+                                        toast.error(err?.message || '人物写真の追加に失敗しました')
                                       }
                                     }}
                                   />
-                                  アップロード
+                                  追加
                                 </label>
+                                {personImages.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {personFileNames.map((name, idx) => (
+                                      <button
+                                        key={`${name}-${idx}`}
+                                        type="button"
+                                        onClick={() => {
+                                          setPersonImages((prev) => prev.filter((_, i) => i !== idx))
+                                          setPersonFileNames((prev) => prev.filter((_, i) => i !== idx))
+                                        }}
+                                        className="px-2 py-1 bg-white rounded-lg border border-slate-200 hover:bg-slate-100 text-[10px] font-bold text-slate-700"
+                                        title="クリックで削除"
+                                      >
+                                        {name.length > 18 ? name.slice(0, 18) + '…' : name} ×
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                <p className="mt-2 text-[10px] text-slate-500 font-bold">
+                                  ※ 最大4枚まで（人物は提供画像を優先して自然に合成します）
+                                </p>
                               </div>
                             </div>
                           </div>

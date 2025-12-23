@@ -426,7 +426,11 @@ export interface GenerateOptions {
   logoDescription?: string  // ロゴの説明（例: "青い円形のロゴ"）
   personDescription?: string  // 人物の説明（例: "30代女性ビジネスパーソン"）
   logoImage?: string  // ロゴ画像のBase64データ（data:image/...;base64,...形式）
-  personImage?: string  // 人物画像のBase64データ
+  // 人物画像（複数枚対応）
+  // - 推奨: personImages を使用（最大数はAPI側で制限）
+  // - 後方互換: personImage も受け付ける
+  personImages?: string[]
+  personImage?: string  // 互換用（単体）
   referenceImages?: string[] // 参考画像（data:image/...;base64,...形式）
   // ユーザー指定の配色（#RRGGBB 推奨）
   brandColors?: string[]
@@ -547,7 +551,11 @@ ${buildAgencyMasterPromptJP({
   mainColor: brandColors[0] || '未指定',
   subColors: brandColors.slice(1).join(', ') || '未指定',
   hasLogo: !!options.logoImage,
-  hasPerson: !!(options.personImage || options.hasPerson),
+  hasPerson: !!(
+    (Array.isArray(options.personImages) && options.personImages.length > 0) ||
+    options.personImage ||
+    options.hasPerson
+  ),
 })}
 
 === YOUTUBE THUMBNAIL SPECIFICATIONS ===
@@ -614,13 +622,19 @@ ${company ? `- Brand (任意): ${company}` : ''}
 
   // 人物画像がある場合
   if (options.hasPerson) {
-    if (options.personImage) {
+    const personImages =
+      Array.isArray(options.personImages) && options.personImages.length > 0
+        ? options.personImages
+        : (options.personImage ? [options.personImage] : [])
+
+    if (personImages.length > 0) {
       prompt += `
 === PERSON IMAGE (PROVIDED) ===
-I am providing a person's photo to include in this thumbnail.
-Position them on the left third of the frame.
-The person should have an engaging, expressive pose.
-Leave space for the headline/subhead/CTA text on the right or bottom.
+I am providing ${personImages.length} person photo(s) to include in this thumbnail.
+- Use the provided photo(s) as-is (do NOT distort faces/bodies, do NOT regenerate a new face).
+- If multiple photos are provided, compose them naturally and avoid clutter.
+- Position the main person on the left third of the frame and keep clear space for text.
+- Leave space for the headline/subhead/CTA text on the right or bottom.
 `
     } else {
       prompt += `
@@ -698,7 +712,11 @@ ${buildAgencyMasterPromptJP({
   mainColor: brandColors[0] || categoryStyle.colors,
   subColors: brandColors.slice(1).join(', ') || '未指定',
   hasLogo: !!options.logoImage,
-  hasPerson: !!(options.personImage || options.hasPerson),
+  hasPerson: !!(
+    (Array.isArray(options.personImages) && options.personImages.length > 0) ||
+    options.personImage ||
+    options.hasPerson
+  ),
 })}
 
 === BANNER SPECIFICATIONS ===
@@ -808,14 +826,20 @@ Do NOT recreate the exact same design 1:1. Create a new original banner in a sim
 
   // 人物がある場合
   if (options.hasPerson) {
-    if (options.personImage) {
+    const personImages =
+      Array.isArray(options.personImages) && options.personImages.length > 0
+        ? options.personImages
+        : (options.personImage ? [options.personImage] : [])
+
+    if (personImages.length > 0) {
       // 実際の人物画像が提供されている場合
       prompt += `
 === PERSON IMAGE (PROVIDED) ===
-I am providing a person's photo. Please incorporate this person into the banner design.
-Position them on one side of the banner (left or right), leaving space for text on the other side.
-Blend the person naturally with the banner background and style.
-The person should look professional and trustworthy in the context of the advertisement.
+I am providing ${personImages.length} person photo(s). Please incorporate these provided person photo(s) into the banner design.
+- Use the provided photo(s) as-is (do NOT distort faces/bodies, do NOT regenerate a new face).
+- If multiple photos are provided, compose them naturally (balanced, not cluttered).
+- Position person(s) to support the text hierarchy and keep text fully readable.
+- Blend the person(s) naturally with the banner background and style.
 `
     } else {
       // 人物画像がない場合は生成
@@ -891,9 +915,13 @@ async function generateSingleBanner(
           imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
         } catch { /* ignore */ }
       }
-      if (options?.personImage) {
+      const personImages =
+        Array.isArray(options?.personImages) && options.personImages.length > 0
+          ? options.personImages
+          : (options?.personImage ? [options.personImage] : [])
+      for (const p of personImages.slice(0, 4)) {
         try {
-          const parsed = parseDataUrl(options.personImage)
+          const parsed = parseDataUrl(p)
           imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
         } catch { /* ignore */ }
       }
