@@ -6,7 +6,7 @@
  */
 'use client'
 
-import BannerDashboard from './dashboard/page'
+import BannerUrlAutoPage from './url/page'
 
-export default BannerDashboard
+export default BannerUrlAutoPage
 

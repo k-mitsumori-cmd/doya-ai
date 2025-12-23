@@ -35,7 +35,7 @@ interface NavItem {
 }
 
 const bannerNavItems: NavItem[] = [
-  { href: '/banner/dashboard#from-url', label: 'URL自動生成', icon: Link2, hot: true },
+  { href: '/banner', label: 'URL自動生成', icon: Link2, hot: true },
   { href: '/banner/dashboard', label: 'バナー作成', icon: Palette },
   { href: '/banner/dashboard/chat', label: 'AIチャット', icon: MessageSquare },
   { href: '/banner/gallery', label: 'ギャラリー', icon: Layers },
@@ -93,7 +93,7 @@ function DashboardSidebarImpl({
 
   const isActive = (href: string) => {
     const base = href.split('#')[0]
-    if (base === '/banner/dashboard' || base === '/seo') {
+    if (base === '/banner' || base === '/banner/dashboard' || base === '/seo') {
       return pathname === base
     }
     return pathname.startsWith(base)
