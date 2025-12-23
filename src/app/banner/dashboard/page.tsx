@@ -1139,13 +1139,39 @@ export default function BannerDashboard() {
 
     const key = `${category}|${purpose}`
 
+    const isValidCopyCandidate = (s: string) => {
+      const t = String(s || '').trim()
+      if (!t) return false
+      // JSON断片/解析エラーのゴミを混入させない
+      if (/suggestions/i.test(t)) return false
+      if (/^[\{\}\[\]"]+$/.test(t)) return false
+      if (/^\{.*\}$/.test(t)) return false
+      if (/^\[.*\]$/.test(t)) return false
+      return t.length >= 4 && t.length <= 80
+    }
+
     // 既にAI生成の候補がある場合は「押すたびに切り替え」（ローカルテンプレートは混ぜない）
     if (aiSamplePool.length > 1 && aiSampleKey === key) {
-      const next = (aiSampleIndex + 1) % aiSamplePool.length
-      setAiSampleIndex(next)
-      setKeyword(aiSamplePool[next])
-      toast.success(`AIコピーを切り替えました（${next + 1}/${aiSamplePool.length}）`, { icon: '🔁' })
-      return
+      // 念のためサニタイズ（古い状態でゴミが混ざっていても再発しない）
+      const cleaned = aiSamplePool.filter((x) => isValidCopyCandidate(x))
+      if (cleaned.length === 0) {
+        setAiSamplePool([])
+        setAiSampleIndex(0)
+        // フォールスルーしてAI再取得
+      } else {
+        if (cleaned.length !== aiSamplePool.length) {
+          setAiSamplePool(cleaned)
+          setAiSampleIndex(0)
+          setKeyword(cleaned[0])
+          toast.success(`AIコピーを切り替えました（1/${cleaned.length}）`, { icon: '🔁' })
+          return
+        }
+        const next = (aiSampleIndex + 1) % cleaned.length
+        setAiSampleIndex(next)
+        setKeyword(cleaned[next])
+        toast.success(`AIコピーを切り替えました（${next + 1}/${cleaned.length}）`, { icon: '🔁' })
+        return
+      }
     }
 
     // 候補が1つしかない場合も、AIから再取得を試みる（ローカルテンプレートは追加しない）
@@ -1172,7 +1198,10 @@ export default function BannerDashboard() {
         })
         const data = await res.json()
         if (res.ok && Array.isArray(data?.suggestions)) {
-          ai = data.suggestions.filter((s: any) => typeof s === 'string' && s.trim())
+          ai = data.suggestions
+            .filter((s: any) => typeof s === 'string')
+            .map((s: any) => String(s || '').trim())
+            .filter((s: string) => isValidCopyCandidate(s))
         }
       } catch {
         // AI呼び出し失敗時は下でフォールバック処理
@@ -1182,8 +1211,8 @@ export default function BannerDashboard() {
       if (ai.length > 0) {
         // ベース文言がある場合のみ、それをバリエーションとして先頭に追加
         const pool = base 
-          ? uniqStrings([base, ...ai]).slice(0, 24)
-          : uniqStrings(ai).slice(0, 24)
+          ? uniqStrings([base, ...ai]).filter((s) => isValidCopyCandidate(s)).slice(0, 24)
+          : uniqStrings(ai).filter((s) => isValidCopyCandidate(s)).slice(0, 24)
 
         setAiSampleKey(key)
         setAiSamplePool(pool)
