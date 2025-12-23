@@ -8,7 +8,6 @@ import {
   LayoutDashboard, 
   Sparkles, 
   Clock, 
-  BarChart3, 
   Settings, 
   Palette,
   MessageSquare,
@@ -40,7 +39,6 @@ const bannerNavItems: NavItem[] = [
   { href: '/banner/dashboard', label: 'バナー作成', icon: Palette },
   { href: '/banner/dashboard/chat', label: 'AIチャット', icon: MessageSquare },
   { href: '/banner/gallery', label: 'ギャラリー', icon: Layers },
-  { href: '/banner/dashboard/stats', label: '統計・分析', icon: BarChart3 },
   { href: '/banner/dashboard/history', label: '履歴', icon: Clock },
   { href: '/banner/dashboard/plan', label: 'プラン・使用量', icon: CreditCard },
 ]

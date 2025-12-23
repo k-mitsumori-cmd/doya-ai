@@ -89,7 +89,7 @@ export default function KantanDashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   const isGuest = !session
-  const userName = session?.user?.name || '田中 太郎'
+  const userName = session?.user?.name || 'ゲスト'
   const userInitial = userName[0]?.toUpperCase() || 'T'
 
   useEffect(() => {

@@ -195,8 +195,8 @@ export default function BannerPlanPage() {
                 <div className="h-8 w-px bg-slate-200 hidden sm:block" />
                 <div className="flex items-center gap-3 pl-2">
                   <div className="text-right hidden sm:block">
-                    <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || '田中 太郎'}</p>
-                    <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">Admin</p>
+                    <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || 'ゲスト'}</p>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{session?.user ? 'Member' : 'Guest'}</p>
                   </div>
                   <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
                     {session?.user?.image ? (
