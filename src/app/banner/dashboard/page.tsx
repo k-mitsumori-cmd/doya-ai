@@ -221,22 +221,208 @@ const SIZE_PRESETS: Record<string, Array<{ value: string; label: string; ratio: 
   ],
 }
 
-type SampleScenario = { purpose: string; category: string; keyword: string }
+type SampleScenario = { purpose: string; category: string; size: string; keyword: string; imageDescription: string }
 
-// サンプル入力（用途/業種/キーワードも含めて押すたびに切り替え）
+// サンプル入力（用途/業種/サイズ/内容/イメージまで含めて押すたびに切り替え）
 const SAMPLE_SCENARIOS: SampleScenario[] = [
-  { purpose: 'sns_ad', category: 'marketing', keyword: '広告費ムダ打ち0へ。CV改善の無料診断、今だけ受付中' },
-  { purpose: 'sns_ad', category: 'beauty', keyword: '【本日限定】新規¥0体験あり たった30分で印象UP' },
-  { purpose: 'display', category: 'ec', keyword: '決算セール MAX70%OFF 本日限り！' },
-  { purpose: 'display', category: 'food', keyword: '初回限定 20%OFF。人気No.1セットを今だけ' },
-  { purpose: 'webinar', category: 'it', keyword: '【参加無料】生成AI活用ロードマップ（Q&A付き）' },
-  { purpose: 'webinar', category: 'finance', keyword: '【無料セミナー】家計見直しで月1万円を生み出す方法' },
-  { purpose: 'lp_hero', category: 'it', keyword: '業務効率を10倍に。次世代AIプラットフォーム' },
-  { purpose: 'lp_hero', category: 'health', keyword: '予約から問診まで一括管理。現場をもっとラクに' },
-  { purpose: 'email', category: 'ec', keyword: '本日23:59まで：会員様限定クーポン配布中' },
-  { purpose: 'campaign', category: 'telecom', keyword: '乗り換えで最大2万円キャッシュバック 月額990円〜' },
-  { purpose: 'youtube', category: 'it', keyword: '【保存版】AIで作業が10倍速くなる“最短ルート”' },
+  {
+    purpose: 'sns_ad',
+    category: 'marketing',
+    size: '1080x1080',
+    keyword: '広告費ムダ打ち0へ。CV改善の無料診断、今だけ受付中',
+    imageDescription:
+      'B2B感のある清潔なビジネス写真（人物＋グラフの抽象要素）。\nドヤバナーブルー基調、CTAは白背景×青文字で目立たせる。\n見出しは太字で短く、3秒で理解できる構成。上下の余白や黒帯は作らない。',
+  },
+  {
+    purpose: 'sns_ad',
+    category: 'beauty',
+    size: '1080x1080',
+    keyword: '【本日限定】新規¥0体験あり たった30分で印象UP',
+    imageDescription:
+      '透明感のある人物アップ（肌ツヤ/清潔感）。\n白〜淡いベージュ×アクセントに黄色、上品で“高級感”。\nテキストは2段まで・大きく、CTAボタンをはっきり配置。余白や黒帯なし。',
+  },
+  {
+    purpose: 'sns_ad',
+    category: 'recruit',
+    size: '1080x1080',
+    keyword: '未経験OK｜週3〜リモート可 まずはカジュアル面談',
+    imageDescription:
+      '笑顔のチーム写真＋“安心感”のある青トーン。\n「未経験OK」「週3〜」など数字/条件を大きく。\nCTAは“面談予約”系のボタンで目立たせる。上下の余白なし。',
+  },
+  {
+    purpose: 'display',
+    category: 'ec',
+    size: '300x250',
+    keyword: '決算セール MAX70%OFF 本日限り！',
+    imageDescription:
+      '商品を大きく1点見せ、赤/オレンジで割引バッジ。\n文字は極太で短く、視認性最優先（小サイズでも読める）。\nCTAは右下に小さくても押せるボタン風。黒帯なし。',
+  },
+  {
+    purpose: 'display',
+    category: 'food',
+    size: '300x250',
+    keyword: '初回限定 20%OFF。人気No.1セットを今だけ',
+    imageDescription:
+      '料理の接写でシズル感（湯気/ツヤ）。\n暖色背景＋オレンジCTAで食欲を刺激。\n文字は短く太く。上下の余白なし。',
+  },
+  {
+    purpose: 'display',
+    category: 'realestate',
+    size: '728x90',
+    keyword: '内見予約でギフト券1万円（今月限定）',
+    imageDescription:
+      '開放感のある室内写真を横長にトリミング。\n青系で誠実、特典数字を最優先で大きく。\n小さくても読める太字。余白や黒帯なし。',
+  },
+  {
+    purpose: 'webinar',
+    category: 'it',
+    size: '1200x628',
+    keyword: '【参加無料】生成AI活用ロードマップ（Q&A付き）',
+    imageDescription:
+      '登壇者の上半身写真＋“参加無料”バッジ。\n日程/時間/特典を整理して配置。\nブルー基調で信頼感、申込CTAを強調。上下の余白なし。',
+  },
+  {
+    purpose: 'webinar',
+    category: 'finance',
+    size: '1200x628',
+    keyword: '【無料セミナー】家計見直しで月1万円を生み出す方法',
+    imageDescription:
+      '信頼感のある人物（スーツ）＋ネイビー×ゴールド。\n「月1万円」など数字を最大級。\n“無料”をバッジで強調、CTAを明確に。余白なし。',
+  },
+  {
+    purpose: 'lp_hero',
+    category: 'it',
+    size: '1920x600',
+    keyword: '業務効率を10倍に。次世代AIプラットフォーム',
+    imageDescription:
+      'プロダクトUIの抽象イメージ＋クリーンな余白。\n大見出しは左寄せで太字、サブ要点は3つまで。\nCTAは右側に目立つボタン。上下の余白なし（ヒーロー帯ぴったり）。',
+  },
+  {
+    purpose: 'lp_hero',
+    category: 'health',
+    size: '1920x600',
+    keyword: '予約から問診まで一括管理。現場をもっとラクに',
+    imageDescription:
+      '清潔感のある医療現場写真（白衣/受付/タブレット）。\n青×白で安心、要点を短く太字。\nCTAをはっきり配置。上下の余白なし。',
+  },
+  {
+    purpose: 'email',
+    category: 'ec',
+    size: '600x200',
+    keyword: '本日23:59まで：会員様限定クーポン配布中',
+    imageDescription:
+      'メール上部で一瞬で伝わるシンプル構成。\nクーポン券風のビジュアル＋期限を太字。\nCTAは“今すぐ使う”で明確に。余白なし。',
+  },
+  {
+    purpose: 'email',
+    category: 'education',
+    size: '600x300',
+    keyword: '無料体験レッスン受付中｜最短2週間で基礎が身につく',
+    imageDescription:
+      '学習している人物/ノートPCの写真。\n青基調で信頼、箇条書きは2〜3点。\nCTAは目立つボタン。余白なし。',
+  },
+  {
+    purpose: 'campaign',
+    category: 'telecom',
+    size: '1200x628',
+    keyword: '乗り換えで最大2万円キャッシュバック 月額990円〜',
+    imageDescription:
+      'スマホを持つ手元＋“最大2万円”を最優先で巨大表示。\nオレンジ×黄色アクセントでお得感。\nCTAは“今すぐ申し込む”系。上下の余白なし。',
+  },
+  {
+    purpose: 'campaign',
+    category: 'food',
+    size: '1080x1080',
+    keyword: '今だけ！ランチセット500円OFF（先着100名）',
+    imageDescription:
+      '料理の接写＋赤い先着バッジ。\n「500円OFF」「先着100名」を大きく。\nCTAは予約/注文ボタン風。余白なし。',
+  },
+  {
+    purpose: 'youtube',
+    category: 'it',
+    size: '1280x720',
+    keyword: '【保存版】AIで作業が10倍速くなる“最短ルート”',
+    imageDescription:
+      '表情のある人物（驚き/ドヤ顔）＋極太テキスト。\n強コントラスト（青×黒）＋黄色ハイライト。\n“10倍”“最短”など数字・強語を強調。上下の余白なし。',
+  },
+  {
+    purpose: 'youtube',
+    category: 'marketing',
+    size: '1280x720',
+    keyword: '【NG集】広告で失敗する人の共通点7つ',
+    imageDescription:
+      '人物の表情＋“NG”を赤でドン。\n数字（7つ）を大きく、視線誘導の矢印。\nサムネらしい派手さ。余白なし。',
+  },
 ]
+
+function buildSampleImageDescription(category: string, purpose: string, size: string) {
+  const catLabel = CATEGORIES.find((c) => c.value === category)?.label || category
+  const purposeLabel = PURPOSES.find((p) => p.value === purpose)?.label || purpose
+  const purposeCue =
+    purpose === 'youtube'
+      ? '表情強めの人物＋極太テキスト。コントラストを強く、数字/強語をハイライト。'
+      : purpose === 'display'
+        ? '小サイズ前提。文字は短く太く、重要語を最大サイズで。'
+        : purpose === 'webinar'
+          ? '登壇者写真＋「無料/日程/特典」を整理し、申込CTAを明確に。'
+          : purpose === 'lp_hero'
+            ? '余白を活かしたヒーロー構成。価値提案を太字で、CTAを目立たせる。'
+            : purpose === 'email'
+              ? 'シンプルで軽量。1メッセージを短く、CTAで本文へ誘導。'
+              : purpose === 'campaign'
+                ? 'お得感（割引/限定/先着）を最優先で大きく、CTAを強く。'
+                : '3秒で伝わる構成。'
+
+  const catCue =
+    category === 'food'
+      ? '料理の接写でシズル感（湯気/ツヤ）。暖色で食欲を刺激。'
+      : category === 'beauty'
+        ? '透明感・清潔感の人物アップ。上品な余白と高級感。'
+        : category === 'ec'
+          ? '商品を大きく、割引バッジと期限で緊急性。'
+          : category === 'marketing'
+            ? 'B2Bの信頼感。清潔な人物＋データの抽象要素。'
+            : category === 'telecom'
+              ? 'スマホ/料金/キャッシュバックの数字訴求を強調。'
+              : category === 'recruit'
+                ? '笑顔のチーム写真。安心感の青トーン。'
+                : category === 'finance'
+                  ? 'ネイビー×ゴールドで信頼/高級感。数字を強調。'
+                  : category === 'health'
+                    ? '清潔な医療現場。安心の青×白。'
+                    : category === 'realestate'
+                      ? '開放感のある室内/外観。誠実な青トーン。'
+                      : category === 'education'
+                        ? '学習シーン。成長が伝わる明るい光。'
+                        : category === 'it'
+                          ? 'デジタル抽象光/UI。スピード感。'
+                          : 'シンプルで汎用性の高いモダンデザイン。'
+
+  return `【${purposeLabel} / ${catLabel} / ${size}】\n${purposeCue}\n${catCue}\nCTAボタンを必ず入れ、文字は同じ文言を重複させない。上下の余白や黒帯は作らない。`
+}
+
+function buildSampleScenariosFor(category: string, purpose: string): SampleScenario[] {
+  const fixed = SAMPLE_SCENARIOS.filter((s) => s.category === category && s.purpose === purpose)
+  if (fixed.length > 0) return fixed
+
+  // 固定プリセットが足りない場合は「高CTRコピー」から自動生成してパターンを増やす
+  const sizes = (SIZE_PRESETS[purpose] || SIZE_PRESETS.default).map((s) => s.value)
+  const sizeA = sizes[0] || '1080x1080'
+  const sizeB = sizes[1] || sizeA
+  const copies = buildHighCtrSampleCopies(category, purpose).slice(0, 8)
+  const derived: SampleScenario[] = []
+  for (let i = 0; i < copies.length; i++) {
+    const sz = i % 3 === 0 ? sizeB : sizeA
+    derived.push({
+      purpose,
+      category,
+      size: sz,
+      keyword: copies[i]!,
+      imageDescription: buildSampleImageDescription(category, purpose, sz),
+    })
+  }
+  return derived
+}
 
 // A/B/Cパターンの工夫点・特徴
 const BANNER_INSIGHTS: Record<string, { 
@@ -679,7 +865,7 @@ export default function BannerDashboard() {
   const [aiSampleIndex, setAiSampleIndex] = useState(0)
   const [aiSampleKey, setAiSampleKey] = useState('')
 
-  // サンプル入力（用途/業種/キーワードまで押すたびに切り替え）
+  // サンプル入力（用途/業種/サイズ/内容/イメージまで押すたびに切り替え）
   const [sampleScenarioIndex, setSampleScenarioIndex] = useState(-1)
   const sampleScenarioIndexRef = useRef(-1)
   const sampleCopyIndexRef = useRef<Record<string, number>>({})
@@ -969,23 +1155,29 @@ export default function BannerDashboard() {
 
   // Handlers
   const handleSample = () => {
-    // 業種を選択中なら「いまの業種に合わせたキャッチコピー」だけ切り替える
+    // 業種選択済み → 用途×業種×サイズ×内容×イメージまでまとめて切り替える
     if (category) {
       const key = `${category}|${purpose}`
-      const pool = buildHighCtrSampleCopies(category, purpose)
+      const pool = buildSampleScenariosFor(category, purpose)
       const current = sampleCopyIndexRef.current[key] ?? -1
       const next = (current + 1) % Math.max(1, pool.length)
       sampleCopyIndexRef.current[key] = next
       setSampleCopyIndex(next)
       setSampleCopyTotal(pool.length)
-      setKeyword(pool[next] || pool[0] || '')
 
+      const s = pool[next] || pool[0]
+      if (s) {
+        setUseCustomSize(false)
+        setSize(s.size)
+        setKeyword(s.keyword)
+        setImageDescription(s.imageDescription)
+      }
       const label = CATEGORIES.find((c) => c.value === category)?.label || category
-      toast.success(`キャッチコピーを「${label}」向けサンプルにしました（${next + 1}/${pool.length}）`, { icon: '🔁' })
+      toast.success(`サンプルを切り替えました（${label}×${PURPOSES.find(p => p.value === purpose)?.label || purpose} / ${next + 1}/${pool.length}）`, { icon: '🔁' })
       return
     }
 
-    // 業種未選択の場合は「用途/業種/キーワード」をまとめてセット（導線として残す）
+    // 業種未選択 → 用途/業種/サイズ/内容/イメージまでまとめてセット（導線として残す）
     const pool = SAMPLE_SCENARIOS
     sampleScenarioIndexRef.current = (sampleScenarioIndexRef.current + 1) % pool.length
     const next = sampleScenarioIndexRef.current
@@ -993,7 +1185,10 @@ export default function BannerDashboard() {
     const s = pool[next]!
     setPurpose(s.purpose)
     setCategory(s.category)
+    setUseCustomSize(false)
+    setSize(s.size)
     setKeyword(s.keyword)
+    setImageDescription(s.imageDescription)
     toast.success(`サンプルを切り替えました（${next + 1}/${pool.length}）`, { icon: '🔁' })
   }
 
