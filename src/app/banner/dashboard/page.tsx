@@ -1875,9 +1875,9 @@ export default function BannerDashboard() {
               </div>
               
               <div className="space-y-8">
-                {/* Catchphrase */}
+                {/* キャッチフレーズ */}
                 <div className="relative group/input">
-                  <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-[0.2em] ml-1">Catchphrase</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block tracking-[0.2em] ml-1">キャッチフレーズ</label>
                   <textarea
                     value={keyword}
                     onChange={(e) => setKeyword(e.target.value)}
