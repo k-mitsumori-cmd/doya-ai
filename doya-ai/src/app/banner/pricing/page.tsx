@@ -7,6 +7,18 @@ import { CheckoutButton } from '@/components/CheckoutButton'
 
 export default function BannerPricingPage() {
   const { data: session } = useSession()
+  const bannerPlanRaw = String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || (session ? 'FREE' : 'GUEST')).toUpperCase()
+  const bannerPlanTier = (() => {
+    const p = String(bannerPlanRaw || '').toUpperCase()
+    if (!p || p === 'GUEST') return 'GUEST' as const
+    if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
+    if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('FREE')) return 'FREE' as const
+    return 'FREE' as const
+  })()
+  const isLoggedIn = !!session?.user?.email
+  const isPaid = bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
+
   const plans = BANNER_PRICING.plans
   const free = plans.find((p) => p.id === 'banner-free')
   const pro = plans.find((p) => p.id === 'banner-pro')
@@ -32,6 +44,20 @@ export default function BannerPricingPage() {
           料金プラン
         </h1>
 
+        <div className="mb-6 flex flex-col items-center gap-2">
+          <p className="text-sm font-black text-slate-800">
+            現在のプラン：{bannerPlanTier === 'GUEST' ? 'ゲスト' : bannerPlanTier === 'FREE' ? '無料' : bannerPlanTier === 'PRO' ? 'PRO' : 'Enterprise'}
+          </p>
+          {isPaid && (
+            <Link
+              href="/banner/dashboard/plan"
+              className="text-xs font-black text-blue-600 hover:text-blue-800"
+            >
+              アカウント画面でプラン変更/解約を行う →
+            </Link>
+          )}
+        </div>
+
         <div className="space-y-6">
           {/* おためし */}
           <div className="rounded-3xl bg-[#F7F6F1] p-8">
@@ -40,11 +66,20 @@ export default function BannerPricingPage() {
                 <h2 className="text-2xl font-black text-slate-900">{free?.name || 'おためしプラン'}</h2>
                 <p className="text-sm text-slate-600 mt-2">{free?.description || `1日${BANNER_PRICING.freeLimit}回までの生成をすることができます`}</p>
                 <div className="mt-5">
-                  <Link href="/banner">
-                    <button className="px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors">
-                      {free?.cta || '3回生成'}
+                  {bannerPlanTier === 'FREE' ? (
+                    <button
+                      disabled
+                      className="px-4 py-2 rounded-full bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed"
+                    >
+                      現在のプラン
                     </button>
-                  </Link>
+                  ) : (
+                    <Link href="/banner">
+                      <button className="px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors">
+                        {free?.cta || '3回生成'}
+                      </button>
+                    </Link>
+                  )}
                 </div>
               </div>
               <div className="flex-shrink-0">
@@ -74,14 +109,30 @@ export default function BannerPricingPage() {
               </div>
             </div>
             <div className="mt-6">
-              <CheckoutButton
-                planId="banner-pro"
-                loginCallbackUrl="/banner/pricing"
-                className="w-full py-4 rounded-2xl text-base"
-                variant="primary"
-              >
-                プロプランを始める
-              </CheckoutButton>
+              {bannerPlanTier === 'PRO' ? (
+                <button
+                  disabled
+                  className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
+                >
+                  現在のプラン
+                </button>
+              ) : bannerPlanTier === 'ENTERPRISE' ? (
+                <button
+                  disabled
+                  className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
+                >
+                  現在より下位のプランです
+                </button>
+              ) : (
+                <CheckoutButton
+                  planId="banner-pro"
+                  loginCallbackUrl="/banner/pricing"
+                  className="w-full py-4 rounded-2xl text-base"
+                  variant="primary"
+                >
+                  プロプランを始める
+                </CheckoutButton>
+              )}
             </div>
           </div>
 
@@ -107,9 +158,18 @@ export default function BannerPricingPage() {
               </div>
             </div>
             <div className="mt-6 grid gap-3">
-              <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner/pricing" className="w-full py-4 rounded-2xl text-base">
-                エンタープライズを始める
-              </CheckoutButton>
+              {bannerPlanTier === 'ENTERPRISE' ? (
+                <button
+                  disabled
+                  className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
+                >
+                  現在のプラン
+                </button>
+              ) : (
+                <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner/pricing" className="w-full py-4 rounded-2xl text-base">
+                  {bannerPlanTier === 'PRO' ? 'エンタープライズにアップグレード' : 'エンタープライズを始める'}
+                </CheckoutButton>
+              )}
               <a
                 href={HIGH_USAGE_CONTACT_URL}
                 target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
@@ -124,11 +184,19 @@ export default function BannerPricingPage() {
 
         {/* Bottom CTA */}
         <div className="mt-10 flex justify-center">
-          <Link href="/banner">
-            <button className="px-8 py-4 rounded-full bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
-              おためしプランを使ってみる
-            </button>
-          </Link>
+          {isLoggedIn ? (
+            <Link href="/banner/dashboard/plan">
+              <button className="px-8 py-4 rounded-full bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
+                アカウント画面でプランを管理する
+              </button>
+            </Link>
+          ) : (
+            <Link href="/banner">
+              <button className="px-8 py-4 rounded-full bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
+                おためしプランを使ってみる
+              </button>
+            </Link>
+          )}
         </div>
       </main>
     </div>
