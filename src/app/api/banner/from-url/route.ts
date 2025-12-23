@@ -12,11 +12,13 @@ export const maxDuration = 300
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 type FromUrlRequest = {
-  targetUrl: string
-  bannerPurpose: string
+  // 互換: 旧UIでは targetUrl/camelCase。新UIでは target_url/snake_case（URLのみ入力）
+  targetUrl?: string
+  target_url?: string
+  bannerPurpose?: string
   industry?: string
-  size: string
-  requiredText: string
+  size?: string
+  requiredText?: string
   language?: 'ja'
   // optional assets
   logoImage?: string
@@ -189,28 +191,71 @@ async function callGeminiForJson(prompt: string, apiKey: string): Promise<any> {
 
 function buildWebsiteBannerPrompt(input: {
   target_url: string
-  banner_purpose: string
-  industry: string
   size: string
   language: 'ja'
-  required_text: string
   optional_assets: { logo_image?: string; person_images?: number }
   brand_constraints: { main_color?: string; sub_color?: string; tone_keywords?: string }
   compliance: { avoid?: string; must_include?: string }
   page_meta: { title?: string; description?: string }
   page_text: string
+  color_hints: string
 }) {
-  // ユーザー提示プロンプトを“仕様”として埋め込み、そこに抽出元データを渡す
-  return `あなたは「Webサイト解析 × バナー制作」のプロです。
-ユーザーが入力したURLのページ内容を元に、広告/LP/告知に使える高品質なバナー画像を生成してください。
+  // ユーザー提示プロンプト（仕様）に合わせて、URLのみから解析→最終画像プロンプトまで作る
+  return `あなたは「Webサイトを一瞬で理解し、最適な広告バナーを自動生成するAI」です。
 
-# 0. 入力（ユーザー or システムから渡される）
+この機能の最大の価値は、ユーザーが【一切プロンプトを書かず】、【サイトURLを入力するだけ】で、そのサイトに“本当に合った”バナーを生成できることです。
+
+ユーザーから与えられる入力は、以下の1つのみです。
 - target_url: ${input.target_url}
-- banner_purpose: ${input.banner_purpose}
-- industry: ${input.industry}
+
+それ以外の条件（用途・業種・トーン・コピー・色・CTA・構成）は、すべてあなたがサイト内容から自動で判断・補完してください。
+
+---
+
+## 1. サイト自動解析（最重要）
+target_url を実際に見て、以下を必ず読み取ってください。
+- このサイトは「何のサービス / 会社」か
+- 誰向けのサービスか（ターゲット）
+- 何が一番の強み・価値か（1〜3点）
+- サイト全体のトーン（信頼感 / 高級感 / テック / 親しみ / ポップ / 採用向け 等）
+- メインカラー・サブカラー（視覚的に判断）
+- 最も自然なCTA（問い合わせ / 資料DL / 申し込み / 採用応募など）
+※ 明示されていない情報は、サイト全体の文脈から「広告として最も自然な形」で推定してよい。
+
+## 2. バナー用コピーを自動設計
+以下をすべて自動で作成すること。
+- メイン見出し（バナーで一番目立たせる一文）
+- 補助コピー（0〜2行）
+- CTA文言（1つ）
+※ サイトに明確な数字・実績がある場合のみ根拠として使用。嘘・過剰表現は禁止。
+
+## 3. デザイン判断（人間のデザイナーの思考を再現）
+- バナーの雰囲気、配色、文字量、余白、情報優先順位、写真or抽象背景を自動決定
+- 採用系なら人物感、BtoBなら信頼感を優先
+重要ルール：
+- 文字は必ず「読める」「正しい日本語」
+- 装飾よりも“一瞬で理解できる”こと最優先
+- 広告バナーとしてCTRが出そうな構成
+
+## 4. 画像生成AIに渡す最終プロンプトを作成
+- 日本語バナーであること
+- 見出し・補助コピー・CTAをすべて含める
+- 文字が崩れないよう強く指示
+- 配色・雰囲気・構図を具体的に記述
+- 広告バナー品質（高解像度・シャープ）
+
+## 5. 出力形式（必須）
+次の2つだけを出力する（JSONのみ。余計な文章やキーは禁止）：
+{
+  "banner_analysis": "",
+  "image_generation_prompt": ""
+}
+
+---
+
+### システムから渡す補助情報（解析の材料）
 - size: ${input.size}
 - language: ${input.language}
-- required_text: ${input.required_text}
 - optional_assets:
   - logo_image: ${input.optional_assets.logo_image ? 'あり（提供済み）' : 'なし'}
   - person_images: ${input.optional_assets.person_images ? `${input.optional_assets.person_images}枚（提供済み）` : 'なし'}
@@ -220,63 +265,42 @@ function buildWebsiteBannerPrompt(input: {
   - tone_keywords: ${input.brand_constraints.tone_keywords || '未指定'}
 - compliance:
   - avoid: ${input.compliance.avoid || '未指定'}
-  - must_include: ${input.compliance.must_include || '未指定（required_text に含める想定）'}
-
-# 1. Webページ解析（必須）
-以下を target_url から抽出・推定して構造化する：
-- サービス/商品の名称（正式名）
-- 主要価値（ベネフィット）上位3つ（短い日本語で）
-- 根拠（実績/数字/導入社/受賞/特徴）上位3つ（ページ内にあるもの優先）
-- 想定ターゲット（誰向けか）
-- トーン&マナー（ページの印象：信頼/高級/テック/カジュアル等）
-- ブランドカラー（主要色を推定。指定があれば優先）
-- CTA（問い合わせ/資料DLなど、banner_purposeに沿って最適化）
-
-抽出できない情報がある場合は「推定」で補完し、推定した箇所を明確に区別する。
-
-# 2. コピー設計（バナー用・短く強く）
-- required_text は絶対に改変せず、そのまま画像に入れる（必須）。
-- required_text 以外の補助コピーを 0〜2個まで作る（短い、刺さる、誇張しない）。
-- CTA文言を 1つ作る（例：無料で資料DL / まずは相談 / 詳しく見る）。誇張禁止。
-- 数字や固有名詞はページの根拠がある場合のみ使用。
-
-# 3. デザイン指示（バナー生成のルール）
-- 画像内の文字は必ず「読める」こと。最優先。
-- required_text は視認性の高い位置に配置（FV中央/上部など）。改行や文字詰めは可、文字自体は改変禁止。
-- 背景は “読みやすさ” を損なわない。装飾より可読性優先。
-- logo_image があれば左上or右上に配置。なければサイト名をタイポで表現。
-- person_images があれば “顔が切れない / 重要要素に被らない / CTA付近に配置しない”。
-- 画面内の要素順序は「見出し(required_text) → 補助コピー → CTA → 根拠（実績/特徴）」。
-- 根拠要素は最大2点まで（例：「導入〇〇社」「満足度〇〇%」など）。ない場合は無理に入れない。
-
-# 4. 出力形式（必須）
-以下を必ず出力する（JSONのみ、余計な文章は禁止）：
-
-{
-  "analysis_json": {
-    "extracted": {},
-    "inferred": {},
-    "palette": {},
-    "tone": "",
-    "key_message": "",
-    "cta": ""
-  },
-  "image_generation_prompt": "",
-  "negative_prompt": ""
-}
-
-## 解析に使えるページ情報（抽出元）
+  - must_include: ${input.compliance.must_include || '未指定'}
 - page_title: ${safeTrim(input.page_meta.title, 200)}
 - page_description: ${safeTrim(input.page_meta.description, 320)}
+- color_hints: ${safeTrim(input.color_hints, 800)}
 
 ### page_text（重要：ページ本文の抜粋）
 ${safeTrim(input.page_text, 18000)}
 
-## 追加の厳守事項
-- required_text は必ず画像内に入り、1文字たりとも欠落・改変しない。
-- 日本語は自然で正しい表記にする。
-- バナーとしてのCTRを意識しつつも、虚偽・誇張はしない。
-`
+## 最重要
+- image_generation_prompt は「そのまま画像生成AIに渡せる完成形」にする（1本のプロンプト）。
+- バナー内の文字が読みやすいよう、文字数を詰め込みすぎない。
+- 虚偽・過剰表現は禁止。`
+}
+
+function extractColorHints(html: string): string {
+  try {
+    const theme = (html.match(/<meta[^>]+name=["']theme-color["'][^>]+content=["']([^"']{1,32})["']/i)?.[1] || '').trim()
+    const all = html.match(/#[0-9a-fA-F]{3,6}\b/g) || []
+    const normalized = all
+      .map((c) => c.toUpperCase())
+      .map((c) => (c.length === 4 ? `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}` : c))
+      .filter((c) => /^#[0-9A-F]{6}$/.test(c))
+    const freq = new Map<string, number>()
+    for (const c of normalized) freq.set(c, (freq.get(c) || 0) + 1)
+    const top = [...freq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([c, n]) => `${c}(${n})`)
+      .join(', ')
+    const parts = []
+    if (theme) parts.push(`theme-color=${theme}`)
+    if (top) parts.push(`html/css hex top=${top}`)
+    return parts.join(' / ')
+  } catch {
+    return ''
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -288,10 +312,8 @@ export async function POST(request: NextRequest) {
     const userId = !isGuest ? ((session?.user as any)?.id as string | undefined) : undefined
 
     const body = (await request.json()) as FromUrlRequest
-    const targetUrl = safeTrim(body?.targetUrl, 2000)
-    const bannerPurpose = safeTrim(body?.bannerPurpose, 100) || 'サービス認知'
+    const targetUrl = safeTrim(body?.targetUrl || body?.target_url, 2000)
     const size = safeTrim(body?.size, 32) || '1080x1080'
-    const requiredText = safeTrim(body?.requiredText, 200)
     const category = safeTrim(body?.industry, 40) || 'other'
     const appPurpose = safeTrim(body?.purpose, 32) || 'sns_ad'
     const requestedCountRaw = Number(body?.count)
@@ -299,9 +321,6 @@ export async function POST(request: NextRequest) {
 
     if (!targetUrl || !isValidHttpUrl(targetUrl)) {
       return NextResponse.json({ error: 'URLが不正です（https://〜 を入力してください）' }, { status: 400 })
-    }
-    if (!requiredText) {
-      return NextResponse.json({ error: 'required_text（画像内に必ず入れるテキスト）を入力してください' }, { status: 400 })
     }
     if (!isNanobannerConfigured()) {
       return NextResponse.json({ error: 'バナー生成APIが設定されていません。管理者にお問い合わせください。' }, { status: 503 })
@@ -365,25 +384,28 @@ export async function POST(request: NextRequest) {
 
     const meta = extractMeta(html)
     const pageText = stripHtmlToText(html)
+    const colorHints = extractColorHints(html)
 
     const apiKey = getApiKey()
     const specPrompt = buildWebsiteBannerPrompt({
       target_url: targetUrl,
-      banner_purpose: bannerPurpose,
-      industry: category,
       size,
       language: 'ja',
-      required_text: requiredText,
-      optional_assets: { logo_image: body.logoImage ? 'provided' : undefined, person_images: Array.isArray(body.personImages) ? body.personImages.length : 0 },
+      optional_assets: {
+        logo_image: body.logoImage ? 'provided' : undefined,
+        person_images: Array.isArray(body.personImages) ? body.personImages.length : 0,
+      },
       brand_constraints: { main_color: body.mainColor, sub_color: body.subColor, tone_keywords: body.toneKeywords },
       compliance: { avoid: body.avoid, must_include: body.mustInclude },
       page_meta: meta,
       page_text: pageText,
+      color_hints: colorHints,
     })
 
     const structured = await callGeminiForJson(specPrompt, apiKey)
-    const analysisJson = structured?.analysis_json || null
+    const bannerAnalysis = safeTrim(structured?.banner_analysis, 6000)
     const imagePrompt = safeTrim(structured?.image_generation_prompt, 24000)
+    // 互換: 旧promptでは negative_prompt を返していた。なければ空でOK。
     const negativePrompt = safeTrim(structured?.negative_prompt, 6000)
 
     if (!imagePrompt) {
@@ -394,15 +416,18 @@ export async function POST(request: NextRequest) {
     const options = {
       purpose: appPurpose,
       logoImage: body.logoImage,
-      personImages: Array.isArray(body.personImages) ? body.personImages : undefined,
+      // 人物写真は1名（1枚）に固定
+      personImages: Array.isArray(body.personImages) ? body.personImages.slice(0, 1) : undefined,
       referenceImages: Array.isArray(body.referenceImages) ? body.referenceImages : undefined,
       brandColors: Array.isArray(body.brandColors) ? body.brandColors : undefined,
-      // required_text を画像内に必ず入れるため、keywordにも入れておく（内部hard constraintsで参照される）
+      // URLのみ入力のため、最終プロンプトをそのまま使用
       customImagePrompt: imagePrompt,
       negativePrompt,
     }
 
-    const result = await generateBanners(category || 'other', requiredText, size, options as any, requestedCount)
+    // keyword は履歴/メタ用途。なければ title を採用（customImagePromptを使うので生成品質には影響しない）
+    const keywordForMeta = safeTrim(meta.title, 80) || 'URL自動生成'
+    const result = await generateBanners(category || 'other', keywordForMeta, size, options as any, requestedCount)
 
     // ==============================
     // 履歴保存（ログインユーザーのみ / DB）
@@ -422,13 +447,13 @@ export async function POST(request: NextRequest) {
               serviceId: 'banner',
               input: {
                 category,
-                keyword: requiredText,
+                keyword: keywordForMeta,
                 size,
                 purpose: appPurpose || 'sns_ad',
                 count: requestedCount,
                 source: 'url',
                 targetUrl,
-                bannerPurpose,
+                bannerPurpose: 'auto',
               },
               output: img,
               outputType: 'IMAGE',
@@ -437,9 +462,9 @@ export async function POST(request: NextRequest) {
                 category,
                 purpose: appPurpose || 'sns_ad',
                 size,
-                keyword: requiredText,
+                keyword: keywordForMeta,
                 targetUrl,
-                bannerPurpose,
+                bannerPurpose: 'auto',
                 pattern: patterns[idx] || String(idx + 1),
                 usedModel: result.usedModel || null,
                 shared,
@@ -474,9 +499,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // レスポンス
+    // - bannerAnalysis: 解析結果（テキスト）
+    // - analysisJson: UI互換用（legacy）に key_message / cta / tone を切り出して返す
+    const legacyAnalysisJson = {
+      key_message: bannerAnalysis || undefined,
+      cta: undefined as string | undefined,
+      tone: undefined as string | undefined,
+    }
+    // bannerAnalysis からCTA/トーンの推定（簡易パース）
+    const ctaMatch = String(bannerAnalysis || '').match(/(CTA|アクション)[：:]\s*(.{2,30})/i)
+    if (ctaMatch) legacyAnalysisJson.cta = ctaMatch[2].split(/[、。]/)[0].trim()
+    const toneMatch = String(bannerAnalysis || '').match(/(トーン|雰囲気)[：:]\s*(.{2,20})/i)
+    if (toneMatch) legacyAnalysisJson.tone = toneMatch[2].split(/[、。]/)[0].trim()
+
     const res = NextResponse.json({
       banners: result.banners,
-      analysisJson,
+      bannerAnalysis: bannerAnalysis || undefined,
+      analysisJson: legacyAnalysisJson, // UI互換
       imagePrompt,
       negativePrompt,
       usedModel: result.usedModel || undefined,
