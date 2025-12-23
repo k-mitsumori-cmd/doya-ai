@@ -8,6 +8,7 @@ import DashboardSidebar from '@/components/DashboardSidebar'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { CheckoutButton } from '@/components/CheckoutButton'
 
 interface HistoryItem {
   id: string
@@ -406,11 +407,14 @@ export default function BannerHistoryPage() {
                 いつでも確認・再ダウンロードできます。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/banner/dashboard/plan">
-                  <button className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl transition-all shadow-lg shadow-amber-100 hover:scale-105">
-                    プランをアップグレード
-                  </button>
-                </Link>
+                <CheckoutButton
+                  planId="banner-pro"
+                  loginCallbackUrl="/banner/dashboard/history"
+                  variant="secondary"
+                  className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl transition-all shadow-lg shadow-amber-100 hover:scale-105"
+                >
+                  プランをアップグレード（Stripeへ）
+                </CheckoutButton>
                 <Link href="/banner/dashboard">
                   <button className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all">
                     バナーを生成する
