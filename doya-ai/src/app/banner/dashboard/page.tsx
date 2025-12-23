@@ -1605,13 +1605,28 @@ export default function BannerDashboard() {
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.2em]">Channel Strategy</p>
                   </div>
                 </div>
-                <button 
-                  onClick={handleSample}
-                  className="flex items-center gap-2 px-5 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl transition-all text-sm font-bold border border-slate-200 shadow-sm active:scale-95"
-                >
-                  <Wand2 className="w-4 h-4" />
-                  <span>サンプル入力</span>
-                </button>
+                <div className="flex flex-col items-start sm:items-end gap-2">
+                  <button
+                    onClick={handleSample}
+                    className="relative flex items-center gap-2 px-6 py-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl transition-all text-sm font-black shadow-xl shadow-blue-200 active:scale-95 border border-blue-600"
+                  >
+                    <span className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-amber-400 text-[10px] font-black text-slate-900 shadow-md">
+                      HOT
+                    </span>
+                    <Wand2 className="w-4 h-4" />
+                    <span>サンプル入力</span>
+                  </button>
+
+                  {/* 使い方 */}
+                  <div className="max-w-[360px] rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3">
+                    <p className="text-[11px] font-black text-slate-700">サンプル入力の使い方</p>
+                    <ul className="mt-1 text-[11px] text-slate-600 font-bold leading-relaxed space-y-1">
+                      <li>・押すだけで「用途/業種/サイズ/内容詳細（イメージ）」まで一括入力</li>
+                      <li>・押すたびにシナリオが切り替わります（迷ったら2〜3回押す）</li>
+                      <li>・そのまま「プロ品質バナーを生成する」を押せばOK</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
               <div className="grid lg:grid-cols-2 gap-8">
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
