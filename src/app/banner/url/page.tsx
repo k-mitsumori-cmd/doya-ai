@@ -160,7 +160,7 @@ export default function BannerUrlAutoPage() {
                   <p className="text-sm font-black text-slate-900">サイトURL</p>
                   {isGuest ? (
                     <Link
-                      href={`/auth/signin?callbackUrl=${encodeURIComponent('/banner')}`}
+                      href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner')}`}
                       className="inline-flex items-center gap-2 text-xs font-black text-blue-600 hover:text-blue-800"
                     >
                       <LogIn className="w-4 h-4" />

@@ -325,7 +325,11 @@ function DashboardSidebarImpl({
               </button>
             ) : (
               <Link
-                href={`/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/banner/dashboard')}`}
+                href={
+                  pathname.startsWith('/banner')
+                    ? `/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(pathname || '/banner')}`
+                    : `/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/kantan/dashboard')}`
+                }
                 className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white text-[#2563EB] text-[11px] font-black hover:bg-blue-50 transition-colors shadow-sm"
                 title="ログイン"
               >

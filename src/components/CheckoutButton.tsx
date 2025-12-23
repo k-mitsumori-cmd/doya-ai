@@ -29,7 +29,11 @@ export function CheckoutButton({
     // 未ログインの場合はログインページへ
     if (status === 'unauthenticated') {
       const service = planId.split('-')[0]
-      router.push(`/auth/signin?callbackUrl=/${service}/pricing`)
+      if (service === 'banner') {
+        router.push(`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner/pricing')}`)
+      } else {
+        router.push(`/auth/signin?callbackUrl=/${service}/pricing`)
+      }
       return
     }
 

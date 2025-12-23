@@ -280,7 +280,7 @@ export default function BannerPlanPage() {
                   <div className="mt-8 flex flex-col sm:flex-row gap-3">
                     {isGuest ? (
                       <Link
-                        href="/api/auth/signin"
+                        href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner/dashboard/plan')}`}
                         className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95"
                       >
                         <Sparkles className="w-5 h-5" />
