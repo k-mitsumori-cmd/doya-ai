@@ -26,10 +26,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const handleToggle = (collapsed: boolean) => {
+  // 親（各ページ）が頻繁に再レンダーしても Sidebar が再レンダーされないように、
+  // callback を安定化（memo(DashboardSidebar)が効くようにする）
+  const handleToggle = React.useCallback((collapsed: boolean) => {
     setIsCollapsed(collapsed)
     localStorage.setItem('sidebar-collapsed', String(collapsed))
-  }
+  }, [])
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
