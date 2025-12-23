@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FileText, LayoutDashboard, Plus, Sparkles } from 'lucide-react'
+import { FileText, LayoutDashboard, Plus, Sparkles, HelpCircle } from 'lucide-react'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 type NavItem = {
   href: string
@@ -73,6 +74,16 @@ export function SeoSidebar({
               新規作成へ
             </button>
           </Link>
+          <a
+            href={SUPPORT_CONTACT_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2 bg-white/10 text-white text-[10px] font-black rounded-lg hover:bg-white/15 transition-colors border border-white/10"
+            title="お問い合わせ（改善点・不具合）"
+          >
+            <HelpCircle className="w-4 h-4" />
+            お問い合わせ
+          </a>
         </div>
       </div>
     </aside>

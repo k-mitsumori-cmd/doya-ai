@@ -22,6 +22,7 @@ import {
   CreditCard
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 interface NavItem {
   href: string
@@ -225,6 +226,36 @@ function DashboardSidebarImpl({
 
       {/* Side Banner */}
       <SidebarBanner />
+
+      {/* Support */}
+      <div className="px-4 pb-3">
+        <a
+          href={SUPPORT_CONTACT_URL}
+          target="_blank"
+          rel="noreferrer"
+          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 transition-colors text-white ${
+            isCollapsed ? 'justify-center' : ''
+          }`}
+          title="お問い合わせ（改善点・不具合）"
+        >
+          <HelpCircle className="w-5 h-5 text-white" />
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.div
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -6 }}
+                className="min-w-0"
+              >
+                <div className="text-sm font-black leading-none">お問い合わせ</div>
+                <div className="text-[10px] text-blue-100/70 font-bold mt-1 truncate">
+                  改善点・エラー報告はこちら
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </a>
+      </div>
 
       {/* User Profile */}
       <div className="p-4 border-t border-white/5 bg-blue-700/30">

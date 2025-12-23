@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { useSession } from 'next-auth/react'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 // 1バナー生成で削減できる推定時間（分）
 const ESTIMATED_TIME_SAVED_PER_BANNER = 45 // デザイナーが1バナー作るのに平均45分
@@ -230,6 +231,14 @@ export default function StatsPage() {
                 >
                   再読み込み
                 </button>
+                <a
+                  href={SUPPORT_CONTACT_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-8 py-4 bg-white border border-gray-200 text-slate-800 font-black rounded-2xl transition-all hover:bg-slate-50"
+                >
+                  お問い合わせ
+                </a>
               </div>
             </motion.div>
           </main>

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 interface HistoryItem {
   id: string
@@ -235,6 +236,14 @@ export default function BannerHistoryPage() {
                 >
                   再読み込み
                 </button>
+                <a
+                  href={SUPPORT_CONTACT_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-8 py-4 bg-white border border-gray-200 text-slate-800 font-black rounded-2xl transition-all hover:bg-slate-50"
+                >
+                  お問い合わせ
+                </a>
               </div>
             </motion.div>
           ) : requiresUpgrade ? (

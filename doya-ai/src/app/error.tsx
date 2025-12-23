@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { Home, RefreshCw, Sparkles, AlertTriangle } from 'lucide-react'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 export default function Error({
   error,
@@ -71,7 +72,7 @@ export default function Error({
         <div className="mt-10 pt-8 border-t border-gray-200">
           <p className="text-sm text-gray-500">
             問題が解決しない場合は
-            <a href="mailto:support@doya-ai.com" className="text-violet-600 hover:underline mx-1">
+            <a href={SUPPORT_CONTACT_URL} target="_blank" rel="noreferrer" className="text-violet-600 hover:underline mx-1">
               サポート
             </a>
             までお問い合わせください。
