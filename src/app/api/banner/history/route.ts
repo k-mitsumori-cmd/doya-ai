@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING } from '@/lib/pricing'
+import sharp from 'sharp'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -45,6 +46,25 @@ function isProFromSession(session: any): boolean {
 const lastCleanupAtByUser = new Map<string, number>()
 const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6時間
 
+async function toJpegThumbDataUrl(output: unknown): Promise<string | null> {
+  const s = typeof output === 'string' ? output : ''
+  if (!s) return null
+  if (!s.startsWith('data:image/')) return s // URL等はそのまま
+  const comma = s.indexOf(',')
+  if (comma === -1) return null
+  const b64 = s.slice(comma + 1)
+  try {
+    const input = Buffer.from(b64, 'base64')
+    const buf = await sharp(input)
+      .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 35, mozjpeg: true })
+      .toBuffer()
+    return `data:image/jpeg;base64,${buf.toString('base64')}`
+  } catch {
+    return null
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -56,6 +76,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const batchIdParam = searchParams.get('batchId') || ''
     const includeImages = (searchParams.get('images') || '1') !== '0'
+    const thumbMode = (searchParams.get('thumb') || '0') === '1'
 
     // 有料プラン判定
     const isPro = isProFromSession(session) || (await isProUserByDb(userId))
@@ -104,6 +125,7 @@ export async function GET(request: NextRequest) {
         },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: 12,
+        select: { id: true, output: true, createdAt: true, input: true, metadata: true },
       })
 
       // 古いデータ救済：fallback key（YYYY-MM-DDTHH:MM|keyword|size）でも探す
@@ -122,6 +144,7 @@ export async function GET(request: NextRequest) {
             },
             orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
             take: 12,
+            select: { id: true, output: true, createdAt: true, input: true, metadata: true },
           })
             // keyword/size が一致するものだけ残す
             .then((rs) =>
@@ -136,14 +159,28 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      const banners = rows
-        .map((r) => (typeof r.output === 'string' ? r.output : ''))
-        .filter((s) => typeof s === 'string' && s.startsWith('data:'))
+      // 返却はサムネ（圧縮）を基本にして軽量化。DLは別APIで元画像取得。
+      const images = await Promise.all(
+        rows.map(async (r) => ({
+          id: r.id,
+          thumb: await toJpegThumbDataUrl(r.output),
+        }))
+      )
+      const thumbs = images
+        .map((x) => String(x.thumb || '').trim())
+        .filter((s) => s && s.startsWith('data:'))
 
       return NextResponse.json({
         id: batchIdParam,
-        banners,
-        bannerCount: banners.length,
+        // 互換: banners は “表示用サムネ” を返す
+        banners: thumbs,
+        bannerIds: images.map((x) => x.id),
+        bannerCount: rows.length,
+      }, {
+        headers: {
+          // 履歴はユーザー固有なので private キャッシュのみ
+          'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
+        }
       })
     }
 
