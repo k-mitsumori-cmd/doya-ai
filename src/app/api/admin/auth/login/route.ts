@@ -235,8 +235,17 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Admin login error:', error)
+    // エラーの詳細をログに出力
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorStack = error instanceof Error ? error.stack : ''
+    console.error('Admin login error details:', { errorMessage, errorStack })
+    
     return NextResponse.json(
-      { error: 'ログイン処理中にエラーが発生しました' },
+      { 
+        error: 'ログイン処理中にエラーが発生しました',
+        // 開発環境でのみエラー詳細を返す
+        ...(process.env.NODE_ENV === 'development' && { details: errorMessage }),
+      },
       { status: 500 }
     )
   }
