@@ -184,7 +184,7 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15, oper
   const showAvg = avgSec != null && avgSec > 0;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200]">
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl border border-white/10">
         {/* 円グラフ風プログレス */}
         <div className="relative w-40 h-40 mx-auto mb-6">
