@@ -88,6 +88,7 @@ function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string
     // ドヤバナーAI
     'banner-basic': STRIPE_PRICE_IDS.banner.basic,
     'banner-pro': STRIPE_PRICE_IDS.banner.pro,
+    'banner-enterprise': STRIPE_PRICE_IDS.banner.enterprise,
     // セットプラン
     'bundle': STRIPE_PRICE_IDS.bundle,
   }

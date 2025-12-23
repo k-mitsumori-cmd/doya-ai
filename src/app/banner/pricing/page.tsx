@@ -9,7 +9,7 @@ export default function BannerPricingPage() {
   const { data: session } = useSession()
   const plans = BANNER_PRICING.plans
   const free = plans.find((p) => p.id === 'banner-free')
-  const basic = plans.find((p) => p.id === 'banner-basic')
+  const pro = plans.find((p) => p.id === 'banner-pro')
   const enterprise = plans.find((p) => p.id === 'banner-enterprise')
 
   return (
@@ -53,27 +53,27 @@ export default function BannerPricingPage() {
           <div className="rounded-3xl bg-[#F7F6F1] p-8">
             <div className="flex items-start justify-between gap-6">
               <div>
-                <h2 className="text-2xl font-black text-slate-900">{basic?.name || 'Basicプラン'}</h2>
-                <p className="text-sm text-slate-600 mt-2">{basic?.description || '個人事業主におすすめのプラン'}</p>
+                <h2 className="text-2xl font-black text-slate-900">{pro?.name || 'プロプラン'}</h2>
+                <p className="text-sm text-slate-600 mt-2">{pro?.description || '1日50枚まで生成（PRO）'}</p>
                 <div className="mt-5">
                   <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    1日30回までの生成が可能
+                    1日50枚まで生成可能
                   </div>
                 </div>
               </div>
               <div className="flex-shrink-0">
                 <div className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-black text-xl">
-                  {basic?.priceLabel || '月額 ¥3,980'}
+                  {pro?.priceLabel || '月額 ¥9,980'}
                 </div>
               </div>
             </div>
             <div className="mt-6">
               <CheckoutButton
-                planId="banner-basic"
+                planId="banner-pro"
                 className="w-full py-4 rounded-2xl text-base"
                 variant="secondary"
               >
-                Basicプランを始める
+                プロプランを始める
               </CheckoutButton>
             </div>
           </div>
@@ -82,27 +82,35 @@ export default function BannerPricingPage() {
           <div className="rounded-3xl bg-[#F7F6F1] p-8">
             <div className="flex items-start justify-between gap-6">
               <div>
-                <h2 className="text-2xl font-black text-slate-900">{enterprise?.name || 'Enterpriseプラン'}</h2>
-                <p className="text-sm text-slate-600 mt-2">{enterprise?.description || 'スタートアップや中小企業におすすめ'}</p>
+                <h2 className="text-2xl font-black text-slate-900">{enterprise?.name || 'エンタープライズ'}</h2>
+                <p className="text-sm text-slate-600 mt-2">{enterprise?.description || '1日500枚まで生成（Enterprise）'}</p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    すべての機能
+                    1日500枚まで生成可能
                   </div>
                   <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    ＋ まるなげマーケティング支援
+                    大量生成・チーム運用向け
                   </div>
                 </div>
               </div>
               <div className="flex-shrink-0">
-                <a
-                  href={HIGH_USAGE_CONTACT_URL}
-                  target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
-                  rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
-                  className="px-6 py-4 rounded-2xl bg-white text-slate-900 font-black text-xl hover:bg-slate-50 transition-colors inline-flex items-center justify-center"
-                >
-                  お問い合わせ
-                </a>
+                <div className="px-6 py-4 rounded-2xl bg-white text-slate-900 font-black text-xl">
+                  {enterprise?.priceLabel || '月額 ¥49,800'}
+                </div>
               </div>
+            </div>
+            <div className="mt-6 grid gap-3">
+              <CheckoutButton planId="banner-enterprise" className="w-full py-4 rounded-2xl text-base">
+                エンタープライズを始める
+              </CheckoutButton>
+              <a
+                href={HIGH_USAGE_CONTACT_URL}
+                target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
+                rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+                className="w-full py-3 rounded-2xl bg-white text-slate-900 font-black text-sm hover:bg-slate-50 transition-colors inline-flex items-center justify-center border border-slate-200"
+              >
+                さらに上限UPの相談（マーケティング施策を丸投げする）
+              </a>
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, getGuestUsage } from '@/lib/pricing'
 import {
   ArrowUpRight,
   BadgeCheck,
@@ -46,7 +46,8 @@ export default function BannerPlanPage() {
   const { data: session, status } = useSession()
   const isGuest = !session
   const bannerPlan = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
-  const isPro = !isGuest && (bannerPlan === 'PRO' || bannerPlan === 'BASIC' || bannerPlan === 'ENTERPRISE')
+  const isPaid = !isGuest && (bannerPlan === 'PRO' || bannerPlan === 'BASIC' || bannerPlan === 'ENTERPRISE')
+  const isEnterprise = !isGuest && bannerPlan === 'ENTERPRISE'
 
   const [totalBanners, setTotalBanners] = useState(0)
   const [usageCount, setUsageCount] = useState(0)
@@ -97,7 +98,7 @@ export default function BannerPlanPage() {
     loadStats()
   }, [isGuest, status])
 
-  const dailyLimit = isGuest ? BANNER_PRICING.guestLimit : isPro ? BANNER_PRICING.proLimit : BANNER_PRICING.freeLimit
+  const dailyLimit = isGuest ? BANNER_PRICING.guestLimit : getBannerDailyLimitByUserPlan(bannerPlan)
   const remaining = Math.max(0, dailyLimit - usageCount)
 
   const savedMinutes = totalBanners * ESTIMATED_TIME_SAVED_PER_BANNER_MIN
@@ -107,12 +108,16 @@ export default function BannerPlanPage() {
   const estimateBasisText = `根拠：\n- 1枚あたりの制作時間を ${ESTIMATED_TIME_SAVED_PER_BANNER_MIN} 分と仮定\n- デザイナー時給を ${HOURLY_DESIGNER_RATE_JPY.toLocaleString()} 円と仮定\n\n計算：\n- 推定削減時間 = 累計生成枚数 × ${ESTIMATED_TIME_SAVED_PER_BANNER_MIN} 分 ÷ 60\n- 推定コスト削減 = 推定削減時間（時間）× ${HOURLY_DESIGNER_RATE_JPY.toLocaleString()} 円`
 
   const currentPlanLabel =
-    isGuest ? 'ゲスト' : isPro ? '有料版（PRO）' : '無料版'
+    isGuest ? 'ゲスト' : isEnterprise ? 'エンタープライズ' : isPaid ? 'プロ' : '無料'
 
   const planBadge =
-    isPro ? { text: 'PRO', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
-      : isGuest ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
-        : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
+    isEnterprise
+      ? { text: 'ENTERPRISE', cls: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20' }
+      : isPaid
+        ? { text: 'PRO', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
+        : isGuest
+          ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
+          : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
 
   const handleOpenPortal = async () => {
     if (isPortalLoading) return
@@ -137,6 +142,25 @@ export default function BannerPlanPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planId: 'banner-pro', billingPeriod: 'monthly' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '決済ページを開けませんでした')
+      if (data.url) window.location.href = data.url
+    } catch (e: any) {
+      toast.error(e?.message || '決済ページの起動に失敗しました')
+    } finally {
+      setIsCheckoutLoading(false)
+    }
+  }
+
+  const handleUpgradeEnterprise = async () => {
+    if (isCheckoutLoading) return
+    setIsCheckoutLoading(true)
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: 'banner-enterprise', billingPeriod: 'monthly' }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '決済ページを開けませんでした')
@@ -223,7 +247,7 @@ export default function BannerPlanPage() {
                         <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest ${planBadge.cls}`}>
                           {planBadge.text}
                         </span>
-                        {isPro && (
+                        {isPaid && (
                           <span className="px-3 py-1 rounded-full text-[10px] font-black bg-blue-600 text-white shadow-lg shadow-blue-200 uppercase tracking-widest">
                             Official Plan
                           </span>
@@ -231,14 +255,18 @@ export default function BannerPlanPage() {
                       </div>
                       <h2 className="text-2xl font-black text-slate-800">{currentPlanLabel}</h2>
                       <p className="text-sm text-slate-500 mt-2 font-medium">
-                        日次上限: <span className="font-bold text-slate-800">{dailyLimit}</span> 回 / 今日の残り: <span className="font-bold text-blue-600">{remaining}</span> 回
+                        日次上限: <span className="font-bold text-slate-800">{dailyLimit}</span> 枚 / 今日の残り: <span className="font-bold text-blue-600">{remaining}</span> 枚
                       </p>
                     </div>
 
                     <div className="text-right">
-                      {isPro ? (
+                      {isEnterprise ? (
                         <div className="text-3xl font-black text-slate-800 tracking-tighter">
-                          ¥4,980<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
+                          ¥49,800<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
+                        </div>
+                      ) : isPaid ? (
+                        <div className="text-3xl font-black text-slate-800 tracking-tighter">
+                          ¥9,980<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
                         </div>
                       ) : (
                         <div className="text-3xl font-black text-slate-800 tracking-tighter">
@@ -258,7 +286,7 @@ export default function BannerPlanPage() {
                         <Sparkles className="w-5 h-5" />
                         ログインして利用を開始
                       </Link>
-                    ) : isPro ? (
+                    ) : isPaid ? (
                       <button
                         onClick={handleOpenPortal}
                         disabled={isPortalLoading}
@@ -268,14 +296,24 @@ export default function BannerPlanPage() {
                         契約管理
                       </button>
                     ) : (
-                      <button
-                        onClick={handleUpgrade}
-                        disabled={isCheckoutLoading}
-                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60"
-                      >
-                        {isCheckoutLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
-                        PROプランへアップグレード
-                      </button>
+                      <>
+                        <button
+                          onClick={handleUpgrade}
+                          disabled={isCheckoutLoading}
+                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60"
+                        >
+                          {isCheckoutLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                          プロプランへアップグレード
+                        </button>
+                        <button
+                          onClick={handleUpgradeEnterprise}
+                          disabled={isCheckoutLoading}
+                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black shadow-xl shadow-slate-200 hover:bg-black transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60"
+                        >
+                          {isCheckoutLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Crown className="w-5 h-5" />}
+                          エンタープライズを始める
+                        </button>
+                      </>
                     )}
 
                     <Link

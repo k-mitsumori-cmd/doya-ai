@@ -248,13 +248,15 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
     if (serviceId !== 'bundle') {
       const isBannerPaid =
         serviceId === 'banner' &&
-        (planId === 'banner-basic' || planId === 'banner-pro' || planId === 'banner-starter' || planId === 'banner-business')
+        (planId === 'banner-basic' || planId === 'banner-pro' || planId === 'banner-enterprise' || planId === 'banner-starter' || planId === 'banner-business')
       const servicePlan =
         planId === 'seo-business'
           ? 'BUSINESS'
-          : (planId.endsWith('-pro') || isBannerPaid)
-            ? 'PRO'
-            : 'FREE'
+          : serviceId === 'banner' && planId === 'banner-enterprise'
+            ? 'ENTERPRISE'
+            : (planId.endsWith('-pro') || isBannerPaid)
+              ? 'PRO'
+              : 'FREE'
       await prisma.userServiceSubscription.upsert({
         where: { userId_serviceId: { userId, serviceId } },
         create: {
@@ -282,8 +284,9 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
   const userPlan =
     planId === 'bundle' ? 'BUNDLE'
       : planId === 'seo-business' ? 'BUSINESS'
-        : (planId === 'banner-basic' || (planId && String(planId).endsWith('-pro'))) ? 'PRO'
-          : 'FREE'
+        : planId === 'banner-enterprise' ? 'ENTERPRISE'
+          : (planId === 'banner-basic' || (planId && String(planId).endsWith('-pro'))) ? 'PRO'
+            : 'FREE'
 
   await prisma.user.update({
     where: { id: userId },

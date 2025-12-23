@@ -36,6 +36,7 @@ export interface ServicePricing {
   guestLimit: number
   freeLimit: number
   proLimit: number
+  enterpriseLimit?: number
   historyDays: {
     free: number
     pro: number
@@ -223,7 +224,8 @@ export const BANNER_PRICING: ServicePricing = {
   // NOTE: 生成「枚数」ベースで管理（1回の生成で複数枚作れるため）
   guestLimit: 3,      // ゲスト: 1日3枚（= デフォルト3枚生成1回相当）
   freeLimit: 9,       // 無料会員: 1日9枚（= デフォルト3枚生成3回相当）
-  proLimit: 50,       // 有料: 1日50枚（上限を上げすぎるとコスト/待ち時間が増える）
+  proLimit: 50,       // PRO: 1日50枚
+  enterpriseLimit: 500, // ENTERPRISE: 1日500枚
   historyDays: {
     free: 0,          // 無料/ゲスト: 履歴閲覧不可（有料プラン限定機能）
     pro: 180,         // 有料: 6ヶ月（180日）保存
@@ -246,38 +248,51 @@ export const BANNER_PRICING: ServicePricing = {
       cta: '3回生成',
     },
     {
-      id: 'banner-basic',
-      name: 'Basicプラン',
-      price: 3980,
-      priceLabel: '月額 ¥3,980',
+      id: 'banner-pro',
+      name: 'プロプラン',
+      price: 9980,
+      priceLabel: '月額 ¥9,980',
       period: '/月（税込）',
-      description: '個人事業主におすすめのプラン',
+      description: '1日50枚まで生成（PRO）',
       popular: true,
       color: 'slate',
       features: [
         { text: '1日50枚まで生成', included: true },
         { text: '1回の生成で最大10枚まで', included: true },
         { text: 'すべての機能', included: true },
-        { text: '履歴保存（無制限）', included: true },
+        { text: '履歴閲覧（6ヶ月）', included: true },
         { text: '優先サポート', included: true },
       ],
-      cta: 'Basicプランを始める',
+      cta: 'プロプランを始める',
     },
     {
       id: 'banner-enterprise',
-      name: 'Enterpriseプラン',
-      price: 0,
-      priceLabel: 'お問い合わせ',
-      period: '',
-      description: 'スタートアップや中小企業におすすめ',
+      name: 'エンタープライズ',
+      price: 49800,
+      priceLabel: '月額 ¥49,800',
+      period: '/月（税込）',
+      description: '1日500枚まで生成（Enterprise）',
       color: 'slate',
       features: [
-        { text: 'すべての機能', included: true },
-        { text: '＋ まるなげマーケティング支援', included: true },
+        { text: '1日500枚まで生成', included: true },
+        { text: '1回の生成で最大10枚まで', included: true },
+        { text: 'チーム運用向け（大量生成）', included: true },
+        { text: '履歴閲覧（6ヶ月）', included: true },
+        { text: '優先サポート', included: true },
       ],
-      cta: 'お問い合わせ',
+      cta: 'エンタープライズを始める',
     },
   ],
+}
+
+// Banner: user.plan / user.bannerPlan から日次上限（画像枚数）を決定
+export function getBannerDailyLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.BANNER_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'BUNDLE') return BANNER_PRICING.proLimit
+  if (p === 'ENTERPRISE') return BANNER_PRICING.enterpriseLimit || 500
+  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return BANNER_PRICING.proLimit
+  return BANNER_PRICING.freeLimit
 }
 
 // 50枚/日を超える利用（チーム/法人/大量生成など）の相談導線

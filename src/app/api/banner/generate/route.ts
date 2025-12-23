@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan } from '@/lib/pricing'
 import crypto from 'crypto'
 
 // Vercel上で画像生成が長引くことがあるため、実行時間上限を引き上げる
@@ -256,7 +256,7 @@ export async function POST(request: NextRequest) {
           // NOTE: 生成上限は「画像枚数」ベース
           // - 有料でも1日最大50枚まで
           // - 無料は pricing.ts の freeLimit（枚数）に従う
-          const dailyLimit = isPaidPlan ? BANNER_PRICING.proLimit : BANNER_PRICING.freeLimit
+          const dailyLimit = getBannerDailyLimitByUserPlan(plan)
 
           if (dailyLimit !== -1 && normalized.dailyUsage + desiredCount > dailyLimit) {
             const errorMessage = isPaidPlan
@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
                   dailyUsed: normalized.dailyUsage,
                   dailyRemaining: Math.max(0, dailyLimit - normalized.dailyUsage),
                 },
-                upgradeUrl: HIGH_USAGE_CONTACT_URL || '/banner/pricing',
+                upgradeUrl: isPaidPlan ? (HIGH_USAGE_CONTACT_URL || '/banner/pricing') : '/banner/pricing',
               },
               { status: 429 }
             )

@@ -60,6 +60,10 @@ export const STRIPE_PRICE_IDS = {
       monthly: process.env.STRIPE_PRICE_BANNER_BUSINESS_MONTHLY || 'price_banner_business_monthly',
       yearly: process.env.STRIPE_PRICE_BANNER_BUSINESS_YEARLY || 'price_banner_business_yearly',
     },
+    enterprise: {
+      monthly: process.env.STRIPE_PRICE_BANNER_ENTERPRISE_MONTHLY || 'price_banner_enterprise_monthly',
+      yearly: process.env.STRIPE_PRICE_BANNER_ENTERPRISE_YEARLY || 'price_banner_enterprise_yearly',
+    },
   },
   // セットプラン
   bundle: {
@@ -71,7 +75,7 @@ export const STRIPE_PRICE_IDS = {
 // ========================================
 // 価格ID ↔ プランID 変換（厳密マッピング）
 // ========================================
-export type PlanId = 'seo-pro' | 'seo-business' | 'banner-basic' | 'banner-pro' | 'bundle'
+export type PlanId = 'seo-pro' | 'seo-business' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'bundle'
 export type ServiceId = 'seo' | 'banner' | 'bundle'
 
 export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
@@ -85,6 +89,7 @@ export function getPlanIdFromStripePriceId(priceId: string | null | undefined): 
     ['seo-business', STRIPE_PRICE_IDS.seo.business],
     ['banner-basic', STRIPE_PRICE_IDS.banner.basic],
     ['banner-pro', STRIPE_PRICE_IDS.banner.pro],
+    ['banner-enterprise', STRIPE_PRICE_IDS.banner.enterprise],
     ['bundle', STRIPE_PRICE_IDS.bundle],
   ]
   for (const [planId, prices] of entries) {

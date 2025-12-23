@@ -15,7 +15,7 @@ import {
   TrendingUp, Layers
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
 import { DashboardLayout } from '@/components/DashboardLayout' // New import
 import { FeatureGuide } from '@/components/FeatureGuide'
 // AIバナーコーチ機能は廃止
@@ -1027,24 +1027,24 @@ export default function BannerDashboard() {
   
   const isGuest = !session
   const bannerPlan = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
-  const isProUser = !isGuest && (bannerPlan === 'PRO')
+  const isPaidUser = !isGuest && bannerPlan !== 'FREE'
   const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
   const guestRemaining = BANNER_PRICING.guestLimit - guestUsageCount
   const [userUsageCount, setUserUsageCount] = useState(0)
-  const userDailyLimit = isProUser ? BANNER_PRICING.proLimit : BANNER_PRICING.freeLimit
+  const userDailyLimit = getBannerDailyLimitByUserPlan(bannerPlan)
   const userRemaining = Math.max(0, userDailyLimit - userUsageCount)
   const remainingCount = isGuest ? guestRemaining : userRemaining
 
   useEffect(() => {
     // 無料/ゲストは3枚固定
-    if (!isProUser) {
+    if (!isPaidUser) {
       if (generateCount !== 3) setGenerateCount(3)
       return
     }
     // 有料は 3..10
     if (generateCount < 3) setGenerateCount(3)
     if (generateCount > 10) setGenerateCount(10)
-  }, [isProUser, generateCount])
+  }, [isPaidUser, generateCount])
   
   // タブ状態（バックグラウンドでも進行するが、閉じる/更新すると中断される可能性が高い）
   useEffect(() => {
@@ -1269,7 +1269,7 @@ export default function BannerDashboard() {
 
     // 上限に達している場合はプロプランへ誘導
     if (remainingCount <= 0) {
-      if (isProUser) {
+      if (isPaidUser) {
         toast.error('本日の生成上限に達しました。', { duration: 6000 })
         // PROは「上限UP相談」導線を下に表示（自動遷移はしない）
       } else {
@@ -2047,7 +2047,7 @@ export default function BannerDashboard() {
                   <div className="text-right">
                     <p className="text-xs font-black text-slate-900 tabular-nums">{generateCount}枚</p>
                     <p className="text-[10px] text-slate-400 font-bold">
-                      {isProUser ? '最大10枚' : '無料は3枚固定'}
+                      {isPaidUser ? '最大10枚' : '無料は3枚固定'}
                     </p>
                   </div>
                 </div>
@@ -2057,7 +2057,7 @@ export default function BannerDashboard() {
                     <button
                       key={n}
                       type="button"
-                      disabled={!isProUser && n !== 3}
+                      disabled={!isPaidUser && n !== 3}
                       onClick={() => setGenerateCount(n)}
                       className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
                         generateCount === n
@@ -2070,7 +2070,7 @@ export default function BannerDashboard() {
                   ))}
                 </div>
 
-                {!isProUser && (
+                {!isPaidUser && (
                   <p className="mt-3 text-[11px] text-slate-500 font-medium">
                     ※ 4枚以上は有料プラン限定です（生成時間とコストが増えるため）。
                   </p>

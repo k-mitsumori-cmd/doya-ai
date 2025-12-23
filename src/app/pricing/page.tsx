@@ -45,6 +45,30 @@ function PricingContent() {
     }
   }
 
+  const handleSubscribeEnterprise = async () => {
+    if (!session) {
+      signIn('google', { callbackUrl: '/pricing' })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: 'banner-enterprise', billingPeriod: 'monthly' }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'エラーが発生しました')
+      window.location.href = data.url
+    } catch (error) {
+      console.error('Checkout error:', error)
+      toast.error(error instanceof Error ? error.message : 'エラーが発生しました')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleManageSubscription = async () => {
     setIsLoading(true)
 
@@ -68,7 +92,9 @@ function PricingContent() {
     }
   }
 
-  const isPro = (session?.user as any)?.plan === 'PRO'
+  const plan = String((session?.user as any)?.plan || 'FREE').toUpperCase()
+  const isPro = plan === 'PRO' || plan === 'ENTERPRISE'
+  const isEnterprise = plan === 'ENTERPRISE'
 
   return (
     <div className="min-h-screen bg-white">
@@ -112,10 +138,10 @@ function PricingContent() {
               <Crown className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              有料版をご利用中です
+              {isEnterprise ? 'エンタープライズをご利用中です' : 'プロプランをご利用中です'}
             </h1>
             <p className="text-gray-600 mb-8 text-lg">
-              1日30回までご利用いただけます
+              {isEnterprise ? '1日500枚まで生成できます' : '1日50枚まで生成できます'}
             </p>
             <div className="space-y-3">
               <button
@@ -139,7 +165,7 @@ function PricingContent() {
                 料金プラン
               </h1>
               <p className="text-gray-600 text-lg">
-                無料版と有料版（¥4,980 / 1日30回）だけのシンプル設計
+                PRO（¥9,980 / 1日50枚）と、Enterprise（¥49,800 / 1日500枚）
               </p>
             </div>
 
@@ -195,13 +221,13 @@ function PricingContent() {
                     <p className="opacity-90">たくさん使いたい方に</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-3xl font-bold">¥4,980</p>
+                    <p className="text-3xl font-bold">¥9,980</p>
                     <p className="text-sm opacity-80">/月（税込）</p>
                   </div>
                 </div>
                 <ul className="space-y-3 mb-6">
                   {[
-                    '1日30回まで生成',
+                    '1日50枚まで生成',
                     '主要機能をフル活用',
                     '優先サポート',
                     'いつでも解約OK',
@@ -226,6 +252,50 @@ function PricingContent() {
                     <>
                       <Sparkles className="w-5 h-5" />
                       有料版を始める
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Enterprise */}
+              <div className="bg-slate-900 rounded-2xl p-6 text-white relative border border-slate-800">
+                <div className="flex items-center justify-between mb-4 mt-2">
+                  <div>
+                    <h2 className="text-xl font-bold">エンタープライズ</h2>
+                    <p className="opacity-90">大量生成・チーム運用向け</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold">¥49,800</p>
+                    <p className="text-sm opacity-80">/月（税込）</p>
+                  </div>
+                </div>
+                <ul className="space-y-3 mb-6">
+                  {[
+                    '1日500枚まで生成',
+                    '主要機能をフル活用',
+                    '優先サポート',
+                    'いつでも解約OK',
+                  ].map((feature, i) => (
+                    <li key={i} className="flex items-center gap-3">
+                      <Check className="w-5 h-5 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={handleSubscribeEnterprise}
+                  disabled={isLoading}
+                  className="w-full py-4 bg-white text-slate-900 font-bold rounded-xl hover:bg-slate-50 transition-colors text-lg flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      処理中...
+                    </>
+                  ) : (
+                    <>
+                      <Crown className="w-5 h-5" />
+                      エンタープライズを始める
                     </>
                   )}
                 </button>
