@@ -75,21 +75,18 @@ export default function BannerUrlAutoPage() {
   const [bannerAnalysis, setBannerAnalysis] = useState<string>('')
   const [analysisJson, setAnalysisJson] = useState<ApiResponse['analysisJson'] | undefined>(undefined)
   const [usedModelDisplay, setUsedModelDisplay] = useState<string>('')
-  const [count, setCount] = useState<number>(3)
+  const [count, setCount] = useState<number>(1)
   const [size, setSize] = useState<string>(DEFAULT_FREE_SIZE)
   const [showAdvanced, setShowAdvanced] = useState(false)
 
   const canGenerate = useMemo(() => targetUrl.trim().length > 8 && !isGenerating, [targetUrl, isGenerating])
 
-  // 無料→固定に強制（UI改ざん防止/体験の一貫性）
+  // 無料/有料別に枚数上限を制限（UI改ざん防止）
   useEffect(() => {
-    if (!isPaidUser) {
-      if (count !== 3) setCount(3)
-      if (size !== DEFAULT_FREE_SIZE) setSize(DEFAULT_FREE_SIZE)
-      return
-    }
-    if (count < 3) setCount(3)
-    if (count > 10) setCount(10)
+    const maxCount = isPaidUser ? 10 : 3
+    if (count < 1) setCount(1)
+    if (count > maxCount) setCount(maxCount)
+    if (!isPaidUser && size !== DEFAULT_FREE_SIZE) setSize(DEFAULT_FREE_SIZE)
     if (!size) setSize(DEFAULT_FREE_SIZE)
   }, [isPaidUser, count, size])
 
@@ -246,7 +243,7 @@ export default function BannerUrlAutoPage() {
                     <div className="text-left">
                       <p className="text-sm font-black text-slate-900">詳細設定</p>
                       <p className="text-[11px] text-slate-500 font-bold">
-                        作成枚数：<span className="text-slate-900">{isPaidUser ? `${count}枚` : '3枚（無料固定）'}</span>
+                        作成枚数：<span className="text-slate-900">{count}枚{!isPaidUser && count > 3 ? '（無料上限3枚）' : ''}</span>
                       </p>
                     </div>
                   </div>
@@ -261,8 +258,8 @@ export default function BannerUrlAutoPage() {
                 {showAdvanced && (
                   <div className="px-4 pb-4">
                     <p className="text-[11px] text-slate-500 font-bold mt-1 leading-relaxed">
-                      無料：<span className="text-slate-800">3枚固定 / 1080×1080のみ</span>　
-                      有料：<span className="text-slate-800">最大10枚 / サイズ指定OK</span>
+                      無料：<span className="text-slate-800">1〜3枚 / 1080×1080のみ</span>　
+                      有料：<span className="text-slate-800">1〜10枚 / サイズ指定OK</span>
                     </p>
 
                     <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -270,27 +267,32 @@ export default function BannerUrlAutoPage() {
                       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-xs font-black text-slate-700">生成枚数</p>
-                          <p className="text-xs font-black text-slate-900 tabular-nums">{isPaidUser ? `${count}枚` : '3枚固定'}</p>
+                          <p className="text-xs font-black text-slate-900 tabular-nums">{count}枚</p>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                            <button
-                              key={n}
-                              type="button"
-                              disabled={!isPaidUser && n !== 3}
-                              onClick={() => setCount(n)}
-                              className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
-                                (!isPaidUser && n !== 3)
-                                  ? 'bg-white text-slate-300 border-slate-200 cursor-not-allowed'
-                                  : count === n
-                                    ? 'bg-blue-600 text-white border-blue-600'
-                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                              }`}
-                            >
-                              {n}
-                            </button>
-                          ))}
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
+                            const maxFree = 3
+                            const disabled = !isPaidUser && n > maxFree
+                            return (
+                              <button
+                                key={n}
+                                type="button"
+                                disabled={disabled}
+                                onClick={() => setCount(n)}
+                                className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
+                                  disabled
+                                    ? 'bg-white text-slate-300 border-slate-200 cursor-not-allowed'
+                                    : count === n
+                                      ? 'bg-blue-600 text-white border-blue-600'
+                                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                                }`}
+                              >
+                                {n}
+                              </button>
+                            )
+                          })}
                         </div>
+                        {!isPaidUser && <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 無料は3枚まで。有料プランで最大10枚。</p>}
                       </div>
 
                       {/* サイズ */}
