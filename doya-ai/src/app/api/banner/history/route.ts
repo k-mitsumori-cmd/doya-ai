@@ -20,6 +20,7 @@ type HistoryBatch = {
   purpose: string
   createdAt: string
   banners: string[]
+  bannerCount: number
 }
 
 // ユーザーが有料プランかどうかを判定（DB優先。セッションにもフォールバック）
@@ -51,6 +52,10 @@ export async function GET(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
+
+    const { searchParams } = new URL(request.url)
+    const batchIdParam = searchParams.get('batchId') || ''
+    const includeImages = (searchParams.get('images') || '1') !== '0'
 
     // 有料プラン判定
     const isPro = isProFromSession(session) || (await isProUserByDb(userId))
@@ -86,7 +91,62 @@ export async function GET(request: NextRequest) {
         .catch((e) => console.error('[banner history] cleanup failed:', e))
     }
 
-    const { searchParams } = new URL(request.url)
+    // 単一バッチの画像だけ返す（履歴一覧を軽くするため）
+    if (batchIdParam) {
+      // まず metadata.batchId で探す（基本ケース）
+      const rowsByBatch = await prisma.generation.findMany({
+        where: {
+          userId,
+          serviceId: 'banner',
+          outputType: 'IMAGE',
+          createdAt: { gte: cutoffDate },
+          metadata: { path: ['batchId'], equals: batchIdParam },
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 12,
+      })
+
+      // 古いデータ救済：fallback key（YYYY-MM-DDTHH:MM|keyword|size）でも探す
+      let rows = rowsByBatch
+      if (rows.length === 0 && batchIdParam.includes('|')) {
+        const [tsPart, kwPart, sizePart] = batchIdParam.split('|')
+        if (tsPart && kwPart !== undefined && sizePart !== undefined) {
+          const start = new Date(`${tsPart}:00.000Z`)
+          const end = new Date(`${tsPart}:59.999Z`)
+          rows = await prisma.generation.findMany({
+            where: {
+              userId,
+              serviceId: 'banner',
+              outputType: 'IMAGE',
+              createdAt: { gte: start, lte: end },
+            },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            take: 12,
+          })
+            // keyword/size が一致するものだけ残す
+            .then((rs) =>
+              rs.filter((r) => {
+                const meta: any = r.metadata || {}
+                const input: any = r.input || {}
+                const kw = String(input?.keyword || meta?.keyword || '')
+                const sz = String(input?.size || meta?.size || '')
+                return kw === kwPart && sz === sizePart
+              })
+            )
+        }
+      }
+
+      const banners = rows
+        .map((r) => (typeof r.output === 'string' ? r.output : ''))
+        .filter((s) => typeof s === 'string' && s.startsWith('data:'))
+
+      return NextResponse.json({
+        id: batchIdParam,
+        banners,
+        bannerCount: banners.length,
+      })
+    }
+
     const takeRaw = parseIntParam(searchParams.get('take'), 20)
     const takeBatches = Math.min(Math.max(takeRaw, 1), 50)
     const takeRows = takeBatches * 12 // 1バッチ最大10枚を想定し余裕を持たせる
@@ -124,11 +184,15 @@ export async function GET(request: NextRequest) {
           size: String(input?.size || meta?.size || ''),
           purpose: String(input?.purpose || meta?.purpose || ''),
           createdAt: createdAtIso,
-          banners: typeof r.output === 'string' ? [r.output] : [],
+          banners: includeImages && typeof r.output === 'string' ? [r.output] : [],
+          bannerCount: typeof r.output === 'string' ? 1 : 0,
           _createdAtMs: createdAtMs,
         })
       } else {
-        if (typeof r.output === 'string') cur.banners.push(r.output)
+        if (typeof r.output === 'string') {
+          cur.bannerCount += 1
+          if (includeImages) cur.banners.push(r.output)
+        }
         if (createdAtMs > cur._createdAtMs) {
           cur._createdAtMs = createdAtMs
           cur.createdAt = createdAtIso
@@ -161,7 +225,7 @@ export async function DELETE(request: NextRequest) {
     if (!batchId) return NextResponse.json({ error: 'batchId is required' }, { status: 400 })
 
     // metadata.batchId が一致するものを削除（自分の分だけ）
-    await prisma.generation.deleteMany({
+    const deleted = await prisma.generation.deleteMany({
       where: {
         userId,
         serviceId: 'banner',
@@ -169,6 +233,39 @@ export async function DELETE(request: NextRequest) {
         metadata: { path: ['batchId'], equals: batchId },
       },
     })
+
+    // 古いデータ救済（fallback key）の場合
+    if (deleted.count === 0 && batchId.includes('|')) {
+      const [tsPart, kwPart, sizePart] = batchId.split('|')
+      if (tsPart && kwPart !== undefined && sizePart !== undefined) {
+        const start = new Date(`${tsPart}:00.000Z`)
+        const end = new Date(`${tsPart}:59.999Z`)
+        const rows = await prisma.generation.findMany({
+          where: {
+            userId,
+            serviceId: 'banner',
+            outputType: 'IMAGE',
+            createdAt: { gte: start, lte: end },
+          },
+          select: { id: true, input: true, metadata: true },
+          take: 20,
+        })
+        const ids = rows
+          .filter((r) => {
+            const meta: any = r.metadata || {}
+            const input: any = r.input || {}
+            const kw = String(input?.keyword || meta?.keyword || '')
+            const sz = String(input?.size || meta?.size || '')
+            return kw === kwPart && sz === sizePart
+          })
+          .map((r) => r.id)
+        if (ids.length > 0) {
+          await prisma.generation.deleteMany({
+            where: { id: { in: ids }, userId, serviceId: 'banner', outputType: 'IMAGE' },
+          })
+        }
+      }
+    }
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
