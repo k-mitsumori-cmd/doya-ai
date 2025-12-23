@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage } from '@/lib/pricing'
 import {
   ArrowUpRight,
   BadgeCheck,
@@ -45,43 +45,60 @@ export default function BannerPlanPage() {
   const { data: session, status } = useSession()
   const isGuest = !session
   const bannerPlan = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
-  const isPro = !isGuest && bannerPlan === 'PRO'
+  const isPro = !isGuest && (bannerPlan === 'PRO' || bannerPlan === 'BASIC' || bannerPlan === 'ENTERPRISE')
 
-  const [history, setHistory] = useState<HistoryItem[]>([])
+  const [totalBanners, setTotalBanners] = useState(0)
   const [usageCount, setUsageCount] = useState(0)
   const [isPortalLoading, setIsPortalLoading] = useState(false)
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
+  const [statsLoaded, setStatsLoaded] = useState(false)
 
+  // APIから統計情報を取得（ログインユーザーの場合）
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const stored = localStorage.getItem('banner_history')
-      if (stored) setHistory(JSON.parse(stored) as HistoryItem[])
-    } catch {
-      setHistory([])
-    }
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const today = new Date().toISOString().split('T')[0]
+    if (status === 'loading') return
+    
+    const loadStats = async () => {
       if (isGuest) {
-        const u = getGuestUsage('banner')
-        setUsageCount(u.date === today ? u.count : 0)
+        // ゲストはlocalStorageから取得
+        try {
+          const today = new Date().toISOString().split('T')[0]
+          const u = getGuestUsage('banner')
+          setUsageCount(u.date === today ? u.count : 0)
+          
+          // ゲストの累計枚数はlocalStorageから（ただしほぼ0になる）
+          const stored = localStorage.getItem('banner_history')
+          if (stored) {
+            const history = JSON.parse(stored) as HistoryItem[]
+            const total = history.reduce((acc, h) => acc + (h.banners?.length || 0), 0)
+            setTotalBanners(total)
+          }
+        } catch {
+          setUsageCount(0)
+          setTotalBanners(0)
+        }
       } else {
-        const u = getUserUsage('banner')
-        setUsageCount(u.date === today ? u.count : 0)
+        // ログインユーザーはAPIから取得
+        try {
+          const res = await fetch('/api/banner/stats')
+          if (res.ok) {
+            const data = await res.json()
+            setTotalBanners(data.totalBanners || 0)
+            setUsageCount(data.todayUsage || 0)
+          }
+        } catch {
+          setTotalBanners(0)
+          setUsageCount(0)
+        }
       }
-    } catch {
-      setUsageCount(0)
+      setStatsLoaded(true)
     }
-  }, [isGuest])
+    
+    loadStats()
+  }, [isGuest, status])
 
   const dailyLimit = isGuest ? BANNER_PRICING.guestLimit : isPro ? BANNER_PRICING.proLimit : BANNER_PRICING.freeLimit
   const remaining = Math.max(0, dailyLimit - usageCount)
 
-  const totalBanners = useMemo(() => history.reduce((acc, h) => acc + (h.banners?.length || 0), 0), [history])
   const savedMinutes = totalBanners * ESTIMATED_TIME_SAVED_PER_BANNER_MIN
   const savedHours = Math.floor(savedMinutes / 60)
   const savedCost = Math.floor((savedMinutes / 60) * HOURLY_DESIGNER_RATE_JPY)
