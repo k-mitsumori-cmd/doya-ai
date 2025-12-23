@@ -245,7 +245,7 @@ export default function BannerPlanPage() {
                         className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-200 disabled:opacity-60"
                       >
                         {isPortalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
-                        Stripeで契約を管理する
+                        契約管理
                       </button>
                     ) : (
                       <button
@@ -263,7 +263,7 @@ export default function BannerPlanPage() {
                       className="inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white border border-gray-200 text-slate-800 font-black hover:bg-slate-50 transition-all shadow-sm"
                     >
                       <ArrowUpRight className="w-5 h-5 text-blue-600" />
-                      法人・一括契約相談
+                      マーケティング施策を丸投げする
                     </Link>
                   </div>
                 </div>
