@@ -201,6 +201,7 @@ function buildWebsiteBannerPrompt(input: {
   page_meta: { title?: string; description?: string }
   page_text: string
   color_hints: string
+  visual_hints: string
 }) {
   // ユーザー提示プロンプト（仕様）に合わせて、URLのみから解析→最終画像プロンプトまで作る
   return `あなたは「Webサイトを一瞬で理解し、最適な広告バナーを自動生成するAI」です。
@@ -220,7 +221,11 @@ target_url を実際に見て、以下を必ず読み取ってください。
 - 誰向けのサービスか（ターゲット）
 - 何が一番の強み・価値か（1〜3点）
 - サイト全体のトーン（信頼感 / 高級感 / テック / 親しみ / ポップ / 採用向け 等）
-- メインカラー・サブカラー（視覚的に判断）
+- サイト全体の ブランドトーン・世界観（必須）
+- 使用されている主要カラー（色相・彩度・明度）（必須）
+- 使用されている画像の種類（写真 / イラスト / アイコン、人物あり・なし、実写 or 抽象）（必須）
+- 各色・画像の使用面積比率（必須）
+- メインカラー・サブカラーは「視覚的な面積比」で判定（必須）
 - 最も自然なCTA（問い合わせ / 資料DL / 申し込み / 採用応募など）
 ※ 明示されていない情報は、サイト全体の文脈から「広告として最も自然な形」で推定してよい。
 
@@ -271,9 +276,17 @@ target_url を実際に見て、以下を必ず読み取ってください。
 - page_title: ${safeTrim(input.page_meta.title, 200)}
 - page_description: ${safeTrim(input.page_meta.description, 320)}
 - color_hints: ${safeTrim(input.color_hints, 800)}
+- visual_hints: ${safeTrim(input.visual_hints, 1400)}
 
 ### page_text（重要：ページ本文の抜粋）
 ${safeTrim(input.page_text, 18000)}
+
+## 出力形式（厳守）
+- JSONの "banner_analysis" には、次の順番で必ず含める（見出しも含める）：
+  1) サイト全体の簡易分析まとめ
+  2) メインカラー / サブカラー（理由つき。面積比を根拠にする）
+  3) サービス内容・ターゲット・訴求軸の整理
+- JSONの "image_generation_prompt" には「最終的に使用するバナー画像生成プロンプト（完成形）」のみを出す（余計な見出しや文章は入れない）
 
 ## 最重要
 - image_generation_prompt は「そのまま画像生成AIに渡せる完成形」にする（1本のプロンプト）。
@@ -573,6 +586,331 @@ async function extractPaletteViaHeadlessComputedStyles(targetUrl: string, timeou
   }
 }
 
+type VisualColorByArea = { hex: string; ratio: number }
+type VisualBrandReport = {
+  viewport: { width: number; height: number }
+  colorsByArea: VisualColorByArea[] // top colors with area ratio (0..1)
+  mainColor?: string
+  subColors: string[]
+  colorSummaryText: string
+  imageSummaryText: string
+  imageAreaRatio?: number // 0..1 (viewport only)
+  bgImageAreaRatio?: number // 0..1 (viewport only)
+  people: 'あり' | 'なし' | '不明'
+}
+
+type CachedVisual = { ts: number; report: VisualBrandReport }
+const HEADLESS_VISUAL_CACHE = new Map<string, CachedVisual>()
+const HEADLESS_VISUAL_TTL_MS = 2 * 60 * 60 * 1000
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const h = String(hex || '').trim().toUpperCase()
+  if (!/^#[0-9A-F]{6}$/.test(h)) return null
+  return {
+    r: parseInt(h.slice(1, 3), 16),
+    g: parseInt(h.slice(3, 5), 16),
+    b: parseInt(h.slice(5, 7), 16),
+  }
+}
+
+function colorDistance(a: string, b: string): number {
+  const ra = hexToRgb(a)
+  const rb = hexToRgb(b)
+  if (!ra || !rb) return 999
+  const dr = ra.r - rb.r
+  const dg = ra.g - rb.g
+  const db = ra.b - rb.b
+  return Math.sqrt(dr * dr + dg * dg + db * db)
+}
+
+async function extractColorsByAreaFromScreenshot(
+  screenshotPng: Buffer,
+  sampleW = 160,
+  sampleH = 100
+): Promise<VisualColorByArea[]> {
+  try {
+    const out: any = await sharp(screenshotPng)
+      .resize(sampleW, sampleH, { fit: 'fill' })
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true } as any)
+    const data: Buffer = out?.data
+    const info: any = out?.info
+    const channels = (info as any)?.channels || 3
+    const totalPixels = Math.max(1, Number((info as any)?.width || sampleW) * Number((info as any)?.height || sampleH))
+
+    // 4bit quantization per channel (16 bins) => 4096 buckets
+    const counts = new Map<number, number>()
+    for (let i = 0; i + 2 < data.length; i += channels) {
+      const r = data[i]
+      const g = data[i + 1]
+      const b = data[i + 2]
+      const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4)
+      counts.set(key, (counts.get(key) || 0) + 1)
+    }
+
+    const entries = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 16)
+    const results: VisualColorByArea[] = []
+    for (const [key, c] of entries) {
+      const rBin = (key >> 8) & 0x0f
+      const gBin = (key >> 4) & 0x0f
+      const bBin = key & 0x0f
+      // map bin 0..15 to 0..255 (0,17,34,...255)
+      const r = rBin * 17
+      const g = gBin * 17
+      const b = bBin * 17
+      const hex = rgbToHex(r, g, b)
+      const ratio = c / totalPixels
+      results.push({ hex, ratio })
+    }
+    // dedupe just in case
+    const uniq = new Map<string, number>()
+    for (const r of results) uniq.set(r.hex, (uniq.get(r.hex) || 0) + r.ratio)
+    return Array.from(uniq.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([hex, ratio]) => ({ hex, ratio }))
+  } catch {
+    return []
+  }
+}
+
+async function detectPeopleViaVision(imageUrls: string[]): Promise<'あり' | 'なし' | '不明'> {
+  const apiKey = getVisionApiKey()
+  if (!apiKey) return '不明'
+  const urls = Array.from(new Set(imageUrls.filter(Boolean))).slice(0, 3)
+  if (urls.length === 0) return '不明'
+
+  try {
+    const endpoint = `${VISION_API_BASE}/images:annotate?key=${encodeURIComponent(apiKey)}`
+    const body = {
+      requests: urls.map((u) => ({
+        image: { source: { imageUri: u } },
+        features: [{ type: 'FACE_DETECTION', maxResults: 3 }],
+      })),
+    }
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10_000)
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeout))
+    if (!res.ok) return '不明'
+    const json: any = await res.json().catch(() => null)
+    const responses: any[] = Array.isArray(json?.responses) ? json.responses : []
+    for (const r of responses) {
+      const faces: any[] = Array.isArray(r?.faceAnnotations) ? r.faceAnnotations : []
+      if (faces.length > 0) return 'あり'
+    }
+    return 'なし'
+  } catch {
+    return '不明'
+  }
+}
+
+async function analyzeSiteVisualViaHeadless(targetUrl: string, timeoutMs = 16_000): Promise<VisualBrandReport> {
+  const disable = process.env.DOYA_DISABLE_HEADLESS_COLOR === '1'
+  if (disable) {
+    return {
+      viewport: { width: 1200, height: 800 },
+      colorsByArea: [],
+      subColors: [],
+      colorSummaryText: '',
+      imageSummaryText: '',
+      people: '不明',
+    }
+  }
+
+  let cacheKey = ''
+  try {
+    const u = new URL(targetUrl)
+    cacheKey = u.hostname
+  } catch {
+    cacheKey = targetUrl.slice(0, 120)
+  }
+  const cached = HEADLESS_VISUAL_CACHE.get(cacheKey)
+  if (cached && Date.now() - cached.ts < HEADLESS_VISUAL_TTL_MS) return cached.report
+
+  let puppeteer: any
+  let chromium: any
+  try {
+    const p = await import('puppeteer-core')
+    puppeteer = (p as any).default || p
+    const c = await import('@sparticuz/chromium')
+    chromium = (c as any).default || c
+  } catch {
+    return {
+      viewport: { width: 1200, height: 800 },
+      colorsByArea: [],
+      subColors: [],
+      colorSummaryText: '',
+      imageSummaryText: '',
+      people: '不明',
+    }
+  }
+
+  const viewport = { width: 1200, height: 800 }
+  let browser: any
+  try {
+    const executablePath = await chromium.executablePath()
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: viewport,
+      executablePath,
+      headless: chromium.headless,
+    })
+    const page = await browser.newPage()
+
+    // 高速化（フォント/メディアはブロック、画像は許可して“見え方”を取る）
+    await page.setRequestInterception(true)
+    page.on('request', (req: any) => {
+      const type = req.resourceType()
+      if (type === 'font' || type === 'media') return req.abort()
+      return req.continue()
+    })
+
+    // まずはレンダリング
+    try {
+      await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: timeoutMs })
+    } catch {
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs }).catch(() => {})
+    }
+    // CSS適用・レイアウト安定待ち（短め）
+    await page.waitForTimeout(900).catch(() => {})
+
+    const pageInfo: any = await page.evaluate(() => {
+      const w = window.innerWidth
+      const h = window.innerHeight
+      const viewportArea = Math.max(1, w * h)
+
+      const imgs = Array.from(document.images || [])
+      const imgSrcs = imgs
+        .map((im) => (im as HTMLImageElement).currentSrc || (im as HTMLImageElement).src || '')
+        .filter(Boolean)
+      const svgCount = document.querySelectorAll('svg').length + imgSrcs.filter((u) => u.toLowerCase().includes('.svg')).length
+      const rasterCount = imgSrcs.filter((u) => !u.toLowerCase().includes('.svg')).length
+
+      // viewport内の画像面積（img要素）
+      let imgArea = 0
+      for (const im of imgs) {
+        const r = (im as HTMLImageElement).getBoundingClientRect()
+        const iw = Math.max(0, Math.min(w, r.right) - Math.max(0, r.left))
+        const ih = Math.max(0, Math.min(h, r.bottom) - Math.max(0, r.top))
+        if (iw > 0 && ih > 0) imgArea += iw * ih
+      }
+
+      // viewport内の background-image 面積（主要要素をサンプル）
+      let bgImgArea = 0
+      const nodes = Array.from(document.querySelectorAll('header,main,section,div,nav,footer')).slice(0, 220) as HTMLElement[]
+      for (const el of nodes) {
+        const cs = getComputedStyle(el)
+        const bg = cs.backgroundImage
+        if (!bg || bg === 'none') continue
+        const r = el.getBoundingClientRect()
+        const iw = Math.max(0, Math.min(w, r.right) - Math.max(0, r.left))
+        const ih = Math.max(0, Math.min(h, r.bottom) - Math.max(0, r.top))
+        if (iw > 0 && ih > 0) bgImgArea += iw * ih
+      }
+
+      const iconLinks = Array.from(document.querySelectorAll('link[rel~="icon"],link[rel="apple-touch-icon"],link[rel="shortcut icon"]')) as HTMLLinkElement[]
+
+      // 大きい順に画像URLを採用（人物検出/種類判定用）
+      const imgCandidates = imgs
+        .map((im) => {
+          const r = (im as HTMLImageElement).getBoundingClientRect()
+          const area = Math.max(0, r.width) * Math.max(0, r.height)
+          const src = (im as HTMLImageElement).currentSrc || (im as HTMLImageElement).src || ''
+          return { src, area }
+        })
+        .filter((x) => x.src && x.area > 6000)
+        .sort((a, b) => b.area - a.area)
+        .slice(0, 6)
+        .map((x) => x.src)
+
+      return {
+        viewport: { width: w, height: h },
+        svgCount,
+        rasterCount,
+        imgCount: imgs.length,
+        iconCount: iconLinks.length,
+        imgAreaRatio: Math.min(1, imgArea / viewportArea),
+        bgImgAreaRatio: Math.min(1, bgImgArea / viewportArea),
+        imgCandidates,
+      }
+    })
+
+    const screenshot = (await page.screenshot({ type: 'png' })) as Buffer
+    const colorsByArea = await extractColorsByAreaFromScreenshot(screenshot)
+
+    const mainColor = colorsByArea[0]?.hex
+    const subs: string[] = []
+    // サブは「アクセント候補」優先（中立色は後回し）。ただし面積比順に、近い色は除外。
+    for (const c of colorsByArea.slice(1)) {
+      if (!c?.hex) continue
+      if (subs.length >= 3) break
+      if (mainColor && colorDistance(mainColor, c.hex) < 32) continue
+      if (subs.some((s) => colorDistance(s, c.hex) < 32)) continue
+      if (isNearNeutralHex(c.hex) && subs.length < 2) continue
+      subs.push(c.hex)
+    }
+    // まだ足りなければ中立色も含めて埋める
+    if (subs.length < 2) {
+      for (const c of colorsByArea.slice(1)) {
+        if (subs.length >= 3) break
+        if (!c?.hex) continue
+        if (subs.includes(c.hex)) continue
+        if (mainColor && colorDistance(mainColor, c.hex) < 32) continue
+        subs.push(c.hex)
+      }
+    }
+
+    // 画像の種類（根拠はDOM要素の構成）
+    const kind =
+      pageInfo.svgCount > Math.max(6, pageInfo.rasterCount) ? 'アイコン/イラスト（SVG中心）' :
+      pageInfo.rasterCount > Math.max(6, pageInfo.svgCount) ? '写真/実写（ラスタ画像中心）' :
+      '混在（写真+アイコン/イラスト）'
+
+    const people = await detectPeopleViaVision(Array.isArray(pageInfo.imgCandidates) ? pageInfo.imgCandidates : [])
+
+    const colorSummaryText = colorsByArea
+      .slice(0, 8)
+      .map((c) => `${c.hex}(${Math.round(c.ratio * 100)}%)`)
+      .join(', ')
+    const imageSummaryText = `images=${pageInfo.imgCount} (raster=${pageInfo.rasterCount}, svg≈${pageInfo.svgCount}, icons=${pageInfo.iconCount}) / kind=${kind} / viewport_image_area=${Math.round((pageInfo.imgAreaRatio || 0) * 100)}% / viewport_bg_image_area=${Math.round((pageInfo.bgImgAreaRatio || 0) * 100)}% / people=${people}`
+
+    const report: VisualBrandReport = {
+      viewport,
+      colorsByArea,
+      mainColor,
+      subColors: subs,
+      colorSummaryText,
+      imageSummaryText,
+      imageAreaRatio: pageInfo.imgAreaRatio,
+      bgImageAreaRatio: pageInfo.bgImgAreaRatio,
+      people,
+    }
+    HEADLESS_VISUAL_CACHE.set(cacheKey, { ts: Date.now(), report })
+    return report
+  } catch {
+    return {
+      viewport,
+      colorsByArea: [],
+      subColors: [],
+      colorSummaryText: '',
+      imageSummaryText: '',
+      people: '不明',
+    }
+  } finally {
+    try {
+      await browser?.close?.()
+    } catch {
+      // ignore
+    }
+  }
+}
+
 function getVisionApiKey(): string | null {
   const key =
     process.env.GOOGLE_CLOUD_VISION_API_KEY ||
@@ -827,24 +1165,31 @@ export async function POST(request: NextRequest) {
     const pageText = stripHtmlToText(html)
     const colorHintsFromHtml = extractColorHints(html)
     const paletteFromCss = extractPaletteFromCss(html)
-    // headless computed style（CSS適用後の見え方から抽出）
-    const paletteFromHeadless = await extractPaletteViaHeadlessComputedStyles(targetUrl)
+    // headless visual analysis（必須）：スクショのピクセル面積比で主要色を算出し、画像の種類/面積比も抽出
+    const visual = await analyzeSiteVisualViaHeadless(targetUrl)
+    const paletteFromHeadlessArea = (visual.colorsByArea || []).map((c) => String(c.hex || '').toUpperCase()).filter((c) => /^#[0-9A-F]{6}$/.test(c)).slice(0, 3)
     // 画像（OG/ICON + ページ内の主要img）から実色を抽出（補助：サイト全体の色とズレる場合もある）
     const imageCandidates = extractImageCandidates(html, targetUrl)
     const heroCandidates = extractLikelyHeroImages(html, targetUrl)
     const imageSources = Array.from(new Set([...imageCandidates, ...heroCandidates])).slice(0, 6)
     const paletteFromImages = await extractPaletteFromImages(imageSources)
     const mergedPalette = Array.from(
-      new Set([...(paletteFromHeadless || []), ...(paletteFromCss || []), ...(paletteFromImages || [])].map((c) => String(c).toUpperCase()))
+      new Set([...(paletteFromHeadlessArea || []), ...(paletteFromCss || []), ...(paletteFromImages || [])].map((c) => String(c).toUpperCase()))
     )
       .filter((c) => /^#[0-9A-F]{6}$/.test(c))
       .slice(0, 3)
     const colorHints = [
       colorHintsFromHtml ? `html=${colorHintsFromHtml}` : '',
-      paletteFromHeadless.length > 0 ? `headless_palette=${paletteFromHeadless.join(',')}` : '',
+      paletteFromHeadlessArea.length > 0 ? `headless_area_palette=${paletteFromHeadlessArea.join(',')}` : '',
       paletteFromCss.length > 0 ? `css_palette=${paletteFromCss.slice(0, 3).join(',')}` : '',
       paletteFromImages.length > 0 ? `image_palette=${paletteFromImages.join(',')}` : '',
       imageSources.length > 0 ? `image_sources=${imageSources.slice(0, 2).join(',')}` : '',
+    ]
+      .filter(Boolean)
+      .join(' / ')
+    const visualHints = [
+      visual?.colorSummaryText ? `colors_by_area=${visual.colorSummaryText}` : '',
+      visual?.imageSummaryText ? `visual_image=${visual.imageSummaryText}` : '',
     ]
       .filter(Boolean)
       .join(' / ')
@@ -863,6 +1208,7 @@ export async function POST(request: NextRequest) {
       page_meta: meta,
       page_text: pageText,
       color_hints: colorHints,
+      visual_hints: visualHints,
     })
 
     const structured = await callGeminiForJson(specPrompt, apiKey)
@@ -883,7 +1229,11 @@ export async function POST(request: NextRequest) {
       personImages: Array.isArray(body.personImages) ? body.personImages.slice(0, 1) : undefined,
       referenceImages: Array.isArray(body.referenceImages) ? body.referenceImages : undefined,
       // brandColors が未指定なら、抽出したパレットを使用（色抽出精度UP）
-      brandColors: Array.isArray(body.brandColors) ? body.brandColors : (mergedPalette.length > 0 ? mergedPalette : undefined),
+      brandColors: Array.isArray(body.brandColors)
+        ? body.brandColors
+        : (visual?.mainColor
+            ? [visual.mainColor, ...(visual.subColors || [])].map((c) => String(c || '').toUpperCase()).filter((c) => /^#[0-9A-F]{6}$/.test(c)).slice(0, 3)
+            : (mergedPalette.length > 0 ? mergedPalette : undefined)),
       // URLのみ入力のため、最終プロンプトをそのまま使用
       customImagePrompt: imagePrompt,
       negativePrompt,
