@@ -35,6 +35,29 @@ function formatRelativeTime(date: Date): string {
   return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
 }
 
+const HISTORY_CACHE_KEY = 'doya-history-cache'
+const HISTORY_CACHE_TTL_MS = 60 * 1000 // 1分間有効
+
+function readHistoryCache(): { items: HistoryItem[]; ts: number } | null {
+  try {
+    const raw = sessionStorage.getItem(HISTORY_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed?.items)) return null
+    return { items: parsed.items.map((i: any) => ({ ...i, createdAt: new Date(i.createdAt) })), ts: parsed.ts || 0 }
+  } catch {
+    return null
+  }
+}
+
+function writeHistoryCache(items: HistoryItem[]) {
+  try {
+    sessionStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify({ items: items.map(i => ({ ...i, createdAt: i.createdAt.toISOString() })), ts: Date.now() }))
+  } catch {
+    // ignore
+  }
+}
+
 export default function BannerHistoryPage() {
   const { data: session, status } = useSession()
   const isGuest = status !== 'loading' && !session
@@ -45,6 +68,7 @@ export default function BannerHistoryPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [tipIndex, setTipIndex] = useState(0)
   const [phase, setPhase] = useState<'list' | 'images' | 'idle'>('idle')
+  const [isStale, setIsStale] = useState(false) // キャッシュ表示中かどうか
 
   const LOADING_TIPS = [
     '作ったバナーは6ヶ月間いつでも再DLできます（有料プラン）',
@@ -74,8 +98,27 @@ export default function BannerHistoryPage() {
   }, [])
 
   // ログインユーザーはAPIから、ゲストは履歴閲覧不可
-  const loadHistory = useCallback(async () => {
+  // SWR風: キャッシュがあれば即表示→バックグラウンドで更新
+  const loadHistory = useCallback(async (forceRefresh = false) => {
     if (status === 'loading') return
+
+    // キャッシュチェック（stale-while-revalidate）
+    if (!forceRefresh) {
+      const cached = readHistoryCache()
+      if (cached && cached.items.length > 0) {
+        setHistory(cached.items)
+        setIsLoaded(true)
+        setIsLoading(false)
+        const isExpired = Date.now() - cached.ts > HISTORY_CACHE_TTL_MS
+        if (!isExpired) {
+          // まだ有効 → API呼ばない
+          return
+        }
+        // 期限切れ → バックグラウンドで更新（stale表示中）
+        setIsStale(true)
+      }
+    }
+
     setIsLoading(true)
     setRequiresUpgrade(false)
     setErrorMessage(null)
@@ -115,6 +158,7 @@ export default function BannerHistoryPage() {
                     : 1,
             }))
             setHistory(list)
+            writeHistoryCache(list) // キャッシュ保存
 
             // 先頭だけ軽く画像を段階取得（体感を損なわない範囲）
             setPhase('images')
@@ -152,6 +196,7 @@ export default function BannerHistoryPage() {
     } finally {
       setIsLoaded(true)
       setIsLoading(false)
+      setIsStale(false)
       setPhase('idle')
     }
   }, [isGuest, status, fetchBatchImages])
