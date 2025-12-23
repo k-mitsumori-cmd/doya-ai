@@ -7,6 +7,8 @@ import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles, ChevronDown, Sli
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { CheckoutButton } from '@/components/CheckoutButton'
 
 const DEFAULT_FREE_SIZE = '1080x1080'
 const SIZE_OPTIONS: { label: string; value: string }[] = [
@@ -376,6 +378,82 @@ export default function BannerUrlAutoPage() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* 料金 / プラン表 */}
+            <div className="rounded-3xl border border-slate-200 bg-white p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-black text-slate-900">料金プラン</p>
+                  <p className="text-[11px] text-slate-500 font-bold mt-1">
+                    無料は制限付き。有料は枚数/サイズ指定が可能です。
+                  </p>
+                </div>
+                <Link
+                  href="/banner/pricing"
+                  className="text-xs font-black text-blue-600 hover:text-blue-800"
+                >
+                  料金ページへ
+                </Link>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
+                {/* Free */}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-black text-slate-500">無料</p>
+                  <p className="mt-1 text-lg font-black text-slate-900">{BANNER_PRICING.plans.find((p) => p.id === 'banner-free')?.name || 'おためしプラン'}</p>
+                  <p className="mt-2 text-sm font-black text-slate-900">¥0</p>
+                  <p className="mt-2 text-[11px] text-slate-600 font-bold leading-relaxed">
+                    ログインで1日{BANNER_PRICING.freeLimit}枚まで（ゲストは{BANNER_PRICING.guestLimit}枚まで）
+                  </p>
+                  <div className="mt-3">
+                    <Link
+                      href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner')}`}
+                      className="inline-flex items-center justify-center w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-800 font-black hover:bg-slate-100 transition-colors text-sm"
+                    >
+                      ログインして試す
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Pro */}
+                <div className="rounded-2xl border border-slate-900 bg-slate-900 p-4 text-white">
+                  <p className="text-xs font-black text-white/70">PRO</p>
+                  <p className="mt-1 text-lg font-black">プロプラン</p>
+                  <p className="mt-2 text-sm font-black">月額 ¥9,980</p>
+                  <p className="mt-2 text-[11px] text-white/80 font-bold leading-relaxed">
+                    1日{BANNER_PRICING.proLimit}枚まで生成 / 最大10枚生成 / サイズ指定OK
+                  </p>
+                  <div className="mt-3">
+                    <CheckoutButton planId="banner-pro" loginCallbackUrl="/banner" className="w-full py-3 rounded-2xl text-sm" variant="secondary">
+                      プロプランを始める
+                    </CheckoutButton>
+                  </div>
+                </div>
+
+                {/* Enterprise */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-black text-slate-500">Enterprise</p>
+                  <p className="mt-1 text-lg font-black text-slate-900">エンタープライズ</p>
+                  <p className="mt-2 text-sm font-black text-slate-900">月額 ¥49,800</p>
+                  <p className="mt-2 text-[11px] text-slate-600 font-bold leading-relaxed">
+                    1日{BANNER_PRICING.enterpriseLimit || 500}枚まで生成 / 大量運用向け
+                  </p>
+                  <div className="mt-3 grid gap-2">
+                    <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner" className="w-full py-3 rounded-2xl text-sm">
+                      エンタープライズを始める
+                    </CheckoutButton>
+                    <a
+                      href={HIGH_USAGE_CONTACT_URL}
+                      target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
+                      rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+                      className="inline-flex items-center justify-center w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 font-black hover:bg-slate-100 transition-colors text-sm"
+                    >
+                      さらに上限UPの相談（マーケティング施策を丸投げする）
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

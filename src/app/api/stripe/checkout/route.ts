@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       service === 'seo'
         ? '/seo'
         : service === 'banner'
-          ? '/banner/dashboard'
+          ? '/banner'
           : '/'
     const cancelPath =
       service === 'seo'
@@ -85,6 +85,7 @@ function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string
   const priceMap: Record<string, { monthly: string; yearly: string }> = {
     // ドヤSEO
     'seo-pro': STRIPE_PRICE_IDS.seo.pro,
+    'seo-business': STRIPE_PRICE_IDS.seo.business,
     // ドヤバナーAI
     'banner-basic': STRIPE_PRICE_IDS.banner.basic,
     'banner-pro': STRIPE_PRICE_IDS.banner.pro,
