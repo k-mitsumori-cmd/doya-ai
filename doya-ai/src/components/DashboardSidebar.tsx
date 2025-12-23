@@ -24,7 +24,7 @@ import {
   Link2
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
-import { HIGH_USAGE_CONTACT_URL, SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import SidebarTour from '@/components/SidebarTour'
 
 interface NavItem {
@@ -79,6 +79,22 @@ function DashboardSidebarImpl({
     if (globalPlan) return globalPlan !== 'FREE'
     return false
   }, [session])
+
+  const bannerPlanLabel = useMemo(() => {
+    const bannerPlan = String((session?.user as any)?.bannerPlan || '').toUpperCase()
+    const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
+    const p = bannerPlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
+    if (p === 'ENTERPRISE') return 'ENTERPRISE'
+    if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return 'PRO'
+    if (p === 'FREE') return 'FREE'
+    return isLoggedIn ? 'FREE' : 'GUEST'
+  }, [session, isLoggedIn])
+
+  const nextBannerPlanLabel = useMemo(() => {
+    if (bannerPlanLabel === 'GUEST' || bannerPlanLabel === 'FREE') return 'PRO'
+    if (bannerPlanLabel === 'PRO') return 'ENTERPRISE'
+    return 'CONSULT'
+  }, [bannerPlanLabel])
 
   // 入力中の親コンポーネント再レンダーでサイドバーが“ぱちぱち”しないよう、
   // derived values をメモ化して framer-motion の不要な更新を抑える
@@ -184,12 +200,24 @@ function DashboardSidebarImpl({
             <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center mb-3 shadow-lg">
               <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
             </div>
-            <h4 className="text-xs font-black text-white mb-1">有料プラン</h4>
+            <h4 className="text-xs font-black text-white mb-1">プラン案内</h4>
             <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
-              PRO：月額¥9,980 / 1日50枚<br />
-              上位：Enterprise 月額¥49,800 / 1日500枚
+              現在：{bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
+              <br />
+              {nextBannerPlanLabel === 'PRO' && (
+                <>
+                  次の上位：PRO（月額¥9,980 / 1日{BANNER_PRICING.proLimit}枚）
+                </>
+              )}
+              {nextBannerPlanLabel === 'ENTERPRISE' && (
+                <>
+                  次の上位：Enterprise（月額¥49,800 / 1日{BANNER_PRICING.enterpriseLimit || 500}枚）
+                </>
+              )}
+              {nextBannerPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
             </p>
-            {isPro ? (
+
+            {nextBannerPlanLabel === 'CONSULT' ? (
               <a
                 href={HIGH_USAGE_CONTACT_URL}
                 target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
@@ -202,7 +230,7 @@ function DashboardSidebarImpl({
             ) : (
               <Link href="/banner/pricing">
                 <button className="mt-3 w-full py-2 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
-                  プランを見る
+                  {nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseを始める'}
                 </button>
               </Link>
             )}
