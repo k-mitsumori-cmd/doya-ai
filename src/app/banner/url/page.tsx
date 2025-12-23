@@ -211,7 +211,7 @@ export default function BannerUrlAutoPage() {
                 )}
               </div>
 
-              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3" data-tour="url-input">
                 <div className="flex items-center gap-2">
                   <Link2 className="w-4 h-4 text-slate-400" />
                   <input
@@ -224,7 +224,7 @@ export default function BannerUrlAutoPage() {
               </div>
 
               {/* 詳細設定 */}
-              <div className="mt-4 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+              <div className="mt-4 rounded-2xl border border-slate-200 bg-white overflow-hidden" data-tour="advanced-settings">
                 {/* collapsed header */}
                 <button
                   type="button"
@@ -314,6 +314,7 @@ export default function BannerUrlAutoPage() {
                 type="button"
                 onClick={handleGenerate}
                 disabled={!canGenerate}
+                data-tour="generate-button"
                 className="mt-4 w-full inline-flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-colors disabled:opacity-60"
               >
                 {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
@@ -327,7 +328,7 @@ export default function BannerUrlAutoPage() {
               )}
 
               {(analysisJson?.key_message || bannerAnalysis) && (
-                <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 space-y-2">
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 space-y-2" data-tour="analysis-result">
                   <div className="text-[11px] font-black text-slate-500">サイト解析結果</div>
                   <div className="text-sm font-black text-slate-900 leading-relaxed">
                     {analysisJson?.key_message ? String(analysisJson.key_message) : bannerAnalysis.slice(0, 220)}
@@ -345,7 +346,7 @@ export default function BannerUrlAutoPage() {
             </div>
 
             {/* 生成結果 */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6" data-tour="generated-results">
               {banners.length === 0 ? (
                 <div className="h-[420px] flex items-center justify-center text-center text-slate-500 font-bold">
                   {isGenerating ? '生成中です…（少々お待ちください）' : '生成結果がここに表示されます'}
@@ -381,7 +382,7 @@ export default function BannerUrlAutoPage() {
             </div>
 
             {/* 料金 / プラン表 */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6" data-tour="pricing-plans">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-black text-slate-900">料金プラン</p>
