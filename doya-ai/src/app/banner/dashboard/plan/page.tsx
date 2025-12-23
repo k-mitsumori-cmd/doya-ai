@@ -8,26 +8,22 @@ import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, 
 import { CheckoutButton } from '@/components/CheckoutButton'
 import {
   ArrowUpRight,
-  BadgeCheck,
   BarChart3,
   Clock,
   Crown,
   Layers,
   Loader2,
   Sparkles,
-  Star,
   Target,
   CheckCircle2,
   MessageSquare,
-  Image as ImageIcon,
   Zap,
-  Bell,
   Settings,
   DollarSign,
-  ChevronDown,
   CreditCard,
   ArrowRight,
-  Info
+  Info,
+  Check
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -64,38 +60,8 @@ export default function BannerPlanPage() {
 
   const [totalBanners, setTotalBanners] = useState(0)
   const [usageCount, setUsageCount] = useState(0)
-  const [isPortalLoading, setIsPortalLoading] = useState(false)
   const [isCanceling, setIsCanceling] = useState(false)
   const [statsLoaded, setStatsLoaded] = useState(false)
-
-  const openBillingPortal = async () => {
-    if (isGuest) {
-      toast.error('ログインが必要です')
-      return
-    }
-    try {
-      toast.loading('契約管理ページを開いています...', { id: 'open-portal' })
-      setIsPortalLoading(true)
-      const res = await fetch('/api/stripe/portal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ returnTo: '/banner/dashboard/plan' }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data?.error || '契約管理ページを開けませんでした')
-      if (!data?.url) throw new Error('契約管理ページURLが取得できませんでした')
-      toast.dismiss('open-portal')
-      window.location.href = String(data.url)
-    } catch (e: any) {
-      toast.dismiss('open-portal')
-      // POSTが失敗した場合でも、GETリダイレクトで確実に開く（互換）
-      const msg = e?.message || '契約管理ページを開けませんでした'
-      toast.error(`${msg}（別ルートで再試行します）`)
-      window.location.href = `/api/stripe/portal?returnTo=${encodeURIComponent('/banner/dashboard/plan')}`
-    } finally {
-      setIsPortalLoading(false)
-    }
-  }
 
   const handleCancelSubscription = async () => {
     if (isGuest) {
@@ -220,15 +186,11 @@ export default function BannerPlanPage() {
                 </h1>
               </div>
               
-              <div className="flex items-center gap-3 sm:gap-6">
+                <div className="flex items-center gap-3 sm:gap-6">
                 <div className="hidden md:flex items-center gap-2">
-                  <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all relative">
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                  </button>
-                  <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
+                  <Link href="/banner/dashboard/settings" className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
                     <Settings className="w-5 h-5" />
-                  </button>
+                  </Link>
                 </div>
                 <div className="h-8 w-px bg-slate-200 hidden sm:block" />
                 <div className="flex items-center gap-3 pl-2">
@@ -304,45 +266,23 @@ export default function BannerPlanPage() {
                         ログインして利用を開始
                       </Link>
                     ) : isEnterprise ? (
-                      <>
-                        <button
-                          type="button"
-                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-200"
-                          onClick={openBillingPortal}
-                          disabled={isPortalLoading}
-                        >
-                          {isPortalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
-                          契約管理
-                        </button>
-                        <Link
-                          href={HIGH_USAGE_CONTACT_URL || '/banner/pricing'}
-                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white border border-gray-200 text-slate-800 font-black hover:bg-slate-50 transition-all shadow-sm"
-                        >
-                          <ArrowUpRight className="w-5 h-5 text-blue-600" />
-                          さらに上限UPの相談（丸投げ）
-                        </Link>
-                      </>
+                      <Link
+                        href={HIGH_USAGE_CONTACT_URL || '/banner/pricing'}
+                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-200"
+                      >
+                        <ArrowUpRight className="w-5 h-5" />
+                        さらに上限UPの相談（丸投げ）
+                      </Link>
                     ) : isPro ? (
-                      <>
-                        <CheckoutButton
-                          planId="banner-enterprise"
-                          loginCallbackUrl="/banner/dashboard/plan"
-                          variant="secondary"
-                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black shadow-xl shadow-slate-200 hover:bg-black transition-all hover:scale-[1.02] active:scale-95"
-                        >
-                          <Crown className="w-5 h-5" />
-                          エンタープライズにアップグレード
-                        </CheckoutButton>
-                        <button
-                          type="button"
-                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white border border-gray-200 text-slate-800 font-black hover:bg-slate-50 transition-all shadow-sm"
-                          onClick={openBillingPortal}
-                          disabled={isPortalLoading}
-                        >
-                          {isPortalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5 text-blue-600" />}
-                          契約管理
-                        </button>
-                      </>
+                      <CheckoutButton
+                        planId="banner-enterprise"
+                        loginCallbackUrl="/banner/dashboard/plan"
+                        variant="secondary"
+                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black shadow-xl shadow-slate-200 hover:bg-black transition-all hover:scale-[1.02] active:scale-95"
+                      >
+                        <Crown className="w-5 h-5" />
+                        エンタープライズにアップグレード
+                      </CheckoutButton>
                     ) : (
                       <>
                         <CheckoutButton
@@ -438,6 +378,88 @@ export default function BannerPlanPage() {
                       <p className="text-3xl font-black text-slate-800 tracking-tighter">
                         ¥{savedCost.toLocaleString()}
                       </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 料金プラン比較表 */}
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-8 border-b border-gray-100">
+                  <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-blue-600" />
+                    料金プラン比較
+                  </h3>
+                  <p className="text-sm text-slate-500 font-bold mt-1">
+                    用途に合わせてプランをお選びください
+                  </p>
+                </div>
+                <div className="p-8">
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {/* ゲスト/無料 */}
+                    <div className={`rounded-2xl border p-5 ${bannerPlanTier === 'FREE' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-slate-50'}`}>
+                      <p className="text-xs font-black text-slate-500 uppercase tracking-widest">ログイン</p>
+                      <p className="text-xl font-black text-slate-900 mt-1">無料プラン</p>
+                      <p className="text-2xl font-black text-slate-800 mt-2">¥0</p>
+                      <ul className="mt-4 space-y-2 text-sm text-slate-600 font-bold">
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> ゲスト：1日{BANNER_PRICING.guestLimit}枚まで</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> ログイン：1日{BANNER_PRICING.freeLimit}枚まで</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> サイズ：1080×1080固定</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> 同時生成：最大3枚</li>
+                      </ul>
+                      {bannerPlanTier === 'FREE' && (
+                        <p className="mt-4 text-xs font-black text-blue-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4" /> 現在のプラン
+                        </p>
+                      )}
+                    </div>
+
+                    {/* PRO */}
+                    <div className={`rounded-2xl border p-5 ${bannerPlanTier === 'PRO' ? 'border-blue-500 bg-blue-900' : 'border-slate-900 bg-slate-900'} text-white`}>
+                      <p className="text-xs font-black text-white/70 uppercase tracking-widest">PRO</p>
+                      <p className="text-xl font-black mt-1">プロプラン</p>
+                      <p className="text-2xl font-black mt-2">¥9,980<span className="text-sm font-bold opacity-70">/月</span></p>
+                      <ul className="mt-4 space-y-2 text-sm text-white/90 font-bold">
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 1日{BANNER_PRICING.proLimit}枚まで生成</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> サイズ自由指定</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 同時生成：最大10枚</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 履歴3ヶ月保存</li>
+                      </ul>
+                      {bannerPlanTier === 'PRO' ? (
+                        <p className="mt-4 text-xs font-black text-blue-300 flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4" /> 現在のプラン
+                        </p>
+                      ) : bannerPlanTier !== 'ENTERPRISE' && (
+                        <div className="mt-4">
+                          <CheckoutButton planId="banner-pro" loginCallbackUrl="/banner/dashboard/plan" className="w-full py-2 rounded-xl text-xs" variant="secondary">
+                            PROを始める
+                          </CheckoutButton>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Enterprise */}
+                    <div className={`rounded-2xl border p-5 ${bannerPlanTier === 'ENTERPRISE' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'}`}>
+                      <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Enterprise</p>
+                      <p className="text-xl font-black text-slate-900 mt-1">エンタープライズ</p>
+                      <p className="text-2xl font-black text-slate-800 mt-2">¥49,800<span className="text-sm font-bold text-slate-400">/月</span></p>
+                      <ul className="mt-4 space-y-2 text-sm text-slate-600 font-bold">
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 1日{BANNER_PRICING.enterpriseLimit || 500}枚まで生成</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 大量運用・チーム向け</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 優先サポート</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> さらに上限UP相談可</li>
+                      </ul>
+                      {bannerPlanTier === 'ENTERPRISE' ? (
+                        <p className="mt-4 text-xs font-black text-purple-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4" /> 現在のプラン
+                        </p>
+                      ) : (
+                        <div className="mt-4">
+                          <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner/dashboard/plan" className="w-full py-2 rounded-xl text-xs">
+                            {bannerPlanTier === 'PRO' ? 'アップグレード' : 'Enterpriseを始める'}
+                          </CheckoutButton>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
