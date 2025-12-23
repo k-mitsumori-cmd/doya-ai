@@ -1038,14 +1038,18 @@ export default function BannerDashboard() {
     const [wStr, hStr] = effectiveSize.split('x')
     const px = safeNumber(wStr, 1080) * safeNumber(hStr, 1080)
     const scale = clamp(px / (1080 * 1080), 0.6, 3.0)
-    const predicted = clampMs(base * (0.85 + 0.15 * scale), 8_000, 180_000)
+    // 生成枚数に応じて時間をスケール（基準: デフォルト3枚）
+    const countScale = clamp(generateCount / 3, 0.7, 4.0)
+    const predicted = clampMs(base * (0.85 + 0.15 * scale) * countScale, 8_000, 600_000)
     setPredictedTotalMs(predicted)
     setPredictedRemainingMs(predicted)
 
     try {
       // “終わらない”体感を潰す：フロント側でタイムアウト検知
       const controller = new AbortController()
-      const timeoutMs = Math.max(60_000, Math.min(240_000, predictedTotalMs * 3))
+      // NOTE: state の predictedTotalMs は即時反映されないので、ローカル変数 predicted を使う
+      // 10枚でも待てるよう、上限はサーバ側 maxDuration(300s) に寄せる
+      const timeoutMs = Math.max(90_000, Math.min(290_000, predicted + 60_000))
       const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
 
       const response = await fetch('/api/banner/generate', {

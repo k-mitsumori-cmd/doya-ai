@@ -1201,66 +1201,74 @@ export async function generateBanners(
   console.log(`Model(Text/Gemini): ${textModel}`)
 
   try {
-    const banners: string[] = []
+    const banners: string[] = Array(targetCount).fill('')
     const errors: string[] = []
     let usedModel: string | undefined = undefined
-    
-    // Nパターン順次生成（Nano Banana Pro のみ使用）
-    for (let i = 0; i < targetCount; i++) {
+
+    // 10枚は逐次だとVercelの実行上限/フロントAbortに当たりやすいので、
+    // 同時実行数を制限した並列生成にする（Nano Banana Pro / Gemini3系は維持）
+    const concurrency = targetCount >= 6 ? 3 : targetCount >= 4 ? 2 : 1
+    let cursor = 0
+
+    const runOne = async (i: number) => {
       const appealType = appealTypes[i % appealTypes.length]
       const patternLabel = letters[i] || String(i + 1)
-      try {
-        const basePrompt = createBannerPrompt(category, keyword, size, appealType, options)
-        const extraHint = i >= appealTypes.length ? EXTRA_VARIANT_HINTS[i - appealTypes.length] : ''
-        console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} pattern ${patternLabel} (${appealType.type}/${appealType.japanese})...`)
-        
-        let finalPrompt = basePrompt
-        const hasStrictInputs =
-          !!options.imageDescription ||
-          !!options.logoImage ||
-          !!options.personImage ||
-          (Array.isArray(options.referenceImages) && options.referenceImages.length > 0) ||
-          (Array.isArray(options.brandColors) && options.brandColors.length > 0)
+      const basePrompt = createBannerPrompt(category, keyword, size, appealType, options)
+      const extraHint = i >= appealTypes.length ? EXTRA_VARIANT_HINTS[i - appealTypes.length] : ''
+      console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} pattern ${patternLabel} (${appealType.type}/${appealType.japanese})...`)
 
-        // 重要入力がある場合はプロンプト圧縮で情報が落ちるリスクがあるため、基本はスキップ
-        if (!hasStrictInputs) {
-          try {
-            finalPrompt = await refinePromptWithGemini3Flash(basePrompt)
-          } catch (e: any) {
-            console.warn('Gemini prompt refine failed. Using base prompt.', e?.message || e)
-          }
-        }
+      let finalPrompt = basePrompt
+      const hasStrictInputs =
+        !!options.imageDescription ||
+        !!options.logoImage ||
+        !!options.personImage ||
+        (Array.isArray(options.personImages) && options.personImages.length > 0) ||
+        (Array.isArray(options.referenceImages) && options.referenceImages.length > 0) ||
+        (Array.isArray(options.brandColors) && options.brandColors.length > 0)
 
-        // B/C含め、必須情報が落ちないように最後に“硬い制約”を必ず付与
-        finalPrompt = [
-          finalPrompt,
-          extraHint ? `\n=== VARIATION HINT ===\n${extraHint}\n` : '',
-          buildHardConstraintsAppendix(keyword, size, options, `PATTERN ${patternLabel}`),
-        ]
-          .filter(Boolean)
-          .join('\n')
+      // 重要入力がある場合はプロンプト圧縮で情報が落ちるリスクがあるため、基本はスキップ
+      if (!hasStrictInputs) {
+        try {
+          finalPrompt = await refinePromptWithGemini3Flash(basePrompt)
+        } catch (e: any) {
+          console.warn('Gemini prompt refine failed. Using base prompt.', e?.message || e)
+        }
+      }
 
-        const result = await generateSingleBanner(finalPrompt, size, options)
-        
-        banners.push(result.image)
-        // 最初に成功したモデルを記録
-        if (!usedModel) {
-          usedModel = result.model
+      finalPrompt = [
+        finalPrompt,
+        extraHint ? `\n=== VARIATION HINT ===\n${extraHint}\n` : '',
+        buildHardConstraintsAppendix(keyword, size, options, `PATTERN ${patternLabel}`),
+      ]
+        .filter(Boolean)
+        .join('\n')
+
+      const result = await generateSingleBanner(finalPrompt, size, options)
+      banners[i] = result.image
+      if (!usedModel) usedModel = result.model
+      console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${patternLabel} generated successfully with model: ${result.model}`)
+    }
+
+    const worker = async () => {
+      while (true) {
+        const i = cursor++
+        if (i >= targetCount) return
+        const patternLabel = letters[i] || String(i + 1)
+        try {
+          await runOne(i)
+        } catch (error: any) {
+          console.error(`${isYouTube ? 'Thumbnail' : 'Banner'} ${patternLabel} generation failed:`, error.message)
+          errors.push(`${patternLabel}: ${error.message}`)
+          const [w, h] = size.split('x')
+          banners[i] = `https://placehold.co/${w}x${h}/EF4444/FFFFFF?text=Error:+Pattern+${patternLabel}`
+        } finally {
+          // 同時多発を避ける軽い間引き
+          await new Promise((r) => setTimeout(r, 500))
         }
-        console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generated successfully with model: ${result.model}`)
-        
-        // レート制限を避けるため待機
-        if (i < targetCount - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000))
-        }
-      } catch (error: any) {
-        console.error(`${isYouTube ? 'Thumbnail' : 'Banner'} ${patternLabel} generation failed:`, error.message)
-        errors.push(`${patternLabel}: ${error.message}`)
-        // エラーの場合はプレースホルダー（エラー内容を表示）
-        const [w, h] = size.split('x')
-        banners.push(`https://placehold.co/${w}x${h}/EF4444/FFFFFF?text=Error:+Pattern+${patternLabel}`)
       }
     }
+
+    await Promise.all(Array.from({ length: concurrency }, () => worker()))
 
     console.log(`Generation complete. Used model: ${usedModel || 'unknown'}`)
 
