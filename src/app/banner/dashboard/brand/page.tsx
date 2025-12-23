@@ -13,7 +13,7 @@ export default function BannerBrandPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardSidebar />
-      <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+      <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
         {/* ヘッダー */}
         <header className="sticky top-0 z-40 bg-white border-b border-gray-200">
           <div className="max-w-4xl mx-auto px-4 h-16 flex items-center gap-4">
