@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, shouldResetDailyUsage, getTodayDateJST } from '@/lib/pricing'
 import crypto from 'crypto'
 import sharp from 'sharp'
 
@@ -1197,7 +1197,16 @@ export async function POST(request: NextRequest) {
             where: { userId_serviceId: { userId, serviceId: 'banner' } },
             select: { dailyUsage: true, lastUsageReset: true, plan: true },
           })
-          const used = sub?.dailyUsage || 0
+          // 日付が変わっていたらリセット（日本時間00:00基準）
+          let used = sub?.dailyUsage || 0
+          if (shouldResetDailyUsage(sub?.lastUsageReset)) {
+            used = 0
+            // DBもリセット（非同期で更新、エラーは握りつぶす）
+            prisma.userServiceSubscription.update({
+              where: { userId_serviceId: { userId, serviceId: 'banner' } },
+              data: { dailyUsage: 0, lastUsageReset: new Date() },
+            }).catch(() => {})
+          }
           if (used + desiredCount > dailyLimit) {
             return NextResponse.json(
               {

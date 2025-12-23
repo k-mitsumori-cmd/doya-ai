@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { shouldResetDailyUsage } from '@/lib/pricing'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -41,11 +42,8 @@ export async function GET(request: NextRequest) {
       select: { dailyUsage: true, monthlyUsage: true, lastUsageReset: true },
     })
 
-    const today = new Date().toISOString().split('T')[0]
-    const lastResetDate = sub?.lastUsageReset?.toISOString().split('T')[0] || ''
-    
-    // 日付が変わっていたら0
-    const todayUsage = lastResetDate === today ? (sub?.dailyUsage || 0) : 0
+    // 日付が変わっていたら0（日本時間00:00基準）
+    const todayUsage = shouldResetDailyUsage(sub?.lastUsageReset) ? 0 : (sub?.dailyUsage || 0)
     const monthlyUsage = sub?.monthlyUsage || 0
 
     return NextResponse.json({
