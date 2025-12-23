@@ -84,6 +84,9 @@ function parseSuggestionsFallback(raw: string): string[] {
     // 「suggestions:」や `"suggestions": [` など JSONキー/断片を除外
     .filter((l) => !/^"?suggestions"?\s*[:：]/i.test(l))
     .filter((l) => !/"suggestions"\s*[:：]\s*\[/i.test(l))
+    // 「items:」や `"items": [` など JSONキー/断片を除外（誤って入力欄に入る事故を防ぐ）
+    .filter((l) => !/^"?items"?\s*[:：]/i.test(l))
+    .filter((l) => !/"items"\s*[:：]\s*\[/i.test(l))
     // JSON断片っぽい行を除外
     .filter((l) => !/^\{|\}$/.test(l))
     .filter((l) => !/^\s*\[\s*$/.test(l))

@@ -1346,6 +1346,7 @@ export default function BannerDashboard() {
       if (!t) return false
       // JSON断片/解析エラーのゴミを混入させない
       if (/suggestions/i.test(t)) return false
+      if (/"?items"?\s*[:：]\s*\[?/i.test(t)) return false
       if (/^[\{\}\[\]"]+$/.test(t)) return false
       if (/^\{.*\}$/.test(t)) return false
       if (/^\[.*\]$/.test(t)) return false
