@@ -6,10 +6,8 @@ import { motion } from 'framer-motion'
 import {
   LayoutDashboard,
   Users,
-  FileText,
   Settings,
   LogOut,
-  Sparkles,
   BarChart3,
   CreditCard,
   Shield,
@@ -17,23 +15,20 @@ import {
   ChevronRight,
   Zap,
   Crown,
-  Bell,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const mainNavItems = [
   { icon: LayoutDashboard, label: 'ダッシュボード', href: '/admin', badge: null },
   { icon: Users, label: 'ユーザー管理', href: '/admin/users', badge: null },
-  { icon: FileText, label: 'テンプレート', href: '/admin/templates', badge: null },
   { icon: BarChart3, label: 'アナリティクス', href: '/admin/analytics', badge: null },
   { icon: CreditCard, label: '売上・課金', href: '/admin/billing', badge: null },
-  { icon: Shield, label: '管理者アカウント', href: '/admin/admin-users', badge: null },
   { icon: Settings, label: '設定', href: '/admin/settings', badge: null },
 ]
 
 const serviceLinks = [
-  { emoji: '📝', label: 'カンタンドヤAI', href: '/kantan/dashboard', gradient: 'from-blue-500 to-cyan-500' },
   { emoji: '🎨', label: 'ドヤバナーAI', href: '/banner/dashboard', gradient: 'from-violet-500 to-fuchsia-500' },
+  { emoji: '🧠', label: 'ドヤSEO', href: '/seo/dashboard', gradient: 'from-emerald-500 to-green-500' },
 ]
 
 export function AdminSidebar() {
