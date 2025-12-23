@@ -18,6 +18,7 @@ import {
   Layers,
   ChevronRight,
   RefreshCw,
+  Info,
 } from 'lucide-react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { useSession } from 'next-auth/react'
@@ -125,6 +126,8 @@ export default function StatsPage() {
   const totalTimeSavedMinutes = totalBanners * ESTIMATED_TIME_SAVED_PER_BANNER
   const totalTimeSavedHours = Math.floor(totalTimeSavedMinutes / 60)
   const totalCostSaved = Math.floor((totalTimeSavedMinutes / 60) * HOURLY_DESIGNER_RATE)
+
+  const estimateBasisText = `根拠：\n- 1枚あたりの制作時間を ${ESTIMATED_TIME_SAVED_PER_BANNER} 分と仮定\n- デザイナー時給を ${HOURLY_DESIGNER_RATE.toLocaleString()} 円と仮定\n\n計算：\n- 推定削減時間 = 累計生成枚数 × ${ESTIMATED_TIME_SAVED_PER_BANNER} 分 ÷ 60\n- 推定コスト削減 = 推定削減時間（時間）× ${HOURLY_DESIGNER_RATE.toLocaleString()} 円`
 
   // 日別統計（バナー枚数ベース）
   const dailyStats: DailyStats[] = history.reduce((acc, item) => {
@@ -362,7 +365,18 @@ export default function StatsPage() {
               <Timer className="w-8 h-8 text-white" />
             </div>
             <div>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Time Saved</p>
+              <div className="mb-1 flex items-center gap-1.5">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Time Saved</p>
+                <span className="relative group/tt">
+                  <Info className="w-4 h-4 text-slate-400 cursor-help" aria-label="根拠" />
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[260px] whitespace-pre-line rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 shadow-xl opacity-0 group-hover/tt:opacity-100 transition-opacity"
+                  >
+                    {estimateBasisText}
+                  </span>
+                </span>
+              </div>
               <p className="text-4xl font-black text-slate-800 tracking-tighter">{totalTimeSavedHours}<span className="text-xl ml-1">h</span></p>
             </div>
           </div>
@@ -373,7 +387,18 @@ export default function StatsPage() {
               <DollarSign className="w-8 h-8 text-white" />
             </div>
             <div>
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Cost Reduction</p>
+              <div className="mb-1 flex items-center gap-1.5">
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Cost Reduction</p>
+                <span className="relative group/tt">
+                  <Info className="w-4 h-4 text-slate-400 cursor-help" aria-label="根拠" />
+                  <span
+                    role="tooltip"
+                    className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 w-[260px] whitespace-pre-line rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 shadow-xl opacity-0 group-hover/tt:opacity-100 transition-opacity"
+                  >
+                    {estimateBasisText}
+                  </span>
+                </span>
+              </div>
               <p className="text-4xl font-black text-slate-800 tracking-tighter">¥{totalCostSaved.toLocaleString()}</p>
             </div>
           </div>
