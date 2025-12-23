@@ -1340,6 +1340,8 @@ export default function BannerDashboard() {
       setGeneratedBanners(data.banners || [])
       setGeneratedCopies(Array.isArray(data.copies) ? data.copies : [])
       setUsedModelDisplay(data.usedModelDisplay || null)
+      // 生成直後は先頭を選択（プレビューが出てUXが良い & null事故を防ぐ）
+      setSelectedBanner(0)
       // アニメーション完了後にフラグをリセット（ぱちぱち防止）
       setTimeout(() => setJustGenerated(false), 600)
 
@@ -1401,7 +1403,8 @@ export default function BannerDashboard() {
   const handleDownload = (url: string, index: number) => {
     const link = document.createElement('a')
     link.href = url
-    link.download = `doya-banner-${['A', 'B', 'C'][index]}-${Date.now()}.png`
+    const label = index >= 0 && index < 3 ? ['A', 'B', 'C'][index] : `No${index + 1}`
+    link.download = `doya-banner-${label}-${Date.now()}.png`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -2400,10 +2403,11 @@ export default function BannerDashboard() {
                       </div>
                       
                       {/* Banner Grid - Professional Presentation */}
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className={`grid gap-3 ${generatedBanners.length > 3 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5' : 'grid-cols-3'}`}>
                         {generatedBanners.map((banner, i) => {
                           const insights = BANNER_INSIGHTS[purpose] || BANNER_INSIGHTS.default
-                          const insight = insights[i]
+                          const insight = insights[i % Math.max(1, insights.length)] || insights[0]
+                          const badge = i < 3 ? insight.type : `+${i - 2}`
                           return (
                             <motion.div
                               key={i}
@@ -2422,7 +2426,7 @@ export default function BannerDashboard() {
                               <img src={banner} alt={`Banner ${i + 1}`} className="w-full h-full object-cover transition-opacity duration-200" />
                               <div className="absolute top-2 left-2 px-2 py-1 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-slate-100 flex items-center gap-1.5">
                                 <span className="text-xs">{insight.icon}</span>
-                                <span className="text-[9px] font-black text-slate-800 uppercase tracking-tighter">{insight.type}</span>
+                                <span className="text-[9px] font-black text-slate-800 uppercase tracking-tighter">{badge}</span>
                               </div>
                               <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </motion.div>
@@ -2440,7 +2444,7 @@ export default function BannerDashboard() {
                           {/* バナー工夫点カード */}
                           {(() => {
                             const insights = BANNER_INSIGHTS[purpose] || BANNER_INSIGHTS.default
-                            const insight = insights[selectedBanner]
+                            const insight = insights[selectedBanner % Math.max(1, insights.length)] || insights[0]
                             return (
                               <motion.div
                                 key={selectedBanner}
@@ -2457,7 +2461,7 @@ export default function BannerDashboard() {
                                     <div>
                                       <div className="flex items-center gap-2">
                                         <span className="px-2 py-0.5 bg-white/30 rounded text-[10px] sm:text-xs font-bold text-white">
-                                          {insight.type}案
+                                          {selectedBanner < 3 ? `${insight.type}案` : `追加${selectedBanner - 2}枚目`}
                                         </span>
                                         <span className="text-white text-xs sm:text-sm font-medium">
                                           {insight.title}
@@ -2488,7 +2492,7 @@ export default function BannerDashboard() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="font-bold flex items-center gap-2 text-sm sm:text-base text-gray-900">
                                 <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
-                                {['A', 'B', 'C'][selectedBanner]}案 プレビュー
+                                {selectedBanner < 3 ? `${['A', 'B', 'C'][selectedBanner]}案` : `No${selectedBanner + 1}`} プレビュー
                               </h3>
                               {usedModelDisplay ? (
                                 usedModelDisplay.toLowerCase().includes('nano banana') ? (
@@ -2533,6 +2537,8 @@ export default function BannerDashboard() {
 
                           {/* この画像に使われたテキスト（用途/業種/訴求タイプに合わせて自動生成） */}
                           {(() => {
+                            // コピーはA/B/Cの3案分のみ（4枚目以降は同一コピーからの追加生成のため表示しない）
+                            if (selectedBanner > 2) return null
                             const v = ['A', 'B', 'C'][selectedBanner] as 'A' | 'B' | 'C'
                             const c = generatedCopies.find((x) => x.variant === v)
                             if (!c) return null
