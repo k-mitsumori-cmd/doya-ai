@@ -37,6 +37,8 @@ type CopyRequest = {
   purpose: string
   base?: string
   companyName?: string
+  // 任意（将来の拡張／UIから渡せるように）
+  target?: string
 }
 
 function getGeminiKey(): string | null {
@@ -331,82 +333,140 @@ const CATEGORY_PROMPTS: Record<string, { name: string; ctrKeywords: string[]; pa
   },
 }
 
+const CATEGORY_LABEL_JP: Record<string, string> = {
+  realestate: '不動産',
+  it: 'IT／SaaS',
+  recruit: '採用／人材',
+  ec: 'EC／D2C',
+  education: '教育／講座',
+  food: '飲食／店舗',
+  beauty: '美容',
+  finance: '金融',
+  health: 'ヘルスケア',
+  telecom: '通信・モバイル',
+  marketing: 'マーケティング・広告',
+  other: 'その他',
+}
+
+const PURPOSE_LABEL_JP: Record<string, string> = {
+  sns_ad: 'SNS広告',
+  youtube: 'YouTube',
+  display: 'Web広告（ディスプレイ）',
+  webinar: 'ウェビナーバナー',
+  lp_hero: 'LPファーストビュー',
+  email: 'メール',
+  campaign: 'キャンペーン',
+}
+
 function buildCopyPrompt(input: CopyRequest) {
   const purpose = (ALLOWED_PURPOSES as readonly string[]).includes(input.purpose) ? input.purpose : 'sns_ad'
   const category = (ALLOWED_CATEGORIES as readonly string[]).includes(input.category) ? input.category : 'other'
   const base = String(input.base || '').trim()
   const companyName = String(input.companyName || '').trim()
+  const target = String((input as any).target || '').trim()
 
   const purposeConfig = PURPOSE_PROMPTS[purpose] || PURPOSE_PROMPTS.sns_ad
   const categoryConfig = CATEGORY_PROMPTS[category] || CATEGORY_PROMPTS.other
+  const industryJP = CATEGORY_LABEL_JP[category] || categoryConfig.name || 'その他'
+  const purposeJP = PURPOSE_LABEL_JP[purpose] || purposeConfig.name || 'SNS広告'
 
   const system = [
-    '🎯 あなたはCTR（クリック率）最大化の専門家です。',
-    '広告業界で10年以上の経験を持ち、数字でクリックを勝ち取るプロです。',
+    'あなたは、広告代理店で数多くの成果を出してきたトップクラスのコピーライター兼マーケターです。',
+    '以下の条件をすべて理解し、「マーケティングバナーで実際に使われるコピー」を生成してください。',
     '',
-    '╔══════════════════════════════════════════════════════════════════╗',
-    '║  📊 目標：CTR（クリック率）を最大化するキーワードを生成する  ║',
-    '╚══════════════════════════════════════════════════════════════════╝',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '■ あなたの役割',
+    '━━━━━━━━━━━━━━━━━━━━━━',
     '',
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-    '📌 業種：' + categoryConfig.name,
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '・業種と用途に最適化されたコピーを考える',
+    '・一瞬で内容が伝わるコピーを作る',
+    '・広告・LP・SNSで“成果が出る”ことを最優先する',
+    '・綺麗ごと・抽象論・AIっぽい言い回しは禁止',
     '',
-    '【CTRが高まるキーワード（必ず使う）】',
-    categoryConfig.ctrKeywords.map((kw, i) => `  ${i + 1}. ${kw}`).join('\n'),
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '■ 入力情報',
+    '━━━━━━━━━━━━━━━━━━━━━━',
     '',
-    '【ターゲットのペインポイント（課題・悩み）】',
-    categoryConfig.painPoints.map((p, i) => `  ${i + 1}. ${p}`).join('\n'),
+    `【業種】\n${industryJP}`,
+    `\n【用途】\n${purposeJP}`,
+    base ? `\n【訴求したい内容・特徴（任意）】\n${base}` : '\n【訴求したい内容・特徴（任意）】\n（未入力）',
+    target ? `\n【ターゲット（任意）】\n${target}` : '\n【ターゲット（任意）】\n（未入力）',
+    companyName ? `\n【ブランド名（任意）】\n${companyName}` : '',
     '',
-    '【効果的な訴求軸】',
-    categoryConfig.appealAxes.map((a, i) => `  ${i + 1}. ${a}`).join('\n'),
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '■ 出力するコピー内容（必須）',
+    '━━━━━━━━━━━━━━━━━━━━━━',
     '',
-    '【この業種の高CTRコピー例】',
-    categoryConfig.examples.map((ex, i) => `  ${i + 1}. ${ex}`).join('\n'),
+    '以下の3点を必ず出力してください。',
     '',
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-    '📌 用途：' + purposeConfig.name,
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '① キャッチコピー（メイン）',
+    '・15〜25文字程度',
+    '・一目で価値が伝わる',
+    '・「誰向け・何が得られるか」が明確',
+    '・抽象的なワードは禁止',
     '',
-    '【推奨文字数】' + purposeConfig.charRange,
+    '② サブコピー（補足説明）',
+    '・キャッチを具体化する1文',
+    '・なぜそれが良いのかが分かる',
+    '・専門用語は使いすぎない',
     '',
-    '【CTRを上げる心理トリガー】',
-    purposeConfig.ctrTriggers.map((t, i) => `  ${i + 1}. ${t}`).join('\n'),
+    '③ CTA文言',
+    '・短く、行動がイメージできる',
+    '・「今やる理由」が伝わる表現',
     '',
-    '【効果的なパターン】',
-    purposeConfig.patterns.map((p, i) => `  ${i + 1}. ${p}`).join('\n'),
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '■ 業種別コピー設計ルール（必須）',
+    '━━━━━━━━━━━━━━━━━━━━━━',
     '',
-    companyName ? '【ブランド名】' + companyName : '',
-    base ? '【ベース文言】' + base + '（これを改善してCTRを上げる）' : '',
+    '・不動産：安心感・信頼感・生活イメージ。「失敗しない」「納得できる」「選ばれている」を活用。',
+    '・IT／SaaS：効率化・成果・スピード感。「◯◯を減らす」「◯◯が早くなる」「属人化しない」など具体性重視。',
+    '・採用／人材：共感・未来・前向きさ。「不安」「悩み」を言語化してから解決策を示す。',
+    '・EC／D2C：メリット即伝達。「限定」「今だけ」「簡単」「お得」を分かりやすく。',
+    '・教育／講座：信頼・学べる内容の明確化。「何が学べるか」「誰向けか」を必ず含める。',
+    '・飲食／店舗：直感訴求。「美味しそう」「行きたい」と思わせる言葉選び。',
     '',
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
-    '🔥 CTR最大化の絶対ルール',
-    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '■ 用途別コピー設計ルール（必須）',
+    '━━━━━━━━━━━━━━━━━━━━━━',
     '',
-    '1. ⚠️ 必ず具体的な「数字」を入れる（○%、○円、○日、○名など）',
-    '2. ⚠️ 必ず上記「CTRが高まるキーワード」を各コピーに1つ以上含める',
-    '3. ⚠️ 必ず「' + categoryConfig.name + '」業種に特化した内容にする',
-    '4. 緊急性・限定感・損失回避のいずれかを含める',
-    '5. 疑問形・呼びかけ・驚きのフックを活用',
-    '6. 汎用的・抽象的なコピーは厳禁（業種文脈を必ず入れる）',
-    '7. 出力はJSONのみ（文章や```は禁止）',
-    '8. 推奨文字数を守る',
+    '・SNS広告：スクロール中でも目に止まる強さ',
+    '・LPファーストビュー：サービス理解が一瞬で進む',
+    '・ウェビナー：参加メリットが明確',
+    '・キャンペーン：今すぐ行動する理由を作る',
     '',
-    '【生成する12案のバリエーション】',
-    '- 数字訴求×3案（○%OFF / ○万円 / ○日で など）',
-    '- 緊急性訴求×2案（今だけ / 残り○名 / 本日まで など）',
-    '- ベネフィット直球×2案（業種特有の成果を明示）',
-    '- 不安解消×2案（失敗しない / 返金保証 / 無料 など）',
-    '- 社会的証明×2案（○社導入 / 満足度○% / No.1 など）',
-    '- 好奇心フック×1案（まだ○○してるの？ / 知らないと損 など）',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '■ 禁止事項（厳守）',
+    '━━━━━━━━━━━━━━━━━━━━━━',
     '',
-    '【出力JSONスキーマ】',
-    '{ "suggestions": string[] }',
+    '・意味が曖昧な言葉（革新的・最適・次世代など）',
+    '・誰にでも当てはまる表現',
+    '・説明過多で読まれない文章',
+    '・ポエム調、エモすぎる表現',
+    '・AIっぽい整いすぎた文章',
     '',
-    '※ 必ず「' + categoryConfig.name + '」×「' + purposeConfig.name + '」に最適化された12個の高CTRキーワードを生成してください。',
-  ]
-    .filter(Boolean)
-    .join('\n')
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '■ 生成指示',
+    '━━━━━━━━━━━━━━━━━━━━━━',
+    '',
+    '・12案作成してください（各案 = キャッチ/サブ/CTA の3点セット）',
+    '・可能なら具体的な数字/期限/限定性を自然に入れてください（誇張しすぎはNG）',
+    '・業種/用途に合わない表現は避けてください',
+    '',
+    '【参考：業種×用途のヒント（必ずしもそのまま使わなくてOK）】',
+    `- クリックされやすいキーワード例: ${categoryConfig.ctrKeywords.slice(0, 6).join(' / ')}`,
+    `- よくある悩み: ${categoryConfig.painPoints.slice(0, 3).join(' / ')}`,
+    `- 訴求軸: ${categoryConfig.appealAxes.slice(0, 3).join(' / ')}`,
+    '',
+    '【出力JSONスキーマ】（JSON以外は一切出力しない）',
+    '{',
+    '  "items": [',
+    '    { "catch": string, "sub": string, "cta": string }',
+    '  ],',
+    '  "suggestions": string[]',
+    '}',
+    '',
+    '※ suggestions には items の catch だけを12個入れてください（UI互換のため）。',
+  ].filter(Boolean).join('\n')
 
   return system
 }
@@ -425,9 +485,14 @@ export async function POST(req: NextRequest) {
     const prompt = buildCopyPrompt(body)
     const raw = await callGemini(prompt, apiKey)
     const parsed = extractJsonObject(raw)
-    const suggestionsRaw = Array.isArray(parsed?.suggestions) ? parsed.suggestions : []
+    const itemsRaw = Array.isArray((parsed as any)?.items) ? (parsed as any).items : []
+    const suggestionsFromItems = itemsRaw
+      .map((it: any) => String(it?.catch || '').trim())
+      .filter(Boolean)
+
+    const suggestionsRaw = Array.isArray((parsed as any)?.suggestions) ? (parsed as any).suggestions : []
     let suggestions = uniqStrings(
-      suggestionsRaw.map((s: any) => String(s || '').trim()).filter(Boolean)
+      [...suggestionsFromItems, ...suggestionsRaw.map((s: any) => String(s || '').trim())].filter(Boolean)
     ).slice(0, 12)
 
     // JSONが崩れても「候補抽出」で成功させる（UIの“エラー”体験を減らす）
