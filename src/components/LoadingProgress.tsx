@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sparkles, Zap, Brain, Lightbulb, Rocket, Coffee } from 'lucide-react';
 
 interface LoadingProgressProps {
   isLoading: boolean;
   estimatedSeconds?: number;
+  /** 平均時間を学習するためのキー（例: banner-from-url / banner-generate / banner-refine） */
+  operationKey?: string;
 }
 
 // 待ち時間中に表示するTips
@@ -29,17 +31,105 @@ const processingSteps = [
   { progress: 85, text: '仕上げ中...' },
 ];
 
-export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: LoadingProgressProps) {
+const DEFAULT_ESTIMATES: Record<string, number> = {
+  'banner-from-url': 75,
+  'banner-generate': 55,
+  'banner-refine': 40,
+  'banner-chat': 18,
+};
+
+type TimingStats = { v: 1; samplesMs: number[] };
+
+function statsStorageKey(operationKey?: string) {
+  return `doya_loading_stats:${operationKey || 'default'}`;
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function safeParseJson<T>(raw: string | null): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function formatSeconds(sec: number) {
+  const s = Math.max(0, Math.round(sec));
+  if (s < 60) return `${s}秒`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `${m}分${r.toString().padStart(2, '0')}秒`;
+}
+
+export default function LoadingProgress({ isLoading, estimatedSeconds = 15, operationKey }: LoadingProgressProps) {
   const [progress, setProgress] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [avgSec, setAvgSec] = useState<number | null>(null);
+  const [sampleCount, setSampleCount] = useState<number>(0);
+  const startedAtRef = useRef<number | null>(null);
+
+  const baseEstimateSec = useMemo(() => {
+    const byKey = operationKey ? DEFAULT_ESTIMATES[operationKey] : undefined;
+    return Number.isFinite(estimatedSeconds) ? estimatedSeconds : (byKey || 15);
+  }, [estimatedSeconds, operationKey]);
+
+  // 過去の平均を読み出し（操作キーごと）
+  useEffect(() => {
+    try {
+      const key = statsStorageKey(operationKey);
+      const parsed = safeParseJson<TimingStats>(localStorage.getItem(key));
+      const samples = Array.isArray(parsed?.samplesMs) ? parsed!.samplesMs.filter((n) => Number.isFinite(n) && n > 500) : [];
+      const last = samples.slice(-12);
+      if (last.length > 0) {
+        const avg = last.reduce((a, b) => a + b, 0) / last.length;
+        setAvgSec(Math.round(avg / 1000));
+        setSampleCount(last.length);
+      } else {
+        setAvgSec(null);
+        setSampleCount(0);
+      }
+    } catch {
+      setAvgSec(null);
+      setSampleCount(0);
+    }
+  }, [operationKey]);
 
   useEffect(() => {
     if (!isLoading) {
       setProgress(0);
       setCurrentStep(0);
+      // 計測を終了して保存
+      const start = startedAtRef.current;
+      if (start) {
+        const durationMs = Date.now() - start;
+        startedAtRef.current = null;
+        try {
+          const key = statsStorageKey(operationKey);
+          const parsed = safeParseJson<TimingStats>(localStorage.getItem(key));
+          const prev = Array.isArray(parsed?.samplesMs) ? parsed!.samplesMs : [];
+          const merged = [...prev, durationMs].slice(-30);
+          localStorage.setItem(key, JSON.stringify({ v: 1, samplesMs: merged } satisfies TimingStats));
+          const last = merged.slice(-12);
+          const avg = last.reduce((a, b) => a + b, 0) / Math.max(1, last.length);
+          setAvgSec(Math.round(avg / 1000));
+          setSampleCount(last.length);
+        } catch {
+          // ignore
+        }
+      }
+      setElapsedSec(0);
       return;
     }
+
+    // 計測開始
+    startedAtRef.current = Date.now();
+    setElapsedSec(0);
 
     // プログレスバーのアニメーション
     const progressInterval = setInterval(() => {
@@ -51,6 +141,14 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
         return Math.min(85, prev + base + jitter);
       });
     }, 380);
+
+    // 経過時間カウンタ
+    const elapsedInterval = setInterval(() => {
+      const start = startedAtRef.current;
+      if (!start) return;
+      const sec = Math.floor((Date.now() - start) / 1000);
+      setElapsedSec(sec);
+    }, 1000);
 
     // Tipのローテーション
     const tipInterval = setInterval(() => {
@@ -70,15 +168,20 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
 
     return () => {
       clearInterval(progressInterval);
+      clearInterval(elapsedInterval);
       clearInterval(tipInterval);
       clearInterval(stepInterval);
     };
-  }, [isLoading, estimatedSeconds, currentStep]);
+  }, [isLoading, estimatedSeconds, currentStep, operationKey]);
 
   if (!isLoading) return null;
 
   const CurrentTipIcon = loadingTips[tipIndex].icon;
-  void estimatedSeconds; // 表示しない（過度な期待値を作らない）
+
+  // 平均が無ければ、固定の目安（operationKeyごとのデフォルト）を使用
+  const effectiveTotalSec = avgSec ?? baseEstimateSec;
+  const remainingSec = clamp(effectiveTotalSec - elapsedSec, 0, 60 * 60);
+  const showAvg = avgSec != null && avgSec > 0;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
@@ -122,6 +225,25 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15 }: Lo
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-4xl font-bold text-white">{Math.round(progress)}%</span>
             <span className="text-sm text-gray-400">進捗は目安です（品質優先で前後します）</span>
+            <div className="mt-2 text-[11px] text-gray-300 font-bold text-center leading-relaxed">
+              {showAvg ? (
+                <>
+                  平均: {formatSeconds(avgSec!)}（直近{sampleCount}回）
+                  <span className="mx-2 text-gray-500">/</span>
+                  経過: {formatSeconds(elapsedSec)}
+                  <span className="mx-2 text-gray-500">/</span>
+                  残り目安: {formatSeconds(remainingSec)}
+                </>
+              ) : (
+                <>
+                  目安: {formatSeconds(baseEstimateSec)}
+                  <span className="mx-2 text-gray-500">/</span>
+                  経過: {formatSeconds(elapsedSec)}
+                  <span className="mx-2 text-gray-500">/</span>
+                  残り目安: {formatSeconds(remainingSec)}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
