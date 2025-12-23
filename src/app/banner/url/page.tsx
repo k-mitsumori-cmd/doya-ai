@@ -58,7 +58,15 @@ export default function BannerUrlAutoPage() {
   const bannerPlan = !isGuest
     ? String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
     : 'GUEST'
-  const isPaidUser = !isGuest && bannerPlan !== 'FREE'
+  const bannerPlanTier = (() => {
+    const p = bannerPlan
+    if (!p || p === 'GUEST') return 'GUEST' as const
+    if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
+    if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('FREE')) return 'FREE' as const
+    return 'FREE' as const
+  })()
+  const isPaidUser = bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
 
   const [targetUrl, setTargetUrl] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -398,9 +406,17 @@ export default function BannerUrlAutoPage() {
                 </Link>
               </div>
 
+              {/* 現在プラン表示 */}
+              <p className="text-xs font-black text-slate-700 mt-2">
+                現在のプラン：{bannerPlanTier === 'GUEST' ? 'ゲスト' : bannerPlanTier === 'FREE' ? '無料' : bannerPlanTier === 'PRO' ? 'PRO' : 'Enterprise'}
+                {isPaidUser && (
+                  <Link href="/banner/dashboard/plan" className="ml-2 text-blue-600 hover:underline">アカウント画面で変更/解約 →</Link>
+                )}
+              </p>
+
               <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
                 {/* Free */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className={`rounded-2xl border p-4 ${bannerPlanTier === 'FREE' ? 'border-blue-600 bg-blue-50' : 'border-slate-200 bg-slate-50'}`}>
                   <p className="text-xs font-black text-slate-500">無料</p>
                   <p className="mt-1 text-lg font-black text-slate-900">{BANNER_PRICING.plans.find((p) => p.id === 'banner-free')?.name || 'おためしプラン'}</p>
                   <p className="mt-2 text-sm font-black text-slate-900">¥0</p>
@@ -408,17 +424,28 @@ export default function BannerUrlAutoPage() {
                     ログインで1日{BANNER_PRICING.freeLimit}枚まで（ゲストは{BANNER_PRICING.guestLimit}枚まで）
                   </p>
                   <div className="mt-3">
-                    <Link
-                      href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner')}`}
-                      className="inline-flex items-center justify-center w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-800 font-black hover:bg-slate-100 transition-colors text-sm"
-                    >
-                      ログインして試す
-                    </Link>
+                    {bannerPlanTier === 'FREE' ? (
+                      <button disabled className="w-full px-4 py-3 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed">現在のプラン</button>
+                    ) : isGuest ? (
+                      <Link
+                        href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner')}`}
+                        className="inline-flex items-center justify-center w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-800 font-black hover:bg-slate-100 transition-colors text-sm"
+                      >
+                        ログインして試す
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/banner/dashboard/plan"
+                        className="inline-flex items-center justify-center w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-800 font-black hover:bg-slate-100 transition-colors text-sm"
+                      >
+                        ダウングレードはアカウント画面へ
+                      </Link>
+                    )}
                   </div>
                 </div>
 
                 {/* Pro */}
-                <div className="rounded-2xl border border-slate-900 bg-slate-900 p-4 text-white">
+                <div className={`rounded-2xl border p-4 ${bannerPlanTier === 'PRO' ? 'border-blue-600 bg-blue-900' : 'border-slate-900 bg-slate-900'} text-white`}>
                   <p className="text-xs font-black text-white/70">PRO</p>
                   <p className="mt-1 text-lg font-black">プロプラン</p>
                   <p className="mt-2 text-sm font-black">月額 ¥9,980</p>
@@ -426,14 +453,20 @@ export default function BannerUrlAutoPage() {
                     1日{BANNER_PRICING.proLimit}枚まで生成 / 最大10枚生成 / サイズ指定OK
                   </p>
                   <div className="mt-3">
-                    <CheckoutButton planId="banner-pro" loginCallbackUrl="/banner" className="w-full py-3 rounded-2xl text-sm" variant="secondary">
-                      プロプランを始める
-                    </CheckoutButton>
+                    {bannerPlanTier === 'PRO' ? (
+                      <button disabled className="w-full py-3 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed">現在のプラン</button>
+                    ) : bannerPlanTier === 'ENTERPRISE' ? (
+                      <button disabled className="w-full py-3 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed">現在より下位</button>
+                    ) : (
+                      <CheckoutButton planId="banner-pro" loginCallbackUrl="/banner" className="w-full py-3 rounded-2xl text-sm" variant="secondary">
+                        プロプランを始める
+                      </CheckoutButton>
+                    )}
                   </div>
                 </div>
 
                 {/* Enterprise */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <div className={`rounded-2xl border p-4 ${bannerPlanTier === 'ENTERPRISE' ? 'border-blue-600 bg-blue-50' : 'border-slate-200 bg-white'}`}>
                   <p className="text-xs font-black text-slate-500">Enterprise</p>
                   <p className="mt-1 text-lg font-black text-slate-900">エンタープライズ</p>
                   <p className="mt-2 text-sm font-black text-slate-900">月額 ¥49,800</p>
@@ -441,9 +474,13 @@ export default function BannerUrlAutoPage() {
                     1日{BANNER_PRICING.enterpriseLimit || 500}枚まで生成 / 大量運用向け
                   </p>
                   <div className="mt-3 grid gap-2">
-                    <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner" className="w-full py-3 rounded-2xl text-sm">
-                      エンタープライズを始める
-                    </CheckoutButton>
+                    {bannerPlanTier === 'ENTERPRISE' ? (
+                      <button disabled className="w-full py-3 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed">現在のプラン</button>
+                    ) : (
+                      <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner" className="w-full py-3 rounded-2xl text-sm">
+                        {bannerPlanTier === 'PRO' ? 'エンタープライズにアップグレード' : 'エンタープライズを始める'}
+                      </CheckoutButton>
+                    )}
                     <a
                       href={HIGH_USAGE_CONTACT_URL}
                       target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
