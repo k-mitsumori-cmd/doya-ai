@@ -1019,7 +1019,7 @@ export default function BannerDashboard() {
   
   // URLから自動生成（任意）
   const [siteUrl, setSiteUrl] = useState('')
-  const [siteBannerPurpose, setSiteBannerPurpose] = useState('資料DL')
+  // siteBannerPurpose は廃止（APIがサイトから自動判断）
   const [siteAnalysis, setSiteAnalysis] = useState<any | null>(null)
   const [siteLastPrompt, setSiteLastPrompt] = useState<string | null>(null)
   const [siteLastNegative, setSiteLastNegative] = useState<string | null>(null)
@@ -1431,17 +1431,16 @@ export default function BannerDashboard() {
     }
   }
 
+  // "URLだけでバナー生成" 専用ハンドラ（category/keyword などは不要）
+  const canGenerateFromUrl = siteUrl.trim().length > 8 && remainingCount > 0 && isValidCustomSize
+
   const handleGenerateFromUrl = async () => {
-    if (!canGenerate) return
     const url = siteUrl.trim()
     if (!url) {
       toast.error('サイトURLを入力してください')
       return
     }
-    if (!keyword.trim()) {
-      toast.error('キャッチフレーズ（required_text）を入力してください')
-      return
-    }
+    if (!canGenerateFromUrl) return
 
     setError('')
     setIsGenerating(true)
@@ -1463,15 +1462,11 @@ export default function BannerDashboard() {
         signal: controller.signal,
         body: JSON.stringify({
           targetUrl: url,
-          bannerPurpose: siteBannerPurpose,
-          industry: category || 'other',
+          // 以下すべてオプション：API側がサイトを解析して自動補完する
           size: effectiveSize,
-          requiredText: keyword.trim(),
-          purpose,
           count: generateCount,
           logoImage: logoImage || undefined,
           personImages: Array.isArray(personImages) ? personImages.filter(Boolean).slice(0, 1) : undefined,
-          referenceImages: Array.isArray(referenceImages) ? referenceImages : undefined,
           brandColors: Array.isArray(customColors) ? (useCustomColors ? customColors.filter(Boolean) : undefined) : undefined,
           shareToGallery: shareToGallery && !isGuest ? true : undefined,
           shareProfile: shareToGallery && !isGuest ? (shareProfile ? true : false) : undefined,
@@ -2299,10 +2294,9 @@ export default function BannerDashboard() {
               <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-black text-slate-800">サイトURLから自動生成（β）</p>
+                    <p className="text-sm font-black text-slate-800">サイトURLだけでバナー自動生成（β）</p>
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      URLのページ内容を解析して、クリックされやすいバナーを自動で作ります。
-                      <span className="ml-1 font-bold text-slate-700">キャッチフレーズが required_text（改変禁止）</span>として扱われます。
+                      URLを入力するだけ。サイト内容をAIが解析し、コピー/デザイン/配色をすべて自動で判断してバナーを生成します。
                     </p>
                   </div>
                   {!isGuest ? (
@@ -2320,37 +2314,18 @@ export default function BannerDashboard() {
                   )}
                 </div>
 
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr,200px] gap-3">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
-                      Site URL
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <Link2 className="w-4 h-4 text-slate-400" />
-                      <input
-                        value={siteUrl}
-                        onChange={(e) => setSiteUrl(e.target.value)}
-                        placeholder="https://example.com/..."
-                        className="w-full bg-transparent outline-none text-sm font-bold text-slate-800 placeholder-slate-300"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
-                      Purpose
-                    </label>
-                    <select
-                      value={siteBannerPurpose}
-                      onChange={(e) => setSiteBannerPurpose(e.target.value)}
-                      className="w-full bg-transparent outline-none text-sm font-black text-slate-800"
-                    >
-                      {['資料DL', '問い合わせ', 'セミナー申込', '採用応募', 'サービス認知', 'キャンペーン告知'].map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                    Site URL
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Link2 className="w-4 h-4 text-slate-400" />
+                    <input
+                      value={siteUrl}
+                      onChange={(e) => setSiteUrl(e.target.value)}
+                      placeholder="https://example.com/..."
+                      className="w-full bg-transparent outline-none text-sm font-bold text-slate-800 placeholder-slate-300"
+                    />
                   </div>
                 </div>
 
@@ -2358,11 +2333,11 @@ export default function BannerDashboard() {
                   <button
                     type="button"
                     onClick={handleGenerateFromUrl}
-                    disabled={isGenerating || !canGenerate}
+                    disabled={isGenerating || !canGenerateFromUrl}
                     className="flex-1 inline-flex items-center justify-center gap-3 px-5 py-3 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-colors disabled:opacity-60"
                   >
                     {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
-                    URLを解析してバナー生成
+                    URLだけでバナー生成
                   </button>
                   <Link
                     href="/banner/pricing"
@@ -2374,13 +2349,17 @@ export default function BannerDashboard() {
                 </div>
 
                 {siteAnalysis && (
-                  <div className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
-                    <div className="text-[11px] font-black text-slate-500 mb-1">解析結果（要約）</div>
-                    <div className="text-sm font-black text-slate-900">
-                      {String(siteAnalysis?.key_message || siteAnalysis?.keyMessage || '—')}
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-3 space-y-2">
+                    <div className="text-[11px] font-black text-slate-500">サイト解析結果</div>
+                    <div className="text-sm font-black text-slate-900 leading-relaxed">
+                      {String(siteAnalysis?.key_message || siteAnalysis?.keyMessage || siteAnalysis?.headline || '—')}
                     </div>
-                    <div className="text-[11px] text-slate-600 font-bold mt-1">
-                      CTA: {String(siteAnalysis?.cta || '—')}
+                    {siteAnalysis?.sub_copy && (
+                      <div className="text-xs text-slate-600 font-bold">{String(siteAnalysis.sub_copy)}</div>
+                    )}
+                    <div className="flex flex-wrap gap-2 text-[11px] font-bold text-slate-500">
+                      {siteAnalysis?.tone && <span className="px-2 py-0.5 bg-slate-100 rounded-full">{String(siteAnalysis.tone)}</span>}
+                      {siteAnalysis?.cta && <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">CTA: {String(siteAnalysis.cta)}</span>}
                     </div>
                   </div>
                 )}
