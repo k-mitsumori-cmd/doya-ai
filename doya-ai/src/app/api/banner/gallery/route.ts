@@ -25,8 +25,8 @@ export async function GET(request: NextRequest) {
     const take = Math.min(Math.max(takeRaw, 1), 60)
     const cursor = searchParams.get('cursor') || undefined
 
-    // ギャラリーは直近6ヶ月分のみ表示（古い公開作品は自動削除）
-    const retentionDays = BANNER_PRICING.historyDays?.pro || 180
+    // ギャラリー/履歴は直近3ヶ月のみ保持（DB肥大化防止）
+    const retentionDays = 90
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays)
 
@@ -40,7 +40,6 @@ export async function GET(request: NextRequest) {
             serviceId: 'banner',
             outputType: 'IMAGE',
             createdAt: { lt: cutoffDate },
-            metadata: { path: ['shared'], equals: true },
           },
         })
         .catch((e) => console.error('Gallery cleanup failed:', e))

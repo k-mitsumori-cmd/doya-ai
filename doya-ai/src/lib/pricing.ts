@@ -228,7 +228,7 @@ export const BANNER_PRICING: ServicePricing = {
   enterpriseLimit: 500, // ENTERPRISE: 1日500枚
   historyDays: {
     free: 0,          // 無料/ゲスト: 履歴閲覧不可（有料プラン限定機能）
-    pro: 180,         // 有料: 6ヶ月（180日）保存
+    pro: 90,          // 有料: 3ヶ月（90日）保存（DB肥大化防止のため）
   },
   plans: [
     {
@@ -260,7 +260,7 @@ export const BANNER_PRICING: ServicePricing = {
         { text: '1日50枚まで生成', included: true },
         { text: '1回の生成で最大10枚まで', included: true },
         { text: 'すべての機能', included: true },
-        { text: '履歴閲覧（6ヶ月）', included: true },
+        { text: '履歴閲覧（3ヶ月）', included: true },
         { text: '優先サポート', included: true },
       ],
       cta: 'プロプランを始める',
@@ -277,7 +277,7 @@ export const BANNER_PRICING: ServicePricing = {
         { text: '1日500枚まで生成', included: true },
         { text: '1回の生成で最大10枚まで', included: true },
         { text: 'チーム運用向け（大量生成）', included: true },
-        { text: '履歴閲覧（6ヶ月）', included: true },
+        { text: '履歴閲覧（3ヶ月）', included: true },
         { text: '優先サポート', included: true },
       ],
       cta: 'エンタープライズを始める',
