@@ -23,6 +23,7 @@ import {
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { useSession } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { CheckoutButton } from '@/components/CheckoutButton'
 
 // 1バナー生成で削減できる推定時間（分）
 const ESTIMATED_TIME_SAVED_PER_BANNER = 45 // デザイナーが1バナー作るのに平均45分
@@ -302,11 +303,14 @@ export default function StatsPage() {
                 生成統計・削減効果を確認できます。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/banner/dashboard/plan">
-                  <button className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl transition-all shadow-lg shadow-amber-100 hover:scale-105">
-                    プランをアップグレード
-                  </button>
-                </Link>
+                <CheckoutButton
+                  planId="banner-pro"
+                  loginCallbackUrl="/banner/dashboard/stats"
+                  variant="secondary"
+                  className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl transition-all shadow-lg shadow-amber-100 hover:scale-105"
+                >
+                  プランをアップグレード（Stripeへ）
+                </CheckoutButton>
                 <Link href="/banner/dashboard">
                   <button className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all">
                     バナーを生成する

@@ -72,7 +72,7 @@ export default function BannerPricingPage() {
                 planId="banner-pro"
                 loginCallbackUrl="/banner/pricing"
                 className="w-full py-4 rounded-2xl text-base"
-                variant="secondary"
+                variant="primary"
               >
                 プロプランを始める
               </CheckoutButton>

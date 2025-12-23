@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, getGuestUsage } from '@/lib/pricing'
+import { CheckoutButton } from '@/components/CheckoutButton'
 import {
   ArrowUpRight,
   BadgeCheck,
@@ -28,7 +29,7 @@ import {
   ArrowRight,
   Info
 } from 'lucide-react'
-import toast, { Toaster } from 'react-hot-toast'
+import { Toaster } from 'react-hot-toast'
 
 type HistoryItem = {
   id: string
@@ -52,7 +53,6 @@ export default function BannerPlanPage() {
   const [totalBanners, setTotalBanners] = useState(0)
   const [usageCount, setUsageCount] = useState(0)
   const [isPortalLoading, setIsPortalLoading] = useState(false)
-  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false)
   const [statsLoaded, setStatsLoaded] = useState(false)
 
   // APIから統計情報を取得（ログインユーザーの場合）
@@ -119,58 +119,7 @@ export default function BannerPlanPage() {
           ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
           : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
 
-  const handleOpenPortal = async () => {
-    if (isPortalLoading) return
-    setIsPortalLoading(true)
-    try {
-      const res = await fetch('/api/stripe/portal', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'ポータルを開けませんでした')
-      if (data.url) window.location.href = data.url
-    } catch (e: any) {
-      toast.error(e?.message || 'ポータルの起動に失敗しました')
-    } finally {
-      setIsPortalLoading(false)
-    }
-  }
-
-  const handleUpgrade = async () => {
-    if (isCheckoutLoading) return
-    setIsCheckoutLoading(true)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId: 'banner-pro', billingPeriod: 'monthly' }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '決済ページを開けませんでした')
-      if (data.url) window.location.href = data.url
-    } catch (e: any) {
-      toast.error(e?.message || '決済ページの起動に失敗しました')
-    } finally {
-      setIsCheckoutLoading(false)
-    }
-  }
-
-  const handleUpgradeEnterprise = async () => {
-    if (isCheckoutLoading) return
-    setIsCheckoutLoading(true)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId: 'banner-enterprise', billingPeriod: 'monthly' }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '決済ページを開けませんでした')
-      if (data.url) window.location.href = data.url
-    } catch (e: any) {
-      toast.error(e?.message || '決済ページの起動に失敗しました')
-    } finally {
-      setIsCheckoutLoading(false)
-    }
-  }
+  // 契約管理 / 課金開始は「リンク遷移」＋CheckoutButtonに統一（確実にStripeへ遷移）
 
   if (status === 'loading') {
     return (
@@ -298,22 +247,22 @@ export default function BannerPlanPage() {
                       </a>
                     ) : (
                       <>
-                        <button
-                          onClick={handleUpgrade}
-                          disabled={isCheckoutLoading}
-                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60"
+                        <CheckoutButton
+                          planId="banner-pro"
+                          loginCallbackUrl="/banner/dashboard/plan"
+                          variant="secondary"
+                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95"
                         >
-                          {isCheckoutLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
                           プロプランへアップグレード
-                        </button>
-                        <button
-                          onClick={handleUpgradeEnterprise}
-                          disabled={isCheckoutLoading}
-                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black shadow-xl shadow-slate-200 hover:bg-black transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-60"
+                        </CheckoutButton>
+                        <CheckoutButton
+                          planId="banner-enterprise"
+                          loginCallbackUrl="/banner/dashboard/plan"
+                          variant="secondary"
+                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black shadow-xl shadow-slate-200 hover:bg-black transition-all hover:scale-[1.02] active:scale-95"
                         >
-                          {isCheckoutLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Crown className="w-5 h-5" />}
                           エンタープライズを始める
-                        </button>
+                        </CheckoutButton>
                       </>
                     )}
 
