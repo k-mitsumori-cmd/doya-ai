@@ -24,6 +24,46 @@ type BannerSpec = {
   brandColors?: string[]
 }
 
+const DEFAULT_REFINE_PREDICT_MS = 45_000
+const REFINEMENT_PHASES = [
+  '指示を読み取り中',
+  'レイアウト調整中',
+  'テキスト最適化中',
+  '訴求/CTA強調中',
+  '最終チェック中',
+]
+const REFINEMENT_TIPS = [
+  '例：「CTAをもっと目立たせて」「人物をもう少し明るく」「背景をシンプルに」',
+  '「文字を太めに」「余白を減らして」「価格を入れて」なども効果的です',
+  '「Instagram向け」「YouTube向け」など媒体を指定すると安定します',
+  '「配色は青/白で」「高級感」「ポップ」などトーン指定が効きます',
+  '長文は要点3つくらいに絞ると反映が安定します',
+]
+
+function readRefineEmaMs(): number {
+  try {
+    const v = localStorage.getItem('doya-refine-ema-ms')
+    const n = Number(v)
+    return Number.isFinite(n) && n > 0 ? n : DEFAULT_REFINE_PREDICT_MS
+  } catch {
+    return DEFAULT_REFINE_PREDICT_MS
+  }
+}
+
+function writeRefineEmaMs(ms: number) {
+  try {
+    localStorage.setItem('doya-refine-ema-ms', String(Math.max(1000, Math.floor(ms))))
+  } catch {
+    // ignore
+  }
+}
+
+function updateEma(prev: number, next: number, alpha = 0.25) {
+  const p = Number.isFinite(prev) && prev > 0 ? prev : next
+  const n = Number.isFinite(next) && next > 0 ? next : p
+  return Math.round(p * (1 - alpha) + n * alpha)
+}
+
 export default function BannerChatPage() {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<ChatMsg[]>([
@@ -38,15 +78,26 @@ export default function BannerChatPage() {
   const [input, setInput] = useState('')
   const [isThinking, setIsThinking] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isRefining, setIsRefining] = useState(false)
   const [proposedSpec, setProposedSpec] = useState<BannerSpec | null>(null)
   const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
+  const [selectedBannerIndex, setSelectedBannerIndex] = useState(0)
+  const [refineInstruction, setRefineInstruction] = useState('')
+
+  const [refineStartedAt, setRefineStartedAt] = useState<number | null>(null)
+  const [refineElapsedSec, setRefineElapsedSec] = useState(0)
+  const [predictedRefineTotalMs, setPredictedRefineTotalMs] = useState<number>(DEFAULT_REFINE_PREDICT_MS)
+  const [predictedRefineRemainingMs, setPredictedRefineRemainingMs] = useState<number>(DEFAULT_REFINE_PREDICT_MS)
+  const [refineTipIndex, setRefineTipIndex] = useState(0)
+  const [refinePhaseIndex, setRefinePhaseIndex] = useState(0)
 
   const endRef = useRef<HTMLDivElement | null>(null)
+  const refinePanelRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, generatedBanners.length, proposedSpec?.keyword])
 
-  const canSend = input.trim().length > 0 && !isThinking && !isGenerating
+  const canSend = input.trim().length > 0 && !isThinking && !isGenerating && !isRefining
 
   const summary = useMemo(() => {
     if (!proposedSpec) return null
@@ -71,6 +122,8 @@ export default function BannerChatPage() {
     setInput('')
     setGeneratedBanners([])
     setProposedSpec(null)
+    setSelectedBannerIndex(0)
+    setRefineInstruction('')
 
     setMessages((prev) => [
       ...prev,
@@ -109,6 +162,7 @@ export default function BannerChatPage() {
     if (!proposedSpec || isGenerating) return
     setIsGenerating(true)
     setGeneratedBanners([])
+    setSelectedBannerIndex(0)
     try {
       const res = await fetch('/api/banner/generate', {
         method: 'POST',
@@ -125,12 +179,100 @@ export default function BannerChatPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '生成に失敗しました')
       setGeneratedBanners(Array.isArray(data.banners) ? data.banners : [])
+      setSelectedBannerIndex(0)
       pushAssistant('生成できました。気になる案をダウンロードして使えます。')
     } catch (e: any) {
       pushAssistant('生成に失敗しました。条件を少し変えてもう一度試してください。')
       toast.error(e?.message || '生成に失敗しました')
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const canRefine =
+    generatedBanners.length > 0 &&
+    !isThinking &&
+    !isGenerating &&
+    !isRefining &&
+    refineInstruction.trim().length >= 3 &&
+    selectedBannerIndex >= 0 &&
+    selectedBannerIndex < generatedBanners.length
+
+  // 修正進捗UI（予測残り/フェーズ/チップ）
+  useEffect(() => {
+    if (!isRefining) {
+      setRefineStartedAt(null)
+      setRefineElapsedSec(0)
+      setPredictedRefineTotalMs(readRefineEmaMs())
+      setPredictedRefineRemainingMs(readRefineEmaMs())
+      setRefinePhaseIndex(0)
+      setRefineTipIndex(0)
+      return
+    }
+    const started = refineStartedAt ?? Date.now()
+    if (!refineStartedAt) setRefineStartedAt(started)
+    const tick = setInterval(() => setRefineElapsedSec(Math.floor((Date.now() - started) / 1000)), 1000)
+    return () => clearInterval(tick)
+  }, [isRefining, refineStartedAt])
+
+  useEffect(() => {
+    if (!isRefining || !refineStartedAt) return
+    const t = setInterval(() => {
+      const elapsedMs = Date.now() - refineStartedAt
+      const total = predictedRefineTotalMs || DEFAULT_REFINE_PREDICT_MS
+      const remaining = Math.max(0, total - elapsedMs)
+      setPredictedRefineRemainingMs(remaining)
+
+      const r = elapsedMs / Math.max(1, total)
+      const idx = r < 0.2 ? 0 : r < 0.4 ? 1 : r < 0.6 ? 2 : r < 0.8 ? 3 : 4
+      setRefinePhaseIndex(idx)
+    }, 500)
+    return () => clearInterval(t)
+  }, [isRefining, refineStartedAt, predictedRefineTotalMs])
+
+  useEffect(() => {
+    if (!isRefining) return
+    const t = setInterval(() => setRefineTipIndex((prev) => (prev + 1) % REFINEMENT_TIPS.length), 4800)
+    return () => clearInterval(t)
+  }, [isRefining])
+
+  const handleRefine = async () => {
+    if (!canRefine) return
+    const instruction = refineInstruction.trim()
+    const idx = selectedBannerIndex
+    const originalImage = generatedBanners[idx]
+    setIsRefining(true)
+    const startedAt = Date.now()
+    try {
+      const res = await fetch('/api/banner/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          originalImage,
+          instruction,
+          category: proposedSpec?.category,
+          size: proposedSpec?.size,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.success) throw new Error(data?.error || '修正に失敗しました')
+      const refined = String(data.refinedImage || '')
+      if (!refined.startsWith('data:')) throw new Error('修正画像が取得できませんでした')
+
+      setGeneratedBanners((prev) => prev.map((b, i) => (i === idx ? refined : b)))
+      pushAssistant('修正できました。気になる点があれば、さらに指示して改善できます。')
+      toast.success('AIで修正しました')
+
+      // EMA更新（次回予測用）
+      const actualMs = Date.now() - startedAt
+      const next = updateEma(readRefineEmaMs(), actualMs)
+      writeRefineEmaMs(next)
+      setPredictedRefineTotalMs(next)
+    } catch (e: any) {
+      pushAssistant('修正に失敗しました。指示を短くして、もう一度お試しください。')
+      toast.error(e?.message || '修正に失敗しました')
+    } finally {
+      setIsRefining(false)
     }
   }
 
@@ -151,7 +293,7 @@ export default function BannerChatPage() {
     <div className="min-h-screen bg-slate-50 text-gray-900">
       <DashboardSidebar />
       <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
-        <LoadingProgress isLoading={isThinking || isGenerating} />
+        <LoadingProgress isLoading={isThinking || isGenerating || isRefining} />
 
         {/* ========================================
             Header - Doya Banner Style
@@ -350,21 +492,131 @@ export default function BannerChatPage() {
                   <div className="grid grid-cols-1 gap-6">
                     {generatedBanners.slice(0, 3).map((b, i) => (
                       <div key={i} className="group relative rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm transition-all hover:shadow-2xl hover:scale-[1.02]">
-                        <img src={b} alt={`banner-${i}`} className="w-full object-cover" />
+                        <img src={b} alt={`banner-${i}`} className="w-full object-cover transition-opacity duration-300" />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-8 text-center">
                           <p className="text-white font-black text-xl mb-6 tracking-tighter">
                             PATTERN {String.fromCharCode(65 + i)}
                           </p>
-                          <button
-                            onClick={() => downloadImage(b, `banner-${proposedSpec?.keyword || 'ai'}-${i + 1}.png`)}
-                            className="px-8 py-3 bg-white text-slate-900 font-black rounded-xl text-sm shadow-xl hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2"
-                          >
-                            <Download className="w-4 h-4" />
-                            ダウンロード
-                          </button>
+                          <div className="flex flex-col gap-3 w-full items-center">
+                            <button
+                              onClick={() => downloadImage(b, `banner-${proposedSpec?.keyword || 'ai'}-${i + 1}.png`)}
+                              className="px-8 py-3 bg-white text-slate-900 font-black rounded-xl text-sm shadow-xl hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2"
+                            >
+                              <Download className="w-4 h-4" />
+                              ダウンロード
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedBannerIndex(i)
+                                requestAnimationFrame(() => {
+                                  refinePanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                })
+                              }}
+                              className="px-8 py-3 bg-white/10 text-white font-black rounded-xl text-sm border border-white/20 hover:bg-white hover:text-slate-900 transition-all flex items-center gap-2"
+                            >
+                              <Wand2 className="w-4 h-4" />
+                              AIでこの案を修正
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Refine (Chat Edit) */}
+              {generatedBanners.length > 0 && (
+                <div ref={refinePanelRef} className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-sm font-black text-slate-800 flex items-center gap-2">
+                      <Wand2 className="w-5 h-5 text-blue-600" />
+                      AIでバナーを修正
+                    </p>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      {`対象: PATTERN ${String.fromCharCode(65 + Math.min(selectedBannerIndex, 2))}`}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="rounded-2xl overflow-hidden border border-slate-100 bg-slate-50">
+                      <img
+                        src={generatedBanners[Math.min(selectedBannerIndex, generatedBanners.length - 1)]}
+                        alt="selected-banner"
+                        className="w-full object-cover transition-opacity duration-300"
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      {[0, 1, 2].map((i) => (
+                        <button
+                          key={i}
+                          onClick={() => setSelectedBannerIndex(i)}
+                          disabled={i >= generatedBanners.length}
+                          className={`flex-1 py-2 rounded-xl text-[11px] font-black border transition-colors ${
+                            selectedBannerIndex === i
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white'
+                          }`}
+                        >
+                          {`PATTERN ${String.fromCharCode(65 + i)}`}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="relative">
+                      <textarea
+                        value={refineInstruction}
+                        onChange={(e) => setRefineInstruction(e.target.value)}
+                        placeholder="例：CTAをもっと目立たせて、文字を太く。背景はシンプルに。価格も入れて。"
+                        rows={3}
+                        className="w-full bg-white border border-slate-200 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm font-medium resize-none"
+                        onKeyDown={(e) => {
+                          // Enter は改行。実行は Ctrl/⌘+Enter のみ。
+                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                            e.preventDefault()
+                            void handleRefine()
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {!isRefining ? (
+                      <button
+                        onClick={handleRefine}
+                        disabled={!canRefine}
+                        className="w-full px-6 py-4 rounded-2xl bg-blue-600 text-white font-black text-sm shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                      >
+                        <Wand2 className="w-5 h-5" />
+                        この案をAIで修正する
+                      </button>
+                    ) : (
+                      <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-black text-slate-800">{REFINEMENT_PHASES[refinePhaseIndex]}</p>
+                          <p className="text-xs font-bold text-slate-500">
+                            予測残り {Math.max(0, Math.ceil(predictedRefineRemainingMs / 1000))} 秒
+                          </p>
+                        </div>
+                        <div className="mt-3 h-2 bg-white rounded-full overflow-hidden border border-slate-200">
+                          <div
+                            className="h-full bg-blue-600 rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(
+                                95,
+                                Math.max(2, (refineElapsedSec * 1000) / Math.max(1, predictedRefineTotalMs) * 100)
+                              )}%`,
+                            }}
+                          />
+                        </div>
+                        <p className="mt-3 text-xs text-slate-600 font-medium leading-relaxed">
+                          {REFINEMENT_TIPS[refineTipIndex]}
+                        </p>
+                        <p className="mt-2 text-[10px] text-slate-400 font-bold">
+                          タブは開いたままでOK（バックグラウンド可）。閉じる/更新すると中断される場合があります。
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
