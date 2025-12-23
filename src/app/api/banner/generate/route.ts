@@ -152,8 +152,9 @@ export async function POST(request: NextRequest) {
     }
 
     // バナー生成オプション
+    // 人物写真は「1名（1枚）」のみ対応（サーバ側で厳密にガード）
     const normalizedPersonImages = Array.isArray(personImages)
-      ? personImages.filter((x: any) => typeof x === 'string' && x.startsWith('data:image/')).slice(0, 4)
+      ? personImages.filter((x: any) => typeof x === 'string' && x.startsWith('data:image/')).slice(0, 1)
       : []
     const options = {
       purpose: purpose || 'sns_ad',
