@@ -283,7 +283,7 @@ export const BANNER_PRICING: ServicePricing = {
 // 50枚/日を超える利用（チーム/法人/大量生成など）の相談導線
 export const HIGH_USAGE_CONTACT_URL =
   process.env.NEXT_PUBLIC_HIGH_USAGE_CONTACT_URL ||
-  'mailto:support@doya-ai.com?subject=%E4%B8%8A%E4%BD%8D%E3%83%97%E3%83%A9%E3%83%B3%EF%BC%8850%E6%9E%9A%2F%E6%97%A5%E8%B6%85%EF%BC%89%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6'
+  'https://doyamarke.surisuta.jp/lp/doyamarke'
 
 // ========================================
 // ポータル全体のセット割引
