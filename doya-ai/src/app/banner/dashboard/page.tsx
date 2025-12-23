@@ -1622,7 +1622,8 @@ export default function BannerDashboard() {
         {/* ========================================
             Main Content
             ======================================== */}
-        <div className="grid lg:grid-cols-[420px,1fr] gap-6 sm:gap-10">
+        {/* UI崩れ対策：左カラム固定幅だと日本語が1文字改行しやすいので、元の比率（右=固定）に戻す */}
+        <div className="grid lg:grid-cols-[1fr,440px] gap-6 sm:gap-10">
           
           {/* ========================================
               Left Column - Input Form
