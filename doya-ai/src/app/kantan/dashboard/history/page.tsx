@@ -67,7 +67,7 @@ export default function KantanHistoryPage() {
   const [isLoaded, setIsLoaded] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  const userName = session?.user?.name || '田中 太郎'
+  const userName = session?.user?.name || 'ゲスト'
 
   useEffect(() => {
     setHistory(getHistory())
