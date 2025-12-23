@@ -3,19 +3,21 @@ import { NextRequest, NextResponse } from 'next/server'
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-function getPrimaryTextModel(): string {
-  return (
+
+/**
+ * テキスト生成モデルの優先順位
+ * - gemini-2.0-flash が安定かつ高速
+ * - gemini-1.5-flash はレガシーだが確実に存在
+ */
+function getTextModels(): string[] {
+  const envModel =
     process.env.DOYA_BANNER_TEXT_MODEL ||
     process.env.GEMINI_PRO3_MODEL ||
-    process.env.GEMINI_PRO_3_MODEL ||
     process.env.GEMINI_TEXT_MODEL ||
-    // 未設定時は Gemini 3 Pro Preview を優先（公式モデルID）
-    // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
-    'gemini-3-pro-preview'
-  )
+    null
+  const defaults = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+  return envModel ? [envModel, ...defaults] : defaults
 }
-const GEMINI_MODEL = getPrimaryTextModel()
-const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
 
 const ALLOWED_PURPOSES = ['sns_ad', 'youtube', 'display', 'webinar', 'lp_hero', 'email', 'campaign'] as const
 const ALLOWED_CATEGORIES = [
@@ -32,6 +34,44 @@ const ALLOWED_CATEGORIES = [
   'it',
   'other',
 ] as const
+
+/**
+ * AIアドバイザーのペルソナ（提案型）
+ */
+const AI_ADVISOR_SYSTEM_PROMPT = `あなたは「ドヤバナーAI」の専属バナー制作アドバイザーです。
+プロのマーケターとして、ユーザーの要望に「提案」で応えてください。
+
+【あなたの役割】
+- 要望を受け取ったら、すぐに具体的なバナー案を"提案"する
+- 「〜がおすすめです」「〜はいかがでしょう？」など提案トーンで話す
+- 質問ではなく"選択肢を提示する"形で会話を前に進める
+
+【許可される値】
+- purpose: ${ALLOWED_PURPOSES.join(', ')}
+- category: ${ALLOWED_CATEGORIES.join(', ')}
+- size: "幅x高さ" (例: "1080x1080")
+- keyword: 200文字以内（バナーに載せる訴求コピー）
+- imageDescription: 300文字以内（画像イメージの説明。任意）
+- brandColors: ["#RRGGBB", ...] 最大8色（任意）
+
+【出力JSONスキーマ】
+{
+  "needsMoreInfo": boolean,
+  "questions": string[] | null,
+  "reply": string,
+  "spec": { "purpose": string, "category": string, "size": string, "keyword": string, "imageDescription"?: string, "brandColors"?: string[] } | null
+}
+
+【重要ルール】
+- needsMoreInfo が true の場合は spec を null にして、questionsに「〜はいかがでしょう？」形式で提案を入れる
+- reply は日本語で短く、次のアクションを"提案"する（質問形式にしない）
+- JSON以外は一切出力しない（\`\`\`も禁止）
+- 情報が足りなくても"仮の提案"を返し、ユーザーに修正を促す
+
+【返答例】
+- 「Instagram向けの美容系バナーですね。1080×1080サイズで『初回限定50%OFF』のコピーはいかがでしょう？」
+- 「採用向けバナーなら、『未経験歓迎』のキャッチと人物写真で訴求するのがおすすめです。」
+`
 
 type BannerSpec = {
   purpose: (typeof ALLOWED_PURPOSES)[number]
@@ -91,7 +131,7 @@ function coerceSpec(raw: any): { spec?: BannerSpec; needsMoreInfo: boolean; ques
   const okPurpose = (ALLOWED_PURPOSES as readonly string[]).includes(purpose)
   const okCategory = (ALLOWED_CATEGORIES as readonly string[]).includes(category)
 
-  if (!keyword) needs.push('どんな訴求（キャッチコピー）にしますか？（例:「初回20%OFF」「無料体験」など）')
+  if (!keyword) needs.push('例えば「初回20%OFF」「今だけ送料無料」などのコピーはいかがでしょう？')
 
   const brandColors =
     Array.isArray(raw?.spec?.brandColors || raw?.brandColors) ?
@@ -119,32 +159,6 @@ function coerceSpec(raw: any): { spec?: BannerSpec; needsMoreInfo: boolean; ques
 }
 
 async function callGemini(messages: ChatMessage[], apiKey: string): Promise<string> {
-  const system = [
-    'あなたは「ドヤバナーAI」のバナー制作アシスタントです。',
-    'ユーザーの要望から、バナー生成に必要な情報を抽出して、必ずJSONのみを返してください（前後に文章を付けない）。',
-    '',
-    '【許可される値】',
-    `- purpose: ${ALLOWED_PURPOSES.join(', ')}`,
-    `- category: ${ALLOWED_CATEGORIES.join(', ')}`,
-    '- size: "幅x高さ" (例: "1080x1080")',
-    '- keyword: 200文字以内（バナーに載せる訴求）',
-    '- imageDescription: 300文字以内（画像で表現したい内容。任意）',
-    '- brandColors: ["#RRGGBB", ...] 最大8色（任意）',
-    '',
-    '【出力JSONスキーマ】',
-    '{',
-    '  "needsMoreInfo": boolean,',
-    '  "questions": string[] | null,',
-    '  "reply": string,',
-    '  "spec": { "purpose": string, "category": string, "size": string, "keyword": string, "imageDescription"?: string, "brandColors"?: string[] } | null',
-    '}',
-    '',
-    '【重要】',
-    '- needsMoreInfo が true の場合は、spec は null にする',
-    '- reply は日本語で短く、次にユーザーが答えるべきことを促す',
-    '- JSON以外は一切出力しない（```も禁止）',
-  ].join('\n')
-
   const contents = (messages || []).slice(-12).map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
@@ -152,14 +166,14 @@ async function callGemini(messages: ChatMessage[], apiKey: string): Promise<stri
 
   // system prompt を最初の user に混ぜる
   if (contents.length === 0) {
-    contents.push({ role: 'user', parts: [{ text: system }] })
+    contents.push({ role: 'user', parts: [{ text: AI_ADVISOR_SYSTEM_PROMPT }] })
   } else if (contents[0].role === 'user') {
-    contents[0].parts[0].text = `${system}\n\n---\n\n${contents[0].parts[0].text}`
+    contents[0].parts[0].text = `${AI_ADVISOR_SYSTEM_PROMPT}\n\n---\n\n${contents[0].parts[0].text}`
   } else {
-    contents.unshift({ role: 'user', parts: [{ text: system }] })
+    contents.unshift({ role: 'user', parts: [{ text: AI_ADVISOR_SYSTEM_PROMPT }] })
   }
 
-  const models = [GEMINI_MODEL, 'gemini-3-flash-preview', 'gemini-2.0-flash', GEMINI_FALLBACK_MODEL]
+  const models = getTextModels()
   let lastError: string | null = null
 
   for (const model of models) {
@@ -170,7 +184,7 @@ async function callGemini(messages: ChatMessage[], apiKey: string): Promise<stri
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
-          generationConfig: { temperature: 0.2, maxOutputTokens: 900, topP: 0.9, topK: 40 },
+          generationConfig: { temperature: 0.4, maxOutputTokens: 1000, topP: 0.9, topK: 40 },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
@@ -239,7 +253,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         needsMoreInfo: true,
         questions: qs,
-        reply: parsed.reply || `追加で教えてください：\n- ${qs.join('\n- ')}`,
+        reply: parsed.reply || `以下のような内容はいかがでしょう？\n・${qs.join('\n・')}`,
         spec: null,
       })
     }
@@ -247,7 +261,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       needsMoreInfo: false,
       questions: null,
-      reply: parsed.reply || '了解です。この条件でバナーを作成できます。生成しますか？',
+      reply: parsed.reply || '承知しました。この条件でバナーを作成します！「生成する」ボタンでスタートしてください。',
       spec: coerced.spec,
     })
   } catch (e: any) {
