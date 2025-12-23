@@ -80,7 +80,8 @@ export default function StatsPage() {
         // ログインユーザーはAPIから取得
         const controller = new AbortController()
         const timeout = window.setTimeout(() => controller.abort(), 15_000)
-        const res = await fetch('/api/banner/history?take=200', { signal: controller.signal }) // 最大200バッチで集計
+        // 統計は画像不要なので軽量モードで取得
+        const res = await fetch('/api/banner/history?take=200&images=0', { signal: controller.signal }) // 最大200バッチで集計
         window.clearTimeout(timeout)
         if (res.ok) {
           const data = await res.json()
@@ -96,7 +97,7 @@ export default function StatsPage() {
               keyword: item.keyword || '',
               size: item.size || '',
               createdAt: item.createdAt || new Date().toISOString(),
-              bannerCount: Array.isArray(item.banners) ? item.banners.length : 1,
+              bannerCount: Number(item.bannerCount) > 0 ? Number(item.bannerCount) : 1,
             })))
           }
         } else {

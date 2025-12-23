@@ -15,7 +15,8 @@ interface HistoryItem {
   keyword: string
   size: string
   createdAt: Date
-  banners: string[] // Base64またはURL
+  banners: string[] // 画像は段階取得
+  bannerCount: number // バッチ内の枚数
 }
 
 // 相対時間を表示
@@ -43,6 +44,7 @@ export default function BannerHistoryPage() {
   const [requiresUpgrade, setRequiresUpgrade] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [tipIndex, setTipIndex] = useState(0)
+  const [phase, setPhase] = useState<'list' | 'images' | 'idle'>('idle')
 
   const LOADING_TIPS = [
     '作ったバナーは6ヶ月間いつでも再DLできます（有料プラン）',
@@ -57,12 +59,27 @@ export default function BannerHistoryPage() {
     return () => window.clearInterval(t)
   }, [isLoading, isLoaded])
 
+  const fetchBatchImages = useCallback(async (batchId: string) => {
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 15_000)
+    try {
+      const res = await fetch(`/api/banner/history?batchId=${encodeURIComponent(batchId)}`, { signal: controller.signal })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || '画像の取得に失敗しました')
+      const banners = Array.isArray(data?.banners) ? data.banners : []
+      return banners.filter((b: any) => typeof b === 'string' && b.startsWith('data:'))
+    } finally {
+      window.clearTimeout(timeout)
+    }
+  }, [])
+
   // ログインユーザーはAPIから、ゲストは履歴閲覧不可
   const loadHistory = useCallback(async () => {
     if (status === 'loading') return
     setIsLoading(true)
     setRequiresUpgrade(false)
     setErrorMessage(null)
+    setPhase('list')
     try {
       if (isGuest) {
         // ゲストは履歴閲覧不可（有料プラン限定）
@@ -72,7 +89,8 @@ export default function BannerHistoryPage() {
         // ログインユーザーはAPIから取得
         const controller = new AbortController()
         const timeout = window.setTimeout(() => controller.abort(), 15_000)
-        const res = await fetch('/api/banner/history?take=50', { signal: controller.signal })
+        // まず一覧（画像なし）を高速取得
+        const res = await fetch('/api/banner/history?take=30&images=0', { signal: controller.signal })
         window.clearTimeout(timeout)
         if (res.ok) {
           const data = await res.json()
@@ -82,15 +100,40 @@ export default function BannerHistoryPage() {
             setRequiresUpgrade(true)
           } else {
             const items = Array.isArray(data.items) ? data.items : []
-            setHistory(items.map((item: any) => ({
+            const list: HistoryItem[] = items.map((item: any) => ({
               id: item.id,
               category: item.category || '',
               keyword: item.keyword || '',
               size: item.size || '',
               createdAt: new Date(item.createdAt),
-              // APIは banners 配列を返す（バッチ内の複数枚）
-              banners: Array.isArray(item.banners) ? item.banners : (item.image ? [item.image] : []),
-            })))
+              banners: [], // 画像は後から段階取得
+              bannerCount:
+                Number(item.bannerCount) > 0
+                  ? Number(item.bannerCount)
+                  : Array.isArray(item.banners)
+                    ? item.banners.length
+                    : 1,
+            }))
+            setHistory(list)
+
+            // 先頭だけ軽く画像を段階取得（体感を損なわない範囲）
+            setPhase('images')
+            const first = list.slice(0, 6)
+            const CONCURRENCY = 2
+            let idx = 0
+            const worker = async () => {
+              while (idx < first.length) {
+                const cur = first[idx++]
+                try {
+                  const banners = await fetchBatchImages(cur.id)
+                  setHistory((prev) => prev.map((h) => (h.id === cur.id ? { ...h, banners } : h)))
+                } catch {
+                  // ignore
+                }
+              }
+            }
+            await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()))
+            setPhase('idle')
           }
         } else {
           toast.error('履歴の取得に失敗しました')
@@ -109,8 +152,9 @@ export default function BannerHistoryPage() {
     } finally {
       setIsLoaded(true)
       setIsLoading(false)
+      setPhase('idle')
     }
-  }, [isGuest, status])
+  }, [isGuest, status, fetchBatchImages])
 
   useEffect(() => {
     loadHistory()
@@ -229,6 +273,20 @@ export default function BannerHistoryPage() {
 
         {/* メイン */}
         <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12">
+          {isLoading && !requiresUpgrade && !errorMessage && (
+            <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-3">
+                <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+                <div className="text-xs font-black text-slate-800">
+                  {phase === 'list' ? '履歴一覧を読み込み中…' : phase === 'images' ? '画像を読み込み中…' : '読み込み中…'}
+                </div>
+                <div className="ml-auto text-[11px] font-bold text-slate-500">{LOADING_TIPS[tipIndex]}</div>
+              </div>
+              <div className="mt-2 h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full w-1/3 bg-blue-600 animate-pulse rounded-full" />
+              </div>
+            </div>
+          )}
           {errorMessage ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -355,23 +413,54 @@ export default function BannerHistoryPage() {
                   </div>
                   
                   {/* バナー画像プレビュー */}
-                  {item.banners && item.banners.length > 0 && (
+                  {item.bannerCount > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
-                      {item.banners.map((banner, i) => (
-                        <div key={i} className="relative aspect-video sm:aspect-square rounded-2xl overflow-hidden group/item cursor-pointer shadow-sm border border-slate-100">
-                          <img 
-                            src={banner} 
-                            alt={`Banner ${i + 1}`}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
-                          />
+                      {(item.banners.length > 0
+                        ? item.banners
+                        : Array.from({ length: Math.min(3, item.bannerCount) }, () => '')
+                      ).map((banner, i) => (
+                        <div
+                          key={i}
+                          className="relative aspect-video sm:aspect-square rounded-2xl overflow-hidden group/item cursor-pointer shadow-sm border border-slate-100 bg-slate-50"
+                        >
+                          {banner ? (
+                            <img
+                              src={banner}
+                              alt={`Banner ${i + 1}`}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="animate-pulse w-16 h-16 rounded-2xl bg-slate-200" />
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-blue-600/60 opacity-0 group-hover/item:opacity-100 transition-all flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
-                            <button 
-                              onClick={() => handleDownload(banner, i)}
-                              className="w-12 h-12 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
-                            >
-                              <Download className="w-6 h-6" />
-                            </button>
-                            <span className="text-white text-xs font-black uppercase tracking-widest">ダウンロード</span>
+                            {banner ? (
+                              <>
+                                <button
+                                  onClick={() => handleDownload(banner, i)}
+                                  className="w-12 h-12 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
+                                >
+                                  <Download className="w-6 h-6" />
+                                </button>
+                                <span className="text-white text-xs font-black uppercase tracking-widest">ダウンロード</span>
+                              </>
+                            ) : (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    const banners = await fetchBatchImages(item.id)
+                                    setHistory((prev) => prev.map((h) => (h.id === item.id ? { ...h, banners } : h)))
+                                    toast.success('画像を読み込みました')
+                                  } catch (err: any) {
+                                    toast.error(err?.message || '画像の取得に失敗しました')
+                                  }
+                                }}
+                                className="px-4 py-2 bg-white text-blue-600 rounded-xl font-black text-xs shadow-xl hover:scale-105 transition-transform"
+                              >
+                                画像を表示
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
