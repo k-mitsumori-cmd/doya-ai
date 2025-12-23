@@ -499,7 +499,10 @@ export default function BannerHistoryPage() {
                             />
                           ) : (
                             <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="animate-pulse w-16 h-16 rounded-2xl bg-slate-200" />
+                              <div className="flex flex-col items-center justify-center gap-3">
+                                <div className="animate-pulse w-16 h-16 rounded-2xl bg-slate-200" />
+                                <div className="text-[11px] font-black text-slate-400">読み込み中！</div>
+                              </div>
                             </div>
                           )}
                           <div className="absolute inset-0 bg-blue-600/60 opacity-0 group-hover/item:opacity-100 transition-all flex flex-col items-center justify-center gap-3 backdrop-blur-[2px]">
