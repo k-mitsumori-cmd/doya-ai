@@ -703,7 +703,6 @@ export default function BannerDashboard() {
   const [logoFileName, setLogoFileName] = useState('')
   const [personImages, setPersonImages] = useState<string[]>([])
   const [personFileNames, setPersonFileNames] = useState<string[]>([])
-  const personInputRef = useRef<HTMLInputElement | null>(null)
 
   // 生成枚数（デフォルト3 / 有料は最大10）
   const [generateCount, setGenerateCount] = useState<number>(3)
@@ -723,13 +722,8 @@ export default function BannerDashboard() {
   const MAX_PERSON_IMAGES = 4
 
   const addPersonFiles = async (files: FileList | null) => {
-    console.log('[addPersonFiles] called, files:', files?.length || 0)
-    if (!files || files.length === 0) {
-      console.log('[addPersonFiles] no files selected')
-      return
-    }
+    if (!files || files.length === 0) return
     const list = Array.from(files)
-    console.log('[addPersonFiles] list:', list.map(f => ({ name: f.name, size: f.size, type: f.type })))
     try {
       const remain = Math.max(0, MAX_PERSON_IMAGES - personImages.length)
       if (remain <= 0) {
@@ -740,22 +734,14 @@ export default function BannerDashboard() {
       const urls: string[] = []
       const names: string[] = []
       for (const f of toRead) {
-        console.log('[addPersonFiles] reading:', f.name)
         const url = await readFileAsDataUrl(f)
-        console.log('[addPersonFiles] read success, url length:', url?.length || 0)
         urls.push(url)
         names.push(f.name)
       }
-      console.log('[addPersonFiles] setting state, urls:', urls.length)
-      setPersonImages((prev) => {
-        const next = prev.concat(urls)
-        console.log('[addPersonFiles] personImages after:', next.length)
-        return next
-      })
+      setPersonImages((prev) => prev.concat(urls))
       setPersonFileNames((prev) => prev.concat(names))
       toast.success(`人物写真を${urls.length}枚追加しました`)
     } catch (e: any) {
-      console.error('[addPersonFiles] error:', e)
       toast.error(e?.message || '人物写真の追加に失敗しました')
     }
   }
@@ -2024,30 +2010,20 @@ export default function BannerDashboard() {
                         <p className="text-[11px] text-slate-600 font-bold truncate">
                           {personImages.length > 0 ? `${personImages.length}枚設定済み` : '未設定'}
                         </p>
-                        <input
-                          ref={personInputRef}
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
-                          onChange={async (e) => {
-                            console.log('[person-input] onChange fired')
-                            const files = e.target.files
-                            console.log('[person-input] files:', files?.length || 0)
-                            e.target.value = ''
-                            await addPersonFiles(files)
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            console.log('[person-input] button clicked, triggering input.click()')
-                            personInputRef.current?.click()
-                          }}
-                          className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer"
-                        >
+                        <span className="relative mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            onChange={async (e) => {
+                              const files = e.currentTarget.files
+                              e.currentTarget.value = ''
+                              await addPersonFiles(files)
+                            }}
+                          />
                           追加
-                        </button>
+                        </span>
                         {personImages.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-2">
                             {personFileNames.map((name, idx) => (
