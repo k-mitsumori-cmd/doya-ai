@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Clock, Download, Trash2, Image as ImageIcon, Search, Bell, Settings } from 'lucide-react'
+import { ArrowLeft, Clock, Download, Trash2, Image as ImageIcon, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { useSession } from 'next-auth/react'
@@ -15,23 +15,6 @@ interface HistoryItem {
   size: string
   createdAt: Date
   banners: string[] // Base64またはURL
-}
-
-// ローカルストレージから履歴を取得
-function getHistory(): HistoryItem[] {
-  if (typeof window === 'undefined') return []
-  
-  try {
-    const stored = localStorage.getItem('banner_history')
-    if (!stored) return []
-    const parsed = JSON.parse(stored)
-    return parsed.map((item: any) => ({
-      ...item,
-      createdAt: new Date(item.createdAt)
-    }))
-  } catch {
-    return []
-  }
 }
 
 // 相対時間を表示
@@ -51,33 +34,99 @@ function formatRelativeTime(date: Date): string {
 }
 
 export default function BannerHistoryPage() {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
+  const isGuest = status !== 'loading' && !session
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+
+  // ログインユーザーはAPIから、ゲストはlocalStorageから読み込み
+  const loadHistory = useCallback(async () => {
+    if (status === 'loading') return
+    setIsLoading(true)
+    try {
+      if (isGuest) {
+        // ゲストはlocalStorageから取得
+        const stored = localStorage.getItem('banner_history')
+        if (stored) {
+          const parsed = JSON.parse(stored) as any[]
+          setHistory(parsed.map((item: any) => ({
+            ...item,
+            createdAt: new Date(item.createdAt),
+            banners: Array.isArray(item.banners) ? item.banners : [item.output],
+          })))
+        } else {
+          setHistory([])
+        }
+      } else {
+        // ログインユーザーはAPIから取得
+        const res = await fetch('/api/banner/history?take=50')
+        if (res.ok) {
+          const data = await res.json()
+          const items = Array.isArray(data.items) ? data.items : []
+          setHistory(items.map((item: any) => ({
+            id: item.id,
+            category: item.category || '',
+            keyword: item.keyword || '',
+            size: item.size || '',
+            createdAt: new Date(item.createdAt),
+            banners: [item.image],
+          })))
+        } else {
+          toast.error('履歴の取得に失敗しました')
+          setHistory([])
+        }
+      }
+    } catch (e) {
+      console.error('History load error:', e)
+      setHistory([])
+    } finally {
+      setIsLoaded(true)
+      setIsLoading(false)
+    }
+  }, [isGuest, status])
 
   useEffect(() => {
-    setHistory(getHistory())
-    setIsLoaded(true)
-  }, [])
+    loadHistory()
+  }, [loadHistory])
 
   const handleDownload = (imageUrl: string, index: number) => {
     const link = document.createElement('a')
     link.href = imageUrl
-    link.download = `bunridge_banner_${Date.now()}_${index}.png`
+    link.download = `doya_banner_${Date.now()}_${index}.png`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     toast.success('ダウンロード開始')
   }
 
-  const handleDelete = (id: string) => {
-    const updated = history.filter(item => item.id !== id)
-    setHistory(updated)
-    localStorage.setItem('banner_history', JSON.stringify(updated))
-    toast.success('削除しました')
+  const handleDelete = async (id: string) => {
+    if (isGuest) {
+      // ゲストはlocalStorageから削除
+      const updated = history.filter(item => item.id !== id)
+      setHistory(updated)
+      localStorage.setItem('banner_history', JSON.stringify(updated.map(h => ({
+        ...h,
+        createdAt: h.createdAt.toISOString(),
+      }))))
+      toast.success('削除しました')
+    } else {
+      // ログインユーザーはAPI経由で削除
+      try {
+        const res = await fetch(`/api/banner/history?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+        if (res.ok) {
+          setHistory(history.filter(item => item.id !== id))
+          toast.success('削除しました')
+        } else {
+          toast.error('削除に失敗しました')
+        }
+      } catch {
+        toast.error('削除に失敗しました')
+      }
+    }
   }
 
-  if (!isLoaded) {
+  if (!isLoaded || status === 'loading') {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <DashboardSidebar />
@@ -106,27 +155,26 @@ export default function BannerHistoryPage() {
               </div>
               
               <div className="flex items-center gap-3 sm:gap-6">
-                <div className="hidden md:flex items-center gap-2">
-                  <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all relative">
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                  </button>
-                  <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
-                    <Settings className="w-5 h-5" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => loadHistory()}
+                  disabled={isLoading}
+                  className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                  title="更新"
+                >
+                  <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
                 <div className="h-8 w-px bg-slate-200 hidden sm:block" />
                 <div className="flex items-center gap-3 pl-2">
                   <div className="text-right hidden sm:block">
-                    <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || '田中 太郎'}</p>
-                    <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">Admin</p>
+                    <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || 'ゲスト'}</p>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{isGuest ? 'Guest' : 'User'}</p>
                   </div>
                   <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
                     {session?.user?.image ? (
                       <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-                        {session?.user?.name?.[0]?.toUpperCase() || 'U'}
+                        {session?.user?.name?.[0]?.toUpperCase() || 'G'}
                       </div>
                     )}
                   </div>
@@ -218,10 +266,7 @@ export default function BannerHistoryPage() {
                             >
                               <Download className="w-6 h-6" />
                             </button>
-                            <span className="text-white text-xs font-black uppercase tracking-widest">Download {String.fromCharCode(65 + i)}案</span>
-                          </div>
-                          <div className="absolute top-3 left-3 px-2 py-1 bg-white/90 backdrop-blur-md text-slate-800 text-[10px] font-black rounded-lg shadow-sm border border-slate-100">
-                            {String.fromCharCode(65 + i)}案
+                            <span className="text-white text-xs font-black uppercase tracking-widest">ダウンロード</span>
                           </div>
                         </div>
                       ))}

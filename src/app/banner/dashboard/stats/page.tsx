@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { 
@@ -16,9 +16,11 @@ import {
   Award,
   Timer,
   Layers,
-  ChevronRight
+  ChevronRight,
+  RefreshCw,
 } from 'lucide-react'
 import DashboardSidebar from '@/components/DashboardSidebar'
+import { useSession } from 'next-auth/react'
 
 // 1バナー生成で削減できる推定時間（分）
 const ESTIMATED_TIME_SAVED_PER_BANNER = 45 // デザイナーが1バナー作るのに平均45分
@@ -30,7 +32,6 @@ interface HistoryItem {
   keyword: string
   size: string
   createdAt: string
-  banners: string[]
 }
 
 interface DailyStats {
@@ -39,26 +40,62 @@ interface DailyStats {
 }
 
 export default function StatsPage() {
+  const { data: session, status } = useSession()
+  const isGuest = status !== 'loading' && !session
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
+  // ログインユーザーはAPIから、ゲストはlocalStorageから読み込み
+  const loadHistory = useCallback(async () => {
+    if (status === 'loading') return
+    setIsLoading(true)
     try {
-      const stored = localStorage.getItem('banner_history')
-      if (stored) {
-        const parsed = JSON.parse(stored) as HistoryItem[]
-        setHistory(parsed)
+      if (isGuest) {
+        // ゲストはlocalStorageから取得
+        const stored = localStorage.getItem('banner_history')
+        if (stored) {
+          const parsed = JSON.parse(stored) as any[]
+          setHistory(parsed.map((item: any) => ({
+            id: item.id || '',
+            category: item.category || '',
+            keyword: item.keyword || '',
+            size: item.size || '',
+            createdAt: item.createdAt || new Date().toISOString(),
+          })))
+        } else {
+          setHistory([])
+        }
+      } else {
+        // ログインユーザーはAPIから取得
+        const res = await fetch('/api/banner/history?take=200') // 最大200件で集計
+        if (res.ok) {
+          const data = await res.json()
+          const items = Array.isArray(data.items) ? data.items : []
+          setHistory(items.map((item: any) => ({
+            id: item.id,
+            category: item.category || '',
+            keyword: item.keyword || '',
+            size: item.size || '',
+            createdAt: item.createdAt || new Date().toISOString(),
+          })))
+        } else {
+          setHistory([])
+        }
       }
     } catch {
       setHistory([])
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
-  }, [])
+  }, [isGuest, status])
+
+  useEffect(() => {
+    loadHistory()
+  }, [loadHistory])
 
   // 統計計算
   const totalGenerations = history.length
-  const totalBanners = history.reduce((acc, item) => acc + (item.banners?.length || 0), 0)
+  const totalBanners = totalGenerations // 1生成=1画像（グループ化してないので）
   const totalTimeSavedMinutes = totalBanners * ESTIMATED_TIME_SAVED_PER_BANNER
   const totalTimeSavedHours = Math.floor(totalTimeSavedMinutes / 60)
   const totalCostSaved = Math.floor((totalTimeSavedMinutes / 60) * HOURLY_DESIGNER_RATE)
@@ -68,16 +105,16 @@ export default function StatsPage() {
     const date = new Date(item.createdAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
     const existing = acc.find(d => d.date === date)
     if (existing) {
-      existing.count += item.banners?.length || 0
+      existing.count += 1
     } else {
-      acc.push({ date, count: item.banners?.length || 0 })
+      acc.push({ date, count: 1 })
     }
     return acc
   }, [] as DailyStats[]).slice(-7).reverse()
 
   // カテゴリ別統計
   const categoryStats = history.reduce((acc, item) => {
-    acc[item.category] = (acc[item.category] || 0) + (item.banners?.length || 0)
+    acc[item.category] = (acc[item.category] || 0) + 1
     return acc
   }, {} as Record<string, number>)
 
@@ -115,7 +152,7 @@ export default function StatsPage() {
     ? Math.round(((thisWeekCount - lastWeekCount) / lastWeekCount) * 100) 
     : thisWeekCount > 0 ? 100 : 0
 
-  if (isLoading) {
+  if (isLoading || status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
         <DashboardSidebar />
@@ -143,13 +180,25 @@ export default function StatsPage() {
             </div>
             
             <div className="flex items-center gap-3 sm:gap-6">
+              <button
+                onClick={() => loadHistory()}
+                disabled={isLoading}
+                className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                title="更新"
+              >
+                <RefreshCw className={`w-5 h-5 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
               <div className="flex items-center gap-3 pl-2">
                 <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold text-slate-800 leading-none">田中 太郎</p>
-                  <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">Admin</p>
+                  <p className="text-sm font-bold text-slate-800 leading-none">{session?.user?.name || 'ゲスト'}</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-wider">{isGuest ? 'Guest' : 'User'}</p>
                 </div>
                 <div className="w-10 h-10 rounded-full bg-blue-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                  <span className="text-blue-600 font-black text-xs">TT</span>
+                  {session?.user?.image ? (
+                    <img src={session.user.image} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-blue-600 font-black text-xs">{session?.user?.name?.[0]?.toUpperCase() || 'G'}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -263,36 +312,21 @@ export default function StatsPage() {
             {topCategories.length > 0 ? (
               <div className="space-y-3">
                 {topCategories.map(([cat, count], i) => {
-                  const maxCount = topCategories[0]?.[1] || 1
-                  const percentage = (count / maxCount) * 100
-                  const colors = [
-                    'from-orange-500 to-amber-400',
-                    'from-blue-500 to-blue-600',
-                    'from-amber-400 to-yellow-300',
-                    'from-blue-400 to-blue-500',
-                    'from-slate-400 to-slate-500',
-                  ]
+                  const maxCount = Math.max(...topCategories.map(([_, c]) => c), 1)
+                  const width = (count / maxCount) * 100
                   return (
                     <div key={cat} className="flex items-center gap-3">
-                      <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${colors[i]} flex items-center justify-center text-white text-xs font-bold shadow-md`}>
-                        {i + 1}
+                      <span className="w-6 h-6 flex items-center justify-center text-xs font-black text-gray-400 bg-gray-100 rounded-full">{i + 1}</span>
+                      <span className="w-20 text-sm font-bold text-gray-700 truncate">{categoryLabels[cat] || cat}</span>
+                      <div className="flex-1 bg-gray-100 rounded-full h-3">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${width}%` }}
+                          transition={{ delay: 0.3 + i * 0.05, duration: 0.4 }}
+                          className="h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-400"
+                        />
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium text-gray-700">
-                            {categoryLabels[cat] || cat}
-                          </span>
-                          <span className="text-sm font-bold text-gray-900">{count}枚</span>
-                        </div>
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${percentage}%` }}
-                            transition={{ delay: 0.3 + i * 0.05, duration: 0.5 }}
-                            className={`h-full bg-gradient-to-r ${colors[i]} rounded-full`}
-                          />
-                        </div>
-                      </div>
+                      <span className="text-xs font-black text-gray-600 w-8 text-right">{count}</span>
                     </div>
                   )
                 })}
@@ -305,100 +339,22 @@ export default function StatsPage() {
           </motion.div>
         </div>
 
-        {/* Achievements */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 border border-gray-200 shadow-lg"
-        >
-          <h2 className="font-bold text-gray-900 flex items-center gap-2 mb-4">
-            <Award className="w-5 h-5 text-amber-500" />
-            達成バッジ
-          </h2>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { 
-                title: 'はじめの一歩', 
-                desc: '初めてバナーを生成', 
-                icon: Sparkles, 
-                unlocked: totalBanners >= 1,
-                color: 'from-blue-500 to-blue-500'
-              },
-              { 
-                title: '量産モード', 
-                desc: '10枚以上生成', 
-                icon: Zap, 
-                unlocked: totalBanners >= 10,
-                color: 'from-amber-500 to-orange-500'
-              },
-              { 
-                title: '時短マスター', 
-                desc: '5時間以上削減', 
-                icon: Clock, 
-                unlocked: totalTimeSavedHours >= 5,
-                color: 'from-blue-500 to-blue-500'
-              },
-              { 
-                title: 'プロフェッショナル', 
-                desc: '50枚以上生成', 
-                icon: Target, 
-                unlocked: totalBanners >= 50,
-                color: 'from-blue-500 to-blue-500'
-              },
-            ].map((badge, i) => {
-              const Icon = badge.icon
-              return (
-                <div 
-                  key={i}
-                  className={`relative p-4 rounded-xl border-2 transition-all ${
-                    badge.unlocked 
-                      ? 'bg-gradient-to-br from-white to-gray-50 border-gray-200 shadow-md' 
-                      : 'bg-gray-50 border-gray-100 opacity-50'
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-xl mb-2 flex items-center justify-center ${
-                    badge.unlocked 
-                      ? `bg-gradient-to-br ${badge.color} shadow-lg` 
-                      : 'bg-gray-200'
-                  }`}>
-                    <Icon className={`w-5 h-5 ${badge.unlocked ? 'text-white' : 'text-gray-400'}`} />
-                  </div>
-                  <h3 className={`font-bold text-sm ${badge.unlocked ? 'text-gray-900' : 'text-gray-400'}`}>
-                    {badge.title}
-                  </h3>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{badge.desc}</p>
-                  {badge.unlocked && (
-                    <div className="absolute top-2 right-2 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-md">
-                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </motion.div>
-
         {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="mt-6 sm:mt-8 text-center"
+          className="text-center mt-12"
         >
-          <Link href="/banner">
-            <button className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:scale-[1.02] transition-all">
-              <Sparkles className="w-5 h-5" />
+          <Link href="/banner/dashboard">
+            <button className="inline-flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-lg shadow-blue-100 hover:scale-105 transition-all">
               新しいバナーを生成する
+              <ChevronRight className="w-5 h-5" />
             </button>
           </Link>
         </motion.div>
-        </main>
+      </main>
       </div>
     </div>
   )
 }
-
