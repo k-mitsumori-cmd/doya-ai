@@ -331,7 +331,14 @@ export async function POST(request: NextRequest) {
       if (isGuest) {
         // ゲストは generate ルート側でcookie管理しているため、ここでは簡易に弾く（重複生成を避ける）
         if (requestedCount > BANNER_PRICING.guestLimit) {
-          return NextResponse.json({ error: 'ゲストは本日分の生成上限を超えています。ログインしてご利用ください。', code: 'DAILY_LIMIT_REACHED', upgradeUrl: '/auth/signin' }, { status: 429 })
+          return NextResponse.json(
+            {
+              error: 'ゲストは本日分の生成上限を超えています。ログインしてご利用ください。',
+              code: 'DAILY_LIMIT_REACHED',
+              upgradeUrl: '/auth/doyamarke/signin?callbackUrl=%2Fbanner',
+            },
+            { status: 429 }
+          )
         }
       } else {
         const userId = (session?.user as any)?.id as string | undefined

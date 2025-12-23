@@ -129,7 +129,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 </div>
                 {!isLoggedIn && (
                   <Link
-                    href={`/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/banner/dashboard')}`}
+                    href={
+                      pathname.startsWith('/banner')
+                        ? `/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(pathname || '/banner')}`
+                        : `/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/kantan/dashboard')}`
+                    }
                     className="h-9 px-3 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
                   >
                     <LogIn className="w-4 h-4" />
