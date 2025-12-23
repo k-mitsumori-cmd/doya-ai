@@ -79,10 +79,15 @@ function parseSuggestionsFallback(raw: string): string[] {
     .filter((l) => l !== '```' && !l.startsWith('```'))
     .map((l) => l.replace(/^[\-•\u2022]\s*/, ''))
     .map((l) => l.replace(/^\d+[\.\)]\s*/, ''))
-    // 「suggestions:」みたいな行を除外
-    .filter((l) => !/^suggestions\s*[:：]/i.test(l))
+    // 「suggestions:」や `"suggestions": [` など JSONキー/断片を除外
+    .filter((l) => !/^"?suggestions"?\s*[:：]/i.test(l))
+    .filter((l) => !/"suggestions"\s*[:：]\s*\[/i.test(l))
     // JSON断片っぽい行を除外
     .filter((l) => !/^\{|\}$/.test(l))
+    .filter((l) => !/^\s*\[\s*$/.test(l))
+    .filter((l) => !/^\s*\]\s*,?\s*$/.test(l))
+    // JSONっぽい括弧だけの断片を除外
+    .filter((l) => !/^[\{\}\[\]]+$/.test(l))
 
   // 文字数レンジ外の極端なものは落とす（過度に長い文章を避ける）
   return uniqStrings(lines).filter((s) => s.length >= 4 && s.length <= 80).slice(0, 24)
