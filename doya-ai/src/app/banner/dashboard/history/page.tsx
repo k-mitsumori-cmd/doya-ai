@@ -17,6 +17,7 @@ interface HistoryItem {
   createdAt: Date
   banners: string[] // 画像は段階取得
   bannerCount: number // バッチ内の枚数
+  bannerIds?: string[] // ダウンロード用（元画像のGeneration ID）
 }
 
 // 相対時間を表示
@@ -87,15 +88,29 @@ export default function BannerHistoryPage() {
     const controller = new AbortController()
     const timeout = window.setTimeout(() => controller.abort(), 15_000)
     try {
-      const res = await fetch(`/api/banner/history?batchId=${encodeURIComponent(batchId)}`, { signal: controller.signal })
+      // 履歴表示は軽量化（サムネ）で取得
+      const res = await fetch(`/api/banner/history?batchId=${encodeURIComponent(batchId)}&thumb=1`, { signal: controller.signal })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || '画像の取得に失敗しました')
       const banners = Array.isArray(data?.banners) ? data.banners : []
-      return banners.filter((b: any) => typeof b === 'string' && b.startsWith('data:'))
+      const bannerIds = Array.isArray(data?.bannerIds) ? data.bannerIds : []
+      return {
+        banners: banners.filter((b: any) => typeof b === 'string' && b.startsWith('data:')),
+        bannerIds: bannerIds.filter((x: any) => typeof x === 'string'),
+      }
     } finally {
       window.clearTimeout(timeout)
     }
   }, [])
+
+  const fetchFullImage = async (id: string): Promise<string> => {
+    const res = await fetch(`/api/banner/history/image?id=${encodeURIComponent(id)}`)
+    const json = await res.json()
+    if (!res.ok) throw new Error(json?.error || '画像の取得に失敗しました')
+    const image = String(json?.image || '')
+    if (!image.startsWith('data:') && !/^https?:\/\//.test(image)) throw new Error('画像データが取得できませんでした')
+    return image
+  }
 
   // ログインユーザーはAPIから、ゲストは履歴閲覧不可
   // SWR風: キャッシュがあれば即表示→バックグラウンドで更新
@@ -169,8 +184,10 @@ export default function BannerHistoryPage() {
               while (idx < first.length) {
                 const cur = first[idx++]
                 try {
-                  const banners = await fetchBatchImages(cur.id)
-                  setHistory((prev) => prev.map((h) => (h.id === cur.id ? { ...h, banners } : h)))
+                  const got = await fetchBatchImages(cur.id)
+                  setHistory((prev) =>
+                    prev.map((h) => (h.id === cur.id ? { ...h, banners: got.banners, bannerIds: got.bannerIds } : h))
+                  )
                 } catch {
                   // ignore
                 }
@@ -219,14 +236,20 @@ export default function BannerHistoryPage() {
     return () => window.clearTimeout(t)
   }, [status])
 
-  const handleDownload = (imageUrl: string, index: number) => {
-    const link = document.createElement('a')
-    link.href = imageUrl
-    link.download = `doya_banner_${Date.now()}_${index}.png`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    toast.success('ダウンロード開始')
+  const handleDownload = async (genId: string, index: number) => {
+    try {
+      toast.loading('高画質画像を準備中...', { id: 'dl' })
+      const imageUrl = await fetchFullImage(genId)
+      const link = document.createElement('a')
+      link.href = imageUrl
+      link.download = `doya_banner_${Date.now()}_${index}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('ダウンロード開始', { id: 'dl' })
+    } catch (e: any) {
+      toast.error(e?.message || 'ダウンロードに失敗しました', { id: 'dl' })
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -483,7 +506,14 @@ export default function BannerHistoryPage() {
                             {banner ? (
                               <>
                                 <button
-                                  onClick={() => handleDownload(banner, i)}
+                                  onClick={() => {
+                                    const id = item.bannerIds?.[i]
+                                    if (!id) {
+                                      toast.error('画像IDが取得できませんでした。再読み込みしてください。')
+                                      return
+                                    }
+                                    void handleDownload(id, i)
+                                  }}
                                   className="w-12 h-12 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
                                 >
                                   <Download className="w-6 h-6" />
@@ -494,8 +524,12 @@ export default function BannerHistoryPage() {
                               <button
                                 onClick={async () => {
                                   try {
-                                    const banners = await fetchBatchImages(item.id)
-                                    setHistory((prev) => prev.map((h) => (h.id === item.id ? { ...h, banners } : h)))
+                                    const got = await fetchBatchImages(item.id)
+                                    setHistory((prev) =>
+                                      prev.map((h) =>
+                                        h.id === item.id ? { ...h, banners: got.banners, bannerIds: got.bannerIds } : h
+                                      )
+                                    )
                                     toast.success('画像を読み込みました')
                                   } catch (err: any) {
                                     toast.error(err?.message || '画像の取得に失敗しました')
