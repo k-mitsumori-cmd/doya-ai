@@ -18,6 +18,14 @@ import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
 import { DashboardLayout } from '@/components/DashboardLayout' // New import
 import { FeatureGuide } from '@/components/FeatureGuide'
+import {
+  getNotificationPermission,
+  isBrowserNotificationSupported,
+  readNotifyOnComplete,
+  requestNotificationPermission,
+  sendBrowserNotification,
+  writeNotifyOnComplete,
+} from '@/lib/browser-notify'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -658,6 +666,11 @@ export default function BannerDashboard() {
   const [predictedRemainingMs, setPredictedRemainingMs] = useState<number>(DEFAULT_PREDICT_MS)
   const [notifyOnComplete, setNotifyOnComplete] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
+
+  // 完了通知設定（永続化）
+  useEffect(() => {
+    setNotifyOnComplete(readNotifyOnComplete())
+  }, [])
   
   // 修正機能
   const [refineInstruction, setRefineInstruction] = useState('')
@@ -1018,11 +1031,8 @@ export default function BannerDashboard() {
       writeGenStats(nextStats)
 
       // 完了通知（任意）
-      if (notifyOnComplete && typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'granted') {
-          // eslint-disable-next-line no-new
-          new Notification('ドヤバナーAI', { body: 'バナー生成が完了しました（A/B/C）', silent: true })
-        }
+      if (notifyOnComplete) {
+        sendBrowserNotification('ドヤバナーAI', 'バナー生成が完了しました（A/B/C）')
       }
       
       if (isGuest) {
@@ -2422,20 +2432,36 @@ export default function BannerDashboard() {
                 <div className="mt-2 flex items-center justify-between">
                   <button
                     onClick={async () => {
-                      if (!('Notification' in window)) {
+                      if (!isBrowserNotificationSupported()) {
                         toast.error('このブラウザは通知に対応していません')
                         return
                       }
-                      if (Notification.permission === 'granted') {
-                        setNotifyOnComplete((v) => !v)
+
+                      const perm = getNotificationPermission()
+                      // すでに許可済みならトグルだけ（永続化）
+                      if (perm === 'granted') {
+                        setNotifyOnComplete((v) => {
+                          const next = !v
+                          writeNotifyOnComplete(next)
+                          if (next) {
+                            sendBrowserNotification('ドヤバナーAI', '完了通知がONになりました（テスト通知）')
+                          }
+                          return next
+                        })
                         return
                       }
-                      const perm = await Notification.requestPermission()
-                      if (perm === 'granted') {
+
+                      // まだ未許可なら、ユーザー操作のタイミングで権限をリクエスト
+                      const asked = await requestNotificationPermission()
+                      if (asked === 'granted') {
                         setNotifyOnComplete(true)
+                        writeNotifyOnComplete(true)
+                        sendBrowserNotification('ドヤバナーAI', '完了通知がONになりました（テスト通知）')
                         toast.success('完了通知をONにしました')
                       } else {
-                        toast.error('通知が許可されませんでした')
+                        setNotifyOnComplete(false)
+                        writeNotifyOnComplete(false)
+                        toast.error('通知が許可されませんでした（ブラウザ設定から許可してください）')
                       }
                     }}
                     className={`px-3 py-1.5 rounded-xl font-black transition-colors ${
