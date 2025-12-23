@@ -32,6 +32,7 @@ interface HistoryItem {
   keyword: string
   size: string
   createdAt: string
+  bannerCount: number // バッチ内の画像枚数
 }
 
 interface DailyStats {
@@ -61,13 +62,14 @@ export default function StatsPage() {
             keyword: item.keyword || '',
             size: item.size || '',
             createdAt: item.createdAt || new Date().toISOString(),
+            bannerCount: Array.isArray(item.banners) ? item.banners.length : 1,
           })))
         } else {
           setHistory([])
         }
       } else {
         // ログインユーザーはAPIから取得
-        const res = await fetch('/api/banner/history?take=200') // 最大200件で集計
+        const res = await fetch('/api/banner/history?take=200') // 最大200バッチで集計
         if (res.ok) {
           const data = await res.json()
           const items = Array.isArray(data.items) ? data.items : []
@@ -77,6 +79,7 @@ export default function StatsPage() {
             keyword: item.keyword || '',
             size: item.size || '',
             createdAt: item.createdAt || new Date().toISOString(),
+            bannerCount: Array.isArray(item.banners) ? item.banners.length : 1,
           })))
         } else {
           setHistory([])
@@ -95,26 +98,26 @@ export default function StatsPage() {
 
   // 統計計算
   const totalGenerations = history.length
-  const totalBanners = totalGenerations // 1生成=1画像（グループ化してないので）
+  const totalBanners = history.reduce((sum, item) => sum + item.bannerCount, 0)
   const totalTimeSavedMinutes = totalBanners * ESTIMATED_TIME_SAVED_PER_BANNER
   const totalTimeSavedHours = Math.floor(totalTimeSavedMinutes / 60)
   const totalCostSaved = Math.floor((totalTimeSavedMinutes / 60) * HOURLY_DESIGNER_RATE)
 
-  // 日別統計
+  // 日別統計（バナー枚数ベース）
   const dailyStats: DailyStats[] = history.reduce((acc, item) => {
     const date = new Date(item.createdAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
     const existing = acc.find(d => d.date === date)
     if (existing) {
-      existing.count += 1
+      existing.count += item.bannerCount
     } else {
-      acc.push({ date, count: 1 })
+      acc.push({ date, count: item.bannerCount })
     }
     return acc
   }, [] as DailyStats[]).slice(-7).reverse()
 
-  // カテゴリ別統計
+  // カテゴリ別統計（バナー枚数ベース）
   const categoryStats = history.reduce((acc, item) => {
-    acc[item.category] = (acc[item.category] || 0) + 1
+    acc[item.category] = (acc[item.category] || 0) + item.bannerCount
     return acc
   }, {} as Record<string, number>)
 
@@ -142,11 +145,11 @@ export default function StatsPage() {
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
 
-  const thisWeekCount = history.filter(item => new Date(item.createdAt) >= oneWeekAgo).length
+  const thisWeekCount = history.filter(item => new Date(item.createdAt) >= oneWeekAgo).reduce((s, i) => s + i.bannerCount, 0)
   const lastWeekCount = history.filter(item => {
     const date = new Date(item.createdAt)
     return date >= twoWeeksAgo && date < oneWeekAgo
-  }).length
+  }).reduce((s, i) => s + i.bannerCount, 0)
 
   const weeklyGrowth = lastWeekCount > 0 
     ? Math.round(((thisWeekCount - lastWeekCount) / lastWeekCount) * 100) 

@@ -70,7 +70,8 @@ export default function BannerHistoryPage() {
             keyword: item.keyword || '',
             size: item.size || '',
             createdAt: new Date(item.createdAt),
-            banners: [item.image],
+            // APIは banners 配列を返す（バッチ内の複数枚）
+            banners: Array.isArray(item.banners) ? item.banners : (item.image ? [item.image] : []),
           })))
         } else {
           toast.error('履歴の取得に失敗しました')
@@ -111,9 +112,9 @@ export default function BannerHistoryPage() {
       }))))
       toast.success('削除しました')
     } else {
-      // ログインユーザーはAPI経由で削除
+      // ログインユーザーはAPI経由で削除（batchId = item.id）
       try {
-        const res = await fetch(`/api/banner/history?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+        const res = await fetch(`/api/banner/history?batchId=${encodeURIComponent(id)}`, { method: 'DELETE' })
         if (res.ok) {
           setHistory(history.filter(item => item.id !== id))
           toast.success('削除しました')
