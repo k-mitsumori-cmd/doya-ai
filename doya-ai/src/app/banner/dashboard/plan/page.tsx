@@ -68,6 +68,29 @@ export default function BannerPlanPage() {
   const [isCanceling, setIsCanceling] = useState(false)
   const [statsLoaded, setStatsLoaded] = useState(false)
 
+  const openBillingPortal = async () => {
+    if (isGuest) {
+      toast.error('ログインが必要です')
+      return
+    }
+    try {
+      setIsPortalLoading(true)
+      const res = await fetch('/api/stripe/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnTo: '/banner/dashboard/plan' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || '契約管理ページを開けませんでした')
+      if (!data?.url) throw new Error('契約管理ページURLが取得できませんでした')
+      window.location.href = String(data.url)
+    } catch (e: any) {
+      toast.error(e?.message || '契約管理ページを開けませんでした')
+    } finally {
+      setIsPortalLoading(false)
+    }
+  }
+
   const handleCancelSubscription = async () => {
     if (isGuest) {
       toast.error('ログインが必要です')
@@ -276,14 +299,15 @@ export default function BannerPlanPage() {
                       </Link>
                     ) : isEnterprise ? (
                       <>
-                        <a
-                          href={`/api/stripe/portal/redirect?returnTo=${encodeURIComponent('/banner/dashboard/plan')}`}
+                        <button
+                          type="button"
                           className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-200"
-                          onClick={() => setIsPortalLoading(true)}
+                          onClick={openBillingPortal}
+                          disabled={isPortalLoading}
                         >
                           {isPortalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
                           契約管理
-                        </a>
+                        </button>
                         <Link
                           href={HIGH_USAGE_CONTACT_URL || '/banner/pricing'}
                           className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white border border-gray-200 text-slate-800 font-black hover:bg-slate-50 transition-all shadow-sm"
@@ -303,14 +327,15 @@ export default function BannerPlanPage() {
                           <Crown className="w-5 h-5" />
                           エンタープライズにアップグレード
                         </CheckoutButton>
-                        <a
-                          href={`/api/stripe/portal/redirect?returnTo=${encodeURIComponent('/banner/dashboard/plan')}`}
+                        <button
+                          type="button"
                           className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white border border-gray-200 text-slate-800 font-black hover:bg-slate-50 transition-all shadow-sm"
-                          onClick={() => setIsPortalLoading(true)}
+                          onClick={openBillingPortal}
+                          disabled={isPortalLoading}
                         >
                           {isPortalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5 text-blue-600" />}
                           契約管理
-                        </a>
+                        </button>
                       </>
                     ) : (
                       <>
