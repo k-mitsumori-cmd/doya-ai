@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import React, { memo, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -56,7 +56,7 @@ interface DashboardSidebarProps {
   isMobile?: boolean
 }
 
-export default function DashboardSidebar({ 
+function DashboardSidebarImpl({ 
   isCollapsed: controlledIsCollapsed, 
   onToggle, 
   forceExpanded,
@@ -66,8 +66,10 @@ export default function DashboardSidebar({
   const { data: session } = useSession()
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false)
 
-  const isBanner = pathname.startsWith('/banner')
-  const activeNavItems = isBanner ? bannerNavItems : seoNavItems
+  // 入力中の親コンポーネント再レンダーでサイドバーが“ぱちぱち”しないよう、
+  // derived values をメモ化して framer-motion の不要な更新を抑える
+  const isBanner = useMemo(() => pathname.startsWith('/banner'), [pathname])
+  const activeNavItems = useMemo(() => (isBanner ? bannerNavItems : seoNavItems), [isBanner])
 
   const isCollapsed = forceExpanded ? false : (controlledIsCollapsed ?? internalIsCollapsed)
   const toggle = () => {
@@ -183,9 +185,9 @@ export default function DashboardSidebar({
   return (
     <motion.aside
       initial={false}
-      animate={{ 
+      animate={{
         width: isCollapsed ? 72 : 240,
-        x: isMobile ? 0 : 0 // モバイル時はコンテナ側で制御
+        x: 0, // モバイル時はコンテナ側で制御
       }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       className={`${isMobile ? 'relative' : 'fixed left-0 top-0'} h-screen bg-[#2563EB] flex flex-col z-50 shadow-xl`}
@@ -299,4 +301,7 @@ export default function DashboardSidebar({
     </motion.aside>
   )
 }
+
+// props が変わらない限り再レンダーしない（入力中の“ぱちぱち”対策）
+export default memo(DashboardSidebarImpl)
 
