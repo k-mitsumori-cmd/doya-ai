@@ -36,14 +36,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       {/* Sidebar - Desktop */}
-      <div className="hidden lg:block">
+      <div className="hidden md:block">
         <DashboardSidebar isCollapsed={isCollapsed} onToggle={handleToggle} />
       </div>
 
       {/* Sidebar - Mobile Overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <div className="fixed inset-0 z-[100] lg:hidden">
+          <div className="fixed inset-0 z-[100] md:hidden">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -73,15 +73,15 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div 
         className={`flex flex-col min-h-screen transition-all duration-300 ease-in-out ${
-          isCollapsed ? 'lg:pl-[72px]' : 'lg:pl-[240px]'
+          isCollapsed ? 'md:pl-[72px]' : 'md:pl-[240px]'
         }`}
       >
         <div className="flex-1 flex flex-col min-h-screen">
           {/* Top Header */}
-          <header className="sticky top-0 z-40 h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 lg:px-8">
+          <header className="sticky top-0 z-40 h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 md:px-8">
             <div className="flex items-center gap-4">
               <button 
-                className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
                 onClick={() => setIsSidebarOpen(true)}
               >
                 <Menu className="w-6 h-6" />
@@ -89,7 +89,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               {/* 検索バーは削除 - ツールに集中するため */}
             </div>
 
-            <div className="flex items-center gap-2 lg:gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full relative transition-colors" title="通知">
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
@@ -97,7 +97,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="設定">
                 <Settings className="w-5 h-5" />
               </button>
-              <div className="h-8 w-px bg-gray-200 mx-1 lg:mx-2" />
+              <div className="h-8 w-px bg-gray-200 mx-1 md:mx-2" />
               <div className="flex items-center gap-3 pl-1">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-bold text-gray-900 leading-none mb-1">{session?.user?.name || '田中 太郎'}</p>
@@ -117,7 +117,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </header>
 
           {/* Page Content */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <main className="flex-1 p-4 sm:p-6 md:p-8">
             <div className="max-w-7xl mx-auto">
               {children}
             </div>

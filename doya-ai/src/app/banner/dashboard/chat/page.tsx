@@ -337,7 +337,7 @@ export default function BannerChatPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
       <DashboardSidebar />
-      <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+      <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
         <LoadingProgress isLoading={isThinking || isGenerating || isRefining} />
 
         {/* ========================================

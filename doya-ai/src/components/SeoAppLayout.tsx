@@ -36,14 +36,14 @@ export function SeoAppLayout({
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       {/* Sidebar - Desktop */}
-      <div className="hidden lg:block">
+      <div className="hidden md:block">
         <SeoSidebar />
       </div>
 
       {/* Sidebar - Mobile */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <div className="fixed inset-0 z-[100] lg:hidden">
+          <div className="fixed inset-0 z-[100] md:hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -71,12 +71,12 @@ export function SeoAppLayout({
       </AnimatePresence>
 
       {/* Main */}
-      <div className="flex flex-col min-h-screen transition-all duration-300 ease-in-out lg:pl-[240px]">
+      <div className="flex flex-col min-h-screen transition-all duration-300 ease-in-out md:pl-[240px]">
         {/* Top Header (SEO専用：useSessionを使わず、/api/auth/session 連打を防ぐ) */}
-        <header className="sticky top-0 z-40 h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 lg:px-8">
+        <header className="sticky top-0 z-40 h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 flex items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-3">
             <button
-              className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+              className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu className="w-6 h-6" />
@@ -102,7 +102,7 @@ export function SeoAppLayout({
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 p-4 sm:p-6 md:p-8">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>

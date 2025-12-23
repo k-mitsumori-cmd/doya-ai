@@ -155,7 +155,7 @@ export default function StatsPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
         <DashboardSidebar />
-        <div className="pl-[72px] lg:pl-[240px] flex items-center justify-center min-h-screen">
+        <div className="pl-[72px] md:pl-[240px] flex items-center justify-center min-h-screen">
           <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
         </div>
       </div>
@@ -167,7 +167,7 @@ export default function StatsPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
         <DashboardSidebar />
-        <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+        <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
           <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
             <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
               <div className="h-16 sm:h-20 flex items-center gap-4">
@@ -217,7 +217,7 @@ export default function StatsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
       <DashboardSidebar />
-      <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+      <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
           <div className="h-16 sm:h-20 flex items-center justify-between">

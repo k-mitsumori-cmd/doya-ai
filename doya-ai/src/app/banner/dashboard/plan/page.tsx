@@ -149,7 +149,7 @@ export default function BannerPlanPage() {
     return (
       <div className="min-h-screen bg-slate-50">
         <DashboardSidebar />
-        <div className="pl-[72px] lg:pl-[240px] min-h-screen flex items-center justify-center">
+        <div className="pl-[72px] md:pl-[240px] min-h-screen flex items-center justify-center">
           <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
         </div>
       </div>
@@ -159,7 +159,7 @@ export default function BannerPlanPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
       <DashboardSidebar />
-      <div className="pl-[72px] lg:pl-[240px] transition-all duration-200">
+      <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
         {/* ========================================
             Header - Doya Banner Style
             ======================================== */}
