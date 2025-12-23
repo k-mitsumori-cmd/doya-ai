@@ -22,15 +22,27 @@ type HistoryBatch = {
   banners: string[]
 }
 
-// ユーザーが有料プランかどうかを判定
-async function isProUser(userId: string): Promise<boolean> {
+// ユーザーが有料プランかどうかを判定（DB優先。セッションにもフォールバック）
+async function isProUserByDb(userId: string): Promise<boolean> {
   const sub = await prisma.userServiceSubscription.findUnique({
     where: { userId_serviceId: { userId, serviceId: 'banner' } },
     select: { plan: true },
   })
   const plan = (sub?.plan || 'FREE').toUpperCase()
-  return plan === 'PRO' || plan === 'BASIC' || plan === 'ENTERPRISE'
+  return plan !== 'FREE'
 }
+
+function isProFromSession(session: any): boolean {
+  const bannerPlan = String(session?.user?.bannerPlan || '').toUpperCase()
+  const globalPlan = String(session?.user?.plan || '').toUpperCase()
+  // bannerPlan があればそれを優先。無ければ global plan を見る
+  if (bannerPlan) return bannerPlan !== 'FREE'
+  return globalPlan && globalPlan !== 'FREE'
+}
+
+// クリーンアップ頻度を抑えてレスポンスを軽くする（サーバレスでも一定効果）
+const lastCleanupAtByUser = new Map<string, number>()
+const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6時間
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,7 +53,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 有料プラン判定
-    const isPro = await isProUser(userId)
+    const isPro = isProFromSession(session) || (await isProUserByDb(userId))
     const historyDays = isPro ? BANNER_PRICING.historyDays.pro : BANNER_PRICING.historyDays.free
 
     // 無料ユーザーは履歴閲覧不可
@@ -58,14 +70,21 @@ export async function GET(request: NextRequest) {
     cutoffDate.setDate(cutoffDate.getDate() - historyDays)
     
     // バックグラウンドで古いデータを削除（非同期・エラーでも続行）
-    prisma.generation.deleteMany({
-      where: {
-        userId,
-        serviceId: 'banner',
-        outputType: 'IMAGE',
-        createdAt: { lt: cutoffDate },
-      },
-    }).catch((e) => console.error('[banner history] cleanup failed:', e))
+    const now = Date.now()
+    const last = lastCleanupAtByUser.get(userId) || 0
+    if (now - last > CLEANUP_INTERVAL_MS) {
+      lastCleanupAtByUser.set(userId, now)
+      prisma.generation
+        .deleteMany({
+          where: {
+            userId,
+            serviceId: 'banner',
+            outputType: 'IMAGE',
+            createdAt: { lt: cutoffDate },
+          },
+        })
+        .catch((e) => console.error('[banner history] cleanup failed:', e))
+    }
 
     const { searchParams } = new URL(request.url)
     const takeRaw = parseIntParam(searchParams.get('take'), 20)

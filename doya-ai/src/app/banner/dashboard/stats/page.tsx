@@ -50,6 +50,20 @@ export default function StatsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [requiresUpgrade, setRequiresUpgrade] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [tipIndex, setTipIndex] = useState(0)
+
+  const LOADING_TIPS = [
+    '統計は直近6ヶ月分の履歴から集計しています',
+    'A/B/Cを作り分けると勝ちパターンが見つかりやすいです',
+    'YouTubeは「短い強い言葉＋表情」で伸びやすいです',
+    '表示が重い場合は少し待ってから再試行してください',
+  ]
+
+  useEffect(() => {
+    if (!isLoading && isLoaded) return
+    const t = window.setInterval(() => setTipIndex((v) => (v + 1) % LOADING_TIPS.length), 1800)
+    return () => window.clearInterval(t)
+  }, [isLoading, isLoaded])
 
   // ログインユーザーはAPIから、ゲストは統計閲覧不可
   const loadHistory = useCallback(async () => {
@@ -186,7 +200,10 @@ export default function StatsPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-blue-50/20">
         <DashboardSidebar />
         <div className="pl-[72px] md:pl-[240px] flex items-center justify-center min-h-screen">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+          <div className="text-center">
+            <div className="mx-auto animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+            <p className="mt-4 text-xs font-bold text-slate-500">{LOADING_TIPS[tipIndex]}</p>
+          </div>
         </div>
       </div>
     )

@@ -26,6 +26,21 @@ export default function BannerGalleryPage() {
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [tipIndex, setTipIndex] = useState(0)
+
+  const LOADING_TIPS = [
+    '人気のバナーは「数字×限定感×CTA」が強いです',
+    '人物写真を入れるとCTRが上がりやすい傾向があります',
+    '文字は短く太く。3秒で伝わるのが勝ちです',
+    '迷ったら「今だけ」「無料」「限定」でテスト',
+    'ローディング中も別タブで作業OKです',
+  ]
+
+  useEffect(() => {
+    if (!loading && !loadingMore) return
+    const t = window.setInterval(() => setTipIndex((v) => (v + 1) % LOADING_TIPS.length), 1800)
+    return () => window.clearInterval(t)
+  }, [loading, loadingMore])
 
   const fetchPage = async (nextCursor?: string | null) => {
     const qs = new URLSearchParams()
@@ -139,9 +154,17 @@ export default function BannerGalleryPage() {
 
         <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12">
           {loading ? (
-            <div className="bg-white rounded-3xl border border-gray-100 p-10 shadow-sm flex items-center justify-center gap-3 text-slate-600 font-bold">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              読み込み中...
+            <div className="bg-white rounded-3xl border border-gray-100 p-10 shadow-sm">
+              <div className="flex items-center justify-center gap-3 text-slate-700 font-black">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                読み込み中...
+              </div>
+              <div className="mt-4 h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full w-1/3 bg-blue-600 animate-pulse rounded-full" />
+              </div>
+              <p className="mt-4 text-center text-xs font-bold text-slate-500">
+                {LOADING_TIPS[tipIndex]}
+              </p>
             </div>
           ) : error ? (
             <div className="bg-white rounded-3xl border border-red-100 p-10 shadow-sm">
