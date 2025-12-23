@@ -79,6 +79,7 @@ export default function BannerChatPage() {
   const [logoFileName, setLogoFileName] = useState('')
   const [personImage, setPersonImage] = useState<string | null>(null)
   const [personFileName, setPersonFileName] = useState('')
+  const [generateCount, setGenerateCount] = useState<number>(3)
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
       id: 'hello-1',
@@ -117,6 +118,21 @@ export default function BannerChatPage() {
   }, [messages.length, generatedBanners.length, proposedSpec?.keyword])
 
   const canSend = input.trim().length > 0 && !isThinking && !isGenerating && !isRefining
+
+  const isGuest = !session
+  const bannerPlan = session
+    ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase()
+    : 'GUEST'
+  const isProUser = !isGuest && bannerPlan === 'PRO'
+
+  useEffect(() => {
+    if (!isProUser) {
+      if (generateCount !== 3) setGenerateCount(3)
+      return
+    }
+    if (generateCount < 3) setGenerateCount(3)
+    if (generateCount > 10) setGenerateCount(10)
+  }, [isProUser, generateCount])
 
   const summary = useMemo(() => {
     if (!proposedSpec) return null
@@ -192,6 +208,7 @@ export default function BannerChatPage() {
           purpose: proposedSpec.purpose,
           size: proposedSpec.size,
           keyword: proposedSpec.keyword,
+          count: generateCount,
           imageDescription: proposedSpec.imageDescription,
           brandColors: proposedSpec.brandColors,
           logoImage: logoImage || undefined,
@@ -663,6 +680,39 @@ export default function BannerChatPage() {
                         <p className="mt-3 text-[11px] text-slate-500 font-medium leading-relaxed">
                           ※ ロゴは「提供されたロゴ画像のみ」を使用します。人物写真はアップした写真を自然に合成します。
                         </p>
+                      </div>
+
+                      {/* Generate Count */}
+                      <div className="rounded-2xl border border-slate-100 bg-white p-5">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">生成枚数</p>
+                        <div className="flex items-start justify-between gap-4">
+                          <p className="text-xs text-slate-600 font-bold leading-relaxed">
+                            デフォルト3枚（A/B/C）。有料プランは最大10枚まで。<span className="text-slate-900">枚数が多いほど時間がかかります。</span>
+                          </p>
+                          <p className="text-xs font-black text-slate-900 tabular-nums whitespace-nowrap">{generateCount}枚</p>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                            <button
+                              key={n}
+                              type="button"
+                              disabled={!isProUser && n !== 3}
+                              onClick={() => setGenerateCount(n)}
+                              className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
+                                generateCount === n
+                                  ? 'bg-blue-600 text-white border-blue-600'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed'
+                              }`}
+                            >
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                        {!isProUser && (
+                          <p className="mt-3 text-[11px] text-slate-500 font-medium">
+                            ※ 4枚以上は有料プラン限定です。
+                          </p>
+                        )}
                       </div>
 
                       <button

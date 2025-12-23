@@ -489,6 +489,8 @@ ${company ? `- Brand (任意): ${company}` : ''}
 - Use a clean Japanese font style (Noto Sans JP-like)
 - Use strong contrast + solid/gradient panel behind text
 - Headline is very large, 1–2 lines max. Avoid long sentences.
+- The Headline must appear as real Japanese text inside the image. Do NOT output an image without it.
+- If you struggle to render Japanese correctly, retry internally; do NOT omit the text.
 - Do NOT include any other text besides the provided strings above.
 
 === YOUTUBE THUMBNAIL DESIGN PRINCIPLES ===
@@ -643,6 +645,8 @@ ${company ? `- Brand (任意): ${company}` : ''}
 - Use a clean Japanese font style (Noto Sans JP-like)
 - Use a solid/gradient panel behind text for contrast (no busy background behind letters)
 - Headline is very large, 1–2 lines max. Avoid long sentences.
+- The Headline must appear as real Japanese text inside the image. Do NOT output an image without it.
+- If you struggle to render Japanese correctly, retry internally; do NOT omit the text.
 - Do NOT include any other text besides the provided strings above.
 
 === DESIGN REQUIREMENTS ===
@@ -902,7 +906,8 @@ async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<str
   const instruction = [
     'You are a prompt engineer for a premium image generation model.',
     'Rewrite the following prompt into a concise, high-signal image prompt (English).',
-    'Keep ALL constraints about Japanese text readability, font size, and solid text background.',
+    'Keep ALL constraints about exact pixel size, edge-to-edge (no letterboxing), and Japanese text readability.',
+    'Keep ALL user-provided details (visual description, brand colors, provided logo/person instructions, and exact strings to render).',
     'Do not add policy text. Output ONLY the final prompt.',
     '',
     '--- ORIGINAL PROMPT ---',
@@ -951,6 +956,63 @@ async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<str
   throw lastErr || new Error('Gemini prompt refine failed')
 }
 
+const EXTRA_VARIANT_HINTS: string[] = [
+  'Make it more minimal and premium: fewer elements, strong typography hierarchy, lots of clean space (but no empty bands).',
+  'Make it more bold and punchy: heavier shapes, stronger contrast, and a more aggressive CTA emphasis.',
+  'Make it more photo-centric: subject larger, background simpler, and text panel super clean.',
+  'Make it more infographic-like: simple icons/shapes to support the claim (no extra text).',
+  'Make it more dynamic: diagonal composition, energetic accents, but keep text perfectly readable.',
+  'Make it more luxury: subtle gradients, refined palette, high-end feel (avoid cheap effects).',
+  'Make it more playful: friendly shapes, upbeat tone, but keep high CTR and legibility.',
+]
+
+function buildHardConstraintsAppendix(keyword: string, size: string, options: GenerateOptions, patternLabel: string): string {
+  const [width, height] = size.split('x')
+  const headline = (keyword || '').trim() || (options.headlineText || '').trim()
+  const subhead = (options.subheadText || '').trim()
+  const cta = (options.ctaText || '').trim()
+  const company = (options.companyName || '').trim()
+
+  return [
+    '',
+    '=== HARD CONSTRAINTS (DO NOT DROP) ===',
+    `PATTERN: ${patternLabel} (must be a distinct creative variation, but must follow the same content/image intent)`,
+    `Output dimensions: EXACTLY ${width}x${height} px. Do NOT change aspect ratio.`,
+    '- Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom bars, NO padding, NO borders.',
+    '',
+    'TEXT MUST BE IN THE IMAGE (EXACT):',
+    `- Headline (必須): ${headline || '(empty)'}`,
+    subhead ? `- Subhead (任意): ${subhead}` : '',
+    cta ? `- CTA (任意): ${cta}` : '',
+    company ? `- Brand (任意): ${company}` : '',
+    '',
+    options.imageDescription
+      ? [
+          'USER VISUAL DESCRIPTION (HIGHEST PRIORITY):',
+          `"${options.imageDescription}"`,
+          'Reflect this in ALL patterns, including B/C and beyond.',
+          '',
+        ].join('\n')
+      : '',
+    Array.isArray(options.brandColors) && options.brandColors.length > 0
+      ? [
+          'BRAND COLORS (MUST USE):',
+          options.brandColors.slice(0, 8).join(', '),
+          '',
+        ].join('\n')
+      : '',
+    options.logoImage
+      ? 'LOGO PROVIDED: use ONLY the provided logo image. Do NOT invent any logo/mark.\n'
+      : 'NO LOGO: do NOT invent any logo/mark.\n',
+    options.personImage || options.hasPerson
+      ? 'PERSON: include the provided person photo if available; otherwise generate a suitable person. Keep text readable.\n'
+      : '',
+    'FINAL: Return ONE PNG image with the Japanese text rendered correctly.',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
 // サイズからアスペクト比を計算
 function getAspectRatio(size: string): string {
   const [width, height] = size.split('x').map(Number)
@@ -971,7 +1033,8 @@ export async function generateBanners(
   category: string,
   keyword: string,
   size: string = '1080x1080',
-  options: GenerateOptions = {}
+  options: GenerateOptions = {},
+  count: number = 3
 ): Promise<{ banners: string[]; error?: string; usedModel?: string }> {
   const imageModel = getImageModel()
   const textModel = getGeminiTextModel()
@@ -993,6 +1056,8 @@ export async function generateBanners(
 
   const isYouTube = options.purpose === 'youtube'
   const appealTypes = isYouTube ? YOUTUBE_APPEAL_TYPES : APPEAL_TYPES
+  const letters = 'ABCDEFGHIJ'.split('')
+  const targetCount = Math.max(1, Math.min(10, Number.isFinite(count) ? Math.floor(count) : 3))
 
   console.log(`Starting ${isYouTube ? 'YouTube thumbnail' : 'banner'} generation with Nano Banana Pro`)
   console.log(`Category: ${category}, Purpose: ${options.purpose}, Size: ${size}`)
@@ -1004,18 +1069,40 @@ export async function generateBanners(
     const errors: string[] = []
     let usedModel: string | undefined = undefined
     
-    // 3パターン順次生成（Nano Banana Pro のみ使用）
-    for (const appealType of appealTypes) {
+    // Nパターン順次生成（Nano Banana Pro のみ使用）
+    for (let i = 0; i < targetCount; i++) {
+      const appealType = appealTypes[i % appealTypes.length]
+      const patternLabel = letters[i] || String(i + 1)
       try {
         const basePrompt = createBannerPrompt(category, keyword, size, appealType, options)
-        console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} type ${appealType.type} (${appealType.japanese})...`)
+        const extraHint = i >= appealTypes.length ? EXTRA_VARIANT_HINTS[i - appealTypes.length] : ''
+        console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} pattern ${patternLabel} (${appealType.type}/${appealType.japanese})...`)
         
         let finalPrompt = basePrompt
-        try {
-          finalPrompt = await refinePromptWithGemini3Flash(basePrompt)
-        } catch (e: any) {
-          console.warn('Gemini prompt refine failed. Using base prompt.', e?.message || e)
+        const hasStrictInputs =
+          !!options.imageDescription ||
+          !!options.logoImage ||
+          !!options.personImage ||
+          (Array.isArray(options.referenceImages) && options.referenceImages.length > 0) ||
+          (Array.isArray(options.brandColors) && options.brandColors.length > 0)
+
+        // 重要入力がある場合はプロンプト圧縮で情報が落ちるリスクがあるため、基本はスキップ
+        if (!hasStrictInputs) {
+          try {
+            finalPrompt = await refinePromptWithGemini3Flash(basePrompt)
+          } catch (e: any) {
+            console.warn('Gemini prompt refine failed. Using base prompt.', e?.message || e)
+          }
         }
+
+        // B/C含め、必須情報が落ちないように最後に“硬い制約”を必ず付与
+        finalPrompt = [
+          finalPrompt,
+          extraHint ? `\n=== VARIATION HINT ===\n${extraHint}\n` : '',
+          buildHardConstraintsAppendix(keyword, size, options, `PATTERN ${patternLabel}`),
+        ]
+          .filter(Boolean)
+          .join('\n')
 
         const result = await generateSingleBanner(finalPrompt, size, options)
         
@@ -1027,15 +1114,15 @@ export async function generateBanners(
         console.log(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generated successfully with model: ${result.model}`)
         
         // レート制限を避けるため待機
-        if (appealTypes.indexOf(appealType) < appealTypes.length - 1) {
+        if (i < targetCount - 1) {
           await new Promise(resolve => setTimeout(resolve, 2000))
         }
       } catch (error: any) {
-        console.error(`${isYouTube ? 'Thumbnail' : 'Banner'} ${appealType.type} generation failed:`, error.message)
-        errors.push(`${appealType.type}: ${error.message}`)
+        console.error(`${isYouTube ? 'Thumbnail' : 'Banner'} ${patternLabel} generation failed:`, error.message)
+        errors.push(`${patternLabel}: ${error.message}`)
         // エラーの場合はプレースホルダー（エラー内容を表示）
         const [w, h] = size.split('x')
-        banners.push(`https://placehold.co/${w}x${h}/EF4444/FFFFFF?text=Error:+Pattern+${appealType.type}`)
+        banners.push(`https://placehold.co/${w}x${h}/EF4444/FFFFFF?text=Error:+Pattern+${patternLabel}`)
       }
     }
 

@@ -220,9 +220,10 @@ export const BANNER_PRICING: ServicePricing = {
   serviceId: 'banner',
   serviceName: 'ドヤバナーAI',
   serviceIcon: '🎨',
-  guestLimit: 1,      // ゲスト: 1日1回（コスト管理）
-  freeLimit: 3,       // 無料会員: 1日3回
-  proLimit: 30,       // プロ会員: 1日30回（90案/日）
+  // NOTE: 生成「枚数」ベースで管理（1回の生成で複数枚作れるため）
+  guestLimit: 3,      // ゲスト: 1日3枚（= デフォルト3枚生成1回相当）
+  freeLimit: 9,       // 無料会員: 1日9枚（= デフォルト3枚生成3回相当）
+  proLimit: 50,       // 有料: 1日50枚（上限を上げすぎるとコスト/待ち時間が増える）
   historyDays: {
     free: 7,          // 無料: 7日間保存
     pro: -1,          // プロ: 無制限
@@ -234,12 +235,12 @@ export const BANNER_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '無料',
       period: '',
-      description: '1日3回までの生成をすることができます',
+      description: '1日9枚まで生成できます（デフォルト3枚×3回相当）',
       features: [
-        { text: 'ゲスト: 1日1回まで', included: true },
-        { text: 'ログイン: 1日3回まで', included: true },
+        { text: 'ゲスト: 1日3枚まで', included: true },
+        { text: 'ログイン: 1日9枚まで', included: true },
         { text: 'SNS広告/YouTube/ディスプレイなど対応', included: true },
-        { text: 'A/B/C 3案生成', included: true },
+        { text: 'デフォルト3枚生成（A/B/C）', included: true },
         { text: '履歴保存（7日間）', included: true },
       ],
       cta: '3回生成',
@@ -254,7 +255,8 @@ export const BANNER_PRICING: ServicePricing = {
       popular: true,
       color: 'slate',
       features: [
-        { text: '1日30回までの生成が可能', included: true },
+        { text: '1日50枚まで生成', included: true },
+        { text: '1回の生成で最大10枚まで', included: true },
         { text: 'すべての機能', included: true },
         { text: '履歴保存（無制限）', included: true },
         { text: '優先サポート', included: true },
@@ -278,10 +280,10 @@ export const BANNER_PRICING: ServicePricing = {
   ],
 }
 
-// 30回/日を超える利用（チーム/法人/大量生成など）の相談導線
+// 50枚/日を超える利用（チーム/法人/大量生成など）の相談導線
 export const HIGH_USAGE_CONTACT_URL =
   process.env.NEXT_PUBLIC_HIGH_USAGE_CONTACT_URL ||
-  'mailto:support@doya-ai.com?subject=%E4%B8%8A%E4%BD%8D%E3%83%97%E3%83%A9%E3%83%B3%EF%BC%8830%E5%9B%9E%2F%E6%97%A5%E8%B6%85%EF%BC%89%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6'
+  'mailto:support@doya-ai.com?subject=%E4%B8%8A%E4%BD%8D%E3%83%97%E3%83%A9%E3%83%B3%EF%BC%8850%E6%9E%9A%2F%E6%97%A5%E8%B6%85%EF%BC%89%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6'
 
 // ========================================
 // ポータル全体のセット割引
@@ -455,10 +457,11 @@ export function getUserRemainingCount(serviceId: string, userType: 'free' | 'pro
   return Math.max(0, limit - usage.count)
 }
 
-export function incrementUserUsage(serviceId: string): number {
+export function incrementUserUsage(serviceId: string, by: number = 1): number {
   const usage = getUserUsage(serviceId)
   const today = new Date().toISOString().split('T')[0]
-  const newCount = usage.date === today ? usage.count + 1 : 1
+  const inc = Number.isFinite(by) ? Math.max(1, Math.floor(by)) : 1
+  const newCount = usage.date === today ? usage.count + inc : inc
   setUserUsage(serviceId, newCount)
   return newCount
 }

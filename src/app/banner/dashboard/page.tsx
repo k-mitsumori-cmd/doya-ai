@@ -718,6 +718,9 @@ export default function BannerDashboard() {
   const [personImage, setPersonImage] = useState<string | null>(null)
   const [personFileName, setPersonFileName] = useState('')
 
+  // 生成枚数（デフォルト3 / 有料は最大10）
+  const [generateCount, setGenerateCount] = useState<number>(3)
+
   const readFileAsDataUrl = async (file: File): Promise<string> => {
     const maxBytes = 6 * 1024 * 1024 // 6MB
     if (file.size > maxBytes) throw new Error('画像が大きすぎます（6MB以内）')
@@ -756,6 +759,17 @@ export default function BannerDashboard() {
   const userDailyLimit = isProUser ? BANNER_PRICING.proLimit : BANNER_PRICING.freeLimit
   const userRemaining = Math.max(0, userDailyLimit - userUsageCount)
   const remainingCount = isGuest ? guestRemaining : userRemaining
+
+  useEffect(() => {
+    // 無料/ゲストは3枚固定
+    if (!isProUser) {
+      if (generateCount !== 3) setGenerateCount(3)
+      return
+    }
+    // 有料は 3..10
+    if (generateCount < 3) setGenerateCount(3)
+    if (generateCount > 10) setGenerateCount(10)
+  }, [isProUser, generateCount])
   
   // タブ状態（バックグラウンドでも進行するが、閉じる/更新すると中断される可能性が高い）
   useEffect(() => {
@@ -1016,6 +1030,7 @@ export default function BannerDashboard() {
           keyword: keyword.trim(),
           size: effectiveSize,
           purpose,
+          count: generateCount,
           imageDescription: imageDescription.trim() || undefined,
           logoImage: logoImage || undefined,
           personImage: personImage || undefined,
@@ -1061,7 +1076,8 @@ export default function BannerDashboard() {
           setGuestUsageCount(serverUsed)
           setGuestUsage('banner', serverUsed)
         } else {
-          const newCount = guestUsageCount + 1
+          const genCount = Array.isArray(data?.banners) ? data.banners.length : 3
+          const newCount = guestUsageCount + genCount
           setGuestUsageCount(newCount)
           setGuestUsage('banner', newCount)
         }
@@ -1070,7 +1086,8 @@ export default function BannerDashboard() {
         if (Number.isFinite(serverUsed)) {
           setUserUsageCount(serverUsed)
         } else {
-          const newCount = incrementUserUsage('banner')
+          const genCount = Array.isArray(data?.banners) ? data.banners.length : 3
+          const newCount = incrementUserUsage('banner', genCount)
           setUserUsageCount(newCount)
         }
       }
@@ -1801,6 +1818,49 @@ export default function BannerDashboard() {
               transition={{ delay: 0.35 }}
             >
             <div className="pt-10">
+              {/* Generate Count */}
+              <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-black text-slate-800">生成枚数</p>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      デフォルトは3枚（A/B/C）。有料プランは最大10枚まで増やせます。
+                      <span className="ml-1 font-bold text-slate-700">枚数を増やすほど時間がかかります。</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-black text-slate-900 tabular-nums">{generateCount}枚</p>
+                    <p className="text-[10px] text-slate-400 font-bold">
+                      {isProUser ? '最大10枚' : '無料は3枚固定'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center gap-2">
+                  {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      disabled={!isProUser && n !== 3}
+                      onClick={() => setGenerateCount(n)}
+                      className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
+                        generateCount === n
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+
+                {!isProUser && (
+                  <p className="mt-3 text-[11px] text-slate-500 font-medium">
+                    ※ 4枚以上は有料プラン限定です（生成時間とコストが増えるため）。
+                  </p>
+                )}
+              </div>
+
               {/* Logo / Person Upload */}
               <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
                 <div>
