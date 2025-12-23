@@ -168,6 +168,11 @@ export async function createCustomerPortalSession({
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
     return_url: returnUrl,
+    // Stripeダッシュボードで作成した「カスタマーポータル設定」を指定すると、
+    // 解約/プラン変更などの機能を確実に有効化できる
+    configuration: process.env.STRIPE_PORTAL_CONFIGURATION_ID || undefined,
+    // 日本語化
+    locale: 'ja',
   })
 
   return session
