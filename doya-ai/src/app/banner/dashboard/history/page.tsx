@@ -39,40 +39,39 @@ export default function BannerHistoryPage() {
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [requiresUpgrade, setRequiresUpgrade] = useState(false)
 
-  // ログインユーザーはAPIから、ゲストはlocalStorageから読み込み
+  // ログインユーザーはAPIから、ゲストは履歴閲覧不可
   const loadHistory = useCallback(async () => {
     if (status === 'loading') return
     setIsLoading(true)
+    setRequiresUpgrade(false)
     try {
       if (isGuest) {
-        // ゲストはlocalStorageから取得
-        const stored = localStorage.getItem('banner_history')
-        if (stored) {
-          const parsed = JSON.parse(stored) as any[]
-          setHistory(parsed.map((item: any) => ({
-            ...item,
-            createdAt: new Date(item.createdAt),
-            banners: Array.isArray(item.banners) ? item.banners : [item.output],
-          })))
-        } else {
-          setHistory([])
-        }
+        // ゲストは履歴閲覧不可（有料プラン限定）
+        setHistory([])
+        setRequiresUpgrade(true)
       } else {
         // ログインユーザーはAPIから取得
         const res = await fetch('/api/banner/history?take=50')
         if (res.ok) {
           const data = await res.json()
-          const items = Array.isArray(data.items) ? data.items : []
-          setHistory(items.map((item: any) => ({
-            id: item.id,
-            category: item.category || '',
-            keyword: item.keyword || '',
-            size: item.size || '',
-            createdAt: new Date(item.createdAt),
-            // APIは banners 配列を返す（バッチ内の複数枚）
-            banners: Array.isArray(item.banners) ? item.banners : (item.image ? [item.image] : []),
-          })))
+          // 有料プラン限定チェック
+          if (data.requiresUpgrade) {
+            setHistory([])
+            setRequiresUpgrade(true)
+          } else {
+            const items = Array.isArray(data.items) ? data.items : []
+            setHistory(items.map((item: any) => ({
+              id: item.id,
+              category: item.category || '',
+              keyword: item.keyword || '',
+              size: item.size || '',
+              createdAt: new Date(item.createdAt),
+              // APIは banners 配列を返す（バッチ内の複数枚）
+              banners: Array.isArray(item.banners) ? item.banners : (item.image ? [item.image] : []),
+            })))
+          }
         } else {
           toast.error('履歴の取得に失敗しました')
           setHistory([])
@@ -187,7 +186,35 @@ export default function BannerHistoryPage() {
 
         {/* メイン */}
         <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12">
-          {history.length === 0 ? (
+          {requiresUpgrade ? (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-24 bg-white rounded-3xl border border-amber-200 shadow-sm"
+            >
+              <div className="w-24 h-24 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-amber-100">
+                <ImageIcon className="w-12 h-12 text-amber-400" />
+              </div>
+              <h2 className="text-2xl font-black text-slate-800 mb-3">有料プラン限定機能</h2>
+              <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
+                履歴機能は有料プラン限定です。<br />
+                プランをアップグレードすると、6ヶ月分の履歴を<br />
+                いつでも確認・再ダウンロードできます。
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link href="/banner/dashboard/plan">
+                  <button className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl transition-all shadow-lg shadow-amber-100 hover:scale-105">
+                    プランをアップグレード
+                  </button>
+                </Link>
+                <Link href="/banner/dashboard">
+                  <button className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all">
+                    バナーを生成する
+                  </button>
+                </Link>
+              </div>
+            </motion.div>
+          ) : history.length === 0 ? (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -199,7 +226,7 @@ export default function BannerHistoryPage() {
               <h2 className="text-2xl font-black text-slate-800 mb-3">履歴がありません</h2>
               <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
                 バナーを生成すると、ここに履歴が表示されます。<br />
-                作成したバナーはいつでも再ダウンロード可能です。
+                6ヶ月間保存され、いつでも再ダウンロード可能です。
               </p>
               <Link href="/banner/dashboard">
                 <button className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-100 hover:scale-105">

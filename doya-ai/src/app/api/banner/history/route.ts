@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { BANNER_PRICING } from '@/lib/pricing'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -21,6 +22,16 @@ type HistoryBatch = {
   banners: string[]
 }
 
+// ユーザーが有料プランかどうかを判定
+async function isProUser(userId: string): Promise<boolean> {
+  const sub = await prisma.userServiceSubscription.findUnique({
+    where: { userId_serviceId: { userId, serviceId: 'banner' } },
+    select: { plan: true },
+  })
+  const plan = (sub?.plan || 'FREE').toUpperCase()
+  return plan === 'PRO' || plan === 'BASIC' || plan === 'ENTERPRISE'
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -29,13 +40,45 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
     }
 
+    // 有料プラン判定
+    const isPro = await isProUser(userId)
+    const historyDays = isPro ? BANNER_PRICING.historyDays.pro : BANNER_PRICING.historyDays.free
+
+    // 無料ユーザーは履歴閲覧不可
+    if (historyDays === 0) {
+      return NextResponse.json({
+        items: [],
+        message: '履歴機能は有料プラン限定です。プランをアップグレードしてください。',
+        requiresUpgrade: true,
+      })
+    }
+
+    // 6ヶ月以上前のデータを自動削除（有料ユーザーでも180日を超えた履歴は削除）
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - historyDays)
+    
+    // バックグラウンドで古いデータを削除（非同期・エラーでも続行）
+    prisma.generation.deleteMany({
+      where: {
+        userId,
+        serviceId: 'banner',
+        outputType: 'IMAGE',
+        createdAt: { lt: cutoffDate },
+      },
+    }).catch((e) => console.error('[banner history] cleanup failed:', e))
+
     const { searchParams } = new URL(request.url)
     const takeRaw = parseIntParam(searchParams.get('take'), 20)
     const takeBatches = Math.min(Math.max(takeRaw, 1), 50)
     const takeRows = takeBatches * 12 // 1バッチ最大10枚を想定し余裕を持たせる
 
     const rows = await prisma.generation.findMany({
-      where: { userId, serviceId: 'banner', outputType: 'IMAGE' },
+      where: {
+        userId,
+        serviceId: 'banner',
+        outputType: 'IMAGE',
+        createdAt: { gte: cutoffDate }, // 保存期間内のみ取得
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: takeRows,
     })

@@ -225,8 +225,8 @@ export const BANNER_PRICING: ServicePricing = {
   freeLimit: 9,       // 無料会員: 1日9枚（= デフォルト3枚生成3回相当）
   proLimit: 50,       // 有料: 1日50枚（上限を上げすぎるとコスト/待ち時間が増える）
   historyDays: {
-    free: 7,          // 無料: 7日間保存
-    pro: -1,          // プロ: 無制限
+    free: 0,          // 無料/ゲスト: 履歴閲覧不可（有料プラン限定機能）
+    pro: 180,         // 有料: 6ヶ月（180日）保存
   },
   plans: [
     {
