@@ -110,7 +110,8 @@ export default function BannerPlanPage() {
     loadStats()
   }, [isGuest, status])
 
-  const dailyLimit = isGuest ? BANNER_PRICING.guestLimit : getBannerDailyLimitByUserPlan(bannerPlan)
+  // ログイン時は「プラン階層」で日次上限を決める（plan文字列の揺れに強い）
+  const dailyLimit = isGuest ? BANNER_PRICING.guestLimit : getBannerDailyLimitByUserPlan(bannerPlanTier)
   const remaining = Math.max(0, dailyLimit - usageCount)
 
   const savedMinutes = totalBanners * ESTIMATED_TIME_SAVED_PER_BANNER_MIN
