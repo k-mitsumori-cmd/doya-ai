@@ -357,10 +357,10 @@ const APPEAL_TYPES = [
     type: 'A', 
     focus: 'Benefits focused', 
     style: [
-      'Visual strategy: benefit clarity (fast comprehension) WITHOUT text.',
-      '- Show the core benefit visually (product-in-use, clear outcome scene, before/after as imagery ONLY).',
+      'Visual strategy: benefit clarity (fast comprehension) WITH readable Japanese text.',
+      '- Show the core benefit visually (product-in-use, clear outcome scene, before/after).',
       '- Bright, optimistic lighting; clean background; one strong focal subject.',
-      '- Use supportive visual cues (icons/shapes/arrows WITHOUT text) to guide the eye to the CTA-shape.',
+      '- Use supportive visual cues (icons/shapes/arrows) to guide the eye to the CTA button.',
     ].join('\n'),
     japanese: 'ベネフィット重視',
   },
@@ -368,11 +368,11 @@ const APPEAL_TYPES = [
     type: 'B', 
     focus: 'Urgency and scarcity', 
     style: [
-      'Visual strategy: urgency & scarcity (act-now energy) WITHOUT text.',
+      'Visual strategy: urgency & scarcity (act-now energy) WITH readable Japanese text.',
       '- Dynamic composition (diagonal lines, motion blur accents, energetic shapes).',
-      '- Use urgency colors (red/yellow) as accents only; keep background readable for overlay.',
-      '- Add “limited/now” vibes via visual symbols: timers, streaks, burst shapes (NO numbers).',
-      '- Make the CTA-shape look extremely clickable through contrast and subtle glow.',
+      '- Use urgency colors (red/yellow) as accents only; keep a strong contrast text panel behind letters.',
+      '- Add “limited/now” vibes via visual symbols: timers, streaks, burst shapes (avoid tiny numbers).',
+      '- Make the CTA button look extremely clickable through contrast and subtle glow.',
     ].join('\n'),
     japanese: '緊急性・限定性',
   },
@@ -380,9 +380,9 @@ const APPEAL_TYPES = [
     type: 'C', 
     focus: 'Trust and credibility', 
     style: [
-      'Visual strategy: trust & credibility (premium, safe) WITHOUT text.',
+      'Visual strategy: trust & credibility (premium, safe) WITH readable Japanese text.',
       '- Calm, professional palette; controlled highlights; minimal clutter.',
-      '- Use credibility cues as SHAPES: award badge silhouettes, star shapes, certification-like seals (NO text).',
+      '- Use credibility cues as simple shapes: award badge silhouette, star shapes, certification-like seals (no tiny legal text).',
       '- Product/service shown cleanly with realistic materials; high-end finish and depth.',
       '- Strong grid alignment, generous whitespace, polished “enterprise” feel.',
     ].join('\n'),
@@ -447,7 +447,8 @@ function createYouTubeThumbnailPrompt(
 ): string {
   const [width, height] = size.split('x')
 
-  const headline = (options.headlineText || keyword || '').trim()
+  // キャッチコピー（keyword）を必ず画像内に含める
+  const headline = (keyword || '').trim() || (options.headlineText || '').trim()
   const subhead = (options.subheadText || '').trim()
   const cta = (options.ctaText || '').trim()
   const company = (options.companyName || '').trim()
@@ -458,6 +459,10 @@ function createYouTubeThumbnailPrompt(
 Format: 16:9 landscape thumbnail (${width}x${height} pixels)
 Platform: YouTube - must compete for attention among many thumbnails
 Goal: MAXIMIZE click-through rate (CTR) using bold visuals AND readable Japanese text
+
+=== SIZE / CROPPING (CRITICAL) ===
+- Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom bars, NO padding.
+- Keep all text fully inside the frame (no clipping). Use safe margins but do not create empty bands.
 
 === THUMBNAIL CONCEPT/THEME ===
 "${keyword}"
@@ -569,7 +574,8 @@ function createBannerPrompt(
     return createYouTubeThumbnailPrompt(keyword, size, appealType, options)
   }
 
-  const headline = (options.headlineText || keyword || '').trim()
+  // キャッチコピー（keyword）を必ず画像内に含める
+  const headline = (keyword || '').trim() || (options.headlineText || '').trim()
   const subhead = (options.subheadText || '').trim()
   const cta = (options.ctaText || '').trim()
   const company = (options.companyName || '').trim()
@@ -588,6 +594,10 @@ Goal: generate a HIGH-CTR, premium-quality advertisement creative WITH readable 
 Format: ${aspectRatio} banner (${width}x${height} pixels)
 Purpose: ${options.purpose || 'sns_ad'} - ${purposeStyle.layout}
 Primary KPI: maximize click-through rate (CTR) on mobile feeds.
+
+=== SIZE / CROPPING (CRITICAL) ===
+- Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom margins, NO padding.
+- Keep all text fully inside the frame (no clipping). Use safe margins but do not create empty bands.
 
 === DESIGN STYLE ===
 Industry: ${categoryStyle.style}
@@ -665,7 +675,7 @@ Maintain the logo's original colors and shape, blending it naturally with the ba
 === LOGO / BRAND MARK POLICY (VERY IMPORTANT) ===
 Do NOT include ANY logo, emblem, seal, watermark, badge, or random brand mark.
 Do NOT invent a logo or "logo-like icon".
-If a brand name is present, do NOT render it (NO TEXT rule). Keep a clean corner area for overlay.
+If a brand/company name is provided, you may render it small and clean as text. Do NOT invent any logo.
 `
   }
 
@@ -707,8 +717,12 @@ The person should match the banner's professional tone and target audience
 
   prompt += `
 === FINAL OUTPUT ===
-Return a high-quality ad banner image with NO TEXT.
-Make sure there is a clear overlay area for text (solid/gradient panel) and a CTA button shape (no text).`
+Return ONE high-quality ad banner image WITH the Japanese text rendered correctly.
+- The headline must include the catchphrase keyword exactly as provided.
+- All provided text must be fully readable Japanese (no garbling) and fully inside the frame (no clipping).
+- Fill the canvas edge-to-edge (no empty top/bottom bars, no padding, no borders).
+- CTA text should be placed inside a clickable-looking button.
+- No watermark, no signature.`
 
   return prompt
 }
