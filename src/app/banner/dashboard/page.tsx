@@ -2010,18 +2010,22 @@ export default function BannerDashboard() {
                         <p className="text-[11px] text-slate-600 font-bold truncate">
                           {personImages.length > 0 ? `${personImages.length}枚設定済み` : '未設定'}
                         </p>
-                        <label className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            className="sr-only"
-                            onChange={async (e) => {
-                              const files = e.target.files
-                              e.target.value = ''
-                              await addPersonFiles(files)
-                            }}
-                          />
+                        <input
+                          id="dashboard-person-input"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="sr-only"
+                          onChange={async (e) => {
+                            const files = e.target.files
+                            e.target.value = ''
+                            await addPersonFiles(files)
+                          }}
+                        />
+                        <label
+                          htmlFor="dashboard-person-input"
+                          className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer"
+                        >
                           追加
                         </label>
                         {personImages.length > 0 && (

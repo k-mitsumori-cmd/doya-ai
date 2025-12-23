@@ -599,46 +599,51 @@ export default function BannerChatPage() {
                                 <p className="text-[11px] text-slate-600 font-bold truncate">
                                   {personImages.length > 0 ? `${personImages.length}枚設定済み` : '未設定'}
                                 </p>
-                                <label className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer">
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    className="sr-only"
-                                    onChange={async (e) => {
-                                      const files = e.target.files
-                                      e.target.value = ''
-                                      try {
-                                        if (!files || files.length === 0) return
-                                        const MAX_PERSON_IMAGES = 4
-                                        const remain = Math.max(0, MAX_PERSON_IMAGES - personImages.length)
-                                        if (remain <= 0) {
-                                          toast.error(`人物写真は最大${MAX_PERSON_IMAGES}枚までです`)
-                                          return
-                                        }
-                                        const list = Array.from(files).slice(0, remain)
-                                        const urls: string[] = []
-                                        const names: string[] = []
-                                        for (const f of list) {
-                                          if (!f.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
-                                          if (f.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
-                                          const url = await new Promise<string>((resolve, reject) => {
-                                            const r = new FileReader()
-                                            r.onload = () => resolve(String(r.result || ''))
-                                            r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
-                                            r.readAsDataURL(f)
-                                          })
-                                          urls.push(url)
-                                          names.push(f.name)
-                                        }
-                                        setPersonImages((prev) => prev.concat(urls))
-                                        setPersonFileNames((prev) => prev.concat(names))
-                                        toast.success(`人物写真を${urls.length}枚追加しました`)
-                                      } catch (err: any) {
-                                        toast.error(err?.message || '人物写真の追加に失敗しました')
+                                <input
+                                  id="chat-person-input"
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  className="sr-only"
+                                  onChange={async (e) => {
+                                    const files = e.target.files
+                                    e.target.value = ''
+                                    try {
+                                      if (!files || files.length === 0) return
+                                      const MAX_PERSON_IMAGES = 4
+                                      const remain = Math.max(0, MAX_PERSON_IMAGES - personImages.length)
+                                      if (remain <= 0) {
+                                        toast.error(`人物写真は最大${MAX_PERSON_IMAGES}枚までです`)
+                                        return
                                       }
-                                    }}
-                                  />
+                                      const list = Array.from(files).slice(0, remain)
+                                      const urls: string[] = []
+                                      const names: string[] = []
+                                      for (const f of list) {
+                                        if (!f.type.startsWith('image/')) throw new Error('画像ファイルを選択してください')
+                                        if (f.size > 6 * 1024 * 1024) throw new Error('画像が大きすぎます（6MB以内）')
+                                        const url = await new Promise<string>((resolve, reject) => {
+                                          const r = new FileReader()
+                                          r.onload = () => resolve(String(r.result || ''))
+                                          r.onerror = () => reject(new Error('画像の読み込みに失敗しました'))
+                                          r.readAsDataURL(f)
+                                        })
+                                        urls.push(url)
+                                        names.push(f.name)
+                                      }
+                                      setPersonImages((prev) => prev.concat(urls))
+                                      setPersonFileNames((prev) => prev.concat(names))
+                                      toast.success(`人物写真を${urls.length}枚追加しました`)
+                                    } catch (err: any) {
+                                      console.error('Person image upload error:', err)
+                                      toast.error(err?.message || '人物写真の追加に失敗しました')
+                                    }
+                                  }}
+                                />
+                                <label
+                                  htmlFor="chat-person-input"
+                                  className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer"
+                                >
                                   追加
                                 </label>
                                 {personImages.length > 0 && (
