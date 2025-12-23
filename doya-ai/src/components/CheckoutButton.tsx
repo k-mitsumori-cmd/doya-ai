@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 interface CheckoutButtonProps {
   planId: string
   billingPeriod?: 'monthly' | 'yearly'
+  loginCallbackUrl?: string
   className?: string
   children?: React.ReactNode
   variant?: 'primary' | 'secondary'
@@ -17,6 +18,7 @@ interface CheckoutButtonProps {
 export function CheckoutButton({
   planId,
   billingPeriod = 'monthly',
+  loginCallbackUrl,
   className = '',
   children,
   variant = 'primary',
@@ -30,9 +32,9 @@ export function CheckoutButton({
     if (status === 'unauthenticated') {
       const service = planId.split('-')[0]
       if (service === 'banner') {
-        router.push(`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner/pricing')}`)
+        router.push(`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(loginCallbackUrl || '/banner/pricing')}`)
       } else {
-        router.push(`/auth/signin?callbackUrl=/${service}/pricing`)
+        router.push(`/auth/signin?callbackUrl=${encodeURIComponent(loginCallbackUrl || `/${service}/pricing`)}`)
       }
       return
     }
