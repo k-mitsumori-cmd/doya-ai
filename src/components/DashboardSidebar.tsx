@@ -178,9 +178,10 @@ function DashboardSidebarImpl({
             <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center mb-3 shadow-lg">
               <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
             </div>
-            <h4 className="text-xs font-black text-white mb-1">PRO PLAN</h4>
+            <h4 className="text-xs font-black text-white mb-1">有料プラン</h4>
             <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
-              AI生成機能を無制限に。<br />高度な分析とチーム共有も。
+              PRO：月額¥9,980 / 1日50枚<br />
+              上位：Enterprise 月額¥49,800 / 1日500枚
             </p>
             {isPro ? (
               <a
@@ -193,9 +194,9 @@ function DashboardSidebarImpl({
                 </button>
               </a>
             ) : (
-              <Link href="/pricing">
+              <Link href="/banner/pricing">
                 <button className="mt-3 w-full py-2 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
-                  アップグレード
+                  プランを見る
                 </button>
               </Link>
             )}

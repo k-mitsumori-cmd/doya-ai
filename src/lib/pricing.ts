@@ -308,7 +308,7 @@ export const SUPPORT_CONTACT_URL =
 // ========================================
 // ポータル全体のセット割引
 // ========================================
-// SEO（¥3,000）+ バナー（¥4,980）= ¥7,980 → 約25%OFF
+// セット割引（表示文言は価格改定の影響を受けやすいので、金額の直書きは避ける）
 export const BUNDLE_PRICING = {
   name: 'ドヤAI オールインワン',
   price: 5980,
@@ -318,8 +318,8 @@ export const BUNDLE_PRICING = {
   originalPrice: '¥7,980',
   description: '両方使うなら断然お得',
   features: [
-    { text: 'ドヤSEO プロ（通常¥3,000）', included: true },
-    { text: 'ドヤバナーAI プロ（通常¥4,980）', included: true },
+    { text: 'ドヤSEO プロ', included: true },
+    { text: 'ドヤバナーAI プロ', included: true },
     { text: '今後追加される新サービスも利用可能', included: true },
     { text: '優先サポート', included: true },
   ],
