@@ -829,9 +829,11 @@ export async function POST(request: NextRequest) {
     const paletteFromCss = extractPaletteFromCss(html)
     // headless computed style（CSS適用後の見え方から抽出）
     const paletteFromHeadless = await extractPaletteViaHeadlessComputedStyles(targetUrl)
-    // 画像（OG/ICON）から実色を抽出（補助：サイト全体の色とズレる場合がある）
+    // 画像（OG/ICON + ページ内の主要img）から実色を抽出（補助：サイト全体の色とズレる場合もある）
     const imageCandidates = extractImageCandidates(html, targetUrl)
-    const paletteFromImages = await extractPaletteFromImages(imageCandidates)
+    const heroCandidates = extractLikelyHeroImages(html, targetUrl)
+    const imageSources = Array.from(new Set([...imageCandidates, ...heroCandidates])).slice(0, 6)
+    const paletteFromImages = await extractPaletteFromImages(imageSources)
     const mergedPalette = Array.from(
       new Set([...(paletteFromHeadless || []), ...(paletteFromCss || []), ...(paletteFromImages || [])].map((c) => String(c).toUpperCase()))
     )
@@ -842,7 +844,7 @@ export async function POST(request: NextRequest) {
       paletteFromHeadless.length > 0 ? `headless_palette=${paletteFromHeadless.join(',')}` : '',
       paletteFromCss.length > 0 ? `css_palette=${paletteFromCss.slice(0, 3).join(',')}` : '',
       paletteFromImages.length > 0 ? `image_palette=${paletteFromImages.join(',')}` : '',
-      imageCandidates.length > 0 ? `image_sources=${imageCandidates.slice(0, 2).join(',')}` : '',
+      imageSources.length > 0 ? `image_sources=${imageSources.slice(0, 2).join(',')}` : '',
     ]
       .filter(Boolean)
       .join(' / ')
