@@ -159,6 +159,83 @@ function coerceSpec(raw: any): { spec?: BannerSpec; needsMoreInfo: boolean; ques
   }
 }
 
+function ensureQuestionEnding(text: string): string {
+  const s = String(text || '').trim()
+  if (!s) return 'キャッチコピーはどうしますか？'
+  if (/[？?]\s*$/.test(s)) return s
+  return `${s} どんなキャッチコピーにしますか？`
+}
+
+function buildSuggestedUserMessages(params: {
+  category?: string
+  purpose?: string
+  hintQuestion?: string
+}): string[] {
+  const category = String(params.category || '').toLowerCase()
+  const purpose = String(params.purpose || '').toLowerCase()
+  const q = String(params.hintQuestion || '').trim()
+
+  // 業種別の“そのまま送れる”例（短文・実務寄り）
+  const byCategory: Record<string, string[]> = {
+    beauty: [
+      'キャッチコピーは「初回20%OFF」にします。画像は清潔感のあるモデル写真＋白背景でお願いします。',
+      'キャッチコピーは「毛穴、3日で変わる。」にします。自然光の明るいビフォーアフター風でお願いします。',
+      'キャッチコピーは「今だけ送料無料」にします。パッケージを大きく、価格感を強めてください。',
+    ],
+    recruit: [
+      'キャッチコピーは「未経験から正社員へ」にします。笑顔の人物写真＋安心感のある配色でお願いします。',
+      'キャッチコピーは「残業なし・土日休み」にします。働くイメージが湧く写真でお願いします。',
+      'キャッチコピーは「まずは話を聞くだけOK」にします。CTAは「応募する」でお願いします。',
+    ],
+    it: [
+      'キャッチコピーは「手作業を50%削減」にします。モダンなUI画面風でお願いします。',
+      'キャッチコピーは「属人化をなくす」にします。青/白基調で信頼感あるトーンにしてください。',
+      'キャッチコピーは「最短3日で導入」にします。CTAは「無料で試す」でお願いします。',
+    ],
+    realestate: [
+      'キャッチコピーは「失敗しない家選び」にします。生活イメージの写真で安心感を出してください。',
+      'キャッチコピーは「納得できる物件だけ」にします。落ち着いた上質トーンでお願いします。',
+      'キャッチコピーは「選ばれている理由、公開」にします。CTAは「無料相談」でお願いします。',
+    ],
+    ec: [
+      'キャッチコピーは「今だけ30%OFF」にします。商品を主役に、割引を大きくお願いします。',
+      'キャッチコピーは「先着100名、限定価格」にします。CTAは「今すぐ買う」でお願いします。',
+      'キャッチコピーは「3分で完了、定期便」にします。分かりやすくシンプルにしてください。',
+    ],
+    education: [
+      'キャッチコピーは「初心者でも3ヶ月で習得」にします。何が学べるか一目で分かる構成でお願いします。',
+      'キャッチコピーは「今日から学べる○○」にします。信頼感のある配色でお願いします。',
+      'キャッチコピーは「無料体験からスタート」にします。CTAは「無料で体験」でお願いします。',
+    ],
+    food: [
+      'キャッチコピーは「今夜、絶対食べたい。」にします。シズル感のある写真でお願いします。',
+      'キャッチコピーは「ランチ限定、500円OFF」にします。CTAは「予約する」でお願いします。',
+      'キャッチコピーは「テイクアウトOK」にします。メニュー写真を大きくしてください。',
+    ],
+  }
+
+  const generic = [
+    '用途はSNS広告、サイズは1080×1080でお願いします。キャッチコピーは「今だけ○○」にします。',
+    'キャッチコピーは「○○で悩む人へ」にします。画像は人物写真メインでお願いします。',
+    '色は青/白基調でお願いします。CTAは「今すぐチェック」にします。',
+  ]
+
+  const fromCat = byCategory[category] || generic
+  const picked = fromCat.slice(0, 3)
+  // 用途がYouTubeならサムネ寄りの例も差し込む
+  if (purpose === 'youtube') {
+    return [
+      'YouTubeサムネ用です。キャッチは短く「知らないと損」にします。表情強めの人物でお願いします。',
+      ...picked.slice(0, 2),
+    ]
+  }
+  if (q) {
+    // 質問に寄せた例を先頭に足す（長くしすぎない）
+    return [picked[0], picked[1], picked[2]].filter(Boolean)
+  }
+  return picked
+}
+
 async function callGemini(messages: ChatMessage[], apiKey: string): Promise<string> {
   const contents = (messages || []).slice(-12).map((m) => ({
     role: m.role === 'assistant' ? 'model' : 'user',
@@ -180,23 +257,61 @@ async function callGemini(messages: ChatMessage[], apiKey: string): Promise<stri
   for (const model of models) {
     try {
       const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
-      const res = await fetch(`${endpoint}?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents,
-          generationConfig: { temperature: 0.4, maxOutputTokens: 1000, topP: 0.9, topK: 40 },
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-          ],
-        }),
+      const buildBody = (jsonMode: boolean) => ({
+        contents,
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 1000,
+          topP: 0.9,
+          topK: 40,
+          ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+        },
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+        ],
       })
+
+      const attempt = async (jsonMode: boolean) =>
+        fetch(`${endpoint}?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildBody(jsonMode)),
+        })
+
+      let res = await attempt(true)
+      if (res.status === 502 || res.status === 503) {
+        await new Promise((r) => setTimeout(r, 700))
+        res = await attempt(true)
+      }
 
       if (!res.ok) {
         const t = await res.text()
+        // JSONモードが弾かれたら通常モードで再試行
+        if (
+          res.status === 400 &&
+          (t.includes('responseMimeType') || t.includes('response_mime_type') || t.includes('INVALID_ARGUMENT'))
+        ) {
+          let retry = await attempt(false)
+          if (retry.status === 502 || retry.status === 503) {
+            await new Promise((r) => setTimeout(r, 700))
+            retry = await attempt(false)
+          }
+          if (retry.ok) {
+            const json = await retry.json()
+            const text = json?.candidates?.[0]?.content?.parts
+              ?.map((p: any) => (p?.text ? String(p.text) : ''))
+              .join('\n')
+              .trim()
+            if (text) return text
+          } else {
+            const t2 = await retry.text()
+            lastError = `Gemini ${model} error (retry): ${retry.status} - ${t2.substring(0, 240)}`
+            continue
+          }
+        }
         lastError = `Gemini ${model} error: ${res.status} - ${t.substring(0, 240)}`
         continue
       }
@@ -240,11 +355,17 @@ export async function POST(req: NextRequest) {
     const rawText = await callGemini(messages, apiKey)
     const parsed = extractJsonObject(rawText)
 
+    // パースできない場合でも、ユーザー体験としては「質問で返す」ことを優先（エラーで止めない）
     if (!parsed || typeof parsed !== 'object') {
-      return NextResponse.json(
-        { error: 'AIの出力を解析できませんでした。もう一度お試しください。', raw: rawText },
-        { status: 502 }
-      )
+      const reply = ensureQuestionEnding('いいですね。バナーに載せるキャッチコピーと、使いたい写真/イメージはどんな感じにしますか？')
+      const suggestions = buildSuggestedUserMessages({})
+      return NextResponse.json({
+        needsMoreInfo: true,
+        questions: ['キャッチコピー案と、写真/イメージの希望を教えてください。'],
+        reply,
+        spec: null,
+        suggestions,
+      })
     }
 
     // こちらでも最低限の整合性を担保
@@ -254,16 +375,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         needsMoreInfo: true,
         questions: qs,
-        reply: parsed.reply || `以下のような内容はいかがでしょう？\n・${qs.join('\n・')}`,
+        reply: ensureQuestionEnding(parsed.reply || `キャッチコピー案はどうしますか？`),
         spec: null,
+        suggestions: buildSuggestedUserMessages({
+          category: String(parsed?.spec?.category || parsed?.category || ''),
+          purpose: String(parsed?.spec?.purpose || parsed?.purpose || ''),
+          hintQuestion: qs[0] || '',
+        }),
       })
     }
 
     return NextResponse.json({
       needsMoreInfo: false,
       questions: null,
-      reply: parsed.reply || '承知しました。この条件でバナーを作成します！「生成する」ボタンでスタートしてください。',
+      reply: ensureQuestionEnding(parsed.reply || '承知しました。次に、バナーに入れるキャッチコピーはどうしますか？'),
       spec: coerced.spec,
+      suggestions: buildSuggestedUserMessages({
+        category: coerced.spec?.category,
+        purpose: coerced.spec?.purpose,
+      }),
     })
   } catch (e: any) {
     return NextResponse.json(

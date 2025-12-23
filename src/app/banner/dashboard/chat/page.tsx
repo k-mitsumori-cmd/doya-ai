@@ -81,6 +81,11 @@ export default function BannerChatPage() {
     },
   ])
   const [input, setInput] = useState('')
+  const [suggestedInputs, setSuggestedInputs] = useState<string[]>([
+    'Instagram向けの美容系バナーを作りたいです。1080×1080でお願いします。',
+    'キャッチコピーは「初回20%OFF」にします。画像は清潔感のあるモデル写真でお願いします。',
+    'ターゲットは20〜30代女性です。CTAは「今すぐチェック」でお願いします。',
+  ])
   const [isThinking, setIsThinking] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRefining, setIsRefining] = useState(false)
@@ -171,6 +176,15 @@ export default function BannerChatPage() {
         setProposedSpec(data.spec as BannerSpec)
       } else {
         setProposedSpec(null)
+      }
+      if (Array.isArray(data?.suggestions) && data.suggestions.length > 0) {
+        setSuggestedInputs(
+          data.suggestions
+            .filter((s: any) => typeof s === 'string')
+            .map((s: any) => String(s || '').trim())
+            .filter(Boolean)
+            .slice(0, 4)
+        )
       }
     } catch (e: any) {
       pushAssistant('すみません、エラーが発生しました。もう一度お試しください。')
@@ -439,8 +453,16 @@ export default function BannerChatPage() {
                 </div>
                 <div className="mt-3 flex items-center gap-4 px-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Suggested:</span>
-                  <button onClick={() => setInput("Instagram向けの美容系バナー")} className="text-[10px] font-bold text-blue-600 hover:underline">美容系バナー</button>
-                  <button onClick={() => setInput("求人募集のSNS広告")} className="text-[10px] font-bold text-blue-600 hover:underline">求人募集</button>
+                  {suggestedInputs.slice(0, 3).map((s, i) => (
+                    <button
+                      key={`${i}-${s}`}
+                      onClick={() => setInput(s)}
+                      className="text-[10px] font-bold text-blue-600 hover:underline line-clamp-1"
+                      title={s}
+                    >
+                      {s.length > 18 ? s.slice(0, 18) + '…' : s}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
