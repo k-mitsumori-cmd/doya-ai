@@ -485,3 +485,29 @@ export function incrementUserUsage(serviceId: string, by: number = 1): number {
   setUserUsage(serviceId, newCount)
   return newCount
 }
+
+// ========================================
+// サーバーサイド日次リセット（日本時間00:00基準）
+// ========================================
+/**
+ * 日本時間（JST = UTC+9）での今日の日付文字列を取得
+ */
+export function getTodayDateJST(): string {
+  const now = new Date()
+  // UTC時刻に9時間を加算してJSTに変換
+  const jstOffset = 9 * 60 * 60 * 1000
+  const jstDate = new Date(now.getTime() + jstOffset)
+  return jstDate.toISOString().split('T')[0]
+}
+
+/**
+ * lastUsageResetが今日（JST）でなければリセットが必要
+ */
+export function shouldResetDailyUsage(lastUsageReset: Date | null | undefined): boolean {
+  if (!lastUsageReset) return true
+  const todayJST = getTodayDateJST()
+  // lastUsageResetもJSTに変換して比較
+  const jstOffset = 9 * 60 * 60 * 1000
+  const resetDateJST = new Date(lastUsageReset.getTime() + jstOffset).toISOString().split('T')[0]
+  return resetDateJST !== todayJST
+}

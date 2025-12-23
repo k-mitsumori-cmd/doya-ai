@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, shouldResetDailyUsage, getTodayDateJST } from '@/lib/pricing'
 import crypto from 'crypto'
 
 // Vercel上で画像生成が長引くことがあるため、実行時間上限を引き上げる
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     // セッションチェック
     const session = await getServerSession(authOptions)
     const isGuest = !session
-    const today = new Date().toISOString().split('T')[0] // UTC日付
+    const today = getTodayDateJST() // 日本時間00:00基準
 
     // IPアドレスを取得
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
@@ -231,12 +231,13 @@ export async function POST(request: NextRequest) {
             update: {},
           })
 
-          // 日付/月が変わっていたらリセット
-          const lastDay = current.lastUsageReset.toISOString().split('T')[0]
-          const lastMonth = current.lastUsageReset.toISOString().slice(0, 7)
-          const thisMonth = new Date().toISOString().slice(0, 7)
-          const needsDailyReset = lastDay !== today
-          const needsMonthlyReset = lastMonth !== thisMonth
+          // 日付/月が変わっていたらリセット（日本時間00:00基準）
+          const needsDailyReset = shouldResetDailyUsage(current.lastUsageReset)
+          const todayJST = getTodayDateJST()
+          const thisMonthJST = todayJST.slice(0, 7)
+          const jstOffset = 9 * 60 * 60 * 1000
+          const lastMonthJST = new Date(current.lastUsageReset.getTime() + jstOffset).toISOString().slice(0, 7)
+          const needsMonthlyReset = lastMonthJST !== thisMonthJST
 
           const normalized = needsDailyReset || needsMonthlyReset
             ? await prisma.userServiceSubscription.update({
