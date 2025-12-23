@@ -434,6 +434,15 @@ export interface GenerateOptions {
   referenceImages?: string[] // 参考画像（data:image/...;base64,...形式）
   // ユーザー指定の配色（#RRGGBB 推奨）
   brandColors?: string[]
+  /**
+   * URL解析などで「画像生成AIに渡す最終プロンプト」を既に組み立てている場合に使用。
+   * これが指定された場合、内部テンプレート（createBannerPrompt）は使わず、このプロンプトを優先する。
+   */
+  customImagePrompt?: string
+  /**
+   * 追加のネガティブプロンプト（任意）
+   */
+  negativePrompt?: string
 }
 
 function parseDataUrl(dataUrl: string): { mimeType: string; data: string } {
@@ -1237,7 +1246,9 @@ export async function generateBanners(
     const runOne = async (i: number) => {
       const appealType = appealTypes[i % appealTypes.length]
       const patternLabel = letters[i] || String(i + 1)
-      const basePrompt = createBannerPrompt(category, keyword, size, appealType, options)
+      const basePrompt = options?.customImagePrompt
+        ? String(options.customImagePrompt)
+        : createBannerPrompt(category, keyword, size, appealType, options)
       const extraHint = i >= appealTypes.length ? EXTRA_VARIANT_HINTS[i - appealTypes.length] : ''
       console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} pattern ${patternLabel} (${appealType.type}/${appealType.japanese})...`)
 
@@ -1249,9 +1260,11 @@ export async function generateBanners(
         (Array.isArray(options.personImages) && options.personImages.length > 0) ||
         (Array.isArray(options.referenceImages) && options.referenceImages.length > 0) ||
         (Array.isArray(options.brandColors) && options.brandColors.length > 0)
+      const hasCustomPrompt = !!options?.customImagePrompt
 
       // 重要入力がある場合はプロンプト圧縮で情報が落ちるリスクがあるため、基本はスキップ
-      if (!hasStrictInputs) {
+      // custom prompt は圧縮/再構成で壊れやすいので必ずスキップ
+      if (!hasStrictInputs && !hasCustomPrompt) {
         try {
           finalPrompt = await refinePromptWithGemini3Flash(basePrompt)
         } catch (e: any) {
@@ -1261,6 +1274,7 @@ export async function generateBanners(
 
       finalPrompt = [
         finalPrompt,
+        options?.negativePrompt ? `\n=== NEGATIVE PROMPT (AVOID) ===\n${options.negativePrompt}\n` : '',
         extraHint ? `\n=== VARIATION HINT ===\n${extraHint}\n` : '',
         buildHardConstraintsAppendix(keyword, size, options, `PATTERN ${patternLabel}`),
       ]

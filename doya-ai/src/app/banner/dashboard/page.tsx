@@ -12,7 +12,7 @@ import {
   Play, Crown, ArrowUpRight, Palette,
   MessageSquare, Send, RotateCcw, Pencil, BarChart3,
   Users, DollarSign, Settings, Search, ArrowUpDown, ChevronRight,
-  TrendingUp, Layers
+  TrendingUp, Layers, Link2
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
@@ -1011,6 +1011,13 @@ export default function BannerDashboard() {
   // ギャラリー公開（任意）
   const [shareToGallery, setShareToGallery] = useState(false)
   const [shareProfile, setShareProfile] = useState(false)
+  
+  // URLから自動生成（任意）
+  const [siteUrl, setSiteUrl] = useState('')
+  const [siteBannerPurpose, setSiteBannerPurpose] = useState('資料DL')
+  const [siteAnalysis, setSiteAnalysis] = useState<any | null>(null)
+  const [siteLastPrompt, setSiteLastPrompt] = useState<string | null>(null)
+  const [siteLastNegative, setSiteLastNegative] = useState<string | null>(null)
 
   // 生成履歴（ローカルストレージから読み込み）
   interface HistoryItem {
@@ -1067,6 +1074,12 @@ export default function BannerDashboard() {
 
   // カスタムサイズの場合は入力値を使用
   const effectiveSize = useCustomSize ? `${customWidth}x${customHeight}` : size
+  const previewAspect = useMemo(() => {
+    const [w, h] = String(effectiveSize || '1080x1080').split('x').map((v) => Number(v))
+    const ww = Number.isFinite(w) && w > 0 ? w : 1
+    const hh = Number.isFinite(h) && h > 0 ? h : 1
+    return `${ww} / ${hh}`
+  }, [effectiveSize])
   const isValidCustomSize = !useCustomSize || (
     parseInt(customWidth) >= 100 && parseInt(customWidth) <= 4096 &&
     parseInt(customHeight) >= 100 && parseInt(customHeight) <= 4096
@@ -1413,6 +1426,93 @@ export default function BannerDashboard() {
     }
   }
 
+  const handleGenerateFromUrl = async () => {
+    if (!canGenerate) return
+    const url = siteUrl.trim()
+    if (!url) {
+      toast.error('サイトURLを入力してください')
+      return
+    }
+    if (!keyword.trim()) {
+      toast.error('キャッチフレーズ（required_text）を入力してください')
+      return
+    }
+
+    setError('')
+    setIsGenerating(true)
+    setJustGenerated(true)
+    setGeneratedBanners([])
+    setSelectedBanner(null)
+    setSiteAnalysis(null)
+    setSiteLastPrompt(null)
+    setSiteLastNegative(null)
+
+    try {
+      const controller = new AbortController()
+      const timeoutMs = 290_000
+      const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
+
+      const response = await fetch('/api/banner/from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          targetUrl: url,
+          bannerPurpose: siteBannerPurpose,
+          industry: category || 'other',
+          size: effectiveSize,
+          requiredText: keyword.trim(),
+          purpose,
+          count: generateCount,
+          logoImage: logoImage || undefined,
+          personImages: Array.isArray(personImages) ? personImages.filter(Boolean) : undefined,
+          referenceImages: Array.isArray(referenceImages) ? referenceImages : undefined,
+          brandColors: Array.isArray(customColors) ? (useCustomColors ? customColors.filter(Boolean) : undefined) : undefined,
+          shareToGallery: shareToGallery && !isGuest ? true : undefined,
+          shareProfile: shareToGallery && !isGuest ? (shareProfile ? true : false) : undefined,
+        }),
+      })
+
+      window.clearTimeout(timeout)
+
+      const parsed = await safeReadJson(response)
+      const data = parsed.data || {}
+      if (!parsed.ok) {
+        const msg =
+          data?.error ||
+          normalizeNonJsonApiError(parsed.status, parsed.text) ||
+          'URLからの自動生成に失敗しました'
+        throw new Error(msg)
+      }
+
+      if (Array.isArray(data.banners)) {
+        setGeneratedBanners(data.banners)
+        setSelectedBanner(0)
+      }
+      setUsedModelDisplay(data.usedModelDisplay || null)
+      setSiteAnalysis(data.analysisJson || null)
+      setSiteLastPrompt(typeof data.imagePrompt === 'string' ? data.imagePrompt : null)
+      setSiteLastNegative(typeof data.negativePrompt === 'string' ? data.negativePrompt : null)
+
+      if (data.warning) {
+        setError(data.warning)
+        toast.error('一部のバナー生成に失敗しました', { icon: '⚠️', duration: 5000 })
+      } else {
+        toast.success('サイト情報からバナーを生成しました！', { icon: '🎉' })
+      }
+    } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        setError('生成に時間がかかっています。タブは開いたまま、しばらく待つか再試行してください。')
+        toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
+      } else {
+        setError(err?.message || 'URLからの自動生成に失敗しました')
+        toast.error('生成に失敗しました', { icon: '❌', duration: 5000 })
+      }
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   // （旧）テキストレイヤー合成DLは廃止（画像生成AIが文字まで描画する）
 
   const handleDownload = (url: string, index: number) => {
@@ -1522,7 +1622,7 @@ export default function BannerDashboard() {
         {/* ========================================
             Main Content
             ======================================== */}
-        <div className="grid lg:grid-cols-[1fr,440px] gap-6 sm:gap-10">
+        <div className="grid lg:grid-cols-[420px,1fr] gap-6 sm:gap-10">
           
           {/* ========================================
               Left Column - Input Form
@@ -2223,6 +2323,97 @@ export default function BannerDashboard() {
                 </div>
               </div>
 
+              {/* URL Auto Generate */}
+              <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-black text-slate-800">サイトURLから自動生成（β）</p>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                      URLのページ内容を解析して、クリックされやすいバナーを自動で作ります。
+                      <span className="ml-1 font-bold text-slate-700">キャッチフレーズが required_text（改変禁止）</span>として扱われます。
+                    </p>
+                  </div>
+                  {!isGuest ? (
+                    <div className="text-[10px] font-black text-slate-500 rounded-full bg-slate-100 px-3 py-1">
+                      ログイン済み
+                    </div>
+                  ) : (
+                    <Link
+                      href={`/auth/signin?callbackUrl=${encodeURIComponent('/banner/dashboard')}`}
+                      className="inline-flex items-center gap-2 text-xs font-black text-blue-600 hover:text-blue-800"
+                    >
+                      <LogIn className="w-4 h-4" />
+                      ログイン
+                    </Link>
+                  )}
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr,200px] gap-3">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                      Site URL
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <Link2 className="w-4 h-4 text-slate-400" />
+                      <input
+                        value={siteUrl}
+                        onChange={(e) => setSiteUrl(e.target.value)}
+                        placeholder="https://example.com/..."
+                        className="w-full bg-transparent outline-none text-sm font-bold text-slate-800 placeholder-slate-300"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">
+                      Purpose
+                    </label>
+                    <select
+                      value={siteBannerPurpose}
+                      onChange={(e) => setSiteBannerPurpose(e.target.value)}
+                      className="w-full bg-transparent outline-none text-sm font-black text-slate-800"
+                    >
+                      {['資料DL', '問い合わせ', 'セミナー申込', '採用応募', 'サービス認知', 'キャンペーン告知'].map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={handleGenerateFromUrl}
+                    disabled={isGenerating || !canGenerate}
+                    className="flex-1 inline-flex items-center justify-center gap-3 px-5 py-3 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-colors disabled:opacity-60"
+                  >
+                    {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
+                    URLを解析してバナー生成
+                  </button>
+                  <Link
+                    href="/banner/pricing"
+                    className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white border border-slate-200 text-slate-800 font-black hover:bg-slate-50 transition-colors"
+                  >
+                    プランを見る
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+
+                {siteAnalysis && (
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
+                    <div className="text-[11px] font-black text-slate-500 mb-1">解析結果（要約）</div>
+                    <div className="text-sm font-black text-slate-900">
+                      {String(siteAnalysis?.key_message || siteAnalysis?.keyMessage || '—')}
+                    </div>
+                    <div className="text-[11px] text-slate-600 font-bold mt-1">
+                      CTA: {String(siteAnalysis?.cta || '—')}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Share to Gallery */}
               <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -2321,7 +2512,7 @@ export default function BannerDashboard() {
                   本日の生成上限に達しました。
                   {isGuest ? (
                     <span className="ml-1">ログインしてプランをご確認ください。</span>
-                  ) : isProUser ? (
+                  ) : isPaidUser ? (
                     <span className="ml-1">
                       上限をさらにUPしたい場合は{' '}
                       <a
@@ -2377,7 +2568,10 @@ export default function BannerDashboard() {
                   {recentHistory.slice(0, 3).map((item) => (
                     <div key={item.id} className="group cursor-pointer">
                       {item.banners?.[0] && (
-                        <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm group-hover:shadow-md transition-all">
+                        <div
+                          className="relative rounded-xl overflow-hidden bg-slate-50 border border-slate-100 shadow-sm group-hover:shadow-md transition-all"
+                          style={{ aspectRatio: previewAspect }}
+                        >
                           <img
                             src={item.banners[0]}
                             alt={item.keyword}
@@ -2449,11 +2643,12 @@ export default function BannerDashboard() {
                               animate={{ opacity: 1, scale: 1 }}
                               transition={justGenerated ? { delay: i * 0.1 } : { duration: 0 }}
                               onClick={() => setSelectedBanner(i)}
-                              className={`relative aspect-square rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300 border-2 ${
+                              className={`relative rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300 border-2 ${
                                 selectedBanner === i 
                                   ? 'border-blue-600 shadow-xl shadow-blue-600/20 scale-105 z-10' 
                                   : 'border-white shadow-sm hover:border-slate-200'
                               }`}
+                              style={{ aspectRatio: previewAspect }}
                             >
                               {/* 画像の切り替え時にぱちぱちしないようトランジション追加 */}
                               <img src={banner} alt={`Banner ${i + 1}`} className="w-full h-full object-cover transition-opacity duration-200" />
@@ -2560,11 +2755,14 @@ export default function BannerDashboard() {
                           </div>
                           
                           {/* プレビュー画像（refine後も静かに切り替わるようトランジション追加） */}
-                          <div className="rounded-xl overflow-hidden mb-3 shadow-md">
+                          <div
+                            className="rounded-xl overflow-hidden mb-3 shadow-md bg-slate-100"
+                            style={{ aspectRatio: previewAspect }}
+                          >
                             <img
                               src={generatedBanners[selectedBanner]}
                               alt="Selected Banner"
-                              className="w-full transition-opacity duration-300"
+                              className="w-full h-full object-cover transition-opacity duration-300"
                             />
                           </div>
 
