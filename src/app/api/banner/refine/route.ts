@@ -184,6 +184,7 @@ ${sizeNote}
 - STYLE: High-CTR Japanese paid-ad creative (SNS, Display, Landing page).
 - LAYOUT: Keep text intact and readable. Update layout ONLY if user explicitly requests.
 - TEXT: If user asks to change text, render the NEW Japanese text clearly with legible font, solid/gradient panel for contrast, and NO pseudo-characters.
+- NO DUPLICATION: Do NOT repeat the same phrase. Never place identical text twice (e.g., no duplicated catchphrase/CTA).
 - DIMENSIONS: Fill the ENTIRE canvas edge-to-edge. **ZERO** white-space or margin.
 - NO logos, emblems, seals, watermarks, or invented brand marks unless user explicitly provides or requests.
 - If user asks to add/remove elements, do so while maintaining visual hierarchy and text readability.
