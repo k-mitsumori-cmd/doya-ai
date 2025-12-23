@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Loader2, ArrowLeft, Image as ImageIcon } from 'lucide-react'
+import { Loader2, ArrowLeft, Image as ImageIcon, Download } from 'lucide-react'
+import toast, { Toaster } from 'react-hot-toast'
 import { DashboardLayout } from '@/components/DashboardLayout'
 
 type GalleryItem = {
@@ -70,8 +71,24 @@ export default function BannerGalleryPage() {
     }
   }
 
+  const handleDownload = (imageUrl: string, keyword: string) => {
+    try {
+      const link = document.createElement('a')
+      link.href = imageUrl
+      const safeName = (keyword || 'banner').replace(/[^a-zA-Z0-9ぁ-んァ-ン一-龥]/g, '_').slice(0, 30)
+      link.download = `doya_gallery_${safeName}_${Date.now()}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('ダウンロードを開始しました')
+    } catch {
+      toast.error('ダウンロードに失敗しました')
+    }
+  }
+
   return (
     <DashboardLayout>
+      <Toaster position="top-center" />
       <div className="text-gray-900">
         <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
           <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
@@ -113,9 +130,19 @@ export default function BannerGalleryPage() {
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {items.map((it) => (
-                  <div key={it.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                  <div key={it.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden group">
                     <div className="relative aspect-square bg-slate-50">
-                      <img src={it.image} alt={it.keyword || 'banner'} className="w-full h-full object-cover" />
+                      <img src={it.image} alt={it.keyword || 'banner'} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      {/* ダウンロードボタン（ホバー時表示） */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
+                        <button
+                          onClick={() => handleDownload(it.image, it.keyword)}
+                          className="w-14 h-14 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform"
+                          title="ダウンロード"
+                        >
+                          <Download className="w-7 h-7" />
+                        </button>
+                      </div>
                     </div>
                     <div className="p-5">
                       <div className="flex items-center justify-between gap-3">
