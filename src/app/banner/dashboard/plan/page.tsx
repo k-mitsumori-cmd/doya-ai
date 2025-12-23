@@ -46,10 +46,21 @@ const HOURLY_DESIGNER_RATE_JPY = 3000
 export default function BannerPlanPage() {
   const { data: session, status } = useSession()
   const isGuest = !session
-  const bannerPlan = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
-  const isPaid = !isGuest && (bannerPlan === 'PRO' || bannerPlan === 'BASIC' || bannerPlan === 'ENTERPRISE')
-  const isEnterprise = !isGuest && bannerPlan === 'ENTERPRISE'
-  const isPro = !isGuest && !isEnterprise && (bannerPlan === 'PRO' || bannerPlan === 'BASIC')
+  const bannerPlanRaw = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
+  const bannerPlanTier = (() => {
+    const p = String(bannerPlanRaw || '').toUpperCase()
+    if (!p || p === 'GUEST') return 'GUEST' as const
+    // 既存環境の揺れに耐える（例: BANNER_PRO / PRO_MONTHLY / BASIC / STARTER / BUSINESS など）
+    if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
+    if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('FREE')) return 'FREE' as const
+    // 不明だがログイン済みの場合はFREE扱い（安全側）
+    return 'FREE' as const
+  })()
+
+  const isEnterprise = !isGuest && bannerPlanTier === 'ENTERPRISE'
+  const isPro = !isGuest && bannerPlanTier === 'PRO'
+  const isPaid = !isGuest && (bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE')
 
   const [totalBanners, setTotalBanners] = useState(0)
   const [usageCount, setUsageCount] = useState(0)

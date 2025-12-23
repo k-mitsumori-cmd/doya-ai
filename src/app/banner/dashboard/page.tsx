@@ -18,6 +18,7 @@ import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
 import { DashboardLayout } from '@/components/DashboardLayout' // New import
 import { FeatureGuide } from '@/components/FeatureGuide'
+import { CheckoutButton } from '@/components/CheckoutButton'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -1034,7 +1035,16 @@ export default function BannerDashboard() {
   
   const isGuest = !session
   const bannerPlan = session ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase() : 'GUEST'
-  const isPaidUser = !isGuest && bannerPlan !== 'FREE'
+  const planTier = useMemo(() => {
+    const p = String(bannerPlan || '').toUpperCase()
+    if (!p || p === 'GUEST') return 'GUEST' as const
+    if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
+    if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('FREE')) return 'FREE' as const
+    return 'FREE' as const
+  }, [bannerPlan])
+  const isEnterpriseUser = !isGuest && planTier === 'ENTERPRISE'
+  const isPaidUser = !isGuest && (planTier === 'PRO' || planTier === 'ENTERPRISE')
   const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
   const guestRemaining = BANNER_PRICING.guestLimit - guestUsageCount
   const [userUsageCount, setUserUsageCount] = useState(0)
@@ -2318,11 +2328,12 @@ export default function BannerDashboard() {
 
               {!isGenerating && remainingCount <= 0 && (
                 <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm text-center font-medium">
-                  本日の生成上限に達しました。
+                  <div className="font-black">本日の生成上限に達しました。</div>
+
                   {isGuest ? (
-                    <span className="ml-1">ログインしてプランをご確認ください。</span>
-                  ) : isPaidUser ? (
-                    <span className="ml-1">
+                    <div className="mt-2">ログインしてプランをご確認ください。</div>
+                  ) : isEnterpriseUser ? (
+                    <div className="mt-2">
                       上限をさらにUPしたい場合は{' '}
                       <a
                         href={HIGH_USAGE_CONTACT_URL}
@@ -2333,9 +2344,18 @@ export default function BannerDashboard() {
                         マーケティング施策を丸投げする
                       </a>
                       からご相談ください。
-                    </span>
+                    </div>
                   ) : (
-                    <span className="ml-1">プロプランにアップグレードしてください。</span>
+                    <div className="mt-3 flex justify-center">
+                      <CheckoutButton
+                        planId={isPaidUser ? 'banner-enterprise' : 'banner-pro'}
+                        loginCallbackUrl="/banner/dashboard"
+                        className="px-4 py-2 rounded-xl text-sm"
+                        variant="secondary"
+                      >
+                        {isPaidUser ? 'エンタープライズにアップグレード' : 'プロプランへアップグレード'}
+                      </CheckoutButton>
+                    </div>
                   )}
                 </div>
               )}
