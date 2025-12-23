@@ -259,9 +259,12 @@ export async function POST(request: NextRequest) {
           const dailyLimit = isPaidPlan ? BANNER_PRICING.proLimit : BANNER_PRICING.freeLimit
 
           if (dailyLimit !== -1 && normalized.dailyUsage + desiredCount > dailyLimit) {
+            const errorMessage = isPaidPlan
+              ? '本日の生成上限に達しました。上限をさらにUPしたい場合は「マーケティング施策を丸投げする」からご相談ください。'
+              : '本日の生成上限に達しました。プロプランにアップグレードしてください。'
             return NextResponse.json(
               {
-                error: '本日の生成上限に達しました。プロプランにアップグレードしてください。',
+                error: errorMessage,
                 code: 'DAILY_LIMIT_REACHED',
                 usage: {
                   dailyLimit,
