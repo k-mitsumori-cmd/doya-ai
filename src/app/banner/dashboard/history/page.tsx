@@ -40,12 +40,14 @@ export default function BannerHistoryPage() {
   const [isLoaded, setIsLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [requiresUpgrade, setRequiresUpgrade] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   // ログインユーザーはAPIから、ゲストは履歴閲覧不可
   const loadHistory = useCallback(async () => {
     if (status === 'loading') return
     setIsLoading(true)
     setRequiresUpgrade(false)
+    setErrorMessage(null)
     try {
       if (isGuest) {
         // ゲストは履歴閲覧不可（有料プラン限定）
@@ -53,7 +55,10 @@ export default function BannerHistoryPage() {
         setRequiresUpgrade(true)
       } else {
         // ログインユーザーはAPIから取得
-        const res = await fetch('/api/banner/history?take=50')
+        const controller = new AbortController()
+        const timeout = window.setTimeout(() => controller.abort(), 15_000)
+        const res = await fetch('/api/banner/history?take=50', { signal: controller.signal })
+        window.clearTimeout(timeout)
         if (res.ok) {
           const data = await res.json()
           // 有料プラン限定チェック
@@ -74,12 +79,18 @@ export default function BannerHistoryPage() {
           }
         } else {
           toast.error('履歴の取得に失敗しました')
+          setErrorMessage('履歴の取得に失敗しました（再読み込み/再試行してください）')
           setHistory([])
         }
       }
     } catch (e) {
       console.error('History load error:', e)
       setHistory([])
+      if ((e as any)?.name === 'AbortError') {
+        setErrorMessage('履歴の取得がタイムアウトしました（通信状況をご確認のうえ再試行してください）')
+      } else {
+        setErrorMessage('履歴の取得に失敗しました（再読み込み/再試行してください）')
+      }
     } finally {
       setIsLoaded(true)
       setIsLoading(false)
@@ -89,6 +100,20 @@ export default function BannerHistoryPage() {
   useEffect(() => {
     loadHistory()
   }, [loadHistory])
+
+  // セッションが「loading」のまま固まった時でも無限ローディングにしない（UX救済）
+  useEffect(() => {
+    if (status !== 'loading') return
+    const t = window.setTimeout(() => {
+      // 8秒待ってもセッションが取れない場合は画面を解放（再試行導線を出す）
+      setIsLoaded(true)
+      setIsLoading(false)
+      setHistory([])
+      setRequiresUpgrade(true)
+      setErrorMessage('ログイン状態の確認に時間がかかっています。再読み込みすると解消する場合があります。')
+    }, 8000)
+    return () => window.clearTimeout(t)
+  }, [status])
 
   const handleDownload = (imageUrl: string, index: number) => {
     const link = document.createElement('a')
@@ -126,7 +151,7 @@ export default function BannerHistoryPage() {
     }
   }
 
-  if (!isLoaded || status === 'loading') {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <DashboardSidebar />
@@ -186,7 +211,33 @@ export default function BannerHistoryPage() {
 
         {/* メイン */}
         <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12">
-          {requiresUpgrade ? (
+          {errorMessage ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm"
+            >
+              <div className="w-24 h-24 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
+                <ImageIcon className="w-12 h-12 text-slate-300" />
+              </div>
+              <h2 className="text-2xl font-black text-slate-800 mb-3">履歴を読み込めませんでした</h2>
+              <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">{errorMessage}</p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => loadHistory()}
+                  className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-100 hover:scale-105"
+                >
+                  再試行
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all"
+                >
+                  再読み込み
+                </button>
+              </div>
+            </motion.div>
+          ) : requiresUpgrade ? (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
