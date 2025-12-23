@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles } from 'lucide-react'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
+import LoadingProgress from '@/components/LoadingProgress'
 
 type ApiResponse = {
   banners?: string[]
@@ -128,6 +129,8 @@ export default function BannerUrlAutoPage() {
     <div className="min-h-screen bg-slate-50 text-gray-900">
       <DashboardSidebar />
       <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
+        {/* 生成中に飽きさせない：他ページと同様の待機アニメ（Tips/進捗） */}
+        <LoadingProgress isLoading={isGenerating} />
         <Toaster position="top-center" />
 
         <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8 sm:py-10">
@@ -152,77 +155,76 @@ export default function BannerUrlAutoPage() {
             </Link>
           </div>
 
-          <div className="mt-6 grid lg:grid-cols-[520px,1fr] gap-6 sm:gap-10">
-            {/* Left */}
-            <div className="space-y-4">
-              <div className="rounded-3xl border border-slate-200 bg-white p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-black text-slate-900">サイトURL</p>
-                  {isGuest ? (
-                    <Link
-                      href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner')}`}
-                      className="inline-flex items-center gap-2 text-xs font-black text-blue-600 hover:text-blue-800"
-                    >
-                      <LogIn className="w-4 h-4" />
-                      ログイン
-                    </Link>
-                  ) : (
-                    <span className="text-[10px] font-black text-slate-500 rounded-full bg-slate-100 px-3 py-1">ログイン済み</span>
-                  )}
-                </div>
-
-                <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Link2 className="w-4 h-4 text-slate-400" />
-                    <input
-                      value={targetUrl}
-                      onChange={(e) => setTargetUrl(e.target.value)}
-                      placeholder="https://example.com/..."
-                      className="w-full bg-transparent outline-none text-sm font-bold text-slate-800 placeholder-slate-300"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={!canGenerate}
-                  className="mt-4 w-full inline-flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-colors disabled:opacity-60"
-                >
-                  {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                  URLだけでバナー生成
-                </button>
-
-                {usedModelDisplay && (
-                  <div className="mt-3 text-[11px] text-slate-500 font-bold">
-                    使用モデル: <span className="text-slate-700">{usedModelDisplay}</span>
-                  </div>
+          {/* 縦レイアウト：上=URL入力 / 下=生成結果 */}
+          <div className="mt-6 space-y-6">
+            {/* URL入力 */}
+            <div className="rounded-3xl border border-slate-200 bg-white p-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-black text-slate-900">サイトURL</p>
+                {isGuest ? (
+                  <Link
+                    href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner')}`}
+                    className="inline-flex items-center gap-2 text-xs font-black text-blue-600 hover:text-blue-800"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    ログイン
+                  </Link>
+                ) : (
+                  <span className="text-[10px] font-black text-slate-500 rounded-full bg-slate-100 px-3 py-1">ログイン済み</span>
                 )}
-
-                {(analysisJson?.key_message || bannerAnalysis) && (
-                  <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 space-y-2">
-                    <div className="text-[11px] font-black text-slate-500">サイト解析結果</div>
-                    <div className="text-sm font-black text-slate-900 leading-relaxed">
-                      {analysisJson?.key_message ? String(analysisJson.key_message) : bannerAnalysis.slice(0, 220)}
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-[11px] font-bold text-slate-500">
-                      {analysisJson?.tone && <span className="px-2 py-0.5 bg-slate-100 rounded-full">{String(analysisJson.tone)}</span>}
-                      {analysisJson?.cta && (
-                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">CTA: {String(analysisJson.cta)}</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {error && <div className="mt-4 text-sm text-red-600 font-bold">{error}</div>}
               </div>
+
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Link2 className="w-4 h-4 text-slate-400" />
+                  <input
+                    value={targetUrl}
+                    onChange={(e) => setTargetUrl(e.target.value)}
+                    placeholder="https://example.com/..."
+                    className="w-full bg-transparent outline-none text-sm font-bold text-slate-800 placeholder-slate-300"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                className="mt-4 w-full inline-flex items-center justify-center gap-3 px-5 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-colors disabled:opacity-60"
+              >
+                {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+                URLだけでバナー生成
+              </button>
+
+              {usedModelDisplay && (
+                <div className="mt-3 text-[11px] text-slate-500 font-bold">
+                  使用モデル: <span className="text-slate-700">{usedModelDisplay}</span>
+                </div>
+              )}
+
+              {(analysisJson?.key_message || bannerAnalysis) && (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 space-y-2">
+                  <div className="text-[11px] font-black text-slate-500">サイト解析結果</div>
+                  <div className="text-sm font-black text-slate-900 leading-relaxed">
+                    {analysisJson?.key_message ? String(analysisJson.key_message) : bannerAnalysis.slice(0, 220)}
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-[11px] font-bold text-slate-500">
+                    {analysisJson?.tone && <span className="px-2 py-0.5 bg-slate-100 rounded-full">{String(analysisJson.tone)}</span>}
+                    {analysisJson?.cta && (
+                      <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">CTA: {String(analysisJson.cta)}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {error && <div className="mt-4 text-sm text-red-600 font-bold">{error}</div>}
             </div>
 
-            {/* Right */}
+            {/* 生成結果 */}
             <div className="rounded-3xl border border-slate-200 bg-white p-6">
               {banners.length === 0 ? (
                 <div className="h-[420px] flex items-center justify-center text-center text-slate-500 font-bold">
-                  生成結果がここに表示されます
+                  {isGenerating ? '生成中です…（少々お待ちください）' : '生成結果がここに表示されます'}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -230,7 +232,7 @@ export default function BannerUrlAutoPage() {
                     <p className="text-sm font-black text-slate-900">生成結果</p>
                     <p className="text-[11px] text-slate-500 font-bold">{banners.length}枚</p>
                   </div>
-                  <div className={`grid gap-4 ${banners.length >= 4 ? 'grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
+                  <div className={`grid gap-4 ${banners.length >= 6 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
                     {banners
                       .filter((b) => typeof b === 'string' && b.startsWith('data:image/'))
                       .map((img, idx) => (
