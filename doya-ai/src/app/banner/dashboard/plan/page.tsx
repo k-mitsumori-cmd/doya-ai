@@ -28,7 +28,7 @@ import {
   ArrowRight,
   Info
 } from 'lucide-react'
-import toast from 'react-hot-toast'
+import toast, { Toaster } from 'react-hot-toast'
 
 type HistoryItem = {
   id: string
@@ -186,6 +186,7 @@ export default function BannerPlanPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
       <DashboardSidebar />
+      <Toaster position="top-center" />
       <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
         {/* ========================================
             Header - Doya Banner Style
@@ -287,14 +288,14 @@ export default function BannerPlanPage() {
                         ログインして利用を開始
                       </Link>
                     ) : isPaid ? (
-                      <button
-                        onClick={handleOpenPortal}
-                        disabled={isPortalLoading}
-                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-200 disabled:opacity-60"
+                      <a
+                        href={`/api/stripe/portal/redirect?returnTo=${encodeURIComponent('/banner/dashboard/plan')}`}
+                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-200"
+                        onClick={() => setIsPortalLoading(true)}
                       >
                         {isPortalLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BadgeCheck className="w-5 h-5" />}
                         契約管理
-                      </button>
+                      </a>
                     ) : (
                       <>
                         <button
