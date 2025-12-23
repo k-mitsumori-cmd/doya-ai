@@ -30,7 +30,10 @@ export default function BannerGalleryPage() {
     const qs = new URLSearchParams()
     qs.set('take', '24')
     if (nextCursor) qs.set('cursor', nextCursor)
-    const res = await fetch(`/api/banner/gallery?${qs.toString()}`)
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 15_000)
+    const res = await fetch(`/api/banner/gallery?${qs.toString()}`, { signal: controller.signal })
+    window.clearTimeout(timeout)
     const json = await res.json()
     if (!res.ok) throw new Error(json?.error || 'ギャラリーの取得に失敗しました')
     return json as { items: GalleryItem[]; nextCursor: string | null }
@@ -41,13 +44,18 @@ export default function BannerGalleryPage() {
     ;(async () => {
       try {
         setLoading(true)
+        setError(null)
         const data = await fetchPage(null)
         if (!mounted) return
         setItems(data.items || [])
         setCursor(data.nextCursor || null)
       } catch (e: any) {
         if (!mounted) return
-        setError(e?.message || 'ギャラリーの取得に失敗しました')
+        if (e?.name === 'AbortError') {
+          setError('読み込みがタイムアウトしました。通信状況をご確認のうえ、再試行してください。')
+        } else {
+          setError(e?.message || 'ギャラリーの取得に失敗しました')
+        }
       } finally {
         if (mounted) setLoading(false)
       }
@@ -65,9 +73,31 @@ export default function BannerGalleryPage() {
       setItems((prev) => prev.concat(data.items || []))
       setCursor(data.nextCursor || null)
     } catch (e: any) {
-      setError(e?.message || '追加読み込みに失敗しました')
+      if (e?.name === 'AbortError') {
+        setError('追加読み込みがタイムアウトしました。時間をおいて再試行してください。')
+      } else {
+        setError(e?.message || '追加読み込みに失敗しました')
+      }
     } finally {
       setLoadingMore(false)
+    }
+  }
+
+  const retry = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await fetchPage(null)
+      setItems(data.items || [])
+      setCursor(data.nextCursor || null)
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        setError('読み込みがタイムアウトしました。通信状況をご確認のうえ、再試行してください。')
+      } else {
+        setError(e?.message || 'ギャラリーの取得に失敗しました')
+      }
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -115,6 +145,20 @@ export default function BannerGalleryPage() {
           ) : error ? (
             <div className="bg-white rounded-3xl border border-red-100 p-10 shadow-sm">
               <p className="text-red-600 font-bold">{error}</p>
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={retry}
+                  className="px-6 py-3 rounded-2xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-colors"
+                >
+                  再試行
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-6 py-3 rounded-2xl bg-slate-100 text-slate-700 font-black hover:bg-slate-200 transition-colors"
+                >
+                  再読み込み
+                </button>
+              </div>
             </div>
           ) : items.length === 0 ? (
             <div className="bg-white rounded-3xl border border-gray-100 p-12 shadow-sm text-center">
