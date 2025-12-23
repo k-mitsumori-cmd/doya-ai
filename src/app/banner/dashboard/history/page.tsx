@@ -42,6 +42,20 @@ export default function BannerHistoryPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [requiresUpgrade, setRequiresUpgrade] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [tipIndex, setTipIndex] = useState(0)
+
+  const LOADING_TIPS = [
+    '作ったバナーは6ヶ月間いつでも再DLできます（有料プラン）',
+    '同じ訴求でも「数字」「限定」「無料」で反応が変わります',
+    '画像が多いほど履歴の集計に少し時間がかかります',
+    '重いときは一度更新すると改善する場合があります',
+  ]
+
+  useEffect(() => {
+    if (!isLoading && isLoaded) return
+    const t = window.setInterval(() => setTipIndex((v) => (v + 1) % LOADING_TIPS.length), 1800)
+    return () => window.clearInterval(t)
+  }, [isLoading, isLoaded])
 
   // ログインユーザーはAPIから、ゲストは履歴閲覧不可
   const loadHistory = useCallback(async () => {
@@ -157,7 +171,10 @@ export default function BannerHistoryPage() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <DashboardSidebar />
         <div className="pl-[72px] md:pl-[240px] flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600" />
+          <div className="text-center">
+            <div className="mx-auto animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600" />
+            <p className="mt-4 text-xs font-bold text-slate-500">{LOADING_TIPS[tipIndex]}</p>
+          </div>
         </div>
       </div>
     )

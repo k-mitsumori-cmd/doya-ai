@@ -4,6 +4,10 @@ import { BANNER_PRICING } from '@/lib/pricing'
 
 export const dynamic = 'force-dynamic'
 
+// クリーンアップ頻度を抑えてレスポンスを軽くする（サーバレスでも一定効果）
+let lastGalleryCleanupAt = 0
+const GALLERY_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6時間
+
 function parseIntParam(v: string | null, fallback: number) {
   const n = Number(v)
   return Number.isFinite(n) ? n : fallback
@@ -25,16 +29,21 @@ export async function GET(request: NextRequest) {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays)
 
-    prisma.generation
-      .deleteMany({
-        where: {
-          serviceId: 'banner',
-          outputType: 'IMAGE',
-          createdAt: { lt: cutoffDate },
-          metadata: { path: ['shared'], equals: true },
-        },
-      })
-      .catch((e) => console.error('Gallery cleanup failed:', e))
+    const now = Date.now()
+    // 最初のページ取得時のみ、かつ一定間隔でだけクリーンアップ
+    if (!cursor && now - lastGalleryCleanupAt > GALLERY_CLEANUP_INTERVAL_MS) {
+      lastGalleryCleanupAt = now
+      prisma.generation
+        .deleteMany({
+          where: {
+            serviceId: 'banner',
+            outputType: 'IMAGE',
+            createdAt: { lt: cutoffDate },
+            metadata: { path: ['shared'], equals: true },
+          },
+        })
+        .catch((e) => console.error('Gallery cleanup failed:', e))
+    }
 
     const items = await prisma.generation.findMany({
       where: {
@@ -75,7 +84,15 @@ export async function GET(request: NextRequest) {
 
     const nextCursor = items.length === take ? items[items.length - 1]?.id : null
 
-    return NextResponse.json({ items: shaped, nextCursor })
+    return NextResponse.json(
+      { items: shaped, nextCursor },
+      {
+        // ギャラリーは公開データなので短期キャッシュOK（体感高速化）
+        headers: {
+          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300',
+        },
+      }
+    )
   } catch (e: any) {
     console.error('Gallery list error:', e)
     return NextResponse.json({ error: 'ギャラリーの取得に失敗しました' }, { status: 500 })
