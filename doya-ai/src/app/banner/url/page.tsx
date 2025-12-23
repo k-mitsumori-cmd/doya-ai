@@ -65,7 +65,7 @@ export default function BannerUrlAutoPage() {
   const [error, setError] = useState<string>('')
   const [banners, setBanners] = useState<string[]>([])
   const [bannerAnalysis, setBannerAnalysis] = useState<string>('')
-  const [analysisJson, setAnalysisJson] = useState<ApiResponse['analysisJson']>(null)
+  const [analysisJson, setAnalysisJson] = useState<ApiResponse['analysisJson'] | undefined>(undefined)
   const [usedModelDisplay, setUsedModelDisplay] = useState<string>('')
   const [count, setCount] = useState<number>(3)
   const [size, setSize] = useState<string>(DEFAULT_FREE_SIZE)
@@ -97,7 +97,7 @@ export default function BannerUrlAutoPage() {
     setIsGenerating(true)
     setBanners([])
     setBannerAnalysis('')
-    setAnalysisJson(null)
+    setAnalysisJson(undefined)
     setUsedModelDisplay('')
 
     try {
@@ -167,7 +167,7 @@ export default function BannerUrlAutoPage() {
       <DashboardSidebar />
       <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
         {/* 生成中に飽きさせない：他ページと同様の待機アニメ（Tips/進捗） */}
-        <LoadingProgress isLoading={isGenerating} />
+        <LoadingProgress isLoading={isGenerating} operationKey="banner-from-url" estimatedSeconds={75} />
         <Toaster position="top-center" />
 
         <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8 sm:py-10">

@@ -416,7 +416,11 @@ export default function BannerChatPage() {
     <div className="min-h-screen bg-slate-50 text-gray-900">
       <DashboardSidebar />
       <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
-        <LoadingProgress isLoading={isThinking || isGenerating || isRefining} />
+        <LoadingProgress
+          isLoading={isThinking || isGenerating || isRefining}
+          operationKey={isRefining ? 'banner-refine' : isGenerating ? 'banner-generate' : 'banner-chat'}
+          estimatedSeconds={isRefining ? 40 : isGenerating ? 55 : 18}
+        />
 
         {/* ========================================
             Header - Doya Banner Style
