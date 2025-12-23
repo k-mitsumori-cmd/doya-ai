@@ -15,7 +15,13 @@ export default function BannerPricingPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Small top link (like screenshot) */}
-      <div className="pt-6 flex justify-center">
+      <div className="pt-6 flex items-center justify-center gap-3">
+        <Link
+          href="/banner"
+          className="text-xs font-black text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition-colors px-3 py-2 rounded-full"
+        >
+          ドヤバナーAIに戻る
+        </Link>
         <Link href="/banner/dashboard/plan" className="text-xs font-bold text-blue-600 hover:text-blue-700">
           Plan
         </Link>
