@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING } from '@/lib/pricing'
+import sharp from 'sharp'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 // クリーンアップ頻度を抑えてレスポンスを軽くする（サーバレスでも一定効果）
 let lastGalleryCleanupAt = 0
@@ -15,6 +17,28 @@ function parseIntParam(v: string | null, fallback: number) {
 
 function asBoolFromJson(value: any): boolean {
   return value === true
+}
+
+async function toJpegThumbDataUrl(output: unknown): Promise<string | null> {
+  const s = typeof output === 'string' ? output : ''
+  if (!s) return null
+  if (!s.startsWith('data:image/')) {
+    // URL等はそのまま（ここでは変換しない）
+    return s
+  }
+  const comma = s.indexOf(',')
+  if (comma === -1) return null
+  const b64 = s.slice(comma + 1)
+  try {
+    const input = Buffer.from(b64, 'base64')
+    const buf = await sharp(input)
+      .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 35, mozjpeg: true })
+      .toBuffer()
+    return `data:image/jpeg;base64,${buf.toString('base64')}`
+  } catch {
+    return null
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -65,12 +89,14 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const shaped = items.map((g) => {
+    const shaped = await Promise.all(items.map(async (g) => {
       const meta: any = g.metadata || {}
       const shareProfile = asBoolFromJson(meta?.shareProfile)
+      // 一覧は軽量化のため“粗いサムネ”を返す（元画像は別APIで取得）
+      const thumb = await toJpegThumbDataUrl(g.output)
       return {
         id: g.id,
-        image: g.output,
+        thumb: thumb || null,
         createdAt: g.createdAt,
         category: String(meta?.category || ''),
         purpose: String(meta?.purpose || ''),
@@ -80,16 +106,16 @@ export async function GET(request: NextRequest) {
         creator: shareProfile ? (g.user?.name || '匿名') : '匿名',
         creatorImage: shareProfile ? (g.user?.image || null) : null,
       }
-    })
+    }))
 
     const nextCursor = items.length === take ? items[items.length - 1]?.id : null
 
     return NextResponse.json(
       { items: shaped, nextCursor },
       {
-        // ギャラリーは公開データなので短期キャッシュOK（体感高速化）
+        // ギャラリー一覧は公開データでユーザー差がないため強めにキャッシュOK（体感高速化）
         headers: {
-          'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300',
+          'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=86400',
         },
       }
     )
