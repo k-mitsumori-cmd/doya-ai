@@ -11,21 +11,13 @@ import {
   ChevronDown, Check, Star, Eye, Copy, 
   Play, Crown, ArrowUpRight, Palette,
   MessageSquare, Send, RotateCcw, Pencil, BarChart3,
-  Users, DollarSign, Bell, Settings, Search, ArrowUpDown, ChevronRight,
+  Users, DollarSign, Settings, Search, ArrowUpDown, ChevronRight,
   TrendingUp, Layers
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
 import { DashboardLayout } from '@/components/DashboardLayout' // New import
 import { FeatureGuide } from '@/components/FeatureGuide'
-import {
-  getNotificationPermission,
-  isBrowserNotificationSupported,
-  readNotifyOnComplete,
-  requestNotificationPermission,
-  sendBrowserNotification,
-  writeNotifyOnComplete,
-} from '@/lib/browser-notify'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -664,13 +656,7 @@ export default function BannerDashboard() {
   const [elapsedSec, setElapsedSec] = useState(0)
   const [predictedTotalMs, setPredictedTotalMs] = useState<number>(DEFAULT_PREDICT_MS)
   const [predictedRemainingMs, setPredictedRemainingMs] = useState<number>(DEFAULT_PREDICT_MS)
-  const [notifyOnComplete, setNotifyOnComplete] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
-
-  // 完了通知設定（永続化）
-  useEffect(() => {
-    setNotifyOnComplete(readNotifyOnComplete())
-  }, [])
   
   // 修正機能
   const [refineInstruction, setRefineInstruction] = useState('')
@@ -1097,11 +1083,6 @@ export default function BannerDashboard() {
       nextStats.byPurpose = nextStats.byPurpose || {}
       nextStats.byPurpose[purpose] = updateEma(nextStats.byPurpose[purpose], actualMs)
       writeGenStats(nextStats)
-
-      // 完了通知（任意）
-      if (notifyOnComplete) {
-        sendBrowserNotification('ドヤバナーAI', 'バナー生成が完了しました（A/B/C）')
-      }
       
       if (isGuest) {
         const serverUsed = Number(data?.usage?.dailyUsed)
@@ -2690,46 +2671,6 @@ export default function BannerDashboard() {
                   <span className="font-semibold">- ただし「閉じる/更新」すると中断される可能性があります</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <button
-                    onClick={async () => {
-                      if (!isBrowserNotificationSupported()) {
-                        toast.error('このブラウザは通知に対応していません')
-                        return
-                      }
-
-                      const perm = getNotificationPermission()
-                      // すでに許可済みならトグルだけ（永続化）
-                      if (perm === 'granted') {
-                        setNotifyOnComplete((v) => {
-                          const next = !v
-                          writeNotifyOnComplete(next)
-                          if (next) {
-                            sendBrowserNotification('ドヤバナーAI', '完了通知がONになりました（テスト通知）')
-                          }
-                          return next
-                        })
-                        return
-                      }
-
-                      // まだ未許可なら、ユーザー操作のタイミングで権限をリクエスト
-                      const asked = await requestNotificationPermission()
-                      if (asked === 'granted') {
-                        setNotifyOnComplete(true)
-                        writeNotifyOnComplete(true)
-                        sendBrowserNotification('ドヤバナーAI', '完了通知がONになりました（テスト通知）')
-                        toast.success('完了通知をONにしました')
-                      } else {
-                        setNotifyOnComplete(false)
-                        writeNotifyOnComplete(false)
-                        toast.error('通知が許可されませんでした（ブラウザ設定から許可してください）')
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-xl font-black transition-colors ${
-                      notifyOnComplete ? 'bg-blue-600 text-white' : 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-100'
-                    }`}
-                  >
-                    完了通知 {notifyOnComplete ? 'ON' : 'OFF'}
-                  </button>
                   <div className="text-gray-500 font-semibold">
                     予測合計: 約{formatSec(predictedTotalMs)} / 経過: {elapsedSec}秒{isHidden ? '（バックグラウンド）' : ''}
                   </div>

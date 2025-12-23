@@ -5,16 +5,8 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
-import { Send, Sparkles, Bot, User, Wand2, Image as ImageIcon, Download, MessageSquare, ArrowRight, Bell, Settings } from 'lucide-react'
+import { Send, Sparkles, Bot, User, Wand2, Image as ImageIcon, Download, MessageSquare, ArrowRight, Settings } from 'lucide-react'
 import toast from 'react-hot-toast'
-import {
-  getNotificationPermission,
-  isBrowserNotificationSupported,
-  readNotifyOnComplete,
-  requestNotificationPermission,
-  sendBrowserNotification,
-  writeNotifyOnComplete,
-} from '@/lib/browser-notify'
 
 type ChatMsg = {
   id: string
@@ -74,7 +66,6 @@ function updateEma(prev: number, next: number, alpha = 0.25) {
 
 export default function BannerChatPage() {
   const { data: session } = useSession()
-  const [notifyOnComplete, setNotifyOnComplete] = useState(false)
   const [logoImage, setLogoImage] = useState<string | null>(null)
   const [logoFileName, setLogoFileName] = useState('')
   const [personImages, setPersonImages] = useState<string[]>([])
@@ -107,11 +98,6 @@ export default function BannerChatPage() {
 
   const endRef = useRef<HTMLDivElement | null>(null)
   const refinePanelRef = useRef<HTMLDivElement | null>(null)
-
-  // 完了通知設定（全ページ共通で永続化）
-  useEffect(() => {
-    setNotifyOnComplete(readNotifyOnComplete())
-  }, [])
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -222,9 +208,6 @@ export default function BannerChatPage() {
       setGeneratedBanners(Array.isArray(data.banners) ? data.banners : [])
       setSelectedBannerIndex(0)
       pushAssistant('生成できました。気になる案をダウンロードして使えます。')
-      if (notifyOnComplete) {
-        sendBrowserNotification('ドヤバナーAI', 'AIチャットのバナー生成が完了しました（A/B/C）')
-      }
     } catch (e: any) {
       pushAssistant('生成に失敗しました。条件を少し変えてもう一度試してください。')
       toast.error(e?.message || '生成に失敗しました')
@@ -306,9 +289,6 @@ export default function BannerChatPage() {
       setGeneratedBanners((prev) => prev.map((b, i) => (i === idx ? refined : b)))
       pushAssistant('修正できました。気になる点があれば、さらに指示して改善できます。')
       toast.success('AIで修正しました')
-      if (notifyOnComplete) {
-        sendBrowserNotification('ドヤバナーAI', `AIチャットのバナー修正が完了しました（PATTERN ${String.fromCharCode(65 + idx)}）`)
-      }
 
       // EMA更新（次回予測用）
       const actualMs = Date.now() - startedAt
@@ -360,49 +340,6 @@ export default function BannerChatPage() {
               
               <div className="flex items-center gap-3 sm:gap-6">
                 <div className="hidden md:flex items-center gap-2">
-                  <button
-                    className={`p-2.5 rounded-full transition-all relative ${
-                      notifyOnComplete ? 'text-blue-600 bg-blue-50' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50'
-                    }`}
-                    title={`完了通知 ${notifyOnComplete ? 'ON' : 'OFF'}`}
-                    onClick={async () => {
-                      if (!isBrowserNotificationSupported()) {
-                        toast.error('このブラウザは通知に対応していません')
-                        return
-                      }
-                      const perm = getNotificationPermission()
-                      if (perm === 'granted') {
-                        setNotifyOnComplete((v) => {
-                          const next = !v
-                          writeNotifyOnComplete(next)
-                          if (next) {
-                            sendBrowserNotification('ドヤバナーAI', '完了通知がONになりました（テスト通知）')
-                            toast.success('完了通知をONにしました')
-                          } else {
-                            toast('完了通知をOFFにしました')
-                          }
-                          return next
-                        })
-                        return
-                      }
-                      const asked = await requestNotificationPermission()
-                      if (asked === 'granted') {
-                        setNotifyOnComplete(true)
-                        writeNotifyOnComplete(true)
-                        sendBrowserNotification('ドヤバナーAI', '完了通知がONになりました（テスト通知）')
-                        toast.success('完了通知をONにしました')
-                      } else {
-                        setNotifyOnComplete(false)
-                        writeNotifyOnComplete(false)
-                        toast.error('通知が許可されませんでした（ブラウザ設定から許可してください）')
-                      }
-                    }}
-                  >
-                    <Bell className="w-5 h-5" />
-                    {notifyOnComplete && (
-                      <span className="absolute top-2 right-2 w-2 h-2 bg-blue-600 rounded-full border-2 border-white" />
-                    )}
-                  </button>
                   <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
                     <Settings className="w-5 h-5" />
                   </button>
