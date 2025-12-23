@@ -54,7 +54,7 @@ export default function BannerLandingPage() {
                     PRO MEMBER
                   </div>
                 )}
-                <Link href="/banner/dashboard" className="px-5 sm:px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95">
+                <Link href="/banner" className="px-5 sm:px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95">
                   ダッシュボード
                 </Link>
               </div>
@@ -108,7 +108,7 @@ export default function BannerLandingPage() {
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             {session ? (
-              <Link href="/banner/dashboard">
+              <Link href="/banner">
                 <button className="px-10 py-5 bg-blue-600 hover:bg-blue-700 text-white text-lg font-black rounded-2xl shadow-2xl shadow-blue-200 transition-all flex items-center gap-3 hover:scale-105 active:scale-95">
                   ダッシュボードを開く
                   <ArrowRight className="w-6 h-6" />
