@@ -703,6 +703,7 @@ export default function BannerDashboard() {
   const [logoFileName, setLogoFileName] = useState('')
   const [personImages, setPersonImages] = useState<string[]>([])
   const [personFileNames, setPersonFileNames] = useState<string[]>([])
+  const personInputRef = useRef<HTMLInputElement | null>(null)
 
   // 生成枚数（デフォルト3 / 有料は最大10）
   const [generateCount, setGenerateCount] = useState<number>(3)
@@ -2024,11 +2025,11 @@ export default function BannerDashboard() {
                           {personImages.length > 0 ? `${personImages.length}枚設定済み` : '未設定'}
                         </p>
                         <input
-                          id="dashboard-person-input"
+                          ref={personInputRef}
                           type="file"
                           accept="image/*"
                           multiple
-                          className="sr-only"
+                          style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
                           onChange={async (e) => {
                             console.log('[person-input] onChange fired')
                             const files = e.target.files
@@ -2037,12 +2038,16 @@ export default function BannerDashboard() {
                             await addPersonFiles(files)
                           }}
                         />
-                        <label
-                          htmlFor="dashboard-person-input"
+                        <button
+                          type="button"
+                          onClick={() => {
+                            console.log('[person-input] button clicked, triggering input.click()')
+                            personInputRef.current?.click()
+                          }}
                           className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-xs font-black text-slate-800 cursor-pointer"
                         >
                           追加
-                        </label>
+                        </button>
                         {personImages.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-2">
                             {personFileNames.map((name, idx) => (
