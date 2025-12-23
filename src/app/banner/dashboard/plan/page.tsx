@@ -74,6 +74,7 @@ export default function BannerPlanPage() {
       return
     }
     try {
+      toast.loading('契約管理ページを開いています...', { id: 'open-portal' })
       setIsPortalLoading(true)
       const res = await fetch('/api/stripe/portal', {
         method: 'POST',
@@ -83,9 +84,14 @@ export default function BannerPlanPage() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || '契約管理ページを開けませんでした')
       if (!data?.url) throw new Error('契約管理ページURLが取得できませんでした')
+      toast.dismiss('open-portal')
       window.location.href = String(data.url)
     } catch (e: any) {
-      toast.error(e?.message || '契約管理ページを開けませんでした')
+      toast.dismiss('open-portal')
+      // POSTが失敗した場合でも、GETリダイレクトで確実に開く（互換）
+      const msg = e?.message || '契約管理ページを開けませんでした'
+      toast.error(`${msg}（別ルートで再試行します）`)
+      window.location.href = `/api/stripe/portal?returnTo=${encodeURIComponent('/banner/dashboard/plan')}`
     } finally {
       setIsPortalLoading(false)
     }
