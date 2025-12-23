@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import sharp from 'sharp'
 
 // ========================================
 // バナー修正API
@@ -58,19 +59,30 @@ function parseDataUrl(dataUrl: string): { mimeType: string; data: string } {
   return { mimeType: m[1], data: m[2] }
 }
 
-function getAspectRatio(size?: string): string {
-  if (!size) return '1:1'
-  const [width, height] = size.split('x').map(Number)
-  if (!width || !height) return '1:1'
-  
-  const ratio = width / height
-  if (ratio > 1.7) return '16:9'
-  if (ratio > 1.4) return '3:2'
-  if (ratio > 1.1) return '4:3'
-  if (ratio < 0.6) return '9:16'
-  if (ratio < 0.75) return '2:3'
-  if (ratio < 0.9) return '3:4'
-  return '1:1'
+async function enforceExactSizePng(dataUrl: string, size?: string): Promise<string> {
+  const [w, h] = (size || '').split('x').map((v) => Number(v))
+  if (!w || !h) return dataUrl
+  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
+  if (!m) return dataUrl
+  const base64 = m[2]
+  const input = Buffer.from(base64, 'base64')
+
+  // まずはメタデータ確認（すでに一致なら何もしない）
+  try {
+    const meta = await sharp(input).metadata()
+    if (meta?.width === w && meta?.height === h) return dataUrl
+  } catch {
+    // 継続
+  }
+
+  // NOTE:
+  // - padding/letterbox は禁止（上下の帯が出る）なので、最終的に cover で揃える
+  // - その代わり、プロンプト側で「文字は安全余白に収める」を強制してクリップを避ける
+  const out = await sharp(input)
+    .resize(w, h, { fit: 'cover', position: 'centre' })
+    .png({ compressionLevel: 9 })
+    .toBuffer()
+  return `data:image/png;base64,${out.toString('base64')}`
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<RefineResponse>> {
@@ -92,7 +104,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
       }, { status: 400 })
     }
 
-    const aspectRatio = getAspectRatio(size)
     const apiKey = getApiKey()
     const img = parseDataUrl(originalImage)
 
@@ -115,11 +126,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
             },
           ],
           generationConfig: {
-            responseModalities: ['IMAGE', 'TEXT'],
-            imageConfig: {
-              aspectRatio,
-              imageSize: '2K',
-            },
+            // 編集時はサイズがブレやすいので、画像のみを要求しつつプロンプトでピクセル指定を厳守
+            responseModalities: ['IMAGE'],
           },
         }
 
@@ -144,7 +152,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
         const imgPart = Array.isArray(parts) ? parts.find((p: any) => p?.inlineData?.data) : null
         if (!imgPart?.inlineData?.data) throw new Error('画像が生成されませんでした')
         const mimeType = imgPart.inlineData.mimeType || 'image/png'
-        const refinedImage = `data:${mimeType};base64,${imgPart.inlineData.data}`
+        const refinedImageRaw = `data:${mimeType};base64,${imgPart.inlineData.data}`
+        const refinedImage = await enforceExactSizePng(refinedImageRaw, size)
 
         return NextResponse.json({
           success: true,
@@ -171,7 +180,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
 function createEditPrompt(instruction: string, category?: string, size?: string): string {
   // サイズ情報から余白なし指定を作成
   const [w, h] = (size || '').split('x').map(Number)
-  const sizeNote = w && h ? `Output dimensions: EXACTLY ${w}x${h} px. NO padding, NO letterboxing, NO borders.` : ''
+  const sizeNote = w && h ? `Output dimensions: EXACTLY ${w}x${h} px. Do NOT change aspect ratio. NO padding, NO letterboxing, NO borders.` : ''
+  const tightTextNote =
+    w && h && (h <= 120 || w / h >= 3.5)
+      ? `SMALL/THIN FORMAT (CRITICAL):
+- This is a small-height / extreme-wide banner. NEVER let any text be clipped.
+- If space is tight, reduce font size and simplify decorative elements. Keep text inside safe margins (>= 6% from edges).
+- Prefer 1-line headline; if unavoidable, 2 short lines with smaller font.`
+      : ''
   return `Edit the provided Japanese marketing banner image.
 
 USER INSTRUCTION:
@@ -179,6 +195,7 @@ ${instruction}
 
 ${category ? `INDUSTRY: ${category}` : ''}
 ${sizeNote}
+${tightTextNote}
 
 === DESIGN RULES ===
 - STYLE: High-CTR Japanese paid-ad creative (SNS, Display, Landing page).

@@ -1801,17 +1801,22 @@ export default function BannerDashboard() {
 
                 <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col justify-center items-center text-center">
                   <div className="w-16 h-16 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center mb-4 overflow-hidden relative">
-                    <div 
-                      className="bg-blue-600/10 border border-blue-600/20 rounded-sm"
-                      style={{
-                        width: useCustomSize 
-                          ? `${Math.min(48, 48 * (parseInt(customWidth) || 1) / (parseInt(customHeight) || 1))}px` 
-                          : `${Math.min(48, 48 * (SIZE_INFO[size]?.w || 1) / (SIZE_INFO[size]?.h || 1))}px`,
-                        height: useCustomSize 
-                          ? `${Math.min(48, 48 * (parseInt(customHeight) || 1) / (parseInt(customWidth) || 1))}px` 
-                          : `${Math.min(48, 48 * (SIZE_INFO[size]?.h || 1) / (SIZE_INFO[size]?.w || 1))}px`,
-                      }}
-                    />
+                    {(() => {
+                      const max = 48
+                      const w = useCustomSize ? Number(customWidth) : Number(String(size).split('x')[0])
+                      const h = useCustomSize ? Number(customHeight) : Number(String(size).split('x')[1])
+                      const ww = Number.isFinite(w) && w > 0 ? w : 1
+                      const hh = Number.isFinite(h) && h > 0 ? h : 1
+                      const scale = max / Math.max(ww, hh)
+                      const boxW = Math.max(6, Math.round(ww * scale))
+                      const boxH = Math.max(6, Math.round(hh * scale))
+                      return (
+                        <div
+                          className="bg-blue-600/10 border border-blue-600/20 rounded-sm"
+                          style={{ width: `${boxW}px`, height: `${boxH}px` }}
+                        />
+                      )
+                    })()}
                   </div>
                   <p className="text-slate-800 font-black text-sm">
                     {useCustomSize ? `${customWidth} × ${customHeight}` : size}

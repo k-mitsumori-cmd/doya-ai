@@ -531,6 +531,10 @@ function createYouTubeThumbnailPrompt(
   options: GenerateOptions = {}
 ): string {
   const [width, height] = size.split('x')
+  const wNum = Number(width)
+  const hNum = Number(height)
+  const isTightFormat =
+    Number.isFinite(wNum) && Number.isFinite(hNum) && wNum > 0 && hNum > 0 && (hNum <= 120 || wNum / hNum >= 3.5)
 
   // キャッチコピー（keyword）を必ず画像内に含める
   const headline = (keyword || '').trim() || (options.headlineText || '').trim()
@@ -662,6 +666,13 @@ Generate a YouTube thumbnail that:
 2. Has the provided Japanese text rendered clearly and correctly
 3. Uses a solid/gradient text panel for readability
 4. Would make viewers curious to click
+${isTightFormat ? `
+
+=== SMALL/THIN FORMAT TEXT-FIT (CRITICAL) ===
+- This is a small-height / extreme-wide canvas (${width}x${height}). NEVER clip text.
+- Keep text inside safe margins (>= 6% from edges). Prioritize readability over decoration.
+- If the string is long, reduce font size and simplify visuals. Prefer 1 line; if unavoidable, 2 short lines.
+` : ''}
 
 Create the thumbnail now.`
 
@@ -679,6 +690,10 @@ function createBannerPrompt(
   const categoryStyle = CATEGORY_STYLES[category] || CATEGORY_STYLES.other
   const purposeStyle = PURPOSE_STYLES[options.purpose || 'sns_ad'] || PURPOSE_STYLES.sns_ad
   const [width, height] = size.split('x')
+  const wNum = Number(width)
+  const hNum = Number(height)
+  const isTightFormat =
+    Number.isFinite(wNum) && Number.isFinite(hNum) && wNum > 0 && hNum > 0 && (hNum <= 120 || wNum / hNum >= 3.5)
   const aspectRatio = parseInt(width) > parseInt(height) ? 'landscape (horizontal)' : 
                       parseInt(width) < parseInt(height) ? 'portrait (vertical)' : 'square'
   
@@ -731,6 +746,11 @@ Primary KPI: maximize click-through rate (CTR) on mobile feeds.
 - Output dimensions: EXACTLY ${width}x${height} px. Do NOT change aspect ratio.
 - Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom margins, NO padding.
 - Keep all text fully inside the frame (no clipping). Use safe margins but do not create empty bands.
+${isTightFormat ? `
+- SMALL/THIN FORMAT: This is an extreme-wide / small-height banner. NEVER clip text.
+- Keep all text within a safe area (>= 6% from all edges). If space is tight, reduce font size and simplify decorative elements.
+- Prefer a single, very readable headline line. If unavoidable, split into 2 short lines with smaller font.
+` : ''}
 
 === DESIGN STYLE ===
 Industry: ${categoryStyle.style}
