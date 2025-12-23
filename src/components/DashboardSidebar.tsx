@@ -317,7 +317,11 @@ function DashboardSidebarImpl({
 
       {/* User Profile */}
       <div className="p-4 border-t border-white/5 bg-blue-700/30">
-        <div className={`flex items-center gap-3 p-2 rounded-xl ${isCollapsed ? 'justify-center' : ''}`}>
+        <Link
+          href="/banner/dashboard/settings"
+          className={`flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer ${isCollapsed ? 'justify-center' : ''}`}
+          title="設定"
+        >
           <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-inner border border-white/10">
             {session?.user?.image ? (
               <img 
@@ -346,8 +350,10 @@ function DashboardSidebarImpl({
               </motion.div>
             )}
           </AnimatePresence>
-          {!isCollapsed && (
-            isLoggedIn ? (
+        </Link>
+        {!isCollapsed && (
+          <div className="mt-2 flex items-center justify-end gap-2">
+            {isLoggedIn ? (
               <button
                 onClick={() => signOut()}
                 className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
@@ -368,9 +374,9 @@ function DashboardSidebarImpl({
                 <LogIn className="w-4 h-4" />
                 ログイン
               </Link>
-            )
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Collapse Toggle */}

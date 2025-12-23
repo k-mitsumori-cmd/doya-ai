@@ -4,9 +4,7 @@ import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import DashboardSidebar from './DashboardSidebar'
 import { 
-  Bell, 
   Settings, 
-  Search, 
   User,
   Menu,
   X,
@@ -97,13 +95,13 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-2 md:gap-4">
               {isLoggedIn && (
                 <>
-                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full relative transition-colors" title="通知">
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors" title="設定">
+                  <Link
+                    href="/banner/dashboard/settings"
+                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                    title="設定"
+                  >
                     <Settings className="w-5 h-5" />
-                  </button>
+                  </Link>
                   <div className="h-8 w-px bg-gray-200 mx-1 md:mx-2" />
                 </>
               )}
