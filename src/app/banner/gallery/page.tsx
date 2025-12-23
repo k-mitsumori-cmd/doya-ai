@@ -20,6 +20,29 @@ type GalleryItem = {
   creatorImage: string | null
 }
 
+const GALLERY_CACHE_KEY = 'doya-gallery-cache'
+const GALLERY_CACHE_TTL_MS = 60 * 1000 // 1分間有効
+
+function readGalleryCache(): { items: GalleryItem[]; cursor: string | null; ts: number } | null {
+  try {
+    const raw = sessionStorage.getItem(GALLERY_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed?.items)) return null
+    return { items: parsed.items, cursor: parsed.cursor || null, ts: parsed.ts || 0 }
+  } catch {
+    return null
+  }
+}
+
+function writeGalleryCache(items: GalleryItem[], cursor: string | null) {
+  try {
+    sessionStorage.setItem(GALLERY_CACHE_KEY, JSON.stringify({ items, cursor, ts: Date.now() }))
+  } catch {
+    // ignore
+  }
+}
+
 export default function BannerGalleryPage() {
   const [items, setItems] = useState<GalleryItem[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
@@ -27,6 +50,7 @@ export default function BannerGalleryPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tipIndex, setTipIndex] = useState(0)
+  const [isStale, setIsStale] = useState(false)
 
   const LOADING_TIPS = [
     '人気のバナーは「数字×限定感×CTA」が強いです',
@@ -58,13 +82,30 @@ export default function BannerGalleryPage() {
   useEffect(() => {
     let mounted = true
     ;(async () => {
+      // キャッシュチェック（stale-while-revalidate）
+      const cached = readGalleryCache()
+      if (cached && cached.items.length > 0) {
+        setItems(cached.items)
+        setCursor(cached.cursor)
+        setLoading(false)
+        const isExpired = Date.now() - cached.ts > GALLERY_CACHE_TTL_MS
+        if (!isExpired) {
+          // まだ有効 → API呼ばない
+          return
+        }
+        // 期限切れ → バックグラウンドで更新
+        setIsStale(true)
+      }
+
       try {
-        setLoading(true)
+        setLoading(cached ? false : true) // キャッシュがあればローディング表示しない
         setError(null)
         const data = await fetchPage(null)
         if (!mounted) return
         setItems(data.items || [])
         setCursor(data.nextCursor || null)
+        writeGalleryCache(data.items || [], data.nextCursor || null)
+        setIsStale(false)
       } catch (e: any) {
         if (!mounted) return
         if (e?.name === 'AbortError') {
