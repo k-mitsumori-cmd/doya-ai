@@ -1,4 +1,148 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { ensureSeoSchema } from '@seo/lib/bootstrap'
+import { geminiGenerateJson } from '@seo/lib/gemini'
+import { z } from 'zod'
+
+export const runtime = 'nodejs'
+
+const BodySchema = z.object({
+  message: z.string().min(1).max(20_000),
+  targetHeading: z.string().optional(),
+})
+
+function normalizePlan(p: any): string {
+  return String(p || '').toUpperCase().trim()
+}
+
+function isPaidPlan(plan: string): boolean {
+  return plan === 'PRO' || plan === 'ENTERPRISE'
+}
+
+function extractHeadingsFromMarkdown(md: string): string[] {
+  const lines = String(md || '').split('\n')
+  const heads: string[] = []
+  for (const line of lines) {
+    const m = line.match(/^(#{2,3})\s+(.+?)\s*$/) // H2/H3だけ（長文の修正ポイントになりやすい）
+    if (m) {
+      const text = m[2].trim()
+      if (text && !heads.includes(text)) heads.push(text)
+    }
+    if (heads.length >= 60) break
+  }
+  return heads
+}
+
+export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
+  try {
+    await ensureSeoSchema()
+
+    const session = await getServerSession(authOptions)
+    const user: any = session?.user || null
+    if (!user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'この機能は有料プラン限定です（ログインが必要です）。', code: 'PAID_ONLY' },
+        { status: 401 }
+      )
+    }
+    const plan = normalizePlan(user?.seoPlan || user?.plan || 'FREE')
+    if (!isPaidPlan(plan)) {
+      return NextResponse.json(
+        { success: false, error: 'この機能は有料プラン限定です。', code: 'PAID_ONLY', upgradeUrl: '/pricing' },
+        { status: 402 }
+      )
+    }
+
+    const articleId = ctx.params.id
+    const article = await (prisma as any).seoArticle.findUnique({
+      where: { id: articleId },
+      select: { id: true, title: true, status: true, finalMarkdown: true, targetChars: true },
+    })
+    if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
+    if (String(article.status) !== 'DONE') {
+      return NextResponse.json(
+        { success: false, error: '完成した記事のみAIチャット修正が可能です。', code: 'NOT_DONE' },
+        { status: 400 }
+      )
+    }
+
+    const body = BodySchema.parse(await req.json())
+    const md = String(article.finalMarkdown || '')
+    const isLong = md.length > 80_000
+
+    if (isLong && !body.targetHeading) {
+      const headings = extractHeadingsFromMarkdown(md)
+      return NextResponse.json(
+        { success: false, code: 'NEED_TARGET', headings },
+        { status: 400 }
+      )
+    }
+
+    const model =
+      process.env.SEO_GEMINI_CHAT_MODEL ||
+      process.env.SEO_GEMINI_TEXT_MODEL ||
+      'gemini-3-pro-preview'
+
+    const prompt = [
+      'You are a professional Japanese editor for SEO articles.',
+      'Task: Apply the user request to the given Markdown article.',
+      '',
+      'STRICT RULES:',
+      '- Output STRICT JSON only. No markdown. No extra text. No code fences.',
+      '- Keep markdown valid.',
+      '- Do NOT invent facts. If unsure, keep original wording.',
+      '- Keep in Japanese.',
+      '- If targetHeading is provided, ONLY modify that section and keep everything else unchanged.',
+      '',
+      `Article title: ${article.title}`,
+      `Target characters: ${article.targetChars}`,
+      '',
+      `targetHeading: ${body.targetHeading || ''}`,
+      '',
+      'USER REQUEST:',
+      body.message,
+      '',
+      'CURRENT MARKDOWN:',
+      md.slice(0, 180000),
+      '',
+      'OUTPUT JSON SCHEMA:',
+      '{ "proposedMarkdown": string, "summary": string }',
+    ].join('\n')
+
+    const out = await geminiGenerateJson<{ proposedMarkdown: string; summary: string }>(
+      {
+        model,
+        prompt,
+        generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
+      },
+      'CHAT_EDIT_JSON'
+    )
+
+    const proposedMarkdown = String(out?.proposedMarkdown || '').trim()
+    const summary = String(out?.summary || '').trim()
+    if (!proposedMarkdown) {
+      return NextResponse.json(
+        { success: false, error: 'AIの修正結果が空でした。もう一度お試しください。' },
+        { status: 502 }
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      proposedMarkdown,
+      summary: summary || '修正案を作成しました。',
+      usedModel: model,
+    })
+  } catch (e: any) {
+    const msg = e?.message || '不明なエラー'
+    console.error('[seo chat-edit] failed', { articleId: ctx.params.id, msg })
+    return NextResponse.json({ success: false, error: msg }, { status: 500 })
+  }
+}
+
+import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'

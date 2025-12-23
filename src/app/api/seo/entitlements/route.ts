@@ -1,3 +1,37 @@
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+function normalizePlan(p: any): string {
+  return String(p || '').toUpperCase().trim()
+}
+
+function isPaidPlan(plan: string): boolean {
+  return plan === 'PRO' || plan === 'ENTERPRISE'
+}
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions)
+    const user: any = session?.user || null
+    const isLoggedIn = !!user?.id
+    const plan = normalizePlan(user?.seoPlan || user?.plan || (isLoggedIn ? 'FREE' : 'GUEST'))
+    return NextResponse.json({
+      success: true,
+      isLoggedIn,
+      plan,
+      canUseChatEdit: isLoggedIn && isPaidPlan(plan),
+    })
+  } catch {
+    return NextResponse.json({
+      success: true,
+      isLoggedIn: false,
+      plan: 'UNKNOWN',
+      canUseChatEdit: false,
+    })
+  }
+}
+
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
