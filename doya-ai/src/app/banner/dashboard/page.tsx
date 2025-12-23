@@ -671,6 +671,16 @@ function buildDefaultOverlay(keyword: string, purpose: string) {
   return { headline, subhead: '', cta }
 }
 
+function buildAltHeadlinePool(category: string, purpose: string, baseHeadline: string): string[] {
+  const cat = category && typeof category === 'string' ? category : 'other'
+  const base = String(baseHeadline || '').trim()
+  const pool = uniqStrings([
+    ...buildHighCtrSampleCopies(cat, purpose),
+    ...createCopyVariants(base, purpose),
+  ])
+  return pool.filter((s) => s && s !== base).slice(0, 20)
+}
+
 function createCopyVariants(headline: string, purpose: string) {
   const base = headline.trim()
   const head = base.length ? base : '今すぐ成果を出す'
@@ -2537,29 +2547,39 @@ export default function BannerDashboard() {
 
                           {/* この画像に使われたテキスト（用途/業種/訴求タイプに合わせて自動生成） */}
                           {(() => {
-                            // コピーはA/B/Cの3案分のみ（4枚目以降は同一コピーからの追加生成のため表示しない）
-                            if (selectedBanner > 2) return null
-                            const v = ['A', 'B', 'C'][selectedBanner] as 'A' | 'B' | 'C'
-                            const c = generatedCopies.find((x) => x.variant === v)
-                            if (!c) return null
+                            // 表示仕様:
+                            // - No1〜No5: 同一コピー（固定）
+                            // - No6〜No10: コピー差し替え版（比較用）
+                            const base = buildDefaultOverlay(keyword, purpose)
+                            const altPool = buildAltHeadlinePool(category, purpose, base.headline)
+                            const isAlt = selectedBanner >= 5
+                            const altHeadline = altPool[selectedBanner - 5] || altPool[0] || base.headline
+                            const display = {
+                              headline: isAlt ? altHeadline : base.headline,
+                              subhead: base.subhead,
+                              cta: base.cta,
+                            }
                             return (
                               <div className="border-t border-gray-100 pt-3">
                                 <div className="flex items-center gap-2 mb-2">
                                   <MessageSquare className="w-4 h-4 text-blue-600" />
                                   <span className="text-sm font-bold text-gray-900">画像内テキスト（自動）</span>
                                 </div>
+                                <div className="mb-2 rounded-xl border border-blue-100 bg-blue-50/60 px-3 py-2 text-[11px] font-bold text-slate-700">
+                                  ※ No1〜No5 は<strong className="font-black">同一コピー（固定）</strong>、No6〜No10 は<strong className="font-black">コピー差し替え版（比較用）</strong>を表示しています。
+                                </div>
                                 <div className="grid gap-2">
                                   <div className="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
                                     <div className="text-[11px] font-bold text-gray-500 mb-0.5">見出し（キーワード）</div>
-                                    <div className="text-sm font-black text-gray-900 break-words">{c.headline}</div>
+                                    <div className="text-sm font-black text-gray-900 break-words">{display.headline}</div>
                                   </div>
                                   <div className="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
                                     <div className="text-[11px] font-bold text-gray-500 mb-0.5">サブ（訴求を一致させます）</div>
-                                    <div className="text-sm font-bold text-gray-900 break-words">{c.subhead}</div>
+                                    <div className="text-sm font-bold text-gray-900 break-words">{display.subhead || '—'}</div>
                                   </div>
                                   <div className="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
                                     <div className="text-[11px] font-bold text-gray-500 mb-0.5">CTA</div>
-                                    <div className="text-sm font-bold text-gray-900 break-words">{c.cta}</div>
+                                    <div className="text-sm font-bold text-gray-900 break-words">{display.cta}</div>
                                   </div>
                                 </div>
                               </div>
