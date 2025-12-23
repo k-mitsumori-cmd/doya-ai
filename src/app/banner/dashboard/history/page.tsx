@@ -95,7 +95,8 @@ export default function BannerHistoryPage() {
       const banners = Array.isArray(data?.banners) ? data.banners : []
       const bannerIds = Array.isArray(data?.bannerIds) ? data.bannerIds : []
       return {
-        banners: banners.filter((b: any) => typeof b === 'string' && b.startsWith('data:')),
+        // ここでは “サムネURL” を受け取る（/api/.../thumb）
+        banners: banners.map((b: any) => String(b || '').trim()).filter(Boolean),
         bannerIds: bannerIds.filter((x: any) => typeof x === 'string'),
       }
     } finally {
@@ -495,6 +496,8 @@ export default function BannerHistoryPage() {
                             <img
                               src={banner}
                               alt={`Banner ${i + 1}`}
+                                loading="lazy"
+                                decoding="async"
                               className="w-full h-full object-cover transition-transform duration-500 group-hover/item:scale-110"
                             />
                           ) : (

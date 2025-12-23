@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING } from '@/lib/pricing'
-import sharp from 'sharp'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -17,28 +16,6 @@ function parseIntParam(v: string | null, fallback: number) {
 
 function asBoolFromJson(value: any): boolean {
   return value === true
-}
-
-async function toJpegThumbDataUrl(output: unknown): Promise<string | null> {
-  const s = typeof output === 'string' ? output : ''
-  if (!s) return null
-  if (!s.startsWith('data:image/')) {
-    // URL等はそのまま（ここでは変換しない）
-    return s
-  }
-  const comma = s.indexOf(',')
-  if (comma === -1) return null
-  const b64 = s.slice(comma + 1)
-  try {
-    const input = Buffer.from(b64, 'base64')
-    const buf = await sharp(input)
-      .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 35, mozjpeg: true })
-      .toBuffer()
-    return `data:image/jpeg;base64,${buf.toString('base64')}`
-  } catch {
-    return null
-  }
 }
 
 export async function GET(request: NextRequest) {
@@ -89,14 +66,13 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const shaped = await Promise.all(items.map(async (g) => {
+    const shaped = items.map((g) => {
       const meta: any = g.metadata || {}
       const shareProfile = asBoolFromJson(meta?.shareProfile)
-      // 一覧は軽量化のため“粗いサムネ”を返す（元画像は別APIで取得）
-      const thumb = await toJpegThumbDataUrl(g.output)
       return {
         id: g.id,
-        thumb: thumb || null,
+        // 画像はJSONに載せず、サムネURLを返す（体感を軽く）
+        thumbUrl: `/api/banner/thumb?id=${encodeURIComponent(g.id)}`,
         createdAt: g.createdAt,
         category: String(meta?.category || ''),
         purpose: String(meta?.purpose || ''),
@@ -106,7 +82,7 @@ export async function GET(request: NextRequest) {
         creator: shareProfile ? (g.user?.name || '匿名') : '匿名',
         creatorImage: shareProfile ? (g.user?.image || null) : null,
       }
-    }))
+    })
 
     const nextCursor = items.length === take ? items[items.length - 1]?.id : null
 

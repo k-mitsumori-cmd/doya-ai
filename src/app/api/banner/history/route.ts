@@ -159,22 +159,15 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // 返却はサムネ（圧縮）を基本にして軽量化。DLは別APIで元画像取得。
-      const images = await Promise.all(
-        rows.map(async (r) => ({
-          id: r.id,
-          thumb: await toJpegThumbDataUrl(r.output),
-        }))
-      )
-      const thumbs = images
-        .map((x) => String(x.thumb || '').trim())
-        .filter((s) => s && s.startsWith('data:'))
+      // 返却は「サムネURL」にしてJSONを軽くする（画像は別APIでバイナリ配信）
+      const bannerIds = rows.map((r) => r.id)
+      const thumbs = bannerIds.map((id) => `/api/banner/history/thumb?id=${encodeURIComponent(id)}`)
 
       return NextResponse.json({
         id: batchIdParam,
-        // 互換: banners は “表示用サムネ” を返す
+        // 互換: banners は “表示用サムネURL” を返す
         banners: thumbs,
-        bannerIds: images.map((x) => x.id),
+        bannerIds,
         bannerCount: rows.length,
       }, {
         headers: {
