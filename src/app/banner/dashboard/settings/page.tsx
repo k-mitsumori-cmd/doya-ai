@@ -13,6 +13,7 @@ import { CheckoutButton } from '@/components/CheckoutButton'
 export default function SettingsPage() {
   const { data: session, status } = useSession()
   const [isCancelling, setIsCancelling] = useState(false)
+  const [isResuming, setIsResuming] = useState(false)
   const [cancelScheduledAt, setCancelScheduledAt] = useState<Date | null>(null)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
@@ -103,6 +104,29 @@ export default function SettingsPage() {
       toast.error(err.message || '解約に失敗しました')
     } finally {
       setIsCancelling(false)
+    }
+  }
+
+  const handleResumeSubscription = async () => {
+    if (!confirm('解約をキャンセルして、プランを継続しますか？')) return
+    setIsResuming(true)
+    try {
+      const res = await fetch('/api/stripe/subscription/resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serviceId: 'banner' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '解約取り消しに失敗しました')
+      setCancelScheduledAt(null)
+      try {
+        localStorage.removeItem('banner:cancelScheduledAt')
+      } catch {}
+      toast.success('解約をキャンセルしました！プランは継続されます。')
+    } catch (err: any) {
+      toast.error(err.message || '解約取り消しに失敗しました')
+    } finally {
+      setIsResuming(false)
     }
   }
 
@@ -275,7 +299,7 @@ export default function SettingsPage() {
               <div className="w-12 h-12 rounded-2xl bg-amber-200/60 flex items-center justify-center flex-shrink-0">
                 <CalendarClock className="w-6 h-6 text-amber-900" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h2 className="text-lg font-black text-amber-900">解約予約中</h2>
                 <p className="text-sm font-black text-amber-800 mt-1">
                   <span className="underline">{formatJstDateTime(cancelScheduledAt)}</span> に停止予定（日本時間）
@@ -283,6 +307,14 @@ export default function SettingsPage() {
                 <p className="mt-2 text-[11px] font-bold text-amber-700">
                   停止日時まではPRO/Enterpriseの機能をご利用いただけます。
                 </p>
+                <button
+                  onClick={handleResumeSubscription}
+                  disabled={isResuming}
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {isResuming && <Loader2 className="w-4 h-4 animate-spin" />}
+                  解約を取り消してプランを継続する
+                </button>
               </div>
             </div>
           </section>
