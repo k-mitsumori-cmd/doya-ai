@@ -42,7 +42,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(u)
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
+    const baseUrl = String(process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin)
+      .trim()
+      .replace(/\/+$/, '')
     const returnTo = safeReturnPath(request.nextUrl.searchParams.get('returnTo'))
 
     const portalSession = await createCustomerPortalSession({
@@ -82,7 +84,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin
+    const baseUrl = String(process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin)
+      .trim()
+      .replace(/\/+$/, '')
     const body = await request.json().catch(() => ({}))
     const returnTo = safeReturnPath(body?.returnTo)
 
