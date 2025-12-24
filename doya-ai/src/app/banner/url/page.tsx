@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -54,7 +54,16 @@ function normalizeNonJsonApiError(status: number, text: string): string {
   return '生成に失敗しました'
 }
 
+// Next.jsのprerender時に useSearchParams() を使う場合、Suspense境界が必要
 export default function BannerUrlAutoPage() {
+  return (
+    <Suspense fallback={null}>
+      <BannerUrlAutoPageInner />
+    </Suspense>
+  )
+}
+
+function BannerUrlAutoPageInner() {
   const { data: session, update: updateSession } = useSession()
   const isGuest = !session
   const bannerPlan = !isGuest
