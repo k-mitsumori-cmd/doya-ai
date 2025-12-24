@@ -197,44 +197,35 @@ function DashboardSidebarImpl({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="mx-3 sm:mx-4 my-4 sm:my-6 p-4 sm:p-4 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/10 backdrop-blur-md relative overflow-hidden group"
+            className="mx-3 sm:mx-4 my-2 sm:my-4 p-3 sm:p-3 rounded-xl bg-gradient-to-br from-white/15 to-white/5 border border-white/10 backdrop-blur-md relative overflow-hidden group"
           >
-            <div className="absolute -right-2 -top-2 w-16 h-16 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-500" />
-            <div className="relative z-10">
-              <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-white flex items-center justify-center mb-3 shadow-lg">
-                <Zap className="w-5 h-5 sm:w-4 sm:h-4 text-blue-600 fill-blue-600" />
+            <div className="relative z-10 flex items-center gap-3">
+              <div className="w-8 h-8 sm:w-7 sm:h-7 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
+                <Zap className="w-4 h-4 sm:w-3.5 sm:h-3.5 text-blue-600 fill-blue-600" />
               </div>
-              <h4 className="text-sm sm:text-xs font-black text-white mb-1">プラン案内</h4>
-              <p className="text-xs sm:text-[10px] text-blue-100 font-bold leading-relaxed opacity-90 sm:opacity-80">
-                現在：{bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
-                <br />
-                {nextBannerPlanLabel === 'PRO' && (
-                  <>
-                    次の上位：PRO（月額¥9,980 / 1日{BANNER_PRICING.proLimit}枚）
-                  </>
-                )}
-                {nextBannerPlanLabel === 'ENTERPRISE' && (
-                  <>
-                    次の上位：Enterprise（月額¥49,800 / 1日{BANNER_PRICING.enterpriseLimit || 500}枚）
-                  </>
-                )}
-                {nextBannerPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
-              </p>
-
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] sm:text-[10px] text-blue-100 font-bold leading-snug opacity-90 truncate">
+                  {bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
+                  {nextBannerPlanLabel === 'PRO' && ' → PRO'}
+                  {nextBannerPlanLabel === 'ENTERPRISE' && ' → Enterprise'}
+                  {nextBannerPlanLabel === 'CONSULT' && ' ✓'}
+                </p>
+              </div>
               {nextBannerPlanLabel === 'CONSULT' ? (
                 <a
                   href={HIGH_USAGE_CONTACT_URL}
                   target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
                   rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+                  className="flex-shrink-0"
                 >
-                  <button className="mt-3 w-full py-2.5 sm:py-2 bg-white text-[#2563EB] text-xs sm:text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
-                    マーケティング施策を丸投げする
+                  <button className="px-3 py-1.5 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm whitespace-nowrap">
+                    相談
                   </button>
                 </a>
               ) : (
-                <Link href="/banner/pricing">
-                  <button className="mt-3 w-full py-2.5 sm:py-2 bg-white text-[#2563EB] text-xs sm:text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
-                    {nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseを始める'}
+                <Link href="/banner/pricing" className="flex-shrink-0">
+                  <button className="px-3 py-1.5 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm whitespace-nowrap">
+                    UP
                   </button>
                 </Link>
               )}
@@ -256,10 +247,10 @@ function DashboardSidebarImpl({
         transition={{ duration: 0.2, ease: 'easeInOut' }}
         className={`${isMobile ? 'relative' : 'fixed left-0 top-0'} h-screen bg-[#2563EB] flex flex-col z-50 shadow-xl`}
       >
-      {/* Logo */}
-      <div className="px-4 sm:px-6 py-6 sm:py-8 flex items-center gap-3">
-        <div className="w-12 h-12 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-md">
-          <Sparkles className="w-7 h-7 sm:w-6 sm:h-6 text-white" />
+      {/* Logo - コンパクト版 */}
+      <div className="px-3 sm:px-4 py-4 sm:py-5 flex items-center gap-2">
+        <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-md">
+          <Sparkles className="w-5 h-5 sm:w-5 sm:h-5 text-white" />
         </div>
         <AnimatePresence>
           {(isMobile || !isCollapsed) && (
@@ -269,7 +260,7 @@ function DashboardSidebarImpl({
               exit={{ opacity: 0, x: -10 }}
               className="overflow-hidden"
             >
-              <h1 className="text-2xl sm:text-2xl font-black text-white tracking-tighter leading-none">ドヤバナーAI</h1>
+              <h1 className="text-xl sm:text-lg font-black text-white tracking-tighter leading-none">ドヤバナーAI</h1>
             </motion.div>
           )}
         </AnimatePresence>
@@ -290,18 +281,18 @@ function DashboardSidebarImpl({
       {/* Side Banner */}
       <SidebarBanner />
 
-      {/* Support */}
-      <div className="px-3 sm:px-4 pb-3">
+      {/* Support - コンパクト版 */}
+      <div className="px-3 sm:px-4 pb-2">
         <a
           href={SUPPORT_CONTACT_URL}
           target="_blank"
           rel="noreferrer"
-          className={`w-full flex items-center gap-3 px-3 py-3 sm:py-2.5 rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 transition-colors text-white ${
+          className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15 transition-colors text-white ${
             !isMobile && isCollapsed ? 'justify-center' : ''
           }`}
           title="お問い合わせ（改善点・不具合）"
         >
-          <HelpCircle className="w-6 h-6 sm:w-5 sm:h-5 text-white flex-shrink-0" />
+          <HelpCircle className="w-5 h-5 sm:w-4 sm:h-4 text-white flex-shrink-0" />
           <AnimatePresence>
             {(isMobile || !isCollapsed) && (
               <motion.div
@@ -310,78 +301,74 @@ function DashboardSidebarImpl({
                 exit={{ opacity: 0, x: -6 }}
                 className="min-w-0"
               >
-                <div className="text-base sm:text-sm font-black leading-none">お問い合わせ</div>
-                <div className="text-xs sm:text-[10px] text-blue-100/70 font-bold mt-1 truncate">
-                  改善点・エラー報告はこちら
-                </div>
+                <div className="text-sm sm:text-xs font-bold leading-none">お問い合わせ</div>
               </motion.div>
             )}
           </AnimatePresence>
         </a>
       </div>
 
-      {/* User Profile */}
-      <div className="p-3 sm:p-4 border-t border-white/5 bg-blue-700/30">
-        <Link
-          href="/banner/dashboard/settings"
-          className={`flex items-center gap-3 p-2 sm:p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer ${!isMobile && isCollapsed ? 'justify-center' : ''}`}
-          title="設定"
-        >
-          <div className="w-12 h-12 sm:w-10 sm:h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-inner border border-white/10">
-            {session?.user?.image ? (
-              <img 
-                src={session.user.image} 
-                alt={session.user.name || 'User'} 
-                className="w-full h-full rounded-full object-cover"
-              />
-            ) : (
-              <User className="w-6 h-6 sm:w-5 sm:h-5 text-white" />
-            )}
-          </div>
-          <AnimatePresence>
-            {(isMobile || !isCollapsed) && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex-1 min-w-0"
-              >
-                <p className="text-base sm:text-sm font-bold text-white truncate">
-                  {session?.user?.name || (isLoggedIn ? 'ユーザー' : 'ゲスト')}
-                </p>
-                <p className="text-xs sm:text-[10px] text-blue-100/60 truncate font-medium">
-                  {session?.user?.email || '未ログイン'}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Link>
-        {(isMobile || !isCollapsed) && (
-          <div className="mt-3 sm:mt-2 flex items-center justify-end gap-2">
-            {isLoggedIn ? (
-              <button
-                onClick={() => signOut()}
-                className="p-2 sm:p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                title="ログアウト"
-              >
-                <LogOut className="w-5 h-5 sm:w-4 sm:h-4" />
-              </button>
-            ) : (
-              <Link
-                href={
-                  pathname.startsWith('/banner')
-                    ? `/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(pathname || '/banner')}`
-                    : `/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/kantan/dashboard')}`
-                }
-                className="inline-flex items-center gap-2 px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg bg-white text-[#2563EB] text-sm sm:text-[11px] font-black hover:bg-blue-50 transition-colors shadow-sm"
-                title="ログイン"
-              >
-                <LogIn className="w-5 h-5 sm:w-4 sm:h-4" />
-                ログイン
-              </Link>
-            )}
-          </div>
-        )}
+      {/* User Profile - コンパクト版 */}
+      <div className="p-2 sm:p-3 border-t border-white/5 bg-blue-700/30">
+        <div className={`flex items-center gap-2 ${!isMobile && isCollapsed ? 'justify-center' : ''}`}>
+          <Link
+            href="/banner/dashboard/settings"
+            className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer flex-1 min-w-0"
+            title="設定"
+          >
+            <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-inner border border-white/10">
+              {session?.user?.image ? (
+                <img 
+                  src={session.user.image} 
+                  alt={session.user.name || 'User'} 
+                  className="w-full h-full rounded-full object-cover"
+                />
+              ) : (
+                <User className="w-4 h-4 text-white" />
+              )}
+            </div>
+            <AnimatePresence>
+              {(isMobile || !isCollapsed) && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex-1 min-w-0"
+                >
+                  <p className="text-sm sm:text-xs font-bold text-white truncate">
+                    {session?.user?.name || (isLoggedIn ? 'ユーザー' : 'ゲスト')}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Link>
+          {(isMobile || !isCollapsed) && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {isLoggedIn ? (
+                <button
+                  onClick={() => signOut()}
+                  className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                  title="ログアウト"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              ) : (
+                <Link
+                  href={
+                    pathname.startsWith('/banner')
+                      ? `/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(pathname || '/banner')}`
+                      : `/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/kantan/dashboard')}`
+                  }
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white text-[#2563EB] text-[10px] font-black hover:bg-blue-50 transition-colors shadow-sm"
+                  title="ログイン"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  ログイン
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Collapse Toggle */}
