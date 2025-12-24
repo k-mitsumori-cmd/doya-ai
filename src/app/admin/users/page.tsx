@@ -546,17 +546,76 @@ export default function AdminUsersPage() {
                   })()}
                 </div>
 
-                {/* Stripe Info */}
-                {(editingUser.stripeCustomerId || editingUser.stripeSubscriptionId) && (
-                  <div className="p-4 bg-violet-500/10 border border-violet-500/30 rounded-xl">
-                    <h3 className="text-sm font-medium text-violet-400 mb-2">Stripe連携情報</h3>
-                    <div className="text-xs text-white/60 space-y-1">
+                {/* Stripe管理 */}
+                {editingUser.stripeSubscriptionId && (
+                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Zap className="w-4 h-4 text-emerald-400" />
+                      <h3 className="text-sm font-medium text-emerald-400">Stripe課金管理</h3>
+                    </div>
+                    <div className="text-xs text-white/60 space-y-1 mb-4">
                       {editingUser.stripeCustomerId && (
-                        <p>Customer ID: {editingUser.stripeCustomerId}</p>
+                        <p>Customer ID: <span className="text-white/80 font-mono">{editingUser.stripeCustomerId.slice(0, 20)}...</span></p>
                       )}
                       {editingUser.stripeSubscriptionId && (
-                        <p>Subscription ID: {editingUser.stripeSubscriptionId}</p>
+                        <p>Subscription ID: <span className="text-white/80 font-mono">{editingUser.stripeSubscriptionId.slice(0, 20)}...</span></p>
                       )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          if (!confirm('この期間の終了時にサブスクリプションをキャンセルしますか？')) return
+                          try {
+                            const res = await fetch('/api/admin/stripe', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              credentials: 'include',
+                              body: JSON.stringify({ userId: editingUser.id, action: 'cancel' }),
+                            })
+                            if (res.ok) {
+                              toast.success('キャンセル予約しました')
+                              await fetchUsers()
+                              const updated = users.find((u) => u.id === editingUser.id)
+                              if (updated) setEditingUser(updated)
+                            } else {
+                              toast.error('キャンセルに失敗しました')
+                            }
+                          } catch (e) {
+                            toast.error('エラーが発生しました')
+                          }
+                        }}
+                        disabled={isSaving}
+                        className="flex-1 px-3 py-2 text-xs bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+                      >
+                        期間終了時にキャンセル
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('即座にサブスクリプションをキャンセルしますか？この操作は取り消せません。')) return
+                          try {
+                            const res = await fetch('/api/admin/stripe', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              credentials: 'include',
+                              body: JSON.stringify({ userId: editingUser.id, action: 'cancel_immediately' }),
+                            })
+                            if (res.ok) {
+                              toast.success('サブスクリプションをキャンセルしました')
+                              await fetchUsers()
+                              const updated = users.find((u) => u.id === editingUser.id)
+                              if (updated) setEditingUser(updated)
+                            } else {
+                              toast.error('キャンセルに失敗しました')
+                            }
+                          } catch (e) {
+                            toast.error('エラーが発生しました')
+                          }
+                        }}
+                        disabled={isSaving}
+                        className="flex-1 px-3 py-2 text-xs bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                      >
+                        即時キャンセル
+                      </button>
                     </div>
                   </div>
                 )}
