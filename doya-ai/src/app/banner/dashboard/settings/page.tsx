@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { DashboardLayout } from '@/components/DashboardLayout'
-import { User, Mail, Shield, CreditCard, LogOut, AlertTriangle, Check, Loader2 } from 'lucide-react'
+import { User, Mail, Shield, CreditCard, LogOut, AlertTriangle, Check, Loader2, Sparkles, X, CalendarClock } from 'lucide-react'
 import { Toaster, toast } from 'react-hot-toast'
 import Link from 'next/link'
+import { motion, AnimatePresence } from 'framer-motion'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
@@ -13,6 +14,7 @@ export default function SettingsPage() {
   const { data: session, status } = useSession()
   const [isCancelling, setIsCancelling] = useState(false)
   const [cancelScheduledAt, setCancelScheduledAt] = useState<Date | null>(null)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   const formatJstDateTime = (d: Date) => {
     try {
@@ -40,19 +42,43 @@ export default function SettingsPage() {
   })()
   const isPaidUser = bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
 
-  // 画面リロードでも「解約停止日時」を見失わないように軽く保持
+  // Stripeから解約予定日を取得
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('banner:cancelScheduledAt')
-      if (raw) {
-        const d = new Date(raw)
-        if (!Number.isNaN(d.getTime())) setCancelScheduledAt(d)
+    if (!isLoggedIn) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/stripe/subscription/status?serviceId=banner', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (res.ok && json.cancelAtPeriodEnd && json.currentPeriodEnd) {
+          setCancelScheduledAt(new Date(Number(json.currentPeriodEnd) * 1000))
+        } else {
+          // localStorageのフォールバック
+          try {
+            const raw = localStorage.getItem('banner:cancelScheduledAt')
+            if (raw) {
+              const d = new Date(raw)
+              if (!Number.isNaN(d.getTime())) setCancelScheduledAt(d)
+            }
+          } catch {}
+        }
+      } catch {
+        // localStorageのフォールバック
+        try {
+          const raw = localStorage.getItem('banner:cancelScheduledAt')
+          if (raw) {
+            const d = new Date(raw)
+            if (!Number.isNaN(d.getTime())) setCancelScheduledAt(d)
+          }
+        } catch {}
       }
-    } catch {}
-  }, [])
+    })()
+    return () => { cancelled = true }
+  }, [isLoggedIn])
 
   const handleCancelSubscription = async () => {
-    if (!confirm('本当にプランを解約しますか？\n解約すると、現在の請求期間終了時に無料プランに戻ります。')) return
+    setShowCancelConfirm(false)
     setIsCancelling(true)
     setCancelScheduledAt(null)
     try {
@@ -242,8 +268,28 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* 解約予定日の表示（常時表示） */}
+        {cancelScheduledAt && (
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-amber-200/60 flex items-center justify-center flex-shrink-0">
+                <CalendarClock className="w-6 h-6 text-amber-900" />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-amber-900">解約予約中</h2>
+                <p className="text-sm font-black text-amber-800 mt-1">
+                  <span className="underline">{formatJstDateTime(cancelScheduledAt)}</span> に停止予定（日本時間）
+                </p>
+                <p className="mt-2 text-[11px] font-bold text-amber-700">
+                  停止日時まではPRO/Enterpriseの機能をご利用いただけます。
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* プラン解約 */}
-        {isPaidUser && (
+        {isPaidUser && !cancelScheduledAt && (
           <section className="rounded-2xl border border-red-200 bg-red-50 p-6">
             <h2 className="text-lg font-black text-red-800 flex items-center gap-2 mb-4">
               <AlertTriangle className="w-5 h-5" />
@@ -254,25 +300,13 @@ export default function SettingsPage() {
               解約後も請求期間終了まではPRO/Enterpriseの機能をご利用いただけます。
             </p>
             <button
-              onClick={handleCancelSubscription}
+              onClick={() => setShowCancelConfirm(true)}
               disabled={isCancelling}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 text-white font-black text-sm hover:bg-red-700 transition-colors disabled:opacity-50"
             >
               {isCancelling && <Loader2 className="w-4 h-4 animate-spin" />}
               プランを解約する
             </button>
-
-            {/* 停止日時の固定表示（わかりやすく） */}
-            {cancelScheduledAt && (
-              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-                <p className="text-sm font-black text-amber-900">
-                  解約受付済み：<span className="underline">{formatJstDateTime(cancelScheduledAt)}</span> に停止（日本時間）
-                </p>
-                <p className="mt-1 text-[11px] font-bold text-amber-800">
-                  ※ 停止日時まではプロプラン機能をご利用いただけます（次回更新日で停止）
-                </p>
-              </div>
-            )}
           </section>
         )}
 
@@ -298,6 +332,120 @@ export default function SettingsPage() {
           <p className="mt-1">お問い合わせ: 後日記載予定</p>
         </footer>
       </div>
+
+      {/* 解約確認ポップアップ（引き止めUI） */}
+      <AnimatePresence>
+        {showCancelConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          >
+            {/* 背景 */}
+            <div
+              className="absolute inset-0 bg-black/60"
+              onClick={() => setShowCancelConfirm(false)}
+            />
+
+            {/* モーダル */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* ヘッダー */}
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white">
+                <button
+                  type="button"
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="absolute top-4 right-4 p-2 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white/80">ちょっと待ってください！</p>
+                    <h3 className="text-xl font-black">本当に解約しますか？</h3>
+                  </div>
+                </div>
+              </div>
+
+              {/* コンテンツ */}
+              <div className="p-6">
+                <div className="space-y-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">高品質なバナー生成</p>
+                      <p className="text-xs text-slate-500 font-bold">1日最大{bannerPlanTier === 'ENTERPRISE' ? '500' : '50'}枚まで生成できます</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">自由なサイズ指定</p>
+                      <p className="text-xs text-slate-500 font-bold">無料版では1080×1080固定になります</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Check className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900">優先サポート</p>
+                      <p className="text-xs text-slate-500 font-bold">お困りの際は迅速に対応します</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 p-4 mb-6">
+                  <p className="text-sm font-black text-amber-900">
+                    💡 解約後、再度アップグレードすることも可能です！
+                  </p>
+                  <p className="text-xs text-amber-700 font-bold mt-1">
+                    いつでもPROプランに戻れますので、ご安心ください。
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowCancelConfirm(false)}
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/25"
+                  >
+                    やっぱりプランを継続する
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelSubscription}
+                    disabled={isCancelling}
+                    className="w-full py-3 rounded-2xl border border-slate-200 bg-white text-slate-600 font-black text-sm hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  >
+                    {isCancelling ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        処理中...
+                      </span>
+                    ) : (
+                      'それでも解約する'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   )
 }
