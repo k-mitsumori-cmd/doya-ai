@@ -537,7 +537,7 @@ function BannerUrlAutoPageInner() {
                     {bannerPlanTier === 'PRO' ? (
                       <button disabled className="w-full py-3 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed">現在のプラン</button>
                     ) : bannerPlanTier === 'ENTERPRISE' ? (
-                      <button disabled className="w-full py-3 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed">現在より下位</button>
+                      <button disabled className="w-full py-3 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed">プランダウングレード</button>
                     ) : (
                       <CheckoutButton planId="banner-pro" loginCallbackUrl="/banner" className="w-full py-3 rounded-2xl text-sm" variant="secondary">
                         プロプランを始める

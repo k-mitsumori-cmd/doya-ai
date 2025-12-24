@@ -126,7 +126,7 @@ export default function BannerPricingPage() {
                   disabled
                   className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
                 >
-                  現在より下位のプランです
+                  プランダウングレード
                 </button>
               ) : (
                 <CheckoutButton
