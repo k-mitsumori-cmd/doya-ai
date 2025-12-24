@@ -269,7 +269,7 @@ export default function SettingsPage() {
                   解約受付済み：<span className="underline">{formatJstDateTime(cancelScheduledAt)}</span> に停止（日本時間）
                 </p>
                 <p className="mt-1 text-[11px] font-bold text-amber-800">
-                  ※ 停止日時まではプロプラン機能をご利用いただけます（Stripeの仕様上「次回更新日で停止」です）
+                  ※ 停止日時まではプロプラン機能をご利用いただけます（次回更新日で停止）
                 </p>
               </div>
             )}
