@@ -400,7 +400,7 @@ function DashboardSidebarImpl({
               exit={{ opacity: 0 }}
               className="px-4 py-4 text-center border-t border-white/5"
             >
-              <p className="text-[10px] text-blue-100/30 font-bold tracking-widest">@GORO</p>
+              <p className="text-[10px] text-blue-100/30 font-bold tracking-widest">ドヤバナーAI</p>
             </motion.div>
           )}
         </AnimatePresence>
