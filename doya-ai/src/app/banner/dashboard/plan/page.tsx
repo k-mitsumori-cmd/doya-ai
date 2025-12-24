@@ -63,6 +63,23 @@ export default function BannerPlanPage() {
   const [isCanceling, setIsCanceling] = useState(false)
   const [isSyncingPlan, setIsSyncingPlan] = useState(false)
   const [statsLoaded, setStatsLoaded] = useState(false)
+  const [cancelScheduledAt, setCancelScheduledAt] = useState<Date | null>(null)
+  const [cancelMode, setCancelMode] = useState<'period_end' | 'immediate' | null>(null)
+
+  const formatJstDateTime = (d: Date) => {
+    try {
+      return d.toLocaleString('ja-JP', {
+        timeZone: 'Asia/Tokyo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return d.toISOString()
+    }
+  }
 
   const handleCancelSubscription = async () => {
     if (isGuest) {
@@ -72,6 +89,8 @@ export default function BannerPlanPage() {
     if (!confirm('解約（期間末で停止）しますか？\n※ 次回更新日までは引き続き利用できます。')) return
     try {
       setIsCanceling(true)
+      setCancelScheduledAt(null)
+      setCancelMode(null)
       const res = await fetch('/api/stripe/subscription/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -80,7 +99,13 @@ export default function BannerPlanPage() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || '解約に失敗しました')
       const end = data?.currentPeriodEnd ? new Date(Number(data.currentPeriodEnd) * 1000) : null
-      toast.success(end ? `解約を受け付けました（${end.toLocaleDateString()}で停止）` : '解約を受け付けました')
+      if (end) {
+        setCancelScheduledAt(end)
+        setCancelMode('period_end')
+        toast.success(`解約を受け付けました（${formatJstDateTime(end)}に停止 / 日本時間）`)
+      } else {
+        toast.success('解約を受け付けました')
+      }
     } catch (e: any) {
       toast.error(e?.message || '解約に失敗しました')
     } finally {
@@ -365,6 +390,17 @@ export default function BannerPlanPage() {
                         {isCanceling ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                         プランを解約する
                       </button>
+                      {/* 解約予定の固定表示（わかりやすく） */}
+                      {cancelMode === 'period_end' && cancelScheduledAt && (
+                        <div className="mt-3 w-full max-w-xl rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                          <p className="text-sm font-black text-amber-900">
+                            解約受付済み：<span className="underline">{formatJstDateTime(cancelScheduledAt)}</span> に停止（日本時間）
+                          </p>
+                          <p className="mt-1 text-[11px] font-bold text-amber-800">
+                            ※ 停止日時まではプロプラン機能をご利用いただけます（Stripeの仕様上「次回更新日で停止」です）
+                          </p>
+                        </div>
+                      )}
                       <p className="mt-2 text-[11px] text-slate-500 font-bold">
                         ※ 解約は「次回更新日で停止」です（即時停止が必要な場合はお問い合わせください）
                       </p>
