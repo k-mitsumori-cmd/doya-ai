@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 
 export default function BannerPricingPage() {
   const { data: session } = useSession()
@@ -48,6 +49,10 @@ export default function BannerPricingPage() {
           <p className="text-sm font-black text-slate-800">
             現在のプラン：{bannerPlanTier === 'GUEST' ? 'ゲスト' : bannerPlanTier === 'FREE' ? '無料' : bannerPlanTier === 'PRO' ? 'PRO' : 'Enterprise'}
           </p>
+          {/* 解約予約中（次回更新日で停止）の場合は停止日時を表示 */}
+          <div className="w-full">
+            <BannerCancelScheduleNotice className="max-w-[720px] mx-auto" />
+          </div>
           {isPaid && (
             <Link
               href="/banner/dashboard/plan"
