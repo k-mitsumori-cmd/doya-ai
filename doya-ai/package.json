@@ -24,6 +24,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "archiver": "^7.0.1",
     "bcryptjs": "^3.0.3",
+    "canvas-confetti": "^1.9.3",
     "clsx": "^2.0.0",
     "framer-motion": "^10.17.0",
     "jsonwebtoken": "^9.0.3",

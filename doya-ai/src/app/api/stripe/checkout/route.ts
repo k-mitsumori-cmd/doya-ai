@@ -66,7 +66,9 @@ export async function POST(request: NextRequest) {
           ? '/banner?payment=cancelled'
           : '/pricing?payment=cancelled'
 
-    const successUrl = `${baseUrl}${successPath}?payment=success`
+    // 成功URLにプラン情報を追加（お祝いモーダル表示用）
+    const planLabel = planId.includes('enterprise') ? 'enterprise' : 'pro'
+    const successUrl = `${baseUrl}${successPath}?success=true&plan=${planLabel}`
     const cancelUrl = `${baseUrl}${cancelPath}`
 
     // Checkout Session作成

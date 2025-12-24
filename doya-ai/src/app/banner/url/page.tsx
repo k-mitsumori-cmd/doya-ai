@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
+import UpgradeSuccessModal from '@/components/UpgradeSuccessModal'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
@@ -78,6 +80,34 @@ export default function BannerUrlAutoPage() {
   const [count, setCount] = useState<number>(1)
   const [size, setSize] = useState<string>(DEFAULT_FREE_SIZE)
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [upgradedPlan, setUpgradedPlan] = useState<'PRO' | 'ENTERPRISE'>('PRO')
+
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Stripe決済成功後のリダイレクトを検出してお祝いモーダルを表示
+  useEffect(() => {
+    const success = searchParams.get('success')
+    const plan = searchParams.get('plan')
+    
+    if (success === 'true') {
+      // プラン名を判定
+      if (plan?.toLowerCase().includes('enterprise')) {
+        setUpgradedPlan('ENTERPRISE')
+      } else {
+        setUpgradedPlan('PRO')
+      }
+      setShowUpgradeModal(true)
+      
+      // URLからクエリパラメータを削除（履歴に残さない）
+      const url = new URL(window.location.href)
+      url.searchParams.delete('success')
+      url.searchParams.delete('plan')
+      url.searchParams.delete('session_id')
+      router.replace(url.pathname, { scroll: false })
+    }
+  }, [searchParams, router])
 
   const canGenerate = useMemo(() => targetUrl.trim().length > 8 && !isGenerating, [targetUrl, isGenerating])
 
@@ -498,6 +528,13 @@ export default function BannerUrlAutoPage() {
           </div>
         </div>
       </div>
+
+      {/* アップグレード成功モーダル */}
+      <UpgradeSuccessModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        planName={upgradedPlan}
+      />
     </div>
   )
 }
