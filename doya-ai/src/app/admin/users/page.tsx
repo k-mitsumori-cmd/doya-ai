@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Search, Crown, Mail, Shield, Users, 
-  ChevronDown, Download, Check, X, Edit3, RotateCcw, Zap
+  ChevronDown, Download, Check, X, Edit3, RotateCcw, Zap, Calendar, AlertTriangle
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -19,6 +19,17 @@ interface ServiceSubscription {
   hasStripe: boolean
 }
 
+interface StripeInfo {
+  status: string
+  currentPeriodStart: string
+  currentPeriodEnd: string
+  cancelAtPeriodEnd: boolean
+  canceledAt: string | null
+  created: string
+  amount: number
+  interval: string
+}
+
 interface User {
   id: string
   name: string | null
@@ -30,6 +41,7 @@ interface User {
   updatedAt: string
   stripeCustomerId: string | null
   stripeSubscriptionId: string | null
+  stripeInfo: StripeInfo | null
   totalGenerations: number
   serviceSubscriptions: ServiceSubscription[]
   services: string[]
@@ -296,6 +308,7 @@ export default function AdminUsersPage() {
                 </th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">ユーザー</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">プラン</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">課金状態</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">本日の残り</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">生成数</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">登録日</th>
@@ -363,6 +376,35 @@ export default function AdminUsersPage() {
                           </select>
                         )
                       })()}
+                    </td>
+                    <td className="px-6 py-4">
+                      {user.stripeInfo ? (
+                        <div className="flex flex-col gap-1">
+                          {user.stripeInfo.cancelAtPeriodEnd ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded-full w-fit">
+                              <AlertTriangle className="w-3 h-3" />
+                              解約予定
+                            </span>
+                          ) : user.stripeInfo.status === 'active' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-full w-fit">
+                              <Zap className="w-3 h-3" />
+                              有料課金中
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full w-fit">
+                              {user.stripeInfo.status}
+                            </span>
+                          )}
+                          <span className="text-[10px] text-white/40">
+                            {user.stripeInfo.cancelAtPeriodEnd 
+                              ? `${new Date(user.stripeInfo.currentPeriodEnd).toLocaleDateString('ja-JP')}まで`
+                              : `契約: ${new Date(user.stripeInfo.created).toLocaleDateString('ja-JP')}`
+                            }
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-white/30 text-xs">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       {(() => {
@@ -546,49 +588,141 @@ export default function AdminUsersPage() {
                   })()}
                 </div>
 
-                {/* Stripe管理 */}
+                {/* Stripe課金管理 */}
                 {editingUser.stripeSubscriptionId && (
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Zap className="w-4 h-4 text-emerald-400" />
-                      <h3 className="text-sm font-medium text-emerald-400">Stripe課金管理</h3>
-                    </div>
-                    <div className="text-xs text-white/60 space-y-1 mb-4">
-                      {editingUser.stripeCustomerId && (
-                        <p>Customer ID: <span className="text-white/80 font-mono">{editingUser.stripeCustomerId.slice(0, 20)}...</span></p>
+                  <div className={`p-4 rounded-xl border ${
+                    editingUser.stripeInfo?.cancelAtPeriodEnd 
+                      ? 'bg-amber-500/10 border-amber-500/30' 
+                      : 'bg-emerald-500/10 border-emerald-500/30'
+                  }`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Zap className={`w-4 h-4 ${editingUser.stripeInfo?.cancelAtPeriodEnd ? 'text-amber-400' : 'text-emerald-400'}`} />
+                        <h3 className={`text-sm font-medium ${editingUser.stripeInfo?.cancelAtPeriodEnd ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          Stripe課金管理
+                        </h3>
+                      </div>
+                      {editingUser.stripeInfo?.cancelAtPeriodEnd && (
+                        <span className="flex items-center gap-1 px-2 py-1 bg-amber-500/20 text-amber-400 text-xs rounded-full">
+                          <AlertTriangle className="w-3 h-3" />
+                          解約予定
+                        </span>
                       )}
-                      {editingUser.stripeSubscriptionId && (
-                        <p>Subscription ID: <span className="text-white/80 font-mono">{editingUser.stripeSubscriptionId.slice(0, 20)}...</span></p>
-                      )}
                     </div>
+
+                    {/* 契約情報 */}
+                    {editingUser.stripeInfo && (
+                      <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="p-3 bg-white/5 rounded-lg">
+                          <div className="flex items-center gap-1 text-white/40 text-xs mb-1">
+                            <Calendar className="w-3 h-3" />
+                            契約開始日
+                          </div>
+                          <p className="text-sm font-medium text-white">
+                            {new Date(editingUser.stripeInfo.created).toLocaleDateString('ja-JP')}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded-lg">
+                          <div className="flex items-center gap-1 text-white/40 text-xs mb-1">
+                            <Calendar className="w-3 h-3" />
+                            次回請求日
+                          </div>
+                          <p className="text-sm font-medium text-white">
+                            {new Date(editingUser.stripeInfo.currentPeriodEnd).toLocaleDateString('ja-JP')}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded-lg">
+                          <div className="text-white/40 text-xs mb-1">月額料金</div>
+                          <p className="text-sm font-medium text-white">
+                            ¥{(editingUser.stripeInfo.amount / 100).toLocaleString()}/{editingUser.stripeInfo.interval === 'month' ? '月' : '年'}
+                          </p>
+                        </div>
+                        <div className="p-3 bg-white/5 rounded-lg">
+                          <div className="text-white/40 text-xs mb-1">ステータス</div>
+                          <p className={`text-sm font-medium ${
+                            editingUser.stripeInfo.status === 'active' ? 'text-emerald-400' :
+                            editingUser.stripeInfo.status === 'canceled' ? 'text-red-400' :
+                            'text-amber-400'
+                          }`}>
+                            {editingUser.stripeInfo.status === 'active' ? 'アクティブ' :
+                             editingUser.stripeInfo.status === 'canceled' ? 'キャンセル済み' :
+                             editingUser.stripeInfo.status === 'past_due' ? '支払い遅延' :
+                             editingUser.stripeInfo.status}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {editingUser.stripeInfo?.cancelAtPeriodEnd && (
+                      <div className="p-3 mb-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                        <p className="text-xs text-amber-400">
+                          ⚠️ このユーザーは<strong>{new Date(editingUser.stripeInfo.currentPeriodEnd).toLocaleDateString('ja-JP')}</strong>に解約予定です
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="text-xs text-white/40 space-y-1 mb-4">
+                      <p>Customer: <span className="text-white/60 font-mono">{editingUser.stripeCustomerId?.slice(0, 25)}...</span></p>
+                      <p>Subscription: <span className="text-white/60 font-mono">{editingUser.stripeSubscriptionId?.slice(0, 25)}...</span></p>
+                    </div>
+
                     <div className="flex gap-2">
-                      <button
-                        onClick={async () => {
-                          if (!confirm('この期間の終了時にサブスクリプションをキャンセルしますか？')) return
-                          try {
-                            const res = await fetch('/api/admin/stripe', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              credentials: 'include',
-                              body: JSON.stringify({ userId: editingUser.id, action: 'cancel' }),
-                            })
-                            if (res.ok) {
-                              toast.success('キャンセル予約しました')
-                              await fetchUsers()
-                              const updated = users.find((u) => u.id === editingUser.id)
-                              if (updated) setEditingUser(updated)
-                            } else {
-                              toast.error('キャンセルに失敗しました')
+                      {editingUser.stripeInfo?.cancelAtPeriodEnd ? (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch('/api/admin/stripe', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ userId: editingUser.id, action: 'resume' }),
+                              })
+                              if (res.ok) {
+                                toast.success('解約予約を取り消しました')
+                                await fetchUsers()
+                                const updated = users.find((u) => u.id === editingUser.id)
+                                if (updated) setEditingUser(updated)
+                              } else {
+                                toast.error('操作に失敗しました')
+                              }
+                            } catch (e) {
+                              toast.error('エラーが発生しました')
                             }
-                          } catch (e) {
-                            toast.error('エラーが発生しました')
-                          }
-                        }}
-                        disabled={isSaving}
-                        className="flex-1 px-3 py-2 text-xs bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors disabled:opacity-50"
-                      >
-                        期間終了時にキャンセル
-                      </button>
+                          }}
+                          disabled={isSaving}
+                          className="flex-1 px-3 py-2 text-xs bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                        >
+                          解約予約を取り消す
+                        </button>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            if (!confirm('この期間の終了時にサブスクリプションをキャンセルしますか？')) return
+                            try {
+                              const res = await fetch('/api/admin/stripe', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ userId: editingUser.id, action: 'cancel' }),
+                              })
+                              if (res.ok) {
+                                toast.success('キャンセル予約しました')
+                                await fetchUsers()
+                                const updated = users.find((u) => u.id === editingUser.id)
+                                if (updated) setEditingUser(updated)
+                              } else {
+                                toast.error('キャンセルに失敗しました')
+                              }
+                            } catch (e) {
+                              toast.error('エラーが発生しました')
+                            }
+                          }}
+                          disabled={isSaving}
+                          className="flex-1 px-3 py-2 text-xs bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+                        >
+                          期間終了時にキャンセル
+                        </button>
+                      )}
                       <button
                         onClick={async () => {
                           if (!confirm('即座にサブスクリプションをキャンセルしますか？この操作は取り消せません。')) return

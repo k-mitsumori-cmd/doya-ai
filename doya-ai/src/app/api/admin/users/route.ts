@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import Stripe from 'stripe'
 
 // cookies() を使用するため、静的最適化を無効化
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-06-20',
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,6 +54,32 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
+    // Stripe情報を取得（サブスクリプションがあるユーザーのみ）
+    const stripeInfoMap: Record<string, any> = {}
+    const usersWithStripe = users.filter((u: any) => u.stripeSubscriptionId)
+    
+    // 並列でStripe情報を取得（パフォーマンス向上）
+    await Promise.all(
+      usersWithStripe.map(async (user: any) => {
+        try {
+          const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId)
+          stripeInfoMap[user.id] = {
+            status: subscription.status,
+            currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
+            currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
+            created: new Date(subscription.created * 1000).toISOString(),
+            amount: subscription.items.data[0]?.price?.unit_amount || 0,
+            interval: subscription.items.data[0]?.price?.recurring?.interval || 'month',
+          }
+        } catch (e) {
+          console.error(`Stripe fetch error for user ${user.id}:`, e)
+          stripeInfoMap[user.id] = null
+        }
+      })
+    )
+
     const formattedUsers = users.map((user: any) => ({
       id: user.id,
       name: user.name,
@@ -60,6 +91,7 @@ export async function GET(request: NextRequest) {
       updatedAt: user.updatedAt,
       stripeCustomerId: user.stripeCustomerId,
       stripeSubscriptionId: user.stripeSubscriptionId,
+      stripeInfo: stripeInfoMap[user.id] || null,
       totalGenerations: user._count.generations,
       // サービス別の情報
       serviceSubscriptions: user.serviceSubscriptions.map((sub: any) => ({
