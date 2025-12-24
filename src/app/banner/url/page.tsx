@@ -9,6 +9,7 @@ import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
 import UpgradeSuccessModal from '@/components/UpgradeSuccessModal'
+import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
@@ -488,6 +489,11 @@ function BannerUrlAutoPageInner() {
                   <Link href="/banner/dashboard/plan" className="ml-2 text-blue-600 hover:underline">アカウント画面で変更/解約 →</Link>
                 )}
               </p>
+
+              {/* 解約予約中（次回更新日で停止）の場合は停止日時を表示 */}
+              <div className="mt-3">
+                <BannerCancelScheduleNotice />
+              </div>
 
               <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
                 {/* Free */}
