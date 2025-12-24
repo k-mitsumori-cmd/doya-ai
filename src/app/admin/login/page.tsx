@@ -63,8 +63,7 @@ export default function AdminLoginPage() {
         'error-callback': () => {
           setTurnstileToken('')
           setTurnstileError(true)
-          // エラー時はCAPTCHAをスキップ可能にする
-          console.warn('Turnstile error - allowing login without CAPTCHA')
+          setError('CAPTCHA読み込みエラー。ページを更新してください。')
         },
         theme: 'dark',
         size: 'flexible',
@@ -303,32 +302,42 @@ export default function AdminLoginPage() {
             </div>
 
             {/* Cloudflare Turnstile CAPTCHA */}
-            {IS_TURNSTILE_ENABLED && !turnstileError && (
+            {IS_TURNSTILE_ENABLED && (
               <div className="space-y-2">
-                <div 
-                  ref={turnstileRef}
-                  className="flex justify-center min-h-[65px]"
-                />
-                {!turnstileToken && turnstileLoaded && (
-                  <div className="flex items-center justify-center gap-2 text-xs text-amber-400">
-                    <AlertCircle className="w-3 h-3" />
-                    <span>CAPTCHAを完了してください</span>
+                {!turnstileError ? (
+                  <>
+                    <div 
+                      ref={turnstileRef}
+                      className="flex justify-center min-h-[65px]"
+                    />
+                    {!turnstileToken && turnstileLoaded && (
+                      <div className="flex items-center justify-center gap-2 text-xs text-amber-400">
+                        <AlertCircle className="w-3 h-3" />
+                        <span>CAPTCHAを完了してください</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <div className="flex items-center gap-2 text-red-400">
+                      <AlertCircle className="w-5 h-5" />
+                      <span className="font-medium">CAPTCHA読み込みエラー</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => window.location.reload()}
+                      className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm transition-colors"
+                    >
+                      ページを更新
+                    </button>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Turnstileエラー時の警告 */}
-            {turnstileError && (
-              <div className="flex items-center justify-center gap-2 text-xs text-amber-400 p-3 bg-amber-500/10 rounded-lg">
-                <AlertCircle className="w-4 h-4" />
-                <span>CAPTCHA読み込みエラー。セキュリティ機能が制限されています。</span>
-              </div>
-            )}
-
             <button
               type="submit"
-              disabled={isLoading || !!lockoutMessage || (IS_TURNSTILE_ENABLED && !turnstileToken && !turnstileError)}
+              disabled={isLoading || !!lockoutMessage || (IS_TURNSTILE_ENABLED && !turnstileToken)}
               className="w-full py-4 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
