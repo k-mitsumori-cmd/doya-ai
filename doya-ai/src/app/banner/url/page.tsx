@@ -94,7 +94,8 @@ export default function BannerUrlAutoPage() {
     
     if (success === 'true') {
       // プラン名を判定
-      if (plan?.toLowerCase().includes('enterprise')) {
+      const nextPlanTier = plan?.toLowerCase().includes('enterprise') ? 'ENTERPRISE' : 'PRO'
+      if (nextPlanTier === 'ENTERPRISE') {
         setUpgradedPlan('ENTERPRISE')
       } else {
         setUpgradedPlan('PRO')
@@ -113,6 +114,15 @@ export default function BannerUrlAutoPage() {
             const data = await res.json().catch(() => ({}))
             if (!res.ok) throw new Error(data?.error || 'プラン反映に失敗しました')
             toast.success('プロプランが有効になりました！', { id: 'stripe-sync' })
+
+            // ここで「プラン更新イベント」を発火（他画面/コンポーネントへ即通知）
+            try {
+              window.dispatchEvent(
+                new CustomEvent('doya:plan-updated', {
+                  detail: { serviceId: 'banner', planTier: nextPlanTier, source: 'stripe-sync', at: Date.now() },
+                })
+              )
+            } catch {}
           }
 
           // NextAuthセッションを更新してUIへ即反映

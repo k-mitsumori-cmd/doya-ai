@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import { SITE_CONFIG, SERVICE_SEO, generateSoftwareApplicationSchema } from '@/lib/seo'
+import PlanUpdatedListener from '@/components/PlanUpdatedListener'
 
 // ============================================
 // ドヤバナーAI メタデータ
@@ -58,6 +59,8 @@ export default function BannerLayout({
           __html: JSON.stringify(softwareSchema),
         }}
       />
+      {/* 決済直後など、プラン更新イベントを受けてUIを即時反映 */}
+      <PlanUpdatedListener />
       {children}
     </>
   )
