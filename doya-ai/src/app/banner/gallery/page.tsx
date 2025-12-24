@@ -43,6 +43,42 @@ function writeGalleryCache(items: GalleryItem[], cursor: string | null) {
   }
 }
 
+// サムネイル画像コンポーネント（ローディング中はスケルトン、エラー時はグラデーション背景）
+function GalleryThumb({ src, alt }: { src: string; alt: string }) {
+  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
+
+  return (
+    <div className="w-full h-full relative">
+      {/* ローディング中のスケルトン */}
+      {status === 'loading' && (
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-100 to-slate-200 animate-pulse flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
+        </div>
+      )}
+      {/* エラー時のグラデーション背景 */}
+      {status === 'error' && (
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 flex items-center justify-center">
+          <div className="text-center">
+            <ImageIcon className="w-12 h-12 text-slate-300 mx-auto" />
+            <p className="text-xs text-slate-400 font-bold mt-2">画像準備中</p>
+          </div>
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setStatus('loaded')}
+        onError={() => setStatus('error')}
+        className={`w-full h-full object-cover transition-all duration-500 ${
+          status === 'loaded' ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+    </div>
+  )
+}
+
 export default function BannerGalleryPage() {
   const [items, setItems] = useState<GalleryItem[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
@@ -260,14 +296,10 @@ export default function BannerGalleryPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {items.map((it) => (
                   <div key={it.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden group">
-                    <div className="relative aspect-square bg-slate-50">
-                      <img
-                        src={it.thumbUrl}
-                        alt={it.keyword || 'banner'}
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
+                    <div className="relative aspect-square bg-slate-50 overflow-hidden">
+                      <div className="w-full h-full transition-transform duration-500 group-hover:scale-105">
+                        <GalleryThumb src={it.thumbUrl} alt={it.keyword || 'banner'} />
+                      </div>
                       {/* ダウンロードボタン（ホバー時表示） */}
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
                         <button
