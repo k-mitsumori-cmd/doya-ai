@@ -76,17 +76,92 @@ npx tsx src/scripts/create-admin.ts admin SecureP@ssw0rd123! admin@example.com "
 
 ### 実装されているセキュリティ対策
 
-1. **パスワードハッシュ化**: bcrypt（12ラウンド）を使用
-2. **レート制限**: 
+1. **Cloudflare Turnstile**: ボット対策CAPTCHA（オプション）
+2. **パスワードハッシュ化**: bcrypt（12ラウンド）を使用
+3. **レート制限**: 
    - ログイン試行は15分間に最大5回まで
    - 上限を超えると15分間ロックアウト
    - IPアドレスとユーザー名の両方で制限
-3. **JWTトークン**: 24時間有効期限
-4. **HTTPOnly Cookie**: XSS攻撃から保護
-5. **SameSite Cookie**: CSRF攻撃から保護
-6. **ログイン試行ログ**: すべての試行を記録（成功/失敗）
-7. **セッション管理**: データベースでセッションを管理
-8. **タイミング攻撃対策**: ユーザーが存在しない場合も同じ処理時間
+4. **JWTトークン**: 24時間有効期限
+5. **HTTPOnly Cookie**: XSS攻撃から保護
+6. **SameSite Cookie**: CSRF攻撃から保護
+7. **ログイン試行ログ**: すべての試行を記録（成功/失敗）
+8. **セッション管理**: データベースでセッションを管理
+9. **タイミング攻撃対策**: ユーザーが存在しない場合も同じ処理時間
+
+### Cloudflare Turnstile（CAPTCHA）の設定
+
+ボットによる不正ログイン試行を防ぐため、Cloudflare Turnstileを導入できます。
+
+#### 1. Cloudflare Dashboardでの設定
+
+1. [Cloudflare Dashboard](https://dash.cloudflare.com/) にログイン
+2. サイドバーの「Security」→「Turnstile」を選択
+3. 「Add Widget」をクリック
+4. サイト名を入力（例: "DOYA-AI Admin"）
+5. ドメインを追加（例: `doya-ai.vercel.app`）
+6. Widget Modeを「Managed」に設定
+7. 「Create」をクリック
+8. **Site Key**と**Secret Key**を取得
+
+#### 2. 環境変数の設定
+
+Vercel（または`.env.local`）に以下を追加:
+
+```env
+# フロントエンド用サイトキー（公開可）
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x4AAAAAAAX...
+
+# バックエンド用シークレットキー（非公開）
+TURNSTILE_SECRET_KEY=0x4AAAAAAAX...
+
+# CAPTCHAを必須にする場合（オプション）
+REQUIRE_TURNSTILE=true
+```
+
+#### 3. 動作確認
+
+1. `/admin/login`にアクセス
+2. CAPTCHAウィジェットが表示されることを確認
+3. CAPTCHAを完了するとログインボタンが有効になる
+
+#### テスト用キー（開発時のみ）
+
+開発時にテストする場合、Cloudflareが提供するテスト用キーを使用できます:
+
+```env
+# テスト用（常に成功）
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+
+# テスト用（常に失敗）
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=2x00000000000000000000AB
+TURNSTILE_SECRET_KEY=2x0000000000000000000000000000000AB
+```
+
+### 追加のCloudflareセキュリティ（推奨）
+
+#### Cloudflare Access（ゼロトラスト）
+
+管理画面をさらに保護するため、Cloudflare Accessを設定できます:
+
+1. Cloudflare Dashboard → Zero Trust → Access → Applications
+2. 「Add an Application」→「Self-hosted」
+3. Application name: "DOYA-AI Admin"
+4. Application domain: `doya-ai.vercel.app/admin/*`
+5. ポリシーを設定（例: 特定のメールアドレスのみ許可）
+
+これにより、管理画面へのアクセス前にCloudflareの認証が必要になります。
+
+#### WAFルール
+
+Cloudflare WAFで追加のセキュリティルールを設定:
+
+1. Security → WAF → Custom Rules
+2. 「Create rule」
+3. 例: 特定の国からの管理画面アクセスをブロック
+   - Expression: `(http.request.uri.path contains "/admin") and (ip.geoip.country ne "JP")`
+   - Action: Block
 
 ### セキュリティ推奨事項
 
