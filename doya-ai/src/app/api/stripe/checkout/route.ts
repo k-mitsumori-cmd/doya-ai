@@ -58,8 +58,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ベースURL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.vercel.app'
+    // ベースURL（環境変数が未設定でも現ドメインで成立させる）
+    const baseUrl = String(process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin)
+      .trim()
+      .replace(/\/+$/, '')
     
     // サービスに応じたリダイレクトURL
     const service = planId.split('-')[0] // 'seo-pro' -> 'seo'
