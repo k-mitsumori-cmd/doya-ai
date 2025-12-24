@@ -61,6 +61,7 @@ export default function BannerPlanPage() {
   const [totalBanners, setTotalBanners] = useState(0)
   const [usageCount, setUsageCount] = useState(0)
   const [isCanceling, setIsCanceling] = useState(false)
+  const [isSyncingPlan, setIsSyncingPlan] = useState(false)
   const [statsLoaded, setStatsLoaded] = useState(false)
 
   const handleCancelSubscription = async () => {
@@ -84,6 +85,33 @@ export default function BannerPlanPage() {
       toast.error(e?.message || '解約に失敗しました')
     } finally {
       setIsCanceling(false)
+    }
+  }
+
+  const handleSyncPlan = async () => {
+    if (isGuest) {
+      toast.error('ログインが必要です')
+      return
+    }
+    try {
+      setIsSyncingPlan(true)
+      toast.loading('Stripeの契約状況を確認中…', { id: 'plan-sync' })
+      const res = await fetch('/api/stripe/sync/latest', { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'プラン反映に失敗しました')
+      toast.success('プランを反映しました！', { id: 'plan-sync' })
+      // 他画面へ即通知
+      try {
+        window.dispatchEvent(
+          new CustomEvent('doya:plan-updated', {
+            detail: { serviceId: 'banner', planTier: String(data?.planId || '').includes('enterprise') ? 'ENTERPRISE' : 'PRO', source: 'manual', at: Date.now() },
+          })
+        )
+      } catch {}
+    } catch (e: any) {
+      toast.error(e?.message || 'プラン反映に失敗しました', { id: 'plan-sync' })
+    } finally {
+      setIsSyncingPlan(false)
     }
   }
 
@@ -308,6 +336,23 @@ export default function BannerPlanPage() {
                       </Link>
                     )}
                   </div>
+
+                  {/* 決済済みなのに反映されない時の救済 */}
+                  {!isGuest && !isPaid && (
+                    <div className="mt-3">
+                      <button
+                        onClick={handleSyncPlan}
+                        disabled={isSyncingPlan}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-800 font-black hover:bg-slate-50 transition-colors disabled:opacity-60"
+                      >
+                        {isSyncingPlan ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        課金状態を確認してプランを反映する
+                      </button>
+                      <p className="mt-2 text-[11px] text-slate-500 font-bold">
+                        ※ 決済直後にPROへ切り替わらない場合のみ押してください（Stripe→DBを再同期します）
+                      </p>
+                    </div>
+                  )}
 
                   {/* 契約解除（ポータルが機能しない場合の直通） */}
                   {!isGuest && isPaid && (

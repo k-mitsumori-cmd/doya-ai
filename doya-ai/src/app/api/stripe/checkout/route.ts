@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createCheckoutSession, STRIPE_PRICE_IDS } from '@/lib/stripe'
+import { prisma } from '@/lib/prisma'
 
 function getStripeKeyMode(): 'test' | 'live' | 'unknown' {
   const key = String(process.env.STRIPE_SECRET_KEY || '').trim()
@@ -39,6 +40,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { planId, billingPeriod = 'monthly' } = body
 
+    // セッションの user.id が欠ける/揺れる環境でも確実に userId を取得する
+    const dbUser = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    })
+    if (!dbUser?.id) {
+      return NextResponse.json({ error: 'ユーザー情報の取得に失敗しました' }, { status: 404 })
+    }
+
     // プランIDからStripe価格IDを取得
     const priceId = getPriceId(planId, billingPeriod)
     if (!priceId) {
@@ -75,7 +85,7 @@ export async function POST(request: NextRequest) {
     // Checkout Session作成
     const checkoutSession = await createCheckoutSession({
       priceId,
-      userId: (session.user as any).id || session.user.email,
+      userId: dbUser.id,
       userEmail: session.user.email,
       successUrl,
       cancelUrl,
