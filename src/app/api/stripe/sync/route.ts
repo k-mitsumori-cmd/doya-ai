@@ -46,8 +46,13 @@ export async function POST(request: NextRequest) {
     // 別ユーザーのcheckoutを誤って同期しない最低限のガード
     // - client_reference_id は createCheckoutSession で userId を入れている
     const ref = String(checkout.client_reference_id || '').trim()
-    if (ref && ref !== user.id) {
+    const customerEmail = String((checkout.customer_email as any) || '').trim()
+    // 古い決済で ref が email になっている/空のケースも救済しつつ、他人の決済は弾く
+    if (ref && ref !== user.id && ref !== String(user.email || '').trim()) {
       return NextResponse.json({ error: 'Checkout session does not match user' }, { status: 403 })
+    }
+    if (customerEmail && user.email && customerEmail.toLowerCase() !== user.email.toLowerCase()) {
+      return NextResponse.json({ error: 'Checkout session email does not match user' }, { status: 403 })
     }
 
     // Customer IDを保存（Webhookが遅延してもポータル等が使える）
