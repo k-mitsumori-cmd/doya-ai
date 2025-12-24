@@ -95,6 +95,8 @@ export default function AdminUsersPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   const fetchUsers = async () => {
     try {
@@ -124,6 +126,20 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchUsers()
   }, [])
+
+  // エクスポートメニューを閉じる（外部クリック）
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showExportMenu) {
+        const target = e.target as HTMLElement
+        if (!target.closest('[data-export-menu]')) {
+          setShowExportMenu(false)
+        }
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [showExportMenu])
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
@@ -195,6 +211,45 @@ export default function AdminUsersPage() {
     })
   }
 
+  // エクスポート処理
+  const handleExport = async (format: 'csv' | 'json', includeStripe: boolean = false) => {
+    setIsExporting(true)
+    setShowExportMenu(false)
+    
+    try {
+      const params = new URLSearchParams({
+        format,
+        includeStripe: includeStripe.toString(),
+      })
+      
+      const response = await fetch(`/api/admin/users/export?${params}`, {
+        credentials: 'include',
+      })
+      
+      if (!response.ok) {
+        throw new Error('エクスポートに失敗しました')
+      }
+      
+      // ファイルをダウンロード
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `users_${new Date().toISOString().split('T')[0]}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      toast.success(`${format.toUpperCase()}形式でエクスポートしました`)
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('エクスポートに失敗しました')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
@@ -229,10 +284,80 @@ export default function AdminUsersPage() {
               <RotateCcw className="w-4 h-4" />
               <span className="text-sm">更新</span>
             </button>
-            <button className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all">
-              <Download className="w-4 h-4" />
-              <span className="text-sm">エクスポート</span>
-            </button>
+            <div className="relative" data-export-menu>
+              <button 
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                disabled={isExporting}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all disabled:opacity-50"
+              >
+                {isExporting ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                <span className="text-sm">エクスポート</span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+              
+              {/* Export Dropdown Menu */}
+              <AnimatePresence>
+                {showExportMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute right-0 top-full mt-2 w-64 bg-[#1a1a24] border border-white/10 rounded-xl shadow-xl z-50 overflow-hidden"
+                  >
+                    <div className="p-2">
+                      <p className="px-3 py-2 text-xs font-medium text-white/40 uppercase">CSV形式</p>
+                      <button
+                        onClick={() => handleExport('csv', false)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-white/80 hover:bg-white/5 rounded-lg transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-emerald-400" />
+                        <div className="text-left">
+                          <p className="font-medium">基本情報のみ</p>
+                          <p className="text-xs text-white/40">ユーザー名、メール、プラン等</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => handleExport('csv', true)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-white/80 hover:bg-white/5 rounded-lg transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-amber-400" />
+                        <div className="text-left">
+                          <p className="font-medium">Stripe情報を含む</p>
+                          <p className="text-xs text-white/40">顧客ID、契約期間等</p>
+                        </div>
+                      </button>
+                    </div>
+                    <div className="border-t border-white/10 p-2">
+                      <p className="px-3 py-2 text-xs font-medium text-white/40 uppercase">JSON形式</p>
+                      <button
+                        onClick={() => handleExport('json', false)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-white/80 hover:bg-white/5 rounded-lg transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-blue-400" />
+                        <div className="text-left">
+                          <p className="font-medium">JSON（基本情報）</p>
+                          <p className="text-xs text-white/40">開発者向けフォーマット</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => handleExport('json', true)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-white/80 hover:bg-white/5 rounded-lg transition-colors"
+                      >
+                        <Download className="w-4 h-4 text-violet-400" />
+                        <div className="text-left">
+                          <p className="font-medium">JSON（全情報）</p>
+                          <p className="text-xs text-white/40">Stripe情報を含む</p>
+                        </div>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
