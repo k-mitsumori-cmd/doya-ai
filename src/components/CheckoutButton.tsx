@@ -78,15 +78,16 @@ export function CheckoutButton({
   }
 
   const baseStyles = 'flex items-center justify-center gap-2 font-bold rounded-xl transition-all disabled:opacity-50'
+  // secondary の場合は外部classNameを優先するため、デフォルトスタイルを薄く設定
   const variantStyles = variant === 'primary'
     ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-700 hover:to-fuchsia-700 text-white'
-    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+    : '' // secondary は className で完全にカスタマイズ可能
 
   return (
     <button
       onClick={handleCheckout}
       disabled={isLoading || status === 'loading'}
-      className={`${baseStyles} ${variantStyles} ${className}`}
+      className={`${baseStyles} ${variantStyles} ${className}`.trim()}
     >
       {isLoading ? (
         <>
