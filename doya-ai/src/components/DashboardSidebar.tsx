@@ -118,41 +118,43 @@ function DashboardSidebarImpl({
     const active = isActive(item.href)
     const Icon = item.icon
     const tourId = item.href.split('#')[0]
+    // モバイル時は常に展開表示
+    const showLabel = isMobile || !isCollapsed
 
     return (
       <Link href={item.href}>
         <motion.div
           whileHover={{ x: 4 }}
           data-tour-nav={tourId}
-          className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer group ${
+          className={`relative flex items-center gap-3 px-3 py-3.5 sm:py-2.5 rounded-xl transition-all cursor-pointer group ${
             active
               ? 'bg-white/15 text-white'
               : 'text-blue-100/70 hover:text-white hover:bg-white/10'
           }`}
         >
-          <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-white' : 'text-blue-200/70 group-hover:text-white'}`} />
+          <Icon className={`w-6 h-6 sm:w-5 sm:h-5 flex-shrink-0 ${active ? 'text-white' : 'text-blue-200/70 group-hover:text-white'}`} />
           
           <AnimatePresence>
-            {!isCollapsed && (
+            {showLabel && (
               <motion.span
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: 'auto' }}
                 exit={{ opacity: 0, width: 0 }}
-                className="text-sm font-medium whitespace-nowrap overflow-hidden"
+                className="text-base sm:text-sm font-bold sm:font-medium whitespace-nowrap overflow-hidden"
               >
                 {item.label}
               </motion.span>
             )}
           </AnimatePresence>
 
-          {item.hot && !isCollapsed && (
-            <span className="ml-auto px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-400 text-[10px] font-bold text-white rounded-md shadow-sm">
+          {item.hot && showLabel && (
+            <span className="ml-auto px-2 py-1 sm:px-1.5 sm:py-0.5 bg-gradient-to-r from-amber-400 to-orange-400 text-xs sm:text-[10px] font-bold text-white rounded-md shadow-sm">
               HOT
             </span>
           )}
 
-          {item.badge && !isCollapsed && (
-            <span className="ml-auto px-2 py-0.5 bg-white/20 text-[10px] font-bold rounded-full">
+          {item.badge && showLabel && (
+            <span className="ml-auto px-2.5 py-1 sm:px-2 sm:py-0.5 bg-white/20 text-xs sm:text-[10px] font-bold rounded-full">
               {item.badge}
             </span>
           )}
@@ -184,59 +186,64 @@ function DashboardSidebarImpl({
     </AnimatePresence>
   )
 
-  const SidebarBanner = () => (
-    <AnimatePresence>
-      {!isCollapsed && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          className="mx-4 my-6 p-4 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/10 backdrop-blur-md relative overflow-hidden group"
-        >
-          <div className="absolute -right-2 -top-2 w-16 h-16 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-500" />
-          <div className="relative z-10">
-            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center mb-3 shadow-lg">
-              <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
-            </div>
-            <h4 className="text-xs font-black text-white mb-1">プラン案内</h4>
-            <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
-              現在：{bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
-              <br />
-              {nextBannerPlanLabel === 'PRO' && (
-                <>
-                  次の上位：PRO（月額¥9,980 / 1日{BANNER_PRICING.proLimit}枚）
-                </>
-              )}
-              {nextBannerPlanLabel === 'ENTERPRISE' && (
-                <>
-                  次の上位：Enterprise（月額¥49,800 / 1日{BANNER_PRICING.enterpriseLimit || 500}枚）
-                </>
-              )}
-              {nextBannerPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
-            </p>
+  const SidebarBanner = () => {
+    // モバイル時は常に展開表示
+    const showBanner = isMobile || !isCollapsed
+    
+    return (
+      <AnimatePresence>
+        {showBanner && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="mx-3 sm:mx-4 my-4 sm:my-6 p-4 sm:p-4 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/10 backdrop-blur-md relative overflow-hidden group"
+          >
+            <div className="absolute -right-2 -top-2 w-16 h-16 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-500" />
+            <div className="relative z-10">
+              <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-lg bg-white flex items-center justify-center mb-3 shadow-lg">
+                <Zap className="w-5 h-5 sm:w-4 sm:h-4 text-blue-600 fill-blue-600" />
+              </div>
+              <h4 className="text-sm sm:text-xs font-black text-white mb-1">プラン案内</h4>
+              <p className="text-xs sm:text-[10px] text-blue-100 font-bold leading-relaxed opacity-90 sm:opacity-80">
+                現在：{bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
+                <br />
+                {nextBannerPlanLabel === 'PRO' && (
+                  <>
+                    次の上位：PRO（月額¥9,980 / 1日{BANNER_PRICING.proLimit}枚）
+                  </>
+                )}
+                {nextBannerPlanLabel === 'ENTERPRISE' && (
+                  <>
+                    次の上位：Enterprise（月額¥49,800 / 1日{BANNER_PRICING.enterpriseLimit || 500}枚）
+                  </>
+                )}
+                {nextBannerPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
+              </p>
 
-            {nextBannerPlanLabel === 'CONSULT' ? (
-              <a
-                href={HIGH_USAGE_CONTACT_URL}
-                target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
-                rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
-              >
-                <button className="mt-3 w-full py-2 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
-                  マーケティング施策を丸投げする
-                </button>
-              </a>
-            ) : (
-              <Link href="/banner/pricing">
-                <button className="mt-3 w-full py-2 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
-                  {nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseを始める'}
-                </button>
-              </Link>
-            )}
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  )
+              {nextBannerPlanLabel === 'CONSULT' ? (
+                <a
+                  href={HIGH_USAGE_CONTACT_URL}
+                  target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
+                  rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+                >
+                  <button className="mt-3 w-full py-2.5 sm:py-2 bg-white text-[#2563EB] text-xs sm:text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
+                    マーケティング施策を丸投げする
+                  </button>
+                </a>
+              ) : (
+                <Link href="/banner/pricing">
+                  <button className="mt-3 w-full py-2.5 sm:py-2 bg-white text-[#2563EB] text-xs sm:text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
+                    {nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseを始める'}
+                  </button>
+                </Link>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    )
+  }
 
   return (
     <>
@@ -250,26 +257,26 @@ function DashboardSidebarImpl({
         className={`${isMobile ? 'relative' : 'fixed left-0 top-0'} h-screen bg-[#2563EB] flex flex-col z-50 shadow-xl`}
       >
       {/* Logo */}
-      <div className="px-6 py-8 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-md">
-          <Sparkles className="w-6 h-6 text-white" />
+      <div className="px-4 sm:px-6 py-6 sm:py-8 flex items-center gap-3">
+        <div className="w-12 h-12 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-md">
+          <Sparkles className="w-7 h-7 sm:w-6 sm:h-6 text-white" />
         </div>
         <AnimatePresence>
-          {!isCollapsed && (
+          {(isMobile || !isCollapsed) && (
             <motion.div
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
               className="overflow-hidden"
             >
-              <h1 className="text-2xl font-black text-white tracking-tighter leading-none">ドヤバナーAI</h1>
+              <h1 className="text-2xl sm:text-2xl font-black text-white tracking-tighter leading-none">ドヤバナーAI</h1>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
+      <nav className="flex-1 overflow-y-auto py-4 sm:py-6 px-3 space-y-1 custom-scrollbar">
         {/* Active Tool Navigation */}
         <div className="space-y-1">
           <SectionTitle title={isBanner ? "ドヤバナーAI" : "Doya SEO"} />
@@ -284,27 +291,27 @@ function DashboardSidebarImpl({
       <SidebarBanner />
 
       {/* Support */}
-      <div className="px-4 pb-3">
+      <div className="px-3 sm:px-4 pb-3">
         <a
           href={SUPPORT_CONTACT_URL}
           target="_blank"
           rel="noreferrer"
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 transition-colors text-white ${
-            isCollapsed ? 'justify-center' : ''
+          className={`w-full flex items-center gap-3 px-3 py-3 sm:py-2.5 rounded-2xl border border-white/10 bg-white/10 hover:bg-white/15 transition-colors text-white ${
+            !isMobile && isCollapsed ? 'justify-center' : ''
           }`}
           title="お問い合わせ（改善点・不具合）"
         >
-          <HelpCircle className="w-5 h-5 text-white" />
+          <HelpCircle className="w-6 h-6 sm:w-5 sm:h-5 text-white flex-shrink-0" />
           <AnimatePresence>
-            {!isCollapsed && (
+            {(isMobile || !isCollapsed) && (
               <motion.div
                 initial={{ opacity: 0, x: -6 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -6 }}
                 className="min-w-0"
               >
-                <div className="text-sm font-black leading-none">お問い合わせ</div>
-                <div className="text-[10px] text-blue-100/70 font-bold mt-1 truncate">
+                <div className="text-base sm:text-sm font-black leading-none">お問い合わせ</div>
+                <div className="text-xs sm:text-[10px] text-blue-100/70 font-bold mt-1 truncate">
                   改善点・エラー報告はこちら
                 </div>
               </motion.div>
@@ -314,13 +321,13 @@ function DashboardSidebarImpl({
       </div>
 
       {/* User Profile */}
-      <div className="p-4 border-t border-white/5 bg-blue-700/30">
+      <div className="p-3 sm:p-4 border-t border-white/5 bg-blue-700/30">
         <Link
           href="/banner/dashboard/settings"
-          className={`flex items-center gap-3 p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer ${isCollapsed ? 'justify-center' : ''}`}
+          className={`flex items-center gap-3 p-2 sm:p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer ${!isMobile && isCollapsed ? 'justify-center' : ''}`}
           title="設定"
         >
-          <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-inner border border-white/10">
+          <div className="w-12 h-12 sm:w-10 sm:h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-inner border border-white/10">
             {session?.user?.image ? (
               <img 
                 src={session.user.image} 
@@ -328,36 +335,36 @@ function DashboardSidebarImpl({
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (
-              <User className="w-5 h-5 text-white" />
+              <User className="w-6 h-6 sm:w-5 sm:h-5 text-white" />
             )}
           </div>
           <AnimatePresence>
-            {!isCollapsed && (
+            {(isMobile || !isCollapsed) && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 className="flex-1 min-w-0"
               >
-                <p className="text-sm font-bold text-white truncate">
+                <p className="text-base sm:text-sm font-bold text-white truncate">
                   {session?.user?.name || (isLoggedIn ? 'ユーザー' : 'ゲスト')}
                 </p>
-                <p className="text-[10px] text-blue-100/60 truncate font-medium">
+                <p className="text-xs sm:text-[10px] text-blue-100/60 truncate font-medium">
                   {session?.user?.email || '未ログイン'}
                 </p>
               </motion.div>
             )}
           </AnimatePresence>
         </Link>
-        {!isCollapsed && (
-          <div className="mt-2 flex items-center justify-end gap-2">
+        {(isMobile || !isCollapsed) && (
+          <div className="mt-3 sm:mt-2 flex items-center justify-end gap-2">
             {isLoggedIn ? (
               <button
                 onClick={() => signOut()}
-                className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 sm:p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                 title="ログアウト"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-5 h-5 sm:w-4 sm:h-4" />
               </button>
             ) : (
               <Link
@@ -366,10 +373,10 @@ function DashboardSidebarImpl({
                     ? `/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(pathname || '/banner')}`
                     : `/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/kantan/dashboard')}`
                 }
-                className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white text-[#2563EB] text-[11px] font-black hover:bg-blue-50 transition-colors shadow-sm"
+                className="inline-flex items-center gap-2 px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg bg-white text-[#2563EB] text-sm sm:text-[11px] font-black hover:bg-blue-50 transition-colors shadow-sm"
                 title="ログイン"
               >
-                <LogIn className="w-4 h-4" />
+                <LogIn className="w-5 h-5 sm:w-4 sm:h-4" />
                 ログイン
               </Link>
             )}
