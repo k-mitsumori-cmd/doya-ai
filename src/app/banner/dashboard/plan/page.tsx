@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, getGuestUsage } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import {
   ArrowUpRight,
   BarChart3,
@@ -390,17 +391,10 @@ export default function BannerPlanPage() {
                         {isCanceling ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                         プランを解約する
                       </button>
-                      {/* 解約予定の固定表示（わかりやすく） */}
-                      {cancelMode === 'period_end' && cancelScheduledAt && (
-                        <div className="mt-3 w-full max-w-xl rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-                          <p className="text-sm font-black text-amber-900">
-                            解約受付済み：<span className="underline">{formatJstDateTime(cancelScheduledAt)}</span> に停止（日本時間）
-                          </p>
-                          <p className="mt-1 text-[11px] font-bold text-amber-800">
-                            ※ 停止日時まではプロプラン機能をご利用いただけます（次回更新日で停止）
-                          </p>
-                        </div>
-                      )}
+                      {/* 解約予定の固定表示（Stripeの実状態から表示：別ページで解約→ここに戻っても出る） */}
+                      <div className="mt-3 w-full max-w-xl">
+                        <BannerCancelScheduleNotice />
+                      </div>
                       <p className="mt-2 text-[11px] text-slate-500 font-bold">
                         ※ 解約は「次回更新日で停止」です（即時停止が必要な場合はお問い合わせください）
                       </p>
