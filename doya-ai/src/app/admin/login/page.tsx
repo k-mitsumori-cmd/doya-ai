@@ -33,6 +33,7 @@ export default function AdminLoginPage() {
   const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null)
   const [turnstileToken, setTurnstileToken] = useState('')
   const [turnstileLoaded, setTurnstileLoaded] = useState(false)
+  const [turnstileError, setTurnstileError] = useState(false)
   const turnstileRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
 
@@ -61,7 +62,9 @@ export default function AdminLoginPage() {
         },
         'error-callback': () => {
           setTurnstileToken('')
-          setError('CAPTCHA読み込みエラー。ページを更新してください。')
+          setTurnstileError(true)
+          // エラー時はCAPTCHAをスキップ可能にする
+          console.warn('Turnstile error - allowing login without CAPTCHA')
         },
         theme: 'dark',
         size: 'flexible',
@@ -300,7 +303,7 @@ export default function AdminLoginPage() {
             </div>
 
             {/* Cloudflare Turnstile CAPTCHA */}
-            {IS_TURNSTILE_ENABLED && (
+            {IS_TURNSTILE_ENABLED && !turnstileError && (
               <div className="space-y-2">
                 <div 
                   ref={turnstileRef}
@@ -315,9 +318,17 @@ export default function AdminLoginPage() {
               </div>
             )}
 
+            {/* Turnstileエラー時の警告 */}
+            {turnstileError && (
+              <div className="flex items-center justify-center gap-2 text-xs text-amber-400 p-3 bg-amber-500/10 rounded-lg">
+                <AlertCircle className="w-4 h-4" />
+                <span>CAPTCHA読み込みエラー。セキュリティ機能が制限されています。</span>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isLoading || !!lockoutMessage || (IS_TURNSTILE_ENABLED && !turnstileToken)}
+              disabled={isLoading || !!lockoutMessage || (IS_TURNSTILE_ENABLED && !turnstileToken && !turnstileError)}
               className="w-full py-4 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
