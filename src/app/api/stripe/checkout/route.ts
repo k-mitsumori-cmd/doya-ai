@@ -66,9 +66,10 @@ export async function POST(request: NextRequest) {
           ? '/banner?payment=cancelled'
           : '/pricing?payment=cancelled'
 
-    // 成功URLにプラン情報を追加（お祝いモーダル表示用）
+    // 成功URLにプラン情報/Checkout Session IDを追加（決済直後にアプリ側で同期して即反映させる）
+    // NOTE: {CHECKOUT_SESSION_ID} はStripeが自動で実IDに置換する
     const planLabel = planId.includes('enterprise') ? 'enterprise' : 'pro'
-    const successUrl = `${baseUrl}${successPath}?success=true&plan=${planLabel}`
+    const successUrl = `${baseUrl}${successPath}?success=true&plan=${planLabel}&session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${baseUrl}${cancelPath}`
 
     // Checkout Session作成

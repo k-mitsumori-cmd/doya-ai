@@ -55,7 +55,7 @@ function normalizeNonJsonApiError(status: number, text: string): string {
 }
 
 export default function BannerUrlAutoPage() {
-  const { data: session } = useSession()
+  const { data: session, update: updateSession } = useSession()
   const isGuest = !session
   const bannerPlan = !isGuest
     ? String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
@@ -90,6 +90,7 @@ export default function BannerUrlAutoPage() {
   useEffect(() => {
     const success = searchParams.get('success')
     const plan = searchParams.get('plan')
+    const sessionId = searchParams.get('session_id')
     
     if (success === 'true') {
       // プラン名を判定
@@ -98,7 +99,30 @@ export default function BannerUrlAutoPage() {
       } else {
         setUpgradedPlan('PRO')
       }
-      setShowUpgradeModal(true)
+
+      // まずStripe→DB同期を試みて、プラン反映を即時化する（Webhook遅延/不達の保険）
+      ;(async () => {
+        try {
+          if (sessionId) {
+            toast.loading('決済を確認中…（プラン反映中）', { id: 'stripe-sync' })
+            const res = await fetch('/api/stripe/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId }),
+            })
+            const data = await res.json().catch(() => ({}))
+            if (!res.ok) throw new Error(data?.error || 'プラン反映に失敗しました')
+            toast.success('プロプランが有効になりました！', { id: 'stripe-sync' })
+          }
+
+          // NextAuthセッションを更新してUIへ即反映
+          await updateSession?.()
+        } catch (e: any) {
+          toast.error(e?.message || 'プラン反映に失敗しました（少し待って再読み込みしてください）', { id: 'stripe-sync' })
+        } finally {
+          setShowUpgradeModal(true)
+        }
+      })()
       
       // URLからクエリパラメータを削除（履歴に残さない）
       const url = new URL(window.location.href)
@@ -107,7 +131,7 @@ export default function BannerUrlAutoPage() {
       url.searchParams.delete('session_id')
       router.replace(url.pathname, { scroll: false })
     }
-  }, [searchParams, router])
+  }, [searchParams, router, updateSession])
 
   const canGenerate = useMemo(() => targetUrl.trim().length > 8 && !isGenerating, [targetUrl, isGenerating])
 
