@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { HelpCircle, X, ArrowLeft, ArrowRight, Sparkles } from 'lucide-react'
+import { HelpCircle, X, ArrowLeft, ArrowRight, Sparkles, MousePointerClick, PartyPopper } from 'lucide-react'
 
 export type SidebarTourItem = {
   id: string
@@ -32,6 +32,7 @@ export default function SidebarTour({
   const [step, setStep] = useState(0)
   const [targetRect, setTargetRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
   const [resolvedItems, setResolvedItems] = useState<SidebarTourItem[]>(items)
+  const [isActing, setIsActing] = useState(false)
 
   const total = resolvedItems.length
 
@@ -147,6 +148,40 @@ export default function SidebarTour({
     return { left, top }
   }, [targetRect])
 
+  const canAction = useMemo(() => {
+    if (!isOpen || !current) return false
+    try {
+      const el = document.querySelector(current.targetSelector) as HTMLElement | null
+      return !!el
+    } catch {
+      return false
+    }
+  }, [isOpen, current, step])
+
+  const doAction = async () => {
+    if (!current) return
+    try {
+      setIsActing(true)
+      const el = document.querySelector(current.targetSelector) as HTMLElement | null
+      if (!el) return
+      // 入力欄ならフォーカス、ボタン/リンクならクリック（体験を“楽しく・分かりやすく”）
+      const tag = el.tagName.toLowerCase()
+      if (tag === 'input' || tag === 'textarea') {
+        ;(el as any).focus?.()
+      } else {
+        ;(el as any).click?.()
+      }
+      // 少し待ってから次へ（クリックで画面遷移するケースもあるため短め）
+      window.setTimeout(() => {
+        if (step >= total - 1) close(true)
+        else setStep((s) => Math.min(total - 1, s + 1))
+        setIsActing(false)
+      }, 450)
+    } catch {
+      setIsActing(false)
+    }
+  }
+
   return (
     <>
       {/* 右下に常設 */}
@@ -169,7 +204,8 @@ export default function SidebarTour({
           >
             {/* 背景（クリックで閉じる） */}
             <div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto"
+              // 「ボケて分かりづらい」を避けるため、背景のぼかしは使わず暗転のみ
+              className="absolute inset-0 bg-black/60 pointer-events-auto"
               onClick={() => close(true)}
             />
 
@@ -185,6 +221,27 @@ export default function SidebarTour({
                   boxShadow: '0 0 0 9999px rgba(0,0,0,0.55)',
                 }}
               />
+            )}
+
+            {/* “ここ！”が分かるアニメ（矢印＋バウンス） */}
+            {targetRect && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute pointer-events-none"
+                style={{
+                  left: `${Math.max(12, targetRect.x + targetRect.w / 2 - 14)}px`,
+                  top: `${Math.max(12, targetRect.y - 32)}px`,
+                }}
+              >
+                <motion.div
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+                  className="w-8 h-8 rounded-full bg-white shadow-xl flex items-center justify-center"
+                >
+                  <MousePointerClick className="w-4 h-4 text-blue-600" />
+                </motion.div>
+              </motion.div>
             )}
 
             {/* ツールチップ */}
@@ -221,6 +278,16 @@ export default function SidebarTour({
                   {step + 1} / {total}
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={!canAction || isActing}
+                    onClick={doAction}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-black disabled:opacity-40 hover:bg-black"
+                    title="実際に操作してみる"
+                  >
+                    <PartyPopper className="w-4 h-4" />
+                    いま試す
+                  </button>
                   <button
                     type="button"
                     disabled={step === 0}
