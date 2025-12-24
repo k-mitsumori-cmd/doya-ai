@@ -23,6 +23,7 @@ const mainNavItems = [
   { icon: Users, label: 'ユーザー管理', href: '/admin/users', badge: null },
   { icon: BarChart3, label: 'アナリティクス', href: '/admin/analytics', badge: null },
   { icon: CreditCard, label: '売上・課金', href: '/admin/billing', badge: null },
+  { icon: Shield, label: '管理者アカウント', href: '/admin/admins', badge: null },
   { icon: Settings, label: '設定', href: '/admin/settings', badge: null },
 ]
 
