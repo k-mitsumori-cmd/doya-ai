@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Loader2, ArrowLeft, Image as ImageIcon, Download } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
@@ -43,38 +43,99 @@ function writeGalleryCache(items: GalleryItem[], cursor: string | null) {
   }
 }
 
-// サムネイル画像コンポーネント（ローディング中はスケルトン、エラー時はグラデーション背景）
+// サムネイル画像コンポーネント（高速表示 + ローディング体験最適化）
 function GalleryThumb({ src, alt }: { src: string; alt: string }) {
-  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle')
+  const [retryCount, setRetryCount] = useState(0)
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const imgRef = React.useRef<HTMLImageElement>(null)
+
+  // IntersectionObserverで画面に入ったら読み込み開始（パフォーマンス向上）
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setStatus('loading')
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '200px' } // 少し早めに読み込み開始
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // リトライ機能
+  const handleError = () => {
+    if (retryCount < 3) {
+      // 少し待ってリトライ
+      setTimeout(() => {
+        setRetryCount((c) => c + 1)
+        if (imgRef.current) {
+          imgRef.current.src = `${src}${src.includes('?') ? '&' : '?'}retry=${retryCount + 1}`
+        }
+      }, 1000 * (retryCount + 1))
+    } else {
+      setStatus('error')
+    }
+  }
+
+  // シマーアニメーションのスタイル
+  const shimmerStyle = {
+    background: 'linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%)',
+    backgroundSize: '200% 100%',
+    animation: 'shimmer 1.5s infinite',
+  }
 
   return (
-    <div className="w-full h-full relative">
-      {/* ローディング中のスケルトン */}
-      {status === 'loading' && (
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-100 to-slate-200 animate-pulse flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-slate-400 animate-spin" />
-        </div>
-      )}
-      {/* エラー時のグラデーション背景 */}
-      {status === 'error' && (
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-purple-50 to-pink-100 flex items-center justify-center">
-          <div className="text-center">
-            <ImageIcon className="w-12 h-12 text-slate-300 mx-auto" />
-            <p className="text-xs text-slate-400 font-bold mt-2">画像準備中</p>
+    <div ref={containerRef} className="w-full h-full relative overflow-hidden">
+      <style jsx>{`
+        @keyframes shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
+
+      {/* ローディング中/未読み込みのスケルトン（シマーアニメーション） */}
+      {(status === 'idle' || status === 'loading' || status === 'error') && (
+        <div 
+          className="absolute inset-0"
+          style={shimmerStyle}
+        >
+          {/* 淡いグラデーションオーバーレイ */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-pink-50/30" />
+          {/* 中央のアイコン */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {status === 'loading' ? (
+              <div className="w-10 h-10 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin" />
+            ) : status === 'error' ? (
+              <div className="text-center opacity-60">
+                <ImageIcon className="w-10 h-10 text-slate-400 mx-auto" />
+              </div>
+            ) : (
+              <ImageIcon className="w-10 h-10 text-slate-300" />
+            )}
           </div>
         </div>
       )}
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-        onLoad={() => setStatus('loaded')}
-        onError={() => setStatus('error')}
-        className={`w-full h-full object-cover transition-all duration-500 ${
-          status === 'loaded' ? 'opacity-100' : 'opacity-0'
-        }`}
-      />
+
+      {/* 実際の画像（読み込み開始後） */}
+      {status !== 'idle' && (
+        <img
+          ref={imgRef}
+          src={src}
+          alt={alt}
+          decoding="async"
+          onLoad={() => setStatus('loaded')}
+          onError={handleError}
+          className={`w-full h-full object-cover transition-opacity duration-300 ${
+            status === 'loaded' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      )}
     </div>
   )
 }
