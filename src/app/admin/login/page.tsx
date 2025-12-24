@@ -1,10 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, Lock, User, Eye, EyeOff, Sparkles, AlertCircle, Clock, CheckCircle } from 'lucide-react'
+import { Shield, Lock, User, Eye, EyeOff, Sparkles, AlertCircle, Clock, CheckCircle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
+import Script from 'next/script'
+
+// Turnstile設定
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''
+const IS_TURNSTILE_ENABLED = !!TURNSTILE_SITE_KEY
+
+// Turnstileグローバル型定義
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: string | HTMLElement, options: object) => string
+      reset: (widgetId?: string) => void
+      remove: (widgetId?: string) => void
+    }
+  }
+}
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -15,6 +31,58 @@ export default function AdminLoginPage() {
   const [error, setError] = useState('')
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null)
   const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileLoaded, setTurnstileLoaded] = useState(false)
+  const turnstileRef = useRef<HTMLDivElement>(null)
+  const widgetIdRef = useRef<string | null>(null)
+
+  // Turnstileウィジェットをレンダリング
+  const renderTurnstile = useCallback(() => {
+    if (!IS_TURNSTILE_ENABLED || !turnstileRef.current || !window.turnstile) return
+
+    // 既存のウィジェットを削除
+    if (widgetIdRef.current) {
+      try {
+        window.turnstile.remove(widgetIdRef.current)
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    // 新しいウィジェットをレンダリング
+    try {
+      widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        callback: (token: string) => {
+          setTurnstileToken(token)
+        },
+        'expired-callback': () => {
+          setTurnstileToken('')
+        },
+        'error-callback': () => {
+          setTurnstileToken('')
+          setError('CAPTCHA読み込みエラー。ページを更新してください。')
+        },
+        theme: 'dark',
+        size: 'flexible',
+      })
+    } catch (e) {
+      console.error('Turnstile render error:', e)
+    }
+  }, [])
+
+  // Turnstileをリセット
+  const resetTurnstile = useCallback(() => {
+    setTurnstileToken('')
+    if (window.turnstile && widgetIdRef.current) {
+      try {
+        window.turnstile.reset(widgetIdRef.current)
+      } catch (e) {
+        // fallback: 再レンダリング
+        renderTurnstile()
+      }
+    }
+  }, [renderTurnstile])
 
   // 既にログインしている場合はダッシュボードにリダイレクト
   useEffect(() => {
@@ -51,6 +119,17 @@ export default function AdminLoginPage() {
     return () => clearInterval(interval)
   }, [lockoutUntil])
 
+  // Turnstile初期化
+  useEffect(() => {
+    if (turnstileLoaded && IS_TURNSTILE_ENABLED) {
+      // 少し遅延させてDOMが準備できるのを待つ
+      const timer = setTimeout(() => {
+        renderTurnstile()
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [turnstileLoaded, renderTurnstile])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -65,7 +144,7 @@ export default function AdminLoginPage() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ identifier, password }),
+        body: JSON.stringify({ identifier, password, turnstileToken }),
       })
 
       const data = await response.json()
@@ -83,9 +162,14 @@ export default function AdminLoginPage() {
           if (data.remainingAttempts !== undefined) {
             setRemainingAttempts(data.remainingAttempts)
           }
+        } else if (data.turnstileError) {
+          // CAPTCHA検証エラー
+          setError(data.error || 'CAPTCHA検証に失敗しました')
         } else {
           setError(data.error || 'ログインに失敗しました')
         }
+        // Turnstileをリセット
+        resetTurnstile()
         setIsLoading(false)
         return
       }
@@ -215,9 +299,25 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
+            {/* Cloudflare Turnstile CAPTCHA */}
+            {IS_TURNSTILE_ENABLED && (
+              <div className="space-y-2">
+                <div 
+                  ref={turnstileRef}
+                  className="flex justify-center min-h-[65px]"
+                />
+                {!turnstileToken && turnstileLoaded && (
+                  <div className="flex items-center justify-center gap-2 text-xs text-amber-400">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>CAPTCHAを完了してください</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={isLoading || !!lockoutMessage}
+              disabled={isLoading || !!lockoutMessage || (IS_TURNSTILE_ENABLED && !turnstileToken)}
               className="w-full py-4 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-bold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
@@ -246,6 +346,9 @@ export default function AdminLoginPage() {
               <div>
                 <p className="font-medium text-gray-300 mb-1">セキュリティ機能</p>
                 <ul className="space-y-1 text-gray-400">
+                  {IS_TURNSTILE_ENABLED && (
+                    <li>• Cloudflare Turnstile（CAPTCHA）</li>
+                  )}
                   <li>• ログイン試行回数制限（5回）</li>
                   <li>• IPアドレスベースのレート制限</li>
                   <li>• セキュアなセッション管理</li>
@@ -255,6 +358,15 @@ export default function AdminLoginPage() {
             </div>
           </div>
         </div>
+
+        {/* Turnstile Script */}
+        {IS_TURNSTILE_ENABLED && (
+          <Script
+            src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+            strategy="lazyOnload"
+            onLoad={() => setTurnstileLoaded(true)}
+          />
+        )}
 
         {/* フッター */}
         <p className="text-center text-gray-500 text-sm mt-6">

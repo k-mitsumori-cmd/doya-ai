@@ -13,6 +13,7 @@ import {
   COOKIE_NAME,
 } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import { verifyTurnstileToken, isTurnstileRequired } from '@/lib/turnstile'
 
 // cookies() を使用するため、静的最適化を無効化
 export const dynamic = 'force-dynamic'
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const identifier = (body.identifier || body.username || '').toString().trim()
     const password = (body.password || '').toString()
+    const turnstileToken = (body.turnstileToken || '').toString()
 
     // 入力検証
     if (!identifier || !password) {
@@ -35,6 +37,28 @@ export async function POST(request: NextRequest) {
     // IPアドレスとUser Agent取得
     const ipAddress = getClientIP(request)
     const userAgent = getUserAgent(request)
+
+    // Cloudflare Turnstile検証（設定されている場合）
+    if (isTurnstileRequired() || turnstileToken) {
+      const turnstileResult = await verifyTurnstileToken(turnstileToken, ipAddress)
+      if (!turnstileResult.success) {
+        await recordLoginAttempt(
+          identifier,
+          false,
+          null,
+          ipAddress,
+          userAgent,
+          `Turnstile検証失敗: ${turnstileResult.error}`
+        )
+        return NextResponse.json(
+          { 
+            error: turnstileResult.error || 'CAPTCHA検証に失敗しました',
+            turnstileError: true,
+          },
+          { status: 400 }
+        )
+      }
+    }
 
     // レート制限チェック
     const rateLimit = await checkRateLimit(ipAddress, identifier)
