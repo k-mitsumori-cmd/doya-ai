@@ -35,34 +35,31 @@ interface User {
   services: string[]
 }
 
-const SERVICE_LABELS: Record<string, { name: string; shortName: string; icon: string; bgColor: string; textColor: string }> = {
-  banner: { name: 'ドヤバナーAI', shortName: 'バナー', icon: '🎨', bgColor: 'bg-violet-500/20', textColor: 'text-violet-400' },
-  seo: { name: 'ドヤSEO', shortName: 'SEO', icon: '🧠', bgColor: 'bg-emerald-500/20', textColor: 'text-emerald-400' },
+// ドヤバナーAI専用のプラン設定
+const BANNER_PLANS = {
+  FREE: { label: 'おためし', dailyLimit: 9, color: 'gray' },
+  PRO: { label: 'プロ', dailyLimit: 50, color: 'amber' },
+  ENTERPRISE: { label: 'エンタープライズ', dailyLimit: 500, color: 'rose' },
 }
 
-// サービス・プラン別の日次上限
-const SERVICE_DAILY_LIMITS: Record<string, Record<string, number>> = {
-  banner: { FREE: 9, STARTER: 50, PRO: 50, BUSINESS: 50, ENTERPRISE: 500 },
-  seo: { FREE: 1, STARTER: 5, PRO: 10, BUSINESS: 50, ENTERPRISE: 100 },
+const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; label: string }> = {
+  FREE: { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', label: 'おためし' },
+  PRO: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', label: 'プロ' },
+  ENTERPRISE: { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/30', label: 'エンタープライズ' },
 }
 
-// 残り生成可能数を計算
-function getRemainingGenerations(serviceId: string, plan: string, dailyUsage: number): number {
-  const limits = SERVICE_DAILY_LIMITS[serviceId]
-  if (!limits) return 0
-  const limit = limits[plan] || limits.FREE
-  return Math.max(0, limit - dailyUsage)
+const PLAN_OPTIONS = ['FREE', 'PRO', 'ENTERPRISE']
+
+// 残り生成可能数を計算（ドヤバナーAI用）
+function getRemainingGenerations(plan: string, dailyUsage: number): number {
+  const planConfig = BANNER_PLANS[plan as keyof typeof BANNER_PLANS] || BANNER_PLANS.FREE
+  return Math.max(0, planConfig.dailyLimit - dailyUsage)
 }
 
-const PLAN_STYLES: Record<string, { bg: string; text: string; border: string }> = {
-  FREE: { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30' },
-  STARTER: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', border: 'border-cyan-500/30' },
-  PRO: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30' },
-  BUSINESS: { bg: 'bg-orange-500/20', text: 'text-orange-400', border: 'border-orange-500/30' },
-  ENTERPRISE: { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/30' },
+function getDailyLimit(plan: string): number {
+  const planConfig = BANNER_PLANS[plan as keyof typeof BANNER_PLANS] || BANNER_PLANS.FREE
+  return planConfig.dailyLimit
 }
-
-const PLAN_OPTIONS = ['FREE', 'STARTER', 'PRO', 'BUSINESS', 'ENTERPRISE']
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -270,10 +267,9 @@ export default function AdminUsersPage() {
               className="pl-4 pr-10 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer focus:border-violet-500/50 outline-none transition-all"
             >
               <option value="all" className="bg-[#0A0A0F]">すべてのプラン</option>
-              <option value="FREE" className="bg-[#0A0A0F]">FREE</option>
-              <option value="PRO" className="bg-[#0A0A0F]">PRO</option>
-              <option value="BUSINESS" className="bg-[#0A0A0F]">BUSINESS</option>
-              <option value="ENTERPRISE" className="bg-[#0A0A0F]">ENTERPRISE</option>
+              <option value="FREE" className="bg-[#0A0A0F]">おためし</option>
+              <option value="PRO" className="bg-[#0A0A0F]">プロ</option>
+              <option value="ENTERPRISE" className="bg-[#0A0A0F]">エンタープライズ</option>
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30 pointer-events-none" />
           </div>
@@ -300,8 +296,7 @@ export default function AdminUsersPage() {
                 </th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">ユーザー</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">プラン</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">権限</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">サービス別</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">本日の残り</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">生成数</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">登録日</th>
                 <th className="text-center px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">操作</th>
@@ -346,82 +341,45 @@ export default function AdminUsersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <select
-                        value={user.plan}
-                        onChange={async (e) => {
-                          await handleUpdateUser(user.id, { plan: e.target.value })
-                        }}
-                        disabled={isSaving}
-                        className={`px-3 py-2 rounded-lg border text-xs font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 min-w-[100px] ${
-                          PLAN_STYLES[user.plan]?.bg || PLAN_STYLES.FREE.bg
-                        } ${
-                          PLAN_STYLES[user.plan]?.text || PLAN_STYLES.FREE.text
-                        } ${
-                          PLAN_STYLES[user.plan]?.border || PLAN_STYLES.FREE.border
-                        }`}
-                      >
-                        {PLAN_OPTIONS.map((p) => (
-                          <option key={p} value={p} className="bg-[#0A0A0F]">{p}</option>
-                        ))}
-                      </select>
+                      {(() => {
+                        // ドヤバナーのサービスサブスクリプションを取得
+                        const bannerSub = user.serviceSubscriptions.find((s) => s.serviceId === 'banner')
+                        const currentPlan = bannerSub?.plan || user.plan || 'FREE'
+                        const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
+                        return (
+                          <select
+                            value={currentPlan}
+                            onChange={async (e) => {
+                              await handleUpdateServicePlan(user.id, 'banner', e.target.value)
+                            }}
+                            disabled={isSaving}
+                            className={`px-3 py-2 rounded-lg border text-xs font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 min-w-[120px] ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
+                          >
+                            {PLAN_OPTIONS.map((p) => (
+                              <option key={p} value={p} className="bg-[#0A0A0F]">
+                                {PLAN_STYLES[p]?.label || p}
+                              </option>
+                            ))}
+                          </select>
+                        )
+                      })()}
                     </td>
                     <td className="px-6 py-4">
-                      <select
-                        value={user.role}
-                        onChange={async (e) => {
-                          await handleUpdateUser(user.id, { role: e.target.value })
-                        }}
-                        disabled={isSaving}
-                        className={`px-3 py-1.5 rounded-lg border text-xs font-medium appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 ${
-                          user.role === 'ADMIN'
-                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                            : 'bg-white/5 text-white/50 border-white/10'
-                        }`}
-                      >
-                        <option value="USER" className="bg-[#0A0A0F]">ユーザー</option>
-                        <option value="ADMIN" className="bg-[#0A0A0F]">管理者</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1.5">
-                        {['banner', 'seo'].map((serviceId) => {
-                          const svc = SERVICE_LABELS[serviceId]
-                          const sub = user.serviceSubscriptions.find((s) => s.serviceId === serviceId)
-                          const currentPlan = sub?.plan || 'FREE'
-                          const dailyUsage = sub?.dailyUsage || 0
-                          const remaining = getRemainingGenerations(serviceId, currentPlan, dailyUsage)
-                          const limit = SERVICE_DAILY_LIMITS[serviceId]?.[currentPlan] || SERVICE_DAILY_LIMITS[serviceId]?.FREE || 0
-                          const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
-                          return (
-                            <div 
-                              key={serviceId} 
-                              className={`flex flex-col gap-0.5 px-2 py-1.5 rounded-lg ${svc.bgColor} border border-white/10`}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-xs" title={svc.name}>{svc.icon}</span>
-                                <span className={`text-[10px] font-medium ${svc.textColor}`}>{svc.shortName}</span>
-                                <select
-                                  value={currentPlan}
-                                  onChange={async (e) => {
-                                    await handleUpdateServicePlan(user.id, serviceId, e.target.value)
-                                  }}
-                                  disabled={isSaving}
-                                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 border ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
-                                >
-                                  {PLAN_OPTIONS.map((p) => (
-                                    <option key={p} value={p} className="bg-[#0A0A0F]">{p}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="flex items-center gap-1 text-[9px]">
-                                <span className="text-white/40">残:</span>
-                                <span className={remaining > 0 ? 'text-emerald-400' : 'text-red-400'}>{remaining}</span>
-                                <span className="text-white/30">/ {limit}</span>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
+                      {(() => {
+                        const bannerSub = user.serviceSubscriptions.find((s) => s.serviceId === 'banner')
+                        const currentPlan = bannerSub?.plan || user.plan || 'FREE'
+                        const dailyUsage = bannerSub?.dailyUsage || 0
+                        const remaining = getRemainingGenerations(currentPlan, dailyUsage)
+                        const limit = getDailyLimit(currentPlan)
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className={`text-lg font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {remaining}
+                            </span>
+                            <span className="text-white/30 text-xs">/ {limit}枚</span>
+                          </div>
+                        )
+                      })()}
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-white font-medium">{user.totalGenerations}</span>
@@ -514,114 +472,78 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
 
-                {/* Global Plan & Role */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-white/60 mb-2">グローバルプラン</label>
-                    <select
-                      value={editingUser.plan}
-                      onChange={async (e) => {
-                        await handleUpdateUser(editingUser.id, { plan: e.target.value })
-                        setEditingUser({ ...editingUser, plan: e.target.value })
-                      }}
-                      disabled={isSaving}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer focus:border-violet-500/50 outline-none transition-all disabled:opacity-50"
-                    >
-                      {PLAN_OPTIONS.map((p) => (
-                        <option key={p} value={p} className="bg-[#1a1a24]">{p}</option>
-                      ))}
-                    </select>
+                {/* ドヤバナーAI プラン設定 */}
+                <div className="p-4 bg-violet-500/10 rounded-xl border border-violet-500/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-2xl">🎨</span>
+                    <div>
+                      <h3 className="font-medium text-white">ドヤバナーAI</h3>
+                      <p className="text-xs text-white/40">プランと使用状況</p>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm text-white/60 mb-2">権限</label>
-                    <select
-                      value={editingUser.role}
-                      onChange={async (e) => {
-                        await handleUpdateUser(editingUser.id, { role: e.target.value })
-                        setEditingUser({ ...editingUser, role: e.target.value })
-                      }}
-                      disabled={isSaving}
-                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer focus:border-violet-500/50 outline-none transition-all disabled:opacity-50"
-                    >
-                      <option value="USER" className="bg-[#1a1a24]">ユーザー</option>
-                      <option value="ADMIN" className="bg-[#1a1a24]">管理者</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Service Subscriptions */}
-                <div>
-                  <h3 className="text-sm font-medium text-white mb-3">サービス別設定</h3>
-                  <div className="space-y-3">
-                    {['banner', 'seo'].map((serviceId) => {
-                      const svc = SERVICE_LABELS[serviceId]
-                      const sub = editingUser.serviceSubscriptions.find((s) => s.serviceId === serviceId)
-                      return (
-                        <div key={serviceId} className="p-4 bg-white/5 rounded-xl border border-white/10">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl">{svc.icon}</span>
-                              <span className="font-medium text-white">{svc.name}</span>
-                            </div>
-                            <select
-                              value={sub?.plan || 'FREE'}
-                              onChange={async (e) => {
-                                await handleUpdateServicePlan(editingUser.id, serviceId, e.target.value)
-                                await fetchUsers()
-                                const updated = users.find((u) => u.id === editingUser.id)
-                                if (updated) setEditingUser(updated)
-                              }}
-                              disabled={isSaving}
-                              className="px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white appearance-none cursor-pointer focus:border-violet-500/50 outline-none transition-all disabled:opacity-50"
-                            >
-                              {PLAN_OPTIONS.map((p) => (
-                                <option key={p} value={p} className="bg-[#1a1a24]">{p}</option>
-                              ))}
-                            </select>
-                          </div>
-                          {sub && (
-                            <div className="flex items-center gap-4 text-sm">
-                              <div className="flex items-center gap-2">
-                                <span className="text-white/40">日次使用:</span>
-                                <span className="text-white font-medium">{sub.dailyUsage}回</span>
-                                <button
-                                  onClick={async () => {
-                                    await handleResetUsage(editingUser.id, serviceId, 'daily')
-                                    await fetchUsers()
-                                    const updated = users.find((u) => u.id === editingUser.id)
-                                    if (updated) setEditingUser(updated)
-                                  }}
-                                  disabled={isSaving}
-                                  className="px-2 py-1 text-xs bg-violet-500/20 text-violet-400 rounded hover:bg-violet-500/30 transition-colors disabled:opacity-50"
-                                >
-                                  リセット
-                                </button>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-white/40">月次使用:</span>
-                                <span className="text-white font-medium">{sub.monthlyUsage}回</span>
-                                <button
-                                  onClick={async () => {
-                                    await handleResetUsage(editingUser.id, serviceId, 'monthly')
-                                    await fetchUsers()
-                                    const updated = users.find((u) => u.id === editingUser.id)
-                                    if (updated) setEditingUser(updated)
-                                  }}
-                                  disabled={isSaving}
-                                  className="px-2 py-1 text-xs bg-violet-500/20 text-violet-400 rounded hover:bg-violet-500/30 transition-colors disabled:opacity-50"
-                                >
-                                  リセット
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                          {!sub && (
-                            <p className="text-xs text-white/40">このサービスの利用履歴はありません</p>
-                          )}
+                  
+                  {(() => {
+                    const bannerSub = editingUser.serviceSubscriptions.find((s) => s.serviceId === 'banner')
+                    const currentPlan = bannerSub?.plan || editingUser.plan || 'FREE'
+                    const dailyUsage = bannerSub?.dailyUsage || 0
+                    const remaining = getRemainingGenerations(currentPlan, dailyUsage)
+                    const limit = getDailyLimit(currentPlan)
+                    
+                    return (
+                      <>
+                        <div className="mb-4">
+                          <label className="block text-sm text-white/60 mb-2">プラン</label>
+                          <select
+                            value={currentPlan}
+                            onChange={async (e) => {
+                              await handleUpdateServicePlan(editingUser.id, 'banner', e.target.value)
+                              await fetchUsers()
+                              const updated = users.find((u) => u.id === editingUser.id)
+                              if (updated) setEditingUser(updated)
+                            }}
+                            disabled={isSaving}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer focus:border-violet-500/50 outline-none transition-all disabled:opacity-50"
+                          >
+                            {PLAN_OPTIONS.map((p) => (
+                              <option key={p} value={p} className="bg-[#1a1a24]">
+                                {PLAN_STYLES[p]?.label || p}
+                              </option>
+                            ))}
+                          </select>
                         </div>
-                      )
-                    })}
-                  </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="p-3 bg-white/5 rounded-lg">
+                            <p className="text-xs text-white/40 mb-1">本日の残り</p>
+                            <p className={`text-2xl font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {remaining}<span className="text-sm text-white/40 ml-1">/ {limit}枚</span>
+                            </p>
+                          </div>
+                          <div className="p-3 bg-white/5 rounded-lg">
+                            <p className="text-xs text-white/40 mb-1">本日の使用</p>
+                            <p className="text-2xl font-bold text-white">
+                              {dailyUsage}<span className="text-sm text-white/40 ml-1">枚</span>
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {bannerSub && (
+                          <button
+                            onClick={async () => {
+                              await handleResetUsage(editingUser.id, 'banner', 'daily')
+                              await fetchUsers()
+                              const updated = users.find((u) => u.id === editingUser.id)
+                              if (updated) setEditingUser(updated)
+                            }}
+                            disabled={isSaving}
+                            className="w-full px-4 py-2 text-sm bg-violet-500/20 text-violet-400 rounded-lg hover:bg-violet-500/30 transition-colors disabled:opacity-50"
+                          >
+                            本日の使用回数をリセット
+                          </button>
+                        )}
+                      </>
+                    )
+                  })()}
                 </div>
 
                 {/* Stripe Info */}
