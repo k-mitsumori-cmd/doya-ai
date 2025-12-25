@@ -31,6 +31,50 @@ const TARGETS = [10000, 20000, 30000, 40000, 50000, 60000]
 const TONES = ['丁寧', 'フランク', 'ビジネス', '専門的'] as const
 const STORAGE_KEY = 'doya_seo_new_draft_v2'
 
+type ArticleTypeId = 'howto' | 'thorough' | 'note' | 'comparison'
+
+const ARTICLE_TYPES: Array<{
+  id: ArticleTypeId
+  label: string
+  desc: string
+  badge: string
+  color: { bg: string; ring: string; icon: string }
+  defaultTemplateId: string
+}> = [
+  {
+    id: 'howto',
+    label: 'ハウツー/ガイド',
+    desc: '手順・チェックリスト中心で「読者がやれる」記事',
+    badge: '手順型',
+    color: { bg: 'bg-emerald-50', ring: 'ring-emerald-300', icon: 'text-emerald-600' },
+    defaultTemplateId: 'howto',
+  },
+  {
+    id: 'thorough',
+    label: '徹底解説/超長文',
+    desc: '定義→比較→選び方→失敗例まで、網羅で勝つ記事',
+    badge: '網羅型',
+    color: { bg: 'bg-blue-50', ring: 'ring-blue-300', icon: 'text-blue-600' },
+    defaultTemplateId: 'thorough',
+  },
+  {
+    id: 'note',
+    label: 'note記事',
+    desc: '体験談/学び/気づきで刺す、読み物寄りの記事',
+    badge: '体験型',
+    color: { bg: 'bg-amber-50', ring: 'ring-amber-300', icon: 'text-amber-600' },
+    defaultTemplateId: 'note',
+  },
+  {
+    id: 'comparison',
+    label: '比較記事（調査型）',
+    desc: '調査→抽出→比較表→章立て→本文まで「ガチ比較」',
+    badge: '調査型',
+    color: { bg: 'bg-indigo-50', ring: 'ring-indigo-300', icon: 'text-indigo-600' },
+    defaultTemplateId: 'cmp30',
+  },
+]
+
 // よく使うテンプレート
 const TEMPLATES = [
   {
@@ -99,6 +143,7 @@ const TEMPLATES = [
 export default function SeoNewArticlePage() {
   const router = useRouter()
   const [mode, setMode] = useState<'standard' | 'comparison_research'>('standard')
+  const [articleType, setArticleType] = useState<ArticleTypeId>('howto')
   const [title, setTitle] = useState('')
   const [keywords, setKeywords] = useState('')
   const [targetChars, setTargetChars] = useState(30000)
@@ -168,6 +213,7 @@ export default function SeoNewArticlePage() {
   // 1. サンプル入力
   function fillSample() {
     setMode('comparison_research')
+    setArticleType('comparison')
     setTitle('RPO（採用代行）おすすめ比較50選｜選び方と料金相場【2024年最新】')
     setKeywords('RPO, 採用代行, 比較, 料金, おすすめ')
     setTargetChars(50000)
@@ -198,6 +244,7 @@ export default function SeoNewArticlePage() {
   function saveDraft() {
     const data = {
       mode,
+      articleType,
       title,
       keywords,
       targetChars,
@@ -231,6 +278,7 @@ export default function SeoNewArticlePage() {
       try {
         const data = JSON.parse(saved)
         if (data.mode) setMode(data.mode)
+        if (data.articleType) setArticleType(data.articleType)
         if (data.title) setTitle(data.title)
         if (data.keywords) setKeywords(data.keywords)
         if (data.targetChars) setTargetChars(data.targetChars)
@@ -292,6 +340,7 @@ export default function SeoNewArticlePage() {
     // 比較記事テンプレの場合
     if ((t as any).mode === 'comparison_research') {
       setMode('comparison_research')
+      setArticleType('comparison')
       const cc = (t as any).comparison?.count
       const tt = (t as any).comparison?.template
       if (cc === 10 || cc === 30 || cc === 50) setCmpCount(cc)
@@ -300,10 +349,75 @@ export default function SeoNewArticlePage() {
       setCmpIncludeThirdParty(true)
     } else {
       setMode('standard')
+      if (t.id === 'note' || t.id === 'howto' || t.id === 'thorough') {
+        setArticleType(t.id as ArticleTypeId)
+      }
     }
     setNotice(`${t.name}テンプレートを適用しました`)
     setTimeout(() => setNotice(null), 3000)
   }
+
+  function applyArticleType(typeId: ArticleTypeId) {
+    setArticleType(typeId)
+    const def = ARTICLE_TYPES.find((t) => t.id === typeId)
+    const tpl = TEMPLATES.find((t) => t.id === def?.defaultTemplateId)
+    if (tpl) applyTemplate(tpl)
+  }
+
+  const preview = useMemo(() => {
+    const def = ARTICLE_TYPES.find((t) => t.id === articleType)
+    const base = {
+      title: (title || def?.label || '記事タイトル').trim(),
+      bullets: [] as string[],
+      sections: [] as string[],
+      hasTable: false,
+      flow: [] as string[],
+    }
+    if (articleType === 'note') {
+      return {
+        ...base,
+        bullets: ['導入（背景）', 'やってみたこと', '気づき', '読者への提案'],
+        sections: ['共感を取る導入', '体験ベースの具体例', '学びの整理', 'まとめ'],
+        hasTable: false,
+        flow: ['構成案', '本文（体験談）', '読みやすく整形', '完成'],
+      }
+    }
+    if (articleType === 'howto') {
+      return {
+        ...base,
+        bullets: ['結論（先に）', '手順', '注意点', 'チェックリスト', 'FAQ'],
+        sections: ['手順（ステップ）', '失敗しがちなポイント', 'コピペ用チェックリスト', 'FAQ'],
+        hasTable: false,
+        flow: ['構成案', '本文（手順）', 'チェックリスト', 'FAQ', '完成'],
+      }
+    }
+    if (articleType === 'thorough') {
+      return {
+        ...base,
+        bullets: ['定義', 'できること', '比較表', '選び方', '料金相場', '失敗例', 'FAQ'],
+        sections: ['定義と前提', '比較軸で整理', '用途別おすすめ', '失敗回避', 'FAQ'],
+        hasTable: true,
+        flow: ['構成案', '分割本文', '統合', '図解/サムネ', '完成'],
+      }
+    }
+    // comparison
+    return {
+      ...base,
+      bullets: ['評価軸', '比較表', 'ランキング/おすすめ', '各社解説', '選び方', 'FAQ'],
+      sections: ['評価基準（根拠）', '比較表（一覧）', '各社の強み/弱み', '選び方', 'FAQ'],
+      hasTable: true,
+      flow: [
+        '参考記事解析',
+        '候補収集→確定',
+        '公式サイト巡回',
+        '情報抽出',
+        '比較表生成',
+        '章立て→本文',
+        '校正（AI臭低減）',
+        '完成',
+      ],
+    }
+  }, [articleType, title])
 
   function addRefUrl() {
     const url = refUrlInput.trim()
@@ -617,21 +731,164 @@ export default function SeoNewArticlePage() {
             </div>
           </div>
 
-          {/* Template Picker */}
-          <div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Quick Templates</p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {TEMPLATES.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => applyTemplate(t)}
-                  className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-gray-100 hover:border-blue-500 hover:shadow-lg transition-all text-left group"
-                >
-                  <span className="text-2xl mb-2 block">{t.icon}</span>
-                  <p className="text-sm font-black text-gray-900 leading-tight group-hover:text-blue-600">{t.name}</p>
-                  <p className="text-[10px] text-gray-400 mt-1 font-bold">{t.targetChars.toLocaleString()} CHARS</p>
-                </button>
-              ))}
+          {/* Article Type Picker + Preview */}
+          <div className="space-y-4">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">記事タイプ</p>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              {ARTICLE_TYPES.map((t) => {
+                const active = articleType === t.id
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => applyArticleType(t.id)}
+                    className={`p-5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left group ${
+                      active
+                        ? `bg-white border-gray-900 ring-2 ${t.color.ring} shadow-xl`
+                        : 'bg-white border-gray-100 hover:border-blue-500 hover:shadow-lg'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className={`w-11 h-11 rounded-2xl ${t.color.bg} border border-white flex items-center justify-center`}>
+                        <FileText className={`w-5 h-5 ${t.color.icon}`} />
+                      </div>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-black border ${
+                          active ? 'bg-gray-900 text-white border-gray-900' : 'bg-gray-50 text-gray-600 border-gray-100'
+                        }`}
+                      >
+                        {t.badge}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm font-black text-gray-900 group-hover:text-blue-600">{t.label}</p>
+                    <p className="text-[11px] text-gray-500 mt-1 font-bold leading-relaxed">{t.desc}</p>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-xl shadow-blue-500/5">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+                    <Lightbulb className="w-5 h-5 text-amber-500" />
+                    作成イメージ（完成物の見え方）
+                  </h3>
+                  <p className="text-xs font-bold text-gray-400 mt-1">
+                    選んだ記事タイプに合わせて「構成・比較表・図解/サムネ」の出力イメージを切り替えます。
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-gray-50 text-gray-700 border border-gray-100">本文</Badge>
+                  <Badge className="bg-gray-50 text-gray-700 border border-gray-100">図解</Badge>
+                  <Badge className="bg-gray-50 text-gray-700 border border-gray-100">サムネ</Badge>
+                </div>
+              </div>
+
+              <div className="mt-6 grid lg:grid-cols-5 gap-6">
+                {/* Left: structure */}
+                <div className="lg:col-span-3 rounded-3xl border border-gray-100 bg-gray-50/40 p-5">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Structure</p>
+                  <div className="rounded-2xl bg-white border border-gray-100 p-4">
+                    <p className="text-sm font-black text-gray-900">{preview.title}</p>
+                    <div className="mt-3 grid sm:grid-cols-2 gap-3">
+                      <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">見出し</p>
+                        <ul className="mt-2 space-y-1">
+                          {preview.bullets.slice(0, 6).map((b) => (
+                            <li key={b} className="text-xs font-bold text-gray-600">- {b}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">中身</p>
+                        <ul className="mt-2 space-y-1">
+                          {preview.sections.slice(0, 6).map((b) => (
+                            <li key={b} className="text-xs font-bold text-gray-600">- {b}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+
+                    {preview.hasTable && (
+                      <div className="mt-3 p-3 rounded-2xl bg-white border border-gray-100 overflow-hidden">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">比較表イメージ</p>
+                        <div className="grid grid-cols-4 gap-2 text-[10px] font-black">
+                          {['会社', '料金', '強み', 'おすすめ'].map((h) => (
+                            <div key={h} className="p-2 rounded-xl bg-gray-50 border border-gray-100 text-gray-600">{h}</div>
+                          ))}
+                          {[...Array(8)].map((_, i) => (
+                            <div key={i} className="h-8 rounded-xl bg-gray-50 border border-gray-100" />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right: assets + flow */}
+                <div className="lg:col-span-2 space-y-4">
+                  <div className="rounded-3xl border border-gray-100 bg-gray-50/40 p-5">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Assets</p>
+                    <div className="rounded-2xl bg-white border border-gray-100 p-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-black text-gray-800 flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-blue-600" /> サムネ（BANNER）
+                        </p>
+                        <span className="text-[10px] font-black text-gray-400">16:9</span>
+                      </div>
+                      <div className="mt-3 h-24 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-200 border border-white shadow-inner" />
+                      <div className="mt-4 flex items-center justify-between">
+                        <p className="text-xs font-black text-gray-800 flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4 text-indigo-600" /> 図解（DIAGRAM）
+                        </p>
+                        <span className="text-[10px] font-black text-gray-400">1:1 ×2</span>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-3">
+                        <div className="h-20 rounded-2xl bg-gray-100 border border-white shadow-inner" />
+                        <div className="h-20 rounded-2xl bg-gray-100 border border-white shadow-inner" />
+                      </div>
+                      <p className="mt-3 text-[10px] font-bold text-gray-400">
+                        ※実際の生成は本文に合わせて自動で最適化します
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-gray-100 bg-gray-50/40 p-5">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Flow</p>
+                    <div className="rounded-2xl bg-white border border-gray-100 p-4 space-y-2">
+                      {preview.flow.slice(0, 10).map((s, i) => (
+                        <div key={`${s}_${i}`} className="flex items-center gap-3">
+                          <div className="w-7 h-7 rounded-xl bg-gray-900 text-white flex items-center justify-center text-[10px] font-black">
+                            {i + 1}
+                          </div>
+                          <p className="text-xs font-bold text-gray-700">{s}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Templates (filtered by type) */}
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Quick Templates</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {TEMPLATES.filter((t: any) => {
+                  if (articleType === 'comparison') return String((t as any).mode || '') === 'comparison_research'
+                  return !String((t as any).mode || '')
+                }).map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => applyTemplate(t)}
+                    className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-gray-100 hover:border-blue-500 hover:shadow-lg transition-all text-left group"
+                  >
+                    <span className="text-2xl mb-2 block">{t.icon}</span>
+                    <p className="text-sm font-black text-gray-900 leading-tight group-hover:text-blue-600">{t.name}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 font-bold">{t.targetChars.toLocaleString()} CHARS</p>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
