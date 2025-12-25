@@ -182,36 +182,105 @@ function closeIncompleteJson(input: string): string {
   return s
 }
 
+// レート制限時のフォールバックモデル
+const FALLBACK_MODELS = [
+  'gemini-1.5-pro',
+  'gemini-1.5-flash',
+  'gemini-pro',
+]
+
+// レート制限(429)やサーバーエラー(5xx)時にリトライ
+async function fetchWithRetry(
+  endpoint: string,
+  options: RequestInit,
+  maxRetries = 3,
+  baseDelay = 2000
+): Promise<Response> {
+  let lastError: Error | null = null
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const res = await fetch(endpoint, options)
+      
+      // 成功または4xx(429以外)はそのまま返す
+      if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) {
+        return res
+      }
+      
+      // 429またはサーバーエラーはリトライ
+      if (res.status === 429 || res.status >= 500) {
+        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000
+        console.log(`[Gemini] Rate limited or server error (${res.status}), retrying in ${Math.round(delay)}ms... (attempt ${attempt + 1}/${maxRetries})`)
+        await new Promise(r => setTimeout(r, delay))
+        lastError = new Error(`Gemini API Error: ${res.status}`)
+        continue
+      }
+      
+      return res
+    } catch (e: any) {
+      lastError = e
+      const delay = baseDelay * Math.pow(2, attempt)
+      await new Promise(r => setTimeout(r, delay))
+    }
+  }
+  throw lastError || new Error('Gemini API request failed after retries')
+}
+
 export async function geminiGenerateText(req: GenerateContentRequest): Promise<string> {
   const apiKey = getApiKey()
-  const endpoint = `${GEMINI_API_BASE}/models/${req.model}:generateContent`
+  
+  // 試行するモデルのリストを作成
+  const modelsToTry = [req.model, ...FALLBACK_MODELS.filter(m => m !== req.model)]
+  
+  for (const model of modelsToTry) {
+    const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+    
+    try {
+      const res = await fetchWithRetry(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          contents: [{ parts: req.parts }],
+          generationConfig: {
+            temperature: req.generationConfig?.temperature ?? 0.4,
+            // アウトライン等長いJSON出力に対応するため大きめに設定
+            maxOutputTokens: req.generationConfig?.maxOutputTokens ?? 65536,
+          },
+        }),
+      })
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      contents: [{ parts: req.parts }],
-      generationConfig: {
-        temperature: req.generationConfig?.temperature ?? 0.4,
-        // アウトライン等長いJSON出力に対応するため大きめに設定
-        maxOutputTokens: req.generationConfig?.maxOutputTokens ?? 65536,
-      },
-    }),
-  })
+      if (!res.ok) {
+        const t = await res.text()
+        // レート制限の場合は次のモデルを試す
+        if (res.status === 429 && model !== modelsToTry[modelsToTry.length - 1]) {
+          console.log(`[Gemini] Model ${model} rate limited, trying next model...`)
+          continue
+        }
+        throw new Error(`Gemini API Error: ${res.status} - ${t.substring(0, 500)}`)
+      }
 
-  if (!res.ok) {
-    const t = await res.text()
-    throw new Error(`Gemini API Error: ${res.status} - ${t.substring(0, 500)}`)
+      const json = await res.json()
+      const parts = json?.candidates?.[0]?.content?.parts
+      const text = joinPartsText(parts)
+      if (!text) throw new Error('Gemini が空のテキストを返しました')
+      
+      if (model !== req.model) {
+        console.log(`[Gemini] Successfully used fallback model: ${model}`)
+      }
+      return text
+    } catch (e: any) {
+      // レート制限エラーの場合は次のモデルを試す
+      if (e?.message?.includes('429') && model !== modelsToTry[modelsToTry.length - 1]) {
+        console.log(`[Gemini] Model ${model} failed with rate limit, trying next...`)
+        continue
+      }
+      throw e
+    }
   }
-
-  const json = await res.json()
-  const parts = json?.candidates?.[0]?.content?.parts
-  const text = joinPartsText(parts)
-  if (!text) throw new Error('Gemini が空のテキストを返しました')
-  return text
+  
+  throw new Error('All Gemini models exhausted (rate limits)')
 }
 
 export async function geminiGenerateJson<T>(
