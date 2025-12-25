@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight,
@@ -68,10 +68,17 @@ export default function SeoDashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const isLoadingRef = useRef(false)
 
-  async function load() {
-    setLoading(true)
-    setError(null)
+  async function load(opts?: { showLoading?: boolean }) {
+    // 二重呼び出し防止
+    if (isLoadingRef.current) return
+    isLoadingRef.current = true
+
+    if (opts?.showLoading) {
+      setLoading(true)
+      setError(null)
+    }
     try {
       const res = await fetch('/api/seo/articles', { cache: 'no-store' })
       const json = await res.json()
@@ -79,19 +86,31 @@ export default function SeoDashboardPage() {
         throw new Error(json.error || `API Error: ${res.status}`)
       }
       setArticles(json.articles || [])
+      if (opts?.showLoading) setError(null)
     } catch (e: any) {
-      setArticles([])
-      setError(e?.message || '読み込みに失敗しました')
+      // ポーリング中はエラーで既存データを消さない
+      if (opts?.showLoading) {
+        setArticles([])
+        setError(e?.message || '読み込みに失敗しました')
+      }
     }
-    setLoading(false)
+    if (opts?.showLoading) setLoading(false)
+    isLoadingRef.current = false
   }
 
+  // 生成中の記事があるかどうか
+  const hasRunning = useMemo(() => articles.some(a => a.status === 'RUNNING'), [articles])
+
   useEffect(() => {
-    load()
-    // 自動更新（生成中の記事がある場合）
-    const t = setInterval(load, 5000)
-    return () => clearInterval(t)
+    load({ showLoading: true })
   }, [])
+
+  // 生成中の記事がある場合のみポーリング
+  useEffect(() => {
+    if (!hasRunning) return
+    const t = setInterval(() => load(), 6000)
+    return () => clearInterval(t)
+  }, [hasRunning])
 
   const counts = useMemo(() => {
     const total = articles.length
