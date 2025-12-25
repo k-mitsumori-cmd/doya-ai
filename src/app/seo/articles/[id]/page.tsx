@@ -458,9 +458,9 @@ function SeoArticleInner() {
           </div>
         </div>
 
-        {/* Main Grid */}
-        <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
-          <div className="lg:col-span-2">
+        {/* Main Grid - 記事本文を最大限広く */}
+        <div className="grid lg:grid-cols-4 gap-6 sm:gap-8">
+          <div className="lg:col-span-3">
             {tab === 'preview' && (
               <div className="bg-white rounded-2xl sm:rounded-[40px] border border-gray-100 shadow-xl overflow-hidden min-h-[400px] sm:min-h-[600px]">
                 {/* Cover */}
@@ -512,13 +512,13 @@ function SeoArticleInner() {
                   </div>
                 </div>
 
-                {/* Body */}
-                <div className="bg-[#F8FAFC] p-4 sm:p-6 lg:p-8">
+                {/* Body - 記事本文を全幅で表示 */}
+                <div className="p-4 sm:p-6 lg:p-10">
                   {markdown ? (
-                    <div className="grid lg:grid-cols-12 gap-4 sm:gap-6">
+                    <>
                       {/* Mobile TOC */}
                       {toc.length > 0 && (
-                        <div className="lg:hidden">
+                        <div className="mb-6 lg:hidden">
                           <details className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
                             <summary className="cursor-pointer select-none px-5 py-4 font-black text-sm text-gray-900 flex items-center justify-between">
                               目次
@@ -543,56 +543,11 @@ function SeoArticleInner() {
                         </div>
                       )}
 
-                      <div className="lg:col-span-8">
-                        <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-7 lg:p-8">
-                          <MarkdownPreview markdown={previewMarkdown || markdown} />
-                        </div>
-                      </div>
-                      <div className="hidden lg:block lg:col-span-4">
-                        <div className="sticky top-[7.25rem] space-y-4">
-                          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Table of Contents</p>
-                            {toc.length ? (
-                              <div className="space-y-2">
-                                {toc.map((it) => (
-                                  <a
-                                    key={it.id}
-                                    href={`#${it.id}`}
-                                    className={`block text-xs font-bold text-gray-600 hover:text-blue-600 transition-colors ${
-                                      it.level === 3 ? 'pl-4' : ''
-                                    }`}
-                                  >
-                                    {it.text}
-                                  </a>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-xs font-bold text-gray-400">見出しが生成されると目次が表示されます</p>
-                            )}
-                          </div>
-
-                          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Quick</p>
-                            <div className="grid gap-2">
-                              <button
-                                onClick={() => setTab('edit')}
-                                className="w-full px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-800 font-black text-xs transition-colors flex items-center justify-between"
-                              >
-                                編集する
-                                <Edit3 className="w-4 h-4 text-gray-400" />
-                              </button>
-                              <button
-                                onClick={() => setTab('media')}
-                                className="w-full px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-800 font-black text-xs transition-colors flex items-center justify-between"
-                              >
-                                図解・サムネを見る
-                                <ImageIcon className="w-4 h-4 text-gray-400" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                      {/* 記事本文 - 全幅で読みやすく */}
+                      <article className="max-w-none">
+                        <MarkdownPreview markdown={previewMarkdown || markdown} />
+                      </article>
+                    </>
                   ) : (
                     <div className="py-20 sm:py-32 text-center text-gray-300 font-black text-sm sm:text-base">
                       本文が生成されるまでお待ちください...
@@ -675,43 +630,32 @@ function SeoArticleInner() {
             )}
           </div>
 
-          {/* Sidebar - シンプル化 */}
-          <div className="space-y-6 sm:space-y-8">
-            {/* 記事情報 */}
-            <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-lg">
-              <h3 className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest mb-6">記事情報</h3>
-              <div className="space-y-6">
+          {/* Sidebar - コンパクト化 */}
+          <div className="hidden lg:block space-y-4">
+            {/* 記事情報 - コンパクト */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm sticky top-[7rem]">
+              <div className="space-y-3">
                 <div>
-                  <p className="text-[10px] font-black text-gray-400 mb-2 flex items-center gap-2"><Target className="w-3 h-3" /> キーワード</p>
-                  <div className="flex flex-wrap gap-2">
-                    {((article.keywords as string[]) || []).map((k, i) => (
-                      <span key={i} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[9px] sm:text-[10px] font-black border border-blue-100">{k}</span>
-                    ))}
-                  </div>
+                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">文字数</p>
+                  <p className="text-sm font-black text-gray-900">{score.charCount.toLocaleString()} <span className="text-xs text-gray-400">/ {article.targetChars.toLocaleString()}字</span></p>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-gray-400 mb-2 flex items-center gap-2"><FileText className="w-3 h-3" /> 目標文字数</p>
-                  <p className="text-lg font-black text-gray-900">{article.targetChars.toLocaleString()}字</p>
+                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${Math.min(100, charProgress)}%` }} />
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-gray-400 mb-2 flex items-center gap-2"><BarChart3 className="w-3 h-3" /> 現在の文字数</p>
-                  <p className="text-lg font-black text-gray-900">{score.charCount.toLocaleString()}字 <span className="text-sm text-gray-400">({charProgress}%)</span></p>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {((article.keywords as string[]) || []).slice(0, 3).map((k, i) => (
+                    <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[8px] font-black border border-blue-100 truncate max-w-full">{k}</span>
+                  ))}
                 </div>
               </div>
-            </div>
-
-            {/* クイックアクション */}
-            <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-lg">
-              <h3 className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest mb-6">操作</h3>
-              <div className="grid gap-3">
-                <button onClick={() => setTab('edit')} className="w-full p-4 rounded-xl sm:rounded-2xl bg-purple-50 text-purple-700 font-black text-[10px] sm:text-xs flex items-center justify-between hover:bg-purple-100 transition-all border border-purple-100/50">
-                  編集する <Edit3 className="w-4 h-4" />
+              
+              {/* クイックアクション */}
+              <div className="mt-4 pt-4 border-t border-gray-100 grid gap-2">
+                <button onClick={() => setTab('edit')} className="w-full px-3 py-2 rounded-lg bg-purple-50 text-purple-700 font-black text-[10px] flex items-center justify-between hover:bg-purple-100 transition-all">
+                  編集 <Edit3 className="w-3 h-3" />
                 </button>
-                <button onClick={() => setTab('media')} className="w-full p-4 rounded-xl sm:rounded-2xl bg-orange-50 text-orange-700 font-black text-[10px] sm:text-xs flex items-center justify-between hover:bg-orange-100 transition-all border border-orange-100/50">
-                  画像を見る <ImageIcon className="w-4 h-4" />
-                </button>
-                <button onClick={() => setTab('export')} className="w-full p-4 rounded-xl sm:rounded-2xl bg-gray-50 text-gray-700 font-black text-[10px] sm:text-xs flex items-center justify-between hover:bg-gray-100 transition-all border border-gray-100/50">
-                  ダウンロード <Download className="w-4 h-4" />
+                <button onClick={() => setTab('export')} className="w-full px-3 py-2 rounded-lg bg-gray-50 text-gray-700 font-black text-[10px] flex items-center justify-between hover:bg-gray-100 transition-all">
+                  DL <Download className="w-3 h-3" />
                 </button>
               </div>
             </div>
