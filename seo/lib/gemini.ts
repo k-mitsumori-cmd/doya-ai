@@ -1,8 +1,12 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
-// SEO用途は Gemini 2.0 系を前提にする（必要なら環境変数で上書き）
-export const GEMINI_TEXT_MODEL_DEFAULT = process.env.SEO_GEMINI_TEXT_MODEL || 'gemini-2.0-flash'
-export const GEMINI_IMAGE_MODEL_DEFAULT = process.env.SEO_GEMINI_IMAGE_MODEL || 'gemini-2.0-flash-exp'
+// SEO用途は Gemini 3 系のみ（品質要件）
+// - テキスト: Gemini 3
+// - 画像(図解/サムネ): Nano Banana Pro のみ
+export const GEMINI_TEXT_MODEL_DEFAULT =
+  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-3-pro-preview'
+export const GEMINI_IMAGE_MODEL_DEFAULT =
+  process.env.SEO_GEMINI_IMAGE_MODEL || process.env.SEO_GEMINI_NANO_BANANA_MODEL || 'nano-banana-pro'
 
 type GeminiPart =
   | { text: string }
@@ -288,6 +292,22 @@ export async function geminiGenerateImagePng(args: {
 }): Promise<{ mimeType: string; dataBase64: string }> {
   const apiKey = getApiKey()
   const model = args.model ?? GEMINI_IMAGE_MODEL_DEFAULT
+  const lower = model.toLowerCase().trim()
+
+  // Nano Banana Pro only（運用上の事故防止）
+  // バナーAIは触らない。ドヤSEO内だけで厳格化する。
+  const isNanoBananaAlias =
+    lower === 'nano-banana-pro' ||
+    lower === 'nano-banana-pro-preview' ||
+    lower === 'nano-banana' ||
+    lower === 'nanobanana-pro'
+  const isNanoBananaActual = lower.includes('banana') || lower === 'gemini-3-pro-image-preview'
+  if (!isNanoBananaAlias && !isNanoBananaActual) {
+    throw new Error(
+      `SEO画像生成モデル（${model}）は Nano Banana ではありません。` +
+        ` 環境変数 SEO_GEMINI_IMAGE_MODEL に 'nano-banana-pro'（推奨）を設定してください。`
+    )
+  }
   const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
 
   const res = await fetch(endpoint, {
@@ -299,7 +319,8 @@ export async function geminiGenerateImagePng(args: {
     body: JSON.stringify({
       contents: [{ parts: [{ text: args.prompt }] }],
       generationConfig: {
-        responseModalities: ['IMAGE', 'TEXT'],
+        // 画像のみ要求（TEXT混在だと画像が返らないケースがある）
+        responseModalities: ['IMAGE'],
         imageConfig: {
           aspectRatio: args.aspectRatio ?? '16:9',
           imageSize: args.imageSize ?? '2K',
@@ -325,7 +346,10 @@ export async function geminiGenerateImagePng(args: {
       }
     }
   }
-  throw new Error('Gemini が画像を返しませんでした（テキストのみの応答）')
+  throw new Error(
+    `Gemini が画像を返しませんでした（モデル: ${model}）。` +
+      ` SEO_GEMINI_IMAGE_MODEL を Nano Banana Pro に設定しているか確認してください。`
+  )
 }
 
 
