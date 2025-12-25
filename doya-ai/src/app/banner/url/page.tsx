@@ -249,22 +249,22 @@ function BannerUrlAutoPageInner() {
         <LoadingProgress isLoading={isGenerating} operationKey="banner-from-url" estimatedSeconds={75} />
         <Toaster position="top-center" />
 
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-8 py-8 sm:py-10">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider mb-4">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-8 py-6 sm:py-10">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider mb-3 sm:mb-4">
                 <Sparkles className="w-3.5 h-3.5" />
                 URL Auto Banner
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">URLだけでバナー自動生成</h1>
-              <p className="text-sm text-slate-500 font-bold mt-2">
+              <h1 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">URLだけでバナー自動生成</h1>
+              <p className="text-xs sm:text-sm text-slate-500 font-bold mt-2 leading-relaxed">
                 URLを入力するだけ。サイト内容をAIが解析し、コピー/デザイン/配色/CTAを自動で判断して生成します。
               </p>
             </div>
 
             <Link
               href="/banner/dashboard"
-              className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-800 font-black hover:bg-slate-50 transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-white border border-slate-200 text-slate-800 text-sm font-black hover:bg-slate-50 transition-colors whitespace-nowrap flex-shrink-0"
             >
               手動で作る
               <ArrowRight className="w-4 h-4" />
