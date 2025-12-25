@@ -18,6 +18,24 @@ function mdCharCount(s: string): number {
   return (s || '').replace(/\r\n/g, '\n').length
 }
 
+// いかにもAIっぽいMarkdown記号を避ける（プロンプトでも強制しつつ、最後に軽くサニタイズ）
+function sanitizeAiMarkdown(md: string): string {
+  let s = String(md || '')
+  // 強調記号（太字/下線）を落とす（"**" や "__" が残るとAI感が強い）
+  s = s.replace(/\*\*/g, '')
+  s = s.replace(/__/g, '')
+  // チェックボックス記法を通常の箇条書きに寄せる
+  s = s.replace(/^\s*-\s*\[\s*[xX]?\s*\]\s*/gm, '- ')
+  return s
+}
+
+const NO_AI_MARKDOWN_RULES = [
+  'Important formatting rules (must follow):',
+  '- Do NOT use Markdown emphasis markers: do not output "**", "*", "__", "_".',
+  '- Do NOT use checklist notation: do not output "- [ ]" or "- [x]". Use normal bullet/numbered lists instead.',
+  '- Do NOT wrap labels like Q/A with bold. Use plain "Q:" / "A:".',
+].join('\n')
+
 function normalizeH2Heading(md: string, fallback: string): string {
   const t = (md || '').trim()
   if (!t) return `## ${fallback}\n\n（生成に失敗しました）`
@@ -454,6 +472,7 @@ async function ensureOutlineAndSections(jobId: string) {
     'Create two different intro drafts (A/B) for the article.',
     'A: logical and business-like. B: friendly and story-driven.',
     'Each 250-400 Japanese chars. No exaggeration. Avoid generic AI tone.',
+    NO_AI_MARKDOWN_RULES,
     '',
     `Title: ${article.title}`,
     `Keywords: ${((article.keywords as any) || []).join(', ')}`,
@@ -477,6 +496,7 @@ async function ensureOutlineAndSections(jobId: string) {
   } catch {
     abText = 'A: （生成に失敗しました）\nB: （生成に失敗しました）'
   }
+  abText = sanitizeAiMarkdown(abText)
   await p.seoKnowledgeItem.create({
     data: {
       userId: article.userId,
@@ -517,6 +537,7 @@ async function generateSection(jobId: string) {
     'Write ONE section only in Japanese. Markdown output.',
     'Do NOT copy from sources; paraphrase ideas and add originality (experience, tradeoffs, examples, failure cases).',
     'Avoid "AIっぽい" generic filler. Be specific and practical.',
+    NO_AI_MARKDOWN_RULES,
     '',
     `Article title: ${article.title}`,
     `Tone: ${article.tone}`,
@@ -533,7 +554,8 @@ async function generateSection(jobId: string) {
     'Rules:',
     '- Start with "## " heading (H2) that matches the outline.',
     '- Use H3/H4 as needed.',
-    '- Include: concrete checklist/steps/examples where appropriate.',
+    '- If you include a checklist, use numbered lists or normal bullet lists (NO checkboxes).',
+    '- Include concrete steps / decision criteria / examples where appropriate.',
     '- Avoid repeating earlier sections.',
     '',
     researchContext,
@@ -555,6 +577,7 @@ async function generateSection(jobId: string) {
     '- missing details vs the heading',
     'Then rewrite the section to fix issues.',
     'Output STRICT JSON only.',
+    NO_AI_MARKDOWN_RULES,
     '',
     'JSON schema:',
     '{ "issues": ["..."], "rewritten": "markdown" }',
@@ -586,6 +609,7 @@ async function generateSection(jobId: string) {
   } catch {
     // ignore
   }
+  rewritten = sanitizeAiMarkdown(rewritten)
 
   // 文字数が明らかに不足する場合は、1回だけ追記で増量（50,000字達成のため）
   try {
@@ -598,6 +622,7 @@ async function generateSection(jobId: string) {
         'Do NOT repeat the same sentences. Add concrete examples, checklists, pitfalls, and decision criteria.',
         'Keep it consistent with the heading and outline.',
         'Return Markdown only.',
+        NO_AI_MARKDOWN_RULES,
         '',
         `Target additional chars: ~${Math.max(600, Math.round(goal - currentLen))}`,
         '',
@@ -609,7 +634,7 @@ async function generateSection(jobId: string) {
         parts: [{ text: expandPrompt }],
         generationConfig: { temperature: 0.55, maxOutputTokens: 6500 },
       })
-      rewritten = expanded && expanded.trim() ? expanded : rewritten
+      rewritten = expanded && expanded.trim() ? sanitizeAiMarkdown(expanded) : rewritten
     }
   } catch {
     // ignore
@@ -720,6 +745,7 @@ async function generateLlmoBlocks(article: any, merged: string): Promise<string>
     'Generate helpful additional blocks for the article in Markdown.',
     'Do NOT copy from sources.',
     'Output ONLY Markdown (no JSON).',
+    NO_AI_MARKDOWN_RULES,
     '',
     `Title: ${article.title}`,
     `Tone: ${article.tone}`,
@@ -740,7 +766,7 @@ async function generateLlmoBlocks(article: any, merged: string): Promise<string>
     '- If OFF, omit the section entirely.',
     '- Keep each block concise but useful.',
     '- Use headings starting from "##".',
-    '- For FAQ: Q: / A: format.',
+    '- For FAQ: Use plain "Q:" / "A:" lines (no bold markers).',
     '- For glossary: markdown table is OK.',
     '- For comparison: include at least one markdown table when ON.',
     '',
@@ -754,7 +780,7 @@ async function generateLlmoBlocks(article: any, merged: string): Promise<string>
       parts: [{ text: prompt }],
       generationConfig: { temperature: 0.45, maxOutputTokens: 2200 },
     })
-    return out?.trim() ? out.trim() : ''
+    return out?.trim() ? sanitizeAiMarkdown(out.trim()) : ''
   } catch {
     return ''
   }
