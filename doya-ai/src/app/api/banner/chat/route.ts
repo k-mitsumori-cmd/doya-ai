@@ -237,18 +237,26 @@ function buildSuggestedUserMessages(params: {
 }
 
 async function callGemini(messages: ChatMessage[], apiKey: string): Promise<string> {
-  const contents = (messages || []).slice(-12).map((m) => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }))
+  // 最新12件を使用（古い履歴は切り落とす）
+  const recentMessages = (messages || []).slice(-12)
 
-  // system prompt を最初の user に混ぜる
-  if (contents.length === 0) {
-    contents.push({ role: 'user', parts: [{ text: AI_ADVISOR_SYSTEM_PROMPT }] })
-  } else if (contents[0].role === 'user') {
-    contents[0].parts[0].text = `${AI_ADVISOR_SYSTEM_PROMPT}\n\n---\n\n${contents[0].parts[0].text}`
-  } else {
-    contents.unshift({ role: 'user', parts: [{ text: AI_ADVISOR_SYSTEM_PROMPT }] })
+  // まずシステムプロンプトを含むダミー user メッセージを先頭に追加
+  const contents: { role: string; parts: { text: string }[] }[] = [
+    { role: 'user', parts: [{ text: `${AI_ADVISOR_SYSTEM_PROMPT}\n\n以下はこれまでの会話履歴です。会話の文脈を踏まえて回答してください。` }] },
+  ]
+
+  // Gemini は user/model が交互である必要があるため、履歴を追加する前に model の応答を入れる
+  if (recentMessages.length > 0) {
+    // システムプロンプトへのダミー応答（Geminiが期待する交互パターンを維持）
+    contents.push({ role: 'model', parts: [{ text: '承知しました。バナー制作についてお手伝いします。' }] })
+  }
+
+  // 過去の会話を追加（user/model を正しくマッピング）
+  for (const m of recentMessages) {
+    contents.push({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    })
   }
 
   const models = getTextModels()

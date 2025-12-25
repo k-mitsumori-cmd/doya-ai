@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, ChevronDown, ChevronUp, ArrowRight, Loader2, Wand2, HelpCircle, X, CheckCircle2, Lightbulb, Zap, FileText, Edit3, Download } from 'lucide-react'
+import { Sparkles, ChevronDown, ChevronUp, ArrowRight, Loader2, Wand2, HelpCircle, X, CheckCircle2, Lightbulb, Zap, FileText, Edit3, Download, BookOpen, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 // サンプルキーワードリスト
@@ -30,6 +30,15 @@ export default function SeoCreateSimplePage() {
   const [persona, setPersona] = useState('')
   const [tone, setTone] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showKnowledge, setShowKnowledge] = useState(false)
+
+  // 独自情報（学習）
+  const [knowledgeTitle, setKnowledgeTitle] = useState('')
+  const [knowledgeContent, setKnowledgeContent] = useState('')
+  const [knowledgeItems, setKnowledgeItems] = useState<Array<{ id: string; title: string; content: string; createdAt: string }>>([])
+  const [knowledgeLoading, setKnowledgeLoading] = useState(false)
+  const [knowledgeBusy, setKnowledgeBusy] = useState(false)
+  const [knowledgeError, setKnowledgeError] = useState<string | null>(null)
 
   // 処理状態
   const [loading, setLoading] = useState(false)
@@ -37,6 +46,74 @@ export default function SeoCreateSimplePage() {
   const [showHelp, setShowHelp] = useState(false)
 
   const canSubmit = mainKeyword.trim().length >= 1
+  const canSaveKnowledge = knowledgeTitle.trim().length > 0 && knowledgeContent.trim().length > 0
+
+  const knowledgeHint = useMemo(
+    () =>
+      '例：自社サービスの特徴/料金/強み、NG表現、公式URL、実績数値、用語の定義、競合との違い（一次情報ベース）',
+    []
+  )
+
+  async function loadKnowledge() {
+    setKnowledgeLoading(true)
+    setKnowledgeError(null)
+    try {
+      const res = await fetch('/api/seo/knowledge', { cache: 'no-store' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || `エラー (${res.status})`)
+      setKnowledgeItems(Array.isArray(json.items) ? json.items : [])
+    } catch (e: any) {
+      setKnowledgeError(e?.message || '独自情報の読み込みに失敗しました')
+      setKnowledgeItems([])
+    } finally {
+      setKnowledgeLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!showKnowledge) return
+    loadKnowledge()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showKnowledge])
+
+  async function saveKnowledge() {
+    if (!canSaveKnowledge || knowledgeBusy) return
+    setKnowledgeBusy(true)
+    setKnowledgeError(null)
+    try {
+      const res = await fetch('/api/seo/knowledge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: knowledgeTitle.trim(), content: knowledgeContent.trim() }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || `エラー (${res.status})`)
+      setKnowledgeTitle('')
+      setKnowledgeContent('')
+      await loadKnowledge()
+    } catch (e: any) {
+      setKnowledgeError(e?.message || '保存に失敗しました')
+    } finally {
+      setKnowledgeBusy(false)
+    }
+  }
+
+  async function deleteKnowledge(id: string) {
+    if (knowledgeBusy) return
+    if (!confirm('この独自情報を削除しますか？')) return
+    setKnowledgeBusy(true)
+    setKnowledgeError(null)
+    try {
+      const res = await fetch(`/api/seo/knowledge/${id}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || `エラー (${res.status})`)
+      await loadKnowledge()
+    } catch (e: any) {
+      setKnowledgeError(e?.message || '削除に失敗しました')
+    } finally {
+      setKnowledgeBusy(false)
+    }
+  }
 
   // サンプル入力
   function fillSample() {
@@ -227,6 +304,121 @@ export default function SeoCreateSimplePage() {
                         placeholder="例：やさしい、専門的、ビジネス"
                         className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                       />
+                    </div>
+
+                    {/* 独自情報（学習） */}
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowKnowledge((v) => !v)}
+                        className="flex items-center justify-between w-full px-4 py-3 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-all"
+                      >
+                        <span className="inline-flex items-center gap-2 text-xs font-black text-gray-700">
+                          <BookOpen className="w-4 h-4 text-emerald-600" />
+                          独自情報を学習させる（任意）
+                        </span>
+                        <span className="text-[10px] font-black text-gray-400">
+                          {showKnowledge ? '閉じる' : '開く'}
+                        </span>
+                      </button>
+
+                      <AnimatePresence>
+                        {showKnowledge && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.25 }}
+                            className="mt-3 space-y-3 overflow-hidden"
+                          >
+                            <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-100">
+                              <p className="text-xs font-black text-emerald-800">この情報は次回以降の生成にも反映されます</p>
+                              <p className="text-[10px] font-bold text-emerald-700/80 mt-1">{knowledgeHint}</p>
+                            </div>
+
+                            <div className="grid gap-3">
+                              <div>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                                  タイトル
+                                </label>
+                                <input
+                                  value={knowledgeTitle}
+                                  onChange={(e) => setKnowledgeTitle(e.target.value)}
+                                  placeholder="例：料金体系（2025/01時点）"
+                                  className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                                  内容
+                                </label>
+                                <textarea
+                                  value={knowledgeContent}
+                                  onChange={(e) => setKnowledgeContent(e.target.value)}
+                                  placeholder="ここにコピペでOK（事実ベースの独自情報）"
+                                  rows={5}
+                                  className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all resize-none"
+                                />
+                              </div>
+                              {knowledgeError && (
+                                <div className="p-3 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold">
+                                  {knowledgeError}
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={saveKnowledge}
+                                disabled={!canSaveKnowledge || knowledgeBusy}
+                                className="h-12 rounded-2xl bg-emerald-600 text-white font-black text-sm shadow-lg shadow-emerald-500/20 hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                              >
+                                {knowledgeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                                学習として保存
+                              </button>
+                            </div>
+
+                            <div className="pt-2">
+                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+                                保存済み（最新）
+                              </p>
+                              <div className="grid gap-2">
+                                {knowledgeLoading ? (
+                                  <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 text-gray-500 text-xs font-bold inline-flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    読み込み中...
+                                  </div>
+                                ) : knowledgeItems.length ? (
+                                  knowledgeItems.slice(0, 6).map((it) => (
+                                    <div
+                                      key={it.id}
+                                      className="p-4 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-start justify-between gap-3"
+                                    >
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-black text-gray-900 truncate">{it.title}</p>
+                                        <p className="text-xs font-bold text-gray-500 mt-1 line-clamp-2">
+                                          {String(it.content || '').slice(0, 140)}
+                                          {String(it.content || '').length > 140 ? '…' : ''}
+                                        </p>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => deleteKnowledge(it.id)}
+                                        className="p-2 rounded-xl bg-gray-50 border border-gray-100 hover:bg-red-50 hover:border-red-100 transition-colors text-gray-500 hover:text-red-600"
+                                        title="削除"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100 text-gray-400 text-xs font-bold">
+                                    まだ保存されていません
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </motion.div>
                 )}
