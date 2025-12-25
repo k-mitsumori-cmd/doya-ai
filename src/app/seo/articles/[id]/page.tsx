@@ -181,13 +181,6 @@ function SeoArticleInner() {
   const prevArticleStatusRef = useRef<string | null>(null)
   const dontShowAgainRef = useRef(false)
 
-  const [entitlements, setEntitlements] = useState<null | { canUseChatEdit: boolean; plan: string; isLoggedIn: boolean }>(null)
-  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
-  const [chatInput, setChatInput] = useState('')
-  const [chatBusy, setChatBusy] = useState(false)
-  const [chatError, setChatError] = useState<string | null>(null)
-  const [headings, setHeadings] = useState<string[]>([])
-  const [targetHeading, setTargetHeading] = useState<string>('')
 
   const markdown = useMemo(() => article?.finalMarkdown || '', [article])
   const score = useMemo(() => analyzeMarkdown(markdown || ''), [markdown])
@@ -274,20 +267,6 @@ function SeoArticleInner() {
     setCompletionOpen(true)
   }, [article, article?.status, completionPopupEnabled, id])
 
-  // Chat権限はタブを開いた時だけ取得（/api/auth/session 連打を避ける）
-  useEffect(() => {
-    if (tab !== 'chat') return
-    if (entitlements) return
-    ;(async () => {
-      try {
-        const res = await fetch('/api/seo/entitlements', { cache: 'no-store' })
-        const json = await res.json()
-        if (json?.success) setEntitlements(json)
-      } catch {
-        setEntitlements({ canUseChatEdit: false, plan: 'UNKNOWN', isLoggedIn: false })
-      }
-    })()
-  }, [tab, entitlements])
 
   useEffect(() => {
     if (searchParams.get('auto') === '1') setAutoRun(true)
