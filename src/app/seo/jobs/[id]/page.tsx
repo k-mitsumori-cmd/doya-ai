@@ -3,7 +3,26 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { ArrowRight, RefreshCcw, Play, Pause, ExternalLink } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  ArrowRight,
+  RefreshCcw,
+  Play,
+  Pause,
+  ExternalLink,
+  Sparkles,
+  FileText,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Zap,
+  Brain,
+  PenTool,
+  Layers,
+  Image as ImageIcon,
+  Rocket,
+  PartyPopper,
+} from 'lucide-react'
 import { CompletionModal } from '@seo/components/CompletionModal'
 import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSettings'
 
@@ -27,6 +46,16 @@ type SeoJob = {
   article: { id: string; title: string; outline?: string | null; targetChars: number }
   sections: SeoSection[]
 }
+
+// ステップ情報（アイコン・色・ラベル）
+const STEPS = [
+  { key: 'init', label: '準備中', icon: Zap, color: 'gray' },
+  { key: 'outline', label: '構成生成', icon: Brain, color: 'purple' },
+  { key: 'sections', label: '本文執筆', icon: PenTool, color: 'blue' },
+  { key: 'integrate', label: '記事統合', icon: Layers, color: 'indigo' },
+  { key: 'media', label: '図解生成', icon: ImageIcon, color: 'orange' },
+  { key: 'done', label: '完了', icon: Rocket, color: 'green' },
+]
 
 // ジョブステータスを日本語に変換
 const JOB_STATUS_LABELS: Record<string, string> = {
@@ -70,6 +99,16 @@ const SECTION_STATUS_LABELS: Record<string, string> = {
   error: 'エラー',
 }
 
+// ワクワク Tips
+const TIPS = [
+  '💡 構成は後から自由に編集できます',
+  '🎨 図解・サムネも自動生成されます',
+  '📊 SEOに最適化された見出し構成を生成中...',
+  '✨ 高品質なコンテンツを目指しています',
+  '🚀 1万字以上の記事も対応可能です',
+  '📝 各セクションは個別に再生成できます',
+]
+
 export default function SeoJobPage() {
   const params = useParams<{ id: string }>()
   const jobId = params.id
@@ -85,11 +124,19 @@ export default function SeoJobPage() {
   const [completionPopupEnabled, setCompletionPopupEnabled] = useState(true)
   const prevStatusRef = useRef<string | null>(null)
   const dontShowAgainRef = useRef(false)
+  const [tipIndex, setTipIndex] = useState(0)
 
   const reviewedCount = useMemo(
-    () => (job?.sections || []).filter((s) => s.status === 'reviewed').length,
+    () => (job?.sections || []).filter((s) => s.status === 'reviewed' || s.status === 'generated').length,
     [job]
   )
+
+  // 現在のステップインデックス
+  const currentStepIndex = useMemo(() => {
+    if (!job) return 0
+    const idx = STEPS.findIndex((s) => s.key === job.step.toLowerCase())
+    return idx >= 0 ? idx : 0
+  }, [job])
 
   // ポーリング中かどうかのref（再レンダリングを避けるため）
   const isPollingRef = useRef(false)
@@ -100,9 +147,18 @@ export default function SeoJobPage() {
     jobRef.current = job
   }, [job])
 
+  // Tips を回転表示
+  useEffect(() => {
+    if (job?.status === 'done') return
+    const t = setInterval(() => {
+      setTipIndex((i) => (i + 1) % TIPS.length)
+    }, 5000)
+    return () => clearInterval(t)
+  }, [job?.status])
+
   const load = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading === true
-    
+
     // ポーリング中の二重呼び出しを防止
     if (!showLoading && isPollingRef.current) return
     isPollingRef.current = true
@@ -110,7 +166,6 @@ export default function SeoJobPage() {
     if (showLoading) setLoading(true)
     setLoadError(null)
     try {
-      // ハング対策: Vercelの一時的な遅延で「読み込み中…」が永遠に続かないようtimeoutを入れる
       const controller = new AbortController()
       const timeoutMs = 12000
       const t = setTimeout(() => controller.abort(), timeoutMs)
@@ -123,18 +178,16 @@ export default function SeoJobPage() {
       if (!res.ok || json?.success === false) {
         throw new Error(json?.error || `API Error: ${res.status}`)
       }
-      
-      // 新しいデータがある場合のみ更新（不要な再レンダリングを防ぐ）
+
       const newJob = json.job || null
       if (newJob) {
         setJob(newJob)
       }
     } catch (e: any) {
-      // ポーリング時は一時的な失敗で画面が点滅しないよう、既存jobがある場合は維持する
       if (showLoading || !jobRef.current) setJob(null)
       const msg =
         e?.name === 'AbortError'
-          ? '読み込みがタイムアウトしました（回線/サーバの一時遅延の可能性）。再読み込みしてください。'
+          ? '読み込みがタイムアウトしました。再読み込みしてください。'
           : e?.message || '読み込みに失敗しました'
       setLoadError(msg)
     }
@@ -160,7 +213,7 @@ export default function SeoJobPage() {
       if (!res.ok || json?.success === false) {
         const msg = json?.error || `advance failed (${res.status})`
         setActionError(msg)
-        setAuto(false) // 自動実行中なら止める（無限リトライ防止）
+        setAuto(false)
         await load({ showLoading: false })
         return
       }
@@ -168,11 +221,10 @@ export default function SeoJobPage() {
     } finally {
       setBusy(false)
     }
-  }, [busy, jobId, load])
+  }, [busy, jobId, load, job?.status])
 
   useEffect(() => {
     load({ showLoading: true })
-    // ポーリング間隔を4秒に延長（ちらつき防止）
     const t = setInterval(() => {
       load({ showLoading: false })
     }, 4000)
@@ -204,7 +256,6 @@ export default function SeoJobPage() {
     setCompletionOpen(true)
   }, [job, job?.status, completionPopupEnabled, jobId])
 
-  // 作成直後 (?auto=1) は自動実行をONにする
   useEffect(() => {
     const a = searchParams.get('auto')
     if (a === '1') setAuto(true)
@@ -223,25 +274,36 @@ export default function SeoJobPage() {
 
   if (loading) {
     return (
-      <main className="max-w-6xl mx-auto px-4 py-10">
-        <div className="text-white/70">読み込み中...</div>
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-2xl shadow-blue-500/30">
+            <Loader2 className="w-10 h-10 text-white animate-spin" />
+          </div>
+          <p className="text-white/70 font-bold">読み込み中...</p>
+        </motion.div>
       </main>
     )
   }
 
   if (!job) {
     return (
-      <main className="max-w-6xl mx-auto px-4 py-10">
-        <div className="p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800">
-          <p className="font-bold">読み込みに失敗しました</p>
-          <pre className="text-xs whitespace-pre-wrap mt-2">{loadError || '不明なエラー'}</pre>
-          <p className="text-xs mt-2 text-red-800/90">
-            まずは環境変数（<code>GOOGLE_GENAI_API_KEY</code> / <code>DATABASE_URL</code>）とDB接続状態を確認してください。
-          </p>
-        </div>
-        <div className="mt-4">
+      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full bg-white rounded-3xl p-8 shadow-2xl"
+        >
+          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-100 flex items-center justify-center">
+            <XCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <h2 className="text-xl font-black text-gray-900 text-center">読み込みに失敗しました</h2>
+          <p className="text-sm text-gray-500 mt-3 text-center">{loadError || '不明なエラー'}</p>
           <button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800"
+            className="mt-6 w-full py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 transition-colors"
             onClick={() => {
               setLoading(true)
               load({ showLoading: true })
@@ -249,13 +311,18 @@ export default function SeoJobPage() {
           >
             再読み込み
           </button>
-        </div>
+        </motion.div>
       </main>
     )
   }
 
+  const isRunning = job.status === 'running'
+  const isDone = job.status === 'done'
+  const isPaused = job.status === 'paused'
+  const isError = job.status === 'error'
+
   return (
-    <main className="max-w-6xl mx-auto px-4 py-8">
+    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 py-8 px-4">
       <CompletionModal
         open={completionOpen}
         title={job.article.title}
@@ -263,7 +330,6 @@ export default function SeoJobPage() {
         primaryLabel="記事を見る"
         onPrimary={() => router.push(`/seo/articles/${job.articleId}`)}
         onClose={() => {
-          // モーダル内チェックに合わせて設定を反映
           if (dontShowAgainRef.current) {
             const next = patchSeoClientSettings({ completionPopupEnabled: false })
             setCompletionPopupEnabled(next.completionPopupEnabled)
@@ -275,251 +341,381 @@ export default function SeoJobPage() {
           dontShowAgainRef.current = v
         }}
       />
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">生成ジョブ</h1>
-          <p className="text-white/70 mt-1">{job.article.title}</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Link
-            href={`/seo/articles/${job.articleId}`}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50"
-          >
-            記事ページへ
-            <ExternalLink className="w-4 h-4" />
-          </Link>
-          <button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 disabled:opacity-60"
-            onClick={advanceOnce}
-            disabled={busy || job.status === 'done' || job.status === 'cancelled'}
-          >
-            <Play className="w-4 h-4" />
-            {job.status === 'paused' ? '再開して進める' : '次へ進める'}
-          </button>
-          <button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50"
-            onClick={() => setAuto((v) => !v)}
-          >
-            {auto ? (
-              <>
-                <Pause className="w-4 h-4" /> 自動停止
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4" /> 自動実行
-              </>
+
+      <div className="max-w-5xl mx-auto">
+        {/* ヘッダー */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-white/80 text-xs font-bold mb-4">
+            <Sparkles className="w-4 h-4" />
+            AI記事生成中
+          </div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight">
+            {job.article.title}
+          </h1>
+          <p className="text-white/60 mt-3 text-sm">
+            目標: {job.article.targetChars.toLocaleString()}文字
+          </p>
+        </motion.div>
+
+        {/* メインカード */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white/5 backdrop-blur-xl rounded-[32px] border border-white/10 overflow-hidden"
+        >
+          {/* ステータスバー */}
+          <div className={`h-2 ${isDone ? 'bg-gradient-to-r from-green-400 to-emerald-500' : isError ? 'bg-gradient-to-r from-red-400 to-rose-500' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500'}`}>
+            {isRunning && (
+              <motion.div
+                className="h-full bg-white/30"
+                initial={{ x: '-100%' }}
+                animate={{ x: '100%' }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                style={{ width: '50%' }}
+              />
             )}
-          </button>
-          <button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50"
-            onClick={async () => {
-              setActionError(null)
-              try {
-                if (job.status === 'paused') {
-                  await fetch(`/api/seo/jobs/${jobId}/resume`, { method: 'POST' })
-                } else {
-                  await fetch(`/api/seo/jobs/${jobId}/pause`, { method: 'POST' })
-                }
-                await load({ showLoading: false })
-              } catch (e: any) {
-                setActionError(e?.message || '失敗しました')
-              }
-            }}
-          >
-            {job.status === 'paused' ? (
-              <>
-                <Play className="w-4 h-4" /> サーバ再開
-              </>
-            ) : (
-              <>
-                <Pause className="w-4 h-4" /> サーバ一時停止
-              </>
+          </div>
+
+          {/* コンテンツ */}
+          <div className="p-6 sm:p-8 lg:p-10">
+            {/* ステップ進捗 */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
+                {STEPS.map((step, idx) => {
+                  const isActive = idx === currentStepIndex
+                  const isCompleted = idx < currentStepIndex
+                  const Icon = step.icon
+
+                  return (
+                    <motion.div
+                      key={step.key}
+                      className={`flex-1 min-w-[80px] flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
+                        isActive
+                          ? 'bg-white/10 scale-105'
+                          : isCompleted
+                          ? 'opacity-60'
+                          : 'opacity-30'
+                      }`}
+                      animate={isActive ? { scale: [1, 1.05, 1] } : {}}
+                      transition={{ repeat: isActive && isRunning ? Infinity : 0, duration: 2 }}
+                    >
+                      <div
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                          isCompleted
+                            ? 'bg-green-500/20'
+                            : isActive
+                            ? 'bg-blue-500/20'
+                            : 'bg-white/5'
+                        }`}
+                      >
+                        {isCompleted ? (
+                          <CheckCircle2 className="w-6 h-6 text-green-400" />
+                        ) : isActive && isRunning ? (
+                          <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+                        ) : (
+                          <Icon className={`w-6 h-6 ${isActive ? 'text-blue-400' : 'text-white/40'}`} />
+                        )}
+                      </div>
+                      <span className={`text-[10px] sm:text-xs font-bold ${isActive ? 'text-white' : 'text-white/50'}`}>
+                        {step.label}
+                      </span>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* 進捗バー */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-white/60 text-sm font-bold">進捗</span>
+                <span className="text-white font-black text-lg">{job.progress}%</span>
+              </div>
+              <div className="h-4 bg-white/10 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${job.progress}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </div>
+            </div>
+
+            {/* Tips（生成中のみ） */}
+            {isRunning && (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={tipIndex}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-center py-4 px-6 rounded-2xl bg-white/5 border border-white/10 mb-8"
+                >
+                  <p className="text-white/80 text-sm font-bold">{TIPS[tipIndex]}</p>
+                </motion.div>
+              </AnimatePresence>
             )}
-          </button>
-          <button
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-red-700 font-bold hover:bg-red-50"
-            onClick={async () => {
-              if (!confirm('ジョブをキャンセルしますか？（途中成果物は残ります）')) return
-              setActionError(null)
-              try {
-                await fetch(`/api/seo/jobs/${jobId}/cancel`, { method: 'POST' })
-                await load({ showLoading: false })
-                setAuto(false)
-              } catch (e: any) {
-                setActionError(e?.message || '失敗しました')
-              }
-            }}
-          >
-            キャンセル
-          </button>
-          <button
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
-            onClick={() => load({ showLoading: true })}
-          >
-            <RefreshCcw className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
 
-      <div className="mt-6 grid sm:grid-cols-3 gap-3">
-        <div className="p-4 rounded-2xl border border-gray-200 bg-white">
-          <p className="text-xs text-gray-500 font-bold">ステータス</p>
-          <p className="font-bold text-gray-900">{JOB_STATUS_LABELS[job.status] || job.status}</p>
-        </div>
-        <div className="p-4 rounded-2xl border border-gray-200 bg-white">
-          <p className="text-xs text-gray-500 font-bold">現在のステップ / 進捗</p>
-          <p className="font-bold text-gray-900">
-            {STEP_LABELS[job.step] || job.step} / {job.progress}%
-          </p>
-        </div>
-        <div className="p-4 rounded-2xl border border-gray-200 bg-white">
-          <p className="text-xs text-gray-500 font-bold">セクション</p>
-          <p className="font-bold text-gray-900">
-            {reviewedCount} / {job.sections.length} 完了
-          </p>
-        </div>
-      </div>
+            {/* アクションボタン */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+              <button
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+                  isDone
+                    ? 'bg-green-500 text-white hover:bg-green-600'
+                    : 'bg-white text-gray-900 hover:bg-gray-100'
+                } disabled:opacity-50`}
+                onClick={isDone ? () => router.push(`/seo/articles/${job.articleId}`) : advanceOnce}
+                disabled={busy || (isDone ? false : job.status === 'cancelled')}
+              >
+                {isDone ? (
+                  <>
+                    <PartyPopper className="w-5 h-5" />
+                    記事を見る
+                  </>
+                ) : busy ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    処理中...
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-5 h-5" />
+                    {isPaused ? '再開する' : '次へ進める'}
+                  </>
+                )}
+              </button>
 
-      {job.error ? (
-        <div className="mt-4 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800">
-          <p className="font-bold">エラー</p>
-          <pre className="text-xs whitespace-pre-wrap mt-2">{job.error}</pre>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 disabled:opacity-60"
-              disabled={busy}
-              onClick={async () => {
-                setBusy(true)
-                try {
-                  setActionError(null)
-                  const res = await fetch(`/api/seo/jobs/${jobId}/reset`, { method: 'POST' })
-                  const json = await res.json().catch(() => ({}))
-                  if (!res.ok || json?.success === false) {
-                    throw new Error(json?.error || `reset failed (${res.status})`)
-                  }
-                  setAuto(true)
-                  await load({ showLoading: true })
-                  // すぐ1ステップ進める（ユーザーが迷わないように）
-                  await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST' }).catch(() => {})
-                  await load({ showLoading: false })
-                } catch (e: any) {
-                  setActionError(e?.message || 'リセットに失敗しました')
-                } finally {
-                  setBusy(false)
-                }
-              }}
-            >
-              エラーをリセットして再開
-            </button>
-            <button
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-              disabled={busy}
-              onClick={() => {
-                setAuto(true)
-                advanceOnce()
-              }}
-            >
-              自動実行を再開
-            </button>
-          </div>
-        </div>
-      ) : null}
-      {actionError ? (
-        <div className="mt-4 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-800">
-          <p className="font-bold">実行エラー（advance）</p>
-          <pre className="text-xs whitespace-pre-wrap mt-2">{actionError}</pre>
-          <p className="text-xs mt-2 text-red-800/90">
-            まずは環境変数（<code>GOOGLE_GENAI_API_KEY</code> / <code>DATABASE_URL</code>）や参考URLの重さを確認してください。
-          </p>
-        </div>
-      ) : null}
+              {!isDone && (
+                <>
+                  <button
+                    className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl font-bold transition-all ${
+                      auto
+                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                        : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
+                    }`}
+                    onClick={() => setAuto((v) => !v)}
+                  >
+                    {auto ? (
+                      <>
+                        <Pause className="w-4 h-4" /> 自動停止
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4" /> 自動実行
+                      </>
+                    )}
+                  </button>
 
-      <div className="mt-8 grid lg:grid-cols-2 gap-6">
-        <div>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">アウトライン</h2>
-            <Link
-              href={`/seo/articles/${job.articleId}`}
-              className="text-sm text-blue-600 hover:text-blue-700"
-            >
-              記事ページへ <ArrowRight className="inline w-4 h-4" />
-            </Link>
-          </div>
-          <div className="mt-3 p-4 rounded-2xl border border-gray-200 bg-gray-50">
-            <pre className="text-xs whitespace-pre-wrap">{job.article.outline || '（未生成）'}</pre>
-          </div>
-        </div>
+                  <button
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 font-bold hover:bg-white/20 transition-all"
+                    onClick={async () => {
+                      setActionError(null)
+                      try {
+                        if (isPaused) {
+                          await fetch(`/api/seo/jobs/${jobId}/resume`, { method: 'POST' })
+                        } else {
+                          await fetch(`/api/seo/jobs/${jobId}/pause`, { method: 'POST' })
+                        }
+                        await load({ showLoading: false })
+                      } catch (e: any) {
+                        setActionError(e?.message || '失敗しました')
+                      }
+                    }}
+                  >
+                    {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                    {isPaused ? 'サーバ再開' : 'サーバ停止'}
+                  </button>
 
-        <div>
-          <h2 className="text-lg font-bold text-gray-900">セクション進捗</h2>
-          <div className="mt-3 space-y-3">
-            {job.sections.map((s) => (
-              <div key={s.id} className="p-4 rounded-2xl border border-gray-200">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-bold text-gray-900">
-                    {s.index + 1}. {s.headingPath || '（見出し未設定）'}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-                      {SECTION_STATUS_LABELS[s.status] || s.status}
-                    </span>
+                  <button
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 font-bold hover:bg-red-500/20 transition-all"
+                    onClick={async () => {
+                      if (!confirm('ジョブをキャンセルしますか？（途中成果物は残ります）')) return
+                      setActionError(null)
+                      try {
+                        await fetch(`/api/seo/jobs/${jobId}/cancel`, { method: 'POST' })
+                        await load({ showLoading: false })
+                        setAuto(false)
+                      } catch (e: any) {
+                        setActionError(e?.message || '失敗しました')
+                      }
+                    }}
+                  >
+                    キャンセル
+                  </button>
+                </>
+              )}
+
+              <button
+                className="p-3 rounded-xl bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all"
+                onClick={() => load({ showLoading: true })}
+              >
+                <RefreshCcw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* エラー表示 */}
+            {(job.error || actionError) && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 mb-8"
+              >
+                <div className="flex items-start gap-3">
+                  <XCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-bold text-red-400">エラーが発生しました</p>
+                    <pre className="text-xs text-red-300/80 whitespace-pre-wrap mt-2">
+                      {job.error || actionError}
+                    </pre>
                     <button
-                      className="text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                      className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-gray-900 font-bold hover:bg-gray-100 disabled:opacity-60"
                       disabled={busy}
                       onClick={async () => {
                         setBusy(true)
                         try {
-                          await fetch(`/api/seo/sections/${s.id}/regenerate`, { method: 'POST' })
-                          await load()
+                          setActionError(null)
+                          const res = await fetch(`/api/seo/jobs/${jobId}/reset`, { method: 'POST' })
+                          const json = await res.json().catch(() => ({}))
+                          if (!res.ok || json?.success === false) {
+                            throw new Error(json?.error || `reset failed (${res.status})`)
+                          }
+                          setAuto(true)
+                          await load({ showLoading: true })
+                          await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST' }).catch(() => {})
+                          await load({ showLoading: false })
+                        } catch (e: any) {
+                          setActionError(e?.message || 'リセットに失敗しました')
                         } finally {
                           setBusy(false)
                         }
                       }}
                     >
-                      このセクション再生成
+                      <RefreshCcw className="w-4 h-4" />
+                      リセットして再開
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">目安: {s.plannedChars}字</p>
-                {s.consistency ? (
-                  <details className="mt-2">
-                    <summary className="text-xs font-bold text-gray-700 cursor-pointer">整合性メモ</summary>
-                    <pre className="text-xs whitespace-pre-wrap mt-2 text-gray-700">{s.consistency}</pre>
-                  </details>
-                ) : null}
-                {s.content ? (
-                  <details className="mt-2">
-                    <summary className="text-xs font-bold text-gray-700 cursor-pointer">生成内容（抜粋）</summary>
-                    <pre className="text-xs whitespace-pre-wrap mt-2 text-gray-800">
-                      {s.content.slice(0, 1200)}
-                      {s.content.length > 1200 ? '\n...（省略）' : ''}
-                    </pre>
-                  </details>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+              </motion.div>
+            )}
 
-      {job.status === 'done' ? (
-        <div className="mt-8 p-5 rounded-2xl border border-green-200 bg-green-50">
-          <p className="font-bold text-green-900">完了！</p>
-          <p className="text-sm text-green-900 mt-1">
-            記事ページでプレビュー・監査・画像生成・リンクチェック・エクスポートができます。
-          </p>
-          <div className="mt-3">
-            <button
-              className="px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800"
-              onClick={() => router.push(`/seo/articles/${job.articleId}`)}
-            >
-              記事ページへ
-            </button>
+            {/* 完了メッセージ */}
+            {isDone && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-8 rounded-3xl bg-gradient-to-br from-green-500/20 to-emerald-500/10 border border-green-500/20 text-center"
+              >
+                <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-green-500/20 flex items-center justify-center">
+                  <PartyPopper className="w-10 h-10 text-green-400" />
+                </div>
+                <h2 className="text-2xl font-black text-white">🎉 記事が完成しました！</h2>
+                <p className="text-white/70 mt-2">
+                  プレビュー・編集・エクスポートが可能です
+                </p>
+                <button
+                  className="mt-6 px-8 py-4 rounded-xl bg-white text-gray-900 font-black hover:bg-gray-100 transition-colors"
+                  onClick={() => router.push(`/seo/articles/${job.articleId}`)}
+                >
+                  記事ページを開く <ArrowRight className="inline w-5 h-5 ml-2" />
+                </button>
+              </motion.div>
+            )}
           </div>
-        </div>
-      ) : null}
+        </motion.div>
+
+        {/* セクション進捗（生成中・完了時） */}
+        {!isDone && job.sections.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-8"
+          >
+            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-400" />
+              セクション進捗 ({reviewedCount}/{job.sections.length})
+            </h2>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {job.sections.map((s, idx) => {
+                const isGenerating = s.status === 'generating'
+                const isComplete = s.status === 'reviewed' || s.status === 'generated'
+                const isErr = s.status === 'error'
+
+                return (
+                  <motion.div
+                    key={s.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    className={`p-4 rounded-2xl border transition-all ${
+                      isGenerating
+                        ? 'bg-blue-500/10 border-blue-500/30'
+                        : isComplete
+                        ? 'bg-green-500/10 border-green-500/30'
+                        : isErr
+                        ? 'bg-red-500/10 border-red-500/30'
+                        : 'bg-white/5 border-white/10'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          isGenerating
+                            ? 'bg-blue-500/20'
+                            : isComplete
+                            ? 'bg-green-500/20'
+                            : isErr
+                            ? 'bg-red-500/20'
+                            : 'bg-white/10'
+                        }`}
+                      >
+                        {isGenerating ? (
+                          <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                        ) : isComplete ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-400" />
+                        ) : isErr ? (
+                          <XCircle className="w-4 h-4 text-red-400" />
+                        ) : (
+                          <span className="text-xs font-bold text-white/40">{s.index + 1}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-white truncate">
+                          {s.headingPath || `セクション ${s.index + 1}`}
+                        </p>
+                        <p className="text-[10px] text-white/50 mt-1">
+                          {SECTION_STATUS_LABELS[s.status] || s.status} · {s.plannedChars}字
+                        </p>
+                      </div>
+                    </div>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* フッターリンク */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mt-8 text-center"
+        >
+          <Link
+            href={`/seo/articles/${job.articleId}`}
+            className="inline-flex items-center gap-2 text-white/50 hover:text-white/80 text-sm font-bold transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+            記事ページを開く
+          </Link>
+        </motion.div>
+      </div>
     </main>
   )
 }
-
-
