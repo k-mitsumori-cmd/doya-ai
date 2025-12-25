@@ -2,42 +2,64 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight,
   FileText,
-  RefreshCcw,
   Search,
   Plus,
-  Zap,
   Clock,
   CheckCircle2,
   AlertCircle,
-  TrendingUp,
-  LayoutGrid,
-  List,
+  Edit3,
   Play,
-  ImageIcon,
+  Download,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@seo/components/ui/Button'
-import { Card, CardBody, CardHeader, CardTitle, CardDesc } from '@seo/components/ui/Card'
 import { Badge } from '@seo/components/ui/Badge'
 import { ProgressBar } from '@seo/components/ui/ProgressBar'
-import { FeatureGuide } from '@/components/FeatureGuide'
 
 type SeoArticleRow = {
   id: string
   title: string
+  keywords?: string[]
   status: string
   targetChars: number
   createdAt: string
+  updatedAt: string
   jobs?: { id: string; status: string; progress: number; step: string }[]
 }
 
+// ステップ定義（進行バー用）
+const WORKFLOW_STEPS = [
+  { id: 'keyword', label: 'KW', icon: Sparkles },
+  { id: 'outline', label: '構成', icon: FileText },
+  { id: 'generate', label: '本文', icon: Play },
+  { id: 'edit', label: '編集', icon: Edit3 },
+  { id: 'check', label: 'チェック', icon: CheckCircle2 },
+  { id: 'export', label: '出力', icon: Download },
+]
+
+// ステータスからステップを判定
+function getStepIndex(status: string): number {
+  switch (status) {
+    case 'DRAFT': return 1 // 構成済み
+    case 'RUNNING': return 2 // 本文生成中
+    case 'EDITING': return 3 // 編集中
+    case 'DONE': return 4 // チェック可能
+    case 'EXPORTED': return 5 // 出力済み
+    default: return 0
+  }
+}
+
 const STATUS_CONFIG = {
-  DRAFT: { label: '下書き', icon: FileText, color: 'text-blue-600', bg: 'bg-blue-100' },
-  RUNNING: { label: '生成中', icon: Clock, color: 'text-orange-600', bg: 'bg-orange-100' },
-  DONE: { label: '完成', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-  ERROR: { label: 'エラー', icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-100' },
+  DRAFT: { label: '構成済み', color: 'text-blue-600', bg: 'bg-blue-100', tone: 'blue' as const },
+  RUNNING: { label: '生成中', color: 'text-orange-600', bg: 'bg-orange-100', tone: 'amber' as const },
+  EDITING: { label: '編集中', color: 'text-purple-600', bg: 'bg-purple-100', tone: 'purple' as const },
+  DONE: { label: '完成', color: 'text-emerald-600', bg: 'bg-emerald-100', tone: 'green' as const },
+  EXPORTED: { label: '出力済', color: 'text-teal-600', bg: 'bg-teal-100', tone: 'green' as const },
+  ERROR: { label: 'エラー', color: 'text-red-600', bg: 'bg-red-100', tone: 'red' as const },
 } as const
 
 export default function SeoDashboardPage() {
@@ -45,7 +67,7 @@ export default function SeoDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'DRAFT' | 'RUNNING' | 'DONE' | 'ERROR'>('ALL')
+  const [statusFilter, setStatusFilter] = useState<string>('ALL')
 
   async function load() {
     setLoading(true)
@@ -66,171 +88,220 @@ export default function SeoDashboardPage() {
 
   useEffect(() => {
     load()
+    // 自動更新（生成中の記事がある場合）
+    const t = setInterval(load, 5000)
+    return () => clearInterval(t)
   }, [])
 
   const counts = useMemo(() => {
     const total = articles.length
     const running = articles.filter((a) => a.status === 'RUNNING').length
-    const done = articles.filter((a) => a.status === 'DONE').length
+    const done = articles.filter((a) => a.status === 'DONE' || a.status === 'EXPORTED').length
     const draft = articles.filter((a) => a.status === 'DRAFT').length
-    const errorCount = articles.filter((a) => a.status === 'ERROR').length
-    return { total, running, done, draft, errorCount }
+    return { total, running, done, draft }
   }, [articles])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return articles
       .filter((a) => (statusFilter === 'ALL' ? true : a.status === statusFilter))
-      .filter((a) => (!q ? true : a.title.toLowerCase().includes(q)))
+      .filter((a) => (!q ? true : a.title.toLowerCase().includes(q) || (a.keywords || []).some(k => k.toLowerCase().includes(q))))
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
   }, [articles, query, statusFilter])
 
+  // 記事の続きへのリンクを決定
+  function getResumeLink(a: SeoArticleRow): string {
+    const step = getStepIndex(a.status)
+    if (a.status === 'RUNNING') return `/seo/jobs/${a.jobs?.[0]?.id || a.id}?auto=1`
+    if (step <= 1) return `/seo/articles/${a.id}/outline`
+    if (step === 2) return `/seo/articles/${a.id}`
+    if (step === 3) return `/seo/articles/${a.id}/edit`
+    if (step === 4) return `/seo/articles/${a.id}/check`
+    return `/seo/articles/${a.id}/export`
+  }
+
   return (
-    <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-0">
-        {/* Header Section */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8 sm:mb-10">
+    <main className="max-w-6xl mx-auto py-6 sm:py-8 px-4">
+      {/* Header with Progress Bar */}
+      <div className="mb-8 sm:mb-10">
+        {/* 進行バー（常時表示） */}
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6 mb-6">
+          <div className="flex items-center justify-between gap-2 sm:gap-4">
+            {WORKFLOW_STEPS.map((step, i) => (
+              <div key={step.id} className="flex-1 flex flex-col items-center relative">
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all ${
+                  i === 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30' : 'bg-gray-100 text-gray-400'
+                }`}>
+                  <step.icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
+                <p className={`text-[10px] sm:text-xs font-black mt-2 ${i === 0 ? 'text-blue-600' : 'text-gray-400'}`}>
+                  {step.label}
+                </p>
+                {i < WORKFLOW_STEPS.length - 1 && (
+                  <div className="absolute top-5 sm:top-6 left-[60%] w-[80%] h-0.5 bg-gray-100" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* タイトル & CTA */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">記事作成ダッシュボード</h1>
-            <p className="text-sm sm:text-base text-gray-500 mt-1">SEO・LLMOに最適化された高品質記事の管理</p>
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">記事一覧</h1>
+            <p className="text-sm text-gray-400 font-bold mt-1">
+              {counts.total}件の記事 · {counts.running}件が生成中 · {counts.done}件が完成
+            </p>
           </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="flex-1 sm:flex-none">
-              <FeatureGuide 
-                featureId="seo-dashboard-overview"
-                title="記事作成の流れ"
-                description="記事の企画から執筆、そして画像生成までをAIがワンストップでサポートします。"
-                steps={[
-                  "「新規作成」でタイトルとキーワードを入力",
-                  "生成が始まると、アウトライン・本文・図解が順次作成されます",
-                  "完成した記事はプレビューで確認し、必要なら調整して公開へ"
-                ]}
-                imageMode="off"
-              />
+          <Link href="/seo/create">
+            <button className="w-full sm:w-auto h-12 sm:h-14 px-6 sm:px-8 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm sm:text-base shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2">
+              <Plus className="w-5 h-5" />
+              新しい記事を作る
+            </button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+          {[
+            { id: 'ALL', label: 'すべて' },
+            { id: 'RUNNING', label: '生成中' },
+            { id: 'DONE', label: '完成' },
+            { id: 'DRAFT', label: '構成済み' },
+          ].map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setStatusFilter(f.id)}
+              className={`px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap ${
+                statusFilter === f.id
+                  ? 'bg-gray-900 text-white shadow-lg'
+                  : 'bg-white text-gray-400 border border-gray-100 hover:border-gray-300'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+          <input
+            className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-100 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all"
+            placeholder="タイトル・KWで検索..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Article Cards */}
+      <div className="space-y-3">
+        {loading ? (
+          <div className="py-20 text-center">
+            <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-gray-400 font-black text-xs uppercase tracking-widest">読み込み中...</p>
+          </div>
+        ) : error ? (
+          <div className="py-16 bg-white rounded-3xl border border-red-100 text-center">
+            <AlertCircle className="w-12 h-12 text-red-300 mx-auto mb-3" />
+            <p className="text-red-600 font-bold text-sm">{error}</p>
+            <button onClick={load} className="mt-4 px-6 py-2 rounded-xl bg-red-50 text-red-600 text-xs font-black hover:bg-red-100 transition-colors">
+              再読み込み
+            </button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100 text-center"
+          >
+            <div className="w-20 h-20 rounded-3xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-10 h-10 text-gray-200" />
             </div>
-            <Link href="/seo/new" className="flex-1 sm:flex-none">
-              <Button variant="primary" className="w-full bg-[#2563EB] text-white px-6 sm:px-8 h-11 sm:h-12 rounded-xl sm:rounded-2xl shadow-xl shadow-blue-500/20 font-black text-sm sm:text-base">
-                <Plus className="w-5 h-5 mr-2" />
-                新規作成
-              </Button>
+            <h3 className="text-lg font-black text-gray-900 mb-2">まだ記事はありません</h3>
+            <p className="text-sm text-gray-400 font-bold mb-6">最初の1本を作りましょう</p>
+            <Link href="/seo/create">
+              <button className="h-12 px-8 rounded-xl bg-blue-600 text-white text-sm font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                新しい記事を作る
+              </button>
             </Link>
-          </div>
-        </div>
+          </motion.div>
+        ) : (
+          <AnimatePresence mode="popLayout">
+            {filtered.map((a, idx) => {
+              const config = STATUS_CONFIG[a.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.DRAFT
+              const stepIndex = getStepIndex(a.status)
+              const job = a.jobs?.[0]
+              const mainKw = (a.keywords || [])[0] || ''
 
-        {/* Stats Cards - Improved responsiveness */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-10">
-          <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-4 sm:gap-6">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
-              <FileText className="w-6 h-6 sm:w-8 sm:h-8" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total</p>
-              <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.total.toLocaleString()}</p>
-            </div>
-          </div>
-          <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-4 sm:gap-6">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl bg-orange-50 flex items-center justify-center text-orange-600 shadow-inner">
-              <Clock className="w-6 h-6 sm:w-8 sm:h-8 animate-pulse" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">In Progress</p>
-              <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.running.toLocaleString()}</p>
-            </div>
-          </div>
-          <div className="bg-white p-6 sm:p-8 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm flex items-center gap-4 sm:gap-6 sm:col-span-2 lg:col-span-1">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-3xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-inner">
-              <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Completed</p>
-              <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.done.toLocaleString()}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters and List - Improved responsiveness */}
-        <div className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 custom-scrollbar scrollbar-hide">
-              {(['ALL', 'RUNNING', 'DONE', 'DRAFT'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setStatusFilter(f)}
-                  className={`px-4 sm:px-5 py-2 rounded-full text-[10px] sm:text-xs font-black transition-all whitespace-nowrap ${
-                    statusFilter === f 
-                      ? 'bg-gray-900 text-white shadow-lg' 
-                      : 'bg-white text-gray-400 border border-gray-100 hover:border-gray-300'
-                  }`}
+              return (
+                <motion.div
+                  key={a.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ delay: idx * 0.03 }}
                 >
-                  {f === 'ALL' ? 'すべて' : STATUS_CONFIG[f as keyof typeof STATUS_CONFIG].label}
-                </button>
-              ))}
-            </div>
-            <div className="relative w-full md:max-w-sm">
-              <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
-              <input
-                className="w-full pl-11 pr-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl border border-gray-100 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all"
-                placeholder="タイトルで検索..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-          </div>
+                  <Link href={getResumeLink(a)}>
+                    <div className="group bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-200 hover:translate-y-[-2px] transition-all">
+                      <div className="flex items-start sm:items-center gap-4">
+                        {/* ステップインジケーター */}
+                        <div className="hidden sm:flex flex-col items-center gap-1">
+                          {WORKFLOW_STEPS.slice(0, 5).map((s, i) => (
+                            <div
+                              key={s.id}
+                              className={`w-2 h-2 rounded-full transition-all ${
+                                i < stepIndex ? 'bg-blue-600' : i === stepIndex ? 'bg-blue-400 animate-pulse' : 'bg-gray-200'
+                              }`}
+                            />
+                          ))}
+                        </div>
 
-          <div className="grid gap-4">
-            {loading ? (
-              <div className="py-20 text-center">
-                <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-gray-400 font-black text-xs uppercase tracking-widest">Loading Projects...</p>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="py-24 bg-white rounded-[32px] sm:rounded-[40px] border border-gray-100 border-dashed text-center px-6">
-                <FileText className="w-12 h-12 sm:w-16 sm:h-16 text-gray-100 mx-auto mb-4" />
-                <p className="text-gray-400 font-black text-sm sm:text-base">記事が見つかりませんでした</p>
-                <Link href="/seo/new" className="mt-6 inline-block">
-                  <Button variant="ghost" className="text-blue-600 font-black">新しく作成する</Button>
-                </Link>
-              </div>
-            ) : (
-              filtered.map((a) => {
-                const j = a.jobs?.[0]
-                const config = STATUS_CONFIG[a.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.DRAFT
-                return (
-                  <Link key={a.id} href={`/seo/articles/${a.id}${a.status === 'RUNNING' ? '?auto=1' : ''}`}>
-                    <div className="group bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm hover:shadow-xl hover:translate-y-[-2px] transition-all flex items-center gap-4 sm:gap-6">
-                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl ${config.bg} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                        <config.icon className={`w-6 h-6 sm:w-7 sm:h-7 ${config.color}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-black text-gray-900 text-sm sm:text-lg truncate group-hover:text-blue-600 transition-colors">{a.title}</h3>
-                        <div className="flex items-center gap-2 sm:gap-4 mt-0.5 sm:mt-1">
-                          <span className="text-[10px] sm:text-xs font-bold text-gray-400">{a.targetChars.toLocaleString()}字</span>
-                          <span className="text-xs font-bold text-gray-200">|</span>
-                          <span className="text-[10px] sm:text-xs font-bold text-gray-400">{new Date(a.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      {a.status === 'RUNNING' && j && (
-                        <div className="w-32 lg:w-48 hidden sm:block">
-                          <div className="flex justify-between text-[10px] font-black text-orange-600 mb-1 uppercase tracking-wider">
-                            <span className="truncate mr-2">{j.step}</span>
-                            <span>{j.progress}%</span>
+                        {/* メインコンテンツ */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge tone={config.tone}>{config.label}</Badge>
+                            {mainKw && (
+                              <span className="text-[10px] font-black text-gray-400 bg-gray-50 px-2 py-0.5 rounded truncate max-w-[120px]">
+                                {mainKw}
+                              </span>
+                            )}
                           </div>
-                          <ProgressBar value={j.progress} />
+                          <h3 className="font-black text-gray-900 text-sm sm:text-base truncate group-hover:text-blue-600 transition-colors">
+                            {a.title}
+                          </h3>
+                          <p className="text-[10px] text-gray-400 font-bold mt-1">
+                            最終更新: {new Date(a.updatedAt || a.createdAt).toLocaleDateString('ja-JP')}
+                          </p>
                         </div>
-                      )}
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="hidden xs:block">
-                          <Badge tone={a.status === 'DONE' ? 'green' : a.status === 'ERROR' ? 'red' : 'amber'}>
-                            {config.label}
-                          </Badge>
+
+                        {/* 進捗 or CTA */}
+                        <div className="flex items-center gap-3">
+                          {a.status === 'RUNNING' && job && (
+                            <div className="hidden sm:block w-28">
+                              <div className="flex justify-between text-[10px] font-black text-orange-600 mb-1">
+                                <span className="truncate">{job.step}</span>
+                                <span>{job.progress}%</span>
+                              </div>
+                              <ProgressBar value={job.progress} />
+                            </div>
+                          )}
+                          <div className="h-10 px-4 rounded-xl bg-gray-50 group-hover:bg-blue-600 text-gray-400 group-hover:text-white text-xs font-black transition-all flex items-center gap-2">
+                            続きから再開
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </div>
                         </div>
-                        <ArrowRight className="w-5 h-5 text-gray-200 group-hover:text-blue-500 group-hover:translate-x-1 transition-all" />
                       </div>
                     </div>
                   </Link>
-                )
-              })
-            )}
-          </div>
-        </div>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        )}
+      </div>
     </main>
   )
 }
