@@ -72,9 +72,9 @@ export const SERVICE_SEO = {
   
   // ドヤバナーAI
   banner: {
-    title: 'ドヤバナーAI | AIでプロ品質バナーを自動生成',
-    description: 'AIがあなたのビジネスに最適なバナーをA/B/Cの3案で提案。デザイン知識不要で効果的な広告バナーを素早く作成。',
-    keywords: ['AIバナー生成', 'バナー作成', '広告バナー', 'ABテスト', 'デザイン自動化', 'Facebook広告', 'Instagram広告'],
+    title: 'ドヤバナーAI | URLを入力するだけでAIがバナーを自動生成',
+    description: 'URLを入力するだけでサイトを解析し、AIが最適なバナーを自動生成。デザイン知識不要、数分でプロ品質の広告バナーを作成できます。A/B/Cの3案を同時生成。',
+    keywords: ['AIバナー生成', 'バナー自動生成', 'URL入力', '広告バナー', 'ABテスト', 'デザイン自動化', 'Facebook広告', 'Instagram広告', 'SNS広告'],
     ogImage: '/og/banner.png',
     sections: {
       dashboard: {
