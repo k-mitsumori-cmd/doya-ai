@@ -662,6 +662,7 @@ export default function SeoNewArticlePage() {
                   "「AI推定」でターゲット設定を自動化できます。",
                   "「記事を生成」をクリックして、完成を待つだけです。"
                 ]}
+                imageMode="off"
               />
             </div>
           </div>
