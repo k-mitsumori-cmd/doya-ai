@@ -49,8 +49,22 @@ export default function SeoJobPage() {
     [job]
   )
 
+  // ポーリング中かどうかのref（再レンダリングを避けるため）
+  const isPollingRef = useRef(false)
+  const jobRef = useRef<SeoJob | null>(null)
+
+  // jobが更新されたらrefも更新
+  useEffect(() => {
+    jobRef.current = job
+  }, [job])
+
   const load = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading === true
+    
+    // ポーリング中の二重呼び出しを防止
+    if (!showLoading && isPollingRef.current) return
+    isPollingRef.current = true
+
     if (showLoading) setLoading(true)
     setLoadError(null)
     try {
@@ -67,10 +81,15 @@ export default function SeoJobPage() {
       if (!res.ok || json?.success === false) {
         throw new Error(json?.error || `API Error: ${res.status}`)
       }
-      setJob(json.job || null)
+      
+      // 新しいデータがある場合のみ更新（不要な再レンダリングを防ぐ）
+      const newJob = json.job || null
+      if (newJob) {
+        setJob(newJob)
+      }
     } catch (e: any) {
       // ポーリング時は一時的な失敗で画面が点滅しないよう、既存jobがある場合は維持する
-      if (showLoading || !job) setJob(null)
+      if (showLoading || !jobRef.current) setJob(null)
       const msg =
         e?.name === 'AbortError'
           ? '読み込みがタイムアウトしました（回線/サーバの一時遅延の可能性）。再読み込みしてください。'
@@ -78,7 +97,8 @@ export default function SeoJobPage() {
       setLoadError(msg)
     }
     if (showLoading) setLoading(false)
-  }, [jobId, job])
+    isPollingRef.current = false
+  }, [jobId])
 
   const advanceOnce = useCallback(async () => {
     if (busy) return
@@ -110,11 +130,13 @@ export default function SeoJobPage() {
 
   useEffect(() => {
     load({ showLoading: true })
+    // ポーリング間隔を4秒に延長（ちらつき防止）
     const t = setInterval(() => {
       load({ showLoading: false })
-    }, 2500)
+    }, 4000)
     return () => clearInterval(t)
-  }, [load])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId])
 
   useEffect(() => {
     setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
