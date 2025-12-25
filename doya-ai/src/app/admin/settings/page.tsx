@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Save, Key, Bell, Shield, Database, RefreshCw } from 'lucide-react'
+import { Save, Key, Bell, Shield, Database, RefreshCw, BarChart3, ExternalLink, Copy, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function AdminSettingsPage() {
@@ -31,6 +31,22 @@ export default function AdminSettingsPage() {
   })
 
   const [isSaving, setIsSaving] = useState(false)
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+
+  // トラッキング設定
+  const [trackingSettings, setTrackingSettings] = useState({
+    gtmId: process.env.NEXT_PUBLIC_GTM_ID || '',
+    gaId: '',
+    fbPixelId: '',
+    hubspotId: '',
+  })
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedField(field)
+    toast.success('コピーしました')
+    setTimeout(() => setCopiedField(null), 2000)
+  }
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -190,6 +206,191 @@ export default function AdminSettingsPage() {
                 className="input-field"
               />
               <p className="text-xs text-gray-400 mt-1">※ Stripeの価格設定と同期してください</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* トラッキング・アナリティクス設定 */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="bg-white rounded-2xl shadow-sm p-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">トラッキング・アナリティクス</h2>
+              <p className="text-sm text-gray-500">Google Tag Manager、HubSpot等のタグ設定</p>
+            </div>
+          </div>
+          
+          {/* GTM設定 */}
+          <div className="space-y-6">
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-xs">GTM</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">Google Tag Manager</h3>
+                    <p className="text-xs text-gray-500">すべてのタグを一元管理</p>
+                  </div>
+                </div>
+                <a 
+                  href="https://tagmanager.google.com/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
+                >
+                  管理画面 <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">GTM コンテナID</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={trackingSettings.gtmId}
+                    onChange={(e) => setTrackingSettings({ ...trackingSettings, gtmId: e.target.value })}
+                    className="input-field flex-1"
+                    placeholder="GTM-XXXXXXX"
+                  />
+                  <button 
+                    onClick={() => copyToClipboard(trackingSettings.gtmId, 'gtm')}
+                    className="btn-secondary px-3"
+                  >
+                    {copiedField === 'gtm' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  ※ Vercelの環境変数 <code className="bg-gray-100 px-1 py-0.5 rounded">NEXT_PUBLIC_GTM_ID</code> に設定してください
+                </p>
+              </div>
+            </div>
+
+            {/* GTM経由で設定するタグの説明 */}
+            <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <h4 className="font-semibold text-blue-900 mb-3">💡 GTMで設定できるタグ</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-orange-500 rounded flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">GA</span>
+                  </div>
+                  <span className="text-sm text-gray-700">Google Analytics 4</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-orange-600 rounded flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">HS</span>
+                  </div>
+                  <span className="text-sm text-gray-700">HubSpot Tracking</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">FB</span>
+                  </div>
+                  <span className="text-sm text-gray-700">Meta Pixel</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-sky-500 rounded flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">TW</span>
+                  </div>
+                  <span className="text-sm text-gray-700">Twitter Pixel</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-green-600 rounded flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">SC</span>
+                  </div>
+                  <span className="text-sm text-gray-700">Google Search Console</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-yellow-500 rounded flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">AD</span>
+                  </div>
+                  <span className="text-sm text-gray-700">Google Ads</span>
+                </div>
+              </div>
+              <p className="text-xs text-blue-700 mt-3">
+                上記のタグはすべてGTM管理画面から追加・設定できます。
+                <a 
+                  href="https://support.google.com/tagmanager/answer/6102821" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="underline ml-1"
+                >
+                  詳しくはこちら
+                </a>
+              </p>
+            </div>
+
+            {/* GTM設定手順 */}
+            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+              <h4 className="font-semibold text-gray-900 mb-3">📋 設定手順</h4>
+              <ol className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-5 h-5 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                  <span>
+                    <a href="https://tagmanager.google.com/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
+                      Google Tag Manager
+                    </a>
+                    でアカウントとコンテナを作成
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-5 h-5 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                  <span>コンテナID（GTM-XXXXXXX）をコピー</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-5 h-5 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                  <span>
+                    Vercelダッシュボード &gt; Settings &gt; Environment Variables で<br />
+                    <code className="bg-gray-200 px-1 py-0.5 rounded text-xs">NEXT_PUBLIC_GTM_ID</code> を追加
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-5 h-5 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">4</span>
+                  <span>Vercelで再デプロイ（環境変数を反映）</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="flex-shrink-0 w-5 h-5 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">5</span>
+                  <span>GTM管理画面でタグを追加（GA4、HubSpot等）</span>
+                </li>
+              </ol>
+            </div>
+
+            {/* HubSpot直接設定（オプション） */}
+            <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold text-xs">HS</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">HubSpot（参考）</h3>
+                    <p className="text-xs text-gray-500">GTM経由での設定を推奨</p>
+                  </div>
+                </div>
+                <a 
+                  href="https://app.hubspot.com/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-sm text-orange-600 hover:text-orange-700"
+                >
+                  管理画面 <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                HubSpotのトラッキングコードはGTMから追加できます。
+                GTM &gt; タグ &gt; 新規 &gt; カスタムHTML で以下を貼り付けてください：
+              </p>
+              <pre className="bg-gray-800 text-gray-100 p-3 rounded-lg text-xs overflow-x-auto">
+{`<!-- Start of HubSpot Embed Code -->
+<script type="text/javascript" id="hs-script-loader" async defer src="//js.hs-scripts.com/YOUR_HUBSPOT_ID.js"></script>
+<!-- End of HubSpot Embed Code -->`}
+              </pre>
             </div>
           </div>
         </motion.div>

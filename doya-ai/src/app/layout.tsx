@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast'
 import './globals.css'
 import { Providers } from '@/components/Providers'
 import { SITE_CONFIG, SERVICE_SEO, generateOrganizationSchema } from '@/lib/seo'
+import { GoogleTagManager, GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
 
 // ============================================
 // ルートメタデータ（ポータル全体）
@@ -104,6 +105,9 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <head>
+        {/* Google Tag Manager */}
+        <GoogleTagManager />
+        
         {/* 構造化データ（JSON-LD） */}
         <script
           type="application/ld+json"
@@ -117,6 +121,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body>
+        {/* Google Tag Manager (noscript) */}
+        <GoogleTagManagerNoScript />
         <Providers>
           {children}
           <Toaster
