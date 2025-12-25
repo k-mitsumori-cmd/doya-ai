@@ -176,6 +176,11 @@ export async function ensureSeoSchema(): Promise<void> {
       await prisma.$executeRawUnsafe(`ALTER TABLE "SeoJob" ADD COLUMN IF NOT EXISTS "meta" JSONB;`)
     } catch { /* column might already exist */ }
 
+    // 品質チェック結果（UI復元用）
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "SeoArticle" ADD COLUMN IF NOT EXISTS "checkResults" JSONB;`)
+    } catch { /* column might already exist */ }
+
     // indexes / uniques（冪等）
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SeoArticle_userId_createdAt_idx" ON "SeoArticle" ("userId", "createdAt");`)
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SeoArticle_status_createdAt_idx" ON "SeoArticle" ("status", "createdAt");`)

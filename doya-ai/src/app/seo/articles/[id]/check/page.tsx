@@ -99,7 +99,10 @@ export default function SeoCheckPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
-      const json = await res.json()
+      const json = await res.json().catch(async () => {
+        const t = await res.text().catch(() => '')
+        throw new Error(t ? `APIの応答が不正です: ${t.slice(0, 200)}` : 'APIの応答が不正です')
+      })
       if (!res.ok || json?.success === false) {
         throw new Error(json?.error || 'チェックに失敗しました')
       }
