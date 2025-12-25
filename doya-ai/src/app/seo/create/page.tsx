@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, ChevronDown, ChevronUp, ArrowRight, Loader2, Wand2 } from 'lucide-react'
+import { Sparkles, ChevronDown, ChevronUp, ArrowRight, Loader2, Wand2, HelpCircle, X, CheckCircle2, Lightbulb, Zap, FileText, Edit3, Download } from 'lucide-react'
 import Link from 'next/link'
 
 // サンプルキーワードリスト
@@ -34,6 +34,7 @@ export default function SeoCreateSimplePage() {
   // 処理状態
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showHelp, setShowHelp] = useState(false)
 
   const canSubmit = mainKeyword.trim().length >= 1
 
@@ -117,7 +118,17 @@ export default function SeoCreateSimplePage() {
         {/* カード型フォーム */}
         <div className="bg-white rounded-3xl sm:rounded-[40px] border border-gray-100 shadow-2xl shadow-blue-500/5 overflow-hidden">
           {/* ヘッダー */}
-          <div className="px-6 sm:px-10 pt-8 sm:pt-12 pb-6 sm:pb-8 text-center border-b border-gray-50">
+          <div className="px-6 sm:px-10 pt-8 sm:pt-12 pb-6 sm:pb-8 text-center border-b border-gray-50 relative">
+            {/* 使い方ボタン */}
+            <button
+              type="button"
+              onClick={() => setShowHelp(true)}
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[10px] font-black hover:bg-blue-100 transition-all"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              使い方
+            </button>
+
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-xl shadow-blue-500/30">
               <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
             </div>
@@ -271,6 +282,136 @@ export default function SeoCreateSimplePage() {
           構成は後から自由に編集できます。
         </p>
       </motion.div>
+
+      {/* 使い方モーダル */}
+      <AnimatePresence>
+        {showHelp && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowHelp(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+            >
+              {/* ヘッダー */}
+              <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <Lightbulb className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <h2 className="text-lg font-black text-gray-900">使い方ガイド</h2>
+                </div>
+                <button
+                  onClick={() => setShowHelp(false)}
+                  className="p-2 rounded-full hover:bg-gray-100 text-gray-400 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* コンテンツ */}
+              <div className="px-6 py-6 overflow-y-auto">
+                {/* ステップ */}
+                <div className="space-y-4">
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-black flex-shrink-0">1</div>
+                    <div>
+                      <h3 className="text-sm font-black text-gray-900 mb-1">メインキーワードを入力</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        記事で上位表示したいキーワードを入力します。<br />
+                        例：「AI ライティング ツール」「転職エージェント おすすめ」
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-black flex-shrink-0">2</div>
+                    <div>
+                      <h3 className="text-sm font-black text-gray-900 mb-1">「構成を作る」をクリック</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        AIがキーワードを分析し、SEOに最適な見出し構成を自動生成します。<br />
+                        生成には10〜30秒ほどかかります。
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-black flex-shrink-0">3</div>
+                    <div>
+                      <h3 className="text-sm font-black text-gray-900 mb-1">構成を確認・編集</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        生成された見出し構成を確認し、必要に応じて並び替え・追加・削除ができます。
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-black flex-shrink-0">4</div>
+                    <div>
+                      <h3 className="text-sm font-black text-gray-900 mb-1">本文を生成</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        確定した構成に沿って、AIが各章の本文を生成します。<br />
+                        10,000字の記事で約2〜5分かかります。
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 items-start">
+                    <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-black flex-shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-gray-900 mb-1">完成！</h3>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        完成した記事を確認し、編集・出力（HTML/Wordなど）できます。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tips */}
+                <div className="mt-6 p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="w-4 h-4 text-amber-600" />
+                    <h4 className="text-xs font-black text-amber-700 uppercase">Tips</h4>
+                  </div>
+                  <ul className="text-xs text-amber-800 space-y-1.5">
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-500">•</span>
+                      <span>「サンプル入力」ボタンで、試しにサンプルキーワードを入力できます</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-500">•</span>
+                      <span>詳細設定で関連KW・想定読者・文体を指定すると、より最適な記事が生成されます</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-amber-500">•</span>
+                      <span>より細かい設定は「詳細モードで作成する」から行えます</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* フッター */}
+              <div className="px-6 py-4 border-t border-gray-100">
+                <button
+                  onClick={() => setShowHelp(false)}
+                  className="w-full h-12 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors"
+                >
+                  わかりました！
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }
