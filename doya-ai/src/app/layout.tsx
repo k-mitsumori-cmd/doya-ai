@@ -66,9 +66,10 @@ export const metadata: Metadata = {
   
   // アイコン
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+    // App Routerの /icon, /apple-icon を使う（静的ファイル不要）
+    icon: [{ url: '/icon', type: 'image/png' }],
+    shortcut: [{ url: '/icon', type: 'image/png' }],
+    apple: [{ url: '/apple-icon', type: 'image/png' }],
   },
   
   // マニフェスト
