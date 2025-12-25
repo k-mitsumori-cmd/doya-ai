@@ -118,8 +118,12 @@ export async function POST(
       .replace('{tone}', article.tone || 'カジュアル')
 
     // Geminiで生成
-    const noteMarkdown = await geminiGenerateText(prompt, {
-      maxOutputTokens: 16000,
+    const noteMarkdown = await geminiGenerateText({
+      model: 'gemini-3-pro-preview',
+      parts: [{ text: prompt }],
+      generationConfig: {
+        maxOutputTokens: 16000,
+      },
     })
 
     // 記事を更新（note用のマークダウンとして保存）

@@ -83,6 +83,7 @@ type Article = {
   title: string
   status: string
   targetChars: number
+  keywords?: string[]
   outline?: string | null
   finalMarkdown?: string | null
   jobs?: { id: string; status: string; progress: number; step: string; error?: string | null; createdAt: string }[]

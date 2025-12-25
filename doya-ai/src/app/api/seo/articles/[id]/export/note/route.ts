@@ -37,7 +37,7 @@ export async function GET(
       // 画像パスをプレースホルダーに（noteは外部画像を直接表示できない）
       .replace(/!\[([^\]]*)\]\([^)]+\)/g, '【画像: $1 ※noteにアップロード後に差し替え】')
       // テーブルをシンプルな形式に変換（noteはテーブルに対応していない）
-      .replace(/\|([^|\n]+)\|/g, (match) => {
+      .replace(/\|([^|\n]+)\|/g, (match: string) => {
         // ヘッダー行や区切り行を検出
         if (match.includes('---') || match.includes(':-')) {
           return ''
@@ -45,8 +45,8 @@ export async function GET(
         // セルを抽出してリスト形式に変換
         const cells = match
           .split('|')
-          .filter((c) => c.trim())
-          .map((c) => c.trim())
+          .filter((c: string) => c.trim())
+          .map((c: string) => c.trim())
         return cells.length > 0 ? cells.map((c) => `- ${c}`).join('\n') : match
       })
       // 連続する空行を1つに
