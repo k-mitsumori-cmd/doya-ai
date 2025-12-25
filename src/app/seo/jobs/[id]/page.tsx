@@ -274,16 +274,16 @@ export default function SeoJobPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
-          <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-2xl shadow-blue-500/30">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-500/20">
             <Loader2 className="w-10 h-10 text-white animate-spin" />
           </div>
-          <p className="text-white/70 font-bold">読み込み中...</p>
+          <p className="text-gray-500 font-bold">読み込み中...</p>
         </motion.div>
       </main>
     )
@@ -291,11 +291,11 @@ export default function SeoJobPage() {
 
   if (!job) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+      <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white flex items-center justify-center p-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full bg-white rounded-3xl p-8 shadow-2xl"
+          className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-gray-100"
         >
           <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-100 flex items-center justify-center">
             <XCircle className="w-8 h-8 text-red-500" />
@@ -322,7 +322,7 @@ export default function SeoJobPage() {
   const isError = job.status === 'error'
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 py-8 px-4">
+    <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white py-8 px-4">
       <CompletionModal
         open={completionOpen}
         title={job.article.title}
@@ -349,14 +349,14 @@ export default function SeoJobPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-white/80 text-xs font-bold mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-100 text-gray-600 text-xs font-black mb-4 shadow-sm">
             <Sparkles className="w-4 h-4" />
             AI記事生成中
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white leading-tight">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-tight">
             {job.article.title}
           </h1>
-          <p className="text-white/60 mt-3 text-sm">
+          <p className="text-gray-500 mt-3 text-sm font-bold">
             目標: {job.article.targetChars.toLocaleString()}文字
           </p>
         </motion.div>
@@ -366,13 +366,13 @@ export default function SeoJobPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white/5 backdrop-blur-xl rounded-[32px] border border-white/10 overflow-hidden"
+          className="bg-white rounded-[32px] border border-gray-100 overflow-hidden shadow-xl shadow-blue-500/5"
         >
           {/* ステータスバー */}
           <div className={`h-2 ${isDone ? 'bg-gradient-to-r from-green-400 to-emerald-500' : isError ? 'bg-gradient-to-r from-red-400 to-rose-500' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500'}`}>
             {isRunning && (
               <motion.div
-                className="h-full bg-white/30"
+                className="h-full bg-white/35"
                 initial={{ x: '-100%' }}
                 animate={{ x: '100%' }}
                 transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
@@ -394,12 +394,12 @@ export default function SeoJobPage() {
                   return (
                     <motion.div
                       key={step.key}
-                      className={`flex-1 min-w-[80px] flex flex-col items-center gap-2 p-3 rounded-2xl transition-all ${
+                      className={`flex-1 min-w-[92px] flex flex-col items-center gap-2 p-3 rounded-2xl transition-all border ${
                         isActive
-                          ? 'bg-white/10 scale-105'
+                          ? 'bg-blue-50 border-blue-100 scale-[1.03]'
                           : isCompleted
-                          ? 'opacity-60'
-                          : 'opacity-30'
+                          ? 'bg-gray-50 border-gray-100'
+                          : 'bg-white border-transparent opacity-70'
                       }`}
                       animate={isActive ? { scale: [1, 1.05, 1] } : {}}
                       transition={{ repeat: isActive && isRunning ? Infinity : 0, duration: 2 }}
@@ -407,21 +407,21 @@ export default function SeoJobPage() {
                       <div
                         className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                           isCompleted
-                            ? 'bg-green-500/20'
+                            ? 'bg-emerald-50'
                             : isActive
-                            ? 'bg-blue-500/20'
-                            : 'bg-white/5'
+                            ? 'bg-blue-100/70'
+                            : 'bg-gray-50'
                         }`}
                       >
                         {isCompleted ? (
-                          <CheckCircle2 className="w-6 h-6 text-green-400" />
+                          <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                         ) : isActive && isRunning ? (
-                          <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+                          <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
                         ) : (
-                          <Icon className={`w-6 h-6 ${isActive ? 'text-blue-400' : 'text-white/40'}`} />
+                          <Icon className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
                         )}
                       </div>
-                      <span className={`text-[10px] sm:text-xs font-bold ${isActive ? 'text-white' : 'text-white/50'}`}>
+                      <span className={`text-[10px] sm:text-xs font-black ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
                         {step.label}
                       </span>
                     </motion.div>
@@ -433,12 +433,12 @@ export default function SeoJobPage() {
             {/* 進捗バー */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-white/60 text-sm font-bold">進捗</span>
-                <span className="text-white font-black text-lg">{job.progress}%</span>
+                <span className="text-gray-500 text-sm font-black">進捗</span>
+                <span className="text-gray-900 font-black text-lg">{job.progress}%</span>
               </div>
-              <div className="h-4 bg-white/10 rounded-full overflow-hidden">
+              <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full"
+                  className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${job.progress}%` }}
                   transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -454,9 +454,9 @@ export default function SeoJobPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="text-center py-4 px-6 rounded-2xl bg-white/5 border border-white/10 mb-8"
+                  className="text-center py-4 px-6 rounded-2xl bg-gray-50 border border-gray-100 mb-8"
                 >
-                  <p className="text-white/80 text-sm font-bold">{TIPS[tipIndex]}</p>
+                  <p className="text-gray-700 text-sm font-bold">{TIPS[tipIndex]}</p>
                 </motion.div>
               </AnimatePresence>
             )}
@@ -464,10 +464,10 @@ export default function SeoJobPage() {
             {/* アクションボタン */}
             <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
               <button
-                className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+                className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-black transition-all shadow-sm ${
                   isDone
-                    ? 'bg-green-500 text-white hover:bg-green-600'
-                    : 'bg-white text-gray-900 hover:bg-gray-100'
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-95'
                 } disabled:opacity-50`}
                 onClick={isDone ? () => router.push(`/seo/articles/${job.articleId}`) : advanceOnce}
                 disabled={busy || (isDone ? false : job.status === 'cancelled')}
@@ -495,8 +495,8 @@ export default function SeoJobPage() {
                   <button
                     className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl font-bold transition-all ${
                       auto
-                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-                        : 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
+                        ? 'bg-orange-50 text-orange-700 border border-orange-100'
+                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
                     }`}
                     onClick={() => setAuto((v) => !v)}
                   >
@@ -512,7 +512,7 @@ export default function SeoJobPage() {
                   </button>
 
                   <button
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 font-bold hover:bg-white/20 transition-all"
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white text-gray-700 border border-gray-200 font-bold hover:bg-gray-50 transition-all shadow-sm"
                     onClick={async () => {
                       setActionError(null)
                       try {
@@ -532,7 +532,7 @@ export default function SeoJobPage() {
                   </button>
 
                   <button
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 font-bold hover:bg-red-500/20 transition-all"
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-100 font-bold hover:bg-red-100/60 transition-all"
                     onClick={async () => {
                       if (!confirm('ジョブをキャンセルしますか？（途中成果物は残ります）')) return
                       setActionError(null)
@@ -551,7 +551,7 @@ export default function SeoJobPage() {
               )}
 
               <button
-                className="p-3 rounded-xl bg-white/10 text-white border border-white/20 hover:bg-white/20 transition-all"
+                className="p-3 rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-all shadow-sm"
                 onClick={() => load({ showLoading: true })}
               >
                 <RefreshCcw className="w-4 h-4" />
@@ -563,17 +563,17 @@ export default function SeoJobPage() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-6 rounded-2xl bg-red-500/10 border border-red-500/20 mb-8"
+                className="p-6 rounded-2xl bg-red-50 border border-red-100 mb-8"
               >
                 <div className="flex items-start gap-3">
-                  <XCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+                  <XCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-bold text-red-400">エラーが発生しました</p>
-                    <pre className="text-xs text-red-300/80 whitespace-pre-wrap mt-2">
+                    <p className="font-black text-red-700">エラーが発生しました</p>
+                    <pre className="text-xs text-red-700/80 whitespace-pre-wrap mt-2">
                       {job.error || actionError}
                     </pre>
                     <button
-                      className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-gray-900 font-bold hover:bg-gray-100 disabled:opacity-60"
+                      className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white font-black hover:bg-gray-800 disabled:opacity-60"
                       disabled={busy}
                       onClick={async () => {
                         setBusy(true)
@@ -608,17 +608,17 @@ export default function SeoJobPage() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="p-8 rounded-3xl bg-gradient-to-br from-green-500/20 to-emerald-500/10 border border-green-500/20 text-center"
+                className="p-8 rounded-3xl bg-gradient-to-b from-emerald-50 to-white border border-emerald-100 text-center"
               >
-                <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-green-500/20 flex items-center justify-center">
-                  <PartyPopper className="w-10 h-10 text-green-400" />
+                <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-emerald-100 flex items-center justify-center">
+                  <PartyPopper className="w-10 h-10 text-emerald-700" />
                 </div>
-                <h2 className="text-2xl font-black text-white">🎉 記事が完成しました！</h2>
-                <p className="text-white/70 mt-2">
+                <h2 className="text-2xl font-black text-gray-900">🎉 記事が完成しました！</h2>
+                <p className="text-gray-600 mt-2 font-bold">
                   プレビュー・編集・エクスポートが可能です
                 </p>
                 <button
-                  className="mt-6 px-8 py-4 rounded-xl bg-white text-gray-900 font-black hover:bg-gray-100 transition-colors"
+                  className="mt-6 px-8 py-4 rounded-xl bg-gray-900 text-white font-black hover:bg-gray-800 transition-colors"
                   onClick={() => router.push(`/seo/articles/${job.articleId}`)}
                 >
                   記事ページを開く <ArrowRight className="inline w-5 h-5 ml-2" />
@@ -636,8 +636,8 @@ export default function SeoJobPage() {
             transition={{ delay: 0.2 }}
             className="mt-8"
           >
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-400" />
+            <h2 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-600" />
               セクション進捗 ({reviewedCount}/{job.sections.length})
             </h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -652,43 +652,43 @@ export default function SeoJobPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    className={`p-4 rounded-2xl border transition-all ${
+                    className={`p-4 rounded-2xl border transition-all shadow-sm ${
                       isGenerating
-                        ? 'bg-blue-500/10 border-blue-500/30'
+                        ? 'bg-blue-50 border-blue-100'
                         : isComplete
-                        ? 'bg-green-500/10 border-green-500/30'
+                        ? 'bg-emerald-50 border-emerald-100'
                         : isErr
-                        ? 'bg-red-500/10 border-red-500/30'
-                        : 'bg-white/5 border-white/10'
+                        ? 'bg-red-50 border-red-100'
+                        : 'bg-white border-gray-100'
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                           isGenerating
-                            ? 'bg-blue-500/20'
+                            ? 'bg-blue-100'
                             : isComplete
-                            ? 'bg-green-500/20'
+                            ? 'bg-emerald-100'
                             : isErr
-                            ? 'bg-red-500/20'
-                            : 'bg-white/10'
+                            ? 'bg-red-100'
+                            : 'bg-gray-100'
                         }`}
                       >
                         {isGenerating ? (
-                          <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
                         ) : isComplete ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-400" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                         ) : isErr ? (
-                          <XCircle className="w-4 h-4 text-red-400" />
+                          <XCircle className="w-4 h-4 text-red-700" />
                         ) : (
-                          <span className="text-xs font-bold text-white/40">{s.index + 1}</span>
+                          <span className="text-xs font-black text-gray-500">{s.index + 1}</span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-white truncate">
+                        <p className="text-sm font-black text-gray-900 truncate">
                           {s.headingPath || `セクション ${s.index + 1}`}
                         </p>
-                        <p className="text-[10px] text-white/50 mt-1">
+                        <p className="text-[10px] text-gray-500 mt-1 font-bold">
                           {SECTION_STATUS_LABELS[s.status] || s.status} · {s.plannedChars}字
                         </p>
                       </div>
@@ -709,7 +709,7 @@ export default function SeoJobPage() {
         >
           <Link
             href={`/seo/articles/${job.articleId}`}
-            className="inline-flex items-center gap-2 text-white/50 hover:text-white/80 text-sm font-bold transition-colors"
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
             記事ページを開く
