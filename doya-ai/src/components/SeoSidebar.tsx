@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FileText, LayoutDashboard, Plus, Sparkles, HelpCircle } from 'lucide-react'
+import { FileText, LayoutDashboard, Plus, Sparkles, HelpCircle, Settings } from 'lucide-react'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 type NavItem = {
@@ -12,9 +12,10 @@ type NavItem = {
 }
 
 const SEO_NAV: NavItem[] = [
-  { href: '/seo', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/seo/new', label: '新規作成', icon: Plus },
+  { href: '/seo', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/seo/articles', label: '生成履歴', icon: FileText },
+  { href: '/seo/settings', label: '設定', icon: Settings },
 ]
 
 export function SeoSidebar({

@@ -1,9 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { ArrowRight, RefreshCcw, Play, Pause, ExternalLink } from 'lucide-react'
+import { CompletionModal } from '@seo/components/CompletionModal'
+import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSettings'
 
 type SeoSection = {
   id: string
@@ -37,6 +39,10 @@ export default function SeoJobPage() {
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [completionOpen, setCompletionOpen] = useState(false)
+  const [completionPopupEnabled, setCompletionPopupEnabled] = useState(true)
+  const prevStatusRef = useRef<string | null>(null)
+  const dontShowAgainRef = useRef(false)
 
   const reviewedCount = useMemo(
     () => (job?.sections || []).filter((s) => s.status === 'reviewed').length,
@@ -110,6 +116,30 @@ export default function SeoJobPage() {
     return () => clearInterval(t)
   }, [load])
 
+  useEffect(() => {
+    setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
+  }, [])
+
+  useEffect(() => {
+    const cur = job?.status || null
+    const prev = prevStatusRef.current
+    prevStatusRef.current = cur
+    if (!job) return
+    if (!completionPopupEnabled) return
+    if (cur !== 'done') return
+    if (!prev || prev === 'done') return
+
+    try {
+      const key = `doyaSeo.completionPopup.shown.job.${jobId}`
+      if (window.sessionStorage.getItem(key)) return
+      window.sessionStorage.setItem(key, '1')
+    } catch {
+      // ignore
+    }
+
+    setCompletionOpen(true)
+  }, [job, job?.status, completionPopupEnabled, jobId])
+
   // 作成直後 (?auto=1) は自動実行をONにする
   useEffect(() => {
     const a = searchParams.get('auto')
@@ -162,6 +192,25 @@ export default function SeoJobPage() {
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-8">
+      <CompletionModal
+        open={completionOpen}
+        title={job.article.title}
+        subtitle="図解・サムネも生成されています。プレビューを確認しましょう。"
+        primaryLabel="記事を見る"
+        onPrimary={() => router.push(`/seo/articles/${job.articleId}`)}
+        onClose={() => {
+          // モーダル内チェックに合わせて設定を反映
+          if (dontShowAgainRef.current) {
+            const next = patchSeoClientSettings({ completionPopupEnabled: false })
+            setCompletionPopupEnabled(next.completionPopupEnabled)
+          }
+          dontShowAgainRef.current = false
+          setCompletionOpen(false)
+        }}
+        onDontShowAgainChange={(v) => {
+          dontShowAgainRef.current = v
+        }}
+      />
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">生成ジョブ</h1>
