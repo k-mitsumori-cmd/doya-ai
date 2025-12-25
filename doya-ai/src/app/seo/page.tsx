@@ -62,6 +62,29 @@ const STATUS_CONFIG = {
   ERROR: { label: 'エラー', color: 'text-red-600', bg: 'bg-red-100', tone: 'red' as const },
 } as const
 
+// ジョブステップ名を日本語に変換
+const STEP_LABELS: Record<string, string> = {
+  init: '準備中',
+  outline: '構成生成',
+  sections: '本文執筆',
+  integrate: '記事統合',
+  media: '図解生成',
+  done: '完成',
+  OUTLINE: '構成生成',
+  SECTIONS: '本文執筆',
+  INTEGRATE: '記事統合',
+  MEDIA: '図解生成',
+  DONE: '完成',
+  cmp_ref: '参考記事解析',
+  cmp_candidates: '候補収集',
+  cmp_crawl: 'サイト巡回',
+  cmp_extract: '情報抽出',
+  cmp_sources: '出典整形',
+  cmp_tables: '比較表生成',
+  cmp_outline: '章立て生成',
+  cmp_polish: '校正中',
+}
+
 export default function SeoDashboardPage() {
   const [articles, setArticles] = useState<SeoArticleRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -141,6 +164,37 @@ export default function SeoDashboardPage() {
 
   return (
     <main className="max-w-6xl mx-auto py-6 sm:py-8 px-4">
+      {/* 統計カード */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 flex items-center justify-center">
+            <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">合計</p>
+            <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.total}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-orange-50 flex items-center justify-center">
+            <Clock className="w-6 h-6 sm:w-7 sm:h-7 text-orange-600 animate-pulse" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">生成中</p>
+            <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.running}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-50 flex items-center justify-center">
+            <CheckCircle2 className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">完成</p>
+            <p className="text-2xl sm:text-3xl font-black text-gray-900">{counts.done}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Header with Progress Bar */}
       <div className="mb-8 sm:mb-10">
         {/* 進行バー（常時表示） */}
@@ -225,7 +279,7 @@ export default function SeoDashboardPage() {
           <div className="py-16 bg-white rounded-3xl border border-red-100 text-center">
             <AlertCircle className="w-12 h-12 text-red-300 mx-auto mb-3" />
             <p className="text-red-600 font-bold text-sm">{error}</p>
-            <button onClick={load} className="mt-4 px-6 py-2 rounded-xl bg-red-50 text-red-600 text-xs font-black hover:bg-red-100 transition-colors">
+            <button onClick={() => load({ showLoading: true })} className="mt-4 px-6 py-2 rounded-xl bg-red-50 text-red-600 text-xs font-black hover:bg-red-100 transition-colors">
               再読み込み
             </button>
           </div>
@@ -301,7 +355,7 @@ export default function SeoDashboardPage() {
                           {a.status === 'RUNNING' && job && (
                             <div className="hidden sm:block w-28">
                               <div className="flex justify-between text-[10px] font-black text-orange-600 mb-1">
-                                <span className="truncate">{job.step}</span>
+                                <span className="truncate">{STEP_LABELS[job.step] || job.step}</span>
                                 <span>{job.progress}%</span>
                               </div>
                               <ProgressBar value={job.progress} />
