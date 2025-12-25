@@ -75,7 +75,8 @@ export const SERVICE_SEO = {
     title: 'ドヤバナーAI - プロ品質バナーを自動生成',
     description: '「1分待って選ぶだけ」プロ品質バナーを数クリックで自動生成。用途・業種・キャッチコピーを入力するだけ。ドヤバナーAIが、広告・SNS・LPで使えるプロ品質バナーを自動生成します。A/B/C 3パターン同時生成。',
     keywords: ['AIバナー生成', 'バナー自動生成', 'プロ品質バナー', '広告バナー', 'ABテスト', 'デザイン自動化', 'Facebook広告', 'Instagram広告', 'SNS広告', 'LP'],
-    ogImage: '/og/banner.png',
+    // LPと同じOGP画像を使用
+    ogImage: 'https://doyamarke.surisuta.jp/tool/doya_banner_ai/ogp.png',
     sections: {
       dashboard: {
         title: 'バナー生成 | ドヤバナーAI',
