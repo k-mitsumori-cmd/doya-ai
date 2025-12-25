@@ -10,7 +10,10 @@ import {
   ImageIcon, 
   CheckCircle2, 
   Loader2,
-  ChevronRight
+  BookOpen,
+  Target,
+  Compass,
+  Link2
 } from 'lucide-react'
 
 interface GenerationProgressProps {
@@ -29,12 +32,25 @@ const steps = [
 ]
 
 const loadingTips = [
-  "Gemini 2.0 が最適な構成を練っています...",
+  "Gemini 3 が最適な構成を練っています...",
   "分割生成により、5万字を超える長文でも崩れません。",
   "記事の内容に合わせた図解を自動でデザイン中...",
   "検索エンジンだけでなく、AI検索（LLMO）にも最適化しています。",
   "プロ級のライティングスキルをAIが再現しています。",
   "完成まであと少しです。お茶でも飲んでお待ちください☕️",
+]
+
+const comparisonSteps = [
+  { id: 'cmp_ref', label: '参考記事解析', icon: BookOpen },
+  { id: 'cmp_candidates', label: '候補収集', icon: Target },
+  { id: 'cmp_crawl', label: '公式サイト巡回', icon: Compass },
+  { id: 'cmp_extract', label: '情報抽出', icon: Sparkles },
+  { id: 'cmp_sources', label: '出典整形', icon: Link2 },
+  { id: 'cmp_tables', label: '比較表生成', icon: FileText },
+  { id: 'cmp_outline', label: '章立て生成', icon: FileText },
+  { id: 'sections', label: '本文ドラフト', icon: Sparkles },
+  { id: 'cmp_polish', label: '校正・AI臭低減', icon: CheckCircle2 },
+  { id: 'done', label: '完成', icon: CheckCircle2 },
 ]
 
 export function GenerationProgress({ progress, step, title }: GenerationProgressProps) {
@@ -62,7 +78,9 @@ export function GenerationProgress({ progress, step, title }: GenerationProgress
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const currentStepIndex = steps.findIndex(s => s.id === step) || 0
+  const isComparison = String(step || '').startsWith('cmp_')
+  const stepList = isComparison ? comparisonSteps : steps
+  const currentStepIndex = Math.max(0, stepList.findIndex((s) => s.id === step))
 
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 max-w-2xl mx-auto">
@@ -116,8 +134,8 @@ export function GenerationProgress({ progress, step, title }: GenerationProgress
       </div>
 
       {/* Step Indicators */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 w-full mt-12">
-        {steps.map((s, i) => {
+      <div className={`grid gap-2 w-full mt-12 ${isComparison ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-3 sm:grid-cols-6'}`}>
+        {stepList.map((s, i) => {
           const isActive = i <= currentStepIndex
           const isCurrent = i === currentStepIndex
           const Icon = s.icon

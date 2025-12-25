@@ -329,6 +329,12 @@ model SeoArticle {
   referenceImages  Json?    // [{name:string, dataUrl:string}] 参考画像のBase64
   autoBundle       Boolean  @default(true) // 記事+図解+サムネを自動生成するか
 
+  // 比較記事（調査型）
+  mode                 String  @default("standard") // standard | comparison_research
+  comparisonConfig     Json?   // 比較記事設定（対象数/地域/除外条件/参照方針/テンプレ種別など）
+  comparisonCandidates Json?   // 候補企業（確定リスト）
+  referenceInputs      Json?   // 参考記事入力（URL/ファイル/貼り付け）と抽出プレビュー
+
   // 途中成果物
   outline       String?  @db.Text
   finalMarkdown String?  @db.Text
@@ -361,6 +367,7 @@ model SeoJob {
 
   // 途中再開用
   cursor      Int      @default(0) // 次に生成するセクションindex
+  meta        Json?    // 進捗ログ/各ステップのカーソル等（JSON）
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

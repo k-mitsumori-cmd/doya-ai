@@ -69,6 +69,11 @@ export async function POST(req: NextRequest) {
         requestText: input.requestText || null,
         referenceImages: input.referenceImages || null,
         autoBundle: (body.autoBundle ?? true) as boolean, // 追加
+        // 比較記事（調査型）
+        mode: (input.mode ?? 'standard') as any,
+        comparisonConfig: (input.comparisonConfig ?? null) as any,
+        comparisonCandidates: (input.comparisonCandidates ?? null) as any,
+        referenceInputs: (input.referenceInputs ?? null) as any,
       },
     })
 

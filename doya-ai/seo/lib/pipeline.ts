@@ -248,6 +248,53 @@ async function generateOutline(article: any, researchContext: string): Promise<S
   const keywords = Array.isArray(article.keywords) ? article.keywords : (article.keywords as any) || []
   const minSections = computeMinSections(Number(article.targetChars || 10000))
 
+  const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
+  const comparisonConfig = (article.comparisonConfig as any) || null
+  const comparisonCandidates = Array.isArray(article.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
+  const referenceInputs = Array.isArray(article.referenceInputs) ? (article.referenceInputs as any[]) : []
+
+  const comparisonBlock = isComparison
+    ? [
+        'Comparison article mode: ENABLED (research-based).',
+        'You must produce a structure comparable to top-tier Japanese comparison pages:',
+        '- clear evaluation axes',
+        '- strong table-first scanability',
+        '- per-company deep sections (facts + who it fits + cautions)',
+        '- explicit scoring/selection criteria',
+        '- sources/citations plan (URL list, not copy-paste).',
+        '',
+        `Template type: ${String(comparisonConfig?.template || '')}`,
+        `Target companies: ${String(comparisonConfig?.count || '')}`,
+        `Region: ${String(comparisonConfig?.region || '')}`,
+        comparisonConfig?.exclude?.length ? `Exclude rules: ${(comparisonConfig.exclude as any[]).join(' / ')}` : '',
+        comparisonConfig?.tags?.length ? `Priority tags: ${(comparisonConfig.tags as any[]).join(' / ')}` : '',
+        `Require official site: ${comparisonConfig?.requireOfficial ? 'YES' : 'NO'}`,
+        `Include third-party: ${comparisonConfig?.includeThirdParty ? 'YES' : 'NO'}`,
+        '',
+        comparisonCandidates.length
+          ? [
+              'Final candidate list (do not invent new companies beyond this list):',
+              ...comparisonCandidates.slice(0, 60).map((c, i) => {
+                const name = String(c?.name || '').trim()
+                const u = typeof c?.websiteUrl === 'string' ? c.websiteUrl : ''
+                return `${i + 1}. ${name}${u ? ` (${u})` : ''}`
+              }),
+            ].join('\n')
+          : 'Final candidate list: (empty) — outline should still include a "候補の確定方法" section.',
+        '',
+        (() => {
+          const axes = referenceInputs
+            .flatMap((x) => (Array.isArray(x?.template?.axes) ? x.template.axes : []))
+            .map((s: any) => String(s || '').trim())
+            .filter(Boolean)
+          const uniq = Array.from(new Set(axes)).slice(0, 20)
+          return uniq.length ? `Extracted axes from references: ${uniq.join(' / ')}` : ''
+        })(),
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : ''
+
   // アウトラインを確実に完結させるため、シンプルなスキーマで生成
   // h4は省略可にしてJSON長を削減（後で個別セクション生成時に詳細化できる）
   const prompt = [
@@ -271,6 +318,7 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     llmoOptionsText(article),
     '',
     researchContext ? clampText(researchContext, 4000) : '',
+    comparisonBlock ? `\n=== COMPARISON BRIEF ===\n${clampText(comparisonBlock, 5000)}\n` : '',
     '',
     'Constraints:',
     `- sections: exactly ${minSections} items (H2).`,
@@ -348,9 +396,11 @@ async function ensureOutlineAndSections(jobId: string) {
 
   if (article.outline) return
 
+  const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
+
   await p.seoJob.update({
     where: { id: jobId },
-    data: { status: 'running', step: 'outline', startedAt: job.startedAt ?? new Date() },
+    data: { status: 'running', step: isComparison ? 'cmp_outline' : 'outline', startedAt: job.startedAt ?? new Date() },
   })
   await p.seoArticle.update({ where: { id: article.id }, data: { status: 'RUNNING' } })
 
@@ -721,6 +771,7 @@ async function integrate(jobId: string) {
   })
   if (!job) throw new Error('job not found')
   const article = job.article
+  const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
   const sections = job.sections
   const memo = article.memo?.content
 
@@ -794,6 +845,11 @@ async function integrate(jobId: string) {
     where: { id: article.id },
     data: { finalMarkdown, status: 'DONE' },
   })
+
+  if (isComparison) {
+    // “校正・AI臭低減”を比較記事の明示ステップとして表示（実処理は統合の後段で自然に効く）
+    await p.seoJob.update({ where: { id: jobId }, data: { step: 'cmp_polish', progress: 90, status: 'running' } })
+  }
 
   // 自動で素材生成（バナー＋図解）: 失敗しても本文完成は優先する
   try {
@@ -1018,6 +1074,7 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
   })
   if (!job) throw new Error('job not found')
   if (job.status === 'done') return { jobId }
+  if (job.status === 'paused' || job.status === 'cancelled') return { jobId }
 
   try {
     await ensureOutlineAndSections(jobId)
