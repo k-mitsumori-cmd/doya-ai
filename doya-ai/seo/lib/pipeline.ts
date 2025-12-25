@@ -455,7 +455,9 @@ async function ensureOutlineAndSections(jobId: string) {
   if (!job) throw new Error('job not found')
   const article = job.article
 
-  if (article.outline) return
+  // すでにアウトラインがあっても、セクションが未作成なら先に作る（/seo/create のプレビュー→編集フロー用）
+  const hasSections = await p.seoSection.findFirst({ where: { jobId }, select: { id: true } })
+  if (article.outline && hasSections) return
 
   const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
 
@@ -484,18 +486,22 @@ async function ensureOutlineAndSections(jobId: string) {
     }
   }
 
-  const researchContext = await buildResearchContext(article.id)
-  const outline = await generateOutline(article, researchContext)
-  const outlineMd = toOutlineMarkdown(outline)
+  const target = Math.max(10000, Number(article.targetChars || 10000))
+  let outline: SeoOutline
+  let outlineMd: string
 
-  await p.seoArticle.update({
-    where: { id: article.id },
-    data: { outline: outlineMd },
-  })
+  if (article.outline) {
+    outlineMd = String(article.outline || '')
+    outline = ensureMinSections(parseOutlineFromMarkdown(outlineMd, target), target)
+  } else {
+    const researchContext = await buildResearchContext(article.id)
+    outline = await generateOutline(article, researchContext)
+    outlineMd = toOutlineMarkdown(outline)
+    await p.seoArticle.update({ where: { id: article.id }, data: { outline: outlineMd } })
+  }
 
   // sections作成
   const plannedTotal = outline.sections.reduce((a, s) => a + (s.plannedChars || 2000), 0)
-  const target = Math.max(10000, Number(article.targetChars || 10000))
   const ratio = target / Math.max(1, plannedTotal)
 
   const createData = outline.sections.map((s, i) => ({

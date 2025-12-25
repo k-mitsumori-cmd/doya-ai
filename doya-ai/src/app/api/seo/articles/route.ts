@@ -48,13 +48,14 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const input = SeoCreateArticleInputSchema.parse(body)
+    const createJob = body?.createJob !== false
 
     const seoArticle = (prisma as any).seoArticle as any
     const seoJob = (prisma as any).seoJob as any
 
     const article = await seoArticle.create({
       data: {
-        status: 'RUNNING',
+        status: createJob ? 'RUNNING' : 'DRAFT',
         userId,
         title: input.title,
         keywords: input.keywords as any,
@@ -77,11 +78,12 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 50,000字〜の安定生成のため、分割生成ジョブを作って記事ページ側でadvanceする
-    const job = await seoJob.create({
-      data: { articleId: article.id, status: 'queued', step: 'init', progress: 0 },
-    })
+    if (!createJob) {
+      return NextResponse.json({ success: true, articleId: article.id, jobId: null })
+    }
 
+    // 分割生成ジョブを作って記事ページ側でadvanceする
+    const job = await seoJob.create({ data: { articleId: article.id, status: 'queued', step: 'init', progress: 0 } })
     return NextResponse.json({ success: true, articleId: article.id, jobId: job.id })
   } catch (e: any) {
     return NextResponse.json(

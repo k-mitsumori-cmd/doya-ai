@@ -112,7 +112,7 @@ export default function SeoOutlineEditPage() {
     setError(null)
     try {
       const outline = toOutlineString(headings)
-      const res = await fetch(`/api/seo/articles/${articleId}/content`, {
+      const res = await fetch(`/api/seo/articles/${articleId}/outline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ outline }),
@@ -136,7 +136,7 @@ export default function SeoOutlineEditPage() {
     try {
       // まず保存
       await save()
-      // ジョブ作成
+      // ジョブ作成（アウトライン編集後に本文生成を開始）
       const res = await fetch(`/api/seo/articles/${articleId}/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
