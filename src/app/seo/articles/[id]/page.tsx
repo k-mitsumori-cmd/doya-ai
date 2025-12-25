@@ -9,6 +9,7 @@ import { GenerationProgress } from '@seo/components/GenerationProgress'
 import { Button } from '@seo/components/ui/Button'
 import { Badge } from '@seo/components/ui/Badge'
 import { analyzeMarkdown } from '@seo/lib/score'
+import { slugifyHeading } from '@seo/lib/markdown'
 import {
   Download,
   Image as ImageIcon,
@@ -97,6 +98,57 @@ type Article = {
   createdAt: string
 }
 
+type TocItem = { id: string; text: string; level: 2 | 3 }
+
+function extractTocFromMarkdown(md: string): TocItem[] {
+  const text = String(md || '').replace(/\r\n/g, '\n')
+  const lines = text.split('\n')
+  const out: TocItem[] = []
+  const counts = new Map<string, number>()
+  let inCode = false
+  for (const raw of lines) {
+    const line = raw
+    if (line.startsWith('```')) {
+      inCode = !inCode
+      continue
+    }
+    if (inCode) continue
+    const m = line.match(/^(#{2,3})\s+(.+?)\s*$/)
+    if (!m) continue
+    const level = m[1].length as 2 | 3
+    const t = m[2].trim()
+    if (!t) continue
+    const base = slugifyHeading(t)
+    const n = (counts.get(base) || 0) + 1
+    counts.set(base, n)
+    const id = n === 1 ? base : `${base}-${n}`
+    out.push({ id, text: t, level })
+    if (out.length >= 40) break
+  }
+  return out
+}
+
+function stripCoverFromMarkdown(md: string, bannerId?: string | null): string {
+  const lines = String(md || '').replace(/\r\n/g, '\n').split('\n')
+  let i = 0
+  // drop leading empty
+  while (i < lines.length && !lines[i].trim()) i++
+  // drop top H1
+  if (lines[i]?.startsWith('# ')) {
+    i++
+    while (i < lines.length && !lines[i].trim()) i++
+  }
+  // drop top banner image line if it matches
+  if (bannerId) {
+    const needle = `/api/seo/images/${bannerId}`
+    if (lines[i] && lines[i].includes(needle)) {
+      i++
+      while (i < lines.length && !lines[i].trim()) i++
+    }
+  }
+  return lines.slice(i).join('\n').trim()
+}
+
 const TABS = [
   { id: 'preview', label: 'プレビュー', icon: Eye, color: 'text-blue-500' },
   { id: 'media', label: '図解・サムネ', icon: ImageIcon, color: 'text-orange-500' },
@@ -135,6 +187,21 @@ function SeoArticleInner() {
 
   const markdown = useMemo(() => article?.finalMarkdown || '', [article])
   const score = useMemo(() => analyzeMarkdown(markdown || ''), [markdown])
+  const bannerImageId = useMemo(() => {
+    const imgs = (article?.images || []).filter((x) => x.kind === 'BANNER')
+    if (!imgs.length) return null
+    const sorted = imgs
+      .slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    return sorted[0]?.id || null
+  }, [article])
+  const toc = useMemo(() => extractTocFromMarkdown(markdown), [markdown])
+  const previewMarkdown = useMemo(() => stripCoverFromMarkdown(markdown, bannerImageId), [markdown, bannerImageId])
+  const readingMinutes = useMemo(() => {
+    const chars = (markdown || '').length
+    // 600-900字/分くらいを想定して安全側に丸める
+    return Math.max(1, Math.round(chars / 850))
+  }, [markdown])
 
   const load = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading === true
@@ -351,17 +418,140 @@ function SeoArticleInner() {
           <div className="lg:col-span-2">
             {tab === 'preview' && (
               <div className="bg-white rounded-2xl sm:rounded-[40px] border border-gray-100 shadow-xl overflow-hidden min-h-[400px] sm:min-h-[600px]">
-                <div className="p-6 sm:p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
-                  <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                    <Eye className="w-5 h-5 text-blue-500" /> 記事プレビュー
-                  </h2>
-                  <Button variant="ghost" size="sm" onClick={() => copyToClipboard(markdown)} className="bg-white border border-gray-100 font-black h-9 sm:h-10 px-3 sm:px-4">
-                    {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                  </Button>
+                {/* Cover */}
+                <div className="relative">
+                  <div className="aspect-[16/9] bg-gradient-to-br from-[#2563EB] via-indigo-700 to-slate-900 overflow-hidden">
+                    {bannerImageId ? (
+                      <img
+                        src={`/api/seo/images/${bannerImageId}`}
+                        alt="cover"
+                        className="w-full h-full object-cover opacity-95"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-200/30 via-indigo-200/20 to-white/0" />
+                    )}
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+                  <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(markdown)}
+                      className="bg-white/90 hover:bg-white border border-white/30 font-black h-10 px-3 shadow-lg"
+                    >
+                      {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                      <span className="hidden sm:inline">コピー</span>
+                    </Button>
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8">
+                    <div className="flex items-center gap-2 text-white/80 text-[10px] font-black uppercase tracking-widest mb-2">
+                      <Eye className="w-4 h-4" />
+                      Public Preview
+                    </div>
+                    <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white leading-tight tracking-tight">
+                      {article.title}
+                    </h2>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-[10px] font-black">
+                        {readingMinutes}分で読める
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-[10px] font-black">
+                        目標 {Number(article.targetChars || 0).toLocaleString()}字
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-[10px] font-black">
+                        {new Date(article.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-6 sm:p-8 lg:p-12">
-                  {markdown ? <MarkdownPreview markdown={markdown} /> : (
-                    <div className="py-20 sm:py-32 text-center text-gray-300 font-black text-sm sm:text-base">本文が生成されるまでお待ちください...</div>
+
+                {/* Body */}
+                <div className="bg-[#F8FAFC] p-4 sm:p-6 lg:p-8">
+                  {markdown ? (
+                    <div className="grid lg:grid-cols-12 gap-4 sm:gap-6">
+                      {/* Mobile TOC */}
+                      {toc.length > 0 && (
+                        <div className="lg:hidden">
+                          <details className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                            <summary className="cursor-pointer select-none px-5 py-4 font-black text-sm text-gray-900 flex items-center justify-between">
+                              目次
+                              <span className="text-[10px] font-black text-gray-400">タップで開く</span>
+                            </summary>
+                            <div className="px-5 pb-5">
+                              <div className="space-y-2">
+                                {toc.map((it) => (
+                                  <a
+                                    key={it.id}
+                                    href={`#${it.id}`}
+                                    className={`block text-xs font-bold text-gray-600 hover:text-blue-600 transition-colors ${
+                                      it.level === 3 ? 'pl-4' : ''
+                                    }`}
+                                  >
+                                    {it.text}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          </details>
+                        </div>
+                      )}
+
+                      <div className="lg:col-span-8">
+                        <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-7 lg:p-8">
+                          <MarkdownPreview markdown={previewMarkdown || markdown} />
+                        </div>
+                      </div>
+                      <div className="hidden lg:block lg:col-span-4">
+                        <div className="sticky top-[7.25rem] space-y-4">
+                          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Table of Contents</p>
+                            {toc.length ? (
+                              <div className="space-y-2">
+                                {toc.map((it) => (
+                                  <a
+                                    key={it.id}
+                                    href={`#${it.id}`}
+                                    className={`block text-xs font-bold text-gray-600 hover:text-blue-600 transition-colors ${
+                                      it.level === 3 ? 'pl-4' : ''
+                                    }`}
+                                  >
+                                    {it.text}
+                                  </a>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs font-bold text-gray-400">見出しが生成されると目次が表示されます</p>
+                            )}
+                          </div>
+
+                          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Quick</p>
+                            <div className="grid gap-2">
+                              <button
+                                onClick={() => setTab('edit')}
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-800 font-black text-xs transition-colors flex items-center justify-between"
+                              >
+                                編集する
+                                <Edit3 className="w-4 h-4 text-gray-400" />
+                              </button>
+                              <button
+                                onClick={() => setTab('media')}
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 text-gray-800 font-black text-xs transition-colors flex items-center justify-between"
+                              >
+                                図解・サムネを見る
+                                <ImageIcon className="w-4 h-4 text-gray-400" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-20 sm:py-32 text-center text-gray-300 font-black text-sm sm:text-base">
+                      本文が生成されるまでお待ちください...
+                    </div>
                   )}
                 </div>
               </div>

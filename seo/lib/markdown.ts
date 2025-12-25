@@ -77,6 +77,7 @@ export function markdownToHtmlBasic(markdown: string): string {
   let inOl = false
   let inTable = false
   let tableLines: string[] = []
+  const headingIdCounts = new Map<string, number>()
 
   function flushLists() {
     if (inUl) {
@@ -147,7 +148,12 @@ export function markdownToHtmlBasic(markdown: string): string {
     if (hm) {
       flushLists()
       const lvl = hm[1].length
-      html += `<h${lvl}>${escapeHtml(hm[2].trim())}</h${lvl}>\n`
+      const text = hm[2].trim()
+      const base = slugifyHeading(text)
+      const n = (headingIdCounts.get(base) || 0) + 1
+      headingIdCounts.set(base, n)
+      const id = n === 1 ? base : `${base}-${n}`
+      html += `<h${lvl} id="${escapeHtml(id)}">${escapeHtml(text)}</h${lvl}>\n`
       continue
     }
 
@@ -210,6 +216,25 @@ export function markdownToHtmlBasic(markdown: string): string {
   if (inTable) flushTable()
 
   return html
+}
+
+/**
+ * 見出し用のidを作る（英数字はslug、日本語はそのままでもOK）
+ * - 同名の重複は呼び出し側で -2, -3 を付ける
+ */
+export function slugifyHeading(input: string): string {
+  const s = String(input || '').trim()
+  if (!s) return 'section'
+  // 記号を落として、スペースは - に寄せる
+  const cleaned = s
+    .replace(/[’'"]/g, '')
+    .replace(/[「」『』【】（）()\[\]{}<>]/g, '')
+    .replace(/[.,!?，．！？：:;；]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+  const lower = cleaned.toLowerCase()
+  return lower || 'section'
 }
 
 

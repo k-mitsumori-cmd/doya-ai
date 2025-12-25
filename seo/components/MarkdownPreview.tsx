@@ -6,33 +6,170 @@ import { markdownToHtmlBasic } from '@seo/lib/markdown'
 export function MarkdownPreview({ markdown }: { markdown: string }) {
   const html = useMemo(() => markdownToHtmlBasic(markdown || ''), [markdown])
   return (
-    <div
-      className="
-        prose prose-sm sm:prose lg:prose-lg max-w-none
-        text-gray-800
-        prose-headings:text-gray-900 prose-headings:font-bold prose-headings:scroll-mt-20
-        prose-h1:text-2xl prose-h1:border-b prose-h1:border-gray-200 prose-h1:pb-2 prose-h1:mb-4
-        prose-h2:text-xl prose-h2:border-l-4 prose-h2:border-blue-500 prose-h2:pl-3 prose-h2:mt-8 prose-h2:mb-4
-        prose-h3:text-lg prose-h3:text-gray-800 prose-h3:mt-6 prose-h3:mb-3
-        prose-h4:text-base prose-h4:text-gray-700 prose-h4:font-semibold
-        prose-p:text-gray-700 prose-p:leading-relaxed
-        prose-a:text-blue-600 prose-a:underline prose-a:underline-offset-2 hover:prose-a:text-blue-800
-        prose-strong:text-gray-900 prose-strong:font-bold
-        prose-em:text-gray-700 prose-em:italic
-        prose-code:text-pink-600 prose-code:bg-pink-50 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
-        prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:rounded-xl prose-pre:shadow-lg prose-pre:overflow-x-auto
-        prose-blockquote:border-l-4 prose-blockquote:border-gray-300 prose-blockquote:bg-gray-50 prose-blockquote:pl-4 prose-blockquote:py-2 prose-blockquote:text-gray-600 prose-blockquote:italic prose-blockquote:rounded-r-lg
-        prose-ul:text-gray-700 prose-ul:list-disc prose-ul:pl-6
-        prose-ol:text-gray-700 prose-ol:list-decimal prose-ol:pl-6
-        prose-li:text-gray-700 prose-li:my-1
-        prose-table:border-collapse prose-table:w-full prose-table:text-sm
-        prose-th:bg-gray-100 prose-th:text-gray-900 prose-th:font-bold prose-th:px-4 prose-th:py-3 prose-th:border prose-th:border-gray-200 prose-th:text-left
-        prose-td:px-4 prose-td:py-3 prose-td:border prose-td:border-gray-200 prose-td:text-gray-700
-        prose-tr:even:bg-gray-50
-        prose-img:rounded-xl prose-img:shadow-md prose-img:mx-auto
-        prose-hr:border-gray-200 prose-hr:my-8
-      "
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <>
+      <div className="md-preview" data-md-preview dangerouslySetInnerHTML={{ __html: html }} />
+      <style jsx>{`
+        .md-preview {
+          color: #0f172a;
+          font-size: 15px;
+          line-height: 1.9;
+          letter-spacing: 0.01em;
+        }
+        @media (min-width: 640px) {
+          .md-preview {
+            font-size: 16px;
+          }
+        }
+        @media (min-width: 1024px) {
+          .md-preview {
+            font-size: 17px;
+          }
+        }
+        .md-preview h1,
+        .md-preview h2,
+        .md-preview h3,
+        .md-preview h4 {
+          color: #0b1220;
+          font-weight: 900;
+          letter-spacing: -0.01em;
+          scroll-margin-top: 96px;
+        }
+        .md-preview h1 {
+          font-size: 1.6em;
+          padding-bottom: 0.5rem;
+          border-bottom: 1px solid #e5e7eb;
+          margin: 0 0 1.25rem;
+        }
+        .md-preview h2 {
+          font-size: 1.3em;
+          margin: 2.25rem 0 0.75rem;
+          padding-left: 0.75rem;
+          border-left: 4px solid #2563eb;
+        }
+        .md-preview h3 {
+          font-size: 1.12em;
+          margin: 1.6rem 0 0.6rem;
+        }
+        .md-preview h4 {
+          font-size: 1.02em;
+          margin: 1.2rem 0 0.4rem;
+          color: #1f2937;
+        }
+        .md-preview p {
+          margin: 0.9rem 0;
+          color: #334155;
+        }
+        .md-preview a {
+          color: #2563eb;
+          text-decoration: underline;
+          text-underline-offset: 3px;
+          font-weight: 800;
+        }
+        .md-preview a:hover {
+          color: #1d4ed8;
+        }
+        .md-preview strong {
+          color: #0b1220;
+          font-weight: 900;
+        }
+        .md-preview em {
+          color: #334155;
+        }
+        .md-preview ul,
+        .md-preview ol {
+          margin: 0.8rem 0 1rem;
+          padding-left: 1.4rem;
+          color: #334155;
+        }
+        .md-preview li {
+          margin: 0.35rem 0;
+        }
+        .md-preview blockquote {
+          margin: 1.2rem 0;
+          padding: 0.9rem 1rem;
+          background: #f8fafc;
+          border-left: 4px solid #cbd5e1;
+          color: #475569;
+          border-radius: 0.75rem;
+        }
+        .md-preview code {
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+            monospace;
+          font-size: 0.95em;
+          background: #fff1f2;
+          color: #be123c;
+          padding: 0.15rem 0.4rem;
+          border-radius: 0.5rem;
+          border: 1px solid #ffe4e6;
+        }
+        .md-preview pre {
+          margin: 1.2rem 0;
+          padding: 1rem 1.1rem;
+          background: #0b1220;
+          color: #e2e8f0;
+          border-radius: 1rem;
+          overflow-x: auto;
+          box-shadow: 0 12px 30px rgba(2, 6, 23, 0.18);
+        }
+        .md-preview pre code {
+          background: transparent;
+          color: inherit;
+          padding: 0;
+          border: none;
+          font-size: 0.9em;
+        }
+        .md-preview hr {
+          border: none;
+          border-top: 1px solid #e5e7eb;
+          margin: 2rem 0;
+        }
+        .md-preview img {
+          display: block;
+          max-width: 100%;
+          height: auto;
+          border-radius: 1rem;
+          box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
+          margin: 1.25rem auto;
+        }
+        .md-preview table {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          margin: 1.2rem 0;
+          font-size: 0.95em;
+          overflow: hidden;
+          border-radius: 1rem;
+          border: 1px solid #e5e7eb;
+        }
+        .md-preview thead th {
+          background: #f1f5f9;
+          color: #0b1220;
+          font-weight: 900;
+          padding: 0.8rem 0.9rem;
+          border-bottom: 1px solid #e5e7eb;
+          text-align: left;
+          white-space: nowrap;
+        }
+        .md-preview tbody td {
+          padding: 0.8rem 0.9rem;
+          border-bottom: 1px solid #eef2f7;
+          color: #334155;
+          vertical-align: top;
+        }
+        .md-preview tbody tr:nth-child(even) td {
+          background: #fbfdff;
+        }
+        .md-preview tbody tr:last-child td {
+          border-bottom: none;
+        }
+        @media (max-width: 640px) {
+          .md-preview table {
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
+        }
+      `}</style>
+    </>
   )
 }
