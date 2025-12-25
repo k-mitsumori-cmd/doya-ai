@@ -430,37 +430,81 @@ function BannerUrlAutoPageInner() {
             </div>
 
             {/* 生成結果 */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6" data-tour="generated-results">
+            <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-6" data-tour="generated-results">
               {banners.length === 0 ? (
-                <div className="h-[420px] flex items-center justify-center text-center text-slate-500 font-bold">
+                <div className="h-[300px] sm:h-[420px] flex items-center justify-center text-center text-slate-500 font-bold">
                   {isGenerating ? '生成中です…（少々お待ちください）' : '生成結果がここに表示されます'}
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-black text-slate-900">生成結果</p>
-                    <p className="text-[11px] text-slate-500 font-bold">{banners.length}枚</p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-slate-900">GENERATION COMPLETE</p>
+                        <p className="text-[11px] text-slate-500 font-bold">{banners.length}枚のバナーを生成しました</p>
+                      </div>
+                    </div>
+                    {usedModelDisplay && (
+                      <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full">
+                        <Sparkles className="w-3 h-3" />
+                        {usedModelDisplay}
+                      </span>
+                    )}
                   </div>
-                  <div className={`grid gap-4 ${banners.length >= 6 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+
+                  {/* 大きなプレビュー表示 */}
+                  <div className={`grid gap-3 sm:gap-4 ${
+                    banners.length === 1 ? 'grid-cols-1' :
+                    banners.length === 2 ? 'grid-cols-1 sm:grid-cols-2' :
+                    banners.length <= 4 ? 'grid-cols-2' :
+                    'grid-cols-2 sm:grid-cols-3'
+                  }`}>
                     {banners
                       .filter((b) => typeof b === 'string' && b.startsWith('data:image/'))
                       .map((img, idx) => (
-                        <div key={idx} className="rounded-2xl border border-slate-200 overflow-hidden bg-slate-50">
-                          <img src={img} alt={`banner-${idx + 1}`} className="w-full h-auto object-contain bg-white" />
-                          <div className="p-3 flex items-center justify-between gap-2">
-                            <p className="text-xs font-black text-slate-700">No.{idx + 1}</p>
-                            <button
-                              type="button"
-                              onClick={() => downloadImage(img, idx)}
-                              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-black hover:bg-blue-700 transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                              DL
-                            </button>
+                        <div 
+                          key={idx} 
+                          className="group relative rounded-xl sm:rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 hover:border-blue-300 hover:shadow-lg transition-all"
+                        >
+                          <div className="aspect-square bg-white flex items-center justify-center p-2">
+                            <img 
+                              src={img} 
+                              alt={`banner-${idx + 1}`} 
+                              className="max-w-full max-h-full object-contain rounded-lg" 
+                            />
+                          </div>
+                          {/* ホバー時のオーバーレイ */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 sm:p-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-white text-xs sm:text-sm font-black">No.{idx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  downloadImage(img, idx)
+                                }}
+                                className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white text-blue-600 text-xs font-black hover:bg-blue-50 transition-colors shadow-lg"
+                              >
+                                <Download className="w-4 h-4" />
+                                ダウンロード
+                              </button>
+                            </div>
+                          </div>
+                          {/* 番号バッジ（常時表示） */}
+                          <div className="absolute top-2 left-2 w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/90 backdrop-blur-sm border border-slate-200 flex items-center justify-center text-xs font-black text-slate-700 shadow-sm">
+                            {idx + 1}
                           </div>
                         </div>
                       ))}
                   </div>
+
+                  {/* ダウンロードヒント */}
+                  <p className="text-center text-[11px] text-slate-400 font-bold">
+                    画像にカーソルを合わせてダウンロード
+                  </p>
                 </div>
               )}
             </div>
