@@ -152,14 +152,11 @@ function stripCoverFromMarkdown(md: string, bannerId?: string | null): string {
   return lines.slice(i).join('\n').trim()
 }
 
+// シンプル化: 核心的な機能のみに絞る
 const TABS = [
   { id: 'preview', label: 'プレビュー', icon: Eye, color: 'text-blue-500' },
-  { id: 'media', label: '図解・サムネ', icon: ImageIcon, color: 'text-orange-500' },
   { id: 'edit', label: '編集', icon: Edit3, color: 'text-purple-500' },
-  { id: 'chat', label: 'AI修正チャット', icon: MessageCircle, color: 'text-indigo-500' },
-  { id: 'audit', label: '品質監査', icon: CheckCircle, color: 'text-emerald-500' },
-  { id: 'note', label: 'note形式', icon: PenTool, color: 'text-amber-500' },
-  { id: 'research', label: 'リサーチ', icon: Compass, color: 'text-cyan-500' },
+  { id: 'media', label: '画像', icon: ImageIcon, color: 'text-orange-500' },
   { id: 'export', label: 'ダウンロード', icon: Download, color: 'text-gray-500' },
 ] as const
 
@@ -647,7 +644,7 @@ function SeoArticleInner() {
                   onChange={(e) => setMarkdownDraft(e.target.value)}
                 />
                 <div className="flex justify-end gap-3">
-                  <Button variant="ghost" onClick={() => setMarkdownDraft(article.finalMarkdown || '')} className="font-black text-sm">Discard</Button>
+                  <Button variant="ghost" onClick={() => setMarkdownDraft(article.finalMarkdown || '')} className="font-black text-sm">元に戻す</Button>
                   <Button variant="primary" onClick={() => act('save', async () => {
                     await fetch(`/api/seo/articles/${id}/content`, {
                       method: 'POST',
@@ -656,193 +653,6 @@ function SeoArticleInner() {
                     })
                   })} className="bg-gray-900 text-white px-8 sm:px-10 h-12 sm:h-14 rounded-xl sm:rounded-2xl font-black shadow-xl text-sm sm:text-base">保存する</Button>
                 </div>
-              </div>
-            )}
-
-            {tab === 'chat' && (
-              <div className="bg-white rounded-2xl sm:rounded-[40px] border border-gray-100 shadow-xl overflow-hidden p-6 sm:p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-lg sm:text-xl font-black text-gray-900 flex items-center gap-3">
-                      <MessageCircle className="w-5 h-5 text-indigo-500" />
-                      AI修正チャット（完成記事）
-                    </h2>
-                    <p className="text-xs text-gray-400 font-bold mt-1">
-                      有料プラン限定。修正案を確認して「適用して保存」できます。
-                    </p>
-                  </div>
-                </div>
-
-                {article.status !== 'DONE' ? (
-                  <div className="p-6 rounded-2xl bg-amber-50 border border-amber-100 text-amber-800">
-                    <p className="font-black text-sm">記事が完成してから利用できます</p>
-                    <p className="text-xs font-bold mt-1 opacity-80">生成中の間は「編集」タブをご利用ください。</p>
-                  </div>
-                ) : !entitlements ? (
-                  <div className="py-16 text-center">
-                    <div className="w-10 h-10 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-400 font-black text-xs uppercase tracking-widest">Loading...</p>
-                  </div>
-                ) : !entitlements.canUseChatEdit ? (
-                  <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100">
-                    <p className="text-sm font-black text-gray-900">この機能は有料プラン限定です</p>
-                    <p className="text-xs font-bold text-gray-500 mt-2">
-                      プラン：{entitlements.plan || 'FREE'} ／ ログイン：{entitlements.isLoggedIn ? '済' : '未'}
-                    </p>
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                      <Link href="/pricing" className="flex-1">
-                        <button className="w-full h-11 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors">
-                          プランを見る
-                        </button>
-                      </Link>
-                      <button
-                        onClick={() => setEntitlements(null)}
-                        className="flex-1 h-11 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-black hover:bg-gray-100 transition-colors"
-                      >
-                        再読み込み
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {chatError && (
-                      <div className="mb-4 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700">
-                        <p className="font-black text-xs">エラー</p>
-                        <p className="text-xs font-bold mt-1 opacity-80">{chatError}</p>
-                      </div>
-                    )}
-
-                    {headings.length > 0 && (
-                      <div className="mb-4 p-4 rounded-2xl bg-blue-50 border border-blue-100">
-                        <p className="text-xs font-black text-blue-800 mb-2">長文記事のため「修正したい見出し」を選択してください</p>
-                        <select
-                          value={targetHeading}
-                          onChange={(e) => setTargetHeading(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl bg-white border border-blue-100 text-sm font-bold text-gray-900 focus:outline-none focus:border-blue-500"
-                        >
-                          <option value="">見出しを選択…</option>
-                          {headings.map((h) => (
-                            <option key={h} value={h}>{h}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    <div className="rounded-2xl border border-gray-100 bg-gray-50/30 p-4 sm:p-6 min-h-[320px] max-h-[520px] overflow-y-auto space-y-3">
-                      {chatMessages.length === 0 ? (
-                        <div className="text-center py-10">
-                          <p className="text-sm font-black text-gray-500">例）「結論を先に、箇条書きを増やして読みやすくして」</p>
-                          <p className="text-xs font-bold text-gray-400 mt-2">修正内容を送ると、AIが修正案を作ります。</p>
-                        </div>
-                      ) : (
-                        chatMessages.map((m, idx) => (
-                          <div
-                            key={idx}
-                            className={`p-4 rounded-2xl ${
-                              m.role === 'user' ? 'bg-white border border-gray-100' : 'bg-indigo-50 border border-indigo-100'
-                            }`}
-                          >
-                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">
-                              {m.role === 'user' ? 'YOU' : 'AI'}
-                            </p>
-                            <p className="text-sm font-bold text-gray-800 whitespace-pre-wrap">{m.content}</p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                      <textarea
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        placeholder="修正したい内容を入力…"
-                        className="flex-1 min-h-[90px] p-4 rounded-2xl border border-gray-100 bg-white text-sm font-bold text-gray-900 focus:outline-none focus:border-indigo-500"
-                      />
-                      <div className="flex flex-col gap-2 sm:w-44">
-                        <button
-                          disabled={chatBusy || !chatInput.trim()}
-                          onClick={async () => {
-                            const msg = chatInput.trim()
-                            if (!msg) return
-                            setChatBusy(true)
-                            setChatError(null)
-                            setChatMessages((prev) => [...prev, { role: 'user', content: msg }])
-                            setChatInput('')
-                            try {
-                              const res = await fetch(`/api/seo/articles/${id}/chat-edit`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  message: msg,
-                                  ...(targetHeading ? { targetHeading } : {}),
-                                }),
-                              })
-                              const json = await res.json().catch(() => ({}))
-
-                              // 長文のため見出し指定が必要
-                              if (json?.code === 'NEED_TARGET' && Array.isArray(json?.headings)) {
-                                setHeadings(json.headings)
-                                setChatMessages((prev) => [
-                                  ...prev,
-                                  { role: 'assistant', content: '記事が長いので、修正したい見出しを選んでからもう一度送ってください。' },
-                                ])
-                                return
-                              }
-
-                              if (!res.ok || json?.success === false) {
-                                if (json?.code === 'PAID_ONLY') {
-                                  setChatError('この機能は有料プラン限定です。')
-                                } else {
-                                  setChatError(json?.error || `API Error: ${res.status}`)
-                                }
-                                setChatMessages((prev) => [...prev, { role: 'assistant', content: 'すみません、修正案の生成に失敗しました。' }])
-                                return
-                              }
-
-                              const summary = String(json?.summary || '').trim()
-                              const proposedMarkdown = String(json?.proposedMarkdown || '')
-                              setChatMessages((prev) => [
-                                ...prev,
-                                { role: 'assistant', content: summary ? `修正案を作成しました。\n- 要点: ${summary}` : '修正案を作成しました。' },
-                              ])
-
-                              // すぐ適用できるよう draft に入れる
-                              if (proposedMarkdown) {
-                                setMarkdownDraft(proposedMarkdown)
-                                setMessage('修正案を「編集」タブの本文に反映しました。必要なら「保存する」で確定できます。')
-                                setTimeout(() => setMessage(null), 3500)
-                              }
-                            } catch (e: any) {
-                              setChatError(e?.message || '不明なエラー')
-                              setChatMessages((prev) => [...prev, { role: 'assistant', content: '通信エラーが発生しました。時間を置いて再試行してください。' }])
-                            } finally {
-                              setChatBusy(false)
-                            }
-                          }}
-                          className="h-11 rounded-xl bg-indigo-600 text-white text-xs font-black shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-colors disabled:opacity-50"
-                        >
-                          {chatBusy ? '生成中…' : '修正案を作る'}
-                        </button>
-
-                        <button
-                          disabled={chatBusy || !markdownDraft.trim()}
-                          onClick={() =>
-                            act('save', async () => {
-                              await fetch(`/api/seo/articles/${id}/content`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ finalMarkdown: markdownDraft, normalize: true, updateOutline: true }),
-                              })
-                            })
-                          }
-                          className="h-11 rounded-xl bg-white border border-gray-200 text-gray-700 text-xs font-black hover:bg-gray-50 transition-colors disabled:opacity-50"
-                        >
-                          適用して保存
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
               </div>
             )}
 
@@ -865,50 +675,44 @@ function SeoArticleInner() {
             )}
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - シンプル化 */}
           <div className="space-y-6 sm:space-y-8">
+            {/* 記事情報 */}
             <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-lg">
-              <h3 className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Article Information</h3>
+              <h3 className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest mb-6">記事情報</h3>
               <div className="space-y-6">
                 <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase mb-2 flex items-center gap-2"><Target className="w-3 h-3" /> Target Keywords</p>
+                  <p className="text-[10px] font-black text-gray-400 mb-2 flex items-center gap-2"><Target className="w-3 h-3" /> キーワード</p>
                   <div className="flex flex-wrap gap-2">
                     {((article.keywords as string[]) || []).map((k, i) => (
                       <span key={i} className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-[9px] sm:text-[10px] font-black border border-blue-100">{k}</span>
                     ))}
                   </div>
                 </div>
-                {article.requestText && (
-                  <div>
-                    <p className="text-[10px] font-black text-gray-400 uppercase mb-2 flex items-center gap-2"><MessageSquare className="w-3 h-3" /> Request Memo</p>
-                    <div className="p-4 rounded-xl sm:rounded-2xl bg-gray-50 text-[10px] sm:text-[11px] font-bold text-gray-500 border border-gray-100 leading-relaxed line-clamp-6">{article.requestText}</div>
-                  </div>
-                )}
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 mb-2 flex items-center gap-2"><FileText className="w-3 h-3" /> 目標文字数</p>
+                  <p className="text-lg font-black text-gray-900">{article.targetChars.toLocaleString()}字</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 mb-2 flex items-center gap-2"><BarChart3 className="w-3 h-3" /> 現在の文字数</p>
+                  <p className="text-lg font-black text-gray-900">{score.charCount.toLocaleString()}字 <span className="text-sm text-gray-400">({charProgress}%)</span></p>
+                </div>
               </div>
             </div>
 
+            {/* クイックアクション */}
             <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-lg">
-              <h3 className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Work Memo</h3>
-              <textarea
-                className="w-full min-h-32 p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-gray-50 border border-gray-100 text-[11px] sm:text-xs font-bold text-gray-600 focus:outline-none focus:border-blue-500 focus:bg-white transition-all shadow-inner mb-4"
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-                placeholder="AIへの指示や修正ポイントをメモ..."
-              />
-              <Button variant="primary" onClick={() => act('memo', async () => {
-                await fetch(`/api/seo/articles/${id}/memo`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ content: memo }),
-                })
-              })} className="w-full h-11 sm:h-12 bg-gray-900 text-white rounded-xl sm:rounded-2xl font-black text-[10px] sm:text-xs shadow-lg">Save Memo</Button>
-            </div>
-
-            <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-lg">
-              <h3 className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Quick Actions</h3>
+              <h3 className="text-[10px] sm:text-xs font-black text-gray-400 uppercase tracking-widest mb-6">操作</h3>
               <div className="grid gap-3">
-                <button onClick={() => setTab('audit')} className="w-full p-4 rounded-xl sm:rounded-2xl bg-emerald-50 text-emerald-700 font-black text-[10px] sm:text-xs flex items-center justify-between hover:bg-emerald-100 transition-all border border-emerald-100/50">Quality Audit <CheckCircle className="w-4 h-4" /></button>
-                <button onClick={() => setTab('media')} className="w-full p-4 rounded-xl sm:rounded-2xl bg-orange-50 text-orange-700 font-black text-[10px] sm:text-xs flex items-center justify-between hover:bg-orange-100 transition-all border border-orange-100/50">Assets Gen <ImageIcon className="w-4 h-4" /></button>
+                <button onClick={() => setTab('edit')} className="w-full p-4 rounded-xl sm:rounded-2xl bg-purple-50 text-purple-700 font-black text-[10px] sm:text-xs flex items-center justify-between hover:bg-purple-100 transition-all border border-purple-100/50">
+                  編集する <Edit3 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setTab('media')} className="w-full p-4 rounded-xl sm:rounded-2xl bg-orange-50 text-orange-700 font-black text-[10px] sm:text-xs flex items-center justify-between hover:bg-orange-100 transition-all border border-orange-100/50">
+                  画像を見る <ImageIcon className="w-4 h-4" />
+                </button>
+                <button onClick={() => setTab('export')} className="w-full p-4 rounded-xl sm:rounded-2xl bg-gray-50 text-gray-700 font-black text-[10px] sm:text-xs flex items-center justify-between hover:bg-gray-100 transition-all border border-gray-100/50">
+                  ダウンロード <Download className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
