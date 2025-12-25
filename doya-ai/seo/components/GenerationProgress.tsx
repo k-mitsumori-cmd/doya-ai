@@ -129,7 +129,7 @@ export function GenerationProgress({ progress, step, title }: GenerationProgress
         </motion.div>
       </div>
       <div className="flex justify-between w-full text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">
-        <span>Progress</span>
+        <span>進捗</span>
         <span className="text-blue-600">{progress}%</span>
       </div>
 
@@ -181,7 +181,7 @@ export function GenerationProgress({ progress, step, title }: GenerationProgress
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-xs font-black text-blue-600 uppercase tracking-[0.2em] mb-1">Doya Tip</p>
+                <p className="text-xs font-black text-blue-600 uppercase tracking-[0.2em] mb-1">ドヤTip</p>
                 <p className="text-sm text-gray-600 font-medium leading-relaxed">
                   {loadingTips[tipIndex]}
                 </p>
