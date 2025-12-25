@@ -29,7 +29,7 @@ export const metadata: Metadata = {
         url: SERVICE_SEO.banner.ogImage,
         width: 1200,
         height: 630,
-        alt: 'ドヤバナーAI - URLを入力するだけでAIがバナーを自動生成',
+        alt: 'ドヤバナーAI - プロ品質バナーを自動生成',
       },
     ],
   },
