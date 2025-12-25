@@ -376,31 +376,47 @@ export default function BannerHistoryPage() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center py-24 bg-white rounded-3xl border border-amber-200 shadow-sm"
+              className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-3xl shadow-2xl"
             >
-              <div className="w-24 h-24 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-amber-100">
-                <ImageIcon className="w-12 h-12 text-amber-400" />
-              </div>
-              <h2 className="text-2xl font-black text-slate-800 mb-3">有料プラン限定機能</h2>
-              <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
-                履歴機能は有料プラン限定です。<br />
-                プランをアップグレードすると、6ヶ月分の履歴を<br />
-                いつでも確認・再ダウンロードできます。
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <CheckoutButton
-                  planId="banner-pro"
-                  loginCallbackUrl="/banner/dashboard/history"
-                  variant="secondary"
-                  className="px-8 py-4 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl transition-all shadow-lg shadow-amber-100 hover:scale-105"
-                >
-                  プランをアップグレード（Stripeへ）
-                </CheckoutButton>
-                <Link href="/banner/dashboard">
-                  <button className="px-8 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all">
-                    バナーを生成する
-                  </button>
-                </Link>
+              {/* 背景デコレーション */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-400/20 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+              
+              <div className="relative z-10 text-center py-16 sm:py-20 px-6 sm:px-12">
+                <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/30 shadow-lg">
+                  <Clock className="w-10 h-10 text-white" />
+                </div>
+                
+                <span className="inline-block px-4 py-1.5 bg-white/20 backdrop-blur-md text-white text-xs font-black rounded-full uppercase tracking-widest mb-4">
+                  PRO Feature
+                </span>
+                
+                <h2 className="text-2xl sm:text-3xl font-black text-white mb-4">履歴 &amp; 再ダウンロード</h2>
+                
+                <p className="text-blue-100 mb-8 max-w-lg mx-auto leading-relaxed text-sm sm:text-base">
+                  PROプランなら、生成したバナーを<strong className="text-white">3ヶ月間</strong>保存。<br />
+                  いつでも確認・再ダウンロードできます。
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <CheckoutButton
+                    planId="banner-pro"
+                    loginCallbackUrl="/banner/dashboard/history"
+                    variant="secondary"
+                    className="px-8 py-4 bg-white text-blue-600 font-black rounded-2xl transition-all shadow-lg hover:shadow-xl hover:scale-105"
+                  >
+                    PROプランを始める
+                  </CheckoutButton>
+                  <Link href="/banner">
+                    <button className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white border border-white/30 font-black rounded-2xl transition-all backdrop-blur-md">
+                      まずバナーを生成
+                    </button>
+                  </Link>
+                </div>
+                
+                <p className="mt-6 text-xs text-blue-200/80 font-bold">
+                  ¥9,980/月 〜 いつでもキャンセル可能
+                </p>
               </div>
             </motion.div>
           ) : history.length === 0 ? (
