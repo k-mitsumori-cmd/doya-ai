@@ -16,31 +16,39 @@ interface FeatureGuideProps {
   title: string
   description: string
   steps: string[]
+  // SEO用途: ガイドはシンプル表示（AI画像生成を使わない）
+  imageMode?: 'auto' | 'off'
 }
 
-export function FeatureGuide({ featureId, title, description, steps }: FeatureGuideProps) {
+export function FeatureGuide({ featureId, title, description, steps, imageMode = 'auto' }: FeatureGuideProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [guideImage, setGuideImage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
     // 初めて開くときに画像を生成
-    if (isOpen && !guideImage && !isLoading) {
+    if (imageMode !== 'off' && isOpen && !guideImage && !isLoading) {
       generateImage()
     }
-  }, [isOpen])
+  }, [isOpen, guideImage, isLoading, imageMode, featureId])
 
   const generateImage = async () => {
     setIsLoading(true)
     try {
+      // ハング対策: 画像生成APIが応答しない場合でもUIが固まらないようtimeout
+      const controller = new AbortController()
+      const timeoutMs = 12000
+      const t = setTimeout(() => controller.abort(), timeoutMs)
       const res = await fetch('/api/guide/image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           featureName: title,
           description: `A professional guide banner for "${title}" feature. ${description}`
-        })
+        }),
+        signal: controller.signal,
       })
+      clearTimeout(t)
       const data = await res.json()
       if (data.imageUrl) {
         setGuideImage(data.imageUrl)
@@ -79,37 +87,57 @@ export function FeatureGuide({ featureId, title, description, steps }: FeatureGu
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             >
-              {/* Image Header */}
-              <div className="relative aspect-[16/9] sm:aspect-[1200/630] bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                {isLoading ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                    <p className="text-xs sm:text-sm text-gray-400 font-medium">AI生成中...</p>
+              {/* Header */}
+              {imageMode === 'off' ? (
+                <div className="relative flex-shrink-0">
+                  <div className="p-5 sm:p-6 bg-gradient-to-br from-[#2563EB] to-indigo-700">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 text-white/90 text-[10px] sm:text-xs font-black uppercase tracking-widest">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Feature Guide
+                      </div>
+                      <button
+                        onClick={() => setIsOpen(false)}
+                        className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full backdrop-blur-md transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <h2 className="mt-2 text-xl sm:text-2xl font-black text-white leading-tight">{title}</h2>
                   </div>
-                ) : guideImage ? (
-                  <img src={guideImage} alt={title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-gray-400">
-                    <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 opacity-20" />
-                    <p className="text-xs sm:text-sm font-medium">No image</p>
-                  </div>
-                )}
-                
-                <button 
-                  onClick={() => setIsOpen(false)}
-                  className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md transition-colors z-10"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-                
-                <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-                  <div className="flex items-center gap-2 text-blue-300 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Feature Guide
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight">{title}</h2>
                 </div>
-              </div>
+              ) : (
+                <div className="relative aspect-[16/9] sm:aspect-[1200/630] bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                  {isLoading ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                      <p className="text-xs sm:text-sm text-gray-400 font-medium">AI生成中...</p>
+                    </div>
+                  ) : guideImage ? (
+                    <img src={guideImage} alt={title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-gray-400">
+                      <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 opacity-20" />
+                      <p className="text-xs sm:text-sm font-medium">No image</p>
+                    </div>
+                  )}
+                  
+                  <button 
+                    onClick={() => setIsOpen(false)}
+                    className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md transition-colors z-10"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                    <div className="flex items-center gap-2 text-blue-300 text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Feature Guide
+                    </div>
+                    <h2 className="text-xl sm:text-2xl font-bold text-white leading-tight">{title}</h2>
+                  </div>
+                </div>
+              )}
 
               {/* Content - Scrollable */}
               <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">

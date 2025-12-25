@@ -103,6 +103,7 @@ export default function SeoDashboardPage() {
                   "生成が始まると、アウトライン・本文・図解が順次作成されます",
                   "完成した記事はプレビューで確認し、必要なら調整して公開へ"
                 ]}
+                imageMode="off"
               />
             </div>
             <Link href="/seo/new" className="flex-1 sm:flex-none">
