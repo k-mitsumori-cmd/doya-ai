@@ -22,7 +22,7 @@ export function Toggle({
       aria-checked={checked}
       aria-label={label}
       className={clsx(
-        'w-full text-left p-4 rounded-2xl border transition-colors bg-white',
+        'w-full text-left p-4 rounded-2xl border bg-white transition-all duration-200 active:scale-[0.99] motion-reduce:transform-none motion-reduce:transition-none',
         checked
           ? 'border-green-200 hover:border-green-300 bg-green-50/40'
           : 'border-gray-200 hover:border-gray-300'

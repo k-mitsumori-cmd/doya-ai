@@ -26,6 +26,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { FeatureGuide } from '@/components/FeatureGuide'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 
 const TARGETS = [10000, 20000, 30000, 40000, 50000, 60000]
 const TONES = ['丁寧', 'フランク', 'ビジネス', '専門的'] as const
@@ -142,6 +143,7 @@ const TEMPLATES = [
 
 export default function SeoNewArticlePage() {
   const router = useRouter()
+  const reduceMotion = useReducedMotion()
   const [mode, setMode] = useState<'standard' | 'comparison_research'>('standard')
   const [articleType, setArticleType] = useState<ArticleTypeId>('howto')
   const [title, setTitle] = useState('')
@@ -209,6 +211,16 @@ export default function SeoNewArticlePage() {
   }, [keywords])
 
   const canSubmit = title.trim().length > 0 && keywordList.length > 0
+
+  const fadeUp = useMemo(
+    () => ({
+      initial: { opacity: 0, y: 10 },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, y: 6 },
+      transition: { duration: reduceMotion ? 0 : 0.25, ease: 'easeOut' as const },
+    }),
+    [reduceMotion]
+  )
 
   // 1. サンプル入力
   function fillSample() {
@@ -622,9 +634,9 @@ export default function SeoNewArticlePage() {
   }
 
   return (
-    <main className="max-w-4xl mx-auto py-6 sm:py-8 px-4 sm:px-0">
+    <main className="max-w-5xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
         {/* Header */}
-        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+        <motion.div {...fadeUp} className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
             <button
               onClick={() => router.push('/seo')}
@@ -653,25 +665,26 @@ export default function SeoNewArticlePage() {
               />
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {notice && (
-          <div className="mb-6 p-4 rounded-xl sm:rounded-2xl bg-blue-50 text-blue-700 text-sm font-bold flex items-center gap-3 border border-blue-100 shadow-sm animate-fade-in">
-            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-            {notice}
-          </div>
-        )}
+        <AnimatePresence mode="popLayout">
+          {notice && (
+            <motion.div key="notice" {...fadeUp} className="mb-6 p-4 rounded-xl sm:rounded-2xl bg-blue-50 text-blue-700 text-sm font-bold flex items-center gap-3 border border-blue-100 shadow-sm">
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
+              {notice}
+            </motion.div>
+          )}
+          {error && (
+            <motion.div key="error" {...fadeUp} className="mb-6 p-4 rounded-xl sm:rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm">
+              <p className="font-bold flex items-center gap-2"><X className="w-4 h-4" /> エラーが発生しました</p>
+              <p className="mt-1 ml-6">{error}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {error && (
-          <div className="mb-6 p-4 rounded-xl sm:rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm animate-fade-in">
-            <p className="font-bold flex items-center gap-2"><X className="w-4 h-4" /> エラーが発生しました</p>
-            <p className="mt-1 ml-6">{error}</p>
-          </div>
-        )}
-
-        <div className="space-y-6 sm:space-y-8">
+        <motion.div layout className="space-y-6 sm:space-y-8">
           {/* Simple Inputs Card */}
-          <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-xl shadow-blue-500/5">
+          <motion.div layout whileHover={reduceMotion ? undefined : { y: -2 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-xl shadow-blue-500/5">
             <div className="grid gap-6 sm:gap-8">
               <div>
                 <div className="flex items-center justify-between mb-3">
@@ -729,18 +742,20 @@ export default function SeoNewArticlePage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Article Type Picker + Preview */}
           <div className="space-y-4">
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">記事タイプ</p>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               {ARTICLE_TYPES.map((t) => {
                 const active = articleType === t.id
                 return (
-                  <button
+                  <motion.button
                     key={t.id}
                     onClick={() => applyArticleType(t.id)}
+                    whileHover={reduceMotion ? undefined : { y: -2, scale: 1.01 }}
+                    whileTap={reduceMotion ? undefined : { scale: 0.99 }}
                     className={`p-5 sm:p-6 rounded-2xl sm:rounded-3xl border transition-all text-left group ${
                       active
                         ? `bg-white border-gray-900 ring-2 ${t.color.ring} shadow-xl`
@@ -761,7 +776,7 @@ export default function SeoNewArticlePage() {
                     </div>
                     <p className="mt-3 text-sm font-black text-gray-900 group-hover:text-blue-600">{t.label}</p>
                     <p className="text-[11px] text-gray-500 mt-1 font-bold leading-relaxed">{t.desc}</p>
-                  </button>
+                  </motion.button>
                 )
               })}
             </div>
@@ -784,7 +799,15 @@ export default function SeoNewArticlePage() {
                 </div>
               </div>
 
-              <div className="mt-6 grid lg:grid-cols-5 gap-6">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={articleType}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 6 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.22, ease: 'easeOut' }}
+                  className="mt-6 grid lg:grid-cols-5 gap-6"
+                >
                 {/* Left: structure */}
                 <div className="lg:col-span-3 rounded-3xl border border-gray-100 bg-gray-50/40 p-5">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">Structure</p>
@@ -867,7 +890,8 @@ export default function SeoNewArticlePage() {
                     </div>
                   </div>
                 </div>
-              </div>
+                </motion.div>
+              </AnimatePresence>
             </div>
 
             {/* Quick Templates (filtered by type) */}
@@ -878,23 +902,33 @@ export default function SeoNewArticlePage() {
                   if (articleType === 'comparison') return String((t as any).mode || '') === 'comparison_research'
                   return !String((t as any).mode || '')
                 }).map((t) => (
-                  <button
+                  <motion.button
                     key={t.id}
                     onClick={() => applyTemplate(t)}
+                    whileHover={reduceMotion ? undefined : { y: -2 }}
+                    whileTap={reduceMotion ? undefined : { scale: 0.99 }}
                     className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-gray-100 hover:border-blue-500 hover:shadow-lg transition-all text-left group"
                   >
                     <span className="text-2xl mb-2 block">{t.icon}</span>
                     <p className="text-sm font-black text-gray-900 leading-tight group-hover:text-blue-600">{t.name}</p>
                     <p className="text-[10px] text-gray-400 mt-1 font-bold">{t.targetChars.toLocaleString()} CHARS</p>
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </div>
           </div>
 
           {/* Comparison Mode (Research) */}
+          <AnimatePresence initial={false}>
           {mode === 'comparison_research' && (
-            <div className="space-y-6 sm:space-y-8">
+            <motion.div
+              key="comparison"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: reduceMotion ? 0 : 0.25, ease: 'easeOut' }}
+              className="space-y-6 sm:space-y-8"
+            >
               {/* Reference Articles */}
               <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-xl shadow-blue-500/5">
                 <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
@@ -951,8 +985,17 @@ export default function SeoNewArticlePage() {
                       参考記事を追加すると、比較軸や表の型を“ガチ”に寄せられます。
                     </div>
                   ) : (
-                    refItems.map((it) => (
-                      <div key={it.id} className="p-4 rounded-2xl border border-gray-100 bg-white flex items-start gap-4">
+                    <AnimatePresence mode="popLayout">
+                    {refItems.map((it) => (
+                      <motion.div
+                        layout
+                        key={it.id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 6 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.2 }}
+                        className="p-4 rounded-2xl border border-gray-100 bg-white flex items-start gap-4"
+                      >
                         <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 font-black flex-shrink-0">
                           {it.kind === 'url' ? 'URL' : it.kind === 'paste' ? 'TXT' : 'FILE'}
                         </div>
@@ -996,8 +1039,9 @@ export default function SeoNewArticlePage() {
                             削除
                           </button>
                         </div>
-                      </div>
-                    ))
+                      </motion.div>
+                    ))}
+                    </AnimatePresence>
                   )}
                 </div>
               </div>
@@ -1139,9 +1183,18 @@ export default function SeoNewArticlePage() {
                       ここに確定した企業だけを深掘り調査します（削除/追加して整えてください）。
                     </div>
                   ) : (
-                    <div className="space-y-2">
+                    <motion.div layout className="space-y-2">
+                      <AnimatePresence mode="popLayout">
                       {candidates.map((c, idx) => (
-                        <div key={`${c.name}_${idx}`} className="p-4 rounded-2xl border border-gray-100 bg-white flex items-center gap-3">
+                        <motion.div
+                          layout
+                          key={`${c.name}_${idx}`}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 6 }}
+                          transition={{ duration: reduceMotion ? 0 : 0.2 }}
+                          className="p-4 rounded-2xl border border-gray-100 bg-white flex items-center gap-3"
+                        >
                           <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center font-black text-xs">
                             {idx + 1}
                           </div>
@@ -1187,14 +1240,16 @@ export default function SeoNewArticlePage() {
                               削除
                             </button>
                           </div>
-                        </div>
+                        </motion.div>
                       ))}
-                    </div>
+                      </AnimatePresence>
+                    </motion.div>
                   )}
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Bundle Toggle */}
           <div className="bg-gradient-to-br from-[#2563EB] to-blue-700 rounded-2xl sm:rounded-[32px] p-6 sm:p-8 text-white shadow-2xl shadow-blue-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
@@ -1295,7 +1350,7 @@ export default function SeoNewArticlePage() {
               )}
             </Button>
           </div>
-        </div>
+        </motion.div>
     </main>
   )
 }
