@@ -1162,10 +1162,12 @@ export async function POST(request: NextRequest) {
 
     // ==============================
     // 枚数/サイズの強制（改ざん対策）
-    // - 無料/ゲスト：3枚固定・1080x1080固定
-    // - 有料：3〜10枚、サイズ指定可（範囲チェック）
+    // - 無料/ゲスト：1〜3枚・1080x1080固定
+    // - 有料：1〜10枚、サイズ指定可（範囲チェック）
     // ==============================
-    const desiredCount = isPaidUser ? Math.max(3, Math.min(10, requestedCount || 3)) : 3
+    const desiredCount = isPaidUser
+      ? Math.max(1, Math.min(10, requestedCount || 3))
+      : Math.max(1, Math.min(3, requestedCount || 3))
     const size = isPaidUser ? (isValidSizeString(requestedSizeRaw) ? requestedSizeRaw : '1080x1080') : '1080x1080'
 
     if (!targetUrl || !isValidHttpUrl(targetUrl)) {
