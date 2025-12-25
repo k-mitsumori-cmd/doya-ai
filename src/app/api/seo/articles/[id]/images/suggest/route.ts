@@ -77,8 +77,12 @@ ${content.slice(0, 4000)}
 最大5個まで、優先度の高い順に提案してください。
 `
 
-    const result = await geminiGenerateJson(prompt, SuggestSchema, {
-      maxOutputTokens: 4096,
+    const result = await geminiGenerateJson<{ diagrams?: Array<{ title: string; description: string; insertAfterHeading?: string; priority: 'high' | 'medium' | 'low' }> }>({
+      model: 'gemini-3-pro-preview',
+      prompt,
+      generationConfig: {
+        maxOutputTokens: 4096,
+      },
     })
 
     return NextResponse.json({

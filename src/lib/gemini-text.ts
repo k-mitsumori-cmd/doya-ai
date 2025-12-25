@@ -186,7 +186,8 @@ export async function generateChatWithGemini(
     contents[0].parts[0].text = `${sys}\n\n---\n\n${contents[0].parts[0].text}`
   }
 
-  const endpoint = `${GEMINI_API_BASE}/models/${GEMINI_3_MODEL}:generateContent`
+  const modelId = getPrimaryTextModel()
+  const endpoint = `${GEMINI_API_BASE}/models/${modelId}:generateContent`
   
   const response = await fetch(`${endpoint}?key=${apiKey}`, {
     method: 'POST',
