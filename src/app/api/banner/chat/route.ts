@@ -170,10 +170,24 @@ function buildSuggestedUserMessages(params: {
   category?: string
   purpose?: string
   hintQuestion?: string
+  questionText?: string
+  contextText?: string
 }): string[] {
   const category = String(params.category || '').toLowerCase()
   const purpose = String(params.purpose || '').toLowerCase()
-  const q = String(params.hintQuestion || '').trim()
+  const q = String(params.hintQuestion || params.questionText || '').trim()
+  const ctx = String(params.contextText || '').trim()
+
+  const norm = (s: string) => String(s || '').trim()
+  const uniq = (arr: string[]) => Array.from(new Set(arr.map((x) => norm(x)).filter(Boolean)))
+
+  const productName = (() => {
+    const m1 = ctx.match(/商品名(?:は|[:：])\s*([^\n。]+)\s*/i)
+    if (m1?.[1]) return m1[1].trim().slice(0, 30)
+    const m2 = ctx.match(/サービス名(?:は|[:：])\s*([^\n。]+)\s*/i)
+    if (m2?.[1]) return m2[1].trim().slice(0, 30)
+    return ''
+  })()
 
   // 業種別の“そのまま送れる”例（短文・実務寄り）
   const byCategory: Record<string, string[]> = {
@@ -181,6 +195,9 @@ function buildSuggestedUserMessages(params: {
       'キャッチコピーは「初回20%OFF」にします。画像は清潔感のあるモデル写真＋白背景でお願いします。',
       'キャッチコピーは「毛穴、3日で変わる。」にします。自然光の明るいビフォーアフター風でお願いします。',
       'キャッチコピーは「今だけ送料無料」にします。パッケージを大きく、価格感を強めてください。',
+      'ターゲットは20〜30代女性です。清潔感/上品/信頼感のトーンでお願いします。',
+      'CTAは「今すぐチェック」にします。割引率（%）と期限を大きめに入れてください。',
+      'キャッチコピーは「肌、変わる。」にします。余白多めで上品にお願いします。',
     ],
     recruit: [
       'キャッチコピーは「未経験から正社員へ」にします。笑顔の人物写真＋安心感のある配色でお願いします。',
@@ -191,6 +208,9 @@ function buildSuggestedUserMessages(params: {
       'キャッチコピーは「手作業を50%削減」にします。モダンなUI画面風でお願いします。',
       'キャッチコピーは「属人化をなくす」にします。青/白基調で信頼感あるトーンにしてください。',
       'キャッチコピーは「最短3日で導入」にします。CTAは「無料で試す」でお願いします。',
+      'ターゲットは中小企業の管理部門です。難しい言葉は避けてシンプルにお願いします。',
+      '訴求は「導入の速さ」「工数削減」「安心サポート」の3点に絞ってください。',
+      'キャッチコピーは「1分で整う」にします。CTAは「資料請求」でお願いします。',
     ],
     realestate: [
       'キャッチコピーは「失敗しない家選び」にします。生活イメージの写真で安心感を出してください。',
@@ -201,6 +221,9 @@ function buildSuggestedUserMessages(params: {
       'キャッチコピーは「今だけ30%OFF」にします。商品を主役に、割引を大きくお願いします。',
       'キャッチコピーは「先着100名、限定価格」にします。CTAは「今すぐ買う」でお願いします。',
       'キャッチコピーは「3分で完了、定期便」にします。分かりやすくシンプルにしてください。',
+      '価格（¥）と割引（%）を最重要に。購入導線を強くしてください。',
+      '背景は白ベース、アクセントにブランドカラーでお願いします。',
+      'キャッチコピーは「今日だけ特価」にします。期限を目立たせてください。',
     ],
     education: [
       'キャッチコピーは「初心者でも3ヶ月で習得」にします。何が学べるか一目で分かる構成でお願いします。',
@@ -218,22 +241,65 @@ function buildSuggestedUserMessages(params: {
     '用途はSNS広告、サイズは1080×1080でお願いします。キャッチコピーは「今だけ○○」にします。',
     'キャッチコピーは「○○で悩む人へ」にします。画像は人物写真メインでお願いします。',
     '色は青/白基調でお願いします。CTAは「今すぐチェック」にします。',
+    '用途はLPのファーストビューです。強いベネフィットを大きく入れてください。',
+    '目的は集客です。価格（¥）・割引（%）・期限（例: 本日まで）を入れてください。',
+    '写真は「明るい」「清潔感」「余白多め」でお願いします。',
   ]
 
   const fromCat = byCategory[category] || generic
-  const picked = fromCat.slice(0, 3)
+  const picked = fromCat.slice(0, 6)
+
+  const qLower = q.toLowerCase()
+  const wantsCatch = /キャッチ|コピー/.test(q) || /catch/.test(qLower)
+  const wantsImage = /写真|画像|イメージ|素材|ビジュアル/.test(q)
+  const wantsTarget = /ターゲット|誰|向け/.test(q)
+  const wantsPurpose = /用途|目的|媒体|どこで|広告|sns|lp|youtube/.test(qLower) || /用途|目的|媒体|どこで|広告/.test(q)
+  const wantsCategory = /業種|カテゴリ|ジャンル/.test(q)
+
+  const contextual: string[] = []
+  const namePart = productName ? `商品名は「${productName}」。` : ''
+
+  if (wantsPurpose) {
+    contextual.push(
+      `${namePart}用途はSNS広告（Instagram）です。サイズは1080×1080でお願いします。`,
+      `${namePart}用途はLPのファーストビューです。サイズは1200×628でお願いします。`
+    )
+  }
+  if (wantsCategory) {
+    contextual.push(
+      `${namePart}業種は美容です。清潔感・上品・信頼感のトーンでお願いします。`,
+      `${namePart}業種はIT（BtoB）です。青/白基調で信頼感、数字を強調してください。`
+    )
+  }
+  if (wantsTarget) {
+    contextual.push(
+      `${namePart}ターゲットは20〜30代女性です。悩み訴求でお願いします。`,
+      `${namePart}ターゲットは忙しいビジネスパーソンです。「時短」「効率化」を強調してください。`
+    )
+  }
+  if (wantsCatch) {
+    contextual.push(
+      `${namePart}キャッチコピーは「初回20%OFF」にします。CTAは「今すぐチェック」でお願いします。`,
+      `${namePart}キャッチコピーは「1分で完成」にします。CTAは「無料で試す」でお願いします。`
+    )
+  }
+  if (wantsImage) {
+    contextual.push(
+      `${namePart}画像は「明るい人物写真＋白背景」。余白多めでお願いします。`,
+      `${namePart}画像は「プロダクトUIのスクショ風＋アイコン」。近未来っぽいトーンでお願いします。`
+    )
+  }
   // 用途がYouTubeならサムネ寄りの例も差し込む
   if (purpose === 'youtube') {
-    return [
+    return uniq([
       'YouTubeサムネ用です。キャッチは短く「知らないと損」にします。表情強めの人物でお願いします。',
-      ...picked.slice(0, 2),
-    ]
+      ...contextual,
+      ...picked,
+      ...generic,
+    ]).slice(0, 6)
   }
-  if (q) {
-    // 質問に寄せた例を先頭に足す（長くしすぎない）
-    return [picked[0], picked[1], picked[2]].filter(Boolean)
-  }
-  return picked
+  // 質問に寄せた例を先頭に（長くしすぎない）
+  return uniq([...contextual, ...picked, ...generic]).slice(0, 6)
 }
 
 async function callGemini(messages: ChatMessage[], apiKey: string): Promise<string> {
@@ -362,11 +428,15 @@ export async function POST(req: NextRequest) {
 
     const rawText = await callGemini(messages, apiKey)
     const parsed = extractJsonObject(rawText)
+    const contextText = messages
+      .slice(-8)
+      .map((m) => `${m.role === 'assistant' ? 'AI' : 'USER'}: ${String(m.content || '').trim()}`)
+      .join('\n')
 
     // パースできない場合でも、ユーザー体験としては「質問で返す」ことを優先（エラーで止めない）
     if (!parsed || typeof parsed !== 'object') {
       const reply = ensureQuestionEnding('いいですね。バナーに載せるキャッチコピーと、使いたい写真/イメージはどんな感じにしますか？')
-      const suggestions = buildSuggestedUserMessages({})
+      const suggestions = buildSuggestedUserMessages({ questionText: reply, contextText })
       return NextResponse.json({
         needsMoreInfo: true,
         questions: ['キャッチコピー案と、写真/イメージの希望を教えてください。'],
@@ -389,6 +459,8 @@ export async function POST(req: NextRequest) {
           category: String(parsed?.spec?.category || parsed?.category || ''),
           purpose: String(parsed?.spec?.purpose || parsed?.purpose || ''),
           hintQuestion: qs[0] || '',
+          questionText: String(parsed.reply || ''),
+          contextText,
         }),
       })
     }
@@ -401,6 +473,8 @@ export async function POST(req: NextRequest) {
       suggestions: buildSuggestedUserMessages({
         category: coerced.spec?.category,
         purpose: coerced.spec?.purpose,
+        questionText: String(parsed.reply || ''),
+        contextText,
       }),
     })
   } catch (e: any) {

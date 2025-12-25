@@ -155,9 +155,10 @@ export default function BannerChatPage() {
   ])
   const [input, setInput] = useState('')
   const [suggestedInputs, setSuggestedInputs] = useState<string[]>([
-    'Instagram向けの美容系バナーを作りたいです。1080×1080でお願いします。',
-    'キャッチコピーは「初回20%OFF」にします。画像は清潔感のあるモデル写真でお願いします。',
-    'ターゲットは20〜30代女性です。CTAは「今すぐチェック」でお願いします。',
+    '用途はSNS広告（Instagram）です。サイズは1080×1080でお願いします。',
+    'キャッチコピーは「初回20%OFF」にします。CTAは「今すぐチェック」でお願いします。',
+    '画像は清潔感のあるモデル写真＋白背景。上品/信頼感のトーンでお願いします。',
+    'ターゲットは20〜30代女性です。悩み訴求でお願いします。',
   ])
   const [isThinking, setIsThinking] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -257,7 +258,7 @@ export default function BannerChatPage() {
             .filter((s: any) => typeof s === 'string')
             .map((s: any) => String(s || '').trim())
             .filter(Boolean)
-            .slice(0, 4)
+            .slice(0, 8)
         )
       }
     } catch (e: any) {
@@ -529,18 +530,35 @@ export default function BannerChatPage() {
                     <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </div>
-                <div className="mt-2 sm:mt-3 flex items-center gap-2 sm:gap-4 px-1 sm:px-2 overflow-x-auto">
-                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest flex-shrink-0">キーワード:</span>
-                  {suggestedInputs.slice(0, 2).map((s, i) => (
-                    <button
-                      key={`${i}-${s}`}
-                      onClick={() => setInput(s)}
-                      className="text-[9px] sm:text-[10px] font-bold text-blue-600 hover:underline truncate max-w-[100px] sm:max-w-none flex-shrink-0"
-                      title={s}
-                    >
-                      {s.length > 12 ? s.slice(0, 12) + '…' : s}
-                    </button>
-                  ))}
+                <div className="mt-3 sm:mt-4 px-1 sm:px-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                      クイック入力（クリックで挿入）
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 hidden sm:block">
+                      {suggestedInputs.length}件
+                    </span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {suggestedInputs.slice(0, 6).map((s, i) => (
+                      <button
+                        key={`${i}-${s}`}
+                        type="button"
+                        onClick={() => setInput(s)}
+                        title={s}
+                        className="group text-left w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-blue-300 transition-colors shadow-sm"
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-lg bg-blue-50 text-blue-700 text-[10px] font-black flex-shrink-0">
+                            {i + 1}
+                          </span>
+                          <span className="text-[11px] sm:text-[12px] font-bold text-slate-700 leading-relaxed">
+                            {s}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

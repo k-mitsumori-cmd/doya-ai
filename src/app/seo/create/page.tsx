@@ -24,6 +24,16 @@ const SAMPLE_KEYWORDS = [
 export default function SeoCreateSimplePage() {
   const router = useRouter()
 
+  // Step（初見でも迷わない一本道）
+  const [step, setStep] = useState<1 | 2>(1) // Step3はジョブ画面へ遷移するためここでは持たない
+  const [preview, setPreview] = useState<null | {
+    persona: string
+    searchIntent: string
+    keywords: string[]
+    outline: any
+  }>(null)
+  const [previewing, setPreviewing] = useState(false)
+
   // 入力状態
   const [mainKeyword, setMainKeyword] = useState('')
   const [relatedKeywords, setRelatedKeywords] = useState('')
@@ -123,58 +133,118 @@ export default function SeoCreateSimplePage() {
     setPersona(sample.persona)
     setTone(sample.tone)
     setShowAdvanced(true) // 詳細設定も開く
+    setStep(1)
+    setPreview(null)
   }
 
-  async function handleSubmit() {
-    if (!canSubmit || loading) return
-    setLoading(true)
+  function splitRelatedKeywords(raw: string): string[] {
+    return (raw || '')
+      .split(/[,、\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 20)
+  }
+
+  const DEFAULT_LLMO = {
+    tldr: true,
+    conclusionFirst: true,
+    faq: true,
+    glossary: false,
+    comparison: false,
+    quotes: true,
+    templates: false,
+    objections: false,
+  }
+
+  async function handlePreview() {
+    if (!canSubmit || previewing || loading) return
+    setPreviewing(true)
     setError(null)
-
     try {
-      // 関連KWをカンマ区切りで分割
-      const related = relatedKeywords
-        .split(/[,、\n]/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-
-      // 記事を作成（構成生成まで）
-      const res = await fetch('/api/seo/articles', {
+      const related = splitRelatedKeywords(relatedKeywords)
+      const res = await fetch('/api/seo/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: `${mainKeyword}に関する記事`, // 仮タイトル（構成生成後に更新可能）
-          keywords: [mainKeyword, ...related],
+          mainKeyword: mainKeyword.trim(),
+          relatedKeywords: related,
           persona: persona.trim() || undefined,
           tone: tone.trim() || '丁寧',
           targetChars: 10000,
-          searchIntent: '',
-          llmoOptions: {
-            tldr: true,
-            conclusionFirst: true,
-            faq: true,
-            glossary: false,
-            comparison: false,
-            quotes: true,
-            templates: false,
-            objections: false,
-          },
-          autoBundle: true,
-          autoStart: true, // 構成生成を即開始
+          llmoOptions: DEFAULT_LLMO,
         }),
       })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || `エラー (${res.status})`)
+      setPreview(json.preview)
+      setStep(2)
+    } catch (e: any) {
+      setError(e?.message || 'プレビュー生成に失敗しました')
+    } finally {
+      setPreviewing(false)
+    }
+  }
 
-      const json = await res.json()
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || `エラーが発生しました (${res.status})`)
-      }
+  async function createArticle(opts: { createJob: boolean }) {
+    const related = splitRelatedKeywords(relatedKeywords)
+    const requestText =
+      knowledgeItems.length > 0
+        ? `以下の独自情報を考慮して記事を生成してください。\n\n${knowledgeItems
+            .map((it) => `## ${it.title}\n${it.content}`)
+            .join('\n\n')}`
+        : undefined
 
-      // ジョブページへ遷移（自動進行）
-      const articleId = json.article?.id || json.id
-      const jobId = json.jobId || json.article?.jobs?.[0]?.id
+    const derivedPersona = persona.trim() || String(preview?.persona || '').trim() || undefined
+    const derivedIntent = String(preview?.searchIntent || '').trim() || ''
+
+    const res = await fetch('/api/seo/articles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: `${mainKeyword.trim()}に関する記事`,
+        keywords: [mainKeyword.trim(), ...related],
+        persona: derivedPersona,
+        tone: tone.trim() || '丁寧',
+        targetChars: 10000,
+        searchIntent: derivedIntent,
+        llmoOptions: DEFAULT_LLMO,
+        autoBundle: true,
+        createJob: opts.createJob,
+        requestText,
+      }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok || json?.success === false) throw new Error(json?.error || `エラーが発生しました (${res.status})`)
+    return { articleId: json.articleId || json.article?.id || json.id, jobId: json.jobId || json.job?.id || null }
+  }
+
+  async function handleStartNow() {
+    if (!canSubmit || loading) return
+    setLoading(true)
+    setError(null)
+    try {
+      const { articleId, jobId } = await createArticle({ createJob: true })
       if (jobId) {
         router.push(`/seo/jobs/${jobId}?auto=1`)
       } else if (articleId) {
         router.push(`/seo/articles/${articleId}`)
+      } else {
+        router.push('/seo')
+      }
+    } catch (e: any) {
+      setError(e?.message || '記事の作成に失敗しました')
+      setLoading(false)
+    }
+  }
+
+  async function handleEditOutlineFirst() {
+    if (!canSubmit || loading) return
+    setLoading(true)
+    setError(null)
+    try {
+      const { articleId } = await createArticle({ createJob: false })
+      if (articleId) {
+        router.push(`/seo/articles/${articleId}/outline`)
       } else {
         router.push('/seo')
       }
@@ -215,10 +285,134 @@ export default function SeoCreateSimplePage() {
             <p className="text-sm text-gray-400 font-bold mt-2">
               キーワードを入力するだけで、AIが構成から本文まで生成します
             </p>
+
+            {/* Step indicator */}
+            <div className="mt-5 flex items-center justify-center gap-2">
+              {[
+                { id: 1, label: 'Step1 入力' },
+                { id: 2, label: 'Step2 プレビュー' },
+                { id: 3, label: 'Step3 生成' },
+              ].map((s) => {
+                const active = (s.id === 1 && step === 1) || (s.id === 2 && step === 2)
+                const done = s.id === 1 && step === 2
+                return (
+                  <div
+                    key={s.id}
+                    className={`px-3 py-1.5 rounded-full text-[10px] font-black border transition-colors ${
+                      active
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : done
+                          ? 'bg-blue-50 text-blue-700 border-blue-100'
+                          : 'bg-white text-gray-400 border-gray-200'
+                    }`}
+                  >
+                    {s.label}
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
           {/* フォーム */}
           <div className="px-6 sm:px-10 py-6 sm:py-8 space-y-5">
+            {/* Step2: 生成前アウトプレビュー */}
+            {step === 2 && preview && (
+              <div className="space-y-5">
+                <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100">
+                  <p className="text-xs font-black text-blue-700 flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    生成前プレビュー（ここで「成果が出そう」を確認できます）
+                  </p>
+                  <p className="text-[11px] font-bold text-blue-700/80 mt-1">
+                    構成・検索意図・想定読者を確認してから生成できます。必要なら構成編集にも進めます。
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-4 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">目標</p>
+                    <p className="text-lg font-black text-gray-900 mt-1">10,000字</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">想定読者</p>
+                    <p className="text-sm font-bold text-gray-900 mt-1 line-clamp-2">
+                      {String(preview.persona || persona || '（未指定：生成時に最適化）')}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">検索意図</p>
+                    <p className="text-sm font-bold text-gray-900 mt-1 line-clamp-2">
+                      {String(preview.searchIntent || '（推定中）')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-black text-gray-900">構成プレビュー</p>
+                      <p className="text-[11px] font-bold text-gray-500 mt-1">
+                        H2: {Array.isArray(preview.outline?.sections) ? preview.outline.sections.length : 0} 個
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-black px-3 py-1.5 rounded-full bg-gray-50 border border-gray-100 text-gray-500">
+                      後で編集OK
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {(Array.isArray(preview.outline?.sections) ? preview.outline.sections : []).slice(0, 12).map((s: any, i: number) => (
+                      <div key={i} className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-sm font-black text-gray-900 leading-snug">
+                            {s?.h2 ? String(s.h2) : `見出し${i + 1}`}
+                          </p>
+                          {String(s?.intentTag || '').trim() ? (
+                            <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-[10px] font-black">
+                              {String(s.intentTag)}
+                            </span>
+                          ) : null}
+                        </div>
+                        {Array.isArray(s?.h3) && s.h3.length > 0 && (
+                          <ul className="mt-2 space-y-1">
+                            {s.h3.slice(0, 6).map((h: any, j: number) => (
+                              <li key={j} className="text-xs font-bold text-gray-600">
+                                ・{String(h)}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                    {Array.isArray(preview.outline?.sections) && preview.outline.sections.length > 12 && (
+                      <p className="text-[11px] font-bold text-gray-400">
+                        …他 {preview.outline.sections.length - 12} 件（生成後に全文表示）
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {Array.isArray(preview.outline?.diagramIdeas) && preview.outline.diagramIdeas.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                    <p className="text-sm font-black text-gray-900">図解案（自動生成の候補）</p>
+                    <div className="mt-3 space-y-2">
+                      {preview.outline.diagramIdeas.slice(0, 2).map((d: any, i: number) => (
+                        <div key={i} className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                          <p className="text-sm font-black text-gray-900">{String(d?.title || '図解')}</p>
+                          <p className="text-xs font-bold text-gray-600 mt-1">{String(d?.description || '')}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11px] font-bold text-gray-400 mt-3">
+                      ※ 図解/サムネ生成は有料プランで利用できます
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {step === 1 && (
+              <>
             {/* メインKW（必須） */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -424,6 +618,8 @@ export default function SeoCreateSimplePage() {
                 )}
               </AnimatePresence>
             </div>
+              </>
+            )}
 
             {/* エラー */}
             {error && (
@@ -439,23 +635,65 @@ export default function SeoCreateSimplePage() {
 
           {/* CTA */}
           <div className="px-6 sm:px-10 pb-8 sm:pb-10 flex flex-col gap-3">
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit || loading}
-              className="w-full h-14 sm:h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-base sm:text-lg shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  構成を生成中...
-                </>
-              ) : (
-                <>
-                  構成を作る
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
+            {step === 1 ? (
+              <button
+                onClick={handlePreview}
+                disabled={!canSubmit || previewing || loading}
+                className="w-full h-14 sm:h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-base sm:text-lg shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
+              >
+                {previewing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    プレビュー生成中...
+                  </>
+                ) : (
+                  <>
+                    アウトラインをプレビュー
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep(1)
+                    setError(null)
+                  }}
+                  className="w-full h-12 rounded-xl bg-gray-50 border border-gray-100 text-gray-600 font-black text-sm hover:bg-gray-100 transition-colors"
+                >
+                  入力に戻る
+                </button>
+
+                <button
+                  onClick={handleStartNow}
+                  disabled={!canSubmit || loading}
+                  className="w-full h-14 sm:h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-base sm:text-lg shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      生成を開始中...
+                    </>
+                  ) : (
+                    <>
+                      このまま生成する
+                      <ArrowRight className="w-5 h-5" />
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleEditOutlineFirst}
+                  disabled={!canSubmit || loading}
+                  className="w-full h-12 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-sm hover:bg-gray-50 transition-colors"
+                >
+                  構成を編集してから生成
+                </button>
+              </>
+            )}
 
             <Link href="/seo/new" className="block">
               <button
@@ -526,10 +764,10 @@ export default function SeoCreateSimplePage() {
                   <div className="flex gap-4 items-start">
                     <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-black flex-shrink-0">2</div>
                     <div>
-                      <h3 className="text-sm font-black text-gray-900 mb-1">「構成を作る」をクリック</h3>
+                      <h3 className="text-sm font-black text-gray-900 mb-1">「アウトラインをプレビュー」をクリック</h3>
                       <p className="text-xs text-gray-500 leading-relaxed">
-                        AIがキーワードを分析し、SEOに最適な見出し構成を自動生成します。<br />
-                        生成には10〜30秒ほどかかります。
+                        AIがキーワードを分析し、SEOに最適な「構成・検索意図・想定読者」をプレビューします。<br />
+                        通常10〜30秒ほどで表示されます。
                       </p>
                     </div>
                   </div>
