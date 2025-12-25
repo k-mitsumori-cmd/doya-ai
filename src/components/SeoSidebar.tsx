@@ -12,9 +12,10 @@ type NavItem = {
 }
 
 const SEO_NAV: NavItem[] = [
-  { href: '/seo/new', label: '新規作成', icon: Plus },
+  { href: '/seo/create', label: '新規作成', icon: Plus },
   { href: '/seo', label: 'ダッシュボード', icon: LayoutDashboard },
   { href: '/seo/articles', label: '生成履歴', icon: FileText },
+  { href: '/seo/new', label: '詳細モード', icon: Settings },
   { href: '/seo/settings', label: '設定', icon: Settings },
 ]
 
