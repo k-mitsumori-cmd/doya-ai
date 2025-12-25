@@ -335,7 +335,7 @@ function SeoArticleInner() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-          <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Loading Content...</p>
+          <p className="text-gray-400 font-black uppercase tracking-widest text-xs">読み込み中...</p>
         </div>
       </div>
     )
@@ -425,10 +425,10 @@ function SeoArticleInner() {
         {!isGenerating && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-10">
             {[
-              { label: 'Score', val: score.score, icon: BarChart3, color: score.score >= 70 ? 'text-emerald-500' : 'text-amber-500' },
-              { label: 'Characters', val: score.charCount.toLocaleString(), sub: `/ ${charProgress}%`, icon: FileText, color: 'text-blue-500' },
-              { label: 'Headings', val: score.headingCount, icon: Layers, color: 'text-purple-500' },
-              { label: 'Assets', val: article.images?.length || 0, icon: ImageIcon, color: 'text-orange-500' },
+              { label: 'スコア', val: score.score, icon: BarChart3, color: score.score >= 70 ? 'text-emerald-500' : 'text-amber-500' },
+              { label: '文字数', val: score.charCount.toLocaleString(), sub: `/ ${charProgress}%`, icon: FileText, color: 'text-blue-500' },
+              { label: '見出し', val: score.headingCount, icon: Layers, color: 'text-purple-500' },
+              { label: '画像', val: article.images?.length || 0, icon: ImageIcon, color: 'text-orange-500' },
             ].map((s, i) => (
               <div key={i} className="bg-white p-5 sm:p-6 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{s.label}</p>
@@ -496,7 +496,7 @@ function SeoArticleInner() {
                   <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8">
                     <div className="flex items-center gap-2 text-white/80 text-[10px] font-black uppercase tracking-widest mb-2">
                       <Eye className="w-4 h-4" />
-                      Public Preview
+                      プレビュー
                     </div>
                     <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white leading-tight tracking-tight">
                       {article.title}

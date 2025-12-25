@@ -28,6 +28,48 @@ type SeoJob = {
   sections: SeoSection[]
 }
 
+// ジョブステータスを日本語に変換
+const JOB_STATUS_LABELS: Record<string, string> = {
+  pending: '待機中',
+  running: '実行中',
+  paused: '一時停止中',
+  done: '完了',
+  error: 'エラー',
+  cancelled: 'キャンセル済み',
+}
+
+// ステップ名を日本語に変換
+const STEP_LABELS: Record<string, string> = {
+  init: '準備中',
+  outline: '構成生成',
+  sections: '本文執筆',
+  integrate: '記事統合',
+  media: '図解生成',
+  done: '完了',
+  OUTLINE: '構成生成',
+  SECTIONS: '本文執筆',
+  INTEGRATE: '記事統合',
+  MEDIA: '図解生成',
+  DONE: '完了',
+  cmp_ref: '参考記事解析',
+  cmp_candidates: '候補収集',
+  cmp_crawl: 'サイト巡回',
+  cmp_extract: '情報抽出',
+  cmp_sources: '出典整形',
+  cmp_tables: '比較表生成',
+  cmp_outline: '章立て生成',
+  cmp_polish: '校正中',
+}
+
+// セクションステータスを日本語に変換
+const SECTION_STATUS_LABELS: Record<string, string> = {
+  pending: '未生成',
+  generating: '生成中',
+  generated: '生成済み',
+  reviewed: 'レビュー済',
+  error: 'エラー',
+}
+
 export default function SeoJobPage() {
   const params = useParams<{ id: string }>()
   const jobId = params.id
@@ -320,20 +362,20 @@ export default function SeoJobPage() {
       </div>
 
       <div className="mt-6 grid sm:grid-cols-3 gap-3">
-        <div className="p-4 rounded-2xl border border-gray-200">
-          <p className="text-xs text-gray-500">status</p>
-          <p className="font-bold text-gray-900">{job.status}</p>
+        <div className="p-4 rounded-2xl border border-gray-200 bg-white">
+          <p className="text-xs text-gray-500 font-bold">ステータス</p>
+          <p className="font-bold text-gray-900">{JOB_STATUS_LABELS[job.status] || job.status}</p>
         </div>
-        <div className="p-4 rounded-2xl border border-gray-200">
-          <p className="text-xs text-gray-500">step / progress</p>
+        <div className="p-4 rounded-2xl border border-gray-200 bg-white">
+          <p className="text-xs text-gray-500 font-bold">現在のステップ / 進捗</p>
           <p className="font-bold text-gray-900">
-            {job.step} / {job.progress}%
+            {STEP_LABELS[job.step] || job.step} / {job.progress}%
           </p>
         </div>
-        <div className="p-4 rounded-2xl border border-gray-200">
-          <p className="text-xs text-gray-500">sections</p>
+        <div className="p-4 rounded-2xl border border-gray-200 bg-white">
+          <p className="text-xs text-gray-500 font-bold">セクション</p>
           <p className="font-bold text-gray-900">
-            {reviewedCount} / {job.sections.length}
+            {reviewedCount} / {job.sections.length} 完了
           </p>
         </div>
       </div>
@@ -419,7 +461,7 @@ export default function SeoJobPage() {
                   </p>
                   <div className="flex items-center gap-2">
                     <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">
-                      {s.status}
+                      {SECTION_STATUS_LABELS[s.status] || s.status}
                     </span>
                     <button
                       className="text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60"
@@ -450,7 +492,7 @@ export default function SeoJobPage() {
                     <summary className="text-xs font-bold text-gray-700 cursor-pointer">生成内容（抜粋）</summary>
                     <pre className="text-xs whitespace-pre-wrap mt-2 text-gray-800">
                       {s.content.slice(0, 1200)}
-                      {s.content.length > 1200 ? '\n...(truncated)' : ''}
+                      {s.content.length > 1200 ? '\n...（省略）' : ''}
                     </pre>
                   </details>
                 ) : null}
