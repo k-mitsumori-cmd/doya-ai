@@ -51,6 +51,7 @@ type SeoImage = {
   kind: string
   title?: string | null
   description?: string | null
+  prompt?: string | null
   createdAt: string
 }
 
@@ -181,6 +182,13 @@ function SeoArticleInner() {
   const prevArticleStatusRef = useRef<string | null>(null)
   const dontShowAgainRef = useRef(false)
 
+  const [entitlements, setEntitlements] = useState<null | { canUseSeoImages: boolean; plan: string; isLoggedIn: boolean }>(null)
+  const [mediaBusy, setMediaBusy] = useState(false)
+  const [mediaError, setMediaError] = useState<string | null>(null)
+  const [regenOpen, setRegenOpen] = useState(false)
+  const [regenImage, setRegenImage] = useState<SeoImage | null>(null)
+  const [regenPrompt, setRegenPrompt] = useState('')
+
 
   const markdown = useMemo(() => article?.finalMarkdown || '', [article])
   const score = useMemo(() => analyzeMarkdown(markdown || ''), [markdown])
@@ -266,6 +274,62 @@ function SeoArticleInner() {
     }
     setCompletionOpen(true)
   }, [article, article?.status, completionPopupEnabled, id])
+
+  // 画像タブを開いた時だけ権限を取得（無駄な呼び出しを避ける）
+  useEffect(() => {
+    if (tab !== 'media') return
+    if (entitlements) return
+    ;(async () => {
+      try {
+        const res = await fetch('/api/seo/entitlements', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (json?.success) setEntitlements(json)
+        else setEntitlements({ canUseSeoImages: false, plan: 'UNKNOWN', isLoggedIn: false })
+      } catch {
+        setEntitlements({ canUseSeoImages: false, plan: 'UNKNOWN', isLoggedIn: false })
+      }
+    })()
+  }, [tab, entitlements])
+
+  async function ensureImages() {
+    if (mediaBusy) return
+    setMediaBusy(true)
+    setMediaError(null)
+    try {
+      const res = await fetch(`/api/seo/articles/${id}/images/ensure`, { method: 'POST' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || `生成に失敗しました (${res.status})`)
+      await load({ showLoading: false })
+    } catch (e: any) {
+      setMediaError(e?.message || '画像生成に失敗しました')
+    } finally {
+      setMediaBusy(false)
+    }
+  }
+
+  async function regenerateImage() {
+    if (!regenImage) return
+    if (mediaBusy) return
+    setMediaBusy(true)
+    setMediaError(null)
+    try {
+      const res = await fetch(`/api/seo/images/${regenImage.id}/regenerate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: regenPrompt }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || `再生成に失敗しました (${res.status})`)
+      setRegenOpen(false)
+      setRegenImage(null)
+      setRegenPrompt('')
+      await load({ showLoading: false })
+    } catch (e: any) {
+      setMediaError(e?.message || '再生成に失敗しました')
+    } finally {
+      setMediaBusy(false)
+    }
+  }
 
 
   useEffect(() => {
@@ -542,6 +606,39 @@ function SeoArticleInner() {
                   <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-6 sm:mb-8 flex items-center gap-3">
                     <ImageIcon className="w-6 h-6 text-orange-500" /> 生成されたクリエイティブ
                   </h2>
+
+                  {entitlements && !entitlements.canUseSeoImages && (
+                    <div className="mb-6 p-5 rounded-2xl bg-amber-50 border border-amber-100">
+                      <p className="font-black text-amber-900 text-sm">画像生成（図解/バナー）は有料プラン限定です</p>
+                      <p className="text-xs font-bold text-amber-800/80 mt-1">現在のプラン: {entitlements.plan}</p>
+                      <Link href="/pricing" className="inline-block mt-3">
+                        <button className="h-11 px-5 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-800 transition-colors">
+                          料金プランを見る
+                        </button>
+                      </Link>
+                    </div>
+                  )}
+
+                  {(!entitlements || entitlements.canUseSeoImages) && (
+                    <div className="mb-6 flex flex-wrap items-center gap-2">
+                      <button
+                        onClick={ensureImages}
+                        disabled={mediaBusy}
+                        className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm shadow-lg shadow-blue-500/20 hover:opacity-95 disabled:opacity-50"
+                      >
+                        {mediaBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                        記事に合わせて画像を生成
+                      </button>
+                      <span className="text-[10px] font-bold text-gray-400">バナー＋図解（最大2）を自動生成します</span>
+                    </div>
+                  )}
+
+                  {mediaError && (
+                    <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm font-bold">
+                      {mediaError}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     {article.images?.map((img) => (
                       <div key={img.id} className="group bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-500">
@@ -552,6 +649,19 @@ function SeoArticleInner() {
                           </div>
                           <div className="absolute inset-0 bg-gray-900/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
                             <button onClick={() => copyToClipboard(`![${img.title || 'image'}](/api/seo/images/${img.id})`)} className="p-3 bg-white rounded-full text-gray-900 hover:scale-110 transition-transform"><Copy className="w-5 h-5" /></button>
+                            {entitlements?.canUseSeoImages && (
+                              <button
+                                onClick={() => {
+                                  setRegenImage(img)
+                                  setRegenPrompt(String(img.prompt || ''))
+                                  setRegenOpen(true)
+                                }}
+                                className="p-3 bg-white rounded-full text-gray-900 hover:scale-110 transition-transform"
+                                title="プロンプトを編集して再生成"
+                              >
+                                <Wand2 className="w-5 h-5" />
+                              </button>
+                            )}
                           </div>
                         </div>
                         <div className="p-4 sm:p-5">
@@ -562,11 +672,53 @@ function SeoArticleInner() {
                     ))}
                     {!article.images?.length && (
                       <div className="sm:col-span-2 py-16 sm:py-20 text-center bg-gray-50 rounded-2xl sm:rounded-3xl border-2 border-dashed border-gray-100 font-black text-gray-300 text-sm sm:text-base">
-                        画像は記事完成後に自動生成されます
+                        画像は有料プランで生成できます（上のボタンから生成）
                       </div>
                     )}
                   </div>
                 </div>
+
+                {regenOpen && (
+                  <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6">
+                    <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px]" onClick={() => !mediaBusy && setRegenOpen(false)} />
+                    <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
+                      <div className="p-6 sm:p-8 border-b border-gray-100">
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest">画像を再生成</p>
+                        <h3 className="text-lg sm:text-xl font-black text-gray-900 mt-2">{regenImage?.title || '画像'}</h3>
+                        <p className="text-xs font-bold text-gray-500 mt-2">プロンプトを修正して再生成します（画像内にテキストは入れません）</p>
+                      </div>
+                      <div className="p-6 sm:p-8 space-y-3">
+                        <textarea
+                          value={regenPrompt}
+                          onChange={(e) => setRegenPrompt(e.target.value)}
+                          rows={8}
+                          className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
+                          placeholder="プロンプトを編集してください"
+                        />
+                        <div className="flex flex-col sm:flex-row gap-3 justify-end">
+                          <button
+                            onClick={() => {
+                              if (mediaBusy) return
+                              setRegenOpen(false)
+                              setRegenImage(null)
+                            }}
+                            className="h-11 px-5 rounded-xl bg-white border border-gray-200 text-gray-700 font-black text-sm hover:bg-gray-50 transition-colors"
+                          >
+                            閉じる
+                          </button>
+                          <button
+                            onClick={regenerateImage}
+                            disabled={mediaBusy || !regenPrompt.trim()}
+                            className="h-11 px-6 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-800 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+                          >
+                            {mediaBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                            再生成する
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

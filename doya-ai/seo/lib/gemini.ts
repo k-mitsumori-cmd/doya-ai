@@ -379,24 +379,29 @@ export async function geminiGenerateImagePng(args: {
   }
   const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: args.prompt }] }],
-      generationConfig: {
-        // 画像のみ要求（TEXT混在だと画像が返らないケースがある）
-        responseModalities: ['IMAGE'],
-        imageConfig: {
-          aspectRatio: args.aspectRatio ?? '16:9',
-          imageSize: args.imageSize ?? '2K',
-        },
+  const res = await fetchWithRetry(
+    endpoint,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
       },
-    }),
-  })
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: args.prompt }] }],
+        generationConfig: {
+          // 画像のみ要求（TEXT混在だと画像が返らないケースがある）
+          responseModalities: ['IMAGE'],
+          imageConfig: {
+            aspectRatio: args.aspectRatio ?? '16:9',
+            imageSize: args.imageSize ?? '2K',
+          },
+        },
+      }),
+    },
+    3,
+    1500
+  )
 
   if (!res.ok) {
     const t = await res.text()
