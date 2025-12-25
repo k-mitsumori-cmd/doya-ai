@@ -11,18 +11,21 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
       <style jsx>{`
         .md-preview {
           color: #0f172a;
-          font-size: 15px;
-          line-height: 1.9;
-          letter-spacing: 0.01em;
+          font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP',
+            'Yu Gothic', 'Meiryo', sans-serif;
+          font-size: 15.5px;
+          line-height: 2.05;
+          letter-spacing: 0.015em;
+          text-rendering: optimizeLegibility;
         }
         @media (min-width: 640px) {
           .md-preview {
-            font-size: 16px;
+            font-size: 16.5px;
           }
         }
         @media (min-width: 1024px) {
           .md-preview {
-            font-size: 17px;
+            font-size: 17.5px;
           }
         }
         .md-preview h1,
@@ -56,7 +59,7 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
           color: #1f2937;
         }
         .md-preview p {
-          margin: 0.9rem 0;
+          margin: 1.05rem 0;
           color: #334155;
         }
         .md-preview a {
@@ -77,12 +80,12 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         }
         .md-preview ul,
         .md-preview ol {
-          margin: 0.8rem 0 1rem;
+          margin: 1rem 0 1.2rem;
           padding-left: 1.4rem;
           color: #334155;
         }
         .md-preview li {
-          margin: 0.35rem 0;
+          margin: 0.45rem 0;
         }
         .md-preview blockquote {
           margin: 1.2rem 0;
@@ -140,15 +143,23 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
           overflow: hidden;
           border-radius: 1rem;
           border: 1px solid #e5e7eb;
+          background: #ffffff;
+          box-shadow: 0 18px 40px rgba(2, 6, 23, 0.06);
         }
         .md-preview thead th {
-          background: #f1f5f9;
+          background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
           color: #0b1220;
           font-weight: 900;
           padding: 0.8rem 0.9rem;
           border-bottom: 1px solid #e5e7eb;
           text-align: left;
           white-space: nowrap;
+        }
+        .md-preview thead th:first-child {
+          border-top-left-radius: 1rem;
+        }
+        .md-preview thead th:last-child {
+          border-top-right-radius: 1rem;
         }
         .md-preview tbody td {
           padding: 0.8rem 0.9rem;
@@ -158,6 +169,9 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         }
         .md-preview tbody tr:nth-child(even) td {
           background: #fbfdff;
+        }
+        .md-preview tbody tr:hover td {
+          background: #f5faff;
         }
         .md-preview tbody tr:last-child td {
           border-bottom: none;
