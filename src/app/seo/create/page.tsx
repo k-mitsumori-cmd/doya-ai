@@ -3,8 +3,18 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, ChevronDown, ChevronUp, ArrowRight, Loader2 } from 'lucide-react'
+import { Sparkles, ChevronDown, ChevronUp, ArrowRight, Loader2, Wand2 } from 'lucide-react'
 import Link from 'next/link'
+
+// サンプルキーワードリスト
+const SAMPLE_KEYWORDS = [
+  { main: 'AI ライティング ツール', related: 'SEO記事作成, 自動文章生成, ChatGPT活用', persona: 'マーケティング担当者', tone: '専門的' },
+  { main: '転職エージェント おすすめ', related: '転職サイト比較, 年収アップ, キャリアチェンジ', persona: '30代の転職希望者', tone: 'やさしい' },
+  { main: 'プログラミング 独学', related: 'プログラミングスクール, 未経験エンジニア, 副業', persona: 'プログラミング初心者', tone: 'カジュアル' },
+  { main: 'ダイエット 食事制限なし', related: '健康的に痩せる, 運動不足解消, 糖質制限', persona: '30代女性', tone: 'フレンドリー' },
+  { main: 'クレジットカード 還元率', related: 'ポイント比較, 年会費無料, キャッシュレス', persona: '節約志向の20代', tone: '丁寧' },
+  { main: 'ホームページ制作 費用', related: 'Web制作会社, WordPress, 個人事業主', persona: '中小企業経営者', tone: 'ビジネス' },
+]
 
 /**
  * DeepEditor風シンプル新規作成
@@ -26,6 +36,16 @@ export default function SeoCreateSimplePage() {
   const [error, setError] = useState<string | null>(null)
 
   const canSubmit = mainKeyword.trim().length >= 1
+
+  // サンプル入力
+  function fillSample() {
+    const sample = SAMPLE_KEYWORDS[Math.floor(Math.random() * SAMPLE_KEYWORDS.length)]
+    setMainKeyword(sample.main)
+    setRelatedKeywords(sample.related)
+    setPersona(sample.persona)
+    setTone(sample.tone)
+    setShowAdvanced(true) // 詳細設定も開く
+  }
 
   async function handleSubmit() {
     if (!canSubmit || loading) return
@@ -113,9 +133,19 @@ export default function SeoCreateSimplePage() {
           <div className="px-6 sm:px-10 py-6 sm:py-8 space-y-5">
             {/* メインKW（必須） */}
             <div>
-              <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
-                メインキーワード <span className="text-red-400">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-black text-gray-500 uppercase tracking-widest">
+                  メインキーワード <span className="text-red-400">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={fillSample}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 text-purple-600 text-[10px] font-black hover:from-purple-100 hover:to-indigo-100 hover:border-purple-200 transition-all group"
+                >
+                  <Wand2 className="w-3 h-3 group-hover:rotate-12 transition-transform" />
+                  サンプル入力
+                </button>
+              </div>
               <input
                 type="text"
                 value={mainKeyword}
