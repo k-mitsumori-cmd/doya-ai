@@ -87,7 +87,7 @@ function BannerUrlAutoPageInner() {
   const [bannerAnalysis, setBannerAnalysis] = useState<string>('')
   const [analysisJson, setAnalysisJson] = useState<ApiResponse['analysisJson'] | undefined>(undefined)
   const [usedModelDisplay, setUsedModelDisplay] = useState<string>('')
-  const [count, setCount] = useState<number>(1)
+  const [count, setCount] = useState<number>(3)
   const [size, setSize] = useState<string>(DEFAULT_FREE_SIZE)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
