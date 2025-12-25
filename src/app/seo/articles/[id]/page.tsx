@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
@@ -10,6 +10,8 @@ import { Button } from '@seo/components/ui/Button'
 import { Badge } from '@seo/components/ui/Badge'
 import { analyzeMarkdown } from '@seo/lib/score'
 import { slugifyHeading } from '@seo/lib/markdown'
+import { CompletionModal } from '@seo/components/CompletionModal'
+import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSettings'
 import {
   Download,
   Image as ImageIcon,
@@ -176,6 +178,10 @@ function SeoArticleInner() {
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [completionOpen, setCompletionOpen] = useState(false)
+  const [completionPopupEnabled, setCompletionPopupEnabled] = useState(true)
+  const prevArticleStatusRef = useRef<string | null>(null)
+  const dontShowAgainRef = useRef(false)
 
   const [entitlements, setEntitlements] = useState<null | { canUseChatEdit: boolean; plan: string; isLoggedIn: boolean }>(null)
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([])
@@ -246,6 +252,29 @@ function SeoArticleInner() {
     }, 3000)
     return () => clearInterval(t)
   }, [load])
+
+  useEffect(() => {
+    setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
+  }, [])
+
+  useEffect(() => {
+    const cur = article?.status || null
+    const prev = prevArticleStatusRef.current
+    prevArticleStatusRef.current = cur
+    if (!article) return
+    if (!completionPopupEnabled) return
+    if (cur !== 'DONE') return
+    if (!prev || prev === 'DONE') return
+
+    try {
+      const key = `doyaSeo.completionPopup.shown.article.${id}`
+      if (window.sessionStorage.getItem(key)) return
+      window.sessionStorage.setItem(key, '1')
+    } catch {
+      // ignore
+    }
+    setCompletionOpen(true)
+  }, [article, article?.status, completionPopupEnabled, id])
 
   // Chat権限はタブを開いた時だけ取得（/api/auth/session 連打を避ける）
   useEffect(() => {
@@ -326,6 +355,24 @@ function SeoArticleInner() {
 
   return (
     <main className="max-w-7xl mx-auto py-6 sm:py-8 px-4 sm:px-0">
+        <CompletionModal
+          open={completionOpen}
+          title={article.title}
+          subtitle="プレビューを確認して、必要ならAI修正チャットで仕上げましょう。"
+          primaryLabel="プレビューを見る"
+          onPrimary={() => setTab('preview')}
+          onClose={() => {
+            if (dontShowAgainRef.current) {
+              const next = patchSeoClientSettings({ completionPopupEnabled: false })
+              setCompletionPopupEnabled(next.completionPopupEnabled)
+            }
+            dontShowAgainRef.current = false
+            setCompletionOpen(false)
+          }}
+          onDontShowAgainChange={(v) => {
+            dontShowAgainRef.current = v
+          }}
+        />
         {/* Header */}
         <div className="mb-6 sm:mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="w-full md:w-auto">
