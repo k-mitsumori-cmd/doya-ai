@@ -19,7 +19,16 @@ export function Button({
       type={props.type ?? 'button'}
       {...props}
       className={clsx(
-        'inline-flex items-center justify-center gap-2 rounded-xl font-bold transition-all disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:ring-offset-2',
+        [
+          'inline-flex items-center justify-center gap-2 rounded-xl font-bold',
+          // micro-interactions
+          'transition-all duration-200 ease-out',
+          'hover:-translate-y-[1px] active:translate-y-0 active:scale-[0.99]',
+          'disabled:opacity-60 disabled:cursor-not-allowed',
+          'focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:ring-offset-2',
+          // respect reduced motion (Tailwind)
+          'motion-reduce:transform-none motion-reduce:transition-none',
+        ].join(' '),
         size === 'sm' && 'px-3 py-2 text-sm',
         size === 'md' && 'px-4 py-2.5 text-sm',
         size === 'lg' && 'px-5 py-3 text-base',
