@@ -79,6 +79,9 @@ export default function SeoJobPage() {
     setBusy(true)
     try {
       setActionError(null)
+      if (job?.status === 'paused') {
+        await fetch(`/api/seo/jobs/${jobId}/resume`, { method: 'POST' })
+      }
       const res = await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST' })
       let json: any = null
       try {
@@ -175,10 +178,10 @@ export default function SeoJobPage() {
           <button
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 disabled:opacity-60"
             onClick={advanceOnce}
-            disabled={busy || job.status === 'done'}
+            disabled={busy || job.status === 'done' || job.status === 'cancelled'}
           >
             <Play className="w-4 h-4" />
-            次へ進める
+            {job.status === 'paused' ? '再開して進める' : '次へ進める'}
           </button>
           <button
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50"
@@ -193,6 +196,48 @@ export default function SeoJobPage() {
                 <Play className="w-4 h-4" /> 自動実行
               </>
             )}
+          </button>
+          <button
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 font-bold text-gray-700 hover:bg-gray-50"
+            onClick={async () => {
+              setActionError(null)
+              try {
+                if (job.status === 'paused') {
+                  await fetch(`/api/seo/jobs/${jobId}/resume`, { method: 'POST' })
+                } else {
+                  await fetch(`/api/seo/jobs/${jobId}/pause`, { method: 'POST' })
+                }
+                await load({ showLoading: false })
+              } catch (e: any) {
+                setActionError(e?.message || '失敗しました')
+              }
+            }}
+          >
+            {job.status === 'paused' ? (
+              <>
+                <Play className="w-4 h-4" /> サーバ再開
+              </>
+            ) : (
+              <>
+                <Pause className="w-4 h-4" /> サーバ一時停止
+              </>
+            )}
+          </button>
+          <button
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-200 text-red-700 font-bold hover:bg-red-50"
+            onClick={async () => {
+              if (!confirm('ジョブをキャンセルしますか？（途中成果物は残ります）')) return
+              setActionError(null)
+              try {
+                await fetch(`/api/seo/jobs/${jobId}/cancel`, { method: 'POST' })
+                await load({ showLoading: false })
+                setAuto(false)
+              } catch (e: any) {
+                setActionError(e?.message || '失敗しました')
+              }
+            }}
+          >
+            キャンセル
           </button>
           <button
             className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"

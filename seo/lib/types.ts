@@ -34,6 +34,11 @@ export const SeoCreateArticleInputSchema = z.object({
   // 新機能：依頼テキストと参考画像
   requestText: z.string().max(50000).optional().nullable(),
   referenceImages: z.array(SeoReferenceImageSchema).max(5).optional().nullable(),
+  // 比較記事（調査型）
+  mode: z.enum(['standard', 'comparison_research']).optional().default('standard'),
+  comparisonConfig: z.any().optional().nullable(),
+  comparisonCandidates: z.any().optional().nullable(),
+  referenceInputs: z.any().optional().nullable(),
 })
 
 export type SeoCreateArticleInput = z.infer<typeof SeoCreateArticleInputSchema>

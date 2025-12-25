@@ -29,7 +29,7 @@ import { FeatureGuide } from '@/components/FeatureGuide'
 
 const TARGETS = [10000, 20000, 30000, 40000, 50000, 60000]
 const TONES = ['丁寧', 'フランク', 'ビジネス', '専門的'] as const
-const STORAGE_KEY = 'doya_seo_new_draft_v1'
+const STORAGE_KEY = 'doya_seo_new_draft_v2'
 
 // よく使うテンプレート
 const TEMPLATES = [
@@ -61,10 +61,44 @@ const TEMPLATES = [
     searchIntent: '手順/注意点/よくある失敗/チェックリスト/FAQ',
     llmo: { tldr: true, conclusionFirst: true, faq: true, glossary: true, comparison: false, quotes: true, templates: true, objections: true },
   },
+  {
+    id: 'cmp10',
+    name: '比較記事（調査型）10社',
+    icon: '🔎',
+    title: '【厳選10社】○○おすすめ比較｜料金・特徴・選び方',
+    targetChars: 20000,
+    searchIntent: '比較表/選び方/料金相場/おすすめ/向いている企業/FAQ',
+    llmo: { tldr: true, conclusionFirst: true, faq: true, glossary: true, comparison: true, quotes: true, templates: true, objections: true },
+    mode: 'comparison_research' as const,
+    comparison: { template: 'comparison', count: 10 },
+  },
+  {
+    id: 'cmp30',
+    name: '比較記事（調査型）30社',
+    icon: '🏁',
+    title: '○○おすすめ比較30選｜料金・特徴・選び方【最新版】',
+    targetChars: 30000,
+    searchIntent: '比較表/ランキング/選び方/料金相場/導入手順/FAQ',
+    llmo: { tldr: true, conclusionFirst: true, faq: true, glossary: true, comparison: true, quotes: true, templates: true, objections: true },
+    mode: 'comparison_research' as const,
+    comparison: { template: 'comparison', count: 30 },
+  },
+  {
+    id: 'cmp50',
+    name: '比較記事（調査型）50社',
+    icon: '🏆',
+    title: '○○おすすめ比較50選｜選び方と料金相場【最新版】',
+    targetChars: 50000,
+    searchIntent: '比較表/ランキング/選び方/料金相場/失敗例/チェックリスト/FAQ',
+    llmo: { tldr: true, conclusionFirst: true, faq: true, glossary: true, comparison: true, quotes: true, templates: true, objections: true },
+    mode: 'comparison_research' as const,
+    comparison: { template: 'ranking', count: 50 },
+  },
 ]
 
 export default function SeoNewArticlePage() {
   const router = useRouter()
+  const [mode, setMode] = useState<'standard' | 'comparison_research'>('standard')
   const [title, setTitle] = useState('')
   const [keywords, setKeywords] = useState('')
   const [targetChars, setTargetChars] = useState(30000)
@@ -76,6 +110,37 @@ export default function SeoNewArticlePage() {
   const [requestText, setRequestText] = useState('')
   const [referenceImages, setReferenceImages] = useState<{ name: string; dataUrl: string }[]>([])
   const [autoBundle, setAutoBundle] = useState(true) // セット生成フラグ
+
+  // 比較記事（調査型）: 参考記事入力
+  const [refUrlInput, setRefUrlInput] = useState('')
+  const [refItems, setRefItems] = useState<
+    Array<{
+      id: string
+      kind: 'url' | 'paste' | 'file'
+      url?: string
+      title?: string | null
+      host?: string | null
+      ogImage?: string | null
+      status: 'idle' | 'fetching' | 'ready' | 'error' | 'parsed'
+      error?: string | null
+      text?: string
+      headings?: { h2: string[]; h3: string[] }
+      template?: any
+    }>
+  >([])
+  const [refPaste, setRefPaste] = useState('')
+
+  // 比較記事（調査型）: 候補企業
+  const [cmpTemplate, setCmpTemplate] = useState<'comparison' | 'ranking' | 'price' | 'feature'>('comparison')
+  const [cmpCount, setCmpCount] = useState<10 | 30 | 50>(30)
+  const [cmpRegion, setCmpRegion] = useState<'JP' | 'GLOBAL'>('JP')
+  const [cmpExclude, setCmpExclude] = useState('')
+  const [cmpTags, setCmpTags] = useState('')
+  const [cmpRequireOfficial, setCmpRequireOfficial] = useState(true)
+  const [cmpIncludeThirdParty, setCmpIncludeThirdParty] = useState(true)
+  const [candidates, setCandidates] = useState<Array<{ name: string; websiteUrl?: string; notes?: string }>>([])
+  const [candidateName, setCandidateName] = useState('')
+  const [candidateUrl, setCandidateUrl] = useState('')
 
   const [llmo, setLlmo] = useState({
     tldr: true,
@@ -102,6 +167,7 @@ export default function SeoNewArticlePage() {
 
   // 1. サンプル入力
   function fillSample() {
+    setMode('comparison_research')
     setTitle('RPO（採用代行）おすすめ比較50選｜選び方と料金相場【2024年最新】')
     setKeywords('RPO, 採用代行, 比較, 料金, おすすめ')
     setTargetChars(50000)
@@ -117,13 +183,43 @@ export default function SeoNewArticlePage() {
       templates: true,
       objections: true,
     })
+    setCmpTemplate('ranking')
+    setCmpCount(50)
+    setCmpRegion('JP')
+    setCmpRequireOfficial(true)
+    setCmpIncludeThirdParty(true)
+    setCandidates([])
+    setRefItems([])
     setNotice('サンプルデータを入力しました')
     setTimeout(() => setNotice(null), 3000)
   }
 
   // 2. ドラフト保存・読込
   function saveDraft() {
-    const data = { title, keywords, targetChars, tone, persona, searchIntent, referenceUrls, forbidden, llmo, autoBundle, requestText }
+    const data = {
+      mode,
+      title,
+      keywords,
+      targetChars,
+      tone,
+      persona,
+      searchIntent,
+      referenceUrls,
+      forbidden,
+      llmo,
+      autoBundle,
+      requestText,
+      refItems,
+      refPaste,
+      cmpTemplate,
+      cmpCount,
+      cmpRegion,
+      cmpExclude,
+      cmpTags,
+      cmpRequireOfficial,
+      cmpIncludeThirdParty,
+      candidates,
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
     setNotice('ドラフトを保存しました')
     setTimeout(() => setNotice(null), 3000)
@@ -134,6 +230,7 @@ export default function SeoNewArticlePage() {
     if (saved) {
       try {
         const data = JSON.parse(saved)
+        if (data.mode) setMode(data.mode)
         if (data.title) setTitle(data.title)
         if (data.keywords) setKeywords(data.keywords)
         if (data.targetChars) setTargetChars(data.targetChars)
@@ -145,6 +242,16 @@ export default function SeoNewArticlePage() {
         if (data.llmo) setLlmo(data.llmo)
         if (data.autoBundle !== undefined) setAutoBundle(data.autoBundle)
         if (data.requestText) setRequestText(data.requestText)
+        if (Array.isArray(data.refItems)) setRefItems(data.refItems)
+        if (typeof data.refPaste === 'string') setRefPaste(data.refPaste)
+        if (data.cmpTemplate) setCmpTemplate(data.cmpTemplate)
+        if (data.cmpCount) setCmpCount(data.cmpCount)
+        if (data.cmpRegion) setCmpRegion(data.cmpRegion)
+        if (typeof data.cmpExclude === 'string') setCmpExclude(data.cmpExclude)
+        if (typeof data.cmpTags === 'string') setCmpTags(data.cmpTags)
+        if (typeof data.cmpRequireOfficial === 'boolean') setCmpRequireOfficial(data.cmpRequireOfficial)
+        if (typeof data.cmpIncludeThirdParty === 'boolean') setCmpIncludeThirdParty(data.cmpIncludeThirdParty)
+        if (Array.isArray(data.candidates)) setCandidates(data.candidates)
       } catch (e) {
         // ignore
       }
@@ -182,8 +289,155 @@ export default function SeoNewArticlePage() {
     setTargetChars(t.targetChars)
     setSearchIntent(t.searchIntent)
     setLlmo(t.llmo)
+    // 比較記事テンプレの場合
+    if ((t as any).mode === 'comparison_research') {
+      setMode('comparison_research')
+      const cc = (t as any).comparison?.count
+      const tt = (t as any).comparison?.template
+      if (cc === 10 || cc === 30 || cc === 50) setCmpCount(cc)
+      if (tt === 'comparison' || tt === 'ranking' || tt === 'price' || tt === 'feature') setCmpTemplate(tt)
+      setCmpRequireOfficial(true)
+      setCmpIncludeThirdParty(true)
+    } else {
+      setMode('standard')
+    }
     setNotice(`${t.name}テンプレートを適用しました`)
     setTimeout(() => setNotice(null), 3000)
+  }
+
+  function addRefUrl() {
+    const url = refUrlInput.trim()
+    if (!url) return
+    try {
+      // validate
+      // eslint-disable-next-line no-new
+      new URL(url)
+    } catch {
+      setError('URLの形式が正しくありません')
+      return
+    }
+    const id = `url_${Date.now()}_${Math.random().toString(16).slice(2)}`
+    setRefItems((prev) => [
+      ...prev,
+      { id, kind: 'url', url, status: 'fetching', title: null, host: null, ogImage: null, error: null },
+    ])
+    setRefUrlInput('')
+    ;(async () => {
+      try {
+        const res = await fetch('/api/seo/reference/meta', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ urls: [url] }),
+        })
+        const json = await res.json().catch(() => ({}))
+        const item = Array.isArray(json?.items) ? json.items[0] : null
+        setRefItems((prev) =>
+          prev.map((x) =>
+            x.id !== id
+              ? x
+              : {
+                  ...x,
+                  status: item?.ok ? 'ready' : 'error',
+                  title: item?.title ?? null,
+                  host: item?.host ?? null,
+                  ogImage: item?.ogImage ?? null,
+                  error: item?.ok ? null : String(item?.error || '取得に失敗しました'),
+                }
+          )
+        )
+      } catch (e: any) {
+        setRefItems((prev) => prev.map((x) => (x.id === id ? { ...x, status: 'error', error: e?.message || '失敗しました' } : x)))
+      }
+    })()
+  }
+
+  async function parseRefItem(id: string) {
+    const item = refItems.find((x) => x.id === id)
+    if (!item) return
+    setRefItems((prev) => prev.map((x) => (x.id === id ? { ...x, status: 'fetching', error: null } : x)))
+    try {
+      const res = await fetch('/api/seo/reference/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item.kind === 'url' ? { url: item.url } : { text: item.text || '', titleHint: item.title || undefined }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) throw new Error(json?.error || `API Error: ${res.status}`)
+      setRefItems((prev) =>
+        prev.map((x) =>
+          x.id !== id
+            ? x
+            : { ...x, status: 'parsed', headings: json.headings || x.headings, template: json.template || x.template }
+        )
+      )
+    } catch (e: any) {
+      setRefItems((prev) => prev.map((x) => (x.id === id ? { ...x, status: 'error', error: e?.message || '失敗しました' } : x)))
+    }
+  }
+
+  function addPasteRef() {
+    const text = refPaste.trim()
+    if (!text) return
+    const id = `paste_${Date.now()}_${Math.random().toString(16).slice(2)}`
+    setRefItems((prev) => [
+      ...prev,
+      { id, kind: 'paste', status: 'ready', title: '貼り付け', host: null, ogImage: null, error: null, text },
+    ])
+    setRefPaste('')
+    setNotice('貼り付け参考を追加しました（必要なら「解析」してください）')
+    setTimeout(() => setNotice(null), 2500)
+  }
+
+  async function autoCollectCandidates() {
+    setError(null)
+    setNotice(null)
+    const query = title.trim() || keywordList.join(' ')
+    if (!query) {
+      setError('タイトルまたはキーワードを入力してください')
+      return
+    }
+    try {
+      const res = await fetch('/api/seo/compare/candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query,
+          count: cmpCount,
+          region: cmpRegion,
+          exclude: cmpExclude.split(/[,、\n]+/).map((s) => s.trim()).filter(Boolean),
+          tags: cmpTags.split(/[,、\n]+/).map((s) => s.trim()).filter(Boolean),
+          requireOfficial: cmpRequireOfficial,
+          includeThirdParty: cmpIncludeThirdParty,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || `API Error: ${res.status}`)
+      }
+      const list = Array.isArray(json?.candidates) ? json.candidates : []
+      setCandidates(
+        list
+          .map((c: any) => ({
+            name: String(c?.name || '').trim(),
+            websiteUrl: typeof c?.websiteUrl === 'string' ? c.websiteUrl : undefined,
+            notes: typeof c?.notes === 'string' ? c.notes : undefined,
+          }))
+          .filter((c: any) => c.name)
+      )
+      setNotice('候補リストを生成しました（編集して確定してください）')
+      setTimeout(() => setNotice(null), 3000)
+    } catch (e: any) {
+      setError(e?.message || '候補収集に失敗しました')
+    }
+  }
+
+  function addCandidateManual() {
+    const name = candidateName.trim()
+    if (!name) return
+    const url = candidateUrl.trim()
+    setCandidates((prev) => [...prev, { name, ...(url ? { websiteUrl: url } : {}) }])
+    setCandidateName('')
+    setCandidateUrl('')
   }
 
   // 5. 画像アップロード
@@ -211,18 +465,33 @@ export default function SeoNewArticlePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          mode,
           title,
           keywords: keywordList,
           targetChars,
           tone,
           persona,
           searchIntent,
-          referenceUrls: urls,
+          referenceUrls: Array.from(new Set([...urls, ...refItems.filter((x) => x.kind === 'url' && x.url).map((x) => x.url as string)])),
           forbidden: forbidden.split(/[,、\n]+/).map(s => s.trim()).filter(Boolean),
           llmoOptions: llmo,
           requestText,
           referenceImages,
           autoBundle,
+          comparisonConfig:
+            mode === 'comparison_research'
+              ? {
+                  template: cmpTemplate,
+                  count: cmpCount,
+                  region: cmpRegion,
+                  exclude: cmpExclude.split(/[,、\n]+/).map((s) => s.trim()).filter(Boolean),
+                  tags: cmpTags.split(/[,、\n]+/).map((s) => s.trim()).filter(Boolean),
+                  requireOfficial: cmpRequireOfficial,
+                  includeThirdParty: cmpIncludeThirdParty,
+                }
+              : null,
+          comparisonCandidates: mode === 'comparison_research' ? candidates : null,
+          referenceInputs: mode === 'comparison_research' ? refItems : null,
         }),
       })
       const json = await res.json()
@@ -366,6 +635,310 @@ export default function SeoNewArticlePage() {
             </div>
           </div>
 
+          {/* Comparison Mode (Research) */}
+          {mode === 'comparison_research' && (
+            <div className="space-y-6 sm:space-y-8">
+              {/* Reference Articles */}
+              <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-xl shadow-blue-500/5">
+                <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-blue-600" />
+                      参考記事（テンプレの起点）
+                    </h3>
+                    <p className="text-xs font-bold text-gray-400 mt-1">
+                      URL / ファイル / 貼り付け から「見出し構造・比較軸・表・FAQ」を抽出し、今回の記事に反映します。
+                    </p>
+                  </div>
+                  <Badge className="bg-blue-50 text-blue-700 border border-blue-100">最重要</Badge>
+                </div>
+
+                {/* URL input */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    value={refUrlInput}
+                    onChange={(e) => setRefUrlInput(e.target.value)}
+                    placeholder="参考URLを貼り付け（複数OK）"
+                    className="flex-1 px-4 py-3 rounded-2xl border-2 border-gray-50 bg-gray-50/50 font-bold text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  />
+                  <button
+                    onClick={addRefUrl}
+                    className="h-12 px-5 rounded-2xl bg-gray-900 text-white font-black text-sm hover:bg-gray-800 transition-colors"
+                  >
+                    追加
+                  </button>
+                </div>
+
+                {/* Paste */}
+                <div className="mt-4 grid gap-3">
+                  <textarea
+                    value={refPaste}
+                    onChange={(e) => setRefPaste(e.target.value)}
+                    placeholder="記事本文をここに貼り付け（見出し解析に使えます）"
+                    className="w-full p-4 rounded-2xl border border-gray-100 bg-gray-50 text-sm min-h-[120px] focus:outline-none focus:border-blue-500"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={addPasteRef}
+                      className="h-11 px-4 rounded-xl bg-white border border-gray-200 text-gray-700 font-black text-xs hover:bg-gray-50 transition-colors"
+                    >
+                      貼り付けを追加
+                    </button>
+                  </div>
+                </div>
+
+                {/* List */}
+                <div className="mt-6 space-y-3">
+                  {refItems.length === 0 ? (
+                    <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100 text-gray-500 text-sm font-bold">
+                      参考記事を追加すると、比較軸や表の型を“ガチ”に寄せられます。
+                    </div>
+                  ) : (
+                    refItems.map((it) => (
+                      <div key={it.id} className="p-4 rounded-2xl border border-gray-100 bg-white flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-500 font-black flex-shrink-0">
+                          {it.kind === 'url' ? 'URL' : it.kind === 'paste' ? 'TXT' : 'FILE'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-black text-gray-900 truncate">
+                            {it.kind === 'url' ? it.title || it.url : it.title || '貼り付け'}
+                          </p>
+                          {it.kind === 'url' && (
+                            <p className="text-xs font-bold text-gray-400 truncate">{it.host || it.url}</p>
+                          )}
+                          {it.status === 'error' && (
+                            <p className="text-xs font-black text-red-600 mt-1">{it.error || '失敗しました'}</p>
+                          )}
+                          {it.headings?.h2?.length ? (
+                            <p className="text-xs font-bold text-gray-500 mt-2">
+                              抽出見出し: H2 {it.headings.h2.length}件 / H3 {it.headings.h3?.length || 0}件
+                            </p>
+                          ) : null}
+                          {it.template?.axes?.length ? (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {it.template.axes.slice(0, 6).map((a: string) => (
+                                <span key={a} className="px-2 py-1 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black border border-blue-100">
+                                  {a}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            onClick={() => parseRefItem(it.id)}
+                            disabled={it.status === 'fetching'}
+                            className="h-10 px-3 rounded-xl bg-blue-600 text-white text-xs font-black hover:bg-blue-700 transition-colors disabled:opacity-60"
+                          >
+                            {it.status === 'fetching' ? '解析中…' : '解析'}
+                          </button>
+                          <button
+                            onClick={() => setRefItems((prev) => prev.filter((x) => x.id !== it.id))}
+                            className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-black hover:bg-gray-50 transition-colors"
+                          >
+                            削除
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Candidate Collection */}
+              <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-xl shadow-blue-500/5">
+                <div className="flex items-start justify-between gap-4 flex-wrap mb-6">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+                      <Target className="w-5 h-5 text-indigo-600" />
+                      比較対象の収集（候補→確定）
+                    </h3>
+                    <p className="text-xs font-bold text-gray-400 mt-1">
+                      “候補を自動収集”で叩き台を作り、削除/追加/順序を整えて「確定リスト」にします。
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">テンプレ種別</p>
+                    <select
+                      value={cmpTemplate}
+                      onChange={(e) => setCmpTemplate(e.target.value as any)}
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-gray-100 text-sm font-bold text-gray-900 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="comparison">比較記事（調査型）</option>
+                      <option value="ranking">ランキング（スコアリング）</option>
+                      <option value="price">料金比較（表重視）</option>
+                      <option value="feature">機能比較（要件別おすすめ）</option>
+                    </select>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">比較対象数</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[10, 30, 50].map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => setCmpCount(n as any)}
+                          className={`h-11 rounded-xl font-black text-sm transition-all ${
+                            cmpCount === n ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {n}社
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">対象地域</p>
+                    <select
+                      value={cmpRegion}
+                      onChange={(e) => setCmpRegion(e.target.value as any)}
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-gray-100 text-sm font-bold text-gray-900 focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="JP">日本（初期）</option>
+                      <option value="GLOBAL">グローバル</option>
+                    </select>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">参照方針（推奨）</p>
+                    <div className="flex items-center justify-between gap-3 bg-white border border-gray-100 rounded-xl px-4 py-3">
+                      <div>
+                        <p className="text-xs font-black text-gray-900">公式サイト必須</p>
+                        <p className="text-[10px] font-bold text-gray-400">ON推奨（根拠がブレにくい）</p>
+                      </div>
+                      <Toggle checked={cmpRequireOfficial} onChange={setCmpRequireOfficial} label="" />
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-3 bg-white border border-gray-100 rounded-xl px-4 py-3">
+                      <div>
+                        <p className="text-xs font-black text-gray-900">口コミ/第三者情報も参照</p>
+                        <p className="text-[10px] font-bold text-gray-400">ON推奨（比較が深くなる）</p>
+                      </div>
+                      <Toggle checked={cmpIncludeThirdParty} onChange={setCmpIncludeThirdParty} label="" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-white border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">除外条件</p>
+                    <textarea
+                      value={cmpExclude}
+                      onChange={(e) => setCmpExclude(e.target.value)}
+                      placeholder="例：派遣のみは除外、SEO会社は除外..."
+                      className="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 text-sm min-h-[78px] focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div className="p-4 rounded-2xl bg-white border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">優先する業界/カテゴリ</p>
+                    <textarea
+                      value={cmpTags}
+                      onChange={(e) => setCmpTags(e.target.value)}
+                      placeholder="例：IT、人材、ベンチャー..."
+                      className="w-full p-3 rounded-xl border border-gray-100 bg-gray-50 text-sm min-h-[78px] focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={autoCollectCandidates}
+                    className="flex-1 h-12 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-colors"
+                  >
+                    候補を自動収集する
+                  </button>
+                  <div className="flex-1 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">手動追加</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={candidateName}
+                        onChange={(e) => setCandidateName(e.target.value)}
+                        placeholder="会社名"
+                        className="flex-1 px-3 py-2 rounded-xl border border-gray-100 bg-white text-sm font-bold"
+                      />
+                      <input
+                        value={candidateUrl}
+                        onChange={(e) => setCandidateUrl(e.target.value)}
+                        placeholder="公式URL（任意）"
+                        className="flex-1 px-3 py-2 rounded-xl border border-gray-100 bg-white text-sm font-bold"
+                      />
+                      <button
+                        onClick={addCandidateManual}
+                        className="px-4 py-2 rounded-xl bg-gray-900 text-white font-black text-xs hover:bg-gray-800"
+                      >
+                        追加
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3">確定リスト（編集可能）</p>
+                  {candidates.length === 0 ? (
+                    <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100 text-gray-500 text-sm font-bold">
+                      ここに確定した企業だけを深掘り調査します（削除/追加して整えてください）。
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {candidates.map((c, idx) => (
+                        <div key={`${c.name}_${idx}`} className="p-4 rounded-2xl border border-gray-100 bg-white flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center font-black text-xs">
+                            {idx + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-black text-gray-900 truncate">{c.name}</p>
+                            {c.websiteUrl ? (
+                              <p className="text-xs font-bold text-gray-400 truncate">{c.websiteUrl}</p>
+                            ) : (
+                              <p className="text-xs font-bold text-gray-300">公式URL未設定（後で推定/補完できます）</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() =>
+                                setCandidates((prev) => {
+                                  if (idx === 0) return prev
+                                  const next = [...prev]
+                                  ;[next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]
+                                  return next
+                                })
+                              }
+                              className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-black hover:bg-gray-50"
+                            >
+                              ↑
+                            </button>
+                            <button
+                              onClick={() =>
+                                setCandidates((prev) => {
+                                  if (idx === prev.length - 1) return prev
+                                  const next = [...prev]
+                                  ;[next[idx + 1], next[idx]] = [next[idx], next[idx + 1]]
+                                  return next
+                                })
+                              }
+                              className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-black hover:bg-gray-50"
+                            >
+                              ↓
+                            </button>
+                            <button
+                              onClick={() => setCandidates((prev) => prev.filter((_, i) => i !== idx))}
+                              className="h-10 px-3 rounded-xl bg-white border border-gray-200 text-gray-600 text-xs font-black hover:bg-gray-50"
+                            >
+                              削除
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Bundle Toggle */}
           <div className="bg-gradient-to-br from-[#2563EB] to-blue-700 rounded-2xl sm:rounded-[32px] p-6 sm:p-8 text-white shadow-2xl shadow-blue-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
@@ -455,11 +1028,11 @@ export default function SeoNewArticlePage() {
               {loading ? (
                 <div className="flex items-center justify-center gap-3">
                   <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin" />
-                  生成を開始中...
+                  {mode === 'comparison_research' ? '調査を開始中...' : '生成を開始中...'}
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-3">
-                  記事を生成する
+                  {mode === 'comparison_research' ? '比較記事を作成（調査開始）' : '記事を生成する'}
                   <ArrowRight className="w-6 h-6" />
                 </div>
               )}
