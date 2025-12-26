@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 
@@ -30,7 +30,8 @@ export function markLogoutToastPending() {
   }
 }
 
-export default function LogoutToastListener() {
+// useSearchParams を使うコンポーネントは Suspense でラップが必要
+function LogoutToastListenerInner() {
   const params = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
@@ -57,6 +58,14 @@ export default function LogoutToastListener() {
   }, [params, pathname, router])
 
   return null
+}
+
+export default function LogoutToastListener() {
+  return (
+    <Suspense fallback={null}>
+      <LogoutToastListenerInner />
+    </Suspense>
+  )
 }
 
 
