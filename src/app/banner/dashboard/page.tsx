@@ -843,8 +843,6 @@ export default function BannerDashboard() {
     { variant: 'A' | 'B' | 'C'; headline: string; subhead: string; cta: string }[]
   >([])
   const [usedModelDisplay, setUsedModelDisplay] = useState<string | null>(null) // 使用モデル名
-  // 初回生成直後のみアニメーションを発火（refine後はアニメーションを抑制して「ぱちぱち」防止）
-  const [justGenerated, setJustGenerated] = useState(false)
   const [error, setError] = useState('')
   const [progress, setProgress] = useState(0)
   const [phaseIndex, setPhaseIndex] = useState(0)
@@ -1307,8 +1305,12 @@ export default function BannerDashboard() {
     
     setError('')
     setIsGenerating(true)
-    setGeneratedBanners([])
-    setSelectedBanner(null)
+    // 生成開始時に既存バナーを消さない（消すと画面が「パチパチ」しやすい）
+    // 新しい結果が返ってきたタイミングで上書きする
+    setGeneratedCopies([])
+    setUsedModelDisplay(null)
+    setRefineInstruction('')
+    setRefineHistory([])
     const startedAt = Date.now()
     setGenerationStartedAt(startedAt)
 
@@ -1373,15 +1375,11 @@ export default function BannerDashboard() {
       
       setProgress(100)
       await new Promise(r => setTimeout(r, 500))
-      // 初回生成時のみアニメーションを発火（refine後は抑制）
-      setJustGenerated(true)
       setGeneratedBanners(data.banners || [])
       setGeneratedCopies(Array.isArray(data.copies) ? data.copies : [])
       setUsedModelDisplay(data.usedModelDisplay || null)
       // 生成直後は先頭を選択（プレビューが出てUXが良い & null事故を防ぐ）
       setSelectedBanner(0)
-      // アニメーション完了後にフラグをリセット（ぱちぱち防止）
-      setTimeout(() => setJustGenerated(false), 600)
 
       // 実績時間を保存（次回以降の予測に使用）
       const actualMs = Date.now() - startedAt
@@ -2467,10 +2465,6 @@ export default function BannerDashboard() {
                           return (
                             <motion.div
                               key={i}
-                              // 初回生成時のみアニメーション発火（refine後は静かに更新）
-                              initial={justGenerated ? { opacity: 0, scale: 0.95 } : false}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={justGenerated ? { delay: i * 0.1 } : { duration: 0 }}
                               onClick={() => setSelectedBanner(i)}
                               className={`relative rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300 border-2 ${
                                 selectedBanner === i 
