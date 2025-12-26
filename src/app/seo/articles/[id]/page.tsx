@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
+import { ScorePanel } from './components/ScorePanel'
+import { OutlineEditor } from './components/OutlineEditor'
 import { ClientErrorBoundary } from '@seo/components/ClientErrorBoundary'
 import { GenerationProgress } from '@seo/components/GenerationProgress'
 import { Button } from '@seo/components/ui/Button'
@@ -44,6 +46,7 @@ import {
   PenTool,
   CheckCircle2,
   MessageCircle,
+  Loader2,
 } from 'lucide-react'
 
 type SeoImage = {
@@ -153,10 +156,12 @@ function stripCoverFromMarkdown(md: string, bannerId?: string | null): string {
   return lines.slice(i).join('\n').trim()
 }
 
-// シンプル化: 核心的な機能のみに絞る
+// シンプル化: 核心的な機能のみに絞る＋SEOスコア/見出し操作を追加
 const TABS = [
   { id: 'preview', label: 'プレビュー', icon: Eye, color: 'text-blue-500' },
-  { id: 'edit', label: '編集', icon: Edit3, color: 'text-purple-500' },
+  { id: 'score', label: 'SEOスコア', icon: BarChart3, color: 'text-emerald-500' },
+  { id: 'outline', label: '見出し編集', icon: Layers, color: 'text-indigo-500' },
+  { id: 'edit', label: '本文編集', icon: Edit3, color: 'text-purple-500' },
   { id: 'media', label: '画像', icon: ImageIcon, color: 'text-orange-500' },
   { id: 'export', label: 'ダウンロード', icon: Download, color: 'text-gray-500' },
 ] as const
@@ -597,6 +602,32 @@ function SeoArticleInner() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {tab === 'score' && (
+              <div className="bg-white rounded-2xl sm:rounded-[40px] border border-gray-100 shadow-xl p-6 sm:p-8">
+                <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                  <BarChart3 className="w-6 h-6 text-emerald-500" /> SEOスコア・改善ポイント
+                </h2>
+                <ScorePanel article={article} />
+              </div>
+            )}
+
+            {tab === 'outline' && (
+              <div className="bg-white rounded-2xl sm:rounded-[40px] border border-gray-100 shadow-xl p-6 sm:p-8">
+                <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                  <Layers className="w-6 h-6 text-indigo-500" /> 見出し構成・個別操作
+                </h2>
+                <OutlineEditor
+                  articleId={id}
+                  headings={toc.map((h, i) => ({
+                    id: `h-${i}`,
+                    level: h.level as 2 | 3 | 4,
+                    text: h.text,
+                  }))}
+                  onUpdate={() => load({ showLoading: false })}
+                />
               </div>
             )}
 
