@@ -321,13 +321,13 @@ function BannerUrlAutoPageInner() {
                     <div className="text-left">
                       <p className="text-sm font-black text-slate-900">詳細設定</p>
                       <p className="text-[11px] text-slate-500 font-bold">
-                        作成枚数：<span className="text-slate-900">{count}枚{!isPaidUser && count > 3 ? '（無料上限3枚）' : ''}</span>
+                        作成枚数：<span className="text-slate-900">{count}枚{!(isPaidUser || isFreeHourActive) && count > 3 ? '（無料上限3枚）' : ''}</span>
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-500 rounded-full bg-slate-100 px-3 py-1">
-                      {isPaidUser ? '有料' : isGuest ? 'ゲスト' : '無料'}
+                    <span className={`text-[10px] font-black rounded-full px-3 py-1 ${isFreeHourActive ? 'bg-amber-100 text-amber-700' : 'text-slate-500 bg-slate-100'}`}>
+                      {isFreeHourActive ? '🚀 1時間生成し放題' : isPaidUser ? '有料' : isGuest ? 'ゲスト' : '無料'}
                     </span>
                     <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
                   </div>
@@ -336,8 +336,11 @@ function BannerUrlAutoPageInner() {
                 {showAdvanced && (
                   <div className="px-4 pb-4">
                     <p className="text-[11px] text-slate-500 font-bold mt-1 leading-relaxed">
-                      無料：<span className="text-slate-800">1〜3枚 / 1080×1080のみ</span>　
-                      有料：<span className="text-slate-800">1〜10枚 / サイズ指定OK</span>
+                      {isFreeHourActive ? (
+                        <span className="text-amber-600 font-black">🎉 1時間生成し放題中！ 最大10枚 / サイズ指定OK / 履歴機能も解放</span>
+                      ) : (
+                        <>無料：<span className="text-slate-800">1〜3枚 / 1080×1080のみ</span>　有料：<span className="text-slate-800">1〜10枚 / サイズ指定OK</span></>
+                      )}
                     </p>
 
                     <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -350,7 +353,8 @@ function BannerUrlAutoPageInner() {
                         <div className="mt-2 flex flex-wrap gap-2">
                           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
                             const maxFree = 3
-                            const disabled = !isPaidUser && n > maxFree
+                            const canUseUnlimited = isPaidUser || isFreeHourActive
+                            const disabled = !canUseUnlimited && n > maxFree
                             return (
                               <button
                                 key={n}
@@ -370,19 +374,19 @@ function BannerUrlAutoPageInner() {
                             )
                           })}
                         </div>
-                        {!isPaidUser && <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 無料は3枚まで。有料プランで最大10枚。</p>}
+                        {!(isPaidUser || isFreeHourActive) && <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 無料は3枚まで。有料プランで最大10枚。</p>}
                       </div>
 
                       {/* サイズ */}
                       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-xs font-black text-slate-700">サイズ</p>
-                          <p className="text-[10px] font-black text-slate-500">{isPaidUser ? '指定OK' : '無料は固定'}</p>
+                          <p className="text-[10px] font-black text-slate-500">{(isPaidUser || isFreeHourActive) ? '指定OK' : '無料は固定'}</p>
                         </div>
                         <select
-                          value={isPaidUser ? size : DEFAULT_FREE_SIZE}
+                          value={(isPaidUser || isFreeHourActive) ? size : DEFAULT_FREE_SIZE}
                           onChange={(e) => setSize(e.target.value)}
-                          disabled={!isPaidUser}
+                          disabled={!(isPaidUser || isFreeHourActive)}
                           className="mt-2 w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-black text-slate-800 disabled:opacity-60"
                         >
                           {SIZE_OPTIONS.map((opt) => (
@@ -391,7 +395,7 @@ function BannerUrlAutoPageInner() {
                             </option>
                           ))}
                         </select>
-                        {!isPaidUser && <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 有料プランでサイズ指定が可能です。</p>}
+                        {!(isPaidUser || isFreeHourActive) && <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 有料プランでサイズ指定が可能です。</p>}
                       </div>
                     </div>
                   </div>

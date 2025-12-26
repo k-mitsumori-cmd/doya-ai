@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING } from '@/lib/pricing'
+import { BANNER_PRICING, isWithinFreeHour } from '@/lib/pricing'
 import sharp from 'sharp'
 
 export const runtime = 'nodejs'
@@ -81,11 +81,13 @@ export async function GET(request: NextRequest) {
     const includeImages = (searchParams.get('images') || '1') !== '0'
     const thumbMode = (searchParams.get('thumb') || '0') === '1'
 
-    // 有料プラン判定
-    const isPro = isProFromSession(session) || (await isProUserByDb(userId))
+    // 有料プラン判定（1時間生成し放題中も有料扱い）
+    const firstLoginAt = (session?.user as any)?.firstLoginAt
+    const isFreeHourActive = isWithinFreeHour(firstLoginAt)
+    const isPro = isFreeHourActive || isProFromSession(session) || (await isProUserByDb(userId))
     const historyDays = isPro ? BANNER_PRICING.historyDays.pro : BANNER_PRICING.historyDays.free
 
-    // 無料ユーザーは履歴閲覧不可
+    // 無料ユーザーは履歴閲覧不可（ただし1時間生成し放題中は解放）
     if (historyDays === 0) {
       return NextResponse.json({
         items: [],

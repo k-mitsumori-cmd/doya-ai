@@ -90,6 +90,20 @@ export function markdownToHtmlBasic(markdown: string): string {
     }
   }
 
+  // インラインMarkdownをHTMLに変換（表セル用）
+  function inlineMarkdown(s: string): string {
+    let result = escapeHtml(s)
+    // **bold** → <strong>bold</strong>
+    result = result.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    // *italic* → <em>italic</em>（ただし**の一部でないもの）
+    result = result.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
+    // `code` → <code>code</code>
+    result = result.replace(/`([^`]+)`/g, '<code>$1</code>')
+    // <br> タグはそのまま
+    result = result.replace(/&lt;br&gt;/g, '<br/>')
+    return result
+  }
+
   function flushTable() {
     if (!inTable) return
     const rows = tableLines
@@ -98,15 +112,15 @@ export function markdownToHtmlBasic(markdown: string): string {
     if (rows.length >= 2) {
       const head = rows[0]
       const body = rows.slice(2) // 2行目は区切り想定
-      html += '<table>\n<thead><tr>'
-      for (const c of head) html += `<th>${escapeHtml(c)}</th>`
+      html += '<div class="table-wrapper"><table>\n<thead><tr>'
+      for (const c of head) html += `<th>${inlineMarkdown(c)}</th>`
       html += '</tr></thead>\n<tbody>\n'
       for (const r of body) {
         html += '<tr>'
-        for (const c of r) html += `<td>${escapeHtml(c)}</td>`
+        for (const c of r) html += `<td>${inlineMarkdown(c)}</td>`
         html += '</tr>\n'
       }
-      html += '</tbody>\n</table>\n'
+      html += '</tbody>\n</table></div>\n'
     }
     inTable = false
     tableLines = []
