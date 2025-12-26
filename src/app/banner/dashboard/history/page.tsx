@@ -264,8 +264,10 @@ export default function BannerHistoryPage() {
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <DashboardSidebar />
-        <div className="pl-[72px] md:pl-[240px] flex-1 flex items-center justify-center">
+        <div className="hidden md:block">
+          <DashboardSidebar />
+        </div>
+        <div className="md:pl-[240px] flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="mx-auto animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600" />
             <p className="mt-4 text-xs font-bold text-slate-500">{LOADING_TIPS[tipIndex]}</p>
@@ -277,8 +279,10 @@ export default function BannerHistoryPage() {
 
   return (
     <div className="min-h-screen bg-slate-50/50">
-      <DashboardSidebar />
-      <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
+      <div className="hidden md:block">
+        <DashboardSidebar />
+      </div>
+      <div className="md:pl-[240px] transition-all duration-200">
         {/* ヘッダー */}
         <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 shadow-sm">
           <div className="max-w-[1600px] mx-auto px-4 sm:px-8">

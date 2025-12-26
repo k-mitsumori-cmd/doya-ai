@@ -245,8 +245,11 @@ function BannerUrlAutoPageInner() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
-      <DashboardSidebar />
-      <div className="pl-[72px] md:pl-[240px] transition-all duration-200">
+      {/* デスクトップのみサイドバー表示（モバイルはヘッダーから戻る） */}
+      <div className="hidden md:block">
+        <DashboardSidebar />
+      </div>
+      <div className="md:pl-[240px] transition-all duration-200">
         {/* 生成中に飽きさせない：他ページと同様の待機アニメ（Tips/進捗） */}
         <LoadingProgress isLoading={isGenerating} operationKey="banner-from-url" estimatedSeconds={75} />
         <Toaster position="top-center" />
