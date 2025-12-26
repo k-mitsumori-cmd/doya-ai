@@ -1,6 +1,6 @@
 'use client'
 
-import React, { memo, useMemo, useState } from 'react'
+import React, { memo, useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -23,7 +23,7 @@ import {
   Link2
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
 import SidebarTour from '@/components/SidebarTour'
 
 interface NavItem {
@@ -93,6 +93,29 @@ function DashboardSidebarImpl({
     if (bannerPlanLabel === 'PRO') return 'ENTERPRISE'
     return 'CONSULT'
   }, [bannerPlanLabel])
+
+  // 1時間生成し放題キャンペーン判定
+  const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
+  const [freeHourRemainingMs, setFreeHourRemainingMs] = useState(() => getFreeHourRemainingMs(firstLoginAt))
+  const isFreeHourActive = isLoggedIn && isWithinFreeHour(firstLoginAt)
+
+  // 残り時間をリアルタイム更新
+  useEffect(() => {
+    if (!isFreeHourActive) return
+    const interval = setInterval(() => {
+      const remaining = getFreeHourRemainingMs(firstLoginAt)
+      setFreeHourRemainingMs(remaining)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isFreeHourActive, firstLoginAt])
+
+  // 残り時間を「分:秒」形式に変換
+  const formatRemainingTime = (ms: number): string => {
+    const totalSeconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
 
   // 入力中の親コンポーネント再レンダーでサイドバーが“ぱちぱち”しないよう、
   // derived values をメモ化して framer-motion の不要な更新を抑える
@@ -186,7 +209,74 @@ function DashboardSidebarImpl({
     </AnimatePresence>
   )
 
+  // 1時間生成し放題キャンペーンバナー
+  const FreeHourCampaignBanner = () => {
+    if (!isFreeHourActive || freeHourRemainingMs <= 0) return null
+    const showBanner = isMobile || !isCollapsed
+
+    return (
+      <AnimatePresence>
+        {showBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mx-3 md:mx-4 mt-3 md:mt-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-amber-400 via-orange-400 to-red-400 border border-amber-300/50 relative overflow-hidden shadow-lg shadow-amber-500/20"
+          >
+            {/* 背景装飾 */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/10 pointer-events-none" />
+            <div className="absolute -top-4 -right-4 w-20 h-20 bg-white/20 rounded-full blur-2xl pointer-events-none" />
+            
+            {/* PC用表示 */}
+            <div className="hidden md:block relative z-10">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0 animate-pulse">
+                  <span className="text-lg">🚀</span>
+                </div>
+                <div>
+                  <p className="text-xs font-black text-white drop-shadow-sm">生成し放題中！</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] text-white/90 font-bold">全機能解放</p>
+                <div className="px-2 py-1 bg-white/30 rounded-lg backdrop-blur-sm">
+                  <p className="text-sm font-black text-white tabular-nums drop-shadow-sm">
+                    残り {formatRemainingTime(freeHourRemainingMs)}
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-white/80 font-bold space-y-0.5">
+                <p>✓ 最大10枚生成</p>
+                <p>✓ サイズ指定OK</p>
+                <p>✓ 履歴機能解放</p>
+              </div>
+            </div>
+
+            {/* スマホ用表示 */}
+            <div className="md:hidden relative z-10 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0 animate-pulse">
+                <span className="text-xl">🚀</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-black text-white drop-shadow-sm">生成し放題中！</p>
+                <p className="text-[10px] text-white/80 font-bold">全機能解放 / 履歴OK</p>
+              </div>
+              <div className="px-2.5 py-1.5 bg-white/30 rounded-lg backdrop-blur-sm flex-shrink-0">
+                <p className="text-sm font-black text-white tabular-nums drop-shadow-sm">
+                  {formatRemainingTime(freeHourRemainingMs)}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    )
+  }
+
   const SidebarBanner = () => {
+    // 1時間生成し放題中はプラン案内バナーを非表示
+    if (isFreeHourActive && freeHourRemainingMs > 0) return null
+    
     // モバイル時は常に展開表示
     const showBanner = isMobile || !isCollapsed
     
@@ -319,7 +409,10 @@ function DashboardSidebarImpl({
 
       </nav>
 
-      {/* Side Banner */}
+      {/* 1時間生成し放題キャンペーンバナー */}
+      <FreeHourCampaignBanner />
+
+      {/* Side Banner（プラン案内） */}
       <SidebarBanner />
 
       {/* Support - コンパクト版 */}

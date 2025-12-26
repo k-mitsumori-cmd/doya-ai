@@ -134,53 +134,119 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
           box-shadow: 0 10px 24px rgba(2, 6, 23, 0.12);
           margin: 1.25rem auto;
         }
+        /* ======== TABLE WRAPPER ======== */
+        .md-preview :global(.table-wrapper) {
+          margin: 2rem 0;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          border-radius: 1.25rem;
+          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+          box-shadow:
+            0 4px 6px -1px rgba(0, 0, 0, 0.08),
+            0 20px 40px -8px rgba(37, 99, 235, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.8);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+        }
         .md-preview table {
           width: 100%;
-          border-collapse: separate;
+          border-collapse: collapse;
           border-spacing: 0;
-          margin: 1.2rem 0;
-          font-size: 0.95em;
-          overflow: hidden;
-          border-radius: 1rem;
-          border: 1px solid #e5e7eb;
-          background: #ffffff;
-          box-shadow: 0 18px 40px rgba(2, 6, 23, 0.06);
+          font-size: 0.92em;
+          line-height: 1.65;
         }
+        /* ======== THEAD ======== */
         .md-preview thead th {
-          background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
-          color: #0b1220;
-          font-weight: 900;
-          padding: 0.8rem 0.9rem;
-          border-bottom: 1px solid #e5e7eb;
+          background: linear-gradient(180deg, #1e40af 0%, #2563eb 100%);
+          color: #ffffff;
+          font-weight: 700;
+          font-size: 0.88em;
+          letter-spacing: 0.03em;
+          padding: 1rem 1.1rem;
           text-align: left;
           white-space: nowrap;
+          border-bottom: none;
+          text-transform: none;
         }
         .md-preview thead th:first-child {
-          border-top-left-radius: 1rem;
+          border-top-left-radius: 1.25rem;
+          padding-left: 1.5rem;
         }
         .md-preview thead th:last-child {
-          border-top-right-radius: 1rem;
+          border-top-right-radius: 1.25rem;
+          padding-right: 1.5rem;
         }
+        /* ======== TBODY ======== */
         .md-preview tbody td {
-          padding: 0.8rem 0.9rem;
-          border-bottom: 1px solid #eef2f7;
+          padding: 1rem 1.1rem;
+          border-bottom: 1px solid #f1f5f9;
           color: #334155;
           vertical-align: top;
+          background: #ffffff;
+          transition: background 0.15s ease;
+        }
+        .md-preview tbody td:first-child {
+          padding-left: 1.5rem;
+          font-weight: 600;
+          color: #1e293b;
+        }
+        .md-preview tbody td:last-child {
+          padding-right: 1.5rem;
         }
         .md-preview tbody tr:nth-child(even) td {
-          background: #fbfdff;
+          background: #f8fafc;
         }
         .md-preview tbody tr:hover td {
-          background: #f5faff;
+          background: #eef6ff;
         }
         .md-preview tbody tr:last-child td {
           border-bottom: none;
         }
-        @media (max-width: 640px) {
-          .md-preview table {
-            display: block;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+        .md-preview tbody tr:last-child td:first-child {
+          border-bottom-left-radius: 1.25rem;
+        }
+        .md-preview tbody tr:last-child td:last-child {
+          border-bottom-right-radius: 1.25rem;
+        }
+        /* ======== TABLE CELL STYLING ======== */
+        .md-preview td strong {
+          color: #0f172a;
+          font-weight: 700;
+        }
+        .md-preview td code {
+          font-size: 0.85em;
+          background: #e0f2fe;
+          color: #0369a1;
+          padding: 0.15rem 0.4rem;
+          border-radius: 0.375rem;
+          border: 1px solid #bae6fd;
+        }
+        /* ======== MOBILE RESPONSIVE ======== */
+        @media (max-width: 768px) {
+          .md-preview :global(.table-wrapper) {
+            margin: 1.5rem -1rem;
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+            box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.08);
+          }
+          .md-preview thead th:first-child,
+          .md-preview thead th:last-child,
+          .md-preview tbody tr:last-child td:first-child,
+          .md-preview tbody tr:last-child td:last-child {
+            border-radius: 0;
+          }
+          .md-preview thead th,
+          .md-preview tbody td {
+            padding: 0.75rem 0.9rem;
+            font-size: 0.85em;
+          }
+          .md-preview thead th:first-child,
+          .md-preview tbody td:first-child {
+            padding-left: 1rem;
+          }
+          .md-preview thead th:last-child,
+          .md-preview tbody td:last-child {
+            padding-right: 1rem;
           }
         }
       `}</style>
