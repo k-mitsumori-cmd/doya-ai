@@ -155,6 +155,10 @@ export function FreeHourPopup({ firstLoginAt, onClose }: FreeHourPopupProps) {
                     <Zap className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                     <span>日次上限<span className="font-bold text-amber-600">無制限</span>（1時間限定）</span>
                   </div>
+                  <div className="flex items-start gap-2 text-sm text-gray-700">
+                    <Zap className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <span>履歴機能も<span className="font-bold text-amber-600">解放</span>（再ダウンロード可）</span>
+                  </div>
                 </div>
 
                 {/* CTA */}
