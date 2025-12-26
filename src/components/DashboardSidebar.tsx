@@ -268,85 +268,81 @@ function DashboardSidebarImpl({
   const SidebarBanner = () => {
     // 1時間生成し放題中はプラン案内バナーを非表示
     if (isFreeHourActive && freeHourRemainingMs > 0) return null
-    
+
     // モバイル時は常に展開表示
     const showBanner = isMobile || !isCollapsed
     if (!showBanner) return null
-    
+
     // スマホ表示: コンパクト1行 / PC表示: 縦レイアウトで詳細表示（静的表示）
     return (
       <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden group">
-            {/* PC用：縦レイアウト（詳細表示） */}
-            <div className="hidden md:block relative z-10">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
-                  <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
-                </div>
-                <p className="text-xs font-black text-white">プラン案内</p>
-              </div>
-              <p className="text-[11px] text-white font-bold leading-relaxed mb-1">
-                現在：{bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
-              </p>
-              <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
-                {nextBannerPlanLabel === 'PRO' && (
-                  <>次の上位：PRO（¥9,980/月）</>
-                )}
-                {nextBannerPlanLabel === 'ENTERPRISE' && (
-                  <>次の上位：Enterprise（¥49,800/月）</>
-                )}
-                {nextBannerPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
-              </p>
-              {nextBannerPlanLabel === 'CONSULT' ? (
-                <a
-                  href={HIGH_USAGE_CONTACT_URL}
-                  target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
-                  rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
-                >
-                  <button className="mt-3 w-full py-2 bg-white text-blue-600 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md">
-                    マーケティング丸投げ相談
-                  </button>
-                </a>
-              ) : (
-                <Link href="/banner/pricing">
-                  <button className="mt-3 w-full py-2 bg-white text-blue-600 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md">
-                    {nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseへ'}
-                  </button>
-                </Link>
-              )}
+        {/* PC用：縦レイアウト（詳細表示） */}
+        <div className="hidden md:block relative z-10">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
+              <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
             </div>
+            <p className="text-xs font-black text-white">プラン案内</p>
+          </div>
+          <p className="text-[11px] text-white font-bold leading-relaxed mb-1">
+            現在：{bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
+          </p>
+          <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
+            {nextBannerPlanLabel === 'PRO' && <>次の上位：PRO（¥9,980/月）</>}
+            {nextBannerPlanLabel === 'ENTERPRISE' && <>次の上位：Enterprise（¥49,800/月）</>}
+            {nextBannerPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
+          </p>
+          {nextBannerPlanLabel === 'CONSULT' ? (
+            <a
+              href={HIGH_USAGE_CONTACT_URL}
+              target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
+              rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+            >
+              <button className="mt-3 w-full py-2 bg-white text-blue-600 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md">
+                マーケティング丸投げ相談
+              </button>
+            </a>
+          ) : (
+            <Link href="/banner/pricing">
+              <button className="mt-3 w-full py-2 bg-white text-blue-600 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md">
+                {nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseへ'}
+              </button>
+            </Link>
+          )}
+        </div>
 
-            {/* スマホ用：横1行コンパクト表示 */}
-            <div className="md:hidden relative z-10 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
-                <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-white font-bold leading-snug truncate">
-                  {bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
-                  {nextBannerPlanLabel === 'PRO' && ' → PRO'}
-                  {nextBannerPlanLabel === 'ENTERPRISE' && ' → Enterprise'}
-                  {nextBannerPlanLabel === 'CONSULT' && ' ✓'}
-                </p>
-              </div>
-              {nextBannerPlanLabel === 'CONSULT' ? (
-                <a
-                  href={HIGH_USAGE_CONTACT_URL}
-                  target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
-                  rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
-                  className="flex-shrink-0"
-                >
-                  <button className="px-3 py-1.5 bg-white text-blue-600 text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap">
-                    相談
-                  </button>
-                </a>
-              ) : (
-                <Link href="/banner/pricing" className="flex-shrink-0">
-                  <button className="px-3 py-1.5 bg-white text-blue-600 text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap">
-                    UP
-                  </button>
-                </Link>
-              )}
-            </div>
+        {/* スマホ用：横1行コンパクト表示 */}
+        <div className="md:hidden relative z-10 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
+            <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] text-white font-bold leading-snug truncate">
+              {bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
+              {nextBannerPlanLabel === 'PRO' && ' → PRO'}
+              {nextBannerPlanLabel === 'ENTERPRISE' && ' → Enterprise'}
+              {nextBannerPlanLabel === 'CONSULT' && ' ✓'}
+            </p>
+          </div>
+          {nextBannerPlanLabel === 'CONSULT' ? (
+            <a
+              href={HIGH_USAGE_CONTACT_URL}
+              target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
+              rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+              className="flex-shrink-0"
+            >
+              <button className="px-3 py-1.5 bg-white text-blue-600 text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap">
+                相談
+              </button>
+            </a>
+          ) : (
+            <Link href="/banner/pricing" className="flex-shrink-0">
+              <button className="px-3 py-1.5 bg-white text-blue-600 text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap">
+                UP
+              </button>
+            </Link>
+          )}
+        </div>
       </div>
     )
   }
