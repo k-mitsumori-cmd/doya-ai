@@ -215,10 +215,11 @@ function DashboardSidebarImpl({
     const showBanner = isMobile || !isCollapsed
 
     return (
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {showBanner && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            key="free-hour-campaign-banner"
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="mx-3 md:mx-4 mt-3 md:mt-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-amber-400 via-orange-400 to-red-400 border border-amber-300/50 relative overflow-hidden shadow-lg shadow-amber-500/20"
