@@ -361,7 +361,7 @@ export default function SeoDashboardPage() {
                               <ProgressBar value={job.progress} />
                             </div>
                           )}
-                          <div className="h-10 px-4 rounded-xl bg-gray-50 group-hover:bg-blue-600 text-gray-400 group-hover:text-white text-xs font-black transition-all flex items-center gap-2">
+                          <div className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2">
                             続きから再開
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           </div>

@@ -209,68 +209,59 @@ function DashboardSidebarImpl({
     </AnimatePresence>
   )
 
-  // 1時間生成し放題キャンペーンバナー
+  // 1時間生成し放題キャンペーンバナー（静的表示 - アニメーションなし）
   const FreeHourCampaignBanner = () => {
     if (!isFreeHourActive || freeHourRemainingMs <= 0) return null
     const showBanner = isMobile || !isCollapsed
+    if (!showBanner) return null
 
     return (
-      <AnimatePresence mode="wait">
-        {showBanner && (
-          <motion.div
-            key="free-hour-campaign-banner"
-            initial={false}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="mx-3 md:mx-4 mt-3 md:mt-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-amber-400 via-orange-400 to-red-400 border border-amber-300/50 relative overflow-hidden shadow-lg shadow-amber-500/20"
-          >
-            {/* 背景装飾 */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/10 pointer-events-none" />
-            <div className="absolute -top-4 -right-4 w-20 h-20 bg-white/20 rounded-full blur-2xl pointer-events-none" />
-            
-            {/* PC用表示 */}
-            <div className="hidden md:block relative z-10">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
-                  <span className="text-lg">🚀</span>
-                </div>
-                <div>
-                  <p className="text-xs font-black text-white drop-shadow-sm">生成し放題中！</p>
-                </div>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[11px] text-white/90 font-bold">全機能解放</p>
-                <div className="px-2 py-1 bg-white/30 rounded-lg backdrop-blur-sm">
-                  <p className="text-sm font-black text-white tabular-nums drop-shadow-sm">
-                    残り {formatRemainingTime(freeHourRemainingMs)}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-2 text-[10px] text-white/80 font-bold space-y-0.5">
-                <p>✓ 最大10枚生成</p>
-                <p>✓ サイズ指定OK</p>
-                <p>✓ 履歴機能解放</p>
-              </div>
+      <div className="mx-3 md:mx-4 mt-3 md:mt-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-amber-400 via-orange-400 to-red-400 border border-amber-300/50 relative overflow-hidden shadow-lg shadow-amber-500/20">
+        {/* 背景装飾 */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/10 pointer-events-none" />
+        <div className="absolute -top-4 -right-4 w-20 h-20 bg-white/20 rounded-full blur-2xl pointer-events-none" />
+        
+        {/* PC用表示 */}
+        <div className="hidden md:block relative z-10">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
+              <span className="text-lg">🚀</span>
             </div>
+            <div>
+              <p className="text-xs font-black text-white drop-shadow-sm">生成し放題中！</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[11px] text-white/90 font-bold">全機能解放</p>
+            <div className="px-2 py-1 bg-white/30 rounded-lg backdrop-blur-sm">
+              <p className="text-sm font-black text-white tabular-nums drop-shadow-sm">
+                残り {formatRemainingTime(freeHourRemainingMs)}
+              </p>
+            </div>
+          </div>
+          <div className="mt-2 text-[10px] text-white/80 font-bold space-y-0.5">
+            <p>✓ 最大10枚生成</p>
+            <p>✓ サイズ指定OK</p>
+            <p>✓ 履歴機能解放</p>
+          </div>
+        </div>
 
-            {/* スマホ用表示 */}
-            <div className="md:hidden relative z-10 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
-                <span className="text-xl">🚀</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-black text-white drop-shadow-sm">生成し放題中！</p>
-                <p className="text-[10px] text-white/80 font-bold">全機能解放 / 履歴OK</p>
-              </div>
-              <div className="px-2.5 py-1.5 bg-white/30 rounded-lg backdrop-blur-sm flex-shrink-0">
-                <p className="text-sm font-black text-white tabular-nums drop-shadow-sm">
-                  {formatRemainingTime(freeHourRemainingMs)}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* スマホ用表示 */}
+        <div className="md:hidden relative z-10 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
+            <span className="text-xl">🚀</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-black text-white drop-shadow-sm">生成し放題中！</p>
+            <p className="text-[10px] text-white/80 font-bold">全機能解放 / 履歴OK</p>
+          </div>
+          <div className="px-2.5 py-1.5 bg-white/30 rounded-lg backdrop-blur-sm flex-shrink-0">
+            <p className="text-sm font-black text-white tabular-nums drop-shadow-sm">
+              {formatRemainingTime(freeHourRemainingMs)}
+            </p>
+          </div>
+        </div>
+      </div>
     )
   }
 

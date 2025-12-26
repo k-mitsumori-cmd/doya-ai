@@ -312,7 +312,7 @@ export default function SeoArticlesIndexPage() {
 
                 <div className="p-4 border-t border-gray-100 bg-gray-50/40">
                   <Link href={getResumeLink(a)}>
-                    <Button className="w-full gap-2">
+                    <Button className="w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md hover:shadow-lg transition-all">
                       {a.status === 'RUNNING' ? (
                         <>
                           <Play className="w-4 h-4" />
