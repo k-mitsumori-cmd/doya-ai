@@ -60,7 +60,7 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         }
         .md-preview p {
           margin: 1.05rem 0;
-          color: #334155;
+          color: #0f172a;
         }
         .md-preview a {
           color: #2563eb;
@@ -76,13 +76,13 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
           font-weight: 900;
         }
         .md-preview em {
-          color: #334155;
+          color: #0f172a;
         }
         .md-preview ul,
         .md-preview ol {
           margin: 1rem 0 1.2rem;
           padding-left: 1.4rem;
-          color: #334155;
+          color: #0f172a;
         }
         .md-preview li {
           margin: 0.45rem 0;
@@ -158,14 +158,15 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         .md-preview thead th {
           background: linear-gradient(180deg, #1e40af 0%, #2563eb 100%);
           color: #ffffff;
-          font-weight: 700;
-          font-size: 0.88em;
-          letter-spacing: 0.03em;
+          font-weight: 800;
+          font-size: 0.95em;
+          letter-spacing: 0.01em;
           padding: 1rem 1.1rem;
           text-align: left;
           white-space: nowrap;
           border-bottom: none;
           text-transform: none;
+          text-shadow: 0 1px 0 rgba(0, 0, 0, 0.22);
         }
         .md-preview thead th:first-child {
           border-top-left-radius: 1.25rem;
@@ -179,7 +180,7 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         .md-preview tbody td {
           padding: 1rem 1.1rem;
           border-bottom: 1px solid #f1f5f9;
-          color: #334155;
+          color: #0f172a;
           vertical-align: top;
           background: #ffffff;
           transition: background 0.15s ease;
@@ -238,7 +239,7 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
           .md-preview thead th,
           .md-preview tbody td {
             padding: 0.75rem 0.9rem;
-            font-size: 0.85em;
+            font-size: 0.9em;
           }
           .md-preview thead th:first-child,
           .md-preview tbody td:first-child {

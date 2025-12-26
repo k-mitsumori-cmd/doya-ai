@@ -433,7 +433,7 @@ function SeoArticleInner() {
               </div>
               <h1 className="text-xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">{article.title}</h1>
             </div>
-            <div className="flex items-center gap-3 sm:gap-4 text-[10px] sm:text-sm text-gray-400 font-bold">
+            <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-500 font-bold">
               <p>目標 {article.targetChars.toLocaleString()}字</p>
               <div className="w-1 h-1 rounded-full bg-gray-200" />
               <p>現在 {score.charCount.toLocaleString()}字 ({charProgress}%)</p>
@@ -476,11 +476,11 @@ function SeoArticleInner() {
               { label: '画像', val: article.images?.length || 0, icon: ImageIcon, color: 'text-orange-500' },
             ].map((s, i) => (
               <div key={i} className="bg-white p-5 sm:p-6 rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-sm">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{s.label}</p>
+                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">{s.label}</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-baseline gap-1">
                     <p className={`text-xl sm:text-3xl font-black ${s.color}`}>{s.val}</p>
-                    {s.sub && <span className="text-[9px] sm:text-[10px] font-bold text-gray-300">{s.sub}</span>}
+                    {s.sub && <span className="text-[9px] sm:text-[10px] font-bold text-gray-400">{s.sub}</span>}
                   </div>
                   <s.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${s.color} opacity-20`} />
                 </div>
@@ -497,7 +497,9 @@ function SeoArticleInner() {
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-black transition-all whitespace-nowrap ${
-                  tab === t.id ? 'bg-[#2563EB] text-white shadow-lg shadow-blue-500/30' : 'text-gray-400 hover:bg-gray-50'
+                  tab === t.id
+                    ? 'bg-[#2563EB] text-white shadow-lg shadow-blue-500/30'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
                 <t.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> {t.label}
