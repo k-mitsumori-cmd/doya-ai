@@ -4,6 +4,7 @@ import './globals.css'
 import { Providers } from '@/components/Providers'
 import { SITE_CONFIG, SERVICE_SEO, generateOrganizationSchema } from '@/lib/seo'
 import { GoogleTagManager, GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
+import LogoutToastListener from '@/components/LogoutToastListener'
 
 // ============================================
 // ルートメタデータ（ポータル全体）
@@ -126,6 +127,7 @@ export default function RootLayout({
         <GoogleTagManagerNoScript />
         <Providers>
           {children}
+          <LogoutToastListener />
           <Toaster
             position="top-center"
             toastOptions={{
