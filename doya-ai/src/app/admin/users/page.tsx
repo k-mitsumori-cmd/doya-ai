@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Search, Crown, Mail, Shield, Users, 
-  ChevronDown, Download, Check, X, Edit3, RotateCcw, Zap, Calendar, AlertTriangle
+  ChevronDown, Download, Check, X, Edit3, RotateCcw, Zap, Calendar, AlertTriangle, Trash2
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -97,6 +97,9 @@ export default function AdminUsersPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<User | null>(null)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
   const fetchUsers = async () => {
     try {
@@ -247,6 +250,40 @@ export default function AdminUsersPage() {
       toast.error('エクスポートに失敗しました')
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  // 削除処理
+  const handleDeleteUser = async (user: User) => {
+    if (deleteConfirmText !== 'DELETE') {
+      toast.error('確認テキストを正しく入力してください')
+      return
+    }
+
+    setDeletingUserId(user.id)
+    
+    try {
+      const response = await fetch(`/api/admin/users?userId=${user.id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || '削除に失敗しました')
+      }
+      
+      toast.success(`${user.email || user.name || 'ユーザー'} を削除しました`)
+      setShowDeleteConfirm(null)
+      setDeleteConfirmText('')
+      
+      // ユーザー一覧を更新
+      setUsers(prev => prev.filter(u => u.id !== user.id))
+    } catch (error) {
+      console.error('Delete error:', error)
+      toast.error(error instanceof Error ? error.message : '削除に失敗しました')
+    } finally {
+      setDeletingUserId(null)
     }
   }
 
@@ -564,8 +601,18 @@ export default function AdminUsersPage() {
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors">
+                        <button className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors" title="メール送信">
                           <Mail className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setShowDeleteConfirm(user)
+                            setDeleteConfirmText('')
+                          }}
+                          className="p-2 rounded-lg hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors"
+                          title="削除"
+                        >
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -880,13 +927,120 @@ export default function AdminUsersPage() {
                 )}
               </div>
 
-              <div className="p-6 border-t border-white/10">
+              <div className="p-6 border-t border-white/10 space-y-3">
                 <button
                   onClick={() => setEditingUser(null)}
                   className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl font-medium text-white transition-colors"
                 >
                   閉じる
                 </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(editingUser)
+                    setDeleteConfirmText('')
+                    setEditingUser(null)
+                  }}
+                  className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 rounded-xl font-medium text-red-400 border border-red-500/30 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  このユーザーを削除
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => setShowDeleteConfirm(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#12121a] border border-red-500/30 rounded-2xl w-full max-w-md shadow-2xl"
+            >
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6 text-red-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">ユーザーを削除</h3>
+                    <p className="text-sm text-white/40">この操作は取り消せません</p>
+                  </div>
+                </div>
+
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    {showDeleteConfirm.image ? (
+                      <img src={showDeleteConfirm.image} alt="" className="w-10 h-10 rounded-full" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-bold">
+                        {(showDeleteConfirm.name || showDeleteConfirm.email || '?')[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-medium text-white">{showDeleteConfirm.name || '名前なし'}</p>
+                      <p className="text-sm text-white/50">{showDeleteConfirm.email}</p>
+                    </div>
+                  </div>
+                  <div className="text-xs text-red-300 space-y-1 mt-3">
+                    <p>• すべての生成履歴が削除されます</p>
+                    <p>• Stripeサブスクリプションがキャンセルされます</p>
+                    <p>• ログイン情報が削除されます</p>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-white/60 mb-2">
+                    確認のため <span className="text-red-400 font-bold">DELETE</span> と入力してください
+                  </label>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="DELETE"
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-red-500/50"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(null)
+                      setDeleteConfirmText('')
+                    }}
+                    className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-medium text-white transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={() => handleDeleteUser(showDeleteConfirm)}
+                    disabled={deleteConfirmText !== 'DELETE' || deletingUserId === showDeleteConfirm.id}
+                    className="flex-1 py-3 bg-red-500 hover:bg-red-600 disabled:bg-red-500/30 disabled:cursor-not-allowed rounded-xl font-medium text-white transition-colors flex items-center justify-center gap-2"
+                  >
+                    {deletingUserId === showDeleteConfirm.id ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        削除中...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        削除する
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

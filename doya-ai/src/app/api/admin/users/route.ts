@@ -208,3 +208,85 @@ export async function PATCH(req: NextRequest) {
     )
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    // 管理者認証チェック
+    const cookieStore = await cookies()
+    const token = cookieStore.get(COOKIE_NAME)?.value
+
+    const { valid } = await verifyAdminSession(token || null)
+    if (!valid) {
+      return NextResponse.json({ error: '管理者認証が必要です' }, { status: 401 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const userId = searchParams.get('userId')
+
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+    }
+
+    // ユーザーの存在確認
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        stripeCustomerId: true,
+        stripeSubscriptionId: true,
+      },
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
+    }
+
+    // Stripeサブスクリプションがあればキャンセル
+    if (user.stripeSubscriptionId) {
+      try {
+        await stripe.subscriptions.cancel(user.stripeSubscriptionId)
+      } catch (e) {
+        console.error('Stripe subscription cancel error:', e)
+        // Stripeエラーでも削除は続行
+      }
+    }
+
+    // 関連データを削除（カスケード削除されない場合）
+    // サービスサブスクリプション
+    await prisma.userServiceSubscription.deleteMany({
+      where: { userId },
+    })
+
+    // 生成履歴
+    await prisma.generation.deleteMany({
+      where: { userId },
+    })
+
+    // セッション
+    await prisma.session.deleteMany({
+      where: { userId },
+    })
+
+    // アカウント（OAuth連携）
+    await prisma.account.deleteMany({
+      where: { userId },
+    })
+
+    // ユーザー本体を削除
+    await prisma.user.delete({
+      where: { id: userId },
+    })
+
+    return NextResponse.json({ 
+      success: true, 
+      message: `ユーザー ${user.email || userId} を削除しました` 
+    })
+  } catch (error) {
+    console.error('Admin user delete error:', error)
+    return NextResponse.json(
+      { error: 'ユーザーの削除に失敗しました' },
+      { status: 500 }
+    )
+  }
+}

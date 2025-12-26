@@ -8,7 +8,7 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
   return (
     <>
       <div className="md-preview" data-md-preview dangerouslySetInnerHTML={{ __html: html }} />
-      <style jsx>{`
+      <style jsx global>{`
         .md-preview {
           color: #0f172a;
           font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP',
@@ -135,7 +135,7 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
           margin: 1.25rem auto;
         }
         /* ======== TABLE WRAPPER ======== */
-        .md-preview :global(.table-wrapper) {
+        .md-preview .table-wrapper {
           margin: 2rem 0;
           overflow-x: auto;
           -webkit-overflow-scrolling: touch;
@@ -222,7 +222,7 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         }
         /* ======== MOBILE RESPONSIVE ======== */
         @media (max-width: 768px) {
-          .md-preview :global(.table-wrapper) {
+          .md-preview .table-wrapper {
             margin: 1.5rem -1rem;
             border-radius: 0;
             border-left: none;
