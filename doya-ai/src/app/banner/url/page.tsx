@@ -178,10 +178,8 @@ function BannerUrlAutoPageInner() {
 
     setError('')
     setIsGenerating(true)
-    setBanners([])
-    setBannerAnalysis('')
-    setAnalysisJson(undefined)
-    setUsedModelDisplay('')
+    // 生成開始時に前回の結果を消さない（消すと画面が「パチパチ」しやすい）
+    // 新しい結果が返ってきたタイミングで上書きする
 
     try {
       const controller = new AbortController()
@@ -444,7 +442,15 @@ function BannerUrlAutoPageInner() {
                   {isGenerating ? '生成中です…（少々お待ちください）' : '生成結果がここに表示されます'}
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 relative">
+                  {isGenerating && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-sm border border-slate-200">
+                      <div className="inline-flex items-center gap-2 text-sm font-black text-slate-700">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        生成中…（前回の結果を表示中）
+                      </div>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
