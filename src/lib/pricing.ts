@@ -511,3 +511,33 @@ export function shouldResetDailyUsage(lastUsageReset: Date | null | undefined): 
   const resetDateJST = new Date(lastUsageReset.getTime() + jstOffset).toISOString().split('T')[0]
   return resetDateJST !== todayJST
 }
+
+// ========================================
+// 初回ログイン後1時間生成し放題の判定
+// ========================================
+/** 1時間生成し放題の有効期間（ミリ秒）：デフォルト1時間 */
+export const FREE_HOUR_DURATION_MS = 60 * 60 * 1000
+
+/**
+ * 初回ログインから1時間以内かどうかを判定
+ * @param firstLoginAt - ISO文字列 or Date or null
+ * @returns true なら「1時間生成し放題」が有効
+ */
+export function isWithinFreeHour(firstLoginAt: string | Date | null | undefined): boolean {
+  if (!firstLoginAt) return false
+  const loginTime = typeof firstLoginAt === 'string' ? new Date(firstLoginAt) : firstLoginAt
+  if (isNaN(loginTime.getTime())) return false
+  const elapsed = Date.now() - loginTime.getTime()
+  return elapsed >= 0 && elapsed < FREE_HOUR_DURATION_MS
+}
+
+/**
+ * 1時間生成し放題の残り時間（ミリ秒）。0以下なら終了済み
+ */
+export function getFreeHourRemainingMs(firstLoginAt: string | Date | null | undefined): number {
+  if (!firstLoginAt) return 0
+  const loginTime = typeof firstLoginAt === 'string' ? new Date(firstLoginAt) : firstLoginAt
+  if (isNaN(loginTime.getTime())) return 0
+  const remaining = FREE_HOUR_DURATION_MS - (Date.now() - loginTime.getTime())
+  return Math.max(0, remaining)
+}

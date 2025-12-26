@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, shouldResetDailyUsage, getTodayDateJST } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, shouldResetDailyUsage, getTodayDateJST, isWithinFreeHour } from '@/lib/pricing'
 import crypto from 'crypto'
 import sharp from 'sharp'
 
@@ -1160,15 +1160,20 @@ export async function POST(request: NextRequest) {
       : 'GUEST'
     const isPaidUser = !isGuest && planRaw !== 'FREE'
 
+    // 1時間生成し放題の判定（セッションから firstLoginAt を取得）
+    const firstLoginAt = (session?.user as any)?.firstLoginAt
+    const isFreeHourActive = !isGuest && isWithinFreeHour(firstLoginAt)
+
     // ==============================
     // 枚数/サイズの強制（改ざん対策）
     // - 無料/ゲスト：1〜3枚・1080x1080固定
-    // - 有料：1〜10枚、サイズ指定可（範囲チェック）
+    // - 有料または1時間生成し放題中：1〜10枚、サイズ指定可（範囲チェック）
     // ==============================
-    const desiredCount = isPaidUser
+    const canUseUnlimited = isPaidUser || isFreeHourActive
+    const desiredCount = canUseUnlimited
       ? Math.max(1, Math.min(10, requestedCount || 3))
       : Math.max(1, Math.min(3, requestedCount || 3))
-    const size = isPaidUser ? (isValidSizeString(requestedSizeRaw) ? requestedSizeRaw : '1080x1080') : '1080x1080'
+    const size = canUseUnlimited ? (isValidSizeString(requestedSizeRaw) ? requestedSizeRaw : '1080x1080') : '1080x1080'
 
     if (!targetUrl || !isValidHttpUrl(targetUrl)) {
       return NextResponse.json({ error: 'URLが不正です（https://〜 を入力してください）' }, { status: 400 })
@@ -1192,33 +1197,35 @@ export async function POST(request: NextRequest) {
           )
         }
       } else {
-        const userId = (session?.user as any)?.id as string | undefined
-        const dailyLimit = getBannerDailyLimitByUserPlan(planRaw)
-        if (userId && dailyLimit !== -1) {
-          const sub = await prisma.userServiceSubscription.findUnique({
-            where: { userId_serviceId: { userId, serviceId: 'banner' } },
-            select: { dailyUsage: true, lastUsageReset: true, plan: true },
-          })
-          // 日付が変わっていたらリセット（日本時間00:00基準）
-          let used = sub?.dailyUsage || 0
-          if (shouldResetDailyUsage(sub?.lastUsageReset)) {
-            used = 0
-            // DBもリセット（非同期で更新、エラーは握りつぶす）
-            prisma.userServiceSubscription.update({
+        // 1時間生成し放題中は日次上限チェックをスキップ
+        if (!isFreeHourActive) {
+          const dailyLimit = getBannerDailyLimitByUserPlan(planRaw)
+          if (userId && dailyLimit !== -1) {
+            const sub = await prisma.userServiceSubscription.findUnique({
               where: { userId_serviceId: { userId, serviceId: 'banner' } },
-              data: { dailyUsage: 0, lastUsageReset: new Date() },
-            }).catch(() => {})
-          }
-          if (used + desiredCount > dailyLimit) {
-            return NextResponse.json(
-              {
-                error: '本日の生成上限に達しました。',
-                code: 'DAILY_LIMIT_REACHED',
-                usage: { dailyLimit, dailyUsed: used, dailyRemaining: Math.max(0, dailyLimit - used) },
-                upgradeUrl: planRaw === 'FREE' ? '/banner' : (HIGH_USAGE_CONTACT_URL || '/banner'),
-              },
-              { status: 429 }
-            )
+              select: { dailyUsage: true, lastUsageReset: true, plan: true },
+            })
+            // 日付が変わっていたらリセット（日本時間00:00基準）
+            let used = sub?.dailyUsage || 0
+            if (shouldResetDailyUsage(sub?.lastUsageReset)) {
+              used = 0
+              // DBもリセット（非同期で更新、エラーは握りつぶす）
+              prisma.userServiceSubscription.update({
+                where: { userId_serviceId: { userId, serviceId: 'banner' } },
+                data: { dailyUsage: 0, lastUsageReset: new Date() },
+              }).catch(() => {})
+            }
+            if (used + desiredCount > dailyLimit) {
+              return NextResponse.json(
+                {
+                  error: '本日の生成上限に達しました。',
+                  code: 'DAILY_LIMIT_REACHED',
+                  usage: { dailyLimit, dailyUsed: used, dailyRemaining: Math.max(0, dailyLimit - used) },
+                  upgradeUrl: planRaw === 'FREE' ? '/banner' : (HIGH_USAGE_CONTACT_URL || '/banner'),
+                },
+                { status: 429 }
+              )
+            }
           }
         }
       }

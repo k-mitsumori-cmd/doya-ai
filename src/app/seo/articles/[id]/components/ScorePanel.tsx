@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { TrendingUp, AlertTriangle, CheckCircle2, Target, Zap, FileText } from 'lucide-react'
+import { TrendingUp, AlertTriangle, CheckCircle2, Zap } from 'lucide-react'
 
 type ScorePanelProps = {
   article: {

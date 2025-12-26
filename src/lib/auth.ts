@@ -12,7 +12,24 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn() {
+    async signIn({ user, account }) {
+      // 初回ログイン時（firstLoginAt が null）なら現在時刻を記録
+      if (user?.id && account) {
+        try {
+          const existing = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { firstLoginAt: true },
+          })
+          if (!existing?.firstLoginAt) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { firstLoginAt: new Date() },
+            })
+          }
+        } catch (e) {
+          console.error('Failed to set firstLoginAt:', e)
+        }
+      }
       return true;
     },
     async session({ session, user }) {
@@ -25,6 +42,7 @@ export const authOptions: NextAuthOptions = {
               id: true, 
               role: true, 
               plan: true,
+              firstLoginAt: true,
               serviceSubscriptions: {
                 select: { serviceId: true, plan: true }
               }
@@ -43,6 +61,8 @@ export const authOptions: NextAuthOptions = {
             ;(session.user as any).bannerPlan = byService['banner'] || 'FREE'
             ;(session.user as any).seoPlan = byService['seo'] || undefined
             ;(session.user as any).kantanPlan = byService['kantan'] || undefined
+            // 初回ログイン時刻（1時間生成し放題の判定用）
+            ;(session.user as any).firstLoginAt = dbUser.firstLoginAt?.toISOString() || null
           }
         } catch (error) {
           console.error('Session callback DB error:', error)
