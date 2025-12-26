@@ -20,11 +20,13 @@ import {
   Zap,
   Layers,
   CreditCard,
-  Link2
+  Link2,
+  Loader2
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
 import SidebarTour from '@/components/SidebarTour'
+import { markLogoutToastPending } from '@/components/LogoutToastListener'
 
 interface NavItem {
   href: string
@@ -69,6 +71,8 @@ function DashboardSidebarImpl({
   const { data: session } = useSession()
   const [internalIsCollapsed, setInternalIsCollapsed] = useState(false)
   const isLoggedIn = !!session?.user
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const isPro = useMemo(() => {
     const bannerPlan = String((session?.user as any)?.bannerPlan || '').toUpperCase()
@@ -121,6 +125,33 @@ function DashboardSidebarImpl({
   // derived values をメモ化して framer-motion の不要な更新を抑える
   const isBanner = useMemo(() => pathname.startsWith('/banner'), [pathname])
   const activeNavItems = useMemo(() => (isBanner ? bannerNavItems : seoNavItems), [isBanner])
+
+  const postLogoutUrl = useMemo(() => {
+    // ログアウト後は「ゲストで閲覧可能な安全な場所」へ戻す
+    if (pathname.startsWith('/banner')) return '/banner?loggedOut=1'
+    if (pathname.startsWith('/kantan')) return '/kantan/dashboard?loggedOut=1'
+    if (pathname.startsWith('/seo')) return '/seo?loggedOut=1'
+    return '/?loggedOut=1'
+  }, [pathname])
+
+  const requestLogout = () => {
+    if (!isLoggedIn || isLoggingOut) return
+    setIsLogoutDialogOpen(true)
+  }
+
+  const confirmLogout = async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    try {
+      // 完了toastは遷移先で表示する（ログアウトはリダイレクトが入るため）
+      markLogoutToastPending()
+      await signOut({ callbackUrl: postLogoutUrl })
+    } finally {
+      // signOut が例外で落ちるケースに備えて閉じる
+      setIsLoggingOut(false)
+      setIsLogoutDialogOpen(false)
+    }
+  }
 
   const isCollapsed = forceExpanded ? false : (controlledIsCollapsed ?? internalIsCollapsed)
   const toggle = () => {
@@ -460,7 +491,7 @@ function DashboardSidebarImpl({
             <div className="flex items-center gap-1 flex-shrink-0">
               {isLoggedIn ? (
                 <button
-                  onClick={() => signOut()}
+                  onClick={requestLogout}
                   className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
                   title="ログアウト"
                 >
@@ -591,6 +622,72 @@ function DashboardSidebarImpl({
           })),
         ]}
       />
+
+      {/* ログアウト確認（チャット風） */}
+      <AnimatePresence>
+        {isLogoutDialogOpen && (
+          <motion.div
+            key="logout-confirm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-black/40 flex items-end sm:items-center justify-center p-4"
+            onClick={() => (isLoggingOut ? null : setIsLogoutDialogOpen(false))}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.98 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                <p className="text-sm font-black text-slate-900">確認</p>
+              </div>
+
+              <div className="p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-[11px] font-black flex-shrink-0">
+                    AI
+                  </div>
+                  <div className="bg-slate-100 rounded-2xl px-3 py-2">
+                    <p className="text-sm font-black text-slate-800 leading-relaxed">ログアウトしますか？</p>
+                    <p className="mt-1 text-[11px] font-bold text-slate-500">
+                      いつでも再ログインできます。
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start justify-end gap-2">
+                  <div className="bg-blue-600 text-white rounded-2xl px-3 py-2">
+                    <p className="text-sm font-black leading-relaxed">ログアウトする</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 pt-0 flex gap-2">
+                <button
+                  type="button"
+                  disabled={isLoggingOut}
+                  onClick={() => setIsLogoutDialogOpen(false)}
+                  className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-black hover:bg-slate-200 transition-colors disabled:opacity-60"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  disabled={isLoggingOut}
+                  onClick={() => void confirmLogout()}
+                  className="flex-1 px-4 py-3 rounded-xl bg-slate-900 text-white font-black hover:bg-black transition-colors disabled:opacity-60 inline-flex items-center justify-center gap-2"
+                >
+                  {isLoggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  ログアウト
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }
