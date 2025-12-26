@@ -16,6 +16,7 @@ import {
 
 type HeadingItem = {
   id: string
+  sectionId?: string | null // 実際のSeoSectionのID（あれば）
   level: 2 | 3 | 4
   text: string
   content?: string
@@ -40,6 +41,12 @@ export function OutlineEditor({ articleId, headings, onUpdate }: OutlineEditorPr
     const heading = headings.find((h) => h.id === headingId)
     if (!heading) return
 
+    // sectionIdがない場合はUI上の仮IDなのでAPI呼び出し不可
+    if (!heading.sectionId && type !== 'edit') {
+      setError('この見出しはまだセクションとして保存されていないため、再生成・強化はできません。本文編集タブから直接編集してください。')
+      return
+    }
+
     if (type === 'edit') {
       setActiveAction({ id: headingId, type })
       setEditText(heading.content || '')
@@ -50,10 +57,10 @@ export function OutlineEditor({ articleId, headings, onUpdate }: OutlineEditorPr
     setError(null)
 
     try {
-      // API呼び出し（実装例）
+      const sectionId = heading.sectionId
       const endpoint = type === 'regenerate'
-        ? `/api/seo/sections/${headingId}/regenerate`
-        : `/api/seo/sections/${headingId}/${type}`
+        ? `/api/seo/sections/${sectionId}/regenerate`
+        : `/api/seo/sections/${sectionId}/${type}`
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -81,13 +88,21 @@ export function OutlineEditor({ articleId, headings, onUpdate }: OutlineEditorPr
 
   const handleSaveEdit = async () => {
     if (!activeAction || activeAction.type !== 'edit') return
+    const heading = headings.find((h) => h.id === activeAction.id)
+    if (!heading) return
+
+    // sectionIdがない場合はAPIを呼べないのでUI上でのみ編集可能（保存不可）
+    if (!heading.sectionId) {
+      setError('この見出しはまだセクションとして保存されていないため、個別保存はできません。本文編集タブから全体を編集してください。')
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
     setError(null)
 
     try {
-      // 編集内容を保存（実装例）
-      const res = await fetch(`/api/seo/sections/${activeAction.id}`, {
+      const res = await fetch(`/api/seo/sections/${heading.sectionId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

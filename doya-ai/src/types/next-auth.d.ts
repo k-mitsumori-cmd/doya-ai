@@ -9,6 +9,8 @@ declare module 'next-auth' {
       bannerPlan?: 'FREE' | 'PRO' | 'ENTERPRISE'
       seoPlan?: 'FREE' | 'PRO' | 'BUSINESS' | 'ENTERPRISE'
       kantanPlan?: 'FREE' | 'PRO' | 'ENTERPRISE'
+      /** 初回ログイン時刻（ISO文字列）。この時刻から1時間は生成し放題 */
+      firstLoginAt?: string | null
     } & DefaultSession['user']
   }
 

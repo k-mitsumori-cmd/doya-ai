@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, shouldResetDailyUsage, getTodayDateJST } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, shouldResetDailyUsage, getTodayDateJST, isWithinFreeHour } from '@/lib/pricing'
 import crypto from 'crypto'
 
 // Vercel上で画像生成が長引くことがあるため、実行時間上限を引き上げる
@@ -218,6 +218,13 @@ export async function POST(request: NextRequest) {
     } else if (!disableLimits && !isGuest) {
       if (userId) {
         try {
+          // ユーザーの firstLoginAt を取得して「1時間生成し放題」かどうか判定
+          const userRecord = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { firstLoginAt: true },
+          })
+          const isFreeHourActive = isWithinFreeHour(userRecord?.firstLoginAt)
+
           const current = await prisma.userServiceSubscription.upsert({
             where: { userId_serviceId: { userId, serviceId: 'banner' } },
             create: {
@@ -253,14 +260,15 @@ export async function POST(request: NextRequest) {
           const plan = String(normalized.plan || 'FREE').toUpperCase()
           const isPaidPlan = plan === 'PRO' || plan === 'ENTERPRISE'
 
-          // 有料のみ最大10枚まで
-          desiredCount = Math.max(1, Math.min(isPaidPlan ? 10 : 3, requestedCount || 3))
+          // 1時間生成し放題中は最大10枚まで許可（有料と同等）
+          desiredCount = Math.max(1, Math.min((isPaidPlan || isFreeHourActive) ? 10 : 3, requestedCount || 3))
           // NOTE: 生成上限は「画像枚数」ベース
           // - 有料でも1日最大50枚まで
           // - 無料は pricing.ts の freeLimit（枚数）に従う
           const dailyLimit = getBannerDailyLimitByUserPlan(plan)
 
-          if (dailyLimit !== -1 && normalized.dailyUsage + desiredCount > dailyLimit) {
+          // 1時間生成し放題中は日次上限チェックをスキップ
+          if (!isFreeHourActive && dailyLimit !== -1 && normalized.dailyUsage + desiredCount > dailyLimit) {
             const errorMessage = isPaidPlan
               ? '本日の生成上限に達しました。上限をさらにUPしたい場合は「マーケティング施策を丸投げする」からご相談ください。'
               : '本日の生成上限に達しました。プロプランにアップグレードしてください。'
@@ -280,9 +288,9 @@ export async function POST(request: NextRequest) {
           }
 
           usageInfo = {
-            dailyLimit,
+            dailyLimit: isFreeHourActive ? -1 : dailyLimit, // 1時間中は無制限扱い
             dailyUsed: normalized.dailyUsage,
-            dailyRemaining: dailyLimit === -1 ? -1 : Math.max(0, dailyLimit - normalized.dailyUsage),
+            dailyRemaining: (isFreeHourActive || dailyLimit === -1) ? -1 : Math.max(0, dailyLimit - normalized.dailyUsage),
           }
         } catch (e: any) {
           console.error('Banner usage limit check failed (Prisma error):', e)

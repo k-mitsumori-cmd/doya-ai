@@ -10,7 +10,8 @@ import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
 import UpgradeSuccessModal from '@/components/UpgradeSuccessModal'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { FreeHourPopup } from '@/components/FreeHourPopup'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, isWithinFreeHour } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
 const DEFAULT_FREE_SIZE = '1080x1080'
@@ -79,6 +80,8 @@ function BannerUrlAutoPageInner() {
     return 'FREE' as const
   })()
   const isPaidUser = bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
+  const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
+  const isFreeHourActive = !isGuest && isWithinFreeHour(firstLoginAt)
 
   const [targetUrl, setTargetUrl] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -155,14 +158,15 @@ function BannerUrlAutoPageInner() {
 
   const canGenerate = useMemo(() => targetUrl.trim().length > 8 && !isGenerating, [targetUrl, isGenerating])
 
-  // 無料/有料別に枚数上限を制限（UI改ざん防止）
+  // 無料/有料/1時間生成し放題別に枚数上限を制限（UI改ざん防止）
   useEffect(() => {
-    const maxCount = isPaidUser ? 10 : 3
+    const canUseUnlimited = isPaidUser || isFreeHourActive
+    const maxCount = canUseUnlimited ? 10 : 3
     if (count < 1) setCount(1)
     if (count > maxCount) setCount(maxCount)
-    if (!isPaidUser && size !== DEFAULT_FREE_SIZE) setSize(DEFAULT_FREE_SIZE)
+    if (!canUseUnlimited && size !== DEFAULT_FREE_SIZE) setSize(DEFAULT_FREE_SIZE)
     if (!size) setSize(DEFAULT_FREE_SIZE)
-  }, [isPaidUser, count, size])
+  }, [isPaidUser, isFreeHourActive, count, size])
 
   const handleGenerate = async () => {
     const url = targetUrl.trim()
@@ -628,6 +632,11 @@ function BannerUrlAutoPageInner() {
         onClose={() => setShowUpgradeModal(false)}
         planName={upgradedPlan}
       />
+
+      {/* 1時間生成し放題ポップアップ（フリープランかつ1時間以内） */}
+      {!isGuest && bannerPlanTier === 'FREE' && (
+        <FreeHourPopup firstLoginAt={firstLoginAt} />
+      )}
     </div>
   )
 }

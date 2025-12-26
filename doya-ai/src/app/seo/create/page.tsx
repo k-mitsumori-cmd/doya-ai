@@ -16,8 +16,6 @@ import {
   CheckCircle2,
   Lightbulb,
   FileText,
-  Users,
-  Palette,
   Zap,
   Target,
   TrendingUp,

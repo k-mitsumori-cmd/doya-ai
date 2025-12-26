@@ -98,7 +98,7 @@ type Article = {
   knowledgeItems?: SeoKnowledge[]
   references?: SeoReference[]
   llmoOptions?: any
-  sections?: { id: string; status: string }[]
+  sections?: { id: string; status: string; headingPath?: string; content?: string }[]
   requestText?: string | null
   referenceImages?: { name: string; dataUrl: string }[] | null
   autoBundle?: boolean
@@ -619,15 +619,31 @@ function SeoArticleInner() {
                 <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
                   <Layers className="w-6 h-6 text-indigo-500" /> 見出し構成・個別操作
                 </h2>
+                {/* セクションIDをマッピング（sectionsがあれば） */}
                 <OutlineEditor
                   articleId={id}
-                  headings={toc.map((h, i) => ({
-                    id: `h-${i}`,
-                    level: h.level as 2 | 3 | 4,
-                    text: h.text,
-                  }))}
+                  headings={toc.map((h, i) => {
+                    // headingPathが一致するセクションを探す
+                    const matchedSection = (article.sections || []).find(
+                      (s: any) => s.headingPath === h.text || s.headingPath?.endsWith(h.text)
+                    )
+                    return {
+                      id: `h-${i}`,
+                      sectionId: matchedSection?.id || null,
+                      level: h.level as 2 | 3 | 4,
+                      text: h.text,
+                      content: matchedSection?.content || undefined,
+                    }
+                  })}
                   onUpdate={() => load({ showLoading: false })}
                 />
+                {(!article.sections || article.sections.length === 0) && (
+                  <div className="mt-4 p-4 rounded-2xl bg-amber-50 border border-amber-100">
+                    <p className="text-sm font-bold text-amber-800">
+                      💡 見出し単位の再生成・強化は、記事生成完了後に利用可能です。現在は本文編集タブから全体を編集できます。
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
