@@ -347,10 +347,9 @@ function DashboardSidebarImpl({
                 </Link>
               )}
             </div>
-          </div>
-        </div>
-      )
-    }
+      </div>
+    )
+  }
 
   return (
     <>
