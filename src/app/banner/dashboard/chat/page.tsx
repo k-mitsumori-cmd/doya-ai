@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
-import { Send, Sparkles, Bot, User, Wand2, Image as ImageIcon, Download, MessageSquare, ArrowRight, Settings } from 'lucide-react'
+import { Send, Sparkles, Bot, User, Wand2, Image as ImageIcon, Download, MessageSquare, ArrowRight, Settings, Menu, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 
 type ChatMsg = {
@@ -139,6 +140,7 @@ async function readAndOptimizeImage(file: File, kind: 'logo' | 'person'): Promis
 
 export default function BannerChatPage() {
   const { data: session } = useSession()
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [logoImage, setLogoImage] = useState<string | null>(null)
   const [logoFileName, setLogoFileName] = useState('')
   const [personImages, setPersonImages] = useState<string[]>([])
@@ -415,10 +417,41 @@ export default function BannerChatPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
-      {/* デスクトップのみサイドバー表示（モバイルはヘッダーから戻る） */}
+      {/* デスクトップのみサイドバー表示 */}
       <div className="hidden md:block">
         <DashboardSidebar />
       </div>
+
+      {/* モバイルサイドバーオーバーレイ */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <div className="fixed inset-0 z-[100] md:hidden">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+              onClick={() => setIsSidebarOpen(false)} 
+            />
+            <motion.div 
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 w-[240px] shadow-2xl"
+            >
+              <DashboardSidebar forceExpanded isMobile />
+              <button 
+                className="absolute top-4 right-[-3.5rem] p-2 text-white bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md transition-colors"
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="md:pl-[240px] transition-all duration-200">
         <LoadingProgress
           isLoading={isThinking || isGenerating || isRefining}
@@ -433,7 +466,14 @@ export default function BannerChatPage() {
           <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
             <div className="h-16 sm:h-20 flex items-center justify-between">
               <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-                <Link href="/banner/dashboard" className="p-1.5 sm:p-2 hover:bg-slate-50 rounded-full transition-colors flex-shrink-0">
+                {/* ハンバーガーメニュー（モバイルのみ） */}
+                <button 
+                  className="md:hidden p-1.5 sm:p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+                  onClick={() => setIsSidebarOpen(true)}
+                >
+                  <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
+                <Link href="/banner/dashboard" className="hidden md:block p-1.5 sm:p-2 hover:bg-slate-50 rounded-full transition-colors flex-shrink-0">
                   <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 rotate-180" />
                 </Link>
                 <h1 className="text-base sm:text-2xl font-black text-slate-800 tracking-tight flex items-center gap-2 sm:gap-3 truncate">
