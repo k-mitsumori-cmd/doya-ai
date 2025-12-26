@@ -230,7 +230,7 @@ function DashboardSidebarImpl({
             {/* PC用表示 */}
             <div className="hidden md:block relative z-10">
               <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0 animate-pulse">
+                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
                   <span className="text-lg">🚀</span>
                 </div>
                 <div>
@@ -254,7 +254,7 @@ function DashboardSidebarImpl({
 
             {/* スマホ用表示 */}
             <div className="md:hidden relative z-10 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0 animate-pulse">
+              <div className="w-9 h-9 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
                 <span className="text-xl">🚀</span>
               </div>
               <div className="flex-1 min-w-0">
