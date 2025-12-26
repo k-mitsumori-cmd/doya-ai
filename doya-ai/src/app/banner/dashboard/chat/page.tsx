@@ -509,11 +509,11 @@ export default function BannerChatPage() {
           </div>
         </header>
 
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+        <div className="max-w-6xl mx-auto px-2 sm:px-6 py-2 sm:py-8">
 
           <div className="grid lg:grid-cols-[1fr_360px] gap-4">
             {/* Chat */}
-            <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[60vh] sm:h-[700px]">
+            <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-80px)] sm:h-[700px]">
               <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-slate-50/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -573,29 +573,29 @@ export default function BannerChatPage() {
                     <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </div>
-                <div className="mt-3 sm:mt-4 px-1 sm:px-2">
+                <div className="mt-2 sm:mt-4 px-1 sm:px-2">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                    <span className="text-[9px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest">
                       クイック入力（クリックで挿入）
                     </span>
                     <span className="text-[10px] font-bold text-slate-400 hidden sm:block">
                       {suggestedInputs.length}件
                     </span>
                   </div>
-                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="mt-1.5 sm:mt-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 max-h-[120px] sm:max-h-none overflow-y-auto">
                     {suggestedInputs.slice(0, 6).map((s, i) => (
                       <button
                         key={`${i}-${s}`}
                         type="button"
                         onClick={() => setInput(s)}
                         title={s}
-                        className="group text-left w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-blue-300 transition-colors shadow-sm"
+                        className="group text-left w-full px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-blue-300 transition-colors shadow-sm"
                       >
                         <div className="flex items-start gap-2">
-                          <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-lg bg-blue-50 text-blue-700 text-[10px] font-black flex-shrink-0">
+                          <span className="mt-[1px] inline-flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-md sm:rounded-lg bg-blue-50 text-blue-700 text-[9px] sm:text-[10px] font-black flex-shrink-0">
                             {i + 1}
                           </span>
-                          <span className="text-[11px] sm:text-[12px] font-bold text-slate-700 leading-relaxed">
+                          <span className="text-[10px] sm:text-[12px] font-bold text-slate-700 leading-snug sm:leading-relaxed line-clamp-2">
                             {s}
                           </span>
                         </div>
