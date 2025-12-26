@@ -1,0 +1,266 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Edit3,
+  RefreshCw,
+  Zap,
+  Target,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Check,
+  X,
+} from 'lucide-react'
+
+type HeadingItem = {
+  id: string
+  level: 2 | 3 | 4
+  text: string
+  content?: string
+}
+
+type OutlineEditorProps = {
+  articleId: string
+  headings: HeadingItem[]
+  onUpdate?: () => void
+}
+
+type ActionType = 'edit' | 'regenerate' | 'seo' | 'cv'
+
+export function OutlineEditor({ articleId, headings, onUpdate }: OutlineEditorProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [activeAction, setActiveAction] = useState<{ id: string; type: ActionType } | null>(null)
+  const [editText, setEditText] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleAction = async (headingId: string, type: ActionType) => {
+    const heading = headings.find((h) => h.id === headingId)
+    if (!heading) return
+
+    if (type === 'edit') {
+      setActiveAction({ id: headingId, type })
+      setEditText(heading.content || '')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      // API呼び出し（実装例）
+      const endpoint = type === 'regenerate'
+        ? `/api/seo/sections/${headingId}/regenerate`
+        : `/api/seo/sections/${headingId}/${type}`
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          articleId,
+          headingPath: heading.text,
+          enhanceType: type,
+        }),
+      })
+
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || `処理に失敗しました`)
+      }
+
+      onUpdate?.()
+    } catch (e: any) {
+      setError(e?.message || '処理に失敗しました')
+    } finally {
+      setLoading(false)
+      setActiveAction(null)
+    }
+  }
+
+  const handleSaveEdit = async () => {
+    if (!activeAction || activeAction.type !== 'edit') return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      // 編集内容を保存（実装例）
+      const res = await fetch(`/api/seo/sections/${activeAction.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: editText,
+        }),
+      })
+
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || '保存に失敗しました')
+      }
+
+      onUpdate?.()
+      setActiveAction(null)
+    } catch (e: any) {
+      setError(e?.message || '保存に失敗しました')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">
+        見出し構成
+      </p>
+
+      {error && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold mb-4">
+          {error}
+        </div>
+      )}
+
+      {headings.map((heading) => {
+        const isExpanded = expandedId === heading.id
+        const isEditing = activeAction?.id === heading.id && activeAction?.type === 'edit'
+
+        return (
+          <motion.div
+            key={heading.id}
+            layout
+            className={`rounded-2xl border transition-all ${
+              isExpanded ? 'border-blue-200 bg-blue-50/30' : 'border-gray-100 bg-white'
+            }`}
+            style={{ marginLeft: heading.level === 3 ? 16 : heading.level === 4 ? 32 : 0 }}
+          >
+            {/* ヘッダー */}
+            <div
+              className="p-4 flex items-center gap-3 cursor-pointer"
+              onClick={() => setExpandedId(isExpanded ? null : heading.id)}
+            >
+              <span
+                className={`flex-shrink-0 w-8 h-6 rounded text-[10px] font-black flex items-center justify-center ${
+                  heading.level === 2
+                    ? 'bg-blue-100 text-blue-600'
+                    : heading.level === 3
+                      ? 'bg-gray-200 text-gray-600'
+                      : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                H{heading.level}
+              </span>
+
+              <span className="flex-1 text-sm font-bold text-gray-800 truncate">
+                {heading.text}
+              </span>
+
+              {isExpanded ? (
+                <ChevronUp className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              )}
+            </div>
+
+            {/* 展開時のアクション */}
+            <AnimatePresence>
+              {isExpanded && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="px-4 pb-4 overflow-hidden"
+                >
+                  {/* 編集モード */}
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        rows={6}
+                        className="w-full p-4 rounded-xl bg-white border-2 border-blue-200 text-sm font-medium text-gray-800 focus:outline-none focus:border-blue-500 transition-all resize-none"
+                        placeholder="この見出しの本文を編集..."
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={loading}
+                          className="flex-1 h-10 rounded-xl bg-blue-600 text-white text-xs font-black hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          保存
+                        </button>
+                        <button
+                          onClick={() => setActiveAction(null)}
+                          className="h-10 px-4 rounded-xl bg-gray-100 text-gray-600 text-xs font-black hover:bg-gray-200 transition-colors flex items-center gap-2"
+                        >
+                          <X className="w-4 h-4" />
+                          キャンセル
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <button
+                        onClick={() => handleAction(heading.id, 'edit')}
+                        disabled={loading}
+                        className="h-10 rounded-xl bg-gray-100 text-gray-700 text-xs font-black hover:bg-gray-200 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        修正
+                      </button>
+                      <button
+                        onClick={() => handleAction(heading.id, 'regenerate')}
+                        disabled={loading}
+                        className="h-10 rounded-xl bg-purple-50 text-purple-700 text-xs font-black hover:bg-purple-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        {loading && activeAction?.id === heading.id && activeAction?.type === 'regenerate' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        )}
+                        再生成
+                      </button>
+                      <button
+                        onClick={() => handleAction(heading.id, 'seo')}
+                        disabled={loading}
+                        className="h-10 rounded-xl bg-blue-50 text-blue-700 text-xs font-black hover:bg-blue-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        {loading && activeAction?.id === heading.id && activeAction?.type === 'seo' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Zap className="w-3.5 h-3.5" />
+                        )}
+                        SEO強化
+                      </button>
+                      <button
+                        onClick={() => handleAction(heading.id, 'cv')}
+                        disabled={loading}
+                        className="h-10 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-black hover:bg-emerald-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        {loading && activeAction?.id === heading.id && activeAction?.type === 'cv' ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Target className="w-3.5 h-3.5" />
+                        )}
+                        CV強化
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )
+      })}
+
+      {headings.length === 0 && (
+        <div className="p-8 text-center rounded-2xl bg-gray-50 border border-gray-100">
+          <p className="text-gray-400 font-bold text-sm">見出しがありません</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
