@@ -17,6 +17,8 @@ import {
   XCircle,
   Zap,
   Clock,
+  Hourglass,
+  Timer,
   Brain,
   PenTool,
   Layers,
@@ -451,16 +453,46 @@ export default function SeoJobPage() {
               <span>状態: {JOB_STATUS_LABELS[job.status] || job.status}</span>
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 shadow-sm">
-              <Clock className="w-4 h-4" />
-              <span>経過: {formatMmSs(elapsed)}</span>
-            </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 shadow-sm">
               <span className="text-blue-600 font-black">工程:</span>
               <span>{STEP_LABELS[job.step] || job.step}</span>
             </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 shadow-sm">
-              <span className="text-gray-400">平均:</span>
-              <span className="text-gray-700 font-black">{Math.round(totalSec / 60)}分前後</span>
+          </div>
+
+          {/* 時間系（見やすさ優先） */}
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left">
+              <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <Clock className="w-4 h-4 text-gray-500" />
+                経過時間
+              </div>
+              <p className="mt-1 text-2xl sm:text-3xl font-black text-gray-900 tabular-nums">
+                {formatMmSs(elapsed)}
+              </p>
+              <p className="mt-1 text-[10px] font-bold text-gray-400">開始からの経過</p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left">
+              <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <Hourglass className="w-4 h-4 text-blue-600" />
+                残り目安
+              </div>
+              <p className="mt-1 text-2xl sm:text-3xl font-black text-gray-900 tabular-nums">
+                {formatMmSs(remainingRange.min)}〜{formatMmSs(remainingRange.max)}
+              </p>
+              <p className="mt-1 text-[10px] font-bold text-gray-400">進捗から推定（目安）</p>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left">
+              <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <Timer className="w-4 h-4 text-indigo-600" />
+                平均所要（目安）
+              </div>
+              <p className="mt-1 text-2xl sm:text-3xl font-black text-gray-900 tabular-nums">
+                {formatMmSs(totalSec)}
+              </p>
+              <p className="mt-1 text-[10px] font-bold text-gray-400">
+                この工程の平均: <span className="text-gray-700 font-black tabular-nums">{formatMmSs(stepExpected)}</span>
+              </p>
             </div>
           </div>
 
@@ -571,7 +603,7 @@ export default function SeoJobPage() {
                     {heartbeatAgo === null ? '通信中...' : `最終更新: ${heartbeatAgo}秒前（4秒ごとに確認）`}
                   </span>
                   <span className="w-1 h-1 rounded-full bg-gray-200" />
-                  <span>残り目安: {formatMmSs(remainingRange.min)}〜{formatMmSs(remainingRange.max)}</span>
+                  <span>経過: {formatMmSs(elapsed)}</span>
                 </div>
                 <div className="text-gray-400 font-bold">
                   ※「記事統合」「図解生成」は進捗が止まって見えても内部で動いていることがあります
