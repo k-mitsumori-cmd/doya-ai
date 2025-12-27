@@ -26,6 +26,7 @@ import {
 import { useSession, signOut } from 'next-auth/react'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
 import SidebarTour from '@/components/SidebarTour'
+import MobileTourPopup, { BANNER_TOUR_SLIDES } from '@/components/MobileTourPopup'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
 
 interface NavItem {
@@ -47,8 +48,9 @@ const bannerNavItems: NavItem[] = [
 
 const seoNavItems: NavItem[] = [
   // /seo に「ダッシュボード＋生成履歴」を統合
-  { href: '/seo', label: '生成記事一覧', icon: LayoutDashboard },
   { href: '/seo/create', label: '新規記事作成', icon: Sparkles },
+  { href: '/seo/new', label: '新規記事作成（詳細）', icon: Sparkles },
+  { href: '/seo', label: '生成記事一覧', icon: LayoutDashboard },
 ]
 
 // 以前の設定項目は削除
@@ -611,6 +613,15 @@ function DashboardSidebarImpl({
           })),
         ]}
       />
+
+      {/* スマホ専用：シンプルなスライド形式の使い方紹介 */}
+      {isBanner && (
+        <MobileTourPopup
+          storageKey={`doya_mobile_tour_banner_${String((session?.user as any)?.id || 'guest')}`}
+          autoStart={true}
+          slides={BANNER_TOUR_SLIDES}
+        />
+      )}
 
       {/* ログアウト確認（チャット風） */}
       <AnimatePresence>
