@@ -22,6 +22,7 @@ import {
   Search,
   BarChart3,
 } from 'lucide-react'
+import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 
 // ================== 定数 ==================
 const ARTICLE_TYPES = [
@@ -843,47 +844,60 @@ export default function SeoCreateWizardPage() {
           </div>
 
           {/* フッター（ナビゲーション） */}
-          <div className="px-6 sm:px-10 pb-8 sm:pb-10 flex items-center gap-3">
-            {step > 1 && (
-              <button
-                type="button"
-                onClick={() => setStep((s) => Math.max(1, s - 1) as 1 | 2 | 3)}
-                className="h-14 px-6 rounded-2xl bg-gray-100 text-gray-600 font-black text-sm hover:bg-gray-200 transition-colors flex items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                戻る
-              </button>
+          <div className="px-6 sm:px-10 pb-8 sm:pb-10 flex flex-col gap-3">
+            {loading && (
+              <AiThinkingStrip
+                show
+                compact
+                title="AIがSEO/LLMO対策を実行中…"
+                subtitle="検索意図 → 構造化 → 網羅性 → 読みやすさ の順で最適化しています"
+                tags={['SEO', 'LLMO', '構造化', '網羅性', '読みやすさ']}
+                steps={['検索意図を推定', '上位構造を分析', 'LLMO向けに整理', '本文を生成・整合']}
+              />
             )}
 
-            <button
-              type="button"
-              onClick={() => {
-                if (step < 3) {
-                  setStep((s) => Math.min(3, s + 1) as 1 | 2 | 3)
-                } else {
-                  handleGenerate()
-                }
-              }}
-              disabled={!canProceed || loading}
-              className="flex-1 h-14 sm:h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-base shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  生成中...
-                </>
-              ) : step < 3 ? (
-                <>
-                  次へ
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              ) : (
-                <>
-                  記事を生成する
-                  <Sparkles className="w-5 h-5" />
-                </>
+            <div className="flex items-center gap-3">
+              {step > 1 && (
+                <button
+                  type="button"
+                  onClick={() => setStep((s) => Math.max(1, s - 1) as 1 | 2 | 3)}
+                  className="h-14 px-6 rounded-2xl bg-gray-100 text-gray-600 font-black text-sm hover:bg-gray-200 transition-colors flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  戻る
+                </button>
               )}
-            </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (step < 3) {
+                    setStep((s) => Math.min(3, s + 1) as 1 | 2 | 3)
+                  } else {
+                    handleGenerate()
+                  }
+                }}
+                disabled={!canProceed || loading}
+                className="flex-1 h-14 sm:h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-base shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    生成中...
+                  </>
+                ) : step < 3 ? (
+                  <>
+                    次へ
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                ) : (
+                  <>
+                    記事を生成する
+                    <Sparkles className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
