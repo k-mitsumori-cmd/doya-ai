@@ -66,7 +66,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit }: ScorePan
     const good: Array<{ title: string; detail: string }> = []
     const improvements: Improvement[] = []
 
-    const charRatio = charCount / targetChars
+    // charRatio は上で定義済み
     if (charRatio >= 0.8 && charRatio <= 1.2) {
       good.push({ title: '文字数が狙い通り', detail: '目標の80〜120%に収まっています（SEO的に安定）。' })
     } else if (charRatio >= 0.6 && charRatio <= 1.4) {
@@ -86,8 +86,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit }: ScorePan
     if (h3Count >= 8) good.push({ title: 'H3で深掘りできている', detail: `H3が${h3Count}個。比較軸や手順が伝わりやすい状態です。` })
     else improvements.push({ id: 'OPEN_EDIT', kind: 'manual', title: 'H3を追加して具体化', detail: '各H2の下にH3（具体例/手順/注意点）を入れると読みやすくなります。' })
 
-    const keywords = article.keywords || []
-    const keywordHits = keywords.filter((kw) => content.toLowerCase().includes(kw.toLowerCase())).length
+    // keywords, keywordHits は上で定義済み
     if (keywords.length === 0) {
       good.push({ title: 'キーワード設定', detail: 'キーワードが設定されています（入力側で設定）。' })
     } else if (keywordHits >= Math.max(1, Math.ceil(keywords.length * 0.6))) {
