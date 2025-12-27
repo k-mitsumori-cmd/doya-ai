@@ -1,8 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
-import { TrendingUp, AlertTriangle, CheckCircle2, Zap, ThumbsUp, Wrench, Loader2 } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { TrendingUp, AlertTriangle, CheckCircle2, Zap, ThumbsUp, Wrench, Loader2, Activity, ScanSearch, ListChecks } from 'lucide-react'
 
 type ScorePanelProps = {
   articleId: string
@@ -28,6 +28,43 @@ function isHeadingRelated(title: string) {
   return /H2|H3|見出し|章立て/.test(title)
 }
 
+function useCountUp(target: number, durationMs: number, enabled: boolean) {
+  const [value, setValue] = useState(0)
+  const rafRef = useRef<number | null>(null)
+  const startRef = useRef<number | null>(null)
+  const lastTargetRef = useRef<number>(target)
+
+  useEffect(() => {
+    if (!enabled) {
+      setValue(target)
+      lastTargetRef.current = target
+      return
+    }
+    // targetが変わったら0から再カウント（見た目の期待感を作る）
+    if (lastTargetRef.current !== target) {
+      setValue(0)
+      lastTargetRef.current = target
+    }
+    startRef.current = null
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+
+    const step = (ts: number) => {
+      if (startRef.current == null) startRef.current = ts
+      const t = Math.min(1, (ts - startRef.current) / Math.max(1, durationMs))
+      // easeOutCubic
+      const eased = 1 - Math.pow(1 - t, 3)
+      setValue(Math.round(target * eased))
+      if (t < 1) rafRef.current = requestAnimationFrame(step)
+    }
+    rafRef.current = requestAnimationFrame(step)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    }
+  }, [target, durationMs, enabled])
+
+  return value
+}
+
 export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutline }: ScorePanelProps) {
   const [selected, setSelected] = useState<Improvement | null>(null)
   const [mode, setMode] = useState<'auto' | 'manual'>('auto')
@@ -35,6 +72,8 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
   const [applyError, setApplyError] = useState<string | null>(null)
   const [needTarget, setNeedTarget] = useState<null | { headings: string[] }>(null)
   const [targetHeading, setTargetHeading] = useState<string>('')
+  const [analyzing, setAnalyzing] = useState(true)
+  const [phase, setPhase] = useState(0)
 
   const analysis = useMemo(() => {
     const content = article.finalMarkdown || ''
@@ -126,6 +165,9 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
     }
   }, [article])
 
+  const goodCount = useMemo(() => analysis.good.length, [analysis.good.length])
+  const improveCount = useMemo(() => analysis.improvements.length, [analysis.improvements.length])
+
   const scoreColor = useMemo(() => {
     if (analysis.score >= 80) return 'text-emerald-600'
     if (analysis.score >= 60) return 'text-yellow-600'
@@ -138,8 +180,126 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
     return 'from-red-50 to-red-100/50'
   }, [analysis.score])
 
+  // 「めっちゃ分析してそう」演出（タブを開いた直後に短い解析アニメを見せる）
+  useEffect(() => {
+    // reduce motion が好みのユーザーは演出を短くする
+    const prefersReduced =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const totalMs = prefersReduced ? 350 : 1200
+    const steps = 4
+    setAnalyzing(true)
+    setPhase(0)
+
+    const t0 = window.setInterval(() => {
+      setPhase((p) => Math.min(steps, p + 1))
+    }, Math.max(120, Math.floor(totalMs / steps)))
+
+    const t1 = window.setTimeout(() => {
+      setAnalyzing(false)
+      setPhase(steps)
+    }, totalMs)
+
+    return () => {
+      window.clearInterval(t0)
+      window.clearTimeout(t1)
+    }
+  }, [])
+
+  const scoreCount = useCountUp(analysis.score, 900, !analyzing)
+  const charCount = useCountUp(analysis.charCount, 950, !analyzing)
+  const h2Count = useCountUp(analysis.h2Count, 850, !analyzing)
+  const h3Count = useCountUp(analysis.h3Count, 850, !analyzing)
+  const goodCountUp = useCountUp(goodCount, 900, !analyzing)
+  const improveCountUp = useCountUp(improveCount, 900, !analyzing)
+
   return (
     <div className="space-y-4">
+      <AnimatePresence mode="wait">
+        {analyzing ? (
+          <motion.div
+            key="analyzing"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="p-5 rounded-3xl border border-gray-100 bg-gradient-to-br from-slate-50 to-white shadow-sm"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <ScanSearch className="w-5 h-5 text-blue-600" />
+                <p className="text-sm font-black text-gray-900">SEOスコアを分析中…</p>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] font-black text-gray-500">
+                <Activity className="w-4 h-4 text-emerald-500 animate-pulse" />
+                動いています
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="h-3 rounded-full bg-gray-100 overflow-hidden border border-gray-200">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, (phase / 4) * 100)}%` }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                  className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500"
+                />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[10px] font-bold text-gray-500">
+                <span>構造/網羅性/読みやすさ</span>
+                <span>{Math.round(Math.min(100, (phase / 4) * 100))}%</span>
+              </div>
+            </div>
+
+            <div className="mt-4 p-4 rounded-2xl bg-white border border-gray-100">
+              <div className="flex items-center gap-2 mb-3">
+                <ListChecks className="w-4 h-4 text-indigo-600" />
+                <p className="text-xs font-black text-gray-700 uppercase tracking-widest">解析ステップ</p>
+              </div>
+              <div className="space-y-2">
+                {[
+                  '本文の構造を解析',
+                  '見出し設計（H2/H3）を評価',
+                  'キーワードの自然な含有を確認',
+                  '改善ポイントを抽出',
+                ].map((label, i) => {
+                  const done = phase >= i + 1
+                  const active = !done && phase === i
+                  return (
+                    <div key={label} className="flex items-center gap-2">
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center border ${
+                          done ? 'bg-emerald-50 border-emerald-200' : active ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        {done ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                          <Loader2 className={`w-4 h-4 ${active ? 'text-blue-600 animate-spin' : 'text-gray-400'}`} />
+                        )}
+                      </div>
+                      <p className={`text-sm font-black ${done ? 'text-gray-900' : active ? 'text-blue-700' : 'text-gray-500'}`}>
+                        {label}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <p className="mt-3 text-[11px] font-bold text-gray-500 leading-relaxed">
+              いま“伸びしろ”を抽出しています。結果が出たら <span className="text-gray-900">改善の打ち手</span> がすぐ分かります。
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="result"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="space-y-4"
+          >
       {/* スコア */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -152,23 +312,31 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
             <span className="text-xs font-black text-gray-500 uppercase tracking-widest">SEOスコア</span>
           </div>
           <div className={`text-3xl font-black ${scoreColor}`}>
-            {analysis.score}
+            {scoreCount}
             <span className="text-sm text-gray-400">/100</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="grid grid-cols-5 gap-2 text-center">
           <div className="p-2 rounded-xl bg-white/60">
-            <p className="text-lg font-black text-gray-900">{analysis.charCount.toLocaleString()}</p>
+            <p className="text-lg font-black text-gray-900 tabular-nums">{charCount.toLocaleString()}</p>
             <p className="text-[10px] text-gray-500 font-bold">文字数</p>
           </div>
           <div className="p-2 rounded-xl bg-white/60">
-            <p className="text-lg font-black text-gray-900">{analysis.h2Count}</p>
+            <p className="text-lg font-black text-gray-900 tabular-nums">{h2Count}</p>
             <p className="text-[10px] text-gray-500 font-bold">H2見出し</p>
           </div>
           <div className="p-2 rounded-xl bg-white/60">
-            <p className="text-lg font-black text-gray-900">{analysis.h3Count}</p>
+            <p className="text-lg font-black text-gray-900 tabular-nums">{h3Count}</p>
             <p className="text-[10px] text-gray-500 font-bold">H3見出し</p>
+          </div>
+          <div className="p-2 rounded-xl bg-white/60">
+            <p className="text-lg font-black text-emerald-700 tabular-nums">{goodCountUp}</p>
+            <p className="text-[10px] text-gray-500 font-bold">Good</p>
+          </div>
+          <div className="p-2 rounded-xl bg-white/60">
+            <p className="text-lg font-black text-amber-700 tabular-nums">{improveCountUp}</p>
+            <p className="text-[10px] text-gray-500 font-bold">改善</p>
           </div>
         </div>
       </motion.div>
@@ -179,6 +347,9 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
           <div className="flex items-center gap-2 mb-3">
             <ThumbsUp className="w-4 h-4 text-emerald-600" />
             <span className="text-xs font-black text-emerald-700 uppercase tracking-widest">Good（うまくいってる）</span>
+            <span className="ml-auto text-[10px] font-black px-2 py-0.5 rounded-full bg-white/80 border border-emerald-200 text-emerald-800 tabular-nums">
+              {goodCountUp}件
+            </span>
           </div>
           <div className="space-y-2">
             {(analysis.good.length ? analysis.good : [{ title: 'ベースはOK', detail: '大枠は整っています。あとは改善点を潰すだけです。' }]).map((g, i) => (
@@ -194,6 +365,9 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="w-4 h-4 text-amber-700" />
             <span className="text-xs font-black text-amber-800 uppercase tracking-widest">改善できる（伸びしろ）</span>
+            <span className="ml-auto text-[10px] font-black px-2 py-0.5 rounded-full bg-white/80 border border-amber-200 text-amber-900 tabular-nums">
+              {improveCountUp}件
+            </span>
           </div>
           <div className="space-y-2">
             {(analysis.improvements.length ? analysis.improvements : []).map((it) => {
@@ -201,6 +375,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
               return (
                 <button
                   key={`${it.id}_${it.title}`}
+                  disabled={applying}
                   onClick={() => {
                     setSelected(it)
                     setApplyError(null)
@@ -210,7 +385,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
                   }}
                   className={`w-full text-left p-3 rounded-xl border transition-all ${
                     active ? 'bg-white border-amber-300 shadow-sm' : 'bg-white/60 border-amber-100 hover:bg-white hover:border-amber-200'
-                  }`}
+                  } disabled:opacity-70 disabled:cursor-not-allowed`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-black text-amber-900">{it.title}</p>
@@ -395,6 +570,9 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
           </div>
         </div>
       )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
