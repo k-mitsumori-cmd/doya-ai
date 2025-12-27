@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight,
@@ -86,6 +87,7 @@ const STEP_LABELS: Record<string, string> = {
 }
 
 export default function SeoDashboardPage() {
+  const router = useRouter()
   const [articles, setArticles] = useState<SeoArticleRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -308,6 +310,8 @@ export default function SeoDashboardPage() {
               const stepIndex = getStepIndex(a.status)
               const job = a.jobs?.[0]
               const mainKw = (a.keywords || [])[0] || ''
+              const detailHref = `/seo/articles/${a.id}`
+              const resumeHref = getResumeLink(a)
 
               return (
                 <motion.div
@@ -317,8 +321,16 @@ export default function SeoDashboardPage() {
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ delay: idx * 0.03 }}
                 >
-                  <Link href={getResumeLink(a)}>
-                    <div className="group bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-200 hover:translate-y-[-2px] transition-all">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(detailHref)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') router.push(detailHref)
+                    }}
+                    className="group bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-200 hover:translate-y-[-2px] transition-all cursor-pointer"
+                    title="クリックで記事詳細（本文/画像）を開く"
+                  >
                       <div className="flex items-start sm:items-center gap-4">
                         {/* ステップインジケーター */}
                         <div className="hidden sm:flex flex-col items-center gap-1">
@@ -361,14 +373,21 @@ export default function SeoDashboardPage() {
                               <ProgressBar value={job.progress} />
                             </div>
                           )}
-                          <div className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(resumeHref)
+                            }}
+                            className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                            title="途中工程から再開"
+                          >
                             続きから再開
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                          </div>
+                          </button>
                         </div>
                       </div>
-                    </div>
-                  </Link>
+                  </div>
                 </motion.div>
               )
             })}
