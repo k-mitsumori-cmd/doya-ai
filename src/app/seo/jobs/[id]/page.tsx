@@ -54,6 +54,14 @@ type SeoJob = {
   startedAt?: string | null
 }
 
+type ActivityLogItem = {
+  id: string
+  at: number
+  kind: 'heartbeat' | 'progress' | 'step' | 'status' | 'info' | 'error'
+  title: string
+  detail?: string
+}
+
 // ステップ情報（アイコン・色・ラベル）
 const STEPS = [
   { key: 'init', label: '準備中', icon: Zap, color: 'gray' },
@@ -131,6 +139,14 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t
 }
 
+function formatHhMmSs(ms: number) {
+  const d = new Date(ms)
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  const ss = String(d.getSeconds()).padStart(2, '0')
+  return `${hh}:${mm}:${ss}`
+}
+
 function estimateTotalSeconds(targetChars: number, isComparison: boolean) {
   // 体感値ベースの目安（厳密なETAではなく“不安を減らすための目安”）
   const chars = clamp(Number(targetChars || 10000), 2000, 60000)
@@ -172,12 +188,18 @@ export default function SeoJobPage() {
   const [completionOpen, setCompletionOpen] = useState(false)
   const [completionPopupEnabled, setCompletionPopupEnabled] = useState(true)
   const prevStatusRef = useRef<string | null>(null)
-  const prevStepRef = useRef<string | null>(null)
   const dontShowAgainRef = useRef(false)
   const [tipIndex, setTipIndex] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const [lastHeartbeatAt, setLastHeartbeatAt] = useState<number | null>(null)
-  const [stepHistory, setStepHistory] = useState<Array<{ step: string; at: number }>>([])
+  const [activityLog, setActivityLog] = useState<ActivityLogItem[]>([])
+  const logWrapRef = useRef<HTMLDivElement | null>(null)
+  const [logAutoScroll, setLogAutoScroll] = useState(true)
+  const logAutoScrollRef = useRef(true)
+  const lastProgressRef = useRef<number | null>(null)
+  const lastHeartbeatLogAtRef = useRef<number>(0)
+  const logPrevStatusRef = useRef<string | null>(null)
+  const logPrevStepRef = useRef<string | null>(null)
 
   const reviewedCount = useMemo(
     () => (job?.sections || []).filter((s) => s.status === 'reviewed' || s.status === 'generated').length,
@@ -199,6 +221,29 @@ export default function SeoJobPage() {
   useEffect(() => {
     jobRef.current = job
   }, [job])
+
+  const pushLog = useCallback((item: Omit<ActivityLogItem, 'id'>) => {
+    setActivityLog((prev) => {
+      const next: ActivityLogItem[] = [
+        ...prev,
+        {
+          ...item,
+          id: `${item.at}_${Math.random().toString(16).slice(2)}`,
+        },
+      ]
+      // 最大200件（重くしない）
+      if (next.length > 200) return next.slice(next.length - 200)
+      return next
+    })
+  }, [])
+
+  // ログの自動スクロール（ユーザーが上に戻ったら停止）
+  useEffect(() => {
+    const el = logWrapRef.current
+    if (!el) return
+    if (!logAutoScrollRef.current) return
+    el.scrollTop = el.scrollHeight
+  }, [activityLog.length])
 
   // Tips を回転表示
   useEffect(() => {
@@ -262,6 +307,18 @@ export default function SeoJobPage() {
       if (newJob) {
         setLastHeartbeatAt(Date.now())
         setJob(newJob)
+
+        // 心拍ログ（4秒ごとに動いている感を出す）
+        const now = Date.now()
+        if (now - lastHeartbeatLogAtRef.current >= 3500) {
+          lastHeartbeatLogAtRef.current = now
+          pushLog({
+            at: now,
+            kind: 'heartbeat',
+            title: 'サーバー応答を確認しました',
+            detail: `状態: ${JOB_STATUS_LABELS[newJob.status] || newJob.status} / 工程: ${STEP_LABELS[newJob.step] || newJob.step} / 進捗: ${clamp(Number(newJob.progress || 0), 0, 100)}%`,
+          })
+        }
       }
     } catch (e: any) {
       if (showLoading || !jobRef.current) setJob(null)
@@ -270,10 +327,16 @@ export default function SeoJobPage() {
           ? '読み込みがタイムアウトしました。再読み込みしてください。'
           : e?.message || '読み込みに失敗しました'
       setLoadError(msg)
+      pushLog({
+        at: Date.now(),
+        kind: 'error',
+        title: '読み込みに失敗しました',
+        detail: msg,
+      })
     }
     if (showLoading) setLoading(false)
     isPollingRef.current = false
-  }, [jobId])
+  }, [jobId, pushLog])
 
   const advanceOnce = useCallback(async () => {
     if (busy) return
@@ -317,6 +380,58 @@ export default function SeoJobPage() {
     setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
   }, [])
 
+  // 状態/ステップ/進捗の変化をログに積む（“動いてる感”の強化）
+  useEffect(() => {
+    if (!job) return
+    const now = Date.now()
+
+    // 状態変化
+    if (logPrevStatusRef.current && logPrevStatusRef.current !== job.status) {
+      pushLog({
+        at: now,
+        kind: 'status',
+        title: `状態が「${JOB_STATUS_LABELS[job.status] || job.status}」になりました`,
+      })
+    }
+    logPrevStatusRef.current = job.status
+
+    // ステップ変化
+    const stepCur = String(job.step || '')
+    if (logPrevStepRef.current && logPrevStepRef.current !== stepCur) {
+      pushLog({
+        at: now,
+        kind: 'step',
+        title: `工程が「${STEP_LABELS[stepCur] || stepCur}」に移りました`,
+      })
+    }
+    logPrevStepRef.current = stepCur
+
+    // 進捗変化
+    const p = clamp(Number(job.progress || 0), 0, 100)
+    const pPrev = lastProgressRef.current
+    if (pPrev === null) {
+      lastProgressRef.current = p
+      pushLog({
+        at: now,
+        kind: 'info',
+        title: '進捗の計測を開始しました',
+        detail: `現在: ${p}%`,
+      })
+    } else if (p !== pPrev) {
+      const diff = p - pPrev
+      lastProgressRef.current = p
+      // 1%以上の変化、もしくは減少（巻き戻り）なら記録
+      if (Math.abs(diff) >= 1 || diff < 0) {
+        pushLog({
+          at: now,
+          kind: 'progress',
+          title: `進捗が ${pPrev}% → ${p}% になりました`,
+          detail: diff > 0 ? `+${diff}%` : `${diff}%`,
+        })
+      }
+    }
+  }, [job?.status, job?.step, job?.progress, job, pushLog])
+
   useEffect(() => {
     const cur = job?.status || null
     const prev = prevStatusRef.current
@@ -337,16 +452,7 @@ export default function SeoJobPage() {
     setCompletionOpen(true)
   }, [job, job?.status, completionPopupEnabled, jobId])
 
-  // ステップ履歴（“動いてる感”のログ）
-  useEffect(() => {
-    if (!job) return
-    const cur = String(job.step || '')
-    const prev = prevStepRef.current
-    if (cur && cur !== prev) {
-      prevStepRef.current = cur
-      setStepHistory((h) => [{ step: cur, at: Date.now() }, ...h].slice(0, 6))
-    }
-  }, [job?.step, job])
+  // 旧: stepHistory（ステップ変化のみ）は廃止し、activityLogへ統合
 
   useEffect(() => {
     const a = searchParams.get('auto')
@@ -813,23 +919,88 @@ export default function SeoJobPage() {
               </AnimatePresence>
             )}
 
-            {/* “動いてる感”ログ */}
-            {isRunning && (
+            {/* “動いてる感”ログ（より細かく・スクロールで追える） */}
+            {(isRunning || isPaused) && (
               <div className="mb-8">
-                <div className="rounded-2xl border border-gray-100 bg-white p-5">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">稼働ログ（最新）</p>
-                  <div className="space-y-2">
-                    {(stepHistory.length ? stepHistory : [{ step: job.step, at: Date.now() }]).map((h, i) => (
-                      <div key={`${h.step}_${h.at}_${i}`} className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="w-2 h-2 rounded-full bg-blue-500" />
-                          <p className="text-xs font-black text-gray-700 truncate">{STEP_LABELS[h.step] || h.step}</p>
+                <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+                  <div className="p-5 border-b border-gray-100 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">稼働ログ</p>
+                      <p className="text-sm font-black text-gray-900 mt-1 truncate">
+                        いま起きていること（自動更新）
+                      </p>
+                    </div>
+                    {!logAutoScroll && (
+                      <button
+                        type="button"
+                        className="h-9 px-4 rounded-xl bg-blue-600 text-white text-xs font-black shadow-sm hover:bg-blue-700 transition-colors"
+                        onClick={() => {
+                          const el = logWrapRef.current
+                          if (!el) return
+                          el.scrollTop = el.scrollHeight
+                          logAutoScrollRef.current = true
+                          setLogAutoScroll(true)
+                        }}
+                      >
+                        最新へ
+                      </button>
+                    )}
+                  </div>
+
+                  <div
+                    ref={logWrapRef}
+                    onScroll={() => {
+                      const el = logWrapRef.current
+                      if (!el) return
+                      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24
+                      logAutoScrollRef.current = atBottom
+                      if (logAutoScroll !== atBottom) setLogAutoScroll(atBottom)
+                    }}
+                    className="max-h-[260px] overflow-y-auto px-5 py-4 space-y-3 bg-gradient-to-b from-white to-slate-50"
+                  >
+                    {(activityLog.length ? activityLog : [{
+                      id: 'seed',
+                      at: Date.now(),
+                      kind: 'info' as const,
+                      title: '稼働ログを準備中…',
+                      detail: 'まもなくログが流れ始めます',
+                    }]).map((it) => {
+                      const ageSec = Math.max(0, Math.floor((Date.now() - it.at) / 1000))
+                      const tone =
+                        it.kind === 'error'
+                          ? { dot: 'bg-red-500', text: 'text-red-700' }
+                          : it.kind === 'progress'
+                          ? { dot: 'bg-indigo-600', text: 'text-gray-900' }
+                          : it.kind === 'step'
+                          ? { dot: 'bg-blue-600', text: 'text-gray-900' }
+                          : it.kind === 'status'
+                          ? { dot: 'bg-amber-500', text: 'text-gray-900' }
+                          : it.kind === 'heartbeat'
+                          ? { dot: 'bg-emerald-500', text: 'text-gray-900' }
+                          : { dot: 'bg-gray-400', text: 'text-gray-900' }
+
+                      return (
+                        <div key={it.id} className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <span className={`mt-1 w-2.5 h-2.5 rounded-full ${tone.dot}`} />
+                            <div className="min-w-0">
+                              <p className={`text-xs font-black ${tone.text} truncate`}>
+                                {it.title}
+                              </p>
+                              {it.detail && (
+                                <p className="text-[10px] font-bold text-gray-500 mt-1 break-words">
+                                  {it.detail}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <p className="text-[10px] font-black text-gray-400 tabular-nums">{formatHhMmSs(it.at)}</p>
+                            <p className="text-[10px] font-bold text-gray-400 tabular-nums">{ageSec}秒前</p>
+                          </div>
                         </div>
-                        <p className="text-[10px] font-bold text-gray-400 flex-shrink-0">
-                          {Math.max(0, Math.floor((Date.now() - h.at) / 1000))}秒前
-                        </p>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </div>
