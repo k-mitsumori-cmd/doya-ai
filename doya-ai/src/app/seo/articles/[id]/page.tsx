@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { AnimatePresence, motion } from 'framer-motion'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
 import { ScorePanel } from './components/ScorePanel'
 import { OutlineEditor } from './components/OutlineEditor'
@@ -633,6 +634,7 @@ function SeoArticleInner() {
                   article={article}
                   onUpdated={() => load({ showLoading: false })}
                   onGoEdit={() => setTab('edit')}
+                  onGoOutline={() => setTab('outline')}
                 />
               </div>
             )}

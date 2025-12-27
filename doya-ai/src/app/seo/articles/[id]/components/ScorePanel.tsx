@@ -14,6 +14,7 @@ type ScorePanelProps = {
   }
   onUpdated?: () => void
   onGoEdit?: () => void
+  onGoOutline?: () => void
 }
 
 type Improvement = {
@@ -23,10 +24,17 @@ type Improvement = {
   kind: 'quick' | 'manual'
 }
 
-export function ScorePanel({ articleId, article, onUpdated, onGoEdit }: ScorePanelProps) {
+function isHeadingRelated(title: string) {
+  return /H2|H3|見出し|章立て/.test(title)
+}
+
+export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutline }: ScorePanelProps) {
   const [selected, setSelected] = useState<Improvement | null>(null)
+  const [mode, setMode] = useState<'auto' | 'manual'>('auto')
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
+  const [needTarget, setNeedTarget] = useState<null | { headings: string[] }>(null)
+  const [targetHeading, setTargetHeading] = useState<string>('')
 
   const analysis = useMemo(() => {
     const content = article.finalMarkdown || ''
@@ -193,7 +201,13 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit }: ScorePan
               return (
                 <button
                   key={`${it.id}_${it.title}`}
-                  onClick={() => { setSelected(it); setApplyError(null) }}
+                  onClick={() => {
+                    setSelected(it)
+                    setApplyError(null)
+                    setNeedTarget(null)
+                    setTargetHeading('')
+                    setMode(it.kind === 'manual' ? 'manual' : 'auto')
+                  }}
                   className={`w-full text-left p-3 rounded-xl border transition-all ${
                     active ? 'bg-white border-amber-300 shadow-sm' : 'bg-white/60 border-amber-100 hover:bg-white hover:border-amber-200'
                   }`}
@@ -201,9 +215,9 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit }: ScorePan
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-black text-amber-900">{it.title}</p>
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                      it.kind === 'quick' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-gray-50 text-gray-600 border border-gray-100'
+                      'bg-white text-gray-700 border border-gray-200'
                     }`}>
-                      {it.kind === 'quick' ? '自動修正' : '手動'}
+                      手動/自動どちらも可
                     </span>
                   </div>
                   <p className="text-[11px] font-bold text-amber-900/70 mt-1 leading-relaxed">{it.detail}</p>
@@ -235,29 +249,124 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit }: ScorePan
               {applyError}
             </div>
           )}
-          <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-end">
-            {selected.kind === 'manual' ? (
+          {needTarget?.headings?.length ? (
+            <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+              <p className="text-xs font-black text-amber-900">長文のため、修正対象の見出しを選んでください</p>
+              <p className="text-[10px] font-bold text-amber-800/80 mt-1">安全に反映するため、部分修正で適用します。</p>
+              <select
+                value={targetHeading}
+                onChange={(e) => setTargetHeading(e.target.value)}
+                className="mt-2 w-full px-3 py-2 rounded-xl bg-white border border-amber-200 text-sm font-bold text-gray-900 focus:outline-none focus:border-blue-500"
+              >
+                <option value="">見出しを選択…</option>
+                {needTarget.headings.slice(0, 50).map((h) => (
+                  <option key={h} value={h}>{h}</option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+
+          <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+            <div className="inline-flex items-center gap-1 p-1 rounded-xl bg-gray-50 border border-gray-100">
               <button
-                onClick={() => onGoEdit?.()}
+                type="button"
+                onClick={() => setMode('manual')}
+                className={`px-3 py-2 rounded-lg text-[11px] font-black transition-all ${
+                  mode === 'manual' ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-white'
+                }`}
+              >
+                手動で対応
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('auto')}
+                className={`px-3 py-2 rounded-lg text-[11px] font-black transition-all ${
+                  mode === 'auto' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-white'
+                }`}
+                title="有料プランの場合はAIで自動修正できます"
+              >
+                AIで自動修正
+              </button>
+            </div>
+            <div className="text-[10px] font-bold text-gray-400">
+              ※自動修正は有料機能のため、プランによっては利用できません
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-end">
+            {mode === 'manual' ? (
+              <button
+                onClick={() => {
+                  if (isHeadingRelated(selected.title)) onGoOutline?.()
+                  else onGoEdit?.()
+                }}
                 className="h-11 px-5 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-800 transition-colors inline-flex items-center justify-center gap-2"
               >
                 <Wrench className="w-4 h-4" />
-                本文編集で対応する
+                {isHeadingRelated(selected.title) ? '見出し編集で対応する' : '本文編集で対応する'}
               </button>
             ) : (
               <button
-                disabled={applying}
+                disabled={applying || (needTarget?.headings?.length ? !targetHeading : false)}
                 onClick={async () => {
                   setApplying(true)
                   setApplyError(null)
                   try {
-                    const res = await fetch(`/api/seo/articles/${articleId}/autofix`, {
+                    // 1) 軽い改善は既存autofixで即適用
+                    if (selected.id !== 'OPEN_EDIT' && selected.kind === 'quick') {
+                      const res = await fetch(`/api/seo/articles/${articleId}/autofix`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fix: selected.id }),
+                      })
+                      const json = await res.json().catch(() => ({}))
+                      if (!res.ok || json?.success === false) throw new Error(json?.error || `API Error: ${res.status}`)
+                      onUpdated?.()
+                      return
+                    }
+
+                    // 2) それ以外は chat-edit で自動修正（有料）
+                    const message = [
+                      `次の改善を行ってください: ${selected.title}`,
+                      selected.detail ? `背景: ${selected.detail}` : '',
+                      '',
+                      '制約:',
+                      '- できるだけ既存の構成と見出しは保つ（必要最小限の変更）',
+                      '- 事実は捏造しない。数字や固有名詞は元の内容にないなら追加しない。',
+                      '- 日本語として自然な文章にする。',
+                    ].join('\n')
+
+                    const res = await fetch(`/api/seo/articles/${articleId}/chat-edit`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ fix: selected.id }),
+                      body: JSON.stringify({
+                        message,
+                        targetHeading: targetHeading || undefined,
+                      }),
                     })
                     const json = await res.json().catch(() => ({}))
-                    if (!res.ok || json?.success === false) throw new Error(json?.error || `API Error: ${res.status}`)
+                    if (json?.code === 'NEED_TARGET' && Array.isArray(json?.headings)) {
+                      setNeedTarget({ headings: json.headings })
+                      throw new Error('長文のため見出し指定が必要です（見出しを選んで再実行してください）。')
+                    }
+                    if (!res.ok || json?.success === false) {
+                      throw new Error(json?.error || `API Error: ${res.status}`)
+                    }
+
+                    const proposed = String(json?.proposedMarkdown || '')
+                    if (!proposed.trim()) throw new Error('自動修正の結果が空でした')
+
+                    // 3) 提案Markdownを保存
+                    const saveRes = await fetch(`/api/seo/articles/${articleId}/content`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ finalMarkdown: proposed, normalize: true }),
+                    })
+                    const saveJson = await saveRes.json().catch(() => ({}))
+                    if (!saveRes.ok || saveJson?.success === false) {
+                      throw new Error(saveJson?.error || `保存に失敗しました (${saveRes.status})`)
+                    }
+
                     onUpdated?.()
                   } catch (e: any) {
                     setApplyError(e?.message || '自動修正に失敗しました')
@@ -268,7 +377,7 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit }: ScorePan
                 className="h-11 px-5 rounded-xl bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors inline-flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {applying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                この改善を自動で適用
+                AIで自動修正する
               </button>
             )}
           </div>

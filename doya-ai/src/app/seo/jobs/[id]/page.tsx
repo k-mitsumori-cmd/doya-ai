@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   XCircle,
   Zap,
+  Clock,
   Brain,
   PenTool,
   Layers,
@@ -45,6 +46,9 @@ type SeoJob = {
   articleId: string
   article: { id: string; title: string; outline?: string | null; targetChars: number }
   sections: SeoSection[]
+  createdAt?: string
+  updatedAt?: string
+  startedAt?: string | null
 }
 
 // ステップ情報（アイコン・色・ラベル）
@@ -109,6 +113,44 @@ const TIPS = [
   '📝 各セクションは個別に再生成できます',
 ]
 
+function formatMmSs(totalSeconds: number) {
+  const s = Math.max(0, Math.floor(totalSeconds))
+  const mins = Math.floor(s / 60)
+  const secs = s % 60
+  return `${mins}:${String(secs).padStart(2, '0')}`
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n))
+}
+
+function estimateTotalSeconds(targetChars: number, isComparison: boolean) {
+  // 体感値ベースの目安（厳密なETAではなく“不安を減らすための目安”）
+  const chars = clamp(Number(targetChars || 10000), 2000, 60000)
+  const base = isComparison ? 240 : 120
+  const per1k = isComparison ? 12 : 8
+  const total = base + per1k * (chars / 1000)
+  return clamp(total, 90, 900)
+}
+
+const STEP_PORTION: Record<string, number> = {
+  init: 0.06,
+  outline: 0.18,
+  sections: 0.52,
+  integrate: 0.12,
+  media: 0.12,
+  done: 0,
+  // 比較記事（ざっくり）
+  cmp_ref: 0.12,
+  cmp_candidates: 0.12,
+  cmp_crawl: 0.16,
+  cmp_extract: 0.16,
+  cmp_sources: 0.08,
+  cmp_tables: 0.12,
+  cmp_outline: 0.12,
+  cmp_polish: 0.12,
+}
+
 export default function SeoJobPage() {
   const params = useParams<{ id: string }>()
   const jobId = params.id
@@ -123,8 +165,12 @@ export default function SeoJobPage() {
   const [completionOpen, setCompletionOpen] = useState(false)
   const [completionPopupEnabled, setCompletionPopupEnabled] = useState(true)
   const prevStatusRef = useRef<string | null>(null)
+  const prevStepRef = useRef<string | null>(null)
   const dontShowAgainRef = useRef(false)
   const [tipIndex, setTipIndex] = useState(0)
+  const [elapsed, setElapsed] = useState(0)
+  const [lastHeartbeatAt, setLastHeartbeatAt] = useState<number | null>(null)
+  const [stepHistory, setStepHistory] = useState<Array<{ step: string; at: number }>>([])
 
   const reviewedCount = useMemo(
     () => (job?.sections || []).filter((s) => s.status === 'reviewed' || s.status === 'generated').length,
@@ -156,6 +202,22 @@ export default function SeoJobPage() {
     return () => clearInterval(t)
   }, [job?.status])
 
+  // 経過時間（startedAtがあればそれを優先）
+  useEffect(() => {
+    const t = setInterval(() => {
+      const j = jobRef.current
+      if (!j) return
+      const startMs =
+        (j.startedAt ? Date.parse(String(j.startedAt)) : NaN) ||
+        (j.createdAt ? Date.parse(String(j.createdAt)) : NaN) ||
+        NaN
+      if (!Number.isFinite(startMs)) return
+      const sec = Math.max(0, Math.floor((Date.now() - startMs) / 1000))
+      setElapsed(sec)
+    }, 1000)
+    return () => clearInterval(t)
+  }, [])
+
   const load = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading === true
 
@@ -181,6 +243,7 @@ export default function SeoJobPage() {
 
       const newJob = json.job || null
       if (newJob) {
+        setLastHeartbeatAt(Date.now())
         setJob(newJob)
       }
     } catch (e: any) {
@@ -256,6 +319,17 @@ export default function SeoJobPage() {
     setCompletionOpen(true)
   }, [job, job?.status, completionPopupEnabled, jobId])
 
+  // ステップ履歴（“動いてる感”のログ）
+  useEffect(() => {
+    if (!job) return
+    const cur = String(job.step || '')
+    const prev = prevStepRef.current
+    if (cur && cur !== prev) {
+      prevStepRef.current = cur
+      setStepHistory((h) => [{ step: cur, at: Date.now() }, ...h].slice(0, 6))
+    }
+  }, [job?.step, job])
+
   useEffect(() => {
     const a = searchParams.get('auto')
     if (a === '1') setAuto(true)
@@ -320,6 +394,17 @@ export default function SeoJobPage() {
   const isDone = job.status === 'done'
   const isPaused = job.status === 'paused'
   const isError = job.status === 'error'
+  const isComparison = String(job.step || '').startsWith('cmp_')
+  const totalSec = estimateTotalSeconds(job.article?.targetChars || 10000, isComparison)
+  const remainingSec = Math.max(0, Math.round(totalSec * (1 - (Number(job.progress || 0) / 100))))
+  const remainingRange = {
+    min: Math.max(0, Math.round(remainingSec * 0.6)),
+    max: Math.round(remainingSec * 1.4),
+  }
+  const currentStepKey = String(job.step || '').toLowerCase()
+  const stepPortion = STEP_PORTION[currentStepKey] ?? 0.12
+  const stepExpected = Math.round(totalSec * stepPortion)
+  const heartbeatAgo = lastHeartbeatAt ? Math.max(0, Math.floor((Date.now() - lastHeartbeatAt) / 1000)) : null
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white py-8 px-4">
@@ -359,6 +444,24 @@ export default function SeoJobPage() {
           <p className="text-gray-500 mt-3 text-sm font-bold">
             目標: {job.article.targetChars.toLocaleString()}文字
           </p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[11px] font-bold text-gray-500">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 shadow-sm">
+              <span className={`w-2.5 h-2.5 rounded-full ${isRunning ? 'bg-emerald-500' : isPaused ? 'bg-amber-500' : isError ? 'bg-red-500' : 'bg-gray-300'}`} />
+              <span>状態: {JOB_STATUS_LABELS[job.status] || job.status}</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 shadow-sm">
+              <Clock className="w-4 h-4" />
+              <span>経過: {formatMmSs(elapsed)}</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 shadow-sm">
+              <span className="text-blue-600 font-black">工程:</span>
+              <span>{STEP_LABELS[job.step] || job.step}</span>
+            </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 shadow-sm">
+              <span className="text-gray-400">平均:</span>
+              <span className="text-gray-700 font-black">{Math.round(totalSec / 60)}分前後</span>
+            </div>
+          </div>
         </motion.div>
 
         {/* メインカード */}
@@ -444,7 +547,84 @@ export default function SeoJobPage() {
                   transition={{ duration: 0.5, ease: 'easeOut' }}
                 />
               </div>
+              <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-gray-500 font-bold">
+                  <span className="inline-flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${heartbeatAgo !== null && heartbeatAgo <= 10 ? 'bg-emerald-500' : 'bg-gray-300'} ${isRunning ? 'animate-pulse' : ''}`} />
+                    {heartbeatAgo === null ? '通信中...' : `最終更新: ${heartbeatAgo}秒前（4秒ごとに確認）`}
+                  </span>
+                  <span className="w-1 h-1 rounded-full bg-gray-200" />
+                  <span>残り目安: {formatMmSs(remainingRange.min)}〜{formatMmSs(remainingRange.max)}</span>
+                </div>
+                <div className="text-gray-400 font-bold">
+                  ※「記事統合」「図解生成」は進捗が止まって見えても内部で動いていることがあります
+                </div>
+              </div>
             </div>
+
+            {/* 工場（ベルトコンベア）演出 */}
+            {isRunning && (
+              <div className="mb-8">
+                <div className="rounded-3xl border border-gray-100 bg-gradient-to-br from-white to-slate-50 overflow-hidden">
+                  <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-gray-900">工場稼働中（いま作ってます）</p>
+                        <p className="text-[10px] font-bold text-gray-500">
+                          現在の工程「{STEP_LABELS[job.step] || job.step}」は平均 {Math.max(1, Math.round(stepExpected / 60))}分以内が多いです
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
+                      ベルトコンベア稼働中
+                    </div>
+                  </div>
+
+                  <div className="relative overflow-hidden px-4 sm:px-6 py-5">
+                    <motion.div
+                      className="flex gap-3 w-[200%]"
+                      animate={{ x: ['0%', '-50%'] }}
+                      transition={{ duration: 16, repeat: Infinity, ease: 'linear' }}
+                    >
+                      {[...STEPS, ...STEPS].map((s, i) => {
+                        const isCur = String(s.key).toLowerCase() === currentStepKey
+                        const isDoneStep = STEPS.findIndex((x) => x.key === s.key) < currentStepIndex
+                        const Icon = s.icon
+                        return (
+                          <div
+                            key={`${s.key}_${i}`}
+                            className={`min-w-[160px] px-4 py-3 rounded-2xl border shadow-sm flex items-center gap-3 ${
+                              isCur
+                                ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20'
+                                : isDoneStep
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                : 'bg-white text-gray-700 border-gray-100'
+                            }`}
+                          >
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                              isCur ? 'bg-white/15' : isDoneStep ? 'bg-emerald-100' : 'bg-gray-50'
+                            }`}>
+                              {isCur ? <Loader2 className="w-5 h-5 animate-spin" /> : <Icon className="w-5 h-5" />}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-black truncate">{s.label}</p>
+                              <p className={`text-[10px] font-bold truncate ${isCur ? 'text-white/80' : 'text-gray-400'}`}>
+                                {isCur ? '加工中…（ちゃんと動いてます）' : isDoneStep ? '完了' : '待機'}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </motion.div>
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white to-transparent" />
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent" />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Tips（生成中のみ） */}
             {isRunning && (
@@ -457,8 +637,33 @@ export default function SeoJobPage() {
                   className="text-center py-4 px-6 rounded-2xl bg-gray-50 border border-gray-100 mb-8"
                 >
                   <p className="text-gray-700 text-sm font-bold">{TIPS[tipIndex]}</p>
+                  <p className="mt-1 text-[10px] font-bold text-gray-400">
+                    進捗が止まって見えてもOKです（特に「記事統合」「図解生成」）。最終更新が動いていれば正常稼働です。
+                  </p>
                 </motion.div>
               </AnimatePresence>
+            )}
+
+            {/* “動いてる感”ログ */}
+            {isRunning && (
+              <div className="mb-8">
+                <div className="rounded-2xl border border-gray-100 bg-white p-5">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">稼働ログ（最新）</p>
+                  <div className="space-y-2">
+                    {(stepHistory.length ? stepHistory : [{ step: job.step, at: Date.now() }]).map((h, i) => (
+                      <div key={`${h.step}_${h.at}_${i}`} className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          <p className="text-xs font-black text-gray-700 truncate">{STEP_LABELS[h.step] || h.step}</p>
+                        </div>
+                        <p className="text-[10px] font-bold text-gray-400 flex-shrink-0">
+                          {Math.max(0, Math.floor((Date.now() - h.at) / 1000))}秒前
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* アクションボタン */}

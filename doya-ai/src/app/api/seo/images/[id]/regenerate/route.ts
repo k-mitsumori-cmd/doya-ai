@@ -7,6 +7,8 @@ import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { z } from 'zod'
 
+export const runtime = 'nodejs'
+
 type PlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
 function normalizePlan(raw: any): PlanCode {
   const s = String(raw || '').toUpperCase().trim()
