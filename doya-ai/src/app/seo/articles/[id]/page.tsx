@@ -816,13 +816,6 @@ function SeoArticleInner() {
                   })}
                   onUpdate={() => load({ showLoading: false })}
                 />
-                {(!article.sections || article.sections.length === 0) && (
-                  <div className="mt-4 p-4 rounded-2xl bg-amber-50 border border-amber-100">
-                    <p className="text-sm font-bold text-amber-800">
-                      💡 見出し単位の再生成・強化は、記事生成完了後に利用可能です。現在は本文編集タブから全体を編集できます。
-                    </p>
-                  </div>
-                )}
               </div>
             )}
 
