@@ -167,6 +167,84 @@ const TABS = [
   { id: 'export', label: 'ダウンロード', icon: Download, color: 'text-gray-500' },
 ] as const
 
+const DEFAULT_BANNER_PROMPT_TEMPLATE = `あなたは、オウンドメディア・SEO記事の
+「名乗らないサムネ画像」を専門に制作するトップデザイナーです。
+
+今回制作するのは、
+記事タイトル・サービス名・ロゴを一切出さずに、
+“画像だけで記事の内容と価値が直感的に伝わる”
+サムネイル画像です。
+
+【目的】
+・検索結果、SNS、記事一覧で一瞬で内容が伝わる
+・「何の記事か」が文字を読まなくても理解できる
+・クリックしたくなるが、煽りすぎない
+・信頼感と分かりやすさを両立する
+
+【絶対ルール（重要）】
+・サービス名、会社名、ロゴ、人物名は一切入れない
+・「〇〇とは」「完全解説」などの説明文も入れない
+・文字は最小限（使う場合はキーワードのみ）
+・画像単体で意味が成立すること
+
+【デザインの基本方針】
+・雰囲気：分かりやすい／整理されている／知的だけど硬すぎない
+・カラー：ポップすぎず、でも暗くならない（青・水色・黄・オレンジ系）
+・背景：白または薄い単色
+・余白をしっかり取り、ゴチャつかせない
+・線はやや太め、要素は大きく
+
+【元となる記事内容】
+▼ここに記事本文、または要点を貼り付ける▼`
+
+const DEFAULT_DIAGRAM_PROMPT_TEMPLATE = `あなたは「SEO記事用の図解バナー制作」を専門とするトップクラスのデザイナーです。
+今回の目的は、オウンドメディアの記事内容を一瞬で理解できる
+“とにかく分かりやすい図解バナー画像”を制作することです。
+
+【前提】
+・使用用途：オウンドメディアのSEO記事内・サムネイル
+・ターゲット：専門知識がない人でも直感的に理解できる読者
+・記事内容：下記の本文内容を正確に要約・視覚化すること
+・難しい表現や抽象表現は使わない
+・「見ただけで内容が分かる」ことを最優先する
+
+【デザインの方向性】
+・カラー：ポップで明るい（青・水色・オレンジ・黄などをベースに）
+・雰囲気：親しみやすい／やさしい／説明がうまい資料のような印象
+・線は太め、要素は大きめ
+・情報量は詰め込みすぎず、整理された構成にする
+・背景は白 or 薄い単色で、視認性を最優先
+
+【図解のルール】
+・文章をそのまま並べるのではなく「構造化」する
+・以下を必ず意識する
+  - 因果関係（なぜ → どうなる）
+  - 手順（STEP1 → STEP2 → STEP3）
+  - 比較（AとBの違い）
+  - 課題 → 解決策 の流れ
+・矢印、アイコン、囲み枠を使って視線誘導を行う
+・1つの図解で「伝えたいメッセージは1つ」に絞る
+
+【テキストの扱い】
+・文字量は最小限
+・1フレーズは15文字以内を目安
+・専門用語は使わず、使う場合は必ず噛み砕く
+・「〇〇とは？」が一瞬で分かる見出しを入れる
+
+【禁止事項】
+・抽象的すぎるイラスト
+・意味のない装飾
+・読まないと理解できない画像
+・文字だらけの画像
+
+【ゴール】
+・記事を読まなくても、画像だけで
+  「この記事で何が分かるか」が理解できる状態
+・SNSやサムネで見ても内容が伝わる図解
+
+【元となる記事内容】
+▼ここにSEO記事本文、または要点を貼り付ける▼`
+
 function SeoArticleInner() {
   const params = useParams<{ id: string }>()
   const id = params.id
@@ -195,6 +273,10 @@ function SeoArticleInner() {
   const [regenImage, setRegenImage] = useState<SeoImage | null>(null)
   const [regenPrompt, setRegenPrompt] = useState('')
   const autoImagesRequestedRef = useRef(false)
+  const [promptOpen, setPromptOpen] = useState(false)
+  const [bannerPromptTemplate, setBannerPromptTemplate] = useState(DEFAULT_BANNER_PROMPT_TEMPLATE)
+  const [diagramPromptTemplate, setDiagramPromptTemplate] = useState(DEFAULT_DIAGRAM_PROMPT_TEMPLATE)
+  const [imageDetail, setImageDetail] = useState<SeoImage | null>(null)
 
 
   const markdown = useMemo(() => article?.finalMarkdown || '', [article])
@@ -263,6 +345,28 @@ function SeoArticleInner() {
     setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
   }, [])
 
+  // /seo/articles/[id]?tab=media のようにクエリでタブを指定できるようにする
+  useEffect(() => {
+    const t = searchParams.get('tab')
+    if (!t) return
+    if (TABS.some((x) => x.id === t)) {
+      setTab(t as any)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  // 画像生成プロンプトテンプレを復元
+  useEffect(() => {
+    try {
+      const s = readSeoClientSettings()
+      const tpl = (s as any)?.seoImagePromptTemplates
+      if (tpl?.banner) setBannerPromptTemplate(String(tpl.banner))
+      if (tpl?.diagram) setDiagramPromptTemplate(String(tpl.diagram))
+    } catch {
+      // ignore
+    }
+  }, [])
+
   useEffect(() => {
     const cur = article?.status || null
     const prev = prevArticleStatusRef.current
@@ -303,7 +407,15 @@ function SeoArticleInner() {
     setMediaBusy(true)
     setMediaError(null)
     try {
-      const res = await fetch(`/api/seo/articles/${id}/images/ensure`, { method: 'POST' })
+      // プロンプトテンプレを送って、記事内容に合わせた生成にする
+      const res = await fetch(`/api/seo/articles/${id}/images/ensure`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bannerPromptTemplate: bannerPromptTemplate?.trim() || undefined,
+          diagramPromptTemplate: diagramPromptTemplate?.trim() || undefined,
+        }),
+      })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) throw new Error(json?.error || `生成に失敗しました (${res.status})`)
       await load({ showLoading: false })
@@ -390,6 +502,28 @@ function SeoArticleInner() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch { }
+  }
+
+  async function downloadImage(img: SeoImage) {
+    try {
+      const res = await fetch(`/api/seo/images/${img.id}`)
+      if (!res.ok) throw new Error(`download failed (${res.status})`)
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const safeTitle = String(img.title || img.kind || 'image')
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .slice(0, 80)
+      const ext = (res.headers.get('Content-Type') || '').includes('png') ? 'png' : 'png'
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `doya-${safeTitle}-${img.id.slice(0, 6)}.${ext}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      setMediaError(e?.message || 'ダウンロードに失敗しました')
+    }
   }
 
   if (loading) {
@@ -702,7 +836,79 @@ function SeoArticleInner() {
                         {mediaBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                         記事に合わせて画像を生成
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => setPromptOpen((v) => !v)}
+                        className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                      >
+                        <Settings className="w-4 h-4" />
+                        プロンプト設定
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = patchSeoClientSettings({
+                            seoImagePromptTemplates: {
+                              banner: bannerPromptTemplate,
+                              diagram: diagramPromptTemplate,
+                            },
+                          } as any)
+                          // 反映通知（軽く）
+                          if (next) {
+                            setMessage('プロンプト設定を保存しました')
+                            setTimeout(() => setMessage(null), 1800)
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-gray-900 text-white font-black text-xs hover:bg-gray-800"
+                        title="このブラウザに保存します"
+                      >
+                        <Check className="w-4 h-4" />
+                        保存
+                      </button>
                       <span className="text-[10px] font-bold text-gray-400">バナー＋図解（最大10）を自動生成します（数分かかる場合があります）</span>
+                    </div>
+                  )}
+
+                  {promptOpen && (
+                    <div className="mb-6 p-5 rounded-2xl bg-gray-50 border border-gray-100">
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <p className="text-sm font-black text-gray-900">生成プロンプト（貼り付けOK）</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBannerPromptTemplate(DEFAULT_BANNER_PROMPT_TEMPLATE)
+                            setDiagramPromptTemplate(DEFAULT_DIAGRAM_PROMPT_TEMPLATE)
+                          }}
+                          className="text-xs font-black text-gray-600 hover:text-gray-900"
+                        >
+                          デフォルトに戻す
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-[11px] font-black text-gray-600 mb-2">記事バナー用プロンプト</p>
+                          <textarea
+                            value={bannerPromptTemplate}
+                            onChange={(e) => setBannerPromptTemplate(e.target.value)}
+                            rows={10}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-200 text-gray-900 font-medium text-xs focus:outline-none focus:border-blue-500 resize-none"
+                            placeholder="ここに記事バナー用プロンプトを貼り付け"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-black text-gray-600 mb-2">図解用プロンプト</p>
+                          <textarea
+                            value={diagramPromptTemplate}
+                            onChange={(e) => setDiagramPromptTemplate(e.target.value)}
+                            rows={10}
+                            className="w-full px-4 py-3 rounded-2xl bg-white border border-gray-200 text-gray-900 font-medium text-xs focus:outline-none focus:border-blue-500 resize-none"
+                            placeholder="ここに図解用プロンプトを貼り付け"
+                          />
+                        </div>
+                      </div>
+                      <p className="mt-3 text-[10px] font-bold text-gray-500">
+                        ※ テンプレ内の「▼ここに…▼」部分は自動で記事本文に置き換えて生成します（サーバ側で処理）。
+                      </p>
                     </div>
                   )}
 
@@ -716,30 +922,68 @@ function SeoArticleInner() {
                     {article.images?.map((img) => (
                       <div key={img.id} className="group bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-500">
                         <div className="aspect-video relative overflow-hidden bg-gray-50">
-                          <img src={`/api/seo/images/${img.id}`} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700" alt={img.title || ''} />
+                          <button
+                            type="button"
+                            onClick={() => setImageDetail(img)}
+                            className="block w-full h-full"
+                            title="クリックで拡大表示"
+                          >
+                            <img src={`/api/seo/images/${img.id}`} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700" alt={img.title || ''} />
+                          </button>
                           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex gap-2">
                             <Badge tone={img.kind === 'BANNER' ? 'orange' : 'blue'}>{img.kind}</Badge>
-                          </div>
-                          <div className="absolute inset-0 bg-gray-900/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
-                            <button onClick={() => copyToClipboard(`![${img.title || 'image'}](/api/seo/images/${img.id})`)} className="p-3 bg-white rounded-full text-gray-900 hover:scale-110 transition-transform"><Copy className="w-5 h-5" /></button>
-                            {entitlements?.canUseSeoImages && (
-                              <button
-                                onClick={() => {
-                                  setRegenImage(img)
-                                  setRegenPrompt(String(img.prompt || ''))
-                                  setRegenOpen(true)
-                                }}
-                                className="p-3 bg-white rounded-full text-gray-900 hover:scale-110 transition-transform"
-                                title="プロンプトを編集して再生成"
-                              >
-                                <Wand2 className="w-5 h-5" />
-                              </button>
-                            )}
                           </div>
                         </div>
                         <div className="p-4 sm:p-5">
                           <p className="font-black text-gray-900 truncate text-sm sm:text-base">{img.title || '無題の画像'}</p>
                           <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">{new Date(img.createdAt).toLocaleDateString()}</p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setImageDetail(img)}
+                              className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                            >
+                              <Eye className="w-4 h-4" />
+                              ひらく
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => downloadImage(img)}
+                              className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                            >
+                              <Download className="w-4 h-4" />
+                              ダウンロード
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(`![${img.title || 'image'}](/api/seo/images/${img.id})`)}
+                              className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                            >
+                              <Copy className="w-4 h-4" />
+                              Markdownコピー
+                            </button>
+                            <Link href={`/seo/images/${img.id}`} className="inline-flex">
+                              <span className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-gray-900 text-white font-black text-xs hover:bg-gray-800">
+                                <ExternalLink className="w-4 h-4" />
+                                詳細ページ
+                              </span>
+                            </Link>
+                            {entitlements?.canUseSeoImages && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRegenImage(img)
+                                  setRegenPrompt(String(img.prompt || ''))
+                                  setRegenOpen(true)
+                                }}
+                                className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-blue-600 text-white font-black text-xs hover:bg-blue-700"
+                                title="プロンプトを編集して再生成"
+                              >
+                                <Wand2 className="w-4 h-4" />
+                                再生成
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -751,6 +995,89 @@ function SeoArticleInner() {
                   </div>
                 </div>
 
+                {/* 画像詳細モーダル（クリックで拡大＆操作） */}
+                <AnimatePresence>
+                  {imageDetail && (
+                    <motion.div
+                      key="imageDetailModal"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[130] flex items-center justify-center p-4 sm:p-6"
+                    >
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setImageDetail(null)} />
+                      <motion.div
+                        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 14, scale: 0.98 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="relative w-full max-w-4xl rounded-3xl bg-white border border-gray-100 shadow-2xl overflow-hidden"
+                      >
+                        <div className="p-5 sm:p-6 border-b border-gray-100 flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">画像プレビュー</p>
+                            <p className="text-lg font-black text-gray-900 mt-1 truncate">{imageDetail.title || '画像'}</p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <Badge tone={imageDetail.kind === 'BANNER' ? 'orange' : 'blue'}>{imageDetail.kind}</Badge>
+                              <span className="text-[10px] font-bold text-gray-400">{new Date(imageDetail.createdAt).toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setImageDetail(null)}
+                            className="h-10 px-4 rounded-xl bg-white border border-gray-200 text-gray-700 font-black text-xs hover:bg-gray-50"
+                          >
+                            閉じる
+                          </button>
+                        </div>
+                        <div className="p-5 sm:p-6">
+                          <div className="rounded-2xl border border-gray-100 overflow-hidden bg-gray-50">
+                            <img src={`/api/seo/images/${imageDetail.id}`} className="w-full h-full object-contain" alt={imageDetail.title || ''} />
+                          </div>
+                          <div className="mt-4 flex flex-wrap gap-2 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => downloadImage(imageDetail)}
+                              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                            >
+                              <Download className="w-4 h-4" />
+                              ダウンロード
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(`![${imageDetail.title || 'image'}](/api/seo/images/${imageDetail.id})`)}
+                              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                            >
+                              <Copy className="w-4 h-4" />
+                              Markdownコピー
+                            </button>
+                            <Link href={`/seo/images/${imageDetail.id}`} className="inline-flex">
+                              <span className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-gray-900 text-white font-black text-xs hover:bg-gray-800">
+                                <ExternalLink className="w-4 h-4" />
+                                詳細ページ
+                              </span>
+                            </Link>
+                            {entitlements?.canUseSeoImages && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRegenImage(imageDetail)
+                                  setRegenPrompt(String(imageDetail.prompt || ''))
+                                  setRegenOpen(true)
+                                }}
+                                className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-blue-600 text-white font-black text-xs hover:bg-blue-700"
+                              >
+                                <Wand2 className="w-4 h-4" />
+                                プロンプト編集→再生成
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {regenOpen && (
                   <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6">
                     <div className="fixed inset-0 bg-black/30 backdrop-blur-[2px]" onClick={() => !mediaBusy && setRegenOpen(false)} />
@@ -758,7 +1085,7 @@ function SeoArticleInner() {
                       <div className="p-6 sm:p-8 border-b border-gray-100">
                         <p className="text-xs font-black text-gray-400 uppercase tracking-widest">画像を再生成</p>
                         <h3 className="text-lg sm:text-xl font-black text-gray-900 mt-2">{regenImage?.title || '画像'}</h3>
-                        <p className="text-xs font-bold text-gray-500 mt-2">プロンプトを修正して再生成します（画像内にテキストは入れません）</p>
+                        <p className="text-xs font-bold text-gray-500 mt-2">プロンプトを修正して再生成します（テキストの有無/量はプロンプト次第です）</p>
                       </div>
                       <div className="p-6 sm:p-8 space-y-3">
                         <textarea
