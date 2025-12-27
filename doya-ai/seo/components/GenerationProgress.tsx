@@ -32,12 +32,12 @@ const steps = [
 ]
 
 const loadingTips = [
-  "Gemini 3 が最適な構成を練っています...",
-  "分割生成により、5万字を超える長文でも崩れません。",
-  "記事の内容に合わせた図解を自動でデザイン中...",
-  "検索エンジンだけでなく、AI検索（LLMO）にも最適化しています。",
-  "プロ級のライティングスキルをAIが再現しています。",
-  "完成まであと少しです。お茶でも飲んでお待ちください☕️",
+  'AIが記事構成を検討し、読みやすい流れに整えています…',
+  '分割生成により、長文でも構造が崩れにくい形で作成しています。',
+  '記事内容に合わせて、図解やサムネイルの生成準備を進めています…',
+  '検索エンジンだけでなく、AI検索（LLMO）も意識して最適化しています。',
+  '文章の一貫性・明確さを保つよう、表現を調整しています…',
+  'まもなく完了します。しばらくそのままお待ちください。',
 ]
 
 const comparisonSteps = [
@@ -49,7 +49,7 @@ const comparisonSteps = [
   { id: 'cmp_tables', label: '比較表生成', icon: FileText },
   { id: 'cmp_outline', label: '章立て生成', icon: FileText },
   { id: 'sections', label: '本文ドラフト', icon: Sparkles },
-  { id: 'cmp_polish', label: '校正・AI臭低減', icon: CheckCircle2 },
+  { id: 'cmp_polish', label: '校正・表現調整', icon: CheckCircle2 },
   { id: 'done', label: '完成', icon: CheckCircle2 },
 ]
 

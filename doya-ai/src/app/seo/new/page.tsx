@@ -33,6 +33,20 @@ const TARGETS = [10000, 20000, 30000, 40000, 50000, 60000]
 const TONES = ['丁寧', 'フランク', 'ビジネス', '専門的'] as const
 const STORAGE_KEY = 'doya_seo_new_draft_v2'
 
+const LLMO_LABELS: Record<
+  string,
+  { label: string; desc: string }
+> = {
+  tldr: { label: '要約（先に）', desc: '冒頭で結論を短く提示し、理解を早めます。' },
+  conclusionFirst: { label: '結論を先に', desc: '読者が迷わない構成にします。' },
+  faq: { label: 'FAQ', desc: 'よくある疑問を補い、検索意図の取りこぼしを減らします。' },
+  glossary: { label: '用語集', desc: '専門用語を補足して、初心者にも分かりやすくします。' },
+  comparison: { label: '比較（軸/表）', desc: '比較軸を整理し、判断しやすい形にします。' },
+  quotes: { label: '根拠・引用', desc: '根拠を補い、信頼性を高めます。' },
+  templates: { label: 'テンプレ要素', desc: 'チェックリスト等の定型要素で再現性を上げます。' },
+  objections: { label: '懸念への回答', desc: '反論・不安を先回りして解消します。' },
+}
+
 type ArticleTypeId = 'howto' | 'thorough' | 'note' | 'comparison'
 
 const ARTICLE_TYPES: Array<{
@@ -516,7 +530,7 @@ export default function SeoNewArticlePage() {
         '情報抽出',
         '比較表生成',
         '章立て→本文',
-        '校正（AI臭低減）',
+        '校正（表現調整）',
         '完成',
       ],
     }
@@ -1490,7 +1504,7 @@ export default function SeoNewArticlePage() {
                     placeholder="例：実体験、現場の失敗談、数字、独自の主張、強い言い切り、具体例、読者に必ず伝えたいこと…"
                   />
                   <p className="mt-2 text-[10px] font-bold text-gray-400">
-                    ✨ ここに一次情報を入れるほど、AI臭が減って“制作ツール”として使えます
+                    ✨ ここに一次情報を入れるほど、独自性と説得力が高まり、実務で使いやすい記事に仕上がります
                   </p>
                 </div>
 
@@ -1501,7 +1515,14 @@ export default function SeoNewArticlePage() {
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     {Object.entries(llmo).map(([key, val]) => (
                       <div key={key} className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
-                        <span className="text-[10px] font-black text-gray-600 uppercase">{key}</span>
+                        <div className="min-w-0 pr-2">
+                          <span className="block text-[10px] font-black text-gray-800">
+                            {(LLMO_LABELS[key]?.label || key)}
+                          </span>
+                          <span className="block text-[9px] font-bold text-gray-400 mt-0.5 truncate">
+                            {LLMO_LABELS[key]?.desc || 'AI最適化の補助要素です'}
+                          </span>
+                        </div>
                         <Toggle checked={val} onChange={(v) => setLlmo(prev => ({ ...prev, [key]: v }))} label="" />
                       </div>
                     ))}
