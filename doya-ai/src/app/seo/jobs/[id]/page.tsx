@@ -461,6 +461,35 @@ export default function SeoJobPage() {
             <Sparkles className="w-4 h-4" />
             AI記事生成中
           </div>
+
+          {/* 進捗（%とゲージを最上段に） */}
+          <div className="max-w-4xl mx-auto mb-5">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-gray-500 text-sm font-black">現在の進捗</span>
+                <span className="text-gray-900 font-black text-2xl tabular-nums">{job.progress}%</span>
+              </div>
+              <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  className={`h-full rounded-full ${
+                    isDone
+                      ? 'bg-gradient-to-r from-emerald-500 to-green-500'
+                      : isError
+                      ? 'bg-gradient-to-r from-rose-500 to-red-500'
+                      : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600'
+                  }`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${job.progress}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                />
+              </div>
+              <div className="mt-2 text-[10px] font-bold text-gray-400 flex items-center justify-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${isDone ? 'bg-emerald-500' : isError ? 'bg-red-500' : isRunning ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
+                <span>{isDone ? '完了しました' : isError ? 'エラーが発生しました' : '進捗を更新中…'}</span>
+              </div>
+            </div>
+          </div>
+
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-tight">
             {job.article.title}
           </h1>
@@ -526,10 +555,6 @@ export default function SeoJobPage() {
             <div className="bg-white rounded-[28px] border border-gray-100 shadow-xl shadow-blue-500/5 p-5 sm:p-6">
               {/* ステップ進捗 */}
               <div className="mb-5">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-gray-500 text-sm font-black">進捗</span>
-                  <span className="text-gray-900 font-black text-xl tabular-nums">{job.progress}%</span>
-                </div>
                 <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
                   {STEPS.map((step, idx) => {
                     const isActive = idx === currentStepIndex
@@ -575,17 +600,9 @@ export default function SeoJobPage() {
                 </div>
               </div>
 
-              {/* 進捗バー */}
-              <div>
-                <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${job.progress}%` }}
-                    transition={{ duration: 0.5, ease: 'easeOut' }}
-                  />
-                </div>
-                <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+              {/* 心拍（進捗更新の証拠） */}
+              <div className="mt-2 text-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-gray-500 font-bold">
                     <span className="inline-flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${heartbeatAgo !== null && heartbeatAgo <= 10 ? 'bg-emerald-500' : 'bg-gray-300'} ${isRunning ? 'animate-pulse' : ''}`} />
@@ -595,11 +612,13 @@ export default function SeoJobPage() {
                     </span>
                     <span className="w-1 h-1 rounded-full bg-gray-200" />
                     <span>経過: {formatMmSs(elapsed)}</span>
-                    <span className="w-1 h-1 rounded-full bg-gray-200" />
                     {isRunning && (
-                      <span className="text-gray-400">
-                        ※「記事統合」「図解生成」は進捗が止まって見えても内部で動いていることがあります
-                      </span>
+                      <>
+                        <span className="w-1 h-1 rounded-full bg-gray-200" />
+                        <span className="text-gray-400">
+                          ※「記事統合」「図解生成」は進捗が止まって見えても内部で動いていることがあります
+                        </span>
+                      </>
                     )}
                   </div>
                 </div>
