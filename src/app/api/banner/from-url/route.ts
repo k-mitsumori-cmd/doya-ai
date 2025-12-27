@@ -11,6 +11,25 @@ export const runtime = 'nodejs'
 export const maxDuration = 300
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+
+// ゲストの日次上限（Cookieで管理 - /api/banner/generate と共通）
+const BANNER_GUEST_USAGE_COOKIE = 'doya_banner_guest_usage'
+type GuestDailyUsage = { date: string; count: number }
+
+function readGuestDailyUsage(request: NextRequest, today: string): GuestDailyUsage {
+  try {
+    const raw = request.cookies.get(BANNER_GUEST_USAGE_COOKIE)?.value
+    if (!raw) return { date: today, count: 0 }
+    const parsed = JSON.parse(raw) as any
+    const date = typeof parsed?.date === 'string' ? parsed.date : today
+    const count = typeof parsed?.count === 'number' ? parsed.count : 0
+    // 日付が変わっていたらリセット
+    if (date !== today) return { date: today, count: 0 }
+    return { date, count }
+  } catch {
+    return { date: today, count: 0 }
+  }
+}
 const VISION_API_BASE = 'https://vision.googleapis.com/v1'
 
 type FromUrlRequest = {
@@ -1183,14 +1202,23 @@ export async function POST(request: NextRequest) {
     }
 
     // 日次上限（画像枚数）
+    let guestUsage: GuestDailyUsage | null = null
+    let usageInfo: null | { dailyLimit: number; dailyUsed: number; dailyRemaining: number } = null
+
     if (!disableLimits) {
       if (isGuest) {
-        // ゲストは generate ルート側でcookie管理しているため、ここでは簡易に弾く（重複生成を避ける）
-        if (desiredCount > BANNER_PRICING.guestLimit) {
+        // ゲストはCookieで使用量を管理（/api/banner/generate と共通Cookie）
+        guestUsage = readGuestDailyUsage(request, today)
+        const dailyLimit = BANNER_PRICING.guestLimit
+        const dailyUsed = guestUsage.count
+        usageInfo = { dailyLimit, dailyUsed, dailyRemaining: Math.max(0, dailyLimit - dailyUsed) }
+
+        if (dailyUsed + desiredCount > dailyLimit) {
           return NextResponse.json(
             {
               error: 'ゲストは本日分の生成上限を超えています。ログインしてご利用ください。',
               code: 'DAILY_LIMIT_REACHED',
+              usage: usageInfo,
               upgradeUrl: '/auth/doyamarke/signin?callbackUrl=%2Fbanner',
             },
             { status: 429 }
@@ -1399,17 +1427,31 @@ export async function POST(request: NextRequest) {
     }
 
     // ==============================
-    // 使用回数加算（ログインユーザーのみ / 画像枚数ベース）
+    // 使用回数加算（画像枚数ベース）
     // ==============================
+    const chargedCount = Math.max(
+      1,
+      Math.min(
+        desiredCount,
+        Array.isArray(result.banners) ? result.banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/')).length : desiredCount
+      )
+    )
+
+    // ゲストの場合: Cookie を更新
+    if (!disableLimits && isGuest && guestUsage) {
+      guestUsage = { date: today, count: guestUsage.date === today ? guestUsage.count + chargedCount : chargedCount }
+      if (usageInfo) {
+        usageInfo = {
+          dailyLimit: usageInfo.dailyLimit,
+          dailyUsed: guestUsage.count,
+          dailyRemaining: usageInfo.dailyLimit === -1 ? -1 : Math.max(0, usageInfo.dailyLimit - guestUsage.count),
+        }
+      }
+    }
+
+    // ログインユーザーの場合: DB を更新
     if (!disableLimits && !isGuest && userId) {
       try {
-        const chargedCount = Math.max(
-          1,
-          Math.min(
-            desiredCount,
-            Array.isArray(result.banners) ? result.banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/')).length : desiredCount
-          )
-        )
         await prisma.userServiceSubscription.update({
           where: { userId_serviceId: { userId, serviceId: 'banner' } },
           data: { dailyUsage: { increment: chargedCount }, monthlyUsage: { increment: chargedCount } },
@@ -1441,8 +1483,21 @@ export async function POST(request: NextRequest) {
       negativePrompt,
       usedModel: result.usedModel || undefined,
       usedModelDisplay: result.usedModel ? getModelDisplayName(result.usedModel) : undefined,
+      usage: usageInfo || undefined,
       warning: result.error || undefined,
     })
+
+    // ゲストの場合: Cookie をセット
+    if (!disableLimits && isGuest && guestUsage) {
+      res.cookies.set(BANNER_GUEST_USAGE_COOKIE, JSON.stringify(guestUsage), {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 2, // 2日
+      })
+    }
+
     return res
   } catch (e: any) {
     console.error('from-url error:', e)
