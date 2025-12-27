@@ -87,6 +87,7 @@ function BannerUrlAutoPageInner() {
   const [targetUrl, setTargetUrl] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string>('')
+  const [errorType, setErrorType] = useState<'limit' | 'system' | null>(null) // エラー種別
   const [banners, setBanners] = useState<string[]>([])
   const [bannerAnalysis, setBannerAnalysis] = useState<string>('')
   const [analysisJson, setAnalysisJson] = useState<ApiResponse['analysisJson'] | undefined>(undefined)
@@ -179,6 +180,7 @@ function BannerUrlAutoPageInner() {
     if (!canGenerate) return
 
     setError('')
+    setErrorType(null)
     setIsGenerating(true)
     // 生成開始時に前回の結果を消さない（消すと画面が「パチパチ」しやすい）
     // 新しい結果が返ってきたタイミングで上書きする
@@ -202,10 +204,21 @@ function BannerUrlAutoPageInner() {
       window.clearTimeout(timeout)
 
       const parsed = await safeReadJson(res)
-      const data = (parsed.data || {}) as ApiResponse
+      const data = (parsed.data || {}) as ApiResponse & { code?: string; usage?: { dailyLimit?: number; dailyUsed?: number; dailyRemaining?: number }; upgradeUrl?: string }
       if (!parsed.ok) {
+        // エラーの種類を判定
+        const isLimitError = data?.code === 'DAILY_LIMIT_REACHED' || parsed.status === 429
         const msg = data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'URLからの自動生成に失敗しました'
-        throw new Error(msg)
+        
+        setError(msg)
+        setErrorType(isLimitError ? 'limit' : 'system')
+        
+        if (isLimitError) {
+          toast.error('本日の生成上限に達しました', { icon: '⚠️', duration: 6000 })
+        } else {
+          toast.error(msg.length > 50 ? '生成に失敗しました' : msg, { icon: '❌', duration: 5000 })
+        }
+        return
       }
 
       setBanners(Array.isArray(data.banners) ? data.banners : [])
@@ -215,6 +228,7 @@ function BannerUrlAutoPageInner() {
 
       if (data.warning) {
         setError(String(data.warning))
+        setErrorType('system')
         toast.error('一部のバナー生成に失敗しました', { icon: '⚠️', duration: 5000 })
       } else {
         toast.success('URLからバナーを生成しました！', { icon: '🎉' })
@@ -222,10 +236,12 @@ function BannerUrlAutoPageInner() {
     } catch (e: any) {
       if (e?.name === 'AbortError') {
         setError('生成に時間がかかっています。タブは開いたまま、しばらく待つか再試行してください。')
+        setErrorType('system')
         toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
       } else {
         setError(e?.message || 'URLからの自動生成に失敗しました')
-        toast.error('生成に失敗しました', { icon: '❌', duration: 5000 })
+        setErrorType('system')
+        toast.error(e?.message?.length > 50 ? '生成に失敗しました' : (e?.message || '生成に失敗しました'), { icon: '❌', duration: 5000 })
       }
     } finally {
       setIsGenerating(false)
@@ -475,7 +491,76 @@ function BannerUrlAutoPageInner() {
                 </div>
               )}
 
-              {error && <div className="mt-4 text-sm text-red-600 font-bold">{error}</div>}
+              {/* エラー表示（種別に応じた詳細表示と誘導） */}
+              {error && (
+                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                      <X className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black text-red-800">
+                        {errorType === 'limit' ? '本日の生成上限に達しました' : '生成に失敗しました'}
+                      </p>
+                      <p className="mt-1 text-xs text-red-700 leading-relaxed">{error}</p>
+                      
+                      {errorType === 'limit' ? (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {isGuest ? (
+                            <>
+                              <Link
+                                href="/auth/doyamarke/signin?callbackUrl=%2Fbanner%2Furl"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-black rounded-lg hover:bg-blue-700 transition-colors"
+                              >
+                                <LogIn className="w-3.5 h-3.5" />
+                                ログインして続ける
+                              </Link>
+                              <span className="text-[10px] text-red-600 font-bold">
+                                ログインすると上限がリセットされます
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Link
+                                href="/banner/dashboard/plan"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-black rounded-lg hover:bg-blue-700 transition-colors"
+                              >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                プランをアップグレード
+                              </Link>
+                              <span className="text-[10px] text-red-600 font-bold">
+                                プロプランなら1日50枚まで生成可能
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleGenerate}
+                            disabled={isGenerating}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 text-white text-xs font-black rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50"
+                          >
+                            再試行する
+                          </button>
+                          <a
+                            href={HIGH_USAGE_CONTACT_URL || 'https://doyamarke.surisuta.jp/contact'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 text-slate-700 text-xs font-black rounded-lg hover:bg-slate-50 transition-colors"
+                          >
+                            お問い合わせ
+                          </a>
+                          <span className="text-[10px] text-red-600 font-bold">
+                            問題が続く場合はお問い合わせください
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 生成結果 */}
