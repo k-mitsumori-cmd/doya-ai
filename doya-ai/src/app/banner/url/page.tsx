@@ -4,8 +4,9 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles, ChevronDown, SlidersHorizontal, Menu, X } from 'lucide-react'
 import { Toaster, toast } from 'react-hot-toast'
+import { motion, AnimatePresence } from 'framer-motion'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import LoadingProgress from '@/components/LoadingProgress'
 import UpgradeSuccessModal from '@/components/UpgradeSuccessModal'
@@ -95,6 +96,7 @@ function BannerUrlAutoPageInner() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [upgradedPlan, setUpgradedPlan] = useState<'PRO' | 'ENTERPRISE'>('PRO')
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -245,10 +247,41 @@ function BannerUrlAutoPageInner() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
-      {/* デスクトップのみサイドバー表示（モバイルはヘッダーから戻る） */}
+      {/* デスクトップのみサイドバー表示 */}
       <div className="hidden md:block">
         <DashboardSidebar />
       </div>
+
+      {/* モバイルサイドバーオーバーレイ */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <div className="fixed inset-0 z-[100] md:hidden">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm" 
+              onClick={() => setIsSidebarOpen(false)} 
+            />
+            <motion.div 
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed inset-y-0 left-0 w-[240px] shadow-2xl"
+            >
+              <DashboardSidebar forceExpanded isMobile />
+              <button 
+                className="absolute top-4 right-[-3.5rem] p-2 text-white bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md transition-colors"
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="md:pl-[240px] transition-all duration-200">
         {/* 生成中に飽きさせない：他ページと同様の待機アニメ（Tips/進捗） */}
         <LoadingProgress isLoading={isGenerating} operationKey="banner-from-url" estimatedSeconds={75} />
@@ -257,6 +290,13 @@ function BannerUrlAutoPageInner() {
         <div className="max-w-[1600px] mx-auto px-3 sm:px-8 py-6 sm:py-10">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex-1 min-w-0">
+              {/* ハンバーガーメニュー（モバイルのみ） */}
+              <button 
+                className="md:hidden p-2 mb-3 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <Menu className="w-6 h-6" />
+              </button>
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase tracking-wider mb-3 sm:mb-4">
                 <Sparkles className="w-3.5 h-3.5" />
                 URL Auto Banner
