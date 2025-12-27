@@ -6,7 +6,7 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 export const GEMINI_TEXT_MODEL_DEFAULT =
   process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-3-pro-preview'
 export const GEMINI_IMAGE_MODEL_DEFAULT =
-  process.env.SEO_GEMINI_IMAGE_MODEL || process.env.SEO_GEMINI_NANO_BANANA_MODEL || 'nano-banana-pro'
+  process.env.SEO_GEMINI_IMAGE_MODEL || process.env.SEO_GEMINI_NANO_BANANA_MODEL || 'nano-banana-pro-preview'
 
 type GeminiPart =
   | { text: string }
@@ -42,6 +42,47 @@ function getApiKey(): string {
     )
   }
   return apiKey.trim()
+}
+
+function normalizeModelId(raw: string): string {
+  const s = String(raw || '').trim()
+  if (!s) return ''
+  return s.startsWith('models/') ? s.slice('models/'.length) : s
+}
+
+function isNanoBananaFamily(modelId: string): boolean {
+  const lower = normalizeModelId(modelId).toLowerCase()
+  const isAlias =
+    lower === 'nano-banana-pro' ||
+    lower === 'nano-banana-pro-preview' ||
+    lower === 'nanobanana-pro' ||
+    lower === 'nano_banana_pro' ||
+    lower === 'nano-banana'
+  const isGemini3ImagePreview = lower === 'gemini-3-pro-image-preview'
+  return lower.includes('banana') || isAlias || isGemini3ImagePreview
+}
+
+function nanoBananaModelCandidates(configured: string): string[] {
+  const m = normalizeModelId(configured)
+  const lower = m.toLowerCase()
+  const out: string[] = []
+
+  // 設定値そのもの
+  if (m) out.push(m)
+
+  // エイリアスの自動解決
+  // NOTE: v1beta では nano-banana-pro が存在しないことがあるため、preview系へ寄せる
+  if (lower === 'nano-banana-pro') {
+    out.unshift('nano-banana-pro-preview')
+  }
+
+  // Nano Banana Pro系の安全なフォールバック
+  // banner側でも利用している候補（generateContent対応）
+  if (!out.includes('nano-banana-pro-preview')) out.push('nano-banana-pro-preview')
+  if (!out.includes('gemini-3-pro-image-preview')) out.push('gemini-3-pro-image-preview')
+
+  // 重複排除
+  return Array.from(new Set(out.filter(Boolean)))
 }
 
 function joinPartsText(parts: any): string {
@@ -360,69 +401,85 @@ export async function geminiGenerateImagePng(args: {
   model?: string
 }): Promise<{ mimeType: string; dataBase64: string }> {
   const apiKey = getApiKey()
-  const model = args.model ?? GEMINI_IMAGE_MODEL_DEFAULT
-  const lower = model.toLowerCase().trim()
+  const configured = args.model ?? GEMINI_IMAGE_MODEL_DEFAULT
 
   // Nano Banana Pro only（運用上の事故防止）
-  // バナーAIは触らない。ドヤSEO内だけで厳格化する。
-  const isNanoBananaAlias =
-    lower === 'nano-banana-pro' ||
-    lower === 'nano-banana-pro-preview' ||
-    lower === 'nano-banana' ||
-    lower === 'nanobanana-pro'
-  const isNanoBananaActual = lower.includes('banana') || lower === 'gemini-3-pro-image-preview'
-  if (!isNanoBananaAlias && !isNanoBananaActual) {
+  if (!isNanoBananaFamily(configured)) {
     throw new Error(
-      `SEO画像生成モデル（${model}）は Nano Banana ではありません。` +
-        ` 環境変数 SEO_GEMINI_IMAGE_MODEL に 'nano-banana-pro'（推奨）を設定してください。`
+      `SEO画像生成モデル（${configured}）は Nano Banana Pro 系ではありません。` +
+        ` 環境変数 SEO_GEMINI_IMAGE_MODEL を 'nano-banana-pro-preview' または 'gemini-3-pro-image-preview' に設定してください。`
     )
   }
-  const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
 
-  const res = await fetchWithRetry(
-    endpoint,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: args.prompt }] }],
-        generationConfig: {
-          // 画像のみ要求（TEXT混在だと画像が返らないケースがある）
-          responseModalities: ['IMAGE'],
-          imageConfig: {
-            aspectRatio: args.aspectRatio ?? '16:9',
-            imageSize: args.imageSize ?? '2K',
+  const modelsToTry = nanoBananaModelCandidates(configured)
+  let lastErr: any = null
+
+  for (const model of modelsToTry) {
+    const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+    try {
+      const res = await fetchWithRetry(
+        endpoint,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
           },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: args.prompt }] }],
+            generationConfig: {
+              // 画像のみ要求（TEXT混在だと画像が返らないケースがある）
+              responseModalities: ['IMAGE'],
+              imageConfig: {
+                aspectRatio: args.aspectRatio ?? '16:9',
+                imageSize: args.imageSize ?? '2K',
+              },
+            },
+          }),
         },
-      }),
-    },
-    3,
-    1500
-  )
+        3,
+        1500
+      )
 
-  if (!res.ok) {
-    const t = await res.text()
-    throw new Error(`Gemini Image API Error: ${res.status} - ${t.substring(0, 500)}`)
-  }
+      if (!res.ok) {
+        const t = await res.text()
+        // 404/400（モデル未対応/未存在）のときは次を試す
+        if ((res.status === 404 || res.status === 400) && model !== modelsToTry[modelsToTry.length - 1]) {
+          lastErr = new Error(`Gemini Image API Error: ${res.status} - ${t.substring(0, 300)}`)
+          continue
+        }
+        throw new Error(`Gemini Image API Error: ${res.status} - ${t.substring(0, 500)}`)
+      }
 
-  const json = await res.json()
-  const parts = json?.candidates?.[0]?.content?.parts
-  if (Array.isArray(parts)) {
-    for (const part of parts) {
-      if (part?.inlineData?.data) {
-        return {
-          mimeType: part?.inlineData?.mimeType || 'image/png',
-          dataBase64: part.inlineData.data as string,
+      const json = await res.json()
+      const parts = json?.candidates?.[0]?.content?.parts
+      if (Array.isArray(parts)) {
+        for (const part of parts) {
+          if (part?.inlineData?.data) {
+            return {
+              mimeType: part?.inlineData?.mimeType || 'image/png',
+              dataBase64: part.inlineData.data as string,
+            }
+          }
         }
       }
+
+      // 成功レスポンスでも画像が無い場合は次のモデルへ
+      lastErr = new Error(`Gemini が画像を返しませんでした（モデル: ${model}）。`)
+      if (model !== modelsToTry[modelsToTry.length - 1]) continue
+      throw lastErr
+    } catch (e: any) {
+      lastErr = e
+      if (model !== modelsToTry[modelsToTry.length - 1]) continue
+      throw e
     }
   }
-  throw new Error(
-    `Gemini が画像を返しませんでした（モデル: ${model}）。` +
-      ` SEO_GEMINI_IMAGE_MODEL を Nano Banana Pro に設定しているか確認してください。`
+
+  throw (
+    lastErr ||
+    new Error(
+      `Gemini 画像生成に失敗しました。SEO_GEMINI_IMAGE_MODEL を 'nano-banana-pro-preview' または 'gemini-3-pro-image-preview' に設定してください。`
+    )
   )
 }
 
