@@ -63,5 +63,3 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     )
   }
 }
-
-

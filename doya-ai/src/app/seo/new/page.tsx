@@ -222,33 +222,123 @@ export default function SeoNewArticlePage() {
     [reduceMotion]
   )
 
+  // サンプルデータ定義
+  const SAMPLES = [
+    {
+      id: 'rpo',
+      name: 'RPO（採用代行）比較',
+      mode: 'comparison_research' as const,
+      articleType: 'comparison' as ArticleTypeId,
+      title: 'RPO（採用代行）おすすめ比較50選｜選び方と料金相場【2024年最新】',
+      keywords: 'RPO, 採用代行, 比較, 料金, おすすめ',
+      targetChars: 50000,
+      persona: '採用に課題を感じている企業の人事責任者、経営層。コスト削減と採用質向上を両立させたい層。',
+      searchIntent: 'RPOの主要プレイヤーを一覧で比較したい。自社に合うサービスの選び方を知りたい。相場感と導入メリットを把握したい。',
+      cmpTemplate: 'ranking' as const,
+      cmpCount: 50 as const,
+    },
+    {
+      id: 'ai-writing',
+      name: 'AIライティングツール比較',
+      mode: 'comparison_research' as const,
+      articleType: 'comparison' as ArticleTypeId,
+      title: 'AIライティングツールおすすめ30選｜機能・料金・精度で徹底比較【2024年版】',
+      keywords: 'AIライティング, 文章生成AI, 記事作成ツール, 比較',
+      targetChars: 30000,
+      persona: 'コンテンツマーケター、ブロガー、企業のマーケティング担当者。記事作成の効率化を図りたい層。',
+      searchIntent: 'AIライティングツールの種類を知りたい。自社に合うツールを選びたい。料金と精度のバランスを比較したい。',
+      cmpTemplate: 'comparison' as const,
+      cmpCount: 30 as const,
+    },
+    {
+      id: 'crm',
+      name: 'CRM（顧客管理）ツール比較',
+      mode: 'comparison_research' as const,
+      articleType: 'comparison' as ArticleTypeId,
+      title: 'CRMツールおすすめ比較20選｜中小企業向け・大企業向け別に解説【2024年】',
+      keywords: 'CRM, 顧客管理, SFA, 比較, おすすめ',
+      targetChars: 30000,
+      persona: '営業部門の責任者、IT担当者。顧客管理の効率化と売上向上を目指す企業。',
+      searchIntent: 'CRMツールの選び方を知りたい。自社規模に合ったツールを見つけたい。導入コストと効果を比較したい。',
+      cmpTemplate: 'comparison' as const,
+      cmpCount: 30 as const,
+    },
+    {
+      id: 'seo-howto',
+      name: 'SEO対策ガイド（ハウツー）',
+      mode: 'standard' as const,
+      articleType: 'howto' as ArticleTypeId,
+      title: 'SEO対策の完全ガイド｜初心者でもできる10ステップ【2024年版】',
+      keywords: 'SEO対策, やり方, 初心者, Google検索',
+      targetChars: 20000,
+      persona: 'Webサイト運営者、ブロガー、マーケティング初心者。SEOの基礎から学びたい人。',
+      searchIntent: 'SEO対策の具体的な手順を知りたい。初心者でも実践できる方法を学びたい。',
+      cmpTemplate: 'comparison' as const,
+      cmpCount: 10 as const,
+    },
+    {
+      id: 'dx-explanation',
+      name: 'DX推進（徹底解説）',
+      mode: 'standard' as const,
+      articleType: 'thorough' as ArticleTypeId,
+      title: 'DX（デジタルトランスフォーメーション）とは？成功事例と進め方を徹底解説',
+      keywords: 'DX, デジタルトランスフォーメーション, 導入, 事例',
+      targetChars: 40000,
+      persona: '経営者、事業責任者、IT部門担当者。自社のDX推進を検討している企業。',
+      searchIntent: 'DXの定義と必要性を理解したい。成功事例から学びたい。自社での進め方を知りたい。',
+      cmpTemplate: 'comparison' as const,
+      cmpCount: 10 as const,
+    },
+    {
+      id: 'startup-note',
+      name: '起業体験談（note記事）',
+      mode: 'standard' as const,
+      articleType: 'note' as ArticleTypeId,
+      title: '1年間で売上ゼロから月商1000万円達成するまでにやったこと',
+      keywords: '起業, スタートアップ, 売上, 成長',
+      targetChars: 5000,
+      persona: '起業を考えている人、スタートアップ経営者、ビジネスに興味がある人。',
+      searchIntent: 'リアルな起業体験を知りたい。成功のコツや失敗談を学びたい。',
+      cmpTemplate: 'comparison' as const,
+      cmpCount: 10 as const,
+    },
+  ]
+
+  const [showSampleMenu, setShowSampleMenu] = useState(false)
+
   // 1. サンプル入力
-  function fillSample() {
-    setMode('comparison_research')
-    setArticleType('comparison')
-    setTitle('RPO（採用代行）おすすめ比較50選｜選び方と料金相場【2024年最新】')
-    setKeywords('RPO, 採用代行, 比較, 料金, おすすめ')
-    setTargetChars(50000)
-    setPersona('採用に課題を感じている企業の人事責任者、経営層。コスト削減と採用質向上を両立させたい層。')
-    setSearchIntent('RPOの主要プレイヤーを一覧で比較したい。自社に合うサービスの選び方を知りたい。相場感と導入メリットを把握したい。')
+  function fillSample(sampleId?: string) {
+    const sample = sampleId ? SAMPLES.find(s => s.id === sampleId) : SAMPLES[0]
+    if (!sample) return
+
+    setMode(sample.mode)
+    setArticleType(sample.articleType)
+    setTitle(sample.title)
+    setKeywords(sample.keywords)
+    setTargetChars(sample.targetChars)
+    setPersona(sample.persona)
+    setSearchIntent(sample.searchIntent)
     setLlmo({
       tldr: true,
       conclusionFirst: true,
       faq: true,
-      glossary: true,
-      comparison: true,
+      glossary: sample.mode === 'comparison_research',
+      comparison: sample.mode === 'comparison_research',
       quotes: true,
       templates: true,
       objections: true,
     })
-    setCmpTemplate('ranking')
-    setCmpCount(50)
-    setCmpRegion('JP')
-    setCmpRequireOfficial(true)
-    setCmpIncludeThirdParty(true)
+    if (sample.mode === 'comparison_research') {
+      setCmpTemplate(sample.cmpTemplate)
+      setCmpCount(sample.cmpCount)
+      setCmpRegion('JP')
+      setCmpRequireOfficial(true)
+      setCmpIncludeThirdParty(true)
+    }
     setCandidates([])
     setRefItems([])
-    setNotice('サンプルデータを入力しました')
+    setShowSampleMenu(false)
+    setNotice(`サンプル「${sample.name}」を入力しました`)
     setTimeout(() => setNotice(null), 3000)
   }
 
@@ -514,9 +604,12 @@ export default function SeoNewArticlePage() {
     setTimeout(() => setNotice(null), 2500)
   }
 
+  const [searchApiNotConfigured, setSearchApiNotConfigured] = useState(false)
+
   async function autoCollectCandidates() {
     setError(null)
     setNotice(null)
+    setSearchApiNotConfigured(false)
     const query = title.trim() || keywordList.join(' ')
     if (!query) {
       setError('タイトルまたはキーワードを入力してください')
@@ -538,6 +631,11 @@ export default function SeoNewArticlePage() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
+        // 検索APIキー未設定エラーの特別処理
+        if (json?.code === 'SEARCH_PROVIDER_NOT_CONFIGURED') {
+          setSearchApiNotConfigured(true)
+          return
+        }
         throw new Error(json?.error || `API Error: ${res.status}`)
       }
       const list = Array.isArray(json?.candidates) ? json.candidates : []
@@ -649,9 +747,54 @@ export default function SeoNewArticlePage() {
             <p className="text-sm sm:text-base text-gray-500 mt-1">高品質な記事とビジュアルをワンセットで生成します。</p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button variant="ghost" size="sm" onClick={fillSample} className="flex-1 sm:flex-none text-gray-400 hover:text-blue-600 border border-gray-100 sm:border-none">
-              <Sparkles className="w-4 h-4 mr-2" /> サンプル
-            </Button>
+            <div className="relative flex-1 sm:flex-none">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowSampleMenu(!showSampleMenu)} 
+                className="w-full text-gray-400 hover:text-blue-600 border border-gray-100 sm:border-none"
+              >
+                <Sparkles className="w-4 h-4 mr-2" /> サンプル
+                <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${showSampleMenu ? 'rotate-180' : ''}`} />
+              </Button>
+              <AnimatePresence>
+                {showSampleMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden"
+                  >
+                    <div className="p-3 border-b border-gray-50 bg-gray-50/50">
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">サンプルを選択</p>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {SAMPLES.map((sample) => (
+                        <button
+                          key={sample.id}
+                          onClick={() => fillSample(sample.id)}
+                          className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-b-0"
+                        >
+                          <p className="text-sm font-black text-gray-900">{sample.name}</p>
+                          <p className="text-[11px] text-gray-500 mt-0.5 truncate">{sample.title}</p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                              sample.mode === 'comparison_research' 
+                                ? 'bg-indigo-50 text-indigo-600' 
+                                : 'bg-emerald-50 text-emerald-600'
+                            }`}>
+                              {sample.mode === 'comparison_research' ? '比較記事' : '通常記事'}
+                            </span>
+                            <span className="text-[10px] text-gray-400">{sample.targetChars.toLocaleString()}字</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <div className="flex-1 sm:flex-none">
               <FeatureGuide 
                 featureId="seo-new-simplified"
@@ -1144,6 +1287,39 @@ export default function SeoNewArticlePage() {
                     />
                   </div>
                 </div>
+
+                {/* 検索APIキー未設定の通知 */}
+                {searchApiNotConfigured && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 p-5 rounded-2xl bg-amber-50 border border-amber-200"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <Lightbulb className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-black text-amber-800">自動収集は現在利用できません</p>
+                        <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                          検索APIキー（SEO_SERPAPI_KEY）が設定されていないため、候補の自動収集はご利用いただけません。<br />
+                          下の「手動追加」から、比較したい企業・サービスを直接入力してください。
+                        </p>
+                        <div className="mt-3 flex items-center gap-2">
+                          <span className="px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black">
+                            ✓ 手動追加で記事作成できます
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setSearchApiNotConfigured(false)}
+                        className="p-1.5 rounded-lg hover:bg-amber-100 text-amber-500 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
 
                 <div className="mt-4 flex flex-col sm:flex-row gap-3">
                   <button

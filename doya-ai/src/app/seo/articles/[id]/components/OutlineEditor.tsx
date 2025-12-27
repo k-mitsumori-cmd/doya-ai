@@ -24,13 +24,75 @@ type HeadingItem = {
 
 type OutlineEditorProps = {
   articleId: string
+  finalMarkdown?: string
   headings: HeadingItem[]
   onUpdate?: () => void
 }
 
 type ActionType = 'edit' | 'regenerate' | 'seo' | 'cv'
 
-export function OutlineEditor({ articleId, headings, onUpdate }: OutlineEditorProps) {
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function extractSectionByHeading(mdRaw: string, level: 2 | 3 | 4, headingText: string) {
+  const md = String(mdRaw || '').replace(/\r\n/g, '\n')
+  const lines = md.split('\n')
+  const headRe = new RegExp(`^#{${level}}\\s+${escapeRegExp(headingText)}\\s*$`)
+  let start = -1
+  for (let i = 0; i < lines.length; i++) {
+    if (headRe.test(lines[i])) {
+      start = i
+      break
+    }
+  }
+  if (start < 0) return { start: -1, end: -1, content: '' }
+
+  const nextRe = new RegExp(`^#{1,${level}}\\s+`)
+  let end = lines.length
+  for (let i = start + 1; i < lines.length; i++) {
+    if (nextRe.test(lines[i])) {
+      end = i
+      break
+    }
+  }
+  const raw = lines.slice(start + 1, end).join('\n')
+  const trimmed = raw.replace(/^\n+/, '').replace(/\n+$/, '')
+  return { start, end, content: trimmed }
+}
+
+function replaceSectionByHeading(mdRaw: string, level: 2 | 3 | 4, headingText: string, newContentRaw: string) {
+  const md = String(mdRaw || '').replace(/\r\n/g, '\n')
+  const lines = md.split('\n')
+  const headRe = new RegExp(`^#{${level}}\\s+${escapeRegExp(headingText)}\\s*$`)
+  let start = -1
+  for (let i = 0; i < lines.length; i++) {
+    if (headRe.test(lines[i])) {
+      start = i
+      break
+    }
+  }
+  if (start < 0) return md
+  const nextRe = new RegExp(`^#{1,${level}}\\s+`)
+  let end = lines.length
+  for (let i = start + 1; i < lines.length; i++) {
+    if (nextRe.test(lines[i])) {
+      end = i
+      break
+    }
+  }
+  const newContent = String(newContentRaw || '').replace(/\r\n/g, '\n').replace(/\n+$/, '')
+  const out = [
+    ...lines.slice(0, start + 1),
+    ...(newContent ? [''] : []),
+    ...(newContent ? newContent.split('\n') : []),
+    '',
+    ...lines.slice(end),
+  ]
+  return out.join('\n').replace(/\n{4,}/g, '\n\n\n').trim() + '\n'
+}
+
+export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: OutlineEditorProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [activeAction, setActiveAction] = useState<{ id: string; type: ActionType } | null>(null)
   const [editText, setEditText] = useState('')
@@ -49,7 +111,13 @@ export function OutlineEditor({ articleId, headings, onUpdate }: OutlineEditorPr
 
     if (type === 'edit') {
       setActiveAction({ id: headingId, type })
-      setEditText(heading.content || '')
+      if (heading.sectionId) {
+        setEditText(heading.content || '')
+      } else {
+        // sectionsが無いケースでも、finalMarkdown から見出し配下の本文を抜いて編集できるようにする
+        const extracted = extractSectionByHeading(finalMarkdown || '', heading.level, heading.text)
+        setEditText(extracted.content || '')
+      }
       return
     }
 
@@ -91,24 +159,25 @@ export function OutlineEditor({ articleId, headings, onUpdate }: OutlineEditorPr
     const heading = headings.find((h) => h.id === activeAction.id)
     if (!heading) return
 
-    // sectionIdがない場合はAPIを呼べないのでUI上でのみ編集可能（保存不可）
-    if (!heading.sectionId) {
-      setError('この見出しはまだセクションとして保存されていないため、個別保存はできません。本文編集タブから全体を編集してください。')
-      setLoading(false)
-      return
-    }
-
     setLoading(true)
     setError(null)
 
     try {
-      const res = await fetch(`/api/seo/sections/${heading.sectionId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: editText,
-        }),
-      })
+      // セクションがあれば section を更新、無ければ markdown を直接更新して保存する
+      const res = heading.sectionId
+        ? await fetch(`/api/seo/sections/${heading.sectionId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: editText }),
+          })
+        : await fetch(`/api/seo/articles/${articleId}/content`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              finalMarkdown: replaceSectionByHeading(finalMarkdown || '', heading.level, heading.text, editText),
+              normalize: true,
+            }),
+          })
 
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {

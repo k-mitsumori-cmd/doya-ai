@@ -93,10 +93,10 @@ export function SeoAppLayout({
                 現在のプラン：{planLabel}
               </div>
             </Link>
-            <Link href="/seo/new">
+            <Link href="/seo/create">
               <button className="h-10 px-4 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
                 <Plus className="w-4 h-4" />
-                新規作成
+                新規記事作成
               </button>
             </Link>
           </div>

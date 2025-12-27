@@ -303,7 +303,7 @@ export const HIGH_USAGE_CONTACT_URL =
 // 改善要望/不具合/問い合わせ導線（アプリ内から共通で利用）
 export const SUPPORT_CONTACT_URL =
   process.env.NEXT_PUBLIC_SUPPORT_CONTACT_URL ||
-  'mailto:support@doya-ai.com?subject=%E3%80%90%E3%83%89%E3%83%A4AI%E3%80%91%E5%95%8F%E3%81%84%E5%90%88%E3%82%8F%E3%81%9B&body=%E4%B8%8B%E8%A8%98%E3%82%92%E3%82%B3%E3%83%94%E3%83%BC%E3%81%97%E3%81%A6%E3%81%94%E8%A8%98%E5%85%A5%E3%81%8F%E3%81%A0%E3%81%95%E3%81%84%0A%0A%E3%83%BB%E7%99%BA%E7%94%9F%E3%83%9A%E3%83%BC%E3%82%B8%EF%BC%9A%0A%E3%83%BB%E7%99%BA%E7%94%9F%E6%97%A5%E6%99%82%EF%BC%9A%0A%E3%83%BB%E7%97%87%E7%8A%B6%EF%BC%9A%0A%E3%83%BB%E5%86%8D%E7%8F%BE%E6%89%8B%E9%A0%86%EF%BC%9A%0A%E3%83%BB%E3%82%B9%E3%82%AF%E3%82%B7%E3%83%A7%EF%BC%88%E3%81%82%E3%82%8C%E3%81%B0%EF%BC%89%EF%BC%9A%0A'
+  'https://doyamarke.surisuta.jp/contact'
 
 // ========================================
 // ポータル全体のセット割引
