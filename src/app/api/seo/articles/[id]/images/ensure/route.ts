@@ -95,9 +95,11 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
     }
 
     // 図解候補を提案して最大10枚生成（既にある場合は不足分のみ）
-    const MAX_DIAGRAMS = 10
+    // 合計最大10枚（バナー1枚 + 図解最大9枚）
+    const MAX_TOTAL = 10
     const existingDiagrams = (article.images || []).filter((x: any) => x.kind === 'DIAGRAM')
-    const remain = Math.max(0, MAX_DIAGRAMS - existingDiagrams.length)
+    const maxDiagrams = hasBanner ? (MAX_TOTAL - 1) : (MAX_TOTAL - 1) // バナーが無い場合はこの後作るので図解は常に最大9
+    const remain = Math.max(0, maxDiagrams - existingDiagrams.length)
     if (remain > 0) {
       const headings = String(article.finalMarkdown).match(/^#{1,3}\s+.+$/gm) || []
       const suggestPrompt = `
@@ -117,7 +119,20 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
         generationConfig: { temperature: 0.3, maxOutputTokens: 1200 },
       }).catch(() => ({ diagrams: [] }))
 
-      const diagrams = Array.isArray(suggestion?.diagrams) ? suggestion.diagrams.slice(0, remain) : []
+      let diagrams = Array.isArray(suggestion?.diagrams) ? suggestion.diagrams.slice(0, remain) : []
+
+      // 提案が空でも生成が進むよう、見出しからフォールバックで図解案を作る
+      if (!diagrams.length) {
+        const base = headings
+          .map((h: string) => String(h).replace(/^#{1,6}\s+/, '').trim())
+          .filter(Boolean)
+          .slice(0, remain)
+        diagrams = base.map((t: string, i: number) => ({
+          title: t || `図解 ${i + 1}`,
+          description: `記事「${article.title}」の「${t}」の内容を、要点が一目で分かるように図解化してください。` +
+            ` 箇条書き/フロー/比較（必要に応じて）で、アイコン・矢印・枠線を使い、白背景で余白を多めに。`,
+        }))
+      }
       if (diagrams.length) {
         for (const diagram of diagrams) {
           const prompt = [
