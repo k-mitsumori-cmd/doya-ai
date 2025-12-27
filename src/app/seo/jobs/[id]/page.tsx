@@ -496,6 +496,88 @@ export default function SeoJobPage() {
             </div>
           </div>
 
+          {/* 進捗（最重要：上に配置） */}
+          <div className="mt-5 max-w-5xl mx-auto">
+            <div className="bg-white rounded-[28px] border border-gray-100 shadow-xl shadow-blue-500/5 p-5 sm:p-6">
+              {/* ステップ進捗 */}
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-gray-500 text-sm font-black">進捗</span>
+                  <span className="text-gray-900 font-black text-xl tabular-nums">{job.progress}%</span>
+                </div>
+                <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
+                  {STEPS.map((step, idx) => {
+                    const isActive = idx === currentStepIndex
+                    const isCompleted = idx < currentStepIndex
+                    const Icon = step.icon
+
+                    return (
+                      <motion.div
+                        key={step.key}
+                        className={`flex-1 min-w-[92px] flex flex-col items-center gap-2 p-3 rounded-2xl transition-all border ${
+                          isActive
+                            ? 'bg-blue-50 border-blue-100 scale-[1.03]'
+                            : isCompleted
+                            ? 'bg-gray-50 border-gray-100'
+                            : 'bg-white border-transparent opacity-70'
+                        }`}
+                        animate={isActive ? { scale: [1, 1.05, 1] } : {}}
+                        transition={{ repeat: isActive && isRunning ? Infinity : 0, duration: 2 }}
+                      >
+                        <div
+                          className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                            isCompleted
+                              ? 'bg-emerald-50'
+                              : isActive
+                              ? 'bg-blue-100/70'
+                              : 'bg-gray-50'
+                          }`}
+                        >
+                          {isCompleted ? (
+                            <CheckCircle2 className="w-6 h-6 text-emerald-600" />
+                          ) : isActive && isRunning ? (
+                            <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                          ) : (
+                            <Icon className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
+                          )}
+                        </div>
+                        <span className={`text-[10px] sm:text-xs font-black ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
+                          {step.label}
+                        </span>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* 進捗バー */}
+              <div>
+                <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${job.progress}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                  />
+                </div>
+                <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-gray-500 font-bold">
+                    <span className="inline-flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${heartbeatAgo !== null && heartbeatAgo <= 10 ? 'bg-emerald-500' : 'bg-gray-300'} ${isRunning ? 'animate-pulse' : ''}`} />
+                      {heartbeatAgo === null ? '通信中...' : `最終更新: ${heartbeatAgo}秒前（4秒ごとに確認）`}
+                    </span>
+                    <span className="w-1 h-1 rounded-full bg-gray-200" />
+                    <span>経過: {formatMmSs(elapsed)}</span>
+                    <span className="w-1 h-1 rounded-full bg-gray-200" />
+                    <span className="text-gray-400">
+                      ※「記事統合」「図解生成」は進捗が止まって見えても内部で動いていることがあります
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="mt-6">
             <AiThinkingStrip
               show={!isDone && !isError}
@@ -535,82 +617,6 @@ export default function SeoJobPage() {
 
           {/* コンテンツ */}
           <div className="p-6 sm:p-8 lg:p-10">
-            {/* ステップ進捗 */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
-                {STEPS.map((step, idx) => {
-                  const isActive = idx === currentStepIndex
-                  const isCompleted = idx < currentStepIndex
-                  const Icon = step.icon
-
-                  return (
-                    <motion.div
-                      key={step.key}
-                      className={`flex-1 min-w-[92px] flex flex-col items-center gap-2 p-3 rounded-2xl transition-all border ${
-                        isActive
-                          ? 'bg-blue-50 border-blue-100 scale-[1.03]'
-                          : isCompleted
-                          ? 'bg-gray-50 border-gray-100'
-                          : 'bg-white border-transparent opacity-70'
-                      }`}
-                      animate={isActive ? { scale: [1, 1.05, 1] } : {}}
-                      transition={{ repeat: isActive && isRunning ? Infinity : 0, duration: 2 }}
-                    >
-                      <div
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          isCompleted
-                            ? 'bg-emerald-50'
-                            : isActive
-                            ? 'bg-blue-100/70'
-                            : 'bg-gray-50'
-                        }`}
-                      >
-                        {isCompleted ? (
-                          <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                        ) : isActive && isRunning ? (
-                          <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-                        ) : (
-                          <Icon className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
-                        )}
-                      </div>
-                      <span className={`text-[10px] sm:text-xs font-black ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
-                        {step.label}
-                      </span>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* 進捗バー */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-500 text-sm font-black">進捗</span>
-                <span className="text-gray-900 font-black text-lg">{job.progress}%</span>
-              </div>
-              <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${job.progress}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                />
-              </div>
-              <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-2 text-gray-500 font-bold">
-                  <span className="inline-flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${heartbeatAgo !== null && heartbeatAgo <= 10 ? 'bg-emerald-500' : 'bg-gray-300'} ${isRunning ? 'animate-pulse' : ''}`} />
-                    {heartbeatAgo === null ? '通信中...' : `最終更新: ${heartbeatAgo}秒前（4秒ごとに確認）`}
-                  </span>
-                  <span className="w-1 h-1 rounded-full bg-gray-200" />
-                  <span>経過: {formatMmSs(elapsed)}</span>
-                </div>
-                <div className="text-gray-400 font-bold">
-                  ※「記事統合」「図解生成」は進捗が止まって見えても内部で動いていることがあります
-                </div>
-              </div>
-            </div>
-
             {/* 工場（ベルトコンベア）演出 */}
             {isRunning && (
               <div className="mb-8">
