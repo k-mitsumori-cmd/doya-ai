@@ -2,23 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { researchAndStore } from '@seo/lib/pipeline'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
-export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
-  try {
-    await ensureSeoSchema()
-    const id = ctx.params.id
-    const result = await researchAndStore(id)
-    return NextResponse.json({ success: true, ...result })
-  } catch (e: any) {
-    return NextResponse.json(
-      { success: false, error: e?.message || '不明なエラー' },
-      { status: 500 }
-    )
-  }
-}
-
-
-
-import { ensureSeoSchema } from '@seo/lib/bootstrap'
+export const runtime = 'nodejs'
 
 export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
   try {
@@ -33,4 +17,3 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
     )
   }
 }
-
