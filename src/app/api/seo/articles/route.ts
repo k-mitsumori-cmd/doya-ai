@@ -10,7 +10,23 @@ export async function GET() {
   try {
     await ensureSeoSchema()
     const seoArticle = (prisma as any).seoArticle as any
+    // 生成記事は3ヶ月（約90日）まで保持
+    const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+
+    // 古い記事は削除（RUNNINGは除外して安全側）
+    try {
+      await seoArticle.deleteMany({
+        where: {
+          createdAt: { lt: cutoff },
+          status: { not: 'RUNNING' },
+        },
+      })
+    } catch {
+      // 失敗しても一覧表示自体は止めない
+    }
+
     const articles = await seoArticle.findMany({
+      where: { createdAt: { gte: cutoff } },
       orderBy: { createdAt: 'desc' },
       take: 50,
       include: {
@@ -92,5 +108,4 @@ export async function POST(req: NextRequest) {
     )
   }
 }
-
 

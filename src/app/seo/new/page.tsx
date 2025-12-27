@@ -1478,6 +1478,21 @@ export default function SeoNewArticlePage() {
                   </div>
                 </div>
 
+                <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-5 sm:p-6">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase mb-3">
+                    一次情報（経験・訴求ポイント）※最重要
+                  </label>
+                  <textarea
+                    className="w-full p-4 rounded-xl border border-gray-100 bg-gray-50 text-sm min-h-[120px] focus:outline-none focus:border-blue-500"
+                    value={requestText}
+                    onChange={(e) => setRequestText(e.target.value)}
+                    placeholder="例：実体験、現場の失敗談、数字、独自の主張、強い言い切り、具体例、読者に必ず伝えたいこと…"
+                  />
+                  <p className="mt-2 text-[10px] font-bold text-gray-400">
+                    ✨ ここに一次情報を入れるほど、AI臭が減って“制作ツール”として使えます
+                  </p>
+                </div>
+
                 <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-6 sm:p-8">
                   <h3 className="text-sm font-black text-gray-900 mb-6 flex items-center gap-2">
                     <Zap className="w-4 h-4 text-amber-500" /> LLMO（AI最適化）要素

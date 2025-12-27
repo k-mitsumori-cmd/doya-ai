@@ -4,6 +4,8 @@ import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gem
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
+export const runtime = 'nodejs'
+
 /**
  * 複数の図解を一括生成するAPI
  */

@@ -66,6 +66,188 @@ const DEFAULT_LLMO = {
   objections: false,
 }
 
+type Sample = {
+  id: string
+  name: string
+  mainKeyword: string
+  articleType: typeof ARTICLE_TYPES[number]['id']
+  audiencePreset: typeof AUDIENCE_PRESETS[number]['id']
+  tone: typeof TONE_OPTIONS[number]['id']
+  targetChars: number
+  relatedKeywords?: string
+  originalContent?: string
+  constraints?: string
+}
+
+// サンプル（押すたびに切り替え/一覧から選択）
+const SAMPLES: Sample[] = [
+  {
+    id: 'rpo50',
+    name: 'RPO（採用代行）比較',
+    mainKeyword: 'RPO おすすめ 比較',
+    articleType: 'comparison',
+    audiencePreset: 'hr',
+    tone: 'logical',
+    targetChars: 20000,
+    relatedKeywords: '採用代行, 料金相場, 選び方, 比較表, 失敗例, チェックリスト',
+    originalContent: '自社の採用課題（例：母集団が弱い/面接工数が逼迫）と、RPOに期待する成果（スピード/品質/コスト）を必ず入れてください。',
+  },
+  {
+    id: 'aiwriting',
+    name: 'AIライティングツール比較',
+    mainKeyword: 'AI ライティング ツール 比較',
+    articleType: 'comparison',
+    audiencePreset: 'marketer',
+    tone: 'logical',
+    targetChars: 10000,
+    relatedKeywords: '記事作成, 生成AI, 料金, 精度, 使い方, 注意点',
+    originalContent: '実際に運用した時の“地味に効くポイント”（例：下書き→人間校正の分業、社内ルール整備）を入れてください。',
+  },
+  {
+    id: 'crm',
+    name: 'CRMツール比較',
+    mainKeyword: 'CRM おすすめ 比較',
+    articleType: 'comparison',
+    audiencePreset: 'executive',
+    tone: 'professional',
+    targetChars: 20000,
+    relatedKeywords: '顧客管理, SFA, MA, 料金, 導入手順, 失敗しない選び方',
+    originalContent: '導入目的（売上可視化/引き継ぎ/商談管理）を明確にし、目的別におすすめが分かれる形で書いてください。',
+  },
+  {
+    id: 'sfa',
+    name: 'SFA導入ガイド（HowTo）',
+    mainKeyword: 'SFA 導入 手順',
+    articleType: 'howto',
+    audiencePreset: 'marketer',
+    tone: 'logical',
+    targetChars: 10000,
+    relatedKeywords: '営業管理, KPI, 定着, 運用ルール, 失敗例',
+    originalContent: '“定着しない”が最大の失敗。運用ルール（入力の最小要件/週次レビュー）を具体例で入れてください。',
+  },
+  {
+    id: 'seo',
+    name: 'SEO対策（完全ガイド）',
+    mainKeyword: 'SEO対策 やり方',
+    articleType: 'howto',
+    audiencePreset: 'beginner',
+    tone: 'friendly',
+    targetChars: 20000,
+    relatedKeywords: '検索意図, キーワード選定, 内部対策, コンテンツ, 失敗例, チェックリスト',
+    originalContent: '初心者がやりがちな失敗（タイトルだけ最適化/リライトしない）を入れてください。',
+  },
+  {
+    id: 'lp',
+    name: 'LP改善（CVR改善）',
+    mainKeyword: 'LP 改善 方法',
+    articleType: 'howto',
+    audiencePreset: 'marketer',
+    tone: 'logical',
+    targetChars: 10000,
+    relatedKeywords: 'CVR, ファーストビュー, CTA, ABテスト, ヒートマップ',
+    originalContent: '“何を捨てるか”の優先順位（1回の改修で触る箇所は3つまで等）を入れてください。',
+  },
+  {
+    id: 'webinar',
+    name: 'ウェビナー集客（解説）',
+    mainKeyword: 'ウェビナー 集客',
+    articleType: 'explanation',
+    audiencePreset: 'marketer',
+    tone: 'professional',
+    targetChars: 10000,
+    relatedKeywords: '告知, メール, SNS広告, LP, 当日運営, フォロー',
+    originalContent: '開催前/当日/開催後の“やること”をチェックリストで入れてください。',
+  },
+  {
+    id: 'pricing',
+    name: '料金ページの作り方（CV）',
+    mainKeyword: '料金ページ 作り方',
+    articleType: 'howto',
+    audiencePreset: 'marketer',
+    tone: 'logical',
+    targetChars: 10000,
+    relatedKeywords: '価格設計, 比較表, 不安解消, FAQ, 導入事例',
+    originalContent: '価格の不安を減らすために、よくある不満（高い/比較できない）を先回りで潰してください。',
+  },
+  {
+    id: 'case',
+    name: '導入事例記事（型）',
+    mainKeyword: '導入事例 記事 書き方',
+    articleType: 'case',
+    audiencePreset: 'marketer',
+    tone: 'professional',
+    targetChars: 10000,
+    relatedKeywords: '課題, 解決策, 導入効果, 数値, 再現性',
+    originalContent: 'Before/Afterは必須。可能なら数値で効果（例：工数-30%）を書く方針で。',
+  },
+  {
+    id: 'ranking',
+    name: 'おすすめランキング記事',
+    mainKeyword: 'おすすめ ランキング 作り方',
+    articleType: 'ranking',
+    audiencePreset: 'beginner',
+    tone: 'friendly',
+    targetChars: 10000,
+    relatedKeywords: '選び方, 比較軸, 料金, 口コミ, 注意点',
+    originalContent: '結論→比較表→目的別おすすめ→FAQ の流れで“迷わない”構成にしてください。',
+  },
+  {
+    id: 'dx',
+    name: 'DX（徹底解説）',
+    mainKeyword: 'DX とは',
+    articleType: 'explanation',
+    audiencePreset: 'executive',
+    tone: 'professional',
+    targetChars: 30000,
+    relatedKeywords: '定義, 事例, 進め方, 失敗例, ロードマップ',
+    originalContent: '社内の抵抗（現場負担/属人化）を前提に、進め方を段階的に書いてください。',
+  },
+  {
+    id: 'hr-ai',
+    name: '採用×AI（解説）',
+    mainKeyword: '採用 AI 活用',
+    articleType: 'explanation',
+    audiencePreset: 'hr',
+    tone: 'logical',
+    targetChars: 10000,
+    relatedKeywords: 'スカウト, 書類選考, 面接, 個人情報, 注意点',
+    originalContent: '個人情報/バイアスへの配慮を必ず入れてください（やってはいけない例も）。',
+  },
+  {
+    id: 'saas-launch',
+    name: 'SaaSローンチ戦略（解説）',
+    mainKeyword: 'SaaS ローンチ 戦略',
+    articleType: 'explanation',
+    audiencePreset: 'executive',
+    tone: 'logical',
+    targetChars: 20000,
+    relatedKeywords: 'PMF, 価格, 初期ユーザー, オンボーディング, KPI',
+    originalContent: '最初は“誰にだけ刺すか”を狭める。ターゲット絞り込みの例を入れてください。',
+  },
+  {
+    id: 'content',
+    name: 'コンテンツSEO（運用）',
+    mainKeyword: 'コンテンツSEO 運用',
+    articleType: 'howto',
+    audiencePreset: 'marketer',
+    tone: 'logical',
+    targetChars: 20000,
+    relatedKeywords: 'KW設計, 企画, リライト, 内部リンク, 効果測定',
+    originalContent: '“作って終わり”にしない運用（週次でSearch Console確認→月次でリライト）を入れてください。',
+  },
+  {
+    id: 'b2b-sales',
+    name: 'B2B営業の型（解説）',
+    mainKeyword: 'B2B 営業 進め方',
+    articleType: 'explanation',
+    audiencePreset: 'expert',
+    tone: 'professional',
+    targetChars: 10000,
+    relatedKeywords: 'リード獲得, 商談化, 提案, 失注理由, 型',
+    originalContent: '“失注理由の回収→反映”までの運用を具体的に書いてください。',
+  },
+]
+
 // ================== メインコンポーネント ==================
 export default function SeoCreateWizardPage() {
   const router = useRouter()
@@ -88,7 +270,10 @@ export default function SeoCreateWizardPage() {
   // 詳細設定（折りたたみ）
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [relatedKeywords, setRelatedKeywords] = useState('')
-  const [customInfo, setCustomInfo] = useState('')
+  const [originalContent, setOriginalContent] = useState('')
+  const [constraints, setConstraints] = useState('')
+  const [showSampleMenu, setShowSampleMenu] = useState(false)
+  const [sampleCursor, setSampleCursor] = useState(0)
 
   // 処理状態
   const [loading, setLoading] = useState(false)
@@ -145,6 +330,13 @@ export default function SeoCreateWizardPage() {
         casual: 'カジュアル',
       }
 
+      const requestText = [
+        originalContent.trim() ? `【一次情報（経験・訴求ポイント）】\n${originalContent.trim()}` : '',
+        constraints.trim() ? `【制約・NG表現】\n${constraints.trim()}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n')
+
       const res = await fetch('/api/seo/articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -158,7 +350,7 @@ export default function SeoCreateWizardPage() {
           llmoOptions: DEFAULT_LLMO,
           autoBundle: true,
           createJob: true,
-          requestText: customInfo.trim() || undefined,
+          requestText: requestText || undefined,
         }),
       })
 
@@ -182,12 +374,25 @@ export default function SeoCreateWizardPage() {
     }
   }
 
-  function fillSample() {
-    setMainKeyword('AI ライティング ツール 比較')
-    setArticleType('comparison')
-    setAudiencePreset('marketer')
-    setTone('logical')
-    setTargetChars(10000)
+  function applySample(sampleId?: string) {
+    const sample = sampleId ? SAMPLES.find((s) => s.id === sampleId) : SAMPLES[0]
+    if (!sample) return
+    const idx = SAMPLES.findIndex((s) => s.id === sample.id)
+    if (idx >= 0) setSampleCursor(idx)
+    setMainKeyword(sample.mainKeyword)
+    setArticleType(sample.articleType)
+    setAudiencePreset(sample.audiencePreset)
+    setTone(sample.tone)
+    setTargetChars(sample.targetChars)
+    setRelatedKeywords(sample.relatedKeywords || '')
+    setOriginalContent(sample.originalContent || '')
+    setConstraints(sample.constraints || '')
+    setShowSampleMenu(false)
+  }
+
+  function cycleSample() {
+    const next = (sampleCursor + 1) % SAMPLES.length
+    applySample(SAMPLES[next]?.id)
   }
 
   return (
@@ -267,14 +472,60 @@ export default function SeoCreateWizardPage() {
                       <label className="text-xs font-black text-gray-500 uppercase tracking-widest">
                         主キーワード <span className="text-red-400">*</span>
                       </label>
-                      <button
-                        type="button"
-                        onClick={fillSample}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 text-purple-600 text-[10px] font-black hover:from-purple-100 hover:to-indigo-100 transition-all"
-                      >
-                        <Wand2 className="w-3 h-3" />
-                        サンプル入力
-                      </button>
+                      <div className="relative flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={cycleSample}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 text-purple-600 text-[10px] font-black hover:from-purple-100 hover:to-indigo-100 transition-all"
+                          title="押すたびにサンプルが切り替わります"
+                        >
+                          <Wand2 className="w-3 h-3" />
+                          サンプル（切替）
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowSampleMenu((v) => !v)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 text-[10px] font-black hover:bg-gray-50 transition-all"
+                          title="サンプル一覧"
+                        >
+                          一覧
+                          <ChevronDown className={`w-3 h-3 transition-transform ${showSampleMenu ? 'rotate-180' : ''}`} />
+                        </button>
+                        <AnimatePresence>
+                          {showSampleMenu && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute right-0 top-full mt-2 w-[360px] max-w-[85vw] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden"
+                            >
+                              <div className="p-3 border-b border-gray-50 bg-gray-50/50">
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">サンプルを選択</p>
+                              </div>
+                              <div className="max-h-80 overflow-y-auto">
+                                {SAMPLES.map((s) => (
+                                  <button
+                                    key={s.id}
+                                    type="button"
+                                    onClick={() => applySample(s.id)}
+                                    className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-gray-50 last:border-b-0"
+                                  >
+                                    <p className="text-sm font-black text-gray-900">{s.name}</p>
+                                    <p className="text-[11px] text-gray-500 mt-0.5 truncate">{s.mainKeyword}</p>
+                                    <div className="flex items-center gap-2 mt-1.5">
+                                      <span className="px-2 py-0.5 rounded-full bg-gray-50 text-gray-600 text-[9px] font-black border border-gray-100">
+                                        {ARTICLE_TYPES.find((t) => t.id === s.articleType)?.label || s.articleType}
+                                      </span>
+                                      <span className="text-[10px] text-gray-400">{s.targetChars.toLocaleString()}字</span>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
                     </div>
                     <input
                       type="text"
@@ -286,6 +537,23 @@ export default function SeoCreateWizardPage() {
                     />
                     <p className="mt-2 text-xs text-gray-400 font-medium">
                       💡 上位表示したい検索キーワードを入力してください
+                    </p>
+                  </div>
+
+                  {/* 一次情報（最重要） */}
+                  <div>
+                    <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
+                      一次情報（経験・訴求ポイント）
+                    </label>
+                    <textarea
+                      value={originalContent}
+                      onChange={(e) => setOriginalContent(e.target.value)}
+                      placeholder="例：実体験、現場の失敗談、数字、独自の主張、比較の結論、読者に必ず伝えたいこと…"
+                      rows={4}
+                      className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
+                    />
+                    <p className="mt-2 text-xs text-gray-400 font-medium">
+                      ✨ ここに一次情報を入れるほど、AIっぽさが減って「制作ツール」になります
                     </p>
                   </div>
 
@@ -496,12 +764,12 @@ export default function SeoCreateWizardPage() {
 
                           <div>
                             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
-                              独自情報・制約
+                              制約・NG表現（任意）
                             </label>
                             <textarea
-                              value={customInfo}
-                              onChange={(e) => setCustomInfo(e.target.value)}
-                              placeholder="自社の強み、料金、NG表現など&#10;例：競合A社より価格が20%安い、〇〇という表現は使わない"
+                              value={constraints}
+                              onChange={(e) => setConstraints(e.target.value)}
+                              placeholder="例：この表現は使わない、必ず『料金相場』を入れる、結論を冒頭に置く…"
                               rows={4}
                               className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
                             />

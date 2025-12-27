@@ -4,6 +4,8 @@ import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gem
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
+export const runtime = 'nodejs'
+
 export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
   try {
     await ensureSeoSchema()
@@ -54,5 +56,3 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
     )
   }
 }
-
-

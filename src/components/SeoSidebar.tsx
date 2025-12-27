@@ -13,9 +13,9 @@ type NavItem = {
 
 const SEO_NAV: NavItem[] = [
   // 「ダッシュボード」と「生成履歴」は /seo に統合（生成記事一覧）
-  { href: '/seo', label: '生成記事一覧', icon: FileText },
   { href: '/seo/create', label: '新規記事作成', icon: Plus },
   { href: '/seo/new', label: '新規記事作成（詳細）', icon: Settings },
+  { href: '/seo', label: '生成記事一覧', icon: FileText },
   { href: '/seo/settings', label: '設定', icon: Settings },
 ]
 

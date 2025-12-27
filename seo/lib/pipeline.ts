@@ -419,7 +419,9 @@ async function generateOutline(article: any, researchContext: string): Promise<S
       article.searchIntent ? `Search intent: ${clampText(article.searchIntent, 1200)}` : '',
       `Tone: ${article.tone}`,
       forbidden.length ? `Forbidden: ${(forbidden as string[]).join(' / ')}` : '',
-      requestText ? `\nUser provided unique info (must respect):\n${requestText}` : '',
+      requestText
+        ? `\n【一次情報（最優先で反映）】\n以下はユーザーが提供した固有情報です。必ず本文に具体的に反映してください。\n- ここに無い事実（数字/体験/実績/断定）は作らない\n- 具体例・結論・比較の根拠は可能な限りこの一次情報に基づける\n- 文章の“芯”として扱い、薄い一般論で上書きしない\n\n${requestText}\n`
+        : '',
       '',
       userKnowledge,
       researchContext,
@@ -593,7 +595,9 @@ async function generateSection(jobId: string) {
     `Article title: ${article.title}`,
     `Tone: ${article.tone}`,
     forbidden.length ? `Forbidden: ${(forbidden as string[]).join(' / ')}` : '',
-    requestText ? `\nUser provided unique info (must respect):\n${requestText}` : '',
+    requestText
+      ? `\n【一次情報（最優先で反映）】\n以下はユーザーが提供した固有情報です。必ず本文に具体的に反映してください。\n- ここに無い事実（数字/体験/実績/断定）は作らない\n- 具体例・結論・比較の根拠は可能な限りこの一次情報に基づける\n- 文章の“芯”として扱い、薄い一般論で上書きしない\n\n${requestText}\n`
+      : '',
     '',
     userKnowledge,
     'Outline (for consistency):',
@@ -806,7 +810,9 @@ async function generateLlmoBlocks(article: any, merged: string): Promise<string>
     `Tone: ${article.tone}`,
     `Keywords: ${((article.keywords as any) || []).join(', ')}`,
     `Target chars: ${article.targetChars}`,
-    requestText ? `\nUser provided unique info (must respect):\n${requestText}` : '',
+    requestText
+      ? `\n【一次情報（最優先で反映）】\n以下はユーザーが提供した固有情報です。必ず本文に具体的に反映してください。\n- ここに無い事実（数字/体験/実績/断定）は作らない\n- 具体例・結論・比較の根拠は可能な限りこの一次情報に基づける\n- 文章の“芯”として扱い、薄い一般論で上書きしない\n\n${requestText}\n`
+      : '',
     '',
     userKnowledge,
     `Include blocks (ON/OFF):`,
@@ -1227,5 +1233,4 @@ export async function runPipelineUntilTimeout(jobId: string, timeoutMs = 25000):
 
   return { jobId, status: currentJob.status, step: currentJob.step }
 }
-
 

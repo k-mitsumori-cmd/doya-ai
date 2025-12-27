@@ -6,6 +6,8 @@ import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateImagePng, geminiGenerateJson, GEMINI_IMAGE_MODEL_DEFAULT, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 
+export const runtime = 'nodejs'
+
 type PlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
 
 function normalizePlan(raw: any): PlanCode {
