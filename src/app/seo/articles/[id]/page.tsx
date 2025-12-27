@@ -193,6 +193,7 @@ function SeoArticleInner() {
   const [regenOpen, setRegenOpen] = useState(false)
   const [regenImage, setRegenImage] = useState<SeoImage | null>(null)
   const [regenPrompt, setRegenPrompt] = useState('')
+  const autoImagesRequestedRef = useRef(false)
 
 
   const markdown = useMemo(() => article?.finalMarkdown || '', [article])
@@ -311,6 +312,21 @@ function SeoArticleInner() {
       setMediaBusy(false)
     }
   }
+
+  // 記事が完成したら（autoBundleがONなら）自動で画像生成を試行する
+  useEffect(() => {
+    if (!article) return
+    if (!article.autoBundle) return
+    if (article.status !== 'DONE') return
+    if (autoImagesRequestedRef.current) return
+    // 既に画像がある程度ある場合はスキップ（サーバ側で不足分のみ生成する）
+    const hasAny = (article.images || []).length > 0
+    if (hasAny) return
+    autoImagesRequestedRef.current = true
+    // 失敗してもUIは壊さない（権限なし/プラン制限など）
+    void ensureImages()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [article?.id, article?.status, article?.autoBundle])
 
   async function regenerateImage() {
     if (!regenImage) return
@@ -612,7 +628,12 @@ function SeoArticleInner() {
                 <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-6 flex items-center gap-3">
                   <BarChart3 className="w-6 h-6 text-emerald-500" /> SEOスコア・改善ポイント
                 </h2>
-                <ScorePanel article={article} />
+                <ScorePanel
+                  articleId={id}
+                  article={article}
+                  onUpdated={() => load({ showLoading: false })}
+                  onGoEdit={() => setTab('edit')}
+                />
               </div>
             )}
 
@@ -624,6 +645,7 @@ function SeoArticleInner() {
                 {/* セクションIDをマッピング（sectionsがあれば） */}
                 <OutlineEditor
                   articleId={id}
+                  finalMarkdown={article.finalMarkdown || ''}
                   headings={toc.map((h, i) => {
                     // headingPathが一致するセクションを探す
                     const matchedSection = (article.sections || []).find(
@@ -678,7 +700,7 @@ function SeoArticleInner() {
                         {mediaBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                         記事に合わせて画像を生成
                       </button>
-                      <span className="text-[10px] font-bold text-gray-400">バナー＋図解（最大2）を自動生成します</span>
+                      <span className="text-[10px] font-bold text-gray-400">バナー＋図解（最大10）を自動生成します（数分かかる場合があります）</span>
                     </div>
                   )}
 
@@ -766,6 +788,40 @@ function SeoArticleInner() {
                         </div>
                       </div>
                     </div>
+
+                {/* 画像生成中ポップアップ */}
+                <AnimatePresence>
+                  {mediaBusy && (
+                    <motion.div
+                      key="mediaBusyModal"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[140] flex items-center justify-center p-4"
+                    >
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                      <motion.div
+                        initial={{ opacity: 0, y: 14, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 14, scale: 0.98 }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                        className="relative w-full max-w-md rounded-3xl bg-white border border-gray-100 shadow-2xl overflow-hidden"
+                      >
+                        <div className="p-6 border-b border-gray-100">
+                          <p className="text-xs font-black text-gray-400 uppercase tracking-widest">画像生成中</p>
+                          <h3 className="text-lg font-black text-gray-900 mt-2">バナー＋図解を生成しています</h3>
+                          <p className="text-xs font-bold text-gray-500 mt-2 leading-relaxed">
+                            記事内容を解析して最大10枚を作ります。内容によっては数分かかることがあります（そのまま待ってOKです）。
+                          </p>
+                        </div>
+                        <div className="p-6 flex items-center gap-3">
+                          <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                          <p className="text-sm font-black text-gray-700">生成しています…</p>
+                        </div>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                   </div>
                 )}
               </div>

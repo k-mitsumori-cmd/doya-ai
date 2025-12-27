@@ -30,5 +30,3 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     )
   }
 }
-
-

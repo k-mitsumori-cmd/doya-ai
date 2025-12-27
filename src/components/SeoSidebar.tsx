@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { FileText, LayoutDashboard, Plus, Sparkles, HelpCircle, Settings } from 'lucide-react'
+import { FileText, LayoutDashboard, Plus, Sparkles, HelpCircle, Settings, Wand2 } from 'lucide-react'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 type NavItem = {
@@ -12,10 +12,10 @@ type NavItem = {
 }
 
 const SEO_NAV: NavItem[] = [
-  { href: '/seo/create', label: '新規作成', icon: Plus },
-  { href: '/seo', label: 'ダッシュボード', icon: LayoutDashboard },
-  { href: '/seo/articles', label: '生成履歴', icon: FileText },
-  { href: '/seo/new', label: '詳細モード', icon: Settings },
+  // 「ダッシュボード」と「生成履歴」は /seo に統合（生成記事一覧）
+  { href: '/seo', label: '生成記事一覧', icon: FileText },
+  { href: '/seo/create', label: '新規記事作成', icon: Plus },
+  { href: '/seo/new', label: '新規記事作成（詳細）', icon: Settings },
   { href: '/seo/settings', label: '設定', icon: Settings },
 ]
 
@@ -71,9 +71,9 @@ export function SeoSidebar({
           <p className="text-[10px] font-bold text-blue-100/80 leading-relaxed">
             タイトルとキーワードだけでOK。本文＋図解＋サムネまで一括生成します。
           </p>
-          <Link href="/seo/new">
+          <Link href="/seo/create">
             <button className="mt-3 w-full py-2 bg-white text-[#2563EB] text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-sm">
-              新規作成へ
+              新規記事作成へ
             </button>
           </Link>
           <a

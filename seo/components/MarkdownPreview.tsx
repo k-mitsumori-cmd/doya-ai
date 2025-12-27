@@ -45,22 +45,39 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         }
         .md-preview h2 {
           font-size: 1.3em;
-          margin: 2.25rem 0 0.75rem;
+          margin: 1.85rem 0 0.55rem;
           padding-left: 0.75rem;
           border-left: 4px solid #2563eb;
         }
         .md-preview h3 {
           font-size: 1.12em;
-          margin: 1.6rem 0 0.6rem;
+          margin: 1.1rem 0 0.35rem;
         }
         .md-preview h4 {
           font-size: 1.02em;
-          margin: 1.2rem 0 0.4rem;
+          margin: 0.85rem 0 0.25rem;
           color: #1f2937;
         }
         .md-preview p {
           margin: 1.05rem 0;
           color: #0f172a;
+        }
+        /* 見出し直後の余白を詰めて「超小見出し」が間延びしないようにする */
+        .md-preview h2 + p {
+          margin-top: 0.65rem;
+        }
+        .md-preview h3 + p {
+          margin-top: 0.55rem;
+        }
+        .md-preview h4 + p {
+          margin-top: 0.45rem;
+        }
+        /* 連続見出し（H2→H3 など）も詰める */
+        .md-preview h2 + h3 {
+          margin-top: 0.8rem;
+        }
+        .md-preview h3 + h4 {
+          margin-top: 0.6rem;
         }
         .md-preview a {
           color: #2563eb;

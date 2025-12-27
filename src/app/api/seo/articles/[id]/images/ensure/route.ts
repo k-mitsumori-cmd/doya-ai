@@ -22,7 +22,7 @@ function isPaid(plan: PlanCode) {
 }
 
 /**
- * 1クリックで「バナー + 図解(最大2)」を生成（既存があればスキップ）
+ * 1クリックで「バナー + 図解(最大10)」を生成（既存があれば不足分だけ生成）
  * - 有料のみ
  * - 既存API(/images/banner, /images/batch)を内部で呼ぶのではなく、同等処理をここで行う
  */
@@ -92,13 +92,15 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       })
     }
 
-    // 図解候補を提案して最大2枚生成
-    const hasDiagram = (article.images || []).some((x: any) => x.kind === 'DIAGRAM')
-    if (!hasDiagram) {
+    // 図解候補を提案して最大10枚生成（既にある場合は不足分のみ）
+    const MAX_DIAGRAMS = 10
+    const existingDiagrams = (article.images || []).filter((x: any) => x.kind === 'DIAGRAM')
+    const remain = Math.max(0, MAX_DIAGRAMS - existingDiagrams.length)
+    if (remain > 0) {
       const headings = String(article.finalMarkdown).match(/^#{1,3}\s+.+$/gm) || []
       const suggestPrompt = `
 あなたは記事のビジュアル設計者です。
-以下の記事内容を分析して、読者の理解を助ける図解（DIAGRAM）を2つ提案してください。
+以下の記事内容を分析して、読者の理解を助ける図解（DIAGRAM）を最大${remain}個提案してください。
 
 タイトル: ${article.title}
 見出し: ${headings.slice(0, 15).join(' / ')}
@@ -113,7 +115,7 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
         generationConfig: { temperature: 0.3, maxOutputTokens: 1200 },
       }).catch(() => ({ diagrams: [] }))
 
-      const diagrams = Array.isArray(suggestion?.diagrams) ? suggestion.diagrams.slice(0, 2) : []
+      const diagrams = Array.isArray(suggestion?.diagrams) ? suggestion.diagrams.slice(0, remain) : []
       if (diagrams.length) {
         for (const diagram of diagrams) {
           const prompt = [

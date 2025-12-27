@@ -221,7 +221,7 @@ export default function SeoDashboardPage() {
         {/* タイトル & CTA */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">記事一覧</h1>
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">生成記事一覧</h1>
             <p className="text-sm text-gray-400 font-bold mt-1">
               {counts.total}件の記事 · {counts.running}件が生成中 · {counts.done}件が完成
             </p>
@@ -229,7 +229,7 @@ export default function SeoDashboardPage() {
           <Link href="/seo/create">
             <button className="w-full sm:w-auto h-12 sm:h-14 px-6 sm:px-8 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm sm:text-base shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2">
               <Plus className="w-5 h-5" />
-              新しい記事を作る
+              新規記事作成
             </button>
           </Link>
         </div>
@@ -297,7 +297,7 @@ export default function SeoDashboardPage() {
             <Link href="/seo/create">
               <button className="h-12 px-8 rounded-xl bg-blue-600 text-white text-sm font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
                 <Plus className="w-5 h-5" />
-                新しい記事を作る
+                新規記事作成
               </button>
             </Link>
           </motion.div>

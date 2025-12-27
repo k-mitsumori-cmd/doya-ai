@@ -46,9 +46,9 @@ const bannerNavItems: NavItem[] = [
 ]
 
 const seoNavItems: NavItem[] = [
-  { href: '/seo', label: 'SEOツール', icon: LayoutDashboard },
-  { href: '/seo/new', label: '新規作成', icon: Sparkles },
-  { href: '/seo/articles', label: '生成履歴', icon: Clock },
+  // /seo に「ダッシュボード＋生成履歴」を統合
+  { href: '/seo', label: '生成記事一覧', icon: LayoutDashboard },
+  { href: '/seo/create', label: '新規記事作成', icon: Sparkles },
 ]
 
 // 以前の設定項目は削除
