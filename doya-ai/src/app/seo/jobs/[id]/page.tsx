@@ -127,6 +127,10 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
 }
 
+function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t
+}
+
 function estimateTotalSeconds(targetChars: number, isComparison: boolean) {
   // 体感値ベースの目安（厳密なETAではなく“不安を減らすための目安”）
   const chars = clamp(Number(targetChars || 10000), 2000, 60000)
@@ -409,13 +413,34 @@ export default function SeoJobPage() {
   const isPaused = job.status === 'paused'
   const isError = job.status === 'error'
   const isComparison = String(job.step || '').startsWith('cmp_')
-  const totalSec = estimateTotalSeconds(job.article?.targetChars || 10000, isComparison)
-  const remainingSec = Math.max(0, Math.round(totalSec * (1 - (Number(job.progress || 0) / 100))))
-  const remainingRange = {
-    min: Math.max(0, Math.round(remainingSec * 0.6)),
-    max: Math.round(remainingSec * 1.4),
-  }
+  const progressPct = clamp(Number(job.progress || 0), 0, 100)
+  const baseTotalSec = estimateTotalSeconds(job.article?.targetChars || 10000, isComparison)
   const currentStepKey = String(job.step || '').toLowerCase()
+
+  // 進捗が進むほど「実績ベース推定」を強くする（序盤のブレを抑える）
+  const confidence = clamp((progressPct - 8) / 30, 0, 1)
+  const canUseActual = progressPct >= 5 && elapsed >= 20
+  const actualTotalSec = canUseActual ? elapsed / (progressPct / 100) : Number.NaN
+
+  const totalSec = Number.isFinite(actualTotalSec)
+    ? clamp(
+        lerp(baseTotalSec, actualTotalSec, confidence),
+        baseTotalSec * 0.6,
+        baseTotalSec * (isComparison ? 3.0 : 2.2)
+      )
+    : baseTotalSec
+
+  const remainingSec = Math.max(0, Math.round(totalSec - elapsed))
+
+  // 進捗が進むほどレンジを狭く。統合/図解はブレやすいので少し広め。
+  let spread = lerp(0.45, 0.18, confidence)
+  if (currentStepKey === 'integrate' || currentStepKey === 'media') spread += 0.12
+  spread = clamp(spread, 0.18, 0.6)
+
+  const remainingRange = {
+    min: Math.max(0, Math.round(remainingSec * (1 - spread))),
+    max: Math.round(remainingSec * (1 + spread)),
+  }
   const stepPortion = STEP_PORTION[currentStepKey] ?? 0.12
   const stepExpected = Math.round(totalSec * stepPortion)
   const heartbeatAgo = lastHeartbeatAt ? Math.max(0, Math.floor((Date.now() - lastHeartbeatAt) / 1000)) : null
