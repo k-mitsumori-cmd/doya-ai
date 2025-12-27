@@ -100,15 +100,55 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  async function applyByMarkdownEdit(heading: HeadingItem, type: Exclude<ActionType, 'edit'>) {
+    // NOTE: セクション保存されていない見出しでも、記事Markdownを直接編集して反映できるようにする
+    const actionLabel = type === 'regenerate' ? '再生成' : type === 'seo' ? 'SEO強化' : 'CV強化'
+    const message = [
+      `見出し「${heading.text}」の内容を${actionLabel}してください。`,
+      '',
+      '制約:',
+      '- 見出しタイトルは変えない（配下の本文のみ改善）',
+      '- できるだけ既存の構成を保ち、必要最小限の変更にする',
+      '- 事実は捏造しない（元の文章に無い数字/固有名詞は増やさない）',
+      '- 日本語として自然で、読みやすくする',
+      type === 'seo'
+        ? '- SEO: 検索意図に直結する要点、具体例、手順、注意点を補強し、関連キーワードを自然に入れる'
+        : type === 'cv'
+          ? '- CV: 読者の次の行動が明確になるように、具体的な判断材料・導線・チェック項目・CTAを自然に追加'
+          : '- 文章の重複や冗長さを減らし、分かりやすく整理して書き直す',
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    const res = await fetch(`/api/seo/articles/${articleId}/chat-edit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, targetHeading: heading.text }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (json?.code === 'PAID_ONLY') {
+      throw new Error(json?.error || 'この操作は有料プラン限定です。')
+    }
+    if (!res.ok || json?.success === false) {
+      throw new Error(json?.error || '処理に失敗しました')
+    }
+    const proposed = String(json?.proposedMarkdown || '')
+    if (!proposed.trim()) throw new Error('AIの修正案が空でした')
+
+    const saveRes = await fetch(`/api/seo/articles/${articleId}/content`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ finalMarkdown: proposed, normalize: true }),
+    })
+    const saveJson = await saveRes.json().catch(() => ({}))
+    if (!saveRes.ok || saveJson?.success === false) {
+      throw new Error(saveJson?.error || '保存に失敗しました')
+    }
+  }
+
   const handleAction = async (headingId: string, type: ActionType) => {
     const heading = headings.find((h) => h.id === headingId)
     if (!heading) return
-
-    // sectionIdがない場合はUI上の仮IDなのでAPI呼び出し不可
-    if (!heading.sectionId && type !== 'edit') {
-      setError('この見出しはまだセクションとして保存されていないため、再生成・強化はできません。本文編集タブから直接編集してください。')
-      return
-    }
 
     if (type === 'edit') {
       setActiveAction({ id: headingId, type })
@@ -126,10 +166,18 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
     setError(null)
 
     try {
+      // セクションがあるなら従来通り section API を叩く。無ければ記事Markdown編集で適用する。
+      if (!heading.sectionId) {
+        await applyByMarkdownEdit(heading, type)
+        onUpdate?.()
+        return
+      }
+
       const sectionId = heading.sectionId
-      const endpoint = type === 'regenerate'
-        ? `/api/seo/sections/${sectionId}/regenerate`
-        : `/api/seo/sections/${sectionId}/${type}`
+      const endpoint =
+        type === 'regenerate'
+          ? `/api/seo/sections/${sectionId}/regenerate`
+          : `/api/seo/sections/${sectionId}/${type}`
 
       const res = await fetch(endpoint, {
         method: 'POST',
