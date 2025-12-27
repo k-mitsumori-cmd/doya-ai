@@ -813,7 +813,7 @@ function SeoArticleInner() {
                           <p className="text-xs font-black text-gray-400 uppercase tracking-widest">画像生成中</p>
                           <h3 className="text-lg font-black text-gray-900 mt-2">バナー＋図解を生成しています</h3>
                           <p className="text-xs font-bold text-gray-500 mt-2 leading-relaxed">
-                            記事内容を解析して最大10枚を作ります。内容によっては数分かかることがあります（そのまま待ってOKです）。
+                            記事内容を解析して最大10枚（バナー1枚＋図解最大9枚）を作ります。内容によっては数分かかることがあります（そのまま待ってOKです）。
                           </p>
                         </div>
                         <div className="p-6 flex items-center gap-3">
