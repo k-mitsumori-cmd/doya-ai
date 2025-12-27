@@ -554,7 +554,7 @@ export default function SeoCreateWizardPage() {
                       className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
                     />
                     <p className="mt-2 text-xs text-gray-400 font-medium">
-                      ✨ ここに一次情報を入れるほど、AIっぽさが減って「制作ツール」になります
+                      ✨ ここに一次情報を入れるほど、独自性と説得力が増し、実務で使いやすい記事に仕上がります
                     </p>
                   </div>
 

@@ -589,7 +589,7 @@ async function generateSection(jobId: string) {
     'You are a Japanese SEO + LLMO expert writer.',
     'Write ONE section only in Japanese. Markdown output.',
     'Do NOT copy from sources; paraphrase ideas and add originality (experience, tradeoffs, examples, failure cases).',
-    'Avoid "AIっぽい" generic filler. Be specific and practical.',
+    'Avoid generic filler. Be specific and practical.',
     NO_AI_MARKDOWN_RULES,
     '',
     `Article title: ${article.title}`,
@@ -885,7 +885,7 @@ async function integrate(jobId: string) {
   if (llmoBlocks) parts.push(llmoBlocks)
 
   if (memo) {
-    parts.push('<!-- AIっぽさメモ（次回リライト用） -->')
+    parts.push('<!-- リライト用メモ（次回改善用） -->')
     parts.push(`<!-- ${clampText(memo, 1200)} -->`)
   }
 
@@ -907,7 +907,7 @@ async function integrate(jobId: string) {
       `Article title: ${article.title}`,
       `Keywords: ${((article.keywords as any) || []).join(', ')}`,
       `Tone: ${article.tone}`,
-      memo ? `User memo about AI-likeness:\n${clampText(memo, 900)}` : '',
+      memo ? `User notes (preferences/constraints):\n${clampText(memo, 900)}` : '',
       '',
       `Target chars for this additional section: ~${Math.min(3500, Math.max(1800, need))}`,
       '',
@@ -936,7 +936,7 @@ async function integrate(jobId: string) {
   })
 
   if (isComparison) {
-    // “校正・AI臭低減”を比較記事の明示ステップとして表示（実処理は統合の後段で自然に効く）
+    // 校正・表現調整を比較記事の明示ステップとして表示（実処理は統合の後段で自然に効く）
     await p.seoJob.update({ where: { id: jobId }, data: { step: 'cmp_polish', progress: 90, status: 'running' } })
   }
 
