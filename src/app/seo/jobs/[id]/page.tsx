@@ -669,31 +669,38 @@ export default function SeoJobPage() {
 
                   <div className="relative overflow-hidden px-4 sm:px-6 py-6">
                     {/* ベルト本体（斜線が流れる） */}
-                    <div className="absolute inset-x-4 sm:inset-x-6 top-1/2 -translate-y-1/2 h-16 rounded-3xl border border-gray-200 bg-white shadow-inner" />
+                    <div className="absolute inset-x-4 sm:inset-x-6 top-1/2 -translate-y-1/2 h-16 rounded-3xl border border-gray-200 bg-slate-50 shadow-inner" />
                     <motion.div
-                      className="absolute inset-x-4 sm:inset-x-6 top-1/2 -translate-y-1/2 h-16 rounded-3xl opacity-80"
+                      className="absolute inset-x-4 sm:inset-x-6 top-1/2 -translate-y-1/2 h-16 rounded-3xl opacity-60"
                       style={{
                         backgroundImage:
-                          'repeating-linear-gradient(45deg, rgba(37,99,235,0.10) 0px, rgba(37,99,235,0.10) 10px, rgba(99,102,241,0.06) 10px, rgba(99,102,241,0.06) 20px)',
+                          'repeating-linear-gradient(45deg, rgba(37,99,235,0.06) 0px, rgba(37,99,235,0.06) 12px, rgba(99,102,241,0.03) 12px, rgba(99,102,241,0.03) 24px)',
                         backgroundSize: '40px 40px',
                       }}
                       animate={{ backgroundPositionX: ['0px', '-240px'] }}
                       transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
                     />
+                    {/* 視線誘導（中央スポットライト） */}
+                    <div className="pointer-events-none absolute inset-x-4 sm:inset-x-6 top-1/2 -translate-y-1/2 h-16 rounded-3xl">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+                    </div>
                     {/* ローラー */}
                     <div className="absolute inset-x-6 sm:inset-x-8 top-1/2 -translate-y-1/2 flex items-center justify-between pointer-events-none">
-                      {Array.from({ length: 10 }).map((_, i) => (
-                        <div key={i} className="w-6 h-6 rounded-full bg-gray-50 border border-gray-200 shadow-sm flex items-center justify-center">
-                          <div className="w-2.5 h-2.5 rounded-full bg-gray-200" />
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-5 h-5 rounded-full bg-white/70 border border-gray-200/70 shadow-sm flex items-center justify-center opacity-45"
+                        >
+                          <div className="w-2 h-2 rounded-full bg-gray-200" />
                         </div>
                       ))}
                     </div>
 
                     {/* 箱（工程）がベルト上を流れる */}
                     <motion.div
-                      className="relative flex gap-3 w-[220%] py-2"
+                      className="relative flex gap-5 w-[260%] py-2 z-10"
                       animate={{ x: ['0%', '-55%'] }}
-                      transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
+                      transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
                     >
                       {[...STEPS, ...STEPS].map((s, i) => {
                         const isCur = String(s.key).toLowerCase() === currentStepKey
@@ -702,20 +709,20 @@ export default function SeoJobPage() {
                         return (
                           <motion.div
                             key={`${s.key}_${i}`}
-                            className={`relative min-w-[170px] px-4 py-3 rounded-2xl border shadow-md flex items-center gap-3 ${
+                            className={`relative min-w-[180px] px-4 py-3 rounded-2xl border shadow-lg flex items-center gap-3 backdrop-blur-[1px] ${
                               isCur
-                                ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/25'
+                                ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/30 ring-2 ring-blue-300'
                                 : isDoneStep
                                 ? 'bg-emerald-50 text-emerald-800 border-emerald-100'
-                                : 'bg-white text-gray-800 border-gray-200'
+                                : 'bg-white text-gray-900 border-gray-200'
                             }`}
-                            animate={isCur ? { y: [0, -2, 0] } : { y: [0, -1, 0] }}
-                            transition={{ duration: isCur ? 1.2 : 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                            animate={isCur ? { y: [0, -1, 0] } : { y: [0, -0.5, 0] }}
+                            transition={{ duration: isCur ? 1.4 : 1.8, repeat: Infinity, ease: 'easeInOut' }}
                           >
-                            {/* 車輪っぽい丸 */}
-                            <div className="absolute -bottom-2 left-5 flex gap-2 opacity-80">
-                              <div className={`w-4 h-4 rounded-full border ${isCur ? 'bg-white/20 border-white/25' : 'bg-gray-50 border-gray-200'}`} />
-                              <div className={`w-4 h-4 rounded-full border ${isCur ? 'bg-white/20 border-white/25' : 'bg-gray-50 border-gray-200'}`} />
+                            {/* 車輪っぽい丸（主張を弱めて見やすく） */}
+                            <div className="pointer-events-none absolute -bottom-1.5 left-5 flex gap-2 opacity-25">
+                              <div className={`w-3.5 h-3.5 rounded-full border ${isCur ? 'bg-white/20 border-white/30' : 'bg-white border-gray-200'}`} />
+                              <div className={`w-3.5 h-3.5 rounded-full border ${isCur ? 'bg-white/20 border-white/30' : 'bg-white border-gray-200'}`} />
                             </div>
 
                             <div
@@ -727,7 +734,7 @@ export default function SeoJobPage() {
                             </div>
                             <div className="min-w-0">
                               <p className="text-xs font-black truncate">{s.label}</p>
-                              <p className={`text-[10px] font-bold truncate ${isCur ? 'text-white/80' : isDoneStep ? 'text-emerald-700/80' : 'text-gray-500'}`}>
+                              <p className={`text-[10px] font-bold truncate ${isCur ? 'text-white/85' : isDoneStep ? 'text-emerald-700/80' : 'text-gray-500'}`}>
                                 {isCur ? '加工中…（稼働中）' : isDoneStep ? '完了' : '待機'}
                               </p>
                             </div>
