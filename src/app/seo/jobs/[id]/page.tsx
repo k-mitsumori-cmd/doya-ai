@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { CompletionModal } from '@seo/components/CompletionModal'
 import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSettings'
+import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 
 type SeoSection = {
   id: string
@@ -461,6 +462,22 @@ export default function SeoJobPage() {
               <span className="text-gray-400">平均:</span>
               <span className="text-gray-700 font-black">{Math.round(totalSec / 60)}分前後</span>
             </div>
+          </div>
+
+          <div className="mt-6">
+            <AiThinkingStrip
+              show={!isDone && !isError}
+              title="AIが思考を巡らせています…"
+              subtitle={`SEO / LLMOの観点で、工程「${STEP_LABELS[job.step] || job.step}」を最適化中です`}
+              tags={['SEO', 'LLMO', '構造化', '網羅性', '読みやすさ']}
+              steps={[
+                '検索意図を推定して構造化',
+                '上位記事を参考に網羅性を強化',
+                'LLMO向けに結論・FAQを整備',
+                '文章の一貫性をチェック',
+              ]}
+              compact
+            />
           </div>
         </motion.div>
 

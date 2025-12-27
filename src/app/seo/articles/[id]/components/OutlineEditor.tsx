@@ -13,6 +13,7 @@ import {
   Check,
   X,
 } from 'lucide-react'
+import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 
 type HeadingItem = {
   id: string
@@ -198,6 +199,14 @@ export function OutlineEditor({ articleId, finalMarkdown, headings, onUpdate }: 
       <p className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4">
         見出し構成
       </p>
+
+      <AiThinkingStrip
+        show={loading}
+        compact
+        title="AIが見出し単位で最適化中…"
+        subtitle="SEO/LLMOの観点で、見出しごとの改善（再生成・強化・CV最適化）を実行しています"
+        tags={['SEO', 'LLMO', '構造化']}
+      />
 
       {error && (
         <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-700 text-xs font-bold mb-4">

@@ -6,6 +6,7 @@ import { Card, CardBody, CardHeader, CardTitle, CardDesc } from '@seo/components
 import { Button } from '@seo/components/ui/Button'
 import { Toggle } from '@seo/components/ui/Toggle'
 import { Badge } from '@seo/components/ui/Badge'
+import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 import {
   Sparkles,
   Wand2,
@@ -1521,7 +1522,17 @@ export default function SeoNewArticlePage() {
           </div>
 
           {/* Submit */}
-          <div className="pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-end gap-4">
+          <div className="pt-8 border-t border-gray-100 flex flex-col gap-4">
+            <AiThinkingStrip
+              show={loading}
+              compact
+              title="AIがSEO/LLMO対策を実行中…"
+              subtitle={mode === 'comparison_research' ? '比較候補の調査 → 構造化 → 記事生成 を進めています' : '検索意図 → 構造化 → 網羅性 → 読みやすさ の順で最適化しています'}
+              tags={['SEO', 'LLMO', '構造化', '網羅性', '読みやすさ']}
+              steps={mode === 'comparison_research' ? ['比較候補を調査', '比較軸を整理', '結論/FAQを整備', '記事を生成'] : ['検索意図を推定', '見出しを設計', '本文を生成', '整合性を調整']}
+            />
+
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-4">
             <Button variant="ghost" onClick={saveDraft} className="w-full sm:w-auto text-gray-400 font-black order-2 sm:order-1">ドラフト保存</Button>
             <Button
               variant="primary"
@@ -1541,6 +1552,7 @@ export default function SeoNewArticlePage() {
                 </div>
               )}
             </Button>
+            </div>
           </div>
         </motion.div>
     </main>

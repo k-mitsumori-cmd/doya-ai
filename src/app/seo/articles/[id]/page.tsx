@@ -15,6 +15,7 @@ import { analyzeMarkdown } from '@seo/lib/score'
 import { slugifyHeading } from '@seo/lib/markdown'
 import { CompletionModal } from '@seo/components/CompletionModal'
 import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSettings'
+import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 import {
   Download,
   Image as ImageIcon,
@@ -588,6 +589,24 @@ function SeoArticleInner() {
               <p>目標 {article.targetChars.toLocaleString()}字</p>
               <div className="w-1 h-1 rounded-full bg-gray-200" />
               <p>現在 {score.charCount.toLocaleString()}字 ({charProgress}%)</p>
+            </div>
+
+            <div className="mt-4">
+              <AiThinkingStrip
+                show={!!isGenerating || !!busy || !!mediaBusy}
+                compact
+                title="AIがSEO/LLMO最適化を実行中…"
+                subtitle={
+                  isGenerating
+                    ? `生成工程「${latestJob?.step || ''}」を進めています（裏で構造/網羅性/読みやすさも調整中）`
+                    : mediaBusy
+                    ? '記事内容を解析して、図解/バナーを生成しています'
+                    : busy
+                    ? '改善・整合性チェックを行っています'
+                    : '最適化しています'
+                }
+                tags={['SEO', 'LLMO', '構造化', '網羅性', '読みやすさ']}
+              />
             </div>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
