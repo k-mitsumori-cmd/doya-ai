@@ -600,42 +600,76 @@ export default function SeoJobPage() {
                     </div>
                   </div>
 
-                  <div className="relative overflow-hidden px-4 sm:px-6 py-5">
+                  <div className="relative overflow-hidden px-4 sm:px-6 py-6">
+                    {/* ベルト本体（斜線が流れる） */}
+                    <div className="absolute inset-x-4 sm:inset-x-6 top-1/2 -translate-y-1/2 h-16 rounded-3xl border border-gray-200 bg-white shadow-inner" />
                     <motion.div
-                      className="flex gap-3 w-[200%]"
-                      animate={{ x: ['0%', '-50%'] }}
-                      transition={{ duration: 16, repeat: Infinity, ease: 'linear' }}
+                      className="absolute inset-x-4 sm:inset-x-6 top-1/2 -translate-y-1/2 h-16 rounded-3xl opacity-80"
+                      style={{
+                        backgroundImage:
+                          'repeating-linear-gradient(45deg, rgba(37,99,235,0.10) 0px, rgba(37,99,235,0.10) 10px, rgba(99,102,241,0.06) 10px, rgba(99,102,241,0.06) 20px)',
+                        backgroundSize: '40px 40px',
+                      }}
+                      animate={{ backgroundPositionX: ['0px', '-240px'] }}
+                      transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+                    />
+                    {/* ローラー */}
+                    <div className="absolute inset-x-6 sm:inset-x-8 top-1/2 -translate-y-1/2 flex items-center justify-between pointer-events-none">
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <div key={i} className="w-6 h-6 rounded-full bg-gray-50 border border-gray-200 shadow-sm flex items-center justify-center">
+                          <div className="w-2.5 h-2.5 rounded-full bg-gray-200" />
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 箱（工程）がベルト上を流れる */}
+                    <motion.div
+                      className="relative flex gap-3 w-[220%] py-2"
+                      animate={{ x: ['0%', '-55%'] }}
+                      transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
                     >
                       {[...STEPS, ...STEPS].map((s, i) => {
                         const isCur = String(s.key).toLowerCase() === currentStepKey
                         const isDoneStep = STEPS.findIndex((x) => x.key === s.key) < currentStepIndex
                         const Icon = s.icon
                         return (
-                          <div
+                          <motion.div
                             key={`${s.key}_${i}`}
-                            className={`min-w-[160px] px-4 py-3 rounded-2xl border shadow-sm flex items-center gap-3 ${
+                            className={`relative min-w-[170px] px-4 py-3 rounded-2xl border shadow-md flex items-center gap-3 ${
                               isCur
-                                ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/20'
+                                ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/25'
                                 : isDoneStep
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                                : 'bg-white text-gray-700 border-gray-100'
+                                ? 'bg-emerald-50 text-emerald-800 border-emerald-100'
+                                : 'bg-white text-gray-800 border-gray-200'
                             }`}
+                            animate={isCur ? { y: [0, -2, 0] } : { y: [0, -1, 0] }}
+                            transition={{ duration: isCur ? 1.2 : 1.6, repeat: Infinity, ease: 'easeInOut' }}
                           >
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                              isCur ? 'bg-white/15' : isDoneStep ? 'bg-emerald-100' : 'bg-gray-50'
-                            }`}>
-                              {isCur ? <Loader2 className="w-5 h-5 animate-spin" /> : <Icon className="w-5 h-5" />}
+                            {/* 車輪っぽい丸 */}
+                            <div className="absolute -bottom-2 left-5 flex gap-2 opacity-80">
+                              <div className={`w-4 h-4 rounded-full border ${isCur ? 'bg-white/20 border-white/25' : 'bg-gray-50 border-gray-200'}`} />
+                              <div className={`w-4 h-4 rounded-full border ${isCur ? 'bg-white/20 border-white/25' : 'bg-gray-50 border-gray-200'}`} />
+                            </div>
+
+                            <div
+                              className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                isCur ? 'bg-white/15' : isDoneStep ? 'bg-emerald-100' : 'bg-gray-50'
+                              }`}
+                            >
+                              {isCur ? <Loader2 className="w-5 h-5 animate-spin" /> : <Icon className={`w-5 h-5 ${isDoneStep ? 'text-emerald-700' : 'text-gray-700'}`} />}
                             </div>
                             <div className="min-w-0">
                               <p className="text-xs font-black truncate">{s.label}</p>
-                              <p className={`text-[10px] font-bold truncate ${isCur ? 'text-white/80' : 'text-gray-400'}`}>
-                                {isCur ? '加工中…（ちゃんと動いてます）' : isDoneStep ? '完了' : '待機'}
+                              <p className={`text-[10px] font-bold truncate ${isCur ? 'text-white/80' : isDoneStep ? 'text-emerald-700/80' : 'text-gray-500'}`}>
+                                {isCur ? '加工中…（稼働中）' : isDoneStep ? '完了' : '待機'}
                               </p>
                             </div>
-                          </div>
+                          </motion.div>
                         )
                       })}
                     </motion.div>
+
+                    {/* 両端フェード */}
                     <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white to-transparent" />
                     <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent" />
                   </div>
