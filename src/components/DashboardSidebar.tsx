@@ -343,8 +343,11 @@ function DashboardSidebarImpl({
           )}
         </div>
 
-        {/* スマホ用：横1行コンパクト表示 */}
-        <div className="md:hidden relative z-10 flex items-center gap-3">
+        {/* スマホ用：横1行コンパクト表示（全体がクリック可能） */}
+        <Link 
+          href={nextBannerPlanLabel === 'CONSULT' ? HIGH_USAGE_CONTACT_URL : '/banner/dashboard/plan'}
+          className="md:hidden relative z-10 flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
+        >
           <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
             <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
           </div>
@@ -356,26 +359,10 @@ function DashboardSidebarImpl({
               {nextBannerPlanLabel === 'CONSULT' && ' ✓'}
             </p>
           </div>
-          {nextBannerPlanLabel === 'CONSULT' ? (
-            <a
-              href={HIGH_USAGE_CONTACT_URL}
-              target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
-              rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
-              className="flex-shrink-0"
-            >
-              <button className="px-3 py-1.5 bg-white text-blue-600 text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap">
-                相談
-              </button>
-            </a>
-          ) : (
-            <Link 
-              href="/banner/dashboard/plan" 
-              className="flex-shrink-0 px-3 py-1.5 bg-white text-blue-600 text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap"
-            >
-              UP
-            </Link>
-          )}
-        </div>
+          <span className="flex-shrink-0 px-3 py-1.5 bg-white text-blue-600 text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap">
+            {nextBannerPlanLabel === 'CONSULT' ? '相談' : 'UP'}
+          </span>
+        </Link>
       </div>
     )
   }
