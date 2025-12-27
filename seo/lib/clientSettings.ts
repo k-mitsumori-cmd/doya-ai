@@ -1,11 +1,16 @@
 export type SeoClientSettings = {
   completionPopupEnabled: boolean
+  seoImagePromptTemplates?: {
+    banner: string
+    diagram: string
+  }
 }
 
 export const SEO_CLIENT_SETTINGS_KEY = 'doyaSeo.clientSettings.v1'
 
 export const DEFAULT_SEO_CLIENT_SETTINGS: SeoClientSettings = {
   completionPopupEnabled: true,
+  seoImagePromptTemplates: undefined,
 }
 
 export function readSeoClientSettings(): SeoClientSettings {
@@ -21,6 +26,15 @@ export function readSeoClientSettings(): SeoClientSettings {
         typeof json.completionPopupEnabled === 'boolean'
           ? json.completionPopupEnabled
           : DEFAULT_SEO_CLIENT_SETTINGS.completionPopupEnabled,
+      seoImagePromptTemplates:
+        json.seoImagePromptTemplates &&
+        typeof (json.seoImagePromptTemplates as any).banner === 'string' &&
+        typeof (json.seoImagePromptTemplates as any).diagram === 'string'
+          ? {
+              banner: String((json.seoImagePromptTemplates as any).banner || ''),
+              diagram: String((json.seoImagePromptTemplates as any).diagram || ''),
+            }
+          : DEFAULT_SEO_CLIENT_SETTINGS.seoImagePromptTemplates,
     }
   } catch {
     return DEFAULT_SEO_CLIENT_SETTINGS
