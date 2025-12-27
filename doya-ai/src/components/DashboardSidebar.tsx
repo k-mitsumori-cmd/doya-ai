@@ -334,10 +334,11 @@ function DashboardSidebarImpl({
               </button>
             </a>
           ) : (
-            <Link href="/banner/pricing">
-              <button className="mt-3 w-full py-2 bg-white text-blue-600 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md">
-                {nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseへ'}
-              </button>
+            <Link 
+              href="/banner/dashboard/plan" 
+              className="mt-3 w-full py-2 bg-white text-blue-600 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md block text-center"
+            >
+              {nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseへ'}
             </Link>
           )}
         </div>
@@ -367,10 +368,11 @@ function DashboardSidebarImpl({
               </button>
             </a>
           ) : (
-            <Link href="/banner/pricing" className="flex-shrink-0">
-              <button className="px-3 py-1.5 bg-white text-blue-600 text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap">
-                UP
-              </button>
+            <Link 
+              href="/banner/dashboard/plan" 
+              className="flex-shrink-0 px-3 py-1.5 bg-white text-blue-600 text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap"
+            >
+              UP
             </Link>
           )}
         </div>
