@@ -157,6 +157,8 @@ export default function SeoDashboardPage() {
   function getResumeLink(a: SeoArticleRow): string {
     const step = getStepIndex(a.status)
     if (a.status === 'RUNNING') return `/seo/jobs/${a.jobs?.[0]?.id || a.id}?auto=1`
+    // 完成後は「新規記事作成の完成後」と同じ記事詳細（本文/画像/編集タブ）へ
+    if (a.status === 'DONE' || a.status === 'EXPORTED') return `/seo/articles/${a.id}`
     if (step <= 1) return `/seo/articles/${a.id}/outline`
     if (step === 2) return `/seo/articles/${a.id}`
     if (step === 3) return `/seo/articles/${a.id}/edit`
