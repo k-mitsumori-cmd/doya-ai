@@ -207,19 +207,29 @@ export default function SeoJobPage() {
 
   // 経過時間（startedAtがあればそれを優先）
   useEffect(() => {
+    const j = jobRef.current
+    if (!j) return
+    const startMs =
+      (j.startedAt ? Date.parse(String(j.startedAt)) : NaN) ||
+      (j.createdAt ? Date.parse(String(j.createdAt)) : NaN) ||
+      NaN
+    if (!Number.isFinite(startMs)) return
+
+    const isTerminal = j.status === 'done' || j.status === 'error' || j.status === 'cancelled'
+    const endMs =
+      isTerminal
+        ? ((j.updatedAt ? Date.parse(String(j.updatedAt)) : NaN) || Date.now())
+        : Date.now()
+
+    // 初回計算（完了後はここで固定値にする）
+    setElapsed(Math.max(0, Math.floor((endMs - startMs) / 1000)))
+    if (isTerminal) return
+
     const t = setInterval(() => {
-      const j = jobRef.current
-      if (!j) return
-      const startMs =
-        (j.startedAt ? Date.parse(String(j.startedAt)) : NaN) ||
-        (j.createdAt ? Date.parse(String(j.createdAt)) : NaN) ||
-        NaN
-      if (!Number.isFinite(startMs)) return
-      const sec = Math.max(0, Math.floor((Date.now() - startMs) / 1000))
-      setElapsed(sec)
+      setElapsed(Math.max(0, Math.floor((Date.now() - startMs) / 1000)))
     }, 1000)
     return () => clearInterval(t)
-  }, [])
+  }, [job?.status, job?.startedAt, job?.createdAt, job?.updatedAt])
 
   const load = useCallback(async (opts?: { showLoading?: boolean }) => {
     const showLoading = opts?.showLoading === true
@@ -292,11 +302,12 @@ export default function SeoJobPage() {
   useEffect(() => {
     load({ showLoading: true })
     const t = setInterval(() => {
+      const j = jobRef.current
+      if (j && (j.status === 'done' || j.status === 'error' || j.status === 'cancelled')) return
       load({ showLoading: false })
     }, 4000)
     return () => clearInterval(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId])
+  }, [jobId, load])
 
   useEffect(() => {
     setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
@@ -408,6 +419,15 @@ export default function SeoJobPage() {
   const stepPortion = STEP_PORTION[currentStepKey] ?? 0.12
   const stepExpected = Math.round(totalSec * stepPortion)
   const heartbeatAgo = lastHeartbeatAt ? Math.max(0, Math.floor((Date.now() - lastHeartbeatAt) / 1000)) : null
+  const articleIdSafe = String(job.articleId || job.article?.id || '').trim()
+  const articleHref = articleIdSafe ? `/seo/articles/${articleIdSafe}` : ''
+  const goToArticle = () => {
+    if (!articleHref) {
+      setActionError('記事IDが取得できませんでした。少し待って再読み込みしてください。')
+      return
+    }
+    router.push(articleHref)
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white py-8 px-4">
@@ -416,7 +436,7 @@ export default function SeoJobPage() {
         title={job.article.title}
         subtitle="図解・サムネも生成されています。プレビューを確認しましょう。"
         primaryLabel="記事を見る"
-        onPrimary={() => router.push(`/seo/articles/${job.articleId}`)}
+        onPrimary={goToArticle}
         onClose={() => {
           if (dontShowAgainRef.current) {
             const next = patchSeoClientSettings({ completionPopupEnabled: false })
@@ -474,12 +494,14 @@ export default function SeoJobPage() {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left">
               <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                 <Hourglass className="w-4 h-4 text-blue-600" />
-                残り目安
+                {isDone ? '完了' : '残り目安'}
               </div>
               <p className="mt-1 text-2xl sm:text-3xl font-black text-gray-900 tabular-nums">
-                {formatMmSs(remainingRange.min)}〜{formatMmSs(remainingRange.max)}
+                {isDone ? '完了' : `${formatMmSs(remainingRange.min)}〜${formatMmSs(remainingRange.max)}`}
               </p>
-              <p className="mt-1 text-[10px] font-bold text-gray-400">進捗から推定（目安）</p>
+              <p className="mt-1 text-[10px] font-bold text-gray-400">
+                {isDone ? '残り目安の表示は終了しました' : '進捗から推定（目安）'}
+              </p>
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left">
@@ -491,7 +513,10 @@ export default function SeoJobPage() {
                 {formatMmSs(totalSec)}
               </p>
               <p className="mt-1 text-[10px] font-bold text-gray-400">
-                この工程の平均: <span className="text-gray-700 font-black tabular-nums">{formatMmSs(stepExpected)}</span>
+                この工程の平均:{' '}
+                <span className="text-gray-700 font-black tabular-nums">
+                  {isDone ? '—' : formatMmSs(stepExpected)}
+                </span>
               </p>
             </div>
           </div>
@@ -564,14 +589,18 @@ export default function SeoJobPage() {
                   <div className="flex items-center gap-2 text-gray-500 font-bold">
                     <span className="inline-flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${heartbeatAgo !== null && heartbeatAgo <= 10 ? 'bg-emerald-500' : 'bg-gray-300'} ${isRunning ? 'animate-pulse' : ''}`} />
-                      {heartbeatAgo === null ? '通信中...' : `最終更新: ${heartbeatAgo}秒前（4秒ごとに確認）`}
+                      {isDone
+                        ? '完了しました'
+                        : (heartbeatAgo === null ? '通信中...' : `最終更新: ${heartbeatAgo}秒前（4秒ごとに確認）`)}
                     </span>
                     <span className="w-1 h-1 rounded-full bg-gray-200" />
                     <span>経過: {formatMmSs(elapsed)}</span>
                     <span className="w-1 h-1 rounded-full bg-gray-200" />
-                    <span className="text-gray-400">
-                      ※「記事統合」「図解生成」は進捗が止まって見えても内部で動いていることがあります
-                    </span>
+                    {isRunning && (
+                      <span className="text-gray-400">
+                        ※「記事統合」「図解生成」は進捗が止まって見えても内部で動いていることがあります
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -763,7 +792,7 @@ export default function SeoJobPage() {
                     ? 'bg-emerald-600 text-white hover:bg-emerald-700'
                     : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-95'
                 } disabled:opacity-50`}
-                onClick={isDone ? () => router.push(`/seo/articles/${job.articleId}`) : advanceOnce}
+                onClick={isDone ? goToArticle : advanceOnce}
                 disabled={busy || (isDone ? false : job.status === 'cancelled')}
               >
                 {isDone ? (
@@ -913,7 +942,7 @@ export default function SeoJobPage() {
                 </p>
                 <button
                   className="mt-6 px-8 py-4 rounded-xl bg-gray-900 text-white font-black hover:bg-gray-800 transition-colors"
-                  onClick={() => router.push(`/seo/articles/${job.articleId}`)}
+                  onClick={goToArticle}
                 >
                   記事ページを開く <ArrowRight className="inline w-5 h-5 ml-2" />
                 </button>
@@ -1001,13 +1030,20 @@ export default function SeoJobPage() {
           transition={{ delay: 0.3 }}
           className="mt-8 text-center"
         >
-          <Link
-            href={`/seo/articles/${job.articleId}`}
-            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold transition-colors"
-          >
-            <ExternalLink className="w-4 h-4" />
-            記事ページを開く
-          </Link>
+          {articleHref ? (
+            <Link
+              href={articleHref}
+              className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold transition-colors"
+            >
+              <ExternalLink className="w-4 h-4" />
+              記事ページを開く
+            </Link>
+          ) : (
+            <span className="inline-flex items-center gap-2 text-gray-300 text-sm font-bold">
+              <ExternalLink className="w-4 h-4" />
+              記事ページを開く（準備中）
+            </span>
+          )}
         </motion.div>
       </div>
     </main>
