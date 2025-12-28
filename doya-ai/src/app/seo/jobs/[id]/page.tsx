@@ -2,13 +2,10 @@
 
 import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowRight,
-  RefreshCcw,
-  Play,
-  Pause,
   ExternalLink,
   Sparkles,
   FileText,
@@ -178,10 +175,8 @@ export default function SeoJobPage() {
   const params = useParams<{ id: string }>()
   const jobId = params.id
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [job, setJob] = useState<SeoJob | null>(null)
   const [loading, setLoading] = useState(true)
-  const [auto, setAuto] = useState(false)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -356,7 +351,6 @@ export default function SeoJobPage() {
       if (!res.ok || json?.success === false) {
         const msg = json?.error || `advance failed (${res.status})`
         setActionError(msg)
-        setAuto(false)
         await load({ showLoading: false })
         return
       }
@@ -454,21 +448,15 @@ export default function SeoJobPage() {
 
   // 旧: stepHistory（ステップ変化のみ）は廃止し、activityLogへ統合
 
+  // 自動で工程を進め続ける（UIで停止/再開は提供しない）
   useEffect(() => {
-    const a = searchParams.get('auto')
-    if (a === '1') setAuto(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    if (!auto) return
     if (!job) return
-    if (job.status === 'done' || job.status === 'error') return
+    if (job.status === 'done' || job.status === 'error' || job.status === 'cancelled') return
     const t = setTimeout(() => {
       advanceOnce()
     }, 700)
     return () => clearTimeout(t)
-  }, [auto, job, advanceOnce])
+  }, [job?.status, job?.step, job?.progress, advanceOnce, job])
 
   if (loading) {
     return (
@@ -1008,99 +996,44 @@ export default function SeoJobPage() {
 
             {/* アクションボタン */}
             <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-              <button
-                className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-black transition-all shadow-sm ${
-                  isDone
-                    ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:opacity-95'
-                } disabled:opacity-50`}
-                onClick={isDone ? goToArticle : advanceOnce}
-                disabled={busy || (isDone ? false : job.status === 'cancelled')}
-              >
-                {isDone ? (
-                  <>
-                    <PartyPopper className="w-5 h-5" />
-                    記事を見る
-                  </>
-                ) : busy ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    処理中...
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-5 h-5" />
-                    {isPaused ? '再開する' : '次へ進める'}
-                  </>
-                )}
-              </button>
-
-              {!isDone && (
+              {isDone ? (
+                <button
+                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all shadow-sm"
+                  onClick={goToArticle}
+                  disabled={busy}
+                >
+                  <PartyPopper className="w-5 h-5" />
+                  記事を見る
+                </button>
+              ) : (
                 <>
                   <button
-                    className={`inline-flex items-center gap-2 px-4 py-3 rounded-xl font-bold transition-all ${
-                      auto
-                        ? 'bg-orange-50 text-orange-700 border border-orange-100'
-                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setAuto((v) => !v)}
+                    className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black shadow-sm opacity-90 cursor-not-allowed"
+                    disabled
+                    title="処理は自動で進行します"
                   >
-                    {auto ? (
-                      <>
-                        <Pause className="w-4 h-4" /> 自動停止
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-4 h-4" /> 自動実行
-                      </>
-                    )}
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    処理中...
                   </button>
 
                   <button
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-white text-gray-700 border border-gray-200 font-bold hover:bg-gray-50 transition-all shadow-sm"
-                    onClick={async () => {
-                      setActionError(null)
-                      try {
-                        if (isPaused) {
-                          await fetch(`/api/seo/jobs/${jobId}/resume`, { method: 'POST' })
-                        } else {
-                          await fetch(`/api/seo/jobs/${jobId}/pause`, { method: 'POST' })
-                        }
-                        await load({ showLoading: false })
-                      } catch (e: any) {
-                        setActionError(e?.message || '失敗しました')
-                      }
-                    }}
-                  >
-                    {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                    {isPaused ? 'サーバ再開' : 'サーバ停止'}
-                  </button>
-
-                  <button
-                    className="inline-flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-red-700 border border-red-100 font-bold hover:bg-red-100/60 transition-all"
+                    className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-red-50 text-red-700 border border-red-100 font-black hover:bg-red-100/60 transition-all"
                     onClick={async () => {
                       if (!confirm('ジョブをキャンセルしますか？（途中成果物は残ります）')) return
                       setActionError(null)
                       try {
                         await fetch(`/api/seo/jobs/${jobId}/cancel`, { method: 'POST' })
                         await load({ showLoading: false })
-                        setAuto(false)
                       } catch (e: any) {
                         setActionError(e?.message || '失敗しました')
                       }
                     }}
+                    disabled={busy || job.status === 'cancelled'}
                   >
                     キャンセル
                   </button>
                 </>
               )}
-
-              <button
-                className="p-3 rounded-xl bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-all shadow-sm"
-                onClick={() => load({ showLoading: true })}
-              >
-                <RefreshCcw className="w-4 h-4" />
-              </button>
             </div>
 
             {/* エラー表示 */}
@@ -1117,32 +1050,9 @@ export default function SeoJobPage() {
                     <pre className="text-xs text-red-700/80 whitespace-pre-wrap mt-2">
                       {job.error || actionError}
                     </pre>
-                    <button
-                      className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 text-white font-black hover:bg-gray-800 disabled:opacity-60"
-                      disabled={busy}
-                      onClick={async () => {
-                        setBusy(true)
-                        try {
-                          setActionError(null)
-                          const res = await fetch(`/api/seo/jobs/${jobId}/reset`, { method: 'POST' })
-                          const json = await res.json().catch(() => ({}))
-                          if (!res.ok || json?.success === false) {
-                            throw new Error(json?.error || `reset failed (${res.status})`)
-                          }
-                          setAuto(true)
-                          await load({ showLoading: true })
-                          await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST' }).catch(() => {})
-                          await load({ showLoading: false })
-                        } catch (e: any) {
-                          setActionError(e?.message || 'リセットに失敗しました')
-                        } finally {
-                          setBusy(false)
-                        }
-                      }}
-                    >
-                      <RefreshCcw className="w-4 h-4" />
-                      リセットして再開
-                    </button>
+                    <p className="mt-4 text-xs font-bold text-red-700/80">
+                      エラーが発生しました。ページを再読み込みするか、必要に応じてキャンセルしてください。
+                    </p>
                   </div>
                 </div>
               </motion.div>
