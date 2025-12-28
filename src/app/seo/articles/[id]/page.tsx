@@ -16,6 +16,7 @@ import { slugifyHeading } from '@seo/lib/markdown'
 import { CompletionModal } from '@seo/components/CompletionModal'
 import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSettings'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
+import { FeatureGuide } from '@/components/FeatureGuide'
 import {
   Download,
   Image as ImageIcon,
@@ -607,6 +608,20 @@ function SeoArticleInner() {
                 }
                 tags={['SEO', 'LLMO', '構造化', '網羅性', '読みやすさ']}
               />
+              <div className="mt-3">
+                <FeatureGuide
+                  featureId={`seo.article.detail.${article.id}`}
+                  title="記事詳細（本文＋画像）の使い方"
+                  description="生成後の確認・修正・画像生成・ダウンロードを、この画面ひとつで完結できます。"
+                  steps={[
+                    '「プレビュー」で本文を確認します（生成中でも進捗が見られます）',
+                    '「SEOスコア」で良い点/改善点を確認し、手動 or AI自動修正で反映します',
+                    '「見出し編集」「本文編集」で必要な箇所だけピンポイントで直せます',
+                    '「画像」でバナー/図解を生成・再生成し、Markdownコピーやダウンロードも可能です',
+                  ]}
+                  imageMode="off"
+                />
+              </div>
             </div>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">

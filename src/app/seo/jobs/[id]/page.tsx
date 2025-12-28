@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { MarkdownPreview } from '@seo/components/MarkdownPreview'
 import {
   ArrowRight,
   ExternalLink,
@@ -23,10 +24,13 @@ import {
   Rocket,
   PartyPopper,
   Lock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { CompletionModal } from '@seo/components/CompletionModal'
 import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSettings'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
+import { FeatureGuide } from '@/components/FeatureGuide'
 
 type SeoSection = {
   id: string
@@ -196,11 +200,18 @@ export default function SeoJobPage() {
   const lastHeartbeatLogAtRef = useRef<number>(0)
   const logPrevStatusRef = useRef<string | null>(null)
   const logPrevStepRef = useRef<string | null>(null)
+  const [openPreviewIds, setOpenPreviewIds] = useState<Record<string, boolean>>({})
 
   const reviewedCount = useMemo(
     () => (job?.sections || []).filter((s) => s.status === 'reviewed' || s.status === 'generated').length,
     [job]
   )
+
+  const reviewedSections = useMemo(() => {
+    const list = (job?.sections || []).filter((s) => s.status === 'reviewed' || s.status === 'generated')
+    // index順で安定表示
+    return list.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+  }, [job?.sections])
 
   // 現在のステップインデックス
   const currentStepIndex = useMemo(() => {
@@ -621,6 +632,20 @@ export default function SeoJobPage() {
           <p className="text-gray-500 mt-3 text-sm font-bold">
             目標: {job.article.targetChars.toLocaleString()}文字
           </p>
+          <div className="mt-4 flex items-center justify-center">
+            <FeatureGuide
+              featureId="seo.jobProgress"
+              title="生成中画面の見方"
+              description="いま何をしているか／どこまで進んだか／完成済み本文のプレビューを、この画面だけで確認できます。"
+              steps={[
+                '上部の進捗%と工程で、全体の進み具合を把握します',
+                '「稼働ログ」で、心拍・進捗・工程変化を確認できます',
+                '下の「完成済み本文プレビュー」で、出来上がったところから読めます',
+                '完了後は「記事を見る」で本文＋画像の画面へ移動します',
+              ]}
+              imageMode="off"
+            />
+          </div>
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[11px] font-bold text-gray-500">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 shadow-sm">
               <span className={`w-2.5 h-2.5 rounded-full ${isRunning ? 'bg-emerald-500' : isPaused ? 'bg-amber-500' : isError ? 'bg-red-500' : 'bg-gray-300'}`} />
@@ -1134,6 +1159,15 @@ export default function SeoJobPage() {
                         : 'bg-white border-gray-100'
                     }`}
                   >
+                    {/* レビュー中っぽい演出（生成中カードのみ） */}
+                    {isGenerating && (
+                      <motion.div
+                        className="mb-3 h-1.5 rounded-full bg-gradient-to-r from-blue-200 via-blue-500 to-indigo-200"
+                        animate={{ backgroundPositionX: ['0%', '100%'] }}
+                        transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
+                        style={{ backgroundSize: '200% 100%' }}
+                      />
+                    )}
                     <div className="flex items-start gap-3">
                       <div
                         className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -1168,6 +1202,81 @@ export default function SeoJobPage() {
                   </motion.div>
                 )
               })}
+            </div>
+          </motion.div>
+        )}
+
+        {/* 完成済み本文プレビュー（生成中でも“できたところ”が読める） */}
+        {!isDone && reviewedSections.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="mt-8"
+          >
+            <div className="rounded-3xl border border-gray-100 bg-white overflow-hidden shadow-sm">
+              <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">途中プレビュー</p>
+                  <p className="text-base sm:text-lg font-black text-gray-900 truncate">
+                    完成済み本文プレビュー（{reviewedSections.length}件）
+                  </p>
+                </div>
+                <span className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
+                  できたところから読めます
+                </span>
+              </div>
+              <div className="max-h-[480px] overflow-y-auto p-4 sm:p-6 space-y-3 bg-gradient-to-b from-white to-slate-50">
+                {reviewedSections.map((s) => {
+                  const open = !!openPreviewIds[s.id]
+                  const heading = s.headingPath || `セクション ${Number(s.index ?? 0) + 1}`
+                  const content = String(s.content || '').trim()
+                  return (
+                    <div key={s.id} className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+                      <button
+                        type="button"
+                        className="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-gray-50 transition-colors"
+                        onClick={() =>
+                          setOpenPreviewIds((prev) => ({ ...prev, [s.id]: !prev[s.id] }))
+                        }
+                      >
+                        <div className="min-w-0 text-left">
+                          <p className="text-xs font-black text-gray-900 truncate">{heading}</p>
+                          <p className="mt-0.5 text-[10px] font-bold text-gray-500">
+                            {content ? `${Math.min(99999, content.length).toLocaleString()}文字` : '本文生成中…'}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0 text-gray-400">
+                          {open ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        </div>
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {open && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.18 }}
+                            className="px-4 pb-4"
+                          >
+                            {content ? (
+                              <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                                <MarkdownPreview markdown={content} />
+                              </div>
+                            ) : (
+                              <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+                                <div className="h-3 w-2/3 bg-gray-200 rounded animate-pulse" />
+                                <div className="mt-2 h-3 w-full bg-gray-200 rounded animate-pulse" />
+                                <div className="mt-2 h-3 w-5/6 bg-gray-200 rounded animate-pulse" />
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           </motion.div>
         )}

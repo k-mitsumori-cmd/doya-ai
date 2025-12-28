@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, BellRing } from 'lucide-react'
 import { readSeoClientSettings, patchSeoClientSettings, type SeoClientSettings } from '@seo/lib/clientSettings'
+import { FeatureGuide } from '@/components/FeatureGuide'
 
 export default function SeoSettingsPage() {
   const [settings, setSettings] = useState<SeoClientSettings>(() => readSeoClientSettings())
@@ -25,6 +26,18 @@ export default function SeoSettingsPage() {
           </Link>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">設定</h1>
           <p className="text-sm text-gray-500 mt-1">ドヤSEOの体験をカスタマイズできます。</p>
+          <div className="mt-3">
+            <FeatureGuide
+              featureId="seo.settings"
+              title="設定の使い方"
+              description="通知や演出など、使い勝手に関わる設定を切り替えられます。"
+              steps={[
+                '「完成！」ポップアップは、記事生成完了の瞬間だけ表示する演出です',
+                'ON/OFFはいつでも変更できます（ローカル設定として保存されます）',
+              ]}
+              imageMode="off"
+            />
+          </div>
         </div>
       </div>
 
