@@ -31,6 +31,12 @@ export async function GET() {
       take: 50,
       include: {
         jobs: { orderBy: { createdAt: 'desc' }, take: 1 },
+        // 一覧サムネ用（最新バナー1枚だけ）
+        images: {
+          where: { kind: 'BANNER' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
     })
     return NextResponse.json({ success: true, articles })
