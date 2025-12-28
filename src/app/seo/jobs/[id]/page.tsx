@@ -22,6 +22,7 @@ import {
   Image as ImageIcon,
   Rocket,
   PartyPopper,
+  Lock,
 } from 'lucide-react'
 import { CompletionModal } from '@seo/components/CompletionModal'
 import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSettings'
@@ -1163,16 +1164,26 @@ export default function SeoJobPage() {
           className="mt-8 text-center"
         >
           {articleHref ? (
-            <Link
-              href={articleHref}
-              className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold transition-colors"
-            >
-              <ExternalLink className="w-4 h-4" />
-              記事ページを開く
-            </Link>
+            isDone ? (
+              <Link
+                href={articleHref}
+                className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                記事ページを開く
+              </Link>
+            ) : (
+              <span
+                className="inline-flex items-center gap-2 text-gray-300 text-sm font-bold"
+                title="記事生成が完了すると開けます"
+              >
+                <Lock className="w-4 h-4" />
+                記事ページを開く（生成中）
+              </span>
+            )
           ) : (
             <span className="inline-flex items-center gap-2 text-gray-300 text-sm font-bold">
-              <ExternalLink className="w-4 h-4" />
+              <Lock className="w-4 h-4" />
               記事ページを開く（準備中）
             </span>
           )}
