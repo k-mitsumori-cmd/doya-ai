@@ -940,21 +940,48 @@ async function integrate(jobId: string) {
     await p.seoJob.update({ where: { id: jobId }, data: { step: 'cmp_polish', progress: 90, status: 'running' } })
   }
 
-  // 自動で素材生成（バナー＋図解）: 失敗しても本文完成は優先する
+  // 自動で素材生成（バナーは必須 / 図解は有料のみ）: 失敗しても本文完成は優先する
   try {
-    const canUseImages = await canUseSeoImagesForArticle(article)
-    if (canUseImages) {
-      await p.seoJob.update({ where: { id: jobId }, data: { step: 'media', progress: 92, status: 'running' } })
-
-      // バナー生成
+    // autoBundleが明示OFFなら、バナー/図解とも作らない（ユーザー意思を尊重）
+    if (article.autoBundle !== false) {
+      // バナーは一覧サムネに必須なので、プランに関係なく“必ず”生成
       const alreadyBanner = await p.seoImage.findFirst({
         where: { articleId: article.id, kind: 'BANNER' },
+        orderBy: { createdAt: 'desc' },
         select: { id: true },
       })
-      if (!alreadyBanner) await autoGenerateBanner(article)
+      const banner = alreadyBanner?.id ? alreadyBanner : await autoGenerateBanner(article)
 
-      // 図解生成（autoBundleが有効な場合）
-      if (article.autoBundle !== false) {
+      // 生成したバナーを本文先頭に差し込む（既に入っていれば何もしない）
+      try {
+        if (banner?.id && !finalMarkdown.includes(`/api/seo/images/${banner.id}`)) {
+          const lines = String(finalMarkdown || '').replace(/\r\n/g, '\n').split('\n')
+          const out: string[] = []
+          let i = 0
+          out.push(lines[i] || `# ${article.title}`)
+          i++
+          // 先頭の空行を維持
+          while (i < lines.length && !lines[i].trim()) {
+            out.push(lines[i])
+            i++
+          }
+          out.push(`![記事バナー](/api/seo/images/${banner.id})`)
+          out.push('')
+          out.push(...lines.slice(i))
+          await p.seoArticle.update({
+            where: { id: article.id },
+            data: { finalMarkdown: out.join('\n') },
+          })
+        }
+      } catch {
+        // ignore
+      }
+
+      // 図解は有料のみ（従来通り）
+      const canUseImages = await canUseSeoImagesForArticle(article)
+      if (canUseImages) {
+        await p.seoJob.update({ where: { id: jobId }, data: { step: 'media', progress: 92, status: 'running' } })
+
         // 1. 本文から図解を提案させる
         const headings = finalMarkdown.match(/^#{1,3}\s+.+$/gm) || []
         const suggestPrompt = `

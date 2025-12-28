@@ -20,6 +20,7 @@ import {
 import { Button } from '@seo/components/ui/Button'
 import { Badge } from '@seo/components/ui/Badge'
 import { ProgressBar } from '@seo/components/ui/ProgressBar'
+import { FeatureGuide } from '@/components/FeatureGuide'
 
 type SeoArticleRow = {
   id: string
@@ -30,6 +31,7 @@ type SeoArticleRow = {
   createdAt: string
   updatedAt: string
   jobs?: { id: string; status: string; progress: number; step: string }[]
+  images?: { id: string; kind: string; createdAt: string }[]
 }
 
 // ステップ定義（進行バー用）
@@ -155,15 +157,8 @@ export default function SeoDashboardPage() {
 
   // 記事の続きへのリンクを決定
   function getResumeLink(a: SeoArticleRow): string {
-    const step = getStepIndex(a.status)
-    if (a.status === 'RUNNING') return `/seo/jobs/${a.jobs?.[0]?.id || a.id}?auto=1`
-    // 完成後は「新規記事作成の完成後」と同じ記事詳細（本文/画像/編集タブ）へ
-    if (a.status === 'DONE' || a.status === 'EXPORTED') return `/seo/articles/${a.id}`
-    if (step <= 1) return `/seo/articles/${a.id}/outline`
-    if (step === 2) return `/seo/articles/${a.id}`
-    if (step === 3) return `/seo/articles/${a.id}/edit`
-    if (step === 4) return `/seo/articles/${a.id}/check`
-    return `/seo/articles/${a.id}/export`
+    // 一覧からは常に「本文＋画像が見られる記事詳細」へ統一（迷いをなくす）
+    return `/seo/articles/${a.id}`
   }
 
   return (
@@ -229,6 +224,23 @@ export default function SeoDashboardPage() {
             <p className="text-sm text-gray-400 font-bold mt-1">
               {counts.total}件の記事 · {counts.running}件が生成中 · {counts.done}件が完成
             </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-100 text-[11px] font-bold text-gray-600">
+                直近3ヶ月分のみ表示（それ以前は一覧から自動で除外されます）
+              </span>
+              <FeatureGuide
+                featureId="seo.generatedList"
+                title="生成記事一覧の使い方"
+                description="生成した記事を一覧で管理し、クリックひとつで本文・画像・SEO改善まで確認できます。"
+                steps={[
+                  'カードをクリックすると、記事詳細（本文＋画像）をすぐ開けます',
+                  '生成中の記事も「途中の本文」や進捗を確認できます',
+                  '完成後はSEOスコアの改善提案→手動/AI修正で仕上げます',
+                  '必要に応じてダウンロードや画像の再生成も可能です',
+                ]}
+                imageMode="off"
+              />
+            </div>
           </div>
           <Link href="/seo/create">
             <button className="w-full sm:w-auto h-12 sm:h-14 px-6 sm:px-8 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm sm:text-base shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all flex items-center justify-center gap-2">
@@ -314,6 +326,7 @@ export default function SeoDashboardPage() {
               const mainKw = (a.keywords || [])[0] || ''
               const detailHref = `/seo/articles/${a.id}`
               const resumeHref = getResumeLink(a)
+              const bannerId = a.images?.[0]?.id || ''
 
               return (
                 <motion.div
@@ -334,6 +347,24 @@ export default function SeoDashboardPage() {
                     title="クリックで記事詳細（本文/画像）を開く"
                   >
                       <div className="flex items-start sm:items-center gap-4">
+                        {/* バナーサムネ（一覧で“ひと目で違いが分かる”） */}
+                        <div className="hidden sm:block w-28">
+                          <div className="aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border border-gray-100">
+                            {bannerId ? (
+                              <img
+                                src={`/api/seo/images/${bannerId}`}
+                                alt=""
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-blue-500/60">
+                                <FileText className="w-6 h-6" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         {/* ステップインジケーター */}
                         <div className="hidden sm:flex flex-col items-center gap-1">
                           {WORKFLOW_STEPS.slice(0, 5).map((s, i) => (
@@ -382,9 +413,9 @@ export default function SeoDashboardPage() {
                               router.push(resumeHref)
                             }}
                             className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
-                            title="途中工程から再開"
+                            title="記事詳細（本文＋画像）を開く"
                           >
-                            続きから再開
+                            {a.status === 'RUNNING' ? '途中を見る' : '記事を開く'}
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                           </button>
                         </div>
