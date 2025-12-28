@@ -438,8 +438,20 @@ function SeoArticleInner() {
     const hasAny = (article.images || []).length > 0
     if (hasAny) return
     autoImagesRequestedRef.current = true
-    // 失敗してもUIは壊さない（権限なし/プラン制限など）
-    void ensureImages()
+    // 自動生成は「ログイン + 有料」の場合のみ（それ以外は401/403になるため叩かない）
+    ;(async () => {
+      try {
+        const res = await fetch('/api/seo/entitlements', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok || json?.success !== true) return
+        if (!json?.isLoggedIn) return
+        if (!json?.canUseSeoImages) return
+        // 失敗してもUIは壊さない（ネットワーク/生成失敗など）
+        await ensureImages()
+      } catch {
+        // ignore
+      }
+    })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [article?.id, article?.status, article?.autoBundle])
 
