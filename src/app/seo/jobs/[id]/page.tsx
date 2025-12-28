@@ -546,7 +546,12 @@ export default function SeoJobPage() {
       setActionError('記事IDが取得できませんでした。少し待って再読み込みしてください。')
       return
     }
-    router.push(articleHref)
+    // ルーティングの状態に左右されないよう、確実に遷移する
+    try {
+      window.location.assign(articleHref)
+    } catch {
+      router.push(articleHref)
+    }
   }
 
   return (
@@ -998,14 +1003,25 @@ export default function SeoJobPage() {
             {/* アクションボタン */}
             <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
               {isDone ? (
-                <button
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all shadow-sm"
-                  onClick={goToArticle}
-                  disabled={busy}
-                >
-                  <PartyPopper className="w-5 h-5" />
-                  記事を見る
-                </button>
+                articleHref ? (
+                  <Link
+                    href={articleHref}
+                    className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-emerald-600 text-white font-black hover:bg-emerald-700 transition-all shadow-sm"
+                    prefetch={false}
+                  >
+                    <PartyPopper className="w-5 h-5" />
+                    記事を見る
+                  </Link>
+                ) : (
+                  <button
+                    className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gray-200 text-gray-500 font-black shadow-sm cursor-not-allowed"
+                    disabled
+                    title="記事IDを取得中です。少し待ってから再読み込みしてください。"
+                  >
+                    <Lock className="w-5 h-5" />
+                    記事を見る（準備中）
+                  </button>
+                )
               ) : (
                 <>
                   <button
