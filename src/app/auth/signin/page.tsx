@@ -185,36 +185,6 @@ function SignInContent() {
               <span className="text-base">{isLoading ? 'ログイン中...' : 'Googleでログイン'}</span>
             </button>
 
-            <div className="flex items-center gap-3">
-              <div className="h-px bg-slate-200 flex-1" />
-              <div className="text-xs font-black text-slate-400">または</div>
-              <div className="h-px bg-slate-200 flex-1" />
-            </div>
-
-            {/* email/password (UI only) */}
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-black text-slate-700 mb-1">メールアドレス</label>
-                <input
-                  disabled
-                  placeholder="you@example.com"
-                  className="w-full h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 placeholder:text-slate-400 disabled:cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-black text-slate-700 mb-1">パスワード</label>
-                <input
-                  disabled
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full h-12 rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-bold text-slate-700 placeholder:text-slate-400 disabled:cursor-not-allowed"
-                />
-              </div>
-              <button disabled className="w-full h-12 rounded-2xl bg-slate-900 text-white font-black text-sm opacity-40 cursor-not-allowed">
-                ログイン（準備中）
-              </button>
-            </div>
-
             <div className="pt-2 flex items-center justify-between gap-3 flex-wrap">
               <Link href="/seo" className="text-sm font-black text-blue-600 hover:text-blue-700">
                 ログインせずに試す →
