@@ -125,8 +125,10 @@ function SignInContent() {
                   key={item.title}
                   className={`rounded-2xl border border-white/15 bg-gradient-to-br ${item.tone} backdrop-blur px-4 py-4 flex items-start gap-3`}
                   initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: [0, -4, 0] }}
-                  transition={{ duration: 4.6 + idx * 0.35, repeat: Infinity, ease: 'easeInOut', delay: idx * 0.12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: 'easeOut', delay: 0.06 * idx }}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.99 }}
                 >
                   <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center flex-shrink-0">
                     <item.icon className="w-5 h-5 text-white" />
