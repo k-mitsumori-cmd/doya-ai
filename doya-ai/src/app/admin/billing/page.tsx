@@ -174,55 +174,85 @@ export default function BillingPage() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* サービス別売上 */}
+          {/* コンプリートパック売上 */}
           <div className="lg:col-span-2 bg-white/[0.02] backdrop-blur rounded-xl border border-white/5 overflow-hidden">
             <div className="p-5 border-b border-white/5 flex items-center justify-between">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <CreditCard className="w-5 h-5 text-violet-400" />
-                サービス別売上
+                コンプリートパック売上
               </h2>
             </div>
             <div className="p-5">
-              <div className="space-y-4">
-                {(data.services || []).map((service) => {
-                  const maxRevenue = Math.max(...data.services.map(s => s.revenue), 1)
-                  const percentage = (service.revenue / maxRevenue) * 100
-                  return (
-                    <div key={service.id} className="p-4 bg-white/5 rounded-xl">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{service.icon}</span>
-                          <div>
-                            <p className="font-medium text-white">{service.name}</p>
-                            <p className="text-xs text-white/40">プロ会員: {service.proUsers}人</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-white">{formatCurrency(service.revenue)}</p>
-                          <p className={`text-xs ${service.growth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {service.growth >= 0 ? '+' : ''}{service.growth}%
-                          </p>
-                        </div>
-                      </div>
-                      <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.max(percentage, 5)}%` }}
-                          transition={{ duration: 0.5 }}
-                          className="h-full bg-gradient-to-r from-emerald-500 to-green-500 rounded-full"
-                        />
-                      </div>
-                    </div>
-                  )
-                })}
+              {/* コンプリートパック説明 */}
+              <div className="p-4 bg-gradient-to-br from-violet-500/10 to-emerald-500/10 rounded-xl border border-violet-500/20 mb-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="flex -space-x-1">
+                    <span className="text-2xl">🎨</span>
+                    <span className="text-2xl">✍️</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-white">コンプリートパック</p>
+                    <p className="text-xs text-white/40">ドヤバナーAI ＋ ドヤライティングAI</p>
+                  </div>
+                </div>
+                <p className="text-sm text-white/60">
+                  両サービスがセットになったお得なプランです。プラン変更時は両サービスが同時に切り替わります。
+                </p>
               </div>
 
-              {/* 合計 */}
-              <div className="mt-6 p-4 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-violet-500/20 rounded-xl">
-                <div className="flex items-center justify-between">
-                  <span className="text-white/60">合計月間売上</span>
-                  <span className="text-2xl font-bold text-white">{formatCurrency(data.monthlyRevenue)}</span>
+              {/* 料金プラン */}
+              <div className="space-y-3 mb-6">
+                <div className="p-4 bg-white/5 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gray-500/20 flex items-center justify-center">
+                      <span className="text-gray-400 font-bold text-sm">FREE</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">おためしプラン</p>
+                      <p className="text-xs text-white/40">バナー9枚/日 + ライティング1件/日</p>
+                    </div>
+                  </div>
+                  <p className="text-xl font-bold text-white">¥0</p>
                 </div>
+                <div className="p-4 bg-amber-500/10 rounded-xl border border-amber-500/30 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                      <Crown className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">プロプラン</p>
+                      <p className="text-xs text-white/40">バナー50枚/日 + ライティング10件/日</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-amber-400">¥3,980</p>
+                    <p className="text-xs text-white/40">/月</p>
+                  </div>
+                </div>
+                <div className="p-4 bg-rose-500/10 rounded-xl border border-rose-500/30 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-rose-500/20 flex items-center justify-center">
+                      <Zap className="w-5 h-5 text-rose-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white">エンタープライズ</p>
+                      <p className="text-xs text-white/40">バナー500枚/日 + ライティング50件/日</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-bold text-rose-400">要問合せ</p>
+                    <p className="text-xs text-white/40">/月</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 月間売上 */}
+              <div className="p-4 bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-xl">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-white/60">月間売上</span>
+                  <span className="text-3xl font-bold text-emerald-400">{formatCurrency(data.monthlyRevenue)}</span>
+                </div>
+                <p className="text-xs text-white/40">プロ会員 {data.premiumUsers}人 × ¥3,980</p>
               </div>
             </div>
           </div>
