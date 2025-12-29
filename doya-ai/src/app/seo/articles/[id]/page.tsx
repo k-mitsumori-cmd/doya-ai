@@ -162,10 +162,10 @@ function stripCoverFromMarkdown(md: string, bannerId?: string | null): string {
 // シンプル化: 核心的な機能のみに絞る＋SEOスコア/見出し操作を追加
 const TABS = [
   { id: 'preview', label: 'プレビュー', icon: Eye, color: 'text-blue-500' },
+  { id: 'media', label: '画像', icon: ImageIcon, color: 'text-orange-500' },
   { id: 'score', label: 'SEOスコア', icon: BarChart3, color: 'text-emerald-500' },
   { id: 'outline', label: '見出し編集', icon: Layers, color: 'text-indigo-500' },
   { id: 'edit', label: '本文編集', icon: Edit3, color: 'text-purple-500' },
-  { id: 'media', label: '画像', icon: ImageIcon, color: 'text-orange-500' },
   { id: 'export', label: 'ダウンロード', icon: Download, color: 'text-gray-500' },
 ] as const
 
