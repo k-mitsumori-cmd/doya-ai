@@ -181,9 +181,8 @@ export async function GET(request: NextRequest) {
           ? ((serviceMonthGenerations - serviceLastMonthGenerations) / serviceLastMonthGenerations * 100)
           : (serviceMonthGenerations > 0 ? 100 : 0)
 
-        // 売上計算（PRO: banner=3980, writing=3000）
-        const priceMap: Record<string, number> = { banner: 3980, writing: 3000 }
-        const revenue = serviceProUsers * (priceMap[serviceId] || 0)
+        // 売上はコンプリートパックなのでサービス別では計算しない（0にする）
+        const revenue = 0
 
         const label = serviceLabels[serviceId]
         serviceStats.push({
@@ -242,8 +241,10 @@ export async function GET(request: NextRequest) {
       ? parseFloat((totalGenerations / totalUsers).toFixed(1))
       : 0
 
-    // 月間売上計算（サービス別合計）
-    const monthlyRevenue = serviceStats.reduce((sum, s) => sum + s.revenue, 0)
+    // 月間売上計算（コンプリートパック: PRO=3,980円, ENTERPRISE=9,980円）
+    // PROユーザー数 × 3,980円 + ENTERPRISEユーザー（Stripe連携）の実際の売上
+    const COMPLETE_PACK_PRO_PRICE = 3980
+    const monthlyRevenue = proUsers * COMPLETE_PACK_PRO_PRICE
 
     return NextResponse.json({
       // 基本統計
