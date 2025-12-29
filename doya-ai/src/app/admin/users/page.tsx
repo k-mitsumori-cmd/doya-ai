@@ -55,9 +55,9 @@ const COMPLETE_PACK_PLANS: Record<string, {
   writingLimit: number
   color: string
 }> = {
-  FREE: { label: 'おためし', bannerLimit: 9, writingLimit: 5, color: 'gray' },
-  PRO: { label: 'プロ', bannerLimit: 50, writingLimit: 30, color: 'amber' },
-  ENTERPRISE: { label: 'エンタープライズ', bannerLimit: 500, writingLimit: 100, color: 'rose' },
+  FREE: { label: 'おためし', bannerLimit: 9, writingLimit: 1, color: 'gray' },
+  PRO: { label: 'プロ', bannerLimit: 50, writingLimit: 10, color: 'amber' },
+  ENTERPRISE: { label: 'エンタープライズ', bannerLimit: 500, writingLimit: 50, color: 'rose' },
 }
 
 // サービス別の表示設定（プランは共通）
