@@ -59,7 +59,7 @@ type SeoJob = {
 type ActivityLogItem = {
   id: string
   at: number
-  kind: 'heartbeat' | 'progress' | 'step' | 'status' | 'info' | 'error'
+  kind: 'heartbeat' | 'progress' | 'step' | 'status' | 'info' | 'error' | 'success'
   title: string
   detail?: string
 }
@@ -200,6 +200,8 @@ export default function SeoJobPage() {
   const lastHeartbeatLogAtRef = useRef<number>(0)
   const logPrevStatusRef = useRef<string | null>(null)
   const logPrevStepRef = useRef<string | null>(null)
+  const logPrevSectionCountRef = useRef<number>(0)
+  const logPrevGeneratingSectionRef = useRef<string | null>(null)
   const [openPreviewIds, setOpenPreviewIds] = useState<Record<string, boolean>>({})
 
   const reviewedCount = useMemo(
@@ -315,15 +317,61 @@ export default function SeoJobPage() {
         setLastHeartbeatAt(Date.now())
         setJob(newJob)
 
-        // 心拍ログ（4秒ごとに動いている感を出す）
+        // 詳細ログ：セクション生成進捗を追跡
         const now = Date.now()
-        if (now - lastHeartbeatLogAtRef.current >= 3500) {
+        const sections = newJob.sections || []
+        const generatingSections = sections.filter((s: any) => s.status === 'generating')
+        const generatedSections = sections.filter((s: any) => s.status === 'generated' || s.status === 'reviewed')
+        const pendingSections = sections.filter((s: any) => s.status === 'pending')
+        
+        // 10秒ごとに詳細な進捗ログを追加（冗長にならないように）
+        if (now - lastHeartbeatLogAtRef.current >= 10000) {
           lastHeartbeatLogAtRef.current = now
+          const step = String(newJob.step || '').toLowerCase()
+          const progress = clamp(Number(newJob.progress || 0), 0, 100)
+          
+          // 工程別の詳細メッセージ
+          let detailTitle = ''
+          let detailInfo = ''
+          
+          if (step === 'outline') {
+            detailTitle = '📝 記事の構成を設計中...'
+            detailInfo = 'SEO・LLMOに最適な見出し構造を分析しています'
+          } else if (step === 'sections') {
+            if (generatingSections.length > 0) {
+              const currentSection = generatingSections[0] as any
+              // headingPathから見出しテキストを抽出
+              const headingText = String(currentSection?.headingPath || `セクション${(currentSection?.index ?? 0) + 1}`)
+                .replace(/^#+\s*/, '')
+                .slice(0, 30)
+              detailTitle = `✍️ 「${headingText}」を執筆中...`
+              detailInfo = `完了: ${generatedSections.length}/${sections.length}セクション`
+            } else if (pendingSections.length > 0) {
+              detailTitle = '🔄 次のセクション準備中...'
+              detailInfo = `完了: ${generatedSections.length}/${sections.length}セクション`
+            } else {
+              detailTitle = '📊 本文執筆を進行中...'
+              detailInfo = `進捗: ${progress}%`
+            }
+          } else if (step === 'integrate') {
+            detailTitle = '🔗 記事を統合・最終調整中...'
+            detailInfo = '全セクションを結合し、文章の一貫性を確認しています'
+          } else if (step === 'media') {
+            detailTitle = '🎨 バナー・図解を生成中...'
+            detailInfo = 'AIが記事に合った画像を描画しています'
+          } else if (step === 'done') {
+            detailTitle = '✅ 記事生成が完了しました'
+            detailInfo = 'すべての工程が正常に終了しました'
+          } else {
+            detailTitle = `⚙️ 工程「${STEP_LABELS[step] || step}」を実行中...`
+            detailInfo = `進捗: ${progress}%`
+          }
+          
           pushLog({
             at: now,
-            kind: 'heartbeat',
-            title: 'サーバー応答を確認しました',
-            detail: `状態: ${JOB_STATUS_LABELS[newJob.status] || newJob.status} / 工程: ${STEP_LABELS[newJob.step] || newJob.step} / 進捗: ${clamp(Number(newJob.progress || 0), 0, 100)}%`,
+            kind: 'info',
+            title: detailTitle,
+            detail: detailInfo,
           })
         }
       }
@@ -401,18 +449,35 @@ export default function SeoJobPage() {
     }
     logPrevStatusRef.current = job.status
 
-    // ステップ変化
-    const stepCur = String(job.step || '')
+    // ステップ変化（工程別の詳細説明付き）
+    const stepCur = String(job.step || '').toLowerCase()
     if (logPrevStepRef.current && logPrevStepRef.current !== stepCur) {
+      const stepDetails: Record<string, { icon: string; desc: string }> = {
+        outline: { icon: '📋', desc: 'SEO・LLMOに最適な記事構成を設計します' },
+        sections: { icon: '✍️', desc: '各セクションの本文を順次執筆していきます' },
+        integrate: { icon: '🔗', desc: '全セクションを統合し、文章の一貫性を調整します' },
+        media: { icon: '🎨', desc: 'バナー画像・図解を生成します' },
+        done: { icon: '✅', desc: 'すべての工程が完了しました' },
+        cmp_ref: { icon: '🔍', desc: '参考記事を解析しています' },
+        cmp_candidates: { icon: '📊', desc: '比較対象の候補を収集しています' },
+        cmp_crawl: { icon: '🌐', desc: 'サイトを巡回して情報を収集しています' },
+        cmp_extract: { icon: '📄', desc: '必要な情報を抽出しています' },
+        cmp_sources: { icon: '📚', desc: '出典情報を整形しています' },
+        cmp_tables: { icon: '📈', desc: '比較表を生成しています' },
+        cmp_outline: { icon: '📝', desc: '章立てを生成しています' },
+        cmp_polish: { icon: '✨', desc: '文章を校正しています' },
+      }
+      const detail = stepDetails[stepCur] || { icon: '⚙️', desc: '' }
       pushLog({
         at: now,
         kind: 'step',
-        title: `工程が「${STEP_LABELS[stepCur] || stepCur}」に移りました`,
+        title: `${detail.icon} 工程「${STEP_LABELS[stepCur] || stepCur}」に移行`,
+        detail: detail.desc,
       })
     }
     logPrevStepRef.current = stepCur
 
-    // 進捗変化
+    // 進捗変化（10%刻みでログ出力、冗長にならないように）
     const p = clamp(Number(job.progress || 0), 0, 100)
     const pPrev = lastProgressRef.current
     if (pPrev === null) {
@@ -420,23 +485,93 @@ export default function SeoJobPage() {
       pushLog({
         at: now,
         kind: 'info',
-        title: '進捗の計測を開始しました',
-        detail: `現在: ${p}%`,
+        title: '🚀 記事生成を開始しました',
+        detail: `現在の進捗: ${p}%`,
       })
     } else if (p !== pPrev) {
       const diff = p - pPrev
       lastProgressRef.current = p
-      // 1%以上の変化、もしくは減少（巻き戻り）なら記録
-      if (Math.abs(diff) >= 1 || diff < 0) {
-        pushLog({
-          at: now,
-          kind: 'progress',
-          title: `進捗が ${pPrev}% → ${p}% になりました`,
-          detail: diff > 0 ? `+${diff}%` : `${diff}%`,
-        })
+      // 10%区切りを超えた時、または100%になった時のみログ
+      const prevTenth = Math.floor(pPrev / 10)
+      const currTenth = Math.floor(p / 10)
+      if (currTenth > prevTenth || p === 100) {
+        const milestoneMessages = [
+          { threshold: 10, icon: '📊', msg: '構成分析中...' },
+          { threshold: 20, icon: '📝', msg: '見出し構造を確定中...' },
+          { threshold: 30, icon: '✍️', msg: '本文執筆開始...' },
+          { threshold: 40, icon: '📖', msg: '本文執筆継続中...' },
+          { threshold: 50, icon: '⚡', msg: '折り返し地点を通過' },
+          { threshold: 60, icon: '📄', msg: '本文執筆後半...' },
+          { threshold: 70, icon: '🔍', msg: 'SEO最適化中...' },
+          { threshold: 80, icon: '🔗', msg: '記事統合・調整中...' },
+          { threshold: 90, icon: '✨', msg: '最終仕上げ中...' },
+          { threshold: 100, icon: '🎉', msg: '記事生成完了！' },
+        ]
+        const milestone = milestoneMessages.find(m => m.threshold === currTenth * 10) || 
+                          milestoneMessages.find(m => m.threshold === 100 && p === 100)
+        if (milestone) {
+          pushLog({
+            at: now,
+            kind: 'progress',
+            title: `${milestone.icon} ${p}% 完了 - ${milestone.msg}`,
+            detail: diff > 0 ? `+${diff}%` : undefined,
+          })
+        }
       }
     }
   }, [job?.status, job?.step, job?.progress, job, pushLog])
+
+  // セクション完了ログ
+  useEffect(() => {
+    if (!job) return
+    const sections = job.sections || []
+    const generatedSections = sections.filter((s) => s.status === 'generated' || s.status === 'reviewed')
+    const generatingSections = sections.filter((s) => s.status === 'generating')
+    const now = Date.now()
+    
+    // セクション完了数が増えたらログに追加
+    const prevCount = logPrevSectionCountRef.current
+    const currCount = generatedSections.length
+    if (currCount > prevCount && prevCount > 0) {
+      // 新しく完了したセクションを特定
+      const newlyCompleted = currCount - prevCount
+      for (let i = 0; i < newlyCompleted; i++) {
+        const sectionIndex = prevCount + i
+        const section = generatedSections[sectionIndex]
+        if (section) {
+          // headingPathから見出しテキストを抽出（例: "## 見出し" → "見出し"）
+          const headingText = String(section.headingPath || `セクション${section.index + 1}`)
+            .replace(/^#+\s*/, '')
+            .slice(0, 35)
+          pushLog({
+            at: now + i, // 微妙にずらして順序を保証
+            kind: 'success',
+            title: `✅ 「${headingText}」の執筆完了`,
+            detail: `${currCount}/${sections.length}セクション完了`,
+          })
+        }
+      }
+    }
+    logPrevSectionCountRef.current = currCount
+    
+    // 現在生成中のセクションが変わったらログに追加
+    const currGenerating = generatingSections.length > 0 ? String(generatingSections[0].id || '') : null
+    const prevGenerating = logPrevGeneratingSectionRef.current
+    if (currGenerating && currGenerating !== prevGenerating) {
+      const section = generatingSections[0]
+      const headingText = String(section.headingPath || `セクション${section.index + 1}`)
+        .replace(/^#+\s*/, '')
+        .slice(0, 35)
+      const index = sections.findIndex((s) => s.id === section.id) + 1
+      pushLog({
+        at: now,
+        kind: 'info',
+        title: `✍️ セクション${index}「${headingText}」の執筆開始`,
+        detail: `残り${sections.length - generatedSections.length}セクション`,
+      })
+    }
+    logPrevGeneratingSectionRef.current = currGenerating
+  }, [job?.sections, job, pushLog])
 
   useEffect(() => {
     const cur = job?.status || null
@@ -825,14 +960,14 @@ export default function SeoJobPage() {
                         <Zap className="w-5 h-5 text-blue-600" />
                       </div>
                       <div>
-                        <p className="text-xs font-black text-gray-900">工場稼働中（いま作ってます）</p>
+                        <p className="text-xs font-black text-gray-900">AI稼働中</p>
                         <p className="text-[10px] font-bold text-gray-500">
                           現在の工程「{STEP_LABELS[job.step] || job.step}」は平均 {Math.max(1, Math.round(stepExpected / 60))}分以内が多いです
                         </p>
                       </div>
                     </div>
                     <div className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
-                      ベルトコンベア稼働中
+                      AI稼働中
                     </div>
                   </div>
 
@@ -946,7 +1081,7 @@ export default function SeoJobPage() {
                     <div className="min-w-0">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">稼働ログ</p>
                       <p className="text-sm font-black text-gray-900 mt-1 truncate">
-                        いま起きていること（自動更新）
+                        記事制作の進捗ログ
                       </p>
                     </div>
                     {!logAutoScroll && (

@@ -31,7 +31,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     if (userId) {
       if (String(article.userId || '') !== userId) {
         return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-      }
+  }
     } else {
       if (!guestId || String(article.guestId || '') !== guestId) {
         return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
