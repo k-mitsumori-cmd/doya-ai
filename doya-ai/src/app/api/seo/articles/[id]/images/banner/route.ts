@@ -15,17 +15,44 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
 
     await ensureSeoStorage()
 
+    const title = String(article.title || '').trim()
+    const keywords = String(((article.keywords as any) || []).join(', ')).trim()
+    const excerpt = String(article.finalMarkdown || article.outline || '')
+      .replace(/!\[[^\]]*?\]\([^)]+\)/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/`{3}[\s\S]*?`{3}/g, '')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+      .slice(0, 2200)
+
     const prompt = [
-      'Create a modern Japanese SEO article banner image.',
-      'CRITICAL: NO TEXT at all (no Japanese, no English, no numbers).',
-      'Create a clean visual with a large empty area for text overlay.',
-      'Style: professional, high contrast, modern.',
+      'あなたはBtoBマーケティングに精通したプロのデザイナー兼アートディレクターです。',
+      '以下の記事内容を正確に理解し、その要点が一目で伝わる「マーケティング用バナー画像」を作成してください。',
       '',
-      `Theme: ${article.title}`,
-      `Keywords: ${((article.keywords as any) || []).join(', ')}`,
+      '【前提条件】',
+      '・目的：記事の訴求内容を視覚的に要約し、クリック・理解を促進する',
+      '・用途：Webサイト/LP/広告/SNS（記事一覧のサムネ）',
+      '・トーン：信頼感・プロフェッショナル・わかりやすさを重視',
+      '・情報を盛り込みすぎず、「一瞬で伝わる」構成にする',
       '',
-      'Output: a single 16:9 banner image.',
-    ].join('\n')
+      '【必須インプット】',
+      `▼記事タイトル\n${title}`,
+      excerpt ? `\n▼記事の要約（または本文）\n${excerpt}` : '',
+      keywords ? `\n▼キーワード\n${keywords}` : '',
+      '\n▼ブランド・サービス名\nドヤライティングAI',
+      '\n▼カラー指定\n#2563EB（指定なしの場合も“青基調のBtoB”で）',
+      '\n▼サイズ\n1200×628（16:9）',
+      '',
+      '【重要：画像生成の制約】',
+      '・画像内に文字は一切入れない（日本語/英語/数字/記号含む）',
+      '・後で文字を載せられる大きな余白を確保する',
+      '',
+      '【最終ゴール】',
+      '「この記事を読むと何が分かるのか」が、バナーを見た瞬間に直感的に伝わる画像を生成してください。',
+    ]
+      .filter(Boolean)
+      .join('\n')
 
     const img = await geminiGenerateImagePng({
       prompt,

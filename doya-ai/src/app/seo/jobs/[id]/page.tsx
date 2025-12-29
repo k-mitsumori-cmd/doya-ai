@@ -15,8 +15,6 @@ import {
   XCircle,
   Zap,
   Clock,
-  Hourglass,
-  Timer,
   Brain,
   PenTool,
   Layers,
@@ -149,6 +147,72 @@ function formatHhMmSs(ms: number) {
   return `${hh}:${mm}:${ss}`
 }
 
+function stripMarkdown(md: string): string {
+  const s = String(md || '')
+  // ライブ表示用：ざっくりプレーンテキストへ
+  return s
+    .replace(/!\[[^\]]*?\]\([^)]+\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/`{3}[\s\S]*?`{3}/g, '')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/\s+\n/g, '\n')
+    .trim()
+}
+
+function buildSimulatedDraft(args: { title: string; heading: string; tone: string }) {
+  const t = String(args.title || '').trim()
+  const h = String(args.heading || '').trim()
+  const tone = String(args.tone || '').trim() || '丁寧'
+  const lines = [
+    `まず結論：${t ? `「${t}」` : '今回のテーマ'}の要点を整理します。`,
+    '',
+    `- ここで扱うポイント：${h || 'このセクションの要点'}`,
+    '- 迷いやすい判断基準：比較軸／優先順位／落とし穴',
+    '- すぐ使える具体例：テンプレ／チェックリスト／手順',
+    '',
+    `文章トーン：${tone}（読みやすさ優先で推敲中）`,
+    '',
+    '…（執筆中）',
+  ]
+  return lines.join('\n')
+}
+
+function useTypewriter(text: string, opts?: { cps?: number; maxChars?: number }) {
+  const cps = Math.max(15, Math.min(90, Number(opts?.cps || 55))) // chars per second
+  const maxChars = Math.max(240, Math.min(1400, Number(opts?.maxChars || 900)))
+  const src = String(text || '').slice(0, maxChars)
+  const [out, setOut] = useState('')
+  const rafRef = useRef<number | null>(null)
+  const startRef = useRef<number>(0)
+
+  useEffect(() => {
+    if (!src) {
+      setOut('')
+      return
+    }
+    startRef.current = performance.now()
+    setOut('')
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    const tick = (now: number) => {
+      const elapsed = Math.max(0, now - startRef.current)
+      const n = Math.min(src.length, Math.floor((elapsed / 1000) * cps))
+      setOut(src.slice(0, Math.max(1, n)))
+      if (n < src.length) rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src])
+
+  return out
+}
+
 
 export default function SeoJobPage() {
   const params = useParams<{ id: string }>()
@@ -188,6 +252,28 @@ export default function SeoJobPage() {
     // index順で安定表示
     return list.sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
   }, [job?.sections])
+
+  const generatingSection = useMemo(() => {
+    const list = job?.sections || []
+    return list.find((s) => s.status === 'generating') || null
+  }, [job?.sections])
+
+  const lastCompletedSection = useMemo(() => {
+    if (!reviewedSections.length) return null
+    return reviewedSections[reviewedSections.length - 1] || null
+  }, [reviewedSections])
+
+  const liveHeading = String(generatingSection?.headingPath || lastCompletedSection?.headingPath || '').trim()
+  const liveSource = useMemo(() => {
+    const tone = String((job as any)?.article?.tone || '').trim()
+    const title = String(job?.article?.title || '').trim()
+    const raw = String((generatingSection?.content || lastCompletedSection?.content || '') || '').trim()
+    if (raw) return stripMarkdown(raw)
+    if (generatingSection) return stripMarkdown(buildSimulatedDraft({ title, heading: liveHeading, tone }))
+    return stripMarkdown(buildSimulatedDraft({ title, heading: liveHeading || '本文', tone }))
+  }, [generatingSection, lastCompletedSection, job?.article?.title, (job as any)?.article?.tone, liveHeading])
+
+  const liveTyped = useTypewriter(liveSource, { cps: 65, maxChars: 900 })
 
   // 現在のステップインデックス
   const currentStepIndex = useMemo(() => {
@@ -751,97 +837,188 @@ export default function SeoJobPage() {
             </div>
           </div>
 
-          {/* 進捗（最重要：上に配置） */}
-          <div className="mt-5 max-w-5xl mx-auto">
-            <div className="bg-white rounded-[28px] border border-gray-100 shadow-xl shadow-blue-500/5 p-5 sm:p-6">
-              {/* ステップ進捗 */}
-              <div className="mb-5">
-                <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
-                  {STEPS.map((step, idx) => {
-                    const isActive = idx === currentStepIndex
-                    const isCompleted = idx < currentStepIndex
-                    const Icon = step.icon
-
+          {/* セクション進捗（上に上げる） */}
+          {!isDone && job.sections.length > 0 && (
+            <div className="mt-6 max-w-5xl mx-auto">
+              <div className="bg-white rounded-[28px] border border-gray-100 shadow-xl shadow-blue-500/5 p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-base sm:text-lg font-black text-gray-900 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    セクション進捗
+                    <span className="text-xs font-black text-gray-500">
+                      （{reviewedCount}/{job.sections.length}）
+                    </span>
+                  </h2>
+                  <div className="text-[10px] font-black text-gray-500">
+                    {heartbeatAgo === null ? '通信中…' : `最終更新: ${heartbeatAgo}秒前`}
+                  </div>
+                </div>
+                <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {job.sections.map((s, idx) => {
+                    const isGenerating = s.status === 'generating'
+                    const isComplete = s.status === 'reviewed' || s.status === 'generated'
+                    const isErr = s.status === 'error'
                     return (
                       <motion.div
-                        key={step.key}
-                        className={`flex-1 min-w-[92px] flex flex-col items-center gap-2 p-3 rounded-2xl transition-all border ${
-                          isActive
-                            ? 'bg-blue-50 border-blue-100 scale-[1.03]'
-                            : isCompleted
-                            ? 'bg-gray-50 border-gray-100'
-                            : 'bg-white border-transparent opacity-70'
+                        key={s.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.03 }}
+                        className={`p-4 rounded-2xl border transition-all shadow-sm ${
+                          isGenerating
+                            ? 'bg-blue-50 border-blue-100'
+                            : isComplete
+                              ? 'bg-emerald-50 border-emerald-100'
+                              : isErr
+                                ? 'bg-red-50 border-red-100'
+                                : 'bg-white border-gray-100'
                         }`}
-                        animate={isActive ? { scale: [1, 1.05, 1] } : {}}
-                        transition={{ repeat: isActive && isRunning ? Infinity : 0, duration: 2 }}
                       >
-                        <div
-                          className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                            isCompleted
-                              ? 'bg-emerald-50'
-                              : isActive
-                              ? 'bg-blue-100/70'
-                              : 'bg-gray-50'
-                          }`}
-                        >
-                          {isCompleted ? (
-                            <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                          ) : isActive && isRunning ? (
-                            <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
-                          ) : (
-                            <Icon className={`w-6 h-6 ${isActive ? 'text-blue-600' : 'text-gray-400'}`} />
-                          )}
+                        {isGenerating && (
+                          <motion.div
+                            className="mb-3 h-1.5 rounded-full bg-gradient-to-r from-blue-200 via-blue-500 to-indigo-200"
+                            animate={{ backgroundPositionX: ['0%', '100%'] }}
+                            transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
+                            style={{ backgroundSize: '200% 100%' }}
+                          />
+                        )}
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                              isGenerating
+                                ? 'bg-blue-100'
+                                : isComplete
+                                  ? 'bg-emerald-100'
+                                  : isErr
+                                    ? 'bg-red-100'
+                                    : 'bg-gray-100'
+                            }`}
+                          >
+                            {isGenerating ? (
+                              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                            ) : isComplete ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                            ) : isErr ? (
+                              <XCircle className="w-4 h-4 text-red-700" />
+                            ) : (
+                              <span className="text-xs font-black text-gray-500">{s.index + 1}</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-black text-gray-900 truncate">
+                              {s.headingPath || `セクション ${s.index + 1}`}
+                            </p>
+                            <p className="text-[10px] text-gray-500 mt-1 font-bold">
+                              {SECTION_STATUS_LABELS[s.status] || s.status} · {s.plannedChars}字
+                            </p>
+                          </div>
                         </div>
-                        <span className={`text-[10px] sm:text-xs font-black ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
-                          {step.label}
-                        </span>
                       </motion.div>
                     )
                   })}
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* 心拍（進捗更新の証拠） */}
-              <div className="mt-2 text-xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-gray-500 font-bold">
-                    <span className="inline-flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${heartbeatAgo !== null && heartbeatAgo <= 10 ? 'bg-emerald-500' : 'bg-gray-300'} ${isRunning ? 'animate-pulse' : ''}`} />
-                      {isDone
-                        ? '完了しました'
-                        : (heartbeatAgo === null ? '通信中...' : `最終更新: ${heartbeatAgo}秒前（4秒ごとに確認）`)}
-                    </span>
-                    <span className="w-1 h-1 rounded-full bg-gray-200" />
-                    <span>経過: {formatMmSs(elapsed)}</span>
-                    {isRunning && (
-                      <>
-                        <span className="w-1 h-1 rounded-full bg-gray-200" />
-                        <span className="text-gray-400">
-                          ※「記事統合」「図解生成」は進捗が止まって見えても内部で動いていることがあります
-                        </span>
-                      </>
-                    )}
+          {/* “できていく”演出（上部に配置） */}
+          {!isDone && !isError && (
+            <div className="mt-6 max-w-5xl mx-auto">
+              <div className="bg-white rounded-[28px] border border-gray-100 shadow-xl shadow-blue-500/5 overflow-hidden">
+                <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">制作中（ライブ）</p>
+                    <p className="text-sm sm:text-base font-black text-gray-900 truncate">
+                      {job.step?.toLowerCase() === 'outline'
+                        ? '見出しを組み立て中'
+                        : job.step?.toLowerCase() === 'sections'
+                          ? '本文を執筆中'
+                          : job.step?.toLowerCase() === 'integrate'
+                            ? '推敲・統合中'
+                            : job.step?.toLowerCase() === 'media'
+                              ? 'バナー/図解を生成中'
+                              : '準備中'}
+                    </p>
+                  </div>
+                  <div className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
+                    生成中
+                  </div>
+                </div>
+
+                <div className="p-5 sm:p-6 grid lg:grid-cols-2 gap-5">
+                  {/* 進行アクション */}
+                  <div className="rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-slate-50 p-5">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">いま起きていること</p>
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-gray-900">タイトル確定</p>
+                          <p className="text-[11px] font-bold text-gray-500 truncate">{job.article.title}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${
+                          job.article.outline ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'
+                        }`}>
+                          {job.article.outline ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+                          ) : (
+                            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-gray-900">見出し（構成）</p>
+                          <p className="text-[11px] font-bold text-gray-500">
+                            {job.article.outline ? '見出しが確定しました' : '見出しを設計しています'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+                          <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-gray-900">本文執筆</p>
+                          <p className="text-[11px] font-bold text-gray-500">
+                            {generatingSection ? `「${String(generatingSection.headingPath || '').replace(/^#+\\s*/, '').slice(0, 26)}」を書いています` : '推敲しながら書き進めています'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ライブ執筆（タイピング演出） */}
+                  <div className="rounded-2xl border border-gray-100 bg-white p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ライブ執筆</p>
+                        <p className="mt-1 text-sm font-black text-gray-900 truncate">
+                          {liveHeading ? liveHeading : '本文'}
+                        </p>
+                      </div>
+                      <div className="text-[10px] font-black text-gray-500 tabular-nums">
+                        {formatMmSs(elapsed)}
+                      </div>
+                    </div>
+                    <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                      <pre className="whitespace-pre-wrap text-[12px] leading-relaxed font-bold text-gray-700">
+                        {liveTyped}
+                        <span className="inline-block w-2 translate-y-[1px] bg-gray-400/70 ml-0.5 animate-pulse">&nbsp;</span>
+                      </pre>
+                      <p className="mt-2 text-[10px] font-bold text-gray-400">
+                        セクションが生成完了すると、実際の本文プレビューにも反映されます
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="mt-6">
-            <AiThinkingStrip
-              show={!isDone && !isError}
-              title="AIが思考を巡らせています…"
-              subtitle={`SEO / LLMOの観点で、工程「${STEP_LABELS[job.step] || job.step}」を最適化中です`}
-              tags={['SEO', 'LLMO', '構造化', '網羅性', '読みやすさ']}
-              steps={[
-                '検索意図を推定して構造化',
-                '上位記事を参考に網羅性を強化',
-                'LLMO向けに結論・FAQを整備',
-                '文章の一貫性をチェック',
-              ]}
-              compact
-            />
-          </div>
+          )}
         </motion.div>
 
         {/* メインカード */}
@@ -866,128 +1043,7 @@ export default function SeoJobPage() {
 
           {/* コンテンツ */}
           <div className="p-6 sm:p-8 lg:p-10">
-            {/* 工場（ベルトコンベア）演出 */}
-            {isRunning && (
-              <div className="mb-8">
-                <div className="rounded-3xl border border-gray-100 bg-gradient-to-br from-white to-slate-50 overflow-hidden">
-                  <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center">
-                        <Zap className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-black text-gray-900">AI稼働中</p>
-                        <p className="text-[10px] font-bold text-gray-500">
-                          現在の工程「{STEP_LABELS[job.step] || job.step}」を実行中です
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
-                      AI稼働中
-                    </div>
-                  </div>
-
-                  <div className="relative overflow-hidden px-4 sm:px-6 py-6">
-                    {/* ベルト本体（斜線が流れる） */}
-                    <div className="absolute inset-x-4 sm:inset-x-6 top-1/2 -translate-y-1/2 h-16 rounded-3xl border border-gray-200 bg-slate-50 shadow-inner" />
-                    <motion.div
-                      className="absolute inset-x-4 sm:inset-x-6 top-1/2 -translate-y-1/2 h-16 rounded-3xl opacity-60"
-                      style={{
-                        backgroundImage:
-                          'repeating-linear-gradient(45deg, rgba(37,99,235,0.06) 0px, rgba(37,99,235,0.06) 12px, rgba(99,102,241,0.03) 12px, rgba(99,102,241,0.03) 24px)',
-                        backgroundSize: '40px 40px',
-                      }}
-                      animate={{ backgroundPositionX: ['0px', '-240px'] }}
-                      transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-                    />
-                    {/* 視線誘導（中央スポットライト） */}
-                    <div className="pointer-events-none absolute inset-x-4 sm:inset-x-6 top-1/2 -translate-y-1/2 h-16 rounded-3xl">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/70 to-transparent" />
-                    </div>
-                    {/* ローラー */}
-                    <div className="absolute inset-x-6 sm:inset-x-8 top-1/2 -translate-y-1/2 flex items-center justify-between pointer-events-none">
-                      {Array.from({ length: 8 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-5 h-5 rounded-full bg-white/70 border border-gray-200/70 shadow-sm flex items-center justify-center opacity-45"
-                        >
-                          <div className="w-2 h-2 rounded-full bg-gray-200" />
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* 箱（工程）がベルト上を流れる */}
-                    <motion.div
-                      className="relative flex gap-5 w-[260%] py-2 z-10"
-                      animate={{ x: ['0%', '-55%'] }}
-                      transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                    >
-                      {[...STEPS, ...STEPS].map((s, i) => {
-                        const isCur = String(s.key).toLowerCase() === currentStepKey
-                        const isDoneStep = STEPS.findIndex((x) => x.key === s.key) < currentStepIndex
-                        const Icon = s.icon
-                        return (
-                          <motion.div
-                            key={`${s.key}_${i}`}
-                            className={`relative min-w-[180px] px-4 py-3 rounded-2xl border shadow-lg flex items-center gap-3 backdrop-blur-[1px] ${
-                              isCur
-                                ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/30 ring-2 ring-blue-300'
-                                : isDoneStep
-                                ? 'bg-emerald-50 text-emerald-800 border-emerald-100'
-                                : 'bg-white text-gray-900 border-gray-200'
-                            }`}
-                            animate={isCur ? { y: [0, -1, 0] } : { y: [0, -0.5, 0] }}
-                            transition={{ duration: isCur ? 1.4 : 1.8, repeat: Infinity, ease: 'easeInOut' }}
-                          >
-                            {/* 車輪っぽい丸（主張を弱めて見やすく） */}
-                            <div className="pointer-events-none absolute -bottom-1.5 left-5 flex gap-2 opacity-25">
-                              <div className={`w-3.5 h-3.5 rounded-full border ${isCur ? 'bg-white/20 border-white/30' : 'bg-white border-gray-200'}`} />
-                              <div className={`w-3.5 h-3.5 rounded-full border ${isCur ? 'bg-white/20 border-white/30' : 'bg-white border-gray-200'}`} />
-                            </div>
-
-                            <div
-                              className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                                isCur ? 'bg-white/15' : isDoneStep ? 'bg-emerald-100' : 'bg-gray-50'
-                              }`}
-                            >
-                              {isCur ? <Loader2 className="w-5 h-5 animate-spin" /> : <Icon className={`w-5 h-5 ${isDoneStep ? 'text-emerald-700' : 'text-gray-700'}`} />}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-black truncate">{s.label}</p>
-                              <p className={`text-[10px] font-bold truncate ${isCur ? 'text-white/85' : isDoneStep ? 'text-emerald-700/80' : 'text-gray-500'}`}>
-                                {isCur ? '加工中…（稼働中）' : isDoneStep ? '完了' : '待機'}
-                              </p>
-                            </div>
-                          </motion.div>
-                        )
-                      })}
-                    </motion.div>
-
-                    {/* 両端フェード */}
-                    <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-white to-transparent" />
-                    <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-white to-transparent" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Tips（生成中のみ） */}
-            {isRunning && (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={tipIndex}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-center py-4 px-6 rounded-2xl bg-gray-50 border border-gray-100 mb-8"
-                >
-                  <p className="text-gray-700 text-sm font-bold">{TIPS[tipIndex]}</p>
-                  <p className="mt-1 text-[10px] font-bold text-gray-400">
-                    進捗が止まって見えてもOKです（特に「記事統合」「図解生成」）。最終更新が動いていれば正常稼働です。
-                  </p>
-                </motion.div>
-              </AnimatePresence>
-            )}
+            {/* ベルトコンベア/Tips は分かりにくいため削除（上部のライブ演出で代替） */}
 
             {/* “動いてる感”ログ（より細かく・スクロールで追える） */}
             {(isRunning || isPaused) && (
@@ -1175,87 +1231,6 @@ export default function SeoJobPage() {
             )}
           </div>
         </motion.div>
-
-        {/* セクション進捗（生成中・完了時） */}
-        {!isDone && job.sections.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mt-8"
-          >
-            <h2 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
-              セクション進捗 ({reviewedCount}/{job.sections.length})
-            </h2>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {job.sections.map((s, idx) => {
-                const isGenerating = s.status === 'generating'
-                const isComplete = s.status === 'reviewed' || s.status === 'generated'
-                const isErr = s.status === 'error'
-
-                return (
-                  <motion.div
-                    key={s.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    className={`p-4 rounded-2xl border transition-all shadow-sm ${
-                      isGenerating
-                        ? 'bg-blue-50 border-blue-100'
-                        : isComplete
-                        ? 'bg-emerald-50 border-emerald-100'
-                        : isErr
-                        ? 'bg-red-50 border-red-100'
-                        : 'bg-white border-gray-100'
-                    }`}
-                  >
-                    {/* レビュー中っぽい演出（生成中カードのみ） */}
-                    {isGenerating && (
-                      <motion.div
-                        className="mb-3 h-1.5 rounded-full bg-gradient-to-r from-blue-200 via-blue-500 to-indigo-200"
-                        animate={{ backgroundPositionX: ['0%', '100%'] }}
-                        transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
-                        style={{ backgroundSize: '200% 100%' }}
-                      />
-                    )}
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                          isGenerating
-                            ? 'bg-blue-100'
-                            : isComplete
-                            ? 'bg-emerald-100'
-                            : isErr
-                            ? 'bg-red-100'
-                            : 'bg-gray-100'
-                        }`}
-                      >
-                        {isGenerating ? (
-                          <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                        ) : isComplete ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                        ) : isErr ? (
-                          <XCircle className="w-4 h-4 text-red-700" />
-                        ) : (
-                          <span className="text-xs font-black text-gray-500">{s.index + 1}</span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-gray-900 truncate">
-                          {s.headingPath || `セクション ${s.index + 1}`}
-                        </p>
-                        <p className="text-[10px] text-gray-500 mt-1 font-bold">
-                          {SECTION_STATUS_LABELS[s.status] || s.status} · {s.plannedChars}字
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )
-              })}
-            </div>
-          </motion.div>
-        )}
 
         {/* 完成済み本文プレビュー（生成中でも“できたところ”が読める） */}
         {!isDone && reviewedSections.length > 0 && (

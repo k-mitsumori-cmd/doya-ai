@@ -188,7 +188,7 @@ export default function SeoNewArticlePage() {
   const [articleType, setArticleType] = useState<ArticleTypeId>('howto')
   const [title, setTitle] = useState('')
   const [keywords, setKeywords] = useState('')
-  const [targetChars, setTargetChars] = useState(30000)
+  const [targetChars, setTargetChars] = useState(10000)
   const [tone, setTone] = useState<typeof TONES[number]>('丁寧')
   const [persona, setPersona] = useState('')
   const [searchIntent, setSearchIntent] = useState('')
@@ -923,7 +923,8 @@ export default function SeoNewArticlePage() {
                     {TARGETS.map((n) => {
                       const selected = targetChars === n
                       const locked = n > charLimit
-                      const requiredPlan = n >= 50000 ? 'ENTERPRISE' : n > 10000 ? 'PRO' : n > 5000 ? 'FREE' : 'GUEST'
+                      // PROの文字数上限が10,000字の場合、10,000字超はEnterpriseが必要
+                      const requiredPlan = n >= 50000 ? 'ENTERPRISE' : n > 10000 ? 'ENTERPRISE' : n > 5000 ? 'FREE' : 'GUEST'
                       const requiredLabel =
                         requiredPlan === 'ENTERPRISE' ? 'Enterpriseが必要' : requiredPlan === 'PRO' ? 'PROが必要' : requiredPlan === 'FREE' ? 'ログインが必要' : 'ゲストOK'
                       const hint = locked ? `${requiredLabel}（クリックでアップグレード）` : `${n.toLocaleString()}字を選択`

@@ -174,7 +174,7 @@ function SeoSidebarImpl({
             現在：{seoPlanLabel === 'GUEST' ? 'ゲスト' : seoPlanLabel === 'FREE' ? '無料' : seoPlanLabel}
           </p>
           <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
-            {nextPlanLabel === 'PRO' && <>PRO: 月額¥9,980で30,000字まで</>}
+            {nextPlanLabel === 'PRO' && <>PRO: 月額¥9,980で10,000字まで</>}
             {nextPlanLabel === 'ENTERPRISE' && <>Enterprise: 月額¥49,980で50,000字まで</>}
             {nextPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
           </p>
