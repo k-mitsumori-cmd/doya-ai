@@ -617,8 +617,10 @@ export default function AdminUsersPage() {
                     {/* ライティング残り生成数 列 */}
                     <td className="px-6 py-4">
                       {(() => {
+                        // コンプリートパックなのでbannerのプランを参照（共通プラン）
+                        const bannerSub = user.serviceSubscriptions.find((s) => s.serviceId === 'banner')
                         const writingSub = user.serviceSubscriptions.find((s) => s.serviceId === 'writing')
-                        const currentPlan = writingSub?.plan || user.plan || 'FREE'
+                        const currentPlan = bannerSub?.plan || user.plan || 'FREE'
                         const dailyUsage = writingSub?.dailyUsage || 0
                         const remaining = getRemainingGenerations('writing', currentPlan, dailyUsage)
                         const limit = getDailyLimit('writing', currentPlan)

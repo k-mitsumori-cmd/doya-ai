@@ -23,7 +23,7 @@ const errorMessages: Record<string, string> = {
 function SignInContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const callbackUrl = searchParams.get('callbackUrl') || '/banner'
+  const callbackUrl = searchParams.get('callbackUrl') || '/seo'
   const error = searchParams.get('error')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -85,7 +85,7 @@ function SignInContent() {
             <Sparkles className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-black text-gray-900 mb-2">ドヤマーケAI</h1>
-          <p className="text-lg text-gray-600">URLだけで広告バナーを自動生成</p>
+          <p className="text-lg text-gray-600">マーケティングのAIならお任せ</p>
         </div>
 
         {/* エラー表示 */}
@@ -133,8 +133,8 @@ function SignInContent() {
 
         {/* ログインせずに使う */}
         <div className="mt-6 text-center">
-          <Link href="/banner" className="text-blue-600 hover:underline text-base">
-            ログインせずに試す → 
+          <Link href="/seo" className="text-blue-600 hover:underline text-base">
+            ログインせずに試す →
           </Link>
         </div>
 

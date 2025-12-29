@@ -146,34 +146,37 @@ export async function GET(request: NextRequest) {
 
     for (const serviceId of serviceIds) {
       try {
+        // 表示名は writing だが、DB上の serviceId は seo のまま（互換のため）
+        const queryServiceId = serviceId === 'writing' ? 'seo' : serviceId
+
         // サービス別ユーザー数
         const serviceUsers = await prisma.userServiceSubscription.count({
-          where: { serviceId },
+          where: { serviceId: queryServiceId },
         })
 
         // サービス別PROユーザー
         const serviceProUsers = await prisma.userServiceSubscription.count({
-          where: { serviceId, plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] } },
+          where: { serviceId: queryServiceId, plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] } },
         })
 
         // サービス別生成数
         const serviceGenerations = await prisma.generation.count({
-          where: { serviceId },
+          where: { serviceId: queryServiceId },
         })
 
         // サービス別今日の生成
         const serviceTodayGenerations = await prisma.generation.count({
-          where: { serviceId, createdAt: { gte: todayStart } },
+          where: { serviceId: queryServiceId, createdAt: { gte: todayStart } },
         })
 
         // サービス別先月の生成
         const serviceLastMonthGenerations = await prisma.generation.count({
-          where: { serviceId, createdAt: { gte: lastMonthStart, lte: lastMonthEnd } },
+          where: { serviceId: queryServiceId, createdAt: { gte: lastMonthStart, lte: lastMonthEnd } },
         })
 
         // サービス別今月の生成
         const serviceMonthGenerations = await prisma.generation.count({
-          where: { serviceId, createdAt: { gte: monthStart } },
+          where: { serviceId: queryServiceId, createdAt: { gte: monthStart } },
         })
 
         // 成長率
