@@ -133,7 +133,7 @@ export const SEO_PRICING: ServicePricing = {
   serviceIcon: '🧠',
   guestLimit: 3,      // ゲスト: 合計3回（記事作成）まで
   freeLimit: 3,       // ログイン無料: 1日3回まで
-  proLimit: 10,       // PRO: 1日10回まで
+  proLimit: 5,        // PRO: 1日5回まで
   enterpriseLimit: 30, // Enterprise: 1日30回まで
   // 文字数制限（1記事あたり）
   charLimit: {
@@ -169,11 +169,11 @@ export const SEO_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '¥9,980',
       period: '/月（税込）',
-      description: '月額9,980円：1日10回 / 30,000字まで',
+      description: '月額9,980円：1日5回 / 30,000字まで',
       popular: true,
       color: 'slate',
       features: [
-        { text: '1日10回まで生成', included: true },
+        { text: '1日5回まで生成', included: true },
         { text: '1記事30,000字まで生成可能', included: true },
         { text: '分割生成（安定化）', included: true },
         { text: '監査（二重チェック）', included: true },
@@ -210,7 +210,7 @@ export function getSeoDailyLimitByUserPlan(plan: string | null | undefined): num
   if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.SEO_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
   if (p === 'ENTERPRISE') return 30
-  if (p === 'PRO') return 10
+  if (p === 'PRO') return SEO_PRICING.proLimit
   return SEO_PRICING.freeLimit
 }
 
