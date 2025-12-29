@@ -221,65 +221,74 @@ function buildWebsiteBannerPrompt(input: {
   page_text: string
   color_hints: string
   visual_hints: string
+  inferred?: { industry?: string; objective?: string; target?: string; evidence_keywords?: string[] }
 }) {
-  // ユーザー提示プロンプト（仕様）に合わせて、URLのみから解析→最終画像プロンプトまで作る
-  return `あなたは「Webサイトを一瞬で理解し、最適な広告バナーを自動生成するAI」です。
+  const inferredIndustry = safeTrim(input.inferred?.industry, 64) || '未推定'
+  const inferredObjective = safeTrim(input.inferred?.objective, 64) || '未推定'
+  const inferredTarget = safeTrim(input.inferred?.target, 120) || '未推定'
+  const inferredEvidence = (Array.isArray(input.inferred?.evidence_keywords) ? input.inferred?.evidence_keywords : [])
+    .map((x) => safeTrim(String(x || ''), 24))
+    .filter(Boolean)
+    .slice(0, 12)
+    .join('、') || 'なし'
 
-この機能の最大の価値は、ユーザーが【一切プロンプトを書かず】、【サイトURLを入力するだけ】で、そのサイトに“本当に合った”バナーを生成できることです。
+  // URL解析結果（title/description/text/visual hints 等）を材料に「成果前提の広告バナー」を設計し、最終画像プロンプトまで落とし込む
+  // NOTE: 出力は互換のため banner_analysis / image_generation_prompt の2キーのみ（JSONのみ）
+  return `あなたは「広告・マーケティング成果を最大化するバナー」を専門に制作する、トップレベルの広告デザイナー兼マーケターです。
 
-ユーザーから与えられる入力は、以下の1つのみです。
+これから渡されるのは、あるWebサイト（target_url）を解析して得られた情報です。
+
+【あなたの目的】
+そのサイト内容・業種・ユーザー心理に最適化された「思わずクリック・申込み・ダウンロードしたくなる広告バナー」を生成してください。
+
+単なる見た目の良さではなく、
+・広告として強い（クリック/申込につながる）
+・情報が一瞬で伝わる（視認性/優先順位）
+・実際に使われていそう（人が作ったようなクオリティ）
+を最優先してください。
+
+---
+
+【最重要：あなたが内部で必ず行うステップ】
+
+STEP1: サイト理解（推定してよいが、根拠は page_text/metadata から）
+- サービス内容（何を提供しているか）
+- 業種/業界（該当しやすいものを1つ選ぶ）
+- 想定ターゲット（年齢/性別/立場/状況）
+- 提供価値（ベネフィット：ユーザーが得る結果）
+- 強い訴求軸（価格/実績/簡単/限定/専門性/権威性/緊急性 など）
+- 最適CTA（問い合わせ/資料DL/無料相談/申込/購入/採用応募など）
+
+STEP2: 勝ちパターン（構成）を自動選択（必須）
+以下のいずれかを選び、業種に最適化して使うこと（混ぜすぎない）：
+1) 課題提起 → 解決策 → ベネフィット → 信頼要素 → CTA（BtoB/SaaSに強い）
+2) ベネフィット先出し → 実績/根拠 → 具体内容 → CTA（教育/スクールに強い）
+3) オファー（割引/特典） → 期限/限定 → 商品/内容 → CTA（EC/キャンペーンに強い）
+4) 効果/変化 → 成分/理由 → 安心要素（監修/実績） → CTA（美容/健康に強い）
+5) 仕事内容/魅力 → 条件/メリット → 信頼/文化 → CTA（採用/転職に強い）
+
+STEP3: コピー設計（日本の広告バナーらしい短さ/強さ）
+- メイン見出し：短く強い（目安 8〜16文字）。一瞬で価値が伝わる言い回し。
+- サブコピー：0〜2行。補足は削り、主張を強める。
+- CTA：短く自然（例：無料で試す/資料DL/無料相談/今すぐチェック）
+- 重要：根拠のない数字や誇張（「必ず」「100%」等）は禁止。サイトに明示がある場合のみ数値利用可。
+
+STEP4: デザイン（人間のデザイナーの思考）
+- 文字が「確実に読める」ことを最優先（コントラスト、余白、文字量）
+- 情報の優先順位：メインコピー ＞ サブコピー ＞ CTA ＞ 補足（ロゴ等）
+- 写真/人物/商品は “意味のある配置” と “視線誘導” を行う（ただ置かない）
+- 安っぽい/AI感が強い装飾は禁止（過度なグロー、雑な3D、過密、ランダムフォント）
+- BtoB/教育は「信頼・整理・プロ感」、ECは「お得感・緊急性」、美容は「清潔感・余白」を優先
+
+STEP5: 最終プロンプト（image_generation_prompt）を作る
+- 1本のプロンプトとして完結（見出し/箇条書き不要）
+- 生成するバナーは日本語。文字が崩れない/読めるよう強く指示
+- サイズ（size）に合わせたレイアウトの指示を含める
+
+---
+
+【システムから渡す解析情報（この情報のみで設計する）】
 - target_url: ${input.target_url}
-
-それ以外の条件（用途・業種・トーン・コピー・色・CTA・構成）は、すべてあなたがサイト内容から自動で判断・補完してください。
-
----
-
-## 1. サイト自動解析（最重要）
-target_url を実際に見て、以下を必ず読み取ってください。
-- このサイトは「何のサービス / 会社」か
-- 誰向けのサービスか（ターゲット）
-- 何が一番の強み・価値か（1〜3点）
-- サイト全体のトーン（信頼感 / 高級感 / テック / 親しみ / ポップ / 採用向け 等）
-- サイト全体の ブランドトーン・世界観（必須）
-- 使用されている主要カラー（色相・彩度・明度）（必須）
-- 使用されている画像の種類（写真 / イラスト / アイコン、人物あり・なし、実写 or 抽象）（必須）
-- 各色・画像の使用面積比率（必須）
-- メインカラー・サブカラーは「視覚的な面積比」で判定（必須）
-- 最も自然なCTA（問い合わせ / 資料DL / 申し込み / 採用応募など）
-※ 明示されていない情報は、サイト全体の文脈から「広告として最も自然な形」で推定してよい。
-
-## 2. バナー用コピーを自動設計
-以下をすべて自動で作成すること。
-- メイン見出し（バナーで一番目立たせる一文）
-- 補助コピー（0〜2行）
-- CTA文言（1つ）
-※ サイトに明確な数字・実績がある場合のみ根拠として使用。嘘・過剰表現は禁止。
-
-## 3. デザイン判断（人間のデザイナーの思考を再現）
-- バナーの雰囲気、配色、文字量、余白、情報優先順位、写真or抽象背景を自動決定
-- 採用系なら人物感、BtoBなら信頼感を優先
-重要ルール：
-- 文字は必ず「読める」「正しい日本語」
-- 装飾よりも“一瞬で理解できる”こと最優先
-- 広告バナーとしてCTRが出そうな構成
-
-## 4. 画像生成AIに渡す最終プロンプトを作成
-- 日本語バナーであること
-- 見出し・補助コピー・CTAをすべて含める
-- 文字が崩れないよう強く指示
-- 配色・雰囲気・構図を具体的に記述
-- 広告バナー品質（高解像度・シャープ）
-
-## 5. 出力形式（必須）
-次の2つだけを出力する（JSONのみ。余計な文章やキーは禁止）：
-{
-  "banner_analysis": "",
-  "image_generation_prompt": ""
-}
-
----
-
-### システムから渡す補助情報（解析の材料）
 - size: ${input.size}
 - language: ${input.language}
 - optional_assets:
@@ -297,19 +306,36 @@ target_url を実際に見て、以下を必ず読み取ってください。
 - color_hints: ${safeTrim(input.color_hints, 800)}
 - visual_hints: ${safeTrim(input.visual_hints, 1400)}
 
+【バックエンド推定ヒント（あくまでヒント。矛盾する場合は page_text を優先）】
+- inferred_industry: ${inferredIndustry}
+- inferred_objective: ${inferredObjective}
+- inferred_target: ${inferredTarget}
+- inferred_evidence_keywords: ${inferredEvidence}
+
 ### page_text（重要：ページ本文の抜粋）
 ${safeTrim(input.page_text, 18000)}
 
-## 出力形式（厳守）
-- JSONの "banner_analysis" には、次の順番で必ず含める（見出しも含める）：
-  1) サイト全体の簡易分析まとめ
-  2) メインカラー / サブカラー（理由つき。面積比を根拠にする）
-  3) サービス内容・ターゲット・訴求軸の整理
-- JSONの "image_generation_prompt" には「最終的に使用するバナー画像生成プロンプト（完成形）」のみを出す（余計な見出しや文章は入れない）
+---
 
-## 最重要
-- image_generation_prompt は「そのまま画像生成AIに渡せる完成形」にする（1本のプロンプト）。
-- バナー内の文字が読みやすいよう、文字数を詰め込みすぎない。
+【出力形式（厳守）】
+次の2つだけを出力する（JSONのみ。余計な文章やキーは禁止）：
+{
+  "banner_analysis": "",
+  "image_generation_prompt": ""
+}
+
+【banner_analysis に必ず含める（見出し付き）】
+1) サイトの要約（サービス/業種/ターゲット/ベネフィット）
+2) 採用した勝ちパターン（上の1〜5のどれか）と理由
+3) 訴求軸（信頼/お得/権威/緊急など）とCTA方針
+4) メインカラー/サブカラー（color_hints/visual_hintsを根拠に）
+5) 採用するコピー案（メイン/サブ/CTA）※日本語で
+
+【image_generation_prompt の厳格ルール】
+- そのまま画像生成AIに渡せる “完成形の1本のプロンプト” のみ
+- 具体的に「レイアウト」「背景」「配色」「文字の階層」「CTAボタン」「余白」「写真/人物/商品配置」を指示
+- 日本語テキストは “読みやすく正確に” を強制（文字崩れ禁止、過密禁止）
+- 広告として実在しそうなクオリティ（安っぽさ/AI感の強いデザインは禁止）
 - 虚偽・過剰表現は禁止。`
 }
 
@@ -334,6 +360,70 @@ function extractColorHints(html: string): string {
     return parts.join(' / ')
   } catch {
     return ''
+  }
+}
+
+type InferredBannerInfo = { industry?: string; objective?: string; target?: string; evidence_keywords?: string[] }
+
+function inferBannerInfoFromText(args: { url: string; title?: string; description?: string; pageText: string }): InferredBannerInfo {
+  const blob = `${args.url}\n${args.title || ''}\n${args.description || ''}\n${args.pageText || ''}`.toLowerCase()
+  const hit = (words: Array<string | RegExp>) =>
+    words.some((w) => (typeof w === 'string' ? blob.includes(w) : w.test(blob)))
+
+  const evidence: string[] = []
+  const pushEvidence = (arr: string[]) => {
+    for (const w of arr) {
+      if (blob.includes(w.toLowerCase())) evidence.push(w)
+      if (evidence.length >= 12) break
+    }
+  }
+
+  // industry
+  let industry: string | undefined
+  if (hit(['ec', 'カート', '購入', '送料無料', 'セール', 'クーポン', '%off', 'off', /楽天|amazon|shopify/i])) {
+    industry = 'EC/セール/キャンペーン'
+    pushEvidence(['セール', 'クーポン', '送料無料', '購入'])
+  } else if (hit(['スクール', '講座', '受講', 'オンライン講座', 'カリキュラム', '資格', '未経験', '学習', '教材'])) {
+    industry = '教育/スクール'
+    pushEvidence(['未経験', '受講', '資格', 'カリキュラム'])
+  } else if (hit(['採用', '求人', 'エントリー', '転職', '面談', 'スカウト', '応募', '人材', 'キャリア'])) {
+    industry = '転職/採用/人材'
+    pushEvidence(['採用', '求人', '応募', '面談'])
+  } else if (hit(['美容', 'コスメ', 'スキンケア', '毛穴', '美白', 'エステ', 'ダイエット', 'サプリ', '健康', '食品', '成分', '監修'])) {
+    industry = '美容/健康/食品'
+    pushEvidence(['成分', '監修', 'スキンケア', '健康'])
+  } else if (hit(['saas', 'b2b', '導入', '資料請求', '無料相談', '工数', '業務', '効率化', '課題', '解決', '法人', 'セキュリティ', 'api'])) {
+    industry = 'BtoB/SaaS'
+    pushEvidence(['導入', '資料請求', '無料相談', '効率化'])
+  } else if (hit(['ノウハウ', '教材', 'メルマガ', 'LINE登録', '無料プレゼント', '特典', 'セミナー', 'ウェビナー', 'AIツール'])) {
+    industry = '情報商材/ノウハウ/AIツール'
+    pushEvidence(['特典', '無料', 'セミナー', 'AI'])
+  } else if (hit(['web制作', '制作会社', 'マーケティング', '広告運用', 'lp', 'seo', 'sns'])) {
+    industry = 'Web/IT/マーケ支援'
+    pushEvidence(['広告運用', 'SEO', 'SNS', 'LP'])
+  }
+
+  // objective
+  let objective: string | undefined
+  if (hit(['資料請求', 'ホワイトペーパー', 'download', 'ダウンロード'])) objective = '資料DL'
+  else if (hit(['問い合わせ', 'お問い合わせ', 'contact'])) objective = '問い合わせ'
+  else if (hit(['無料相談', '相談', 'demo', 'デモ'])) objective = '無料相談'
+  else if (hit(['購入', 'カート', '注文', 'buy'])) objective = '購入'
+  else if (hit(['申し込み', '申込', '予約', 'エントリー', '応募'])) objective = '申込/応募'
+
+  // target (rough)
+  let target: string | undefined
+  if (industry === 'BtoB/SaaS') target = '法人担当者（経営者/マーケ/情シス/営業/人事など）'
+  else if (industry === '教育/スクール') target = '学習者（未経験/スキルアップ/転職目的など）'
+  else if (industry === '転職/採用/人材') target = '求職者または採用担当者'
+  else if (industry === '美容/健康/食品') target = '悩みを持つ個人（主に女性/健康志向）'
+  else if (industry === 'EC/セール/キャンペーン') target = '購入検討中の個人ユーザー'
+
+  return {
+    industry,
+    objective,
+    target,
+    evidence_keywords: evidence.length > 0 ? Array.from(new Set(evidence)) : undefined,
   }
 }
 
@@ -1333,6 +1423,7 @@ export async function POST(request: NextRequest) {
       page_text: pageText,
       color_hints: colorHints,
       visual_hints: visualHints,
+      inferred: inferBannerInfoFromText({ url: targetUrl, title: meta?.title, description: meta?.description, pageText }),
     })
 
     const structured = await callGeminiForJson(specPrompt, apiKey)
