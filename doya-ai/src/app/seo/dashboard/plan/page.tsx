@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, Crown, ExternalLink, Loader2, RefreshCcw, Shield, Sparkles, Timer, X } from 'lucide-react'
-import { SEO_PRICING } from '@/lib/pricing'
+import { SEO_PRICING, getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
 
@@ -39,6 +39,9 @@ export default function SeoPlanPage() {
   const isLoggedIn = !!session?.user?.email
   const seoPlanRaw = String((session?.user as any)?.seoPlan || (isLoggedIn ? 'FREE' : 'GUEST')).toUpperCase()
   const tier = tierFrom(seoPlanRaw)
+  const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
+  const isFreeHourActive = isLoggedIn && isWithinFreeHour(firstLoginAt)
+  const [freeHourRemainingMs, setFreeHourRemainingMs] = useState(() => getFreeHourRemainingMs(firstLoginAt))
 
   const [sub, setSub] = useState<SubStatus | null>(null)
   const [busy, setBusy] = useState(false)
@@ -62,6 +65,21 @@ export default function SeoPlanPage() {
     void loadStatus()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn])
+
+  useEffect(() => {
+    if (!isFreeHourActive) return
+    const interval = setInterval(() => {
+      setFreeHourRemainingMs(getFreeHourRemainingMs(firstLoginAt))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isFreeHourActive, firstLoginAt])
+
+  const formatRemainingTime = (ms: number): string => {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
 
   const cancelAtDays = useMemo(() => {
     if (!sub?.cancelAtPeriodEnd || !sub?.currentPeriodEnd) return null
@@ -115,6 +133,32 @@ export default function SeoPlanPage() {
         ) : (
           <>
             <SeoCancelScheduleNotice className="mb-6" />
+
+            {isFreeHourActive && (
+              <div className="mb-6 rounded-3xl border border-blue-100 bg-blue-50 p-5 sm:p-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0">
+                    <Timer className="w-6 h-6" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-black text-blue-900">初回ログイン後1時間：PRO相当で使い放題（トライアル）</p>
+                    <p className="mt-1 text-[11px] font-bold text-blue-800/80">
+                      画像生成・自動修正も含めて解放中です。
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <p className="text-xs font-black text-blue-900">残り {formatRemainingTime(freeHourRemainingMs)}</p>
+                      <p className="text-[10px] font-bold text-blue-800/70">（1時間）</p>
+                    </div>
+                    <div className="mt-2 h-2 w-full rounded-full bg-blue-200/60 overflow-hidden">
+                      <div
+                        className="h-full bg-blue-600"
+                        style={{ width: `${Math.max(0, Math.min(1, freeHourRemainingMs / (60 * 60 * 1000))) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { SEO_PRICING } from '@/lib/pricing'
+import { SEO_PRICING, getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -22,6 +22,9 @@ export default function SeoPricingPage() {
   const seoPlanRaw = String((session?.user as any)?.seoPlan || (session ? 'FREE' : 'GUEST')).toUpperCase()
   const tier = planTierFrom(seoPlanRaw)
   const isLoggedIn = !!session?.user?.email
+  const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
+  const isFreeHourActive = isLoggedIn && isWithinFreeHour(firstLoginAt)
+  const [freeHourRemainingMs, setFreeHourRemainingMs] = useState(() => getFreeHourRemainingMs(firstLoginAt))
 
   const plans = SEO_PRICING.plans
   const free = plans.find((p) => p.id === 'seo-free')
@@ -51,9 +54,26 @@ export default function SeoPricingPage() {
 
   const tierLabel = tier === 'GUEST' ? 'ゲスト' : tier === 'FREE' ? '無料' : tier === 'PRO' ? 'PRO' : 'Enterprise'
 
+  useEffect(() => {
+    if (!isFreeHourActive) return
+    const interval = setInterval(() => {
+      setFreeHourRemainingMs(getFreeHourRemainingMs(firstLoginAt))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isFreeHourActive, firstLoginAt])
+
+  const formatRemainingTime = (ms: number): string => {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
   const trialHint = useMemo(() => {
-    // firstLoginAtはserver sessionにも載るが、このページはclientなので最小限の文言だけ置く
     if (!isLoggedIn) return null
+    if (!isFreeHourActive) return null
+    const total = 60 * 60 * 1000
+    const ratio = Math.max(0, Math.min(1, freeHourRemainingMs / total))
     return (
       <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3">
         <div className="flex items-start gap-3">
@@ -65,11 +85,18 @@ export default function SeoPricingPage() {
             <p className="mt-1 text-[11px] font-bold text-blue-800/80">
               画像生成や自動修正も解放されます。使えるようになった瞬間は画面に演出が出ます。
             </p>
+            <div className="mt-2 flex items-center justify-between gap-3">
+              <p className="text-xs font-black text-blue-900">残り {formatRemainingTime(freeHourRemainingMs)}</p>
+              <p className="text-[10px] font-bold text-blue-800/70">（1時間）</p>
+            </div>
+            <div className="mt-2 h-2 w-full rounded-full bg-blue-200/60 overflow-hidden">
+              <div className="h-full bg-blue-600" style={{ width: `${ratio * 100}%` }} />
+            </div>
           </div>
         </div>
       </div>
     )
-  }, [isLoggedIn])
+  }, [isLoggedIn, isFreeHourActive, freeHourRemainingMs])
 
   return (
     <div className="min-h-screen bg-white">
