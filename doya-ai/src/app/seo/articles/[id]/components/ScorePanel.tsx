@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { TrendingUp, AlertTriangle, CheckCircle2, Zap, ThumbsUp, Wrench, Loader2, Activity, ScanSearch, ListChecks } from 'lucide-react'
+import { TrendingUp, AlertTriangle, CheckCircle2, Zap, ThumbsUp, Wrench, Loader2, Activity, ScanSearch, ListChecks, Sparkles, Brain, PenTool, RefreshCw } from 'lucide-react'
 
 type ScorePanelProps = {
   articleId: string
@@ -74,6 +74,47 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
   const [targetHeading, setTargetHeading] = useState<string>('')
   const [analyzing, setAnalyzing] = useState(true)
   const [phase, setPhase] = useState(0)
+  const [applyPhase, setApplyPhase] = useState(0)
+  const [applyPhaseText, setApplyPhaseText] = useState('')
+
+  // 自動修正中のフェーズ進行
+  useEffect(() => {
+    if (!applying) {
+      setApplyPhase(0)
+      setApplyPhaseText('')
+      return
+    }
+    const phases = [
+      { text: '記事を解析中...', duration: 1500 },
+      { text: '改善ポイントを特定中...', duration: 2000 },
+      { text: 'AIが文章を修正中...', duration: 3000 },
+      { text: '最適化を適用中...', duration: 2500 },
+      { text: '最終チェック中...', duration: 2000 },
+    ]
+    let idx = 0
+    setApplyPhase(0)
+    setApplyPhaseText(phases[0].text)
+    
+    const advance = () => {
+      idx++
+      if (idx < phases.length) {
+        setApplyPhase(idx)
+        setApplyPhaseText(phases[idx].text)
+      }
+    }
+    
+    let timeout: NodeJS.Timeout
+    const scheduleNext = (i: number) => {
+      if (i >= phases.length - 1) return
+      timeout = setTimeout(() => {
+        advance()
+        scheduleNext(i + 1)
+      }, phases[i].duration)
+    }
+    scheduleNext(0)
+    
+    return () => clearTimeout(timeout)
+  }, [applying])
 
   const analysis = useMemo(() => {
     const content = article.finalMarkdown || ''
@@ -570,6 +611,139 @@ export function ScorePanel({ articleId, article, onUpdated, onGoEdit, onGoOutlin
           </div>
         </div>
       )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* AI自動修正中のポップアップモーダル */}
+      <AnimatePresence>
+        {applying && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-md mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              {/* グラデーションヘッダー */}
+              <div className="h-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">
+                <motion.div
+                  className="h-full bg-white/30"
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+                />
+              </div>
+
+              <div className="p-8 text-center">
+                {/* AIアイコンアニメーション */}
+                <div className="relative w-24 h-24 mx-auto mb-6">
+                  {/* 外側の回転リング */}
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-4 border-blue-200"
+                    style={{ borderTopColor: '#2563EB', borderRightColor: '#8B5CF6' }}
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                  />
+                  {/* 内側のパルス */}
+                  <motion.div
+                    className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center"
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    <motion.div
+                      animate={{ rotate: [0, 10, -10, 0] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Brain className="w-10 h-10 text-white" />
+                    </motion.div>
+                  </motion.div>
+                  {/* 周囲のパーティクル */}
+                  {[...Array(6)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute w-2 h-2 rounded-full bg-blue-400"
+                      style={{
+                        top: '50%',
+                        left: '50%',
+                      }}
+                      animate={{
+                        x: [0, Math.cos((i * 60 * Math.PI) / 180) * 50],
+                        y: [0, Math.sin((i * 60 * Math.PI) / 180) * 50],
+                        opacity: [0, 1, 0],
+                        scale: [0.5, 1, 0.5],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        delay: i * 0.2,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <h3 className="text-xl font-black text-gray-900 mb-2">
+                  AIが記事を修正中
+                </h3>
+                <p className="text-sm text-gray-500 mb-6">
+                  しばらくお待ちください...
+                </p>
+
+                {/* フェーズ表示 */}
+                <div className="space-y-3 mb-6">
+                  {['記事を解析中...', '改善ポイントを特定中...', 'AIが文章を修正中...', '最適化を適用中...', '最終チェック中...'].map((text, i) => (
+                    <motion.div
+                      key={i}
+                      className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all ${
+                        applyPhase === i
+                          ? 'bg-blue-50 border border-blue-200'
+                          : applyPhase > i
+                            ? 'bg-emerald-50 border border-emerald-200'
+                            : 'bg-gray-50 border border-gray-100'
+                      }`}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                    >
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0">
+                        {applyPhase > i ? (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        ) : applyPhase === i ? (
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                          >
+                            <RefreshCw className="w-5 h-5 text-blue-600" />
+                          </motion.div>
+                        ) : (
+                          <div className="w-3 h-3 rounded-full bg-gray-300" />
+                        )}
+                      </div>
+                      <span className={`text-sm font-bold ${
+                        applyPhase === i
+                          ? 'text-blue-700'
+                          : applyPhase > i
+                            ? 'text-emerald-700'
+                            : 'text-gray-400'
+                      }`}>
+                        {text}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* ヒント */}
+                <div className="text-xs text-gray-400 flex items-center justify-center gap-2">
+                  <Sparkles className="w-3 h-3" />
+                  <span>SEO最適化を自動で行っています</span>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -415,54 +415,54 @@ export async function geminiGenerateImagePng(args: {
   let lastErr: any = null
 
   for (const model of modelsToTry) {
-    const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+  const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
     try {
-      const res = await fetchWithRetry(
-        endpoint,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
+  const res = await fetchWithRetry(
+    endpoint,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: args.prompt }] }],
+        generationConfig: {
+          // 画像のみ要求（TEXT混在だと画像が返らないケースがある）
+          responseModalities: ['IMAGE'],
+          imageConfig: {
+            aspectRatio: args.aspectRatio ?? '16:9',
+            imageSize: args.imageSize ?? '2K',
           },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: args.prompt }] }],
-            generationConfig: {
-              // 画像のみ要求（TEXT混在だと画像が返らないケースがある）
-              responseModalities: ['IMAGE'],
-              imageConfig: {
-                aspectRatio: args.aspectRatio ?? '16:9',
-                imageSize: args.imageSize ?? '2K',
-              },
-            },
-          }),
         },
-        3,
-        1500
-      )
+      }),
+    },
+    3,
+    1500
+  )
 
-      if (!res.ok) {
-        const t = await res.text()
+  if (!res.ok) {
+    const t = await res.text()
         // 404/400（モデル未対応/未存在）のときは次を試す
         if ((res.status === 404 || res.status === 400) && model !== modelsToTry[modelsToTry.length - 1]) {
           lastErr = new Error(`Gemini Image API Error: ${res.status} - ${t.substring(0, 300)}`)
           continue
         }
-        throw new Error(`Gemini Image API Error: ${res.status} - ${t.substring(0, 500)}`)
-      }
+    throw new Error(`Gemini Image API Error: ${res.status} - ${t.substring(0, 500)}`)
+  }
 
-      const json = await res.json()
-      const parts = json?.candidates?.[0]?.content?.parts
-      if (Array.isArray(parts)) {
-        for (const part of parts) {
-          if (part?.inlineData?.data) {
-            return {
-              mimeType: part?.inlineData?.mimeType || 'image/png',
-              dataBase64: part.inlineData.data as string,
-            }
-          }
+  const json = await res.json()
+  const parts = json?.candidates?.[0]?.content?.parts
+  if (Array.isArray(parts)) {
+    for (const part of parts) {
+      if (part?.inlineData?.data) {
+        return {
+          mimeType: part?.inlineData?.mimeType || 'image/png',
+          dataBase64: part.inlineData.data as string,
         }
       }
+    }
+  }
 
       // 成功レスポンスでも画像が無い場合は次のモデルへ
       lastErr = new Error(`Gemini が画像を返しませんでした（モデル: ${model}）。`)
