@@ -152,7 +152,7 @@ export function SeoAppLayout({
               <Menu className="w-6 h-6" />
             </button>
             <div>
-              <p className="text-sm font-black text-gray-900 leading-none">ドヤ記事作成AI</p>
+              <p className="text-sm font-black text-gray-900 leading-none">ドヤライティングAI</p>
               <p className="text-[10px] font-bold text-gray-400 mt-1">SEOツール</p>
             </div>
           </div>

@@ -87,7 +87,7 @@ export default function SeoPricingPage() {
 
       <main className="max-w-[720px] mx-auto px-6 pb-12">
         <h1 className="text-center text-3xl sm:text-4xl font-black text-slate-900 mt-6 mb-10">
-          ドヤSEO 料金プラン
+          ドヤライティングAI 料金プラン
         </h1>
 
         <div className="mb-6 flex flex-col items-center gap-2">

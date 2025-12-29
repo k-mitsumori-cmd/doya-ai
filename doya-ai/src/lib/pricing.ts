@@ -124,12 +124,12 @@ export const KANTAN_PRICING: ServicePricing = {
 }
 
 // ========================================
-// ドヤSEO 料金設定
+// ドヤライティングAI 料金設定
 // ========================================
 // SEO記事生成はコストが読みづらいため、まずは控えめな上限で運用
 export const SEO_PRICING: ServicePricing = {
   serviceId: 'seo',
-  serviceName: 'ドヤSEO',
+  serviceName: 'ドヤライティングAI',
   serviceIcon: '🧠',
   guestLimit: 3,      // ゲスト: 合計3回（記事作成）まで
   freeLimit: 3,       // ログイン無料: 1日3回まで
@@ -334,7 +334,7 @@ export const BUNDLE_PRICING = {
   originalPrice: '¥7,980',
   description: '両方使うなら断然お得',
   features: [
-    { text: 'ドヤSEO プロ', included: true },
+    { text: 'ドヤライティングAI プロ', included: true },
     { text: 'ドヤバナーAI プロ', included: true },
     { text: '今後追加される新サービスも利用可能', included: true },
     { text: '優先サポート', included: true },

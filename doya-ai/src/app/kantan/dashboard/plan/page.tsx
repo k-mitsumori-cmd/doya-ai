@@ -335,7 +335,7 @@ export default function KantanPlanPage() {
           </Link>
           <Link href="/seo" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-sm text-white/70">
             <span>🧠</span>
-            <span>ドヤSEO</span>
+            <span>ドヤライティングAI</span>
           </Link>
         </div>
 

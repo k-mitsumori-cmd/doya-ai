@@ -29,7 +29,7 @@ const mainNavItems = [
 
 const serviceLinks = [
   { emoji: '🎨', label: 'ドヤバナーAI', href: '/banner/dashboard', gradient: 'from-violet-500 to-fuchsia-500' },
-  { emoji: '🧠', label: 'ドヤSEO', href: '/seo/dashboard', gradient: 'from-emerald-500 to-green-500' },
+  { emoji: '✍️', label: 'ドヤライティングAI', href: '/seo/dashboard', gradient: 'from-emerald-500 to-cyan-500' },
 ]
 
 export function AdminSidebar() {

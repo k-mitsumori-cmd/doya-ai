@@ -47,11 +47,30 @@ interface User {
   services: string[]
 }
 
-// ドヤバナーAI専用のプラン設定
-const BANNER_PLANS = {
-  FREE: { label: 'おためし', dailyLimit: 9, color: 'gray' },
-  PRO: { label: 'プロ', dailyLimit: 50, color: 'amber' },
-  ENTERPRISE: { label: 'エンタープライズ', dailyLimit: 500, color: 'rose' },
+// サービス設定
+const SERVICE_CONFIG: Record<string, { 
+  name: string
+  emoji: string
+  plans: Record<string, { label: string; dailyLimit: number; color: string }>
+}> = {
+  banner: {
+    name: 'ドヤバナーAI',
+    emoji: '🎨',
+    plans: {
+      FREE: { label: 'おためし', dailyLimit: 9, color: 'gray' },
+      PRO: { label: 'プロ', dailyLimit: 50, color: 'amber' },
+      ENTERPRISE: { label: 'エンタープライズ', dailyLimit: 500, color: 'rose' },
+    }
+  },
+  writing: {
+    name: 'ドヤライティングAI',
+    emoji: '✍️',
+    plans: {
+      FREE: { label: 'おためし', dailyLimit: 5, color: 'gray' },
+      PRO: { label: 'プロ', dailyLimit: 30, color: 'emerald' },
+      ENTERPRISE: { label: 'エンタープライズ', dailyLimit: 100, color: 'cyan' },
+    }
+  },
 }
 
 const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; label: string }> = {
@@ -62,14 +81,18 @@ const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; la
 
 const PLAN_OPTIONS = ['FREE', 'PRO', 'ENTERPRISE']
 
-// 残り生成可能数を計算（ドヤバナーAI用）
-function getRemainingGenerations(plan: string, dailyUsage: number): number {
-  const planConfig = BANNER_PLANS[plan as keyof typeof BANNER_PLANS] || BANNER_PLANS.FREE
+// 残り生成可能数を計算
+function getRemainingGenerations(serviceId: string, plan: string, dailyUsage: number): number {
+  const service = SERVICE_CONFIG[serviceId]
+  if (!service) return 0
+  const planConfig = service.plans[plan] || service.plans.FREE
   return Math.max(0, planConfig.dailyLimit - dailyUsage)
 }
 
-function getDailyLimit(plan: string): number {
-  const planConfig = BANNER_PLANS[plan as keyof typeof BANNER_PLANS] || BANNER_PLANS.FREE
+function getDailyLimit(serviceId: string, plan: string): number {
+  const service = SERVICE_CONFIG[serviceId]
+  if (!service) return 0
+  const planConfig = service.plans[plan] || service.plans.FREE
   return planConfig.dailyLimit
 }
 
@@ -469,10 +492,10 @@ export default function AdminUsersPage() {
                   </button>
                 </th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">ユーザー</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">プラン</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">🎨 バナーAI</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">✍️ ライティングAI</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">課金状態</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">本日の残り</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">生成数</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">合計生成</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">登録日</th>
                 <th className="text-center px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">操作</th>
               </tr>
@@ -515,30 +538,77 @@ export default function AdminUsersPage() {
                         </div>
                       </div>
                     </td>
+                    {/* ドヤバナーAI 列 */}
                     <td className="px-6 py-4">
                       {(() => {
-                        // ドヤバナーのサービスサブスクリプションを取得
                         const bannerSub = user.serviceSubscriptions.find((s) => s.serviceId === 'banner')
                         const currentPlan = bannerSub?.plan || user.plan || 'FREE'
                         const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
+                        const dailyUsage = bannerSub?.dailyUsage || 0
+                        const remaining = getRemainingGenerations('banner', currentPlan, dailyUsage)
+                        const limit = getDailyLimit('banner', currentPlan)
                         return (
-                          <select
-                            value={currentPlan}
-                            onChange={async (e) => {
-                              await handleUpdateServicePlan(user.id, 'banner', e.target.value)
-                            }}
-                            disabled={isSaving}
-                            className={`px-3 py-2 rounded-lg border text-xs font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 min-w-[120px] ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
-                          >
-                            {PLAN_OPTIONS.map((p) => (
-                              <option key={p} value={p} className="bg-[#0A0A0F]">
-                                {PLAN_STYLES[p]?.label || p}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="space-y-1">
+                            <select
+                              value={currentPlan}
+                              onChange={async (e) => {
+                                await handleUpdateServicePlan(user.id, 'banner', e.target.value)
+                              }}
+                              disabled={isSaving}
+                              className={`px-2 py-1 rounded-lg border text-[10px] font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 min-w-[90px] ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
+                            >
+                              {PLAN_OPTIONS.map((p) => (
+                                <option key={p} value={p} className="bg-[#0A0A0F]">
+                                  {PLAN_STYLES[p]?.label || p}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="flex items-center gap-1">
+                              <span className={`text-sm font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {remaining}
+                              </span>
+                              <span className="text-white/30 text-[10px]">/ {limit}枚</span>
+                            </div>
+                          </div>
                         )
                       })()}
                     </td>
+                    {/* ドヤライティングAI 列 */}
+                    <td className="px-6 py-4">
+                      {(() => {
+                        const writingSub = user.serviceSubscriptions.find((s) => s.serviceId === 'writing')
+                        const currentPlan = writingSub?.plan || 'FREE'
+                        const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
+                        const dailyUsage = writingSub?.dailyUsage || 0
+                        const remaining = getRemainingGenerations('writing', currentPlan, dailyUsage)
+                        const limit = getDailyLimit('writing', currentPlan)
+                        return (
+                          <div className="space-y-1">
+                            <select
+                              value={currentPlan}
+                              onChange={async (e) => {
+                                await handleUpdateServicePlan(user.id, 'writing', e.target.value)
+                              }}
+                              disabled={isSaving}
+                              className={`px-2 py-1 rounded-lg border text-[10px] font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 min-w-[90px] ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
+                            >
+                              {PLAN_OPTIONS.map((p) => (
+                                <option key={p} value={p} className="bg-[#0A0A0F]">
+                                  {PLAN_STYLES[p]?.label || p}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="flex items-center gap-1">
+                              <span className={`text-sm font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {remaining}
+                              </span>
+                              <span className="text-white/30 text-[10px]">/ {limit}件</span>
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </td>
+                    {/* 課金状態 列 */}
                     <td className="px-6 py-4">
                       {user.stripeInfo ? (
                         <div className="flex flex-col gap-1">
@@ -550,7 +620,7 @@ export default function AdminUsersPage() {
                           ) : user.stripeInfo.status === 'active' ? (
                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-500/20 text-emerald-400 text-xs rounded-full w-fit">
                               <Zap className="w-3 h-3" />
-                              有料課金中
+                              課金中
                             </span>
                           ) : (
                             <span className="inline-flex items-center px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded-full w-fit">
@@ -568,23 +638,7 @@ export default function AdminUsersPage() {
                         <span className="text-white/30 text-xs">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      {(() => {
-                        const bannerSub = user.serviceSubscriptions.find((s) => s.serviceId === 'banner')
-                        const currentPlan = bannerSub?.plan || user.plan || 'FREE'
-                        const dailyUsage = bannerSub?.dailyUsage || 0
-                        const remaining = getRemainingGenerations(currentPlan, dailyUsage)
-                        const limit = getDailyLimit(currentPlan)
-                        return (
-                          <div className="flex items-center gap-2">
-                            <span className={`text-lg font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {remaining}
-                            </span>
-                            <span className="text-white/30 text-xs">/ {limit}枚</span>
-                          </div>
-                        )
-                      })()}
-                    </td>
+                    {/* 合計生成数 列 */}
                     <td className="px-6 py-4">
                       <span className="text-white font-medium">{user.totalGenerations}</span>
                       <span className="text-white/30 text-xs ml-1">回</span>
@@ -700,8 +754,8 @@ export default function AdminUsersPage() {
                     const bannerSub = editingUser.serviceSubscriptions.find((s) => s.serviceId === 'banner')
                     const currentPlan = bannerSub?.plan || editingUser.plan || 'FREE'
                     const dailyUsage = bannerSub?.dailyUsage || 0
-                    const remaining = getRemainingGenerations(currentPlan, dailyUsage)
-                    const limit = getDailyLimit(currentPlan)
+                    const remaining = getRemainingGenerations('banner', currentPlan, dailyUsage)
+                    const limit = getDailyLimit('banner', currentPlan)
                     
                     return (
                       <>
@@ -751,6 +805,80 @@ export default function AdminUsersPage() {
                             }}
                             disabled={isSaving}
                             className="w-full px-4 py-2 text-sm bg-violet-500/20 text-violet-400 rounded-lg hover:bg-violet-500/30 transition-colors disabled:opacity-50"
+                          >
+                            本日の使用回数をリセット
+                          </button>
+                        )}
+                      </>
+                    )
+                  })()}
+                </div>
+
+                {/* ドヤライティングAI プラン設定 */}
+                <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-2xl">✍️</span>
+                    <div>
+                      <h3 className="font-medium text-white">ドヤライティングAI</h3>
+                      <p className="text-xs text-white/40">プランと使用状況</p>
+                    </div>
+                  </div>
+                  
+                  {(() => {
+                    const writingSub = editingUser.serviceSubscriptions.find((s) => s.serviceId === 'writing')
+                    const currentPlan = writingSub?.plan || 'FREE'
+                    const dailyUsage = writingSub?.dailyUsage || 0
+                    const remaining = getRemainingGenerations('writing', currentPlan, dailyUsage)
+                    const limit = getDailyLimit('writing', currentPlan)
+                    
+                    return (
+                      <>
+                        <div className="mb-4">
+                          <label className="block text-sm text-white/60 mb-2">プラン</label>
+                          <select
+                            value={currentPlan}
+                            onChange={async (e) => {
+                              await handleUpdateServicePlan(editingUser.id, 'writing', e.target.value)
+                              await fetchUsers()
+                              const updated = users.find((u) => u.id === editingUser.id)
+                              if (updated) setEditingUser(updated)
+                            }}
+                            disabled={isSaving}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer focus:border-emerald-500/50 outline-none transition-all disabled:opacity-50"
+                          >
+                            {PLAN_OPTIONS.map((p) => (
+                              <option key={p} value={p} className="bg-[#1a1a24]">
+                                {PLAN_STYLES[p]?.label || p}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="p-3 bg-white/5 rounded-lg">
+                            <p className="text-xs text-white/40 mb-1">本日の残り</p>
+                            <p className={`text-2xl font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {remaining}<span className="text-sm text-white/40 ml-1">/ {limit}件</span>
+                            </p>
+                          </div>
+                          <div className="p-3 bg-white/5 rounded-lg">
+                            <p className="text-xs text-white/40 mb-1">本日の使用</p>
+                            <p className="text-2xl font-bold text-white">
+                              {dailyUsage}<span className="text-sm text-white/40 ml-1">件</span>
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {writingSub && (
+                          <button
+                            onClick={async () => {
+                              await handleResetUsage(editingUser.id, 'writing', 'daily')
+                              await fetchUsers()
+                              const updated = users.find((u) => u.id === editingUser.id)
+                              if (updated) setEditingUser(updated)
+                            }}
+                            disabled={isSaving}
+                            className="w-full px-4 py-2 text-sm bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
                           >
                             本日の使用回数をリセット
                           </button>

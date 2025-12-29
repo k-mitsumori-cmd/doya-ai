@@ -210,7 +210,7 @@ function SeoSidebarImpl({
                 exit={{ opacity: 0, x: -10 }}
                 className="overflow-hidden"
               >
-                <h1 className="text-lg font-black text-white tracking-tighter leading-none">ドヤ記事作成AI</h1>
+                <h1 className="text-lg font-black text-white tracking-tighter leading-none">ドヤライティングAI</h1>
                 <p className="text-[10px] font-bold text-blue-100/70 mt-0.5">SEO最適化・分割生成</p>
               </motion.div>
             )}
@@ -375,7 +375,7 @@ function SeoSidebarImpl({
               exit={{ opacity: 0 }}
               className="px-4 py-3 text-center border-t border-white/5"
             >
-              <p className="text-[10px] text-blue-100/30 font-bold tracking-widest">ドヤ記事作成AI</p>
+              <p className="text-[10px] text-blue-100/30 font-bold tracking-widest">ドヤライティングAI</p>
             </motion.div>
           )}
         </AnimatePresence>
