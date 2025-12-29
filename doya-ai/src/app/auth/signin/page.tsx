@@ -90,7 +90,7 @@ function SignInContent() {
 
       <div className="w-full max-w-5xl overflow-hidden rounded-3xl bg-white border border-slate-200 shadow-[0_24px_80px_-32px_rgba(15,23,42,0.35)] grid grid-cols-1 lg:grid-cols-2">
         {/* LEFT: animated story */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-blue-950 text-white p-8 sm:p-10 lg:p-12">
+        <div className="order-2 lg:order-1 relative overflow-hidden bg-gradient-to-br from-slate-950 via-indigo-950 to-blue-950 text-white p-8 sm:p-10 lg:p-12">
           <motion.div
             className="absolute -top-28 -left-28 w-80 h-80 rounded-full bg-blue-500/25 blur-3xl"
             animate={{ x: [0, 30, 0], y: [0, 20, 0] }}
@@ -147,7 +147,7 @@ function SignInContent() {
         </div>
 
         {/* RIGHT: form */}
-        <div className="p-7 sm:p-10 lg:p-12">
+        <div className="order-1 lg:order-2 p-7 sm:p-10 lg:p-12">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-black text-slate-400 tracking-widest uppercase">Sign in</p>
