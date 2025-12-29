@@ -37,6 +37,13 @@ export interface ServicePricing {
   freeLimit: number
   proLimit: number
   enterpriseLimit?: number
+  // 文字数制限（SEO記事生成用）
+  charLimit?: {
+    guest: number
+    free: number
+    pro: number
+    enterprise: number
+  }
   historyDays: {
     free: number
     pro: number
@@ -128,6 +135,13 @@ export const SEO_PRICING: ServicePricing = {
   freeLimit: 3,       // ログイン無料: 1日3回まで
   proLimit: 10,       // PRO: 1日10回まで
   enterpriseLimit: 30, // Enterprise: 1日30回まで
+  // 文字数制限（1記事あたり）
+  charLimit: {
+    guest: 5000,       // ゲスト: 5,000字まで
+    free: 10000,       // ログイン無料: 10,000字まで
+    pro: 30000,        // PRO: 30,000字まで
+    enterprise: 50000, // Enterprise: 50,000字まで
+  },
   historyDays: {
     free: 90,         // 直近3ヶ月（DB肥大化防止）
     pro: 90,
@@ -141,8 +155,8 @@ export const SEO_PRICING: ServicePricing = {
       period: '',
       description: 'まずは試してみたい方',
       features: [
-        { text: 'ゲスト: 合計3回まで作成', included: true },
-        { text: 'ログイン: 1日3回まで生成', included: true },
+        { text: 'ゲスト: 合計3回まで / 5,000字まで', included: true },
+        { text: 'ログイン: 1日3回 / 10,000字まで', included: true },
         { text: 'アウトライン/セクション生成', included: true },
         { text: '履歴保存（直近3ヶ月）', included: true },
         { text: '画像生成（図解/サムネ）はPROから', included: true },
@@ -155,11 +169,12 @@ export const SEO_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '¥9,980',
       period: '/月（税込）',
-      description: '月額9,980円：1日10回',
+      description: '月額9,980円：1日10回 / 30,000字まで',
       popular: true,
       color: 'slate',
       features: [
         { text: '1日10回まで生成', included: true },
+        { text: '1記事30,000字まで生成可能', included: true },
         { text: '分割生成（安定化）', included: true },
         { text: '監査（二重チェック）', included: true },
         { text: '履歴保存（直近3ヶ月）', included: true },
@@ -174,10 +189,11 @@ export const SEO_PRICING: ServicePricing = {
       price: 49980,
       priceLabel: '¥49,980',
       period: '/月（税込）',
-      description: '月額49,980円：1日30回',
+      description: '月額49,980円：1日30回 / 50,000字まで',
       color: 'slate',
       features: [
         { text: '1日30回まで生成', included: true },
+        { text: '1記事50,000字まで生成可能', included: true },
         { text: '画像生成（図解/サムネ）', included: true },
         { text: 'チーム運用・大量制作向け', included: true },
         { text: '優先サポート', included: true },
@@ -196,6 +212,19 @@ export function getSeoDailyLimitByUserPlan(plan: string | null | undefined): num
   if (p === 'ENTERPRISE') return 30
   if (p === 'PRO') return 10
   return SEO_PRICING.freeLimit
+}
+
+// SEO: user.plan から文字数上限を決定
+export function getSeoCharLimitByUserPlan(plan: string | null | undefined, isGuest: boolean = false): number {
+  const charLimit = SEO_PRICING.charLimit
+  if (!charLimit) return 10000 // フォールバック
+  
+  if (isGuest) return charLimit.guest // 5,000字
+  
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'ENTERPRISE') return charLimit.enterprise // 50,000字
+  if (p === 'PRO') return charLimit.pro // 30,000字
+  return charLimit.free // 10,000字
 }
 
 // ========================================

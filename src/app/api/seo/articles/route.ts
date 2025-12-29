@@ -14,6 +14,7 @@ import {
   seoGuestTotalArticleLimit,
   setGuestCookie,
 } from '@/lib/seoAccess'
+import { getSeoCharLimitByUserPlan } from '@/lib/pricing'
 
 export async function GET(req: NextRequest) {
   try {
@@ -118,6 +119,25 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const input = SeoCreateArticleInputSchema.parse(body)
     const createJob = body?.createJob !== false
+
+    // 文字数制限チェック（トライアル中はPRO相当）
+    const isGuest = !userId
+    const effectivePlan = trialActive ? 'PRO' : plan
+    const charLimit = getSeoCharLimitByUserPlan(effectivePlan, isGuest && !trialActive)
+    const requestedChars = Number(input.targetChars || 10000)
+    
+    if (requestedChars > charLimit) {
+      const planLabel = isGuest ? 'ゲスト' : (plan === 'PRO' ? 'プロ' : plan === 'ENTERPRISE' ? 'エンタープライズ' : 'フリー')
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `${planLabel}プランでは${charLimit.toLocaleString()}字までの記事を作成できます。${requestedChars.toLocaleString()}字を作成するにはプランのアップグレードが必要です。`,
+          charLimit,
+          requestedChars,
+        },
+        { status: 403 }
+      )
+    }
 
     const seoArticle = (prisma as any).seoArticle as any
     const seoJob = (prisma as any).seoJob as any
