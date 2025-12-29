@@ -124,13 +124,45 @@ function coerceJson(text: string): any {
   try {
     return JSON.parse(t)
   } catch {}
+  // ```json ... ``` 対策
+  const fence = t.match(/```json\s*([\s\S]*?)\s*```/i)?.[1]?.trim()
+  if (fence) {
+    try {
+      return JSON.parse(fence)
+    } catch {}
+  }
   // code fence / extra text 対策：最初の { ... } を抜く
   const start = t.indexOf('{')
-  const end = t.lastIndexOf('}')
-  if (start !== -1 && end !== -1 && end > start) {
-    try {
-      return JSON.parse(t.slice(start, end + 1))
-    } catch {}
+  if (start !== -1) {
+    // ブレース対応：最初に成立する JSON オブジェクトを抽出
+    let depth = 0
+    let inStr = false
+    let esc = false
+    for (let i = start; i < t.length; i++) {
+      const ch = t[i]
+      if (inStr) {
+        if (esc) esc = false
+        else if (ch === '\\') esc = true
+        else if (ch === '"') inStr = false
+        continue
+      }
+      if (ch === '"') {
+        inStr = true
+        continue
+      }
+      if (ch === '{') depth++
+      if (ch === '}') {
+        depth--
+        if (depth === 0) {
+          const candidate = t.slice(start, i + 1)
+          try {
+            return JSON.parse(candidate)
+          } catch {
+            break
+          }
+        }
+      }
+    }
   }
   return null
 }
@@ -142,14 +174,23 @@ async function callGeminiForJson(prompt: string, apiKey: string): Promise<any> {
   for (const model of models) {
     try {
       const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+      const jsonSchema = {
+        type: 'OBJECT',
+        properties: {
+          banner_analysis: { type: 'STRING' },
+          image_generation_prompt: { type: 'STRING' },
+          negative_prompt: { type: 'STRING' },
+        },
+        required: ['banner_analysis', 'image_generation_prompt'],
+      }
       const buildBody = (jsonMode: boolean) => ({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 2000,
+          temperature: 0.2,
+          maxOutputTokens: 4096,
           topP: 0.9,
           topK: 40,
-          ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+          ...(jsonMode ? { responseMimeType: 'application/json', responseSchema: jsonSchema } : {}),
         },
         safetySettings: [
           { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
@@ -175,7 +216,7 @@ async function callGeminiForJson(prompt: string, apiKey: string): Promise<any> {
       if (!res.ok) {
         const t = await res.text()
         // JSONモードが弾かれたら通常モードで再試行
-        if (res.status === 400 && (t.includes('responseMimeType') || t.includes('INVALID_ARGUMENT'))) {
+        if (res.status === 400 && (t.includes('responseMimeType') || t.includes('responseSchema') || t.includes('INVALID_ARGUMENT'))) {
           let retry = await attempt(false)
           if (retry.status === 502 || retry.status === 503) {
             await new Promise((r) => setTimeout(r, 700))
@@ -198,7 +239,7 @@ async function callGeminiForJson(prompt: string, apiKey: string): Promise<any> {
       const text = json?.candidates?.[0]?.content?.parts?.map((p: any) => (p?.text ? String(p.text) : '')).join('\n').trim()
       const parsed = coerceJson(text)
       if (!parsed) {
-        lastErr = `Gemini ${model} returned non-JSON`
+        lastErr = `Gemini ${model} returned non-JSON: ${String(text || '').slice(0, 220)}`
         continue
       }
       return parsed
@@ -330,6 +371,7 @@ ${safeTrim(input.page_text, 18000)}
 3) 訴求軸（信頼/お得/権威/緊急など）とCTA方針
 4) メインカラー/サブカラー（color_hints/visual_hintsを根拠に）
 5) 採用するコピー案（メイン/サブ/CTA）※日本語で
+（長すぎると失敗しやすいので banner_analysis は全体で 900〜1400文字以内に要約する）
 
 【image_generation_prompt の厳格ルール】
 - そのまま画像生成AIに渡せる “完成形の1本のプロンプト” のみ
