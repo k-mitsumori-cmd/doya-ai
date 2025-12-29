@@ -23,14 +23,17 @@ import {
   Lightbulb,
   CheckCircle2,
   ImageIcon,
+  Lock,
   X,
   MessageSquare,
   ArrowRight,
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { SEO_PRICING } from '@/lib/pricing'
 
-const TARGETS = [10000, 20000, 30000, 40000, 50000, 60000]
+const TARGETS = [5000, 10000, 20000, 30000, 40000, 50000, 60000]
 const TONES = ['丁寧', 'フランク', 'ビジネス', '専門的'] as const
 const STORAGE_KEY = 'doya_seo_new_draft_v2'
 
@@ -160,6 +163,27 @@ const TEMPLATES = [
 export default function SeoNewArticlePage() {
   const router = useRouter()
   const reduceMotion = useReducedMotion()
+  const { data: session } = useSession()
+  const isLoggedIn = !!session?.user?.email
+  const userPlan = useMemo(() => {
+    if (!isLoggedIn) return 'GUEST' as const
+    const seoPlan = (session?.user as any)?.seoPlan
+    const plan = (session?.user as any)?.plan
+    const p = String(seoPlan || plan || 'FREE').toUpperCase()
+    if (p === 'ENTERPRISE') return 'ENTERPRISE' as const
+    if (p === 'PRO') return 'PRO' as const
+    return 'FREE' as const
+  }, [session, isLoggedIn])
+
+  const charLimit = useMemo(() => {
+    const lim = SEO_PRICING.charLimit
+    if (!lim) return isLoggedIn ? 10000 : 5000
+    if (userPlan === 'ENTERPRISE') return lim.enterprise
+    if (userPlan === 'PRO') return lim.pro
+    if (userPlan === 'FREE') return lim.free
+    return lim.guest
+  }, [userPlan, isLoggedIn])
+
   const [mode, setMode] = useState<'standard' | 'comparison_research'>('standard')
   const [articleType, setArticleType] = useState<ArticleTypeId>('howto')
   const [title, setTitle] = useState('')
@@ -228,6 +252,11 @@ export default function SeoNewArticlePage() {
   }, [keywords])
 
   const canSubmit = title.trim().length > 0 && keywordList.length > 0
+
+  // 上限超過が入っていたらクランプ（ロック表示と整合させる）
+  useEffect(() => {
+    setTargetChars((prev) => Math.min(Number(prev || 0) || 0, charLimit))
+  }, [charLimit])
 
   const fadeUp = useMemo(
     () => ({
@@ -887,15 +916,47 @@ export default function SeoNewArticlePage() {
               <div className="grid sm:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-[10px] sm:text-sm font-black text-gray-700 mb-3 uppercase tracking-wider">目標文字数</label>
-                  <select
-                    className="w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl border-2 border-gray-50 bg-gray-50/50 text-gray-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-bold appearance-none"
-                    value={targetChars}
-                    onChange={(e) => setTargetChars(Number(e.target.value))}
-                  >
-                    {TARGETS.map((n) => (
-                      <option key={n} value={n}>{n.toLocaleString()}字</option>
-                    ))}
-                  </select>
+                  <p className="text-[10px] text-gray-400 font-bold mb-2">
+                    ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'PRO' ? 'プロ' : 'エンタープライズ'}プラン: 最大{charLimit.toLocaleString()}字)
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {TARGETS.map((n) => {
+                      const selected = targetChars === n
+                      const locked = n > charLimit
+                      const hint = locked ? `現在のプランでは${n.toLocaleString()}字は選べません（上位プランで解放）` : `${n.toLocaleString()}字を選択`
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => {
+                            if (locked) return
+                            setTargetChars(n)
+                          }}
+                          disabled={locked}
+                          title={hint}
+                          className={`relative p-3 rounded-xl border-2 text-center transition-all overflow-hidden ${
+                            selected
+                              ? 'border-blue-500 bg-blue-50'
+                              : locked
+                                ? 'border-gray-100 bg-gray-50 opacity-70 cursor-not-allowed'
+                                : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+                          }`}
+                        >
+                          {locked && (
+                            <div className="absolute inset-0 pointer-events-none">
+                              <div className="absolute inset-0 bg-white/35" />
+                              <div className="absolute right-2 top-2 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-900/85 text-white text-[9px] font-black shadow">
+                                <Lock className="w-3 h-3" />
+                                LOCK
+                              </div>
+                            </div>
+                          )}
+                          <p className={`text-sm font-black ${selected ? 'text-blue-600' : 'text-gray-700'}`}>{n.toLocaleString()}字</p>
+                          {locked && <p className="text-[10px] font-black text-gray-500 mt-1">上位プランで解放</p>}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] sm:text-sm font-black text-gray-700 mb-3 uppercase tracking-wider">文章トーン</label>
