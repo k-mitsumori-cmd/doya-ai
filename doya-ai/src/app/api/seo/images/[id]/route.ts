@@ -5,21 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { ensureSeoStorage, readFileAsBuffer, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { getGuestIdFromRequest, isTrialActive, normalizeSeoPlan, canUseSeoImages } from '@/lib/seoAccess'
 
 export const runtime = 'nodejs'
-
-type PlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
-function normalizePlan(raw: any): PlanCode {
-  const s = String(raw || '').toUpperCase().trim()
-  if (s === 'PRO') return 'PRO'
-  if (s === 'ENTERPRISE') return 'ENTERPRISE'
-  if (s === 'FREE') return 'FREE'
-  if (s === 'GUEST') return 'GUEST'
-  return 'UNKNOWN'
-}
-function isPaid(plan: PlanCode) {
-  return plan === 'PRO' || plan === 'ENTERPRISE'
-}
 
 export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
   await ensureSeoSchema()
@@ -27,15 +15,22 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
   const user: any = session?.user || null
   const userId = String(user?.id || '')
+  const guestId = !userId ? getGuestIdFromRequest(_req) : null
 
   const img = await (prisma as any).seoImage.findUnique({
     where: { id },
-    include: { article: { select: { userId: true } } },
+    include: { article: { select: { userId: true, guestId: true } } },
   })
   if (!img) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-  if (!userId) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
-  if (String(img?.article?.userId || '') !== userId) {
-    return NextResponse.json({ success: false, error: 'forbidden' }, { status: 403 })
+  // 所有者チェック（ユーザー/ゲストで分離）
+  if (userId) {
+    if (String(img?.article?.userId || '') !== userId) {
+      return NextResponse.json({ success: false, error: 'forbidden' }, { status: 403 })
+    }
+  } else {
+    if (!guestId || String(img?.article?.guestId || '') !== guestId) {
+      return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
+    }
   }
 
   let buf: Buffer
@@ -46,8 +41,16 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     const code = String(e?.code || '')
     const msg = String(e?.message || '')
     const missing = code === 'ENOENT' || /no such file or directory/i.test(msg)
-    const plan = normalizePlan(user?.seoPlan || user?.plan || (userId ? 'FREE' : 'GUEST'))
-    if (!missing || !isPaid(plan)) {
+    const plan = normalizeSeoPlan(user?.seoPlan || user?.plan || (userId ? 'FREE' : 'GUEST'))
+    const trial = isTrialActive(user?.firstLoginAt || null)
+    const trialActive = !!userId && trial.active
+    const kind = String(img.kind || '').toUpperCase()
+    const imagesAllowed = canUseSeoImages({ isLoggedIn: !!userId, plan, trialActive })
+
+    // バナーは「一覧サムネ必須」のため、所有者であれば復元を許可（図解はPRO/ENT or trial）
+    const canRegenMissing = kind === 'BANNER' ? true : imagesAllowed
+
+    if (!missing || !canRegenMissing) {
       return NextResponse.json(
         { success: false, error: missing ? '画像ファイルが見つかりません（再生成が必要です）' : msg || '画像の読み込みに失敗しました' },
         { status: 404 }
@@ -55,7 +58,6 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     }
 
     await ensureSeoStorage()
-    const kind = String(img.kind || '').toUpperCase()
     const aspectRatio = kind === 'BANNER' ? '16:9' : '1:1'
     const gen = await geminiGenerateImagePng({
       prompt: String(img.prompt || ''),

@@ -52,18 +52,19 @@ export async function POST(request: NextRequest) {
           status: 'active',
           limit: 10,
         })
-        // banner関連のサブスクリプションを探す
-        const bannerSub = subscriptions.data.find((sub) => {
+        // serviceId に一致するサブスクリプションを探す（metadata優先、次にplanId）
+        const matched = subscriptions.data.find((sub) => {
           const priceId = sub.items.data[0]?.price.id || ''
           const productId = sub.items.data[0]?.price.product as string || ''
-          // banner関連の価格IDまたは製品IDを含むものを探す
-          return priceId.includes('banner') || 
-                 productId.includes('banner') ||
-                 sub.metadata?.serviceId === 'banner' ||
-                 sub.metadata?.planId?.includes('banner')
+          const metaService = String(sub.metadata?.serviceId || '')
+          const metaPlanId = String(sub.metadata?.planId || '')
+          if (metaService && metaService === serviceId) return true
+          if (metaPlanId && metaPlanId.startsWith(`${serviceId}-`)) return true
+          // 最後のフォールバック（旧データ互換）：priceId/productId に serviceId が含まれている
+          return priceId.includes(serviceId) || productId.includes(serviceId)
         })
         // 見つからない場合は最初のアクティブなサブスクリプションを使用
-        subscriptionId = bannerSub?.id || subscriptions.data[0]?.id || null
+        subscriptionId = matched?.id || subscriptions.data[0]?.id || null
       } catch (e) {
         console.error('Failed to fetch subscriptions from Stripe:', e)
       }

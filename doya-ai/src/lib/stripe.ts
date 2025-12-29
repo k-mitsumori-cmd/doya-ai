@@ -24,15 +24,15 @@ export const getStripePublishableKey = () => {
 export const STRIPE_PRICE_IDS = {
   // ドヤSEO
   seo: {
-    // PRO: 月額¥3,000（1日10回）
+    // PRO: 月額¥9,980（1日10回）※要件に合わせて更新
     pro: {
       monthly: process.env.STRIPE_PRICE_SEO_PRO_MONTHLY || 'price_seo_pro_monthly',
       yearly: process.env.STRIPE_PRICE_SEO_PRO_YEARLY || 'price_seo_pro_yearly',
     },
-    // BUSINESS: 月額¥9,900（1日50回）
-    business: {
-      monthly: process.env.STRIPE_PRICE_SEO_BUSINESS_MONTHLY || 'price_seo_business_monthly',
-      yearly: process.env.STRIPE_PRICE_SEO_BUSINESS_YEARLY || 'price_seo_business_yearly',
+    // ENTERPRISE: 月額¥49,980（1日30回）
+    enterprise: {
+      monthly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_MONTHLY || 'price_seo_enterprise_monthly',
+      yearly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_YEARLY || 'price_seo_enterprise_yearly',
     },
   },
   // ドヤバナーAI
@@ -75,7 +75,7 @@ export const STRIPE_PRICE_IDS = {
 // ========================================
 // 価格ID ↔ プランID 変換（厳密マッピング）
 // ========================================
-export type PlanId = 'seo-pro' | 'seo-business' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'bundle'
+export type PlanId = 'seo-pro' | 'seo-enterprise' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'bundle'
 export type ServiceId = 'seo' | 'banner' | 'bundle'
 
 export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
@@ -86,7 +86,7 @@ export function getPlanIdFromStripePriceId(priceId: string | null | undefined): 
   if (!priceId) return null
   const entries: Array<[PlanId, { monthly: string; yearly: string }]> = [
     ['seo-pro', STRIPE_PRICE_IDS.seo.pro],
-    ['seo-business', STRIPE_PRICE_IDS.seo.business],
+    ['seo-enterprise', STRIPE_PRICE_IDS.seo.enterprise],
     ['banner-basic', STRIPE_PRICE_IDS.banner.basic],
     ['banner-pro', STRIPE_PRICE_IDS.banner.pro],
     ['banner-enterprise', STRIPE_PRICE_IDS.banner.enterprise],
@@ -244,8 +244,8 @@ function collectRealPriceIds(): string[] {
     // SEO
     process.env.STRIPE_PRICE_SEO_PRO_MONTHLY,
     process.env.STRIPE_PRICE_SEO_PRO_YEARLY,
-    process.env.STRIPE_PRICE_SEO_BUSINESS_MONTHLY,
-    process.env.STRIPE_PRICE_SEO_BUSINESS_YEARLY,
+    process.env.STRIPE_PRICE_SEO_ENTERPRISE_MONTHLY,
+    process.env.STRIPE_PRICE_SEO_ENTERPRISE_YEARLY,
     // Banner（新プラン）
     process.env.STRIPE_PRICE_BANNER_PRO_MONTHLY,
     process.env.STRIPE_PRICE_BANNER_PRO_YEARLY,

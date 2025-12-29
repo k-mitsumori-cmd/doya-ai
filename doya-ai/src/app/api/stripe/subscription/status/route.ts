@@ -46,14 +46,17 @@ export async function GET(request: NextRequest) {
     if (!subscriptionId && user.stripeCustomerId) {
       const subs = await stripe.subscriptions.list({ customer: user.stripeCustomerId, status: 'all', limit: 20 })
       const activeSubs = subs.data.filter((s) => ACTIVE_LIKE.has(String(s.status)))
-      const bannerCandidate = activeSubs.find((s) => {
+      const candidate = activeSubs.find((s) => {
         const priceId = s.items.data[0]?.price.id
         const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
         const planIdFromMeta = (s.metadata?.planId as any) || null
         const planId = String(planIdFromPrice || planIdFromMeta || '')
-        return planId.startsWith('banner-') || planId.includes('banner')
+        const metaService = String((s.metadata?.serviceId as any) || '').trim()
+        if (metaService && metaService === serviceId) return true
+        if (planId && planId.startsWith(`${serviceId}-`)) return true
+        return false
       })
-      subscriptionId = bannerCandidate?.id || activeSubs[0]?.id || null
+      subscriptionId = candidate?.id || activeSubs[0]?.id || null
     }
 
     if (!subscriptionId) {

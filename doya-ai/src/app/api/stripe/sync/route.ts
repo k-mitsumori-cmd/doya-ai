@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
             planId === 'banner-starter' ||
             planId === 'banner-business')
         const servicePlan =
-          planId === 'seo-business'
-            ? 'BUSINESS'
+          serviceId === 'seo' && planId === 'seo-enterprise'
+            ? 'ENTERPRISE'
             : serviceId === 'banner' && planId === 'banner-enterprise'
               ? 'ENTERPRISE'
               : planId.endsWith('-pro') || isBannerPaid
@@ -116,8 +116,8 @@ export async function POST(request: NextRequest) {
     const userPlan =
       planId === 'bundle'
         ? 'BUNDLE'
-        : planId === 'seo-business'
-          ? 'BUSINESS'
+        : planId === 'seo-enterprise'
+          ? 'ENTERPRISE'
           : planId === 'banner-enterprise'
             ? 'ENTERPRISE'
             : planId === 'banner-basic' || (planId && String(planId).endsWith('-pro'))
