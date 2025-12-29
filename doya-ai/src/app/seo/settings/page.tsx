@@ -56,7 +56,7 @@ export default function SeoSettingsPage() {
         </div>
 
         <Link
-          href="/seo/pricing"
+          href="/seo/dashboard/plan"
           className="mt-6 flex items-center justify-between p-4 rounded-2xl border border-gray-100 bg-gray-50/40 hover:bg-gray-50 transition-colors"
         >
           <div className="flex-1">

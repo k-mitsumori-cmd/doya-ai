@@ -926,14 +926,14 @@ export default function SeoNewArticlePage() {
                       const requiredPlan = n >= 50000 ? 'ENTERPRISE' : n > 10000 ? 'PRO' : n > 5000 ? 'FREE' : 'GUEST'
                       const requiredLabel =
                         requiredPlan === 'ENTERPRISE' ? 'Enterpriseが必要' : requiredPlan === 'PRO' ? 'PROが必要' : requiredPlan === 'FREE' ? 'ログインが必要' : 'ゲストOK'
-                      const hint = locked ? `${requiredLabel}（クリックで料金プランへ）` : `${n.toLocaleString()}字を選択`
+                      const hint = locked ? `${requiredLabel}（クリックでアップグレード）` : `${n.toLocaleString()}字を選択`
                       return (
                         <button
                           key={n}
                           type="button"
                           onClick={() => {
                             if (locked) {
-                              window.location.href = '/seo/pricing'
+                              window.location.href = isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'
                               return
                             }
                             setTargetChars(n)
