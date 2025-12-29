@@ -47,30 +47,23 @@ interface User {
   services: string[]
 }
 
-// サービス設定
-const SERVICE_CONFIG: Record<string, { 
-  name: string
-  emoji: string
-  plans: Record<string, { label: string; dailyLimit: number; color: string }>
+// コンプリートパック（共通プラン）設定
+// バナーAIとライティングAIは同じプランで連動
+const COMPLETE_PACK_PLANS: Record<string, { 
+  label: string
+  bannerLimit: number
+  writingLimit: number
+  color: string
 }> = {
-  banner: {
-    name: 'ドヤバナーAI',
-    emoji: '🎨',
-    plans: {
-      FREE: { label: 'おためし', dailyLimit: 9, color: 'gray' },
-      PRO: { label: 'プロ', dailyLimit: 50, color: 'amber' },
-      ENTERPRISE: { label: 'エンタープライズ', dailyLimit: 500, color: 'rose' },
-    }
-  },
-  writing: {
-    name: 'ドヤライティングAI',
-    emoji: '✍️',
-    plans: {
-      FREE: { label: 'おためし', dailyLimit: 5, color: 'gray' },
-      PRO: { label: 'プロ', dailyLimit: 30, color: 'emerald' },
-      ENTERPRISE: { label: 'エンタープライズ', dailyLimit: 100, color: 'cyan' },
-    }
-  },
+  FREE: { label: 'おためし', bannerLimit: 9, writingLimit: 5, color: 'gray' },
+  PRO: { label: 'プロ', bannerLimit: 50, writingLimit: 30, color: 'amber' },
+  ENTERPRISE: { label: 'エンタープライズ', bannerLimit: 500, writingLimit: 100, color: 'rose' },
+}
+
+// サービス別の表示設定（プランは共通）
+const SERVICE_DISPLAY = {
+  banner: { name: 'ドヤバナーAI', emoji: '🎨', unit: '枚' },
+  writing: { name: 'ドヤライティングAI', emoji: '✍️', unit: '件' },
 }
 
 const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; label: string }> = {
@@ -81,19 +74,16 @@ const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; la
 
 const PLAN_OPTIONS = ['FREE', 'PRO', 'ENTERPRISE']
 
-// 残り生成可能数を計算
+// 残り生成可能数を計算（共通プラン）
 function getRemainingGenerations(serviceId: string, plan: string, dailyUsage: number): number {
-  const service = SERVICE_CONFIG[serviceId]
-  if (!service) return 0
-  const planConfig = service.plans[plan] || service.plans.FREE
-  return Math.max(0, planConfig.dailyLimit - dailyUsage)
+  const planConfig = COMPLETE_PACK_PLANS[plan] || COMPLETE_PACK_PLANS.FREE
+  const limit = serviceId === 'banner' ? planConfig.bannerLimit : planConfig.writingLimit
+  return Math.max(0, limit - dailyUsage)
 }
 
 function getDailyLimit(serviceId: string, plan: string): number {
-  const service = SERVICE_CONFIG[serviceId]
-  if (!service) return 0
-  const planConfig = service.plans[plan] || service.plans.FREE
-  return planConfig.dailyLimit
+  const planConfig = COMPLETE_PACK_PLANS[plan] || COMPLETE_PACK_PLANS.FREE
+  return serviceId === 'banner' ? planConfig.bannerLimit : planConfig.writingLimit
 }
 
 const containerVariants = {
@@ -209,8 +199,50 @@ export default function AdminUsersPage() {
     await handleUpdateUser(userId, updates)
   }
 
+  // コンプリートパック: 両サービスのプランを同時に更新
+  const handleUpdateCompletePlan = async (userId: string, newPlan: string) => {
+    try {
+      setIsSaving(true)
+      // bannerとwriting両方を更新
+      const response1 = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId, serviceId: 'banner', servicePlan: newPlan }),
+      })
+      const response2 = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId, serviceId: 'writing', servicePlan: newPlan }),
+      })
+      // ユーザー本体のplanも更新
+      const response3 = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId, plan: newPlan }),
+      })
+
+      if (!response1.ok || !response2.ok || !response3.ok) {
+        throw new Error('更新に失敗しました')
+      }
+
+      await fetchUsers()
+      toast.success('プランを更新しました（コンプリートパック）')
+      return true
+    } catch (error) {
+      console.error('Update error:', error)
+      toast.error('更新に失敗しました')
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const handleUpdateServicePlan = async (userId: string, serviceId: string, newPlan: string) => {
-    await handleUpdateUser(userId, { serviceId, servicePlan: newPlan })
+    // コンプリートパックなので両方同時に更新
+    await handleUpdateCompletePlan(userId, newPlan)
   }
 
   const handleSelectUser = (userId: string) => {
@@ -492,8 +524,9 @@ export default function AdminUsersPage() {
                   </button>
                 </th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">ユーザー</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">🎨 バナーAI</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">✍️ ライティングAI</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">プラン</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">🎨 バナー残り</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">✍️ ライティング残り</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">課金状態</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">合計生成</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">登録日</th>
@@ -538,72 +571,63 @@ export default function AdminUsersPage() {
                         </div>
                       </div>
                     </td>
-                    {/* ドヤバナーAI 列 */}
+                    {/* コンプリートパック プラン列 */}
+                    <td className="px-6 py-4">
+                      {(() => {
+                        // 共通プランを取得（bannerとwritingは連動）
+                        const bannerSub = user.serviceSubscriptions.find((s) => s.serviceId === 'banner')
+                        const currentPlan = bannerSub?.plan || user.plan || 'FREE'
+                        const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
+                        return (
+                          <select
+                            value={currentPlan}
+                            onChange={async (e) => {
+                              await handleUpdateCompletePlan(user.id, e.target.value)
+                            }}
+                            disabled={isSaving}
+                            className={`px-3 py-2 rounded-lg border text-xs font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 min-w-[120px] ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
+                          >
+                            {PLAN_OPTIONS.map((p) => (
+                              <option key={p} value={p} className="bg-[#0A0A0F]">
+                                {PLAN_STYLES[p]?.label || p}
+                              </option>
+                            ))}
+                          </select>
+                        )
+                      })()}
+                    </td>
+                    {/* バナー残り生成数 列 */}
                     <td className="px-6 py-4">
                       {(() => {
                         const bannerSub = user.serviceSubscriptions.find((s) => s.serviceId === 'banner')
                         const currentPlan = bannerSub?.plan || user.plan || 'FREE'
-                        const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
                         const dailyUsage = bannerSub?.dailyUsage || 0
                         const remaining = getRemainingGenerations('banner', currentPlan, dailyUsage)
                         const limit = getDailyLimit('banner', currentPlan)
                         return (
-                          <div className="space-y-1">
-                            <select
-                              value={currentPlan}
-                              onChange={async (e) => {
-                                await handleUpdateServicePlan(user.id, 'banner', e.target.value)
-                              }}
-                              disabled={isSaving}
-                              className={`px-2 py-1 rounded-lg border text-[10px] font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 min-w-[90px] ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
-                            >
-                              {PLAN_OPTIONS.map((p) => (
-                                <option key={p} value={p} className="bg-[#0A0A0F]">
-                                  {PLAN_STYLES[p]?.label || p}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="flex items-center gap-1">
-                              <span className={`text-sm font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {remaining}
-                              </span>
-                              <span className="text-white/30 text-[10px]">/ {limit}枚</span>
-                            </div>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-lg font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {remaining}
+                            </span>
+                            <span className="text-white/30 text-xs">/ {limit}枚</span>
                           </div>
                         )
                       })()}
                     </td>
-                    {/* ドヤライティングAI 列 */}
+                    {/* ライティング残り生成数 列 */}
                     <td className="px-6 py-4">
                       {(() => {
                         const writingSub = user.serviceSubscriptions.find((s) => s.serviceId === 'writing')
-                        const currentPlan = writingSub?.plan || 'FREE'
-                        const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
+                        const currentPlan = writingSub?.plan || user.plan || 'FREE'
                         const dailyUsage = writingSub?.dailyUsage || 0
                         const remaining = getRemainingGenerations('writing', currentPlan, dailyUsage)
                         const limit = getDailyLimit('writing', currentPlan)
                         return (
-                          <div className="space-y-1">
-                            <select
-                              value={currentPlan}
-                              onChange={async (e) => {
-                                await handleUpdateServicePlan(user.id, 'writing', e.target.value)
-                              }}
-                              disabled={isSaving}
-                              className={`px-2 py-1 rounded-lg border text-[10px] font-bold appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 min-w-[90px] ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
-                            >
-                              {PLAN_OPTIONS.map((p) => (
-                                <option key={p} value={p} className="bg-[#0A0A0F]">
-                                  {PLAN_STYLES[p]?.label || p}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="flex items-center gap-1">
-                              <span className={`text-sm font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {remaining}
-                              </span>
-                              <span className="text-white/30 text-[10px]">/ {limit}件</span>
-                            </div>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-lg font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {remaining}
+                            </span>
+                            <span className="text-white/30 text-xs">/ {limit}件</span>
                           </div>
                         )
                       })()}
@@ -740,111 +764,47 @@ export default function AdminUsersPage() {
                   </div>
                 </div>
 
-                {/* ドヤバナーAI プラン設定 */}
-                <div className="p-4 bg-violet-500/10 rounded-xl border border-violet-500/20">
+                {/* コンプリートパック プラン設定 */}
+                <div className="p-4 bg-gradient-to-br from-violet-500/10 to-emerald-500/10 rounded-xl border border-violet-500/20">
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl">🎨</span>
+                    <div className="flex -space-x-2">
+                      <span className="text-2xl">🎨</span>
+                      <span className="text-2xl">✍️</span>
+                    </div>
                     <div>
-                      <h3 className="font-medium text-white">ドヤバナーAI</h3>
-                      <p className="text-xs text-white/40">プランと使用状況</p>
+                      <h3 className="font-medium text-white">コンプリートパック</h3>
+                      <p className="text-xs text-white/40">ドヤバナーAI ＋ ドヤライティングAI</p>
                     </div>
                   </div>
                   
                   {(() => {
                     const bannerSub = editingUser.serviceSubscriptions.find((s) => s.serviceId === 'banner')
-                    const currentPlan = bannerSub?.plan || editingUser.plan || 'FREE'
-                    const dailyUsage = bannerSub?.dailyUsage || 0
-                    const remaining = getRemainingGenerations('banner', currentPlan, dailyUsage)
-                    const limit = getDailyLimit('banner', currentPlan)
-                    
-                    return (
-                      <>
-                        <div className="mb-4">
-                          <label className="block text-sm text-white/60 mb-2">プラン</label>
-                          <select
-                            value={currentPlan}
-                            onChange={async (e) => {
-                              await handleUpdateServicePlan(editingUser.id, 'banner', e.target.value)
-                              await fetchUsers()
-                              const updated = users.find((u) => u.id === editingUser.id)
-                              if (updated) setEditingUser(updated)
-                            }}
-                            disabled={isSaving}
-                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer focus:border-violet-500/50 outline-none transition-all disabled:opacity-50"
-                          >
-                            {PLAN_OPTIONS.map((p) => (
-                              <option key={p} value={p} className="bg-[#1a1a24]">
-                                {PLAN_STYLES[p]?.label || p}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div className="p-3 bg-white/5 rounded-lg">
-                            <p className="text-xs text-white/40 mb-1">本日の残り</p>
-                            <p className={`text-2xl font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {remaining}<span className="text-sm text-white/40 ml-1">/ {limit}枚</span>
-                            </p>
-                          </div>
-                          <div className="p-3 bg-white/5 rounded-lg">
-                            <p className="text-xs text-white/40 mb-1">本日の使用</p>
-                            <p className="text-2xl font-bold text-white">
-                              {dailyUsage}<span className="text-sm text-white/40 ml-1">枚</span>
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {bannerSub && (
-                          <button
-                            onClick={async () => {
-                              await handleResetUsage(editingUser.id, 'banner', 'daily')
-                              await fetchUsers()
-                              const updated = users.find((u) => u.id === editingUser.id)
-                              if (updated) setEditingUser(updated)
-                            }}
-                            disabled={isSaving}
-                            className="w-full px-4 py-2 text-sm bg-violet-500/20 text-violet-400 rounded-lg hover:bg-violet-500/30 transition-colors disabled:opacity-50"
-                          >
-                            本日の使用回数をリセット
-                          </button>
-                        )}
-                      </>
-                    )
-                  })()}
-                </div>
-
-                {/* ドヤライティングAI プラン設定 */}
-                <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl">✍️</span>
-                    <div>
-                      <h3 className="font-medium text-white">ドヤライティングAI</h3>
-                      <p className="text-xs text-white/40">プランと使用状況</p>
-                    </div>
-                  </div>
-                  
-                  {(() => {
                     const writingSub = editingUser.serviceSubscriptions.find((s) => s.serviceId === 'writing')
-                    const currentPlan = writingSub?.plan || 'FREE'
-                    const dailyUsage = writingSub?.dailyUsage || 0
-                    const remaining = getRemainingGenerations('writing', currentPlan, dailyUsage)
-                    const limit = getDailyLimit('writing', currentPlan)
+                    const currentPlan = bannerSub?.plan || editingUser.plan || 'FREE'
+                    const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
+                    
+                    const bannerUsage = bannerSub?.dailyUsage || 0
+                    const bannerRemaining = getRemainingGenerations('banner', currentPlan, bannerUsage)
+                    const bannerLimit = getDailyLimit('banner', currentPlan)
+                    
+                    const writingUsage = writingSub?.dailyUsage || 0
+                    const writingRemaining = getRemainingGenerations('writing', currentPlan, writingUsage)
+                    const writingLimit = getDailyLimit('writing', currentPlan)
                     
                     return (
                       <>
                         <div className="mb-4">
-                          <label className="block text-sm text-white/60 mb-2">プラン</label>
+                          <label className="block text-sm text-white/60 mb-2">プラン（両サービス共通）</label>
                           <select
                             value={currentPlan}
                             onChange={async (e) => {
-                              await handleUpdateServicePlan(editingUser.id, 'writing', e.target.value)
+                              await handleUpdateCompletePlan(editingUser.id, e.target.value)
                               await fetchUsers()
                               const updated = users.find((u) => u.id === editingUser.id)
                               if (updated) setEditingUser(updated)
                             }}
                             disabled={isSaving}
-                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white appearance-none cursor-pointer focus:border-emerald-500/50 outline-none transition-all disabled:opacity-50"
+                            className={`w-full px-4 py-3 rounded-xl appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 border ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
                           >
                             {PLAN_OPTIONS.map((p) => (
                               <option key={p} value={p} className="bg-[#1a1a24]">
@@ -854,35 +814,77 @@ export default function AdminUsersPage() {
                           </select>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div className="p-3 bg-white/5 rounded-lg">
-                            <p className="text-xs text-white/40 mb-1">本日の残り</p>
-                            <p className={`text-2xl font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {remaining}<span className="text-sm text-white/40 ml-1">/ {limit}件</span>
-                            </p>
+                        {/* バナーAI 使用状況 */}
+                        <div className="p-3 bg-violet-500/10 rounded-lg border border-violet-500/20 mb-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span>🎨</span>
+                            <span className="text-sm font-medium text-white">ドヤバナーAI</span>
                           </div>
-                          <div className="p-3 bg-white/5 rounded-lg">
-                            <p className="text-xs text-white/40 mb-1">本日の使用</p>
-                            <p className="text-2xl font-bold text-white">
-                              {dailyUsage}<span className="text-sm text-white/40 ml-1">件</span>
-                            </p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-xs text-white/40 mb-1">本日の残り</p>
+                              <p className={`text-xl font-bold ${bannerRemaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {bannerRemaining}<span className="text-xs text-white/40 ml-1">/ {bannerLimit}枚</span>
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-white/40 mb-1">本日の使用</p>
+                              <p className="text-xl font-bold text-white">
+                                {bannerUsage}<span className="text-xs text-white/40 ml-1">枚</span>
+                              </p>
+                            </div>
                           </div>
+                          {bannerSub && (
+                            <button
+                              onClick={async () => {
+                                await handleResetUsage(editingUser.id, 'banner', 'daily')
+                                await fetchUsers()
+                                const updated = users.find((u) => u.id === editingUser.id)
+                                if (updated) setEditingUser(updated)
+                              }}
+                              disabled={isSaving}
+                              className="w-full mt-2 px-3 py-1.5 text-xs bg-violet-500/20 text-violet-400 rounded-lg hover:bg-violet-500/30 transition-colors disabled:opacity-50"
+                            >
+                              使用回数をリセット
+                            </button>
+                          )}
                         </div>
                         
-                        {writingSub && (
-                          <button
-                            onClick={async () => {
-                              await handleResetUsage(editingUser.id, 'writing', 'daily')
-                              await fetchUsers()
-                              const updated = users.find((u) => u.id === editingUser.id)
-                              if (updated) setEditingUser(updated)
-                            }}
-                            disabled={isSaving}
-                            className="w-full px-4 py-2 text-sm bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
-                          >
-                            本日の使用回数をリセット
-                          </button>
-                        )}
+                        {/* ライティングAI 使用状況 */}
+                        <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span>✍️</span>
+                            <span className="text-sm font-medium text-white">ドヤライティングAI</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-xs text-white/40 mb-1">本日の残り</p>
+                              <p className={`text-xl font-bold ${writingRemaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {writingRemaining}<span className="text-xs text-white/40 ml-1">/ {writingLimit}件</span>
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-white/40 mb-1">本日の使用</p>
+                              <p className="text-xl font-bold text-white">
+                                {writingUsage}<span className="text-xs text-white/40 ml-1">件</span>
+                              </p>
+                            </div>
+                          </div>
+                          {writingSub && (
+                            <button
+                              onClick={async () => {
+                                await handleResetUsage(editingUser.id, 'writing', 'daily')
+                                await fetchUsers()
+                                const updated = users.find((u) => u.id === editingUser.id)
+                                if (updated) setEditingUser(updated)
+                              }}
+                              disabled={isSaving}
+                              className="w-full mt-2 px-3 py-1.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
+                            >
+                              使用回数をリセット
+                            </button>
+                          )}
+                        </div>
                       </>
                     )
                   })()}
