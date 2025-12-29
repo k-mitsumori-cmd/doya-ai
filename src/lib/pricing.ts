@@ -131,8 +131,8 @@ export const SEO_PRICING: ServicePricing = {
   serviceId: 'seo',
   serviceName: 'ドヤライティングAI',
   serviceIcon: '🧠',
-  guestLimit: 3,      // ゲスト: 合計3回（記事作成）まで
-  freeLimit: 3,       // ログイン無料: 1日3回まで
+  guestLimit: 1,      // ゲスト: 合計1回（記事作成）まで
+  freeLimit: 1,       // ログイン無料: 1日1回まで
   proLimit: 5,        // PRO: 1日5回まで
   enterpriseLimit: 30, // Enterprise: 1日30回まで
   // 文字数制限（1記事あたり）
@@ -155,8 +155,8 @@ export const SEO_PRICING: ServicePricing = {
       period: '',
       description: 'まずは試してみたい方',
       features: [
-        { text: 'ゲスト: 合計3回まで / 5,000字まで', included: true },
-        { text: 'ログイン: 1日3回 / 10,000字まで', included: true },
+        { text: 'ゲスト: 合計1回まで / 5,000字まで', included: true },
+        { text: 'ログイン: 1日1回 / 10,000字まで', included: true },
         { text: 'アウトライン/セクション生成', included: true },
         { text: '履歴保存（直近3ヶ月）', included: true },
         { text: '画像生成（図解/サムネ）はPROから', included: true },
