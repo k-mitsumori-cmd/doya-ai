@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -22,6 +23,7 @@ import {
   TrendingUp,
   Search,
   BarChart3,
+  Lock,
 } from 'lucide-react'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 import { FeatureGuide } from '@/components/FeatureGuide'
@@ -52,11 +54,21 @@ const TONE_OPTIONS = [
 ] as const
 
 const CHAR_PRESETS = [
-  { value: 5000, label: '5,000字', desc: '要点を絞った記事' },
-  { value: 10000, label: '10,000字', desc: '標準的なSEO記事' },
-  { value: 20000, label: '20,000字', desc: '網羅性の高い記事' },
-  { value: 30000, label: '30,000字', desc: '徹底解説記事' },
+  { value: 3000, label: '3,000字', desc: 'コンパクトな記事', minPlan: 'GUEST' },
+  { value: 5000, label: '5,000字', desc: '要点を絞った記事', minPlan: 'GUEST' },
+  { value: 10000, label: '10,000字', desc: '標準的なSEO記事', minPlan: 'FREE' },
+  { value: 20000, label: '20,000字', desc: '網羅性の高い記事', minPlan: 'PRO' },
+  { value: 30000, label: '30,000字', desc: '徹底解説記事', minPlan: 'PRO' },
+  { value: 50000, label: '50,000字', desc: '超大型コンテンツ', minPlan: 'ENTERPRISE' },
 ] as const
+
+// プラン別文字数上限
+const CHAR_LIMITS: Record<string, number> = {
+  GUEST: 5000,
+  FREE: 10000,
+  PRO: 30000,
+  ENTERPRISE: 50000,
+}
 
 const DEFAULT_LLMO = {
   tldr: true,
@@ -257,6 +269,7 @@ export default function SeoCreateWizardPage() {
 
   // Step管理
   const [step, setStep] = useState<1 | 2 | 3>(1)
+  const { data: session } = useSession()
 
   // Step1: 記事の軸
   const [mainKeyword, setMainKeyword] = useState('')
@@ -269,6 +282,20 @@ export default function SeoCreateWizardPage() {
   // Step3: 仕上がり
   const [tone, setTone] = useState<string>('logical')
   const [targetChars, setTargetChars] = useState(10000)
+
+  // プラン情報
+  const isLoggedIn = !!session?.user?.email
+  const userPlan = useMemo(() => {
+    if (!isLoggedIn) return 'GUEST'
+    const seoPlan = (session?.user as any)?.seoPlan
+    const plan = (session?.user as any)?.plan
+    const p = String(seoPlan || plan || 'FREE').toUpperCase()
+    if (p === 'ENTERPRISE') return 'ENTERPRISE'
+    if (p === 'PRO') return 'PRO'
+    return 'FREE'
+  }, [session, isLoggedIn])
+  
+  const charLimit = CHAR_LIMITS[userPlan] || 10000
 
   // 詳細設定（折りたたみ）
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -393,7 +420,8 @@ export default function SeoCreateWizardPage() {
     setArticleType(sample.articleType)
     setAudiencePreset(sample.audiencePreset)
     setTone(sample.tone)
-    setTargetChars(sample.targetChars)
+    // サンプルの文字数がプラン上限を超える場合は上限に制限
+    setTargetChars(Math.min(sample.targetChars, charLimit))
     setRelatedKeywords(sample.relatedKeywords || '')
     setOriginalContent(sample.originalContent || '')
     setConstraints(sample.constraints || '')
@@ -723,9 +751,12 @@ export default function SeoCreateWizardPage() {
                   <div>
                     <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
                       文字数目安
+                      <span className="ml-2 text-[10px] font-bold text-gray-400 normal-case">
+                        ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'PRO' ? 'プロ' : 'エンタープライズ'}プラン: 最大{charLimit.toLocaleString()}字)
+                      </span>
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {CHAR_PRESETS.map((preset) => {
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {CHAR_PRESETS.filter(p => p.value <= charLimit).map((preset) => {
                         const selected = targetChars === preset.value
                         return (
                           <button
@@ -745,6 +776,18 @@ export default function SeoCreateWizardPage() {
                           </button>
                         )
                       })}
+                      {/* プランアップグレード誘導 */}
+                      {userPlan !== 'ENTERPRISE' && (
+                        <Link href="/seo/pricing" className="block">
+                          <div className="p-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer">
+                            <div className="flex items-center justify-center gap-1 text-sm font-black text-gray-400">
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>もっと長く</span>
+                            </div>
+                            <p className="text-[10px] text-gray-400 mt-0.5">プランをアップグレード</p>
+                          </div>
+                        </Link>
+                      )}
                     </div>
                   </div>
 
