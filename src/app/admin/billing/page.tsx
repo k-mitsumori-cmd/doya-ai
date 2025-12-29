@@ -225,7 +225,7 @@ export default function BillingPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-amber-400">¥3,980</p>
+                    <p className="text-xl font-bold text-amber-400">¥9,980</p>
                     <p className="text-xs text-white/40">/月</p>
                   </div>
                 </div>
@@ -240,7 +240,7 @@ export default function BillingPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xl font-bold text-rose-400">要問合せ</p>
+                    <p className="text-xl font-bold text-rose-400">¥49,980</p>
                     <p className="text-xs text-white/40">/月</p>
                   </div>
                 </div>
@@ -252,7 +252,10 @@ export default function BillingPage() {
                   <span className="text-white/60">月間売上</span>
                   <span className="text-3xl font-bold text-emerald-400">{formatCurrency(data.monthlyRevenue)}</span>
                 </div>
-                <p className="text-xs text-white/40">プロ会員 {data.premiumUsers}人 × ¥3,980</p>
+                <div className="text-xs text-white/40 space-y-1">
+                  <p>プロ会員 {Math.max(0, data.premiumUsers - data.enterpriseUsers)}人 × ¥9,980</p>
+                  <p>エンタープライズ {data.enterpriseUsers}人 × ¥49,980</p>
+                </div>
               </div>
             </div>
           </div>
