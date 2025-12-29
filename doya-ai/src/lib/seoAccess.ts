@@ -60,13 +60,13 @@ export function seoDailyArticleLimit(plan: SeoPlanCode): number {
   // -1 = 無制限
   if (plan === 'PRO') return 5
   if (plan === 'ENTERPRISE') return 30
-  if (plan === 'FREE') return 3
+  if (plan === 'FREE') return 1
   // GUESTは日次ではなく累計（別ロジック）
   return 0
 }
 
 export function seoGuestTotalArticleLimit(): number {
-  return 3
+  return 1
 }
 
 export function canUseSeoImages(args: { isLoggedIn: boolean; plan: SeoPlanCode; trialActive: boolean }) {
