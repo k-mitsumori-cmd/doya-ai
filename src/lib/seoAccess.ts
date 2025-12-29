@@ -58,7 +58,7 @@ export function jstDayRange(now = new Date()): { start: Date; end: Date } {
 
 export function seoDailyArticleLimit(plan: SeoPlanCode): number {
   // -1 = 無制限
-  if (plan === 'PRO') return 10
+  if (plan === 'PRO') return 5
   if (plan === 'ENTERPRISE') return 30
   if (plan === 'FREE') return 3
   // GUESTは日次ではなく累計（別ロジック）
