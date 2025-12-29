@@ -742,23 +742,45 @@ export default function SeoCreateWizardPage() {
                       </span>
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {CHAR_PRESETS.filter(p => p.value <= charLimit).map((preset) => {
+                      {CHAR_PRESETS.map((preset) => {
                         const selected = targetChars === preset.value
+                        const locked = preset.value > charLimit
+                        const hint = locked
+                          ? `現在のプランでは${preset.value.toLocaleString()}字は選べません（上位プランで解放）`
+                          : `${preset.value.toLocaleString()}字を選択`
+
                         return (
                           <button
                             key={preset.value}
                             type="button"
-                            onClick={() => setTargetChars(preset.value)}
-                            className={`p-3 rounded-xl border-2 text-center transition-all ${
+                            onClick={() => {
+                              if (locked) return
+                              setTargetChars(preset.value)
+                            }}
+                            disabled={locked}
+                            title={hint}
+                            className={`relative p-3 rounded-xl border-2 text-center transition-all overflow-hidden ${
                               selected
                                 ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+                                : locked
+                                  ? 'border-gray-100 bg-gray-50 opacity-70 cursor-not-allowed'
+                                  : 'border-gray-100 bg-gray-50 hover:border-gray-200'
                             }`}
                           >
+                            {locked && (
+                              <div className="absolute inset-0 pointer-events-none">
+                                <div className="absolute inset-0 bg-white/35" />
+                                <div className="absolute right-2 top-2 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-900/85 text-white text-[9px] font-black shadow">
+                                  <Lock className="w-3 h-3" />
+                                  LOCK
+                                </div>
+                              </div>
+                            )}
                             <p className={`text-sm font-black ${selected ? 'text-blue-600' : 'text-gray-700'}`}>
                               {preset.label}
                             </p>
                             <p className="text-[10px] text-gray-400 mt-0.5">{preset.desc}</p>
+                            {locked && <p className="text-[10px] font-black text-gray-500 mt-1">上位プランで解放</p>}
                           </button>
                         )
                       })}
