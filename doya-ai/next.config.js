@@ -74,6 +74,17 @@ const nextConfig = {
         destination: '/seo',
         permanent: false,
       },
+      // /kantan は迷いやすいので、ドヤライティングAI（/seo）へ集約
+      {
+        source: '/kantan',
+        destination: '/seo',
+        permanent: false,
+      },
+      {
+        source: '/kantan/:path*',
+        destination: '/seo',
+        permanent: false,
+      },
     ]
   },
 }
