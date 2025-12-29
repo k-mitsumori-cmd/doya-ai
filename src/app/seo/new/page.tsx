@@ -865,16 +865,7 @@ export default function SeoNewArticlePage() {
           <motion.div layout whileHover={reduceMotion ? undefined : { y: -2 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-xl shadow-blue-500/5">
             <div className="grid gap-6 sm:gap-8">
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-[10px] sm:text-sm font-black text-gray-700 uppercase tracking-wider">記事タイトル</label>
-                  <button
-                    onClick={predictFromTitle}
-                    disabled={predicting || !title.trim()}
-                    className="text-[10px] font-black bg-blue-50 text-blue-600 px-3 py-1 rounded-full hover:bg-blue-100 transition-colors disabled:opacity-50"
-                  >
-                    {predicting ? '推定中...' : 'AIにおまかせ入力'}
-                  </button>
-                </div>
+                <label className="block text-[10px] sm:text-sm font-black text-gray-700 mb-3 uppercase tracking-wider">記事タイトル</label>
                 <input
                   className="w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl border-2 border-gray-50 bg-gray-50/50 text-gray-900 placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-lg sm:text-xl font-bold"
                   value={title}
@@ -1479,9 +1470,19 @@ export default function SeoNewArticlePage() {
           </div>
 
           {/* Advanced Section */}
-          <div className="space-y-4">
+          <div id="advanced-section" className="space-y-4 scroll-mt-4">
             <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
+              onClick={() => {
+                const next = !showAdvanced
+                setShowAdvanced(next)
+                // 開く時はスムーズスクロール
+                if (next) {
+                  setTimeout(() => {
+                    const el = document.getElementById('advanced-section')
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }, 100)
+                }
+              }}
               className="w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl border border-gray-200 text-gray-400 text-xs sm:text-sm font-black flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
             >
               <Settings2 className="w-4 h-4" />
@@ -1493,7 +1494,16 @@ export default function SeoNewArticlePage() {
               <div className="space-y-6 animate-fade-in-up">
                 <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
                   <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-5 sm:p-6">
-                    <label className="block text-[10px] font-black text-gray-400 uppercase mb-3">想定ターゲット</label>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-[10px] font-black text-gray-400 uppercase">想定ターゲット</label>
+                      <button
+                        onClick={predictFromTitle}
+                        disabled={predicting || !title.trim()}
+                        className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors disabled:opacity-50"
+                      >
+                        {predicting ? '推定中...' : 'AI推定'}
+                      </button>
+                    </div>
                     <textarea
                       className="w-full p-4 rounded-xl border border-gray-100 bg-gray-50 text-sm min-h-[100px] focus:outline-none focus:border-blue-500"
                       value={persona}
@@ -1502,7 +1512,16 @@ export default function SeoNewArticlePage() {
                     />
                   </div>
                   <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-5 sm:p-6">
-                    <label className="block text-[10px] font-black text-gray-400 uppercase mb-3">検索意図・ニーズ</label>
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-[10px] font-black text-gray-400 uppercase">検索意図・ニーズ</label>
+                      <button
+                        onClick={predictFromTitle}
+                        disabled={predicting || !title.trim()}
+                        className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors disabled:opacity-50"
+                      >
+                        {predicting ? '推定中...' : 'AI推定'}
+                      </button>
+                    </div>
                     <textarea
                       className="w-full p-4 rounded-xl border border-gray-100 bg-gray-50 text-sm min-h-[100px] focus:outline-none focus:border-blue-500"
                       value={searchIntent}
@@ -1513,9 +1532,18 @@ export default function SeoNewArticlePage() {
                 </div>
 
                 <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 p-5 sm:p-6">
-                  <label className="block text-[10px] font-black text-gray-400 uppercase mb-3">
-                    一次情報（経験・訴求ポイント）※最重要
-                  </label>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-[10px] font-black text-gray-400 uppercase">
+                      一次情報（経験・訴求ポイント）※最重要
+                    </label>
+                    <button
+                      onClick={predictFromTitle}
+                      disabled={predicting || !title.trim()}
+                      className="text-[9px] font-black bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full hover:bg-blue-100 transition-colors disabled:opacity-50"
+                    >
+                      {predicting ? '推定中...' : 'AI推定'}
+                    </button>
+                  </div>
                   <textarea
                     className="w-full p-4 rounded-xl border border-gray-100 bg-gray-50 text-sm min-h-[120px] focus:outline-none focus:border-blue-500"
                     value={requestText}
@@ -1531,14 +1559,14 @@ export default function SeoNewArticlePage() {
                   <h3 className="text-sm font-black text-gray-900 mb-6 flex items-center gap-2">
                     <Zap className="w-4 h-4 text-amber-500" /> LLMO（AI最適化）要素
                   </h3>
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                     {Object.entries(llmo).map(([key, val]) => (
                       <div key={key} className="flex items-center justify-between p-3 rounded-xl bg-gray-50">
                         <div className="min-w-0 pr-2">
                           <span className="block text-[10px] font-black text-gray-800">
                             {(LLMO_LABELS[key]?.label || key)}
                           </span>
-                          <span className="block text-[9px] font-bold text-gray-400 mt-0.5 truncate">
+                          <span className="block text-[9px] font-bold text-gray-400 mt-0.5 line-clamp-2">
                             {LLMO_LABELS[key]?.desc || 'AI最適化の補助要素です'}
                           </span>
                         </div>

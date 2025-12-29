@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, BellRing } from 'lucide-react'
+import { ArrowLeft, BellRing, CreditCard, ArrowRight } from 'lucide-react'
 import { readSeoClientSettings, patchSeoClientSettings, type SeoClientSettings } from '@seo/lib/clientSettings'
 import { FeatureGuide } from '@/components/FeatureGuide'
 
@@ -41,6 +41,35 @@ export default function SeoSettingsPage() {
         </div>
       </div>
 
+      {/* 料金プラン変更セクション */}
+      <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-xl shadow-blue-500/5 p-6 sm:p-8 mb-6">
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+            <CreditCard className="w-6 h-6" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-black text-gray-900">料金・プラン</h2>
+            <p className="text-xs font-bold text-gray-500 mt-1">
+              現在のプランの確認やアップグレード、解約の管理ができます。
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/seo/pricing"
+          className="mt-6 flex items-center justify-between p-4 rounded-2xl border border-gray-100 bg-gray-50/40 hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex-1">
+            <p className="text-sm font-black text-gray-900">料金プランを確認・変更する</p>
+            <p className="text-xs font-bold text-gray-500 mt-1">
+              PRO/Enterpriseプランで文字数上限アップ・画像生成が可能になります
+            </p>
+          </div>
+          <ArrowRight className="w-5 h-5 text-gray-400" />
+        </Link>
+      </div>
+
+      {/* 通知・ポップアップセクション */}
       <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 shadow-xl shadow-blue-500/5 p-6 sm:p-8">
         <div className="flex items-start gap-3">
           <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 flex-shrink-0">

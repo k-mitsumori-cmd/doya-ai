@@ -738,19 +738,116 @@ async function generateSection(jobId: string) {
 
 async function autoGenerateBanner(article: any) {
   await ensureSeoStorage()
+
+  // 記事内容を分析してビジュアルコンセプトを決定
+  const title = String(article.title || '').trim()
+  const keywords = ((article.keywords as any) || []) as string[]
+  const persona = String(article.persona || '').trim()
+  const searchIntent = String(article.searchIntent || '').trim()
+  const requestText = String(article.requestText || '').trim()
+
+  // キーワードから業界・テーマを推測
+  const allText = [title, ...keywords, persona, searchIntent].join(' ').toLowerCase()
+
+  // 業界・テーマ別のビジュアル要素を決定
+  let industryHint = ''
+  let visualElements = 'abstract geometric shapes, flowing lines'
+  let moodKeyword = 'professional'
+
+  if (/マーケティング|広告|集客|sns|instagram|twitter/.test(allText)) {
+    industryHint = 'Digital marketing and social media growth'
+    visualElements = 'upward arrows, network graphs, growth charts, connected nodes'
+    moodKeyword = 'dynamic and growth-oriented'
+  } else if (/rpo|人材|採用|求人|転職|hr/.test(allText)) {
+    industryHint = 'Human resources and talent acquisition'
+    visualElements = 'handshake silhouettes, connected people icons, building blocks'
+    moodKeyword = 'trustworthy and human-centered'
+  } else if (/ai|人工知能|機械学習|deep|gpt|llm/.test(allText)) {
+    industryHint = 'Artificial intelligence and technology'
+    visualElements = 'neural network patterns, circuit board designs, futuristic glowing elements'
+    moodKeyword = 'innovative and cutting-edge'
+  } else if (/seo|検索|google|アクセス|pv|流入/.test(allText)) {
+    industryHint = 'Search engine optimization and web traffic'
+    visualElements = 'magnifying glass, rising graphs, webpage layouts, search bar elements'
+    moodKeyword = 'analytical and results-driven'
+  } else if (/営業|sales|商談|crm|顧客|リード/.test(allText)) {
+    industryHint = 'Sales and customer relationship'
+    visualElements = 'funnel shapes, handshake imagery, target symbols, pipeline flows'
+    moodKeyword = 'confident and success-oriented'
+  } else if (/経営|戦略|事業|ビジネス|コンサル/.test(allText)) {
+    industryHint = 'Business strategy and management'
+    visualElements = 'chess pieces, roadmap paths, compass, interconnected gears'
+    moodKeyword = 'strategic and authoritative'
+  } else if (/開発|プログラミング|エンジニア|システム|saas/.test(allText)) {
+    industryHint = 'Software development and technology'
+    visualElements = 'code brackets, server stacks, cloud shapes, modular blocks'
+    moodKeyword = 'technical and modern'
+  } else if (/金融|投資|資産|保険|fintech/.test(allText)) {
+    industryHint = 'Finance and investment'
+    visualElements = 'upward trending lines, coin stacks, security shields, growth symbols'
+    moodKeyword = 'trustworthy and stable'
+  } else if (/教育|学習|研修|スキル|資格/.test(allText)) {
+    industryHint = 'Education and learning'
+    visualElements = 'open books, lightbulb moments, stepping stones, graduation elements'
+    moodKeyword = 'inspiring and knowledge-focused'
+  } else if (/健康|医療|ヘルスケア|病院|福祉/.test(allText)) {
+    industryHint = 'Healthcare and wellness'
+    visualElements = 'heart shapes, protective shields, gentle curves, care symbols'
+    moodKeyword = 'caring and professional'
+  } else if (/製造|工場|メーカー|生産|品質/.test(allText)) {
+    industryHint = 'Manufacturing and production'
+    visualElements = 'interlocking gears, assembly line patterns, precision tools'
+    moodKeyword = 'reliable and efficient'
+  } else if (/不動産|物件|住宅|建築|リノベ/.test(allText)) {
+    industryHint = 'Real estate and property'
+    visualElements = 'building silhouettes, key symbols, floor plan hints, roof shapes'
+    moodKeyword = 'stable and aspirational'
+  } else if (/美容|コスメ|サロン|エステ|スキンケア/.test(allText)) {
+    industryHint = 'Beauty and cosmetics'
+    visualElements = 'elegant curves, soft gradients, luxury patterns, botanical hints'
+    moodKeyword = 'elegant and refined'
+  } else if (/飲食|レストラン|カフェ|フード|料理/.test(allText)) {
+    industryHint = 'Food and restaurant industry'
+    visualElements = 'abstract food shapes, warm color accents, welcoming curves'
+    moodKeyword = 'warm and inviting'
+  } else if (/旅行|観光|ホテル|ツアー|レジャー/.test(allText)) {
+    industryHint = 'Travel and tourism'
+    visualElements = 'compass, horizon lines, journey paths, destination markers'
+    moodKeyword = 'adventurous and exciting'
+  } else if (/ec|通販|ショップ|物販|アマゾン|楽天/.test(allText)) {
+    industryHint = 'E-commerce and retail'
+    visualElements = 'shopping cart elements, delivery boxes, package symbols, store fronts'
+    moodKeyword = 'convenient and trustworthy'
+  }
+
   const prompt = [
-    'You are a professional graphic designer for high-end business media.',
-    'Goal: Create a visually stunning, modern, and clean thumbnail/banner for a Japanese business article.',
-    'CRITICAL: NO TEXT at all (no Japanese, no English, no numbers). Text will be added later.',
-    'Design elements: Sophisticated abstract shapes, high-quality business metaphors, plenty of negative space.',
-    'Mood: Professional, trustworthy, innovative.',
-    'Colors: Use Bunridge blue (#2563EB) as the primary accent color.',
+    'You are a world-class graphic designer creating a premium editorial thumbnail.',
     '',
-    `Theme: ${article.title}`,
-    `Keywords: ${((article.keywords as any) || []).join(', ')}`,
+    '=== DESIGN BRIEF ===',
+    `Article Theme: ${title}`,
+    `Key Topics: ${keywords.slice(0, 5).join(', ') || 'Business, Professional'}`,
+    industryHint ? `Industry Context: ${industryHint}` : '',
     '',
-    'Output: a high-resolution 16:9 banner image.',
-  ].join('\n')
+    '=== VISUAL DIRECTION ===',
+    `Visual Elements: ${visualElements}`,
+    `Mood: ${moodKeyword}`,
+    'Color Palette:',
+    '  - Primary: Deep blue (#2563EB) as the dominant accent',
+    '  - Secondary: Sophisticated gradients from navy to azure',
+    '  - Highlights: Subtle white or light blue accents',
+    '  - Background: Clean, modern (dark gradient or crisp white with blue tones)',
+    '',
+    '=== STRICT REQUIREMENTS ===',
+    '1. ABSOLUTELY NO TEXT - not even decorative characters, numbers, or symbols that resemble text',
+    '2. Professional editorial quality suitable for business media',
+    '3. High contrast with clear focal point',
+    '4. Generous negative space for title overlay later',
+    '5. 16:9 aspect ratio optimized for web banners',
+    '6. Avoid generic stock photo feel - aim for unique, ownable visual identity',
+    '',
+    '=== OUTPUT ===',
+    'Create a stunning, high-resolution 16:9 banner that immediately communicates the article\'s theme through visual metaphor.',
+  ].filter(Boolean).join('\n')
 
   const img = await geminiGenerateImagePng({
     prompt,
@@ -1144,8 +1241,7 @@ export async function researchAndStore(
         `URL: ${url}`,
         extracted.title ? `TITLE: ${extracted.title}` : '',
         'HEADINGS:',
-        `H2: ${extracted.headings.h2.join(' / ')}`,
-        `H3: ${extracted.headings.h3.join(' / ')}`,
+        extracted.headings.slice(0, 20).join(' / '),
         '',
         'BODY (truncated):',
         clampText(extracted.text, 12000),
