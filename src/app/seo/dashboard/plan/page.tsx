@@ -116,6 +116,37 @@ export default function SeoPlanPage() {
           </div>
         </div>
 
+        {/* 初回ログイン後1時間：使い放題カウントダウン */}
+        {isLoggedIn && isFreeHourActive && freeHourRemainingMs > 0 && (
+          <div className="mb-6 rounded-3xl border border-blue-100 bg-blue-50 px-5 py-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0">
+                  <Timer className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-black text-blue-900 truncate">初回ログイン特典：1時間 使い放題（PRO相当）</p>
+                  <p className="mt-0.5 text-[11px] font-bold text-blue-800/80 truncate">
+                    画像生成・AI自動修正などが解放されています
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest">残り</p>
+                  <p className="text-base font-black text-blue-900 tabular-nums">{formatRemainingTime(freeHourRemainingMs)}</p>
+                </div>
+                <div className="w-40 h-2 rounded-full bg-blue-100 overflow-hidden">
+                  <div
+                    className="h-2 bg-blue-600"
+                    style={{ width: `${Math.max(0, Math.min(100, (freeHourRemainingMs / (60 * 60 * 1000)) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {!isLoggedIn ? (
           <div className="rounded-3xl border border-gray-100 bg-white p-8 text-center">
             <Shield className="w-12 h-12 text-blue-600 mx-auto mb-4" />
