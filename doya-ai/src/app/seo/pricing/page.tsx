@@ -80,15 +80,16 @@ export default function SeoPricingPage() {
           <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0">
             <Timer className="w-5 h-5" />
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-black text-blue-900">初回ログイン後1時間は、PRO相当で使い放題（トライアル）</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-black text-blue-900">初回ログイン後1時間は、PRO相当で使い放題（トライアル）</p>
+              <div className="px-2.5 py-1 rounded-full bg-white border border-blue-200 text-blue-800 text-xs font-black tabular-nums flex-shrink-0">
+                残り {formatRemainingTime(freeHourRemainingMs)}
+              </div>
+            </div>
             <p className="mt-1 text-[11px] font-bold text-blue-800/80">
               画像生成や自動修正も解放されます。使えるようになった瞬間は画面に演出が出ます。
             </p>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <p className="text-xs font-black text-blue-900">残り {formatRemainingTime(freeHourRemainingMs)}</p>
-              <p className="text-[10px] font-bold text-blue-800/70">（1時間）</p>
-            </div>
             <div className="mt-2 h-2 w-full rounded-full bg-blue-200/60 overflow-hidden">
               <div className="h-full bg-blue-600" style={{ width: `${ratio * 100}%` }} />
             </div>

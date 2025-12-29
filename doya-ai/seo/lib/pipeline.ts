@@ -40,6 +40,58 @@ function mdCharCount(s: string): number {
   return (s || '').replace(/\r\n/g, '\n').length
 }
 
+async function generateTopTables(article: any, merged: string): Promise<string> {
+  // 短い記事ほど「冒頭に表」が効く（表でスキャン→本文を読ませる）
+  const target = Math.max(3000, Number(article?.targetChars || 10000))
+  if (target > 6500) return ''
+
+  const forbidden = Array.isArray(article.forbidden) ? article.forbidden : (article.forbidden as any) || []
+  const requestText = article.requestText ? clampText(String(article.requestText || ''), 1800) : ''
+  const userKnowledge = await buildUserKnowledgeContext(article.userId)
+
+  const prompt = [
+    'You are a Japanese business editor.',
+    'Goal: Create table-first blocks to improve scanability for a short Japanese article.',
+    'Output ONLY Markdown.',
+    NO_AI_MARKDOWN_RULES,
+    '',
+    `Title: ${String(article.title || '')}`,
+    `Keywords: ${((article.keywords as any) || []).join(', ')}`,
+    article.persona ? `Persona: ${clampText(String(article.persona || ''), 800)}` : '',
+    article.searchIntent ? `Search intent: ${clampText(String(article.searchIntent || ''), 800)}` : '',
+    `Target chars: ${target}`,
+    `Tone: ${String(article.tone || '')}`,
+    forbidden.length ? `Forbidden: ${(forbidden as string[]).join(' / ')}` : '',
+    requestText
+      ? `\n【一次情報（最優先で反映）】\n以下はユーザーが提供した固有情報です。必ず具体的に反映してください。\n- ここに無い事実（数字/体験/実績/断定）は作らない\n\n${requestText}\n`
+      : '',
+    '',
+    userKnowledge,
+    'Context (truncated):',
+    clampText(merged, 6500),
+    '',
+    'Rules:',
+    '- Create TWO blocks placed near the top of the article.',
+    '- Use headings starting from "##".',
+    '- Block 1: "## 要点早見表" then a markdown table (6-10 rows) that summarizes conclusions and next actions.',
+    '- Block 2: "## 迷ったらこれ（判断チェック表）" then a markdown table (6-10 rows) that helps decision-making (criteria, how to judge, recommended choice).',
+    '- Tables must be valid Markdown tables using "|" and a separator row like "| --- |".',
+    '- Do NOT add any intro text before the first heading.',
+    '- Do not include code fences.',
+  ].join('\n')
+
+  try {
+    const out = await geminiGenerateText({
+      model: GEMINI_TEXT_MODEL_DEFAULT,
+      parts: [{ text: prompt }],
+      generationConfig: { temperature: 0.45, maxOutputTokens: 1700 },
+    })
+    return out?.trim() ? sanitizeAiMarkdown(out.trim()) : ''
+  } catch {
+    return ''
+  }
+}
+
 async function canUseSeoImagesForArticle(article: any): Promise<boolean> {
   try {
     const userId = String(article?.userId || '').trim()
@@ -603,6 +655,7 @@ async function generateSection(jobId: string) {
   const forbidden = Array.isArray(article.forbidden) ? article.forbidden : (article.forbidden as any) || []
   const userKnowledge = await buildUserKnowledgeContext(article.userId)
   const requestText = article.requestText ? clampText(String(article.requestText || ''), 1800) : ''
+  const targetChars = Math.max(3000, Number(article.targetChars || 10000))
 
   const prompt = [
     'You are a Japanese SEO + LLMO expert writer.',
@@ -631,6 +684,9 @@ async function generateSection(jobId: string) {
     '- Start with "## " heading (H2) that matches the outline.',
     '- Use H3/H4 as needed.',
     '- If you include a checklist, use numbered lists or normal bullet lists (NO checkboxes).',
+    targetChars <= 6500
+      ? '- For short articles: proactively use markdown tables when it improves scanability (comparison, criteria, checklist, summary). Include at least ONE markdown table in this section if it naturally fits the heading.'
+      : '',
     '- Include concrete steps / decision criteria / examples where appropriate.',
     '- Avoid repeating earlier sections.',
     '',
@@ -995,6 +1051,10 @@ async function integrate(jobId: string) {
   if (existingBanner?.id) {
     parts.push(`![記事バナー](/api/seo/images/${existingBanner.id})`)
   }
+
+  // 短い記事ほど、冒頭に表を置く（読者のスキャン性を最大化）
+  const topTables = await generateTopTables(article, mergedSections)
+  if (topTables) parts.push(topTables)
 
   // LLMOの追加ブロック（短くてもOK、品質補助＆文字数補助）
   const llmoBlocks = await generateLlmoBlocks(article, mergedSections)
