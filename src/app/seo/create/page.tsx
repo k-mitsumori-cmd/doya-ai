@@ -56,8 +56,8 @@ const CHAR_PRESETS = [
   { value: 3000, label: '3,000字', desc: 'コンパクトな記事', minPlan: 'GUEST' },
   { value: 5000, label: '5,000字', desc: '要点を絞った記事', minPlan: 'GUEST' },
   { value: 10000, label: '10,000字', desc: '標準的なSEO記事', minPlan: 'FREE' },
-  { value: 20000, label: '20,000字', desc: '網羅性の高い記事', minPlan: 'PRO' },
-  { value: 30000, label: '30,000字', desc: '徹底解説記事', minPlan: 'PRO' },
+  { value: 20000, label: '20,000字', desc: '網羅性の高い記事', minPlan: 'ENTERPRISE' },
+  { value: 30000, label: '30,000字', desc: '徹底解説記事', minPlan: 'ENTERPRISE' },
   { value: 50000, label: '50,000字', desc: '超大型コンテンツ', minPlan: 'ENTERPRISE' },
 ] as const
 
@@ -65,7 +65,7 @@ const CHAR_PRESETS = [
 const CHAR_LIMITS: Record<string, number> = {
   GUEST: 5000,
   FREE: 10000,
-  PRO: 30000,
+  PRO: 10000,
   ENTERPRISE: 50000,
 }
 
@@ -745,9 +745,17 @@ export default function SeoCreateWizardPage() {
                       {CHAR_PRESETS.map((preset) => {
                         const selected = targetChars === preset.value
                         const locked = preset.value > charLimit
-                        const requiredPlan = preset.value >= 50000 ? 'ENTERPRISE' : preset.value > 10000 ? 'PRO' : preset.value > 5000 ? 'FREE' : 'GUEST'
+                        // PROの文字数上限がFREEと同じ（10,000字）の場合、10,000字超はEnterpriseが必要
+                        const requiredPlan: 'ENTERPRISE' | 'FREE' | 'GUEST' =
+                          preset.value >= 50000
+                            ? 'ENTERPRISE'
+                            : preset.value > 10000
+                              ? 'ENTERPRISE'
+                              : preset.value > 5000
+                                ? 'FREE'
+                                : 'GUEST'
                         const requiredLabel =
-                          requiredPlan === 'ENTERPRISE' ? 'Enterpriseが必要' : requiredPlan === 'PRO' ? 'PROが必要' : requiredPlan === 'FREE' ? 'ログインが必要' : 'ゲストOK'
+                          requiredPlan === 'ENTERPRISE' ? 'Enterpriseが必要' : requiredPlan === 'FREE' ? 'ログインが必要' : 'ゲストOK'
                         const hint = locked ? `${requiredLabel}（クリックでアップグレード）` : `${preset.value.toLocaleString()}字を選択`
 
                         return (
@@ -775,7 +783,7 @@ export default function SeoCreateWizardPage() {
                                 <div className="absolute inset-0 bg-white/35" />
                                 <div className="absolute right-2 top-2 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-900/85 text-white text-[9px] font-black shadow">
                                   <Lock className="w-3 h-3" />
-                                  {requiredPlan === 'ENTERPRISE' ? 'Enterprise' : requiredPlan === 'PRO' ? 'PRO' : 'LOGIN'}
+                                  {requiredPlan === 'ENTERPRISE' ? 'Enterprise' : requiredPlan === 'FREE' ? 'LOGIN' : 'GUEST'}
                                 </div>
                               </div>
                             )}

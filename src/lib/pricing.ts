@@ -133,13 +133,13 @@ export const SEO_PRICING: ServicePricing = {
   serviceIcon: '🧠',
   guestLimit: 1,      // ゲスト: 合計1回（記事作成）まで
   freeLimit: 1,       // ログイン無料: 1日1回まで
-  proLimit: 5,        // PRO: 1日5回まで
+  proLimit: 3,        // PRO: 1日3回まで
   enterpriseLimit: 30, // Enterprise: 1日30回まで
   // 文字数制限（1記事あたり）
   charLimit: {
     guest: 5000,       // ゲスト: 5,000字まで
     free: 10000,       // ログイン無料: 10,000字まで
-    pro: 30000,        // PRO: 30,000字まで
+    pro: 10000,        // PRO: 10,000字まで
     enterprise: 50000, // Enterprise: 50,000字まで
   },
   historyDays: {
@@ -169,12 +169,12 @@ export const SEO_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '¥9,980',
       period: '/月（税込）',
-      description: '月額9,980円：1日5回 / 30,000字まで',
+      description: '月額9,980円：1日3回 / 10,000字まで',
       popular: true,
       color: 'slate',
       features: [
-        { text: '1日5回まで生成', included: true },
-        { text: '1記事30,000字まで生成可能', included: true },
+        { text: '1日3回まで生成', included: true },
+        { text: '1記事10,000字まで生成可能', included: true },
         { text: '分割生成（安定化）', included: true },
         { text: '監査（二重チェック）', included: true },
         { text: '履歴保存（直近3ヶ月）', included: true },
@@ -209,7 +209,7 @@ export function getSeoDailyLimitByUserPlan(plan: string | null | undefined): num
   // Vercel側で DOYA_DISABLE_LIMITS=1 を設定すると無制限になる
   if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.SEO_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
-  if (p === 'ENTERPRISE') return 30
+  if (p === 'ENTERPRISE') return SEO_PRICING.enterpriseLimit ?? 30
   if (p === 'PRO') return SEO_PRICING.proLimit
   return SEO_PRICING.freeLimit
 }
@@ -223,7 +223,7 @@ export function getSeoCharLimitByUserPlan(plan: string | null | undefined, isGue
   
   const p = String(plan || 'FREE').toUpperCase()
   if (p === 'ENTERPRISE') return charLimit.enterprise // 50,000字
-  if (p === 'PRO') return charLimit.pro // 30,000字
+  if (p === 'PRO') return charLimit.pro // 10,000字
   return charLimit.free // 10,000字
 }
 

@@ -792,7 +792,25 @@ async function generateSection(jobId: string) {
   })
 }
 
-async function autoGenerateBanner(article: any) {
+function extractBannerContextFromMarkdown(md: string): { headings: string[]; excerpt: string } {
+  const text = String(md || '').replace(/\r\n/g, '\n')
+  const headings = (text.match(/^#{1,3}\s+.+$/gm) || [])
+    .map((h) => h.replace(/^#{1,6}\s+/, '').trim())
+    .filter(Boolean)
+    .slice(0, 16)
+  const excerpt = text
+    .replace(/!\[[^\]]*?\]\([^)]+\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/`{3}[\s\S]*?`{3}/g, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, 2800)
+  return { headings, excerpt }
+}
+
+async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }) {
+  const article = args.article
   await ensureSeoStorage()
 
   // 記事内容を分析してビジュアルコンセプトを決定
@@ -801,9 +819,15 @@ async function autoGenerateBanner(article: any) {
   const persona = String(article.persona || '').trim()
   const searchIntent = String(article.searchIntent || '').trim()
   const requestText = String(article.requestText || '').trim()
+  const brandName = 'ドヤライティングAI'
+  const usageScene = 'Webサイト/LP/広告/SNS（記事一覧のサムネ）'
 
-  // キーワードから業界・テーマを推測
-  const allText = [title, ...keywords, persona, searchIntent].join(' ').toLowerCase()
+  const ctx = extractBannerContextFromMarkdown(String(args.finalMarkdown || ''))
+  const headingsText = ctx.headings.length ? ctx.headings.join(' / ') : ''
+  const excerpt = ctx.excerpt
+
+  // キーワード＋本文抜粋から業界・テーマを推測
+  const allText = [title, ...keywords, persona, searchIntent, headingsText, excerpt].join(' ').toLowerCase()
 
   // 業界・テーマ別のビジュアル要素を決定
   let industryHint = ''
@@ -876,34 +900,50 @@ async function autoGenerateBanner(article: any) {
     moodKeyword = 'convenient and trustworthy'
   }
 
+  // ユーザー指定の「バナープロンプト」を反映（ただし文字化け回避のため“画像内テキスト無し”を強制）
   const prompt = [
-    'You are a world-class graphic designer creating a premium editorial thumbnail.',
+    'あなたはBtoBマーケティングに精通したプロのデザイナー兼アートディレクターです。',
+    '以下の記事内容を正確に理解し、その要点が一目で伝わる「マーケティング用バナー画像」を作成してください。',
     '',
-    '=== DESIGN BRIEF ===',
-    `Article Theme: ${title}`,
-    `Key Topics: ${keywords.slice(0, 5).join(', ') || 'Business, Professional'}`,
-    industryHint ? `Industry Context: ${industryHint}` : '',
+    '【前提条件】',
+    '・目的：記事の訴求内容を視覚的に要約し、クリック・理解を促進する',
+    `・用途：${usageScene}`,
+    '・トーン：信頼感・プロフェッショナル・わかりやすさを重視',
+    '・情報を盛り込みすぎず、「一瞬で伝わる」構成にする',
     '',
-    '=== VISUAL DIRECTION ===',
-    `Visual Elements: ${visualElements}`,
-    `Mood: ${moodKeyword}`,
-    'Color Palette:',
-    '  - Primary: Deep blue (#2563EB) as the dominant accent',
-    '  - Secondary: Sophisticated gradients from navy to azure',
-    '  - Highlights: Subtle white or light blue accents',
-    '  - Background: Clean, modern (dark gradient or crisp white with blue tones)',
+    '【必須インプット】',
+    `▼記事タイトル\n${title}`,
+    excerpt ? `\n▼記事の要約（または本文）\n${excerpt}` : '',
+    persona ? `\n▼想定ターゲット\n${persona}` : '',
+    searchIntent ? `\n▼検索意図・ニーズ\n${searchIntent}` : '',
+    headingsText ? `\n▼見出し（参考）\n${headingsText}` : '',
+    `\n▼ブランド・サービス名\n${brandName}`,
+    '\n▼カラー指定\n#2563EB（指定なしの場合も“青基調のBtoB”で）',
+    '\n▼サイズ\n1200×628（16:9）',
     '',
-    '=== STRICT REQUIREMENTS ===',
-    '1. ABSOLUTELY NO TEXT - not even decorative characters, numbers, or symbols that resemble text',
-    '2. Professional editorial quality suitable for business media',
-    '3. High contrast with clear focal point',
-    '4. Generous negative space for title overlay later',
-    '5. 16:9 aspect ratio optimized for web banners',
-    '6. Avoid generic stock photo feel - aim for unique, ownable visual identity',
+    '【デザイン指示】',
+    '・記事の「最も重要なメッセージ」を1つだけ抽出し、ビジュアルの中心に置く',
+    '・抽象的すぎず、記事内容と乖離しない表現にする',
+    '・BtoB向けのため、過度な装飾やポップすぎる表現は避ける',
+    '・余白を活かし、後で文字を載せられる大きな余白を確保する',
+    '・イラスト／写真／UI風表現は、記事内容と相性の良いものを選択する',
     '',
-    '=== OUTPUT ===',
-    'Create a stunning, high-resolution 16:9 banner that immediately communicates the article\'s theme through visual metaphor.',
-  ].filter(Boolean).join('\n')
+    '【重要：画像生成の制約】',
+    '・画像内に文字は一切入れない（日本語/英語/数字/記号含む）',
+    '',
+    '【NG事項】',
+    '・記事内容と無関係なビジュアル',
+    '・意味のない装飾や背景',
+    '・読めない/小さすぎる文字（※文字自体を入れない）',
+    '・マーケティング文脈に合わないカジュアル表現',
+    '',
+    '【追加のビジュアルヒント】',
+    industryHint ? `- Industry: ${industryHint}` : '',
+    `- Visual elements: ${visualElements}`,
+    `- Mood: ${moodKeyword}`,
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   const img = await geminiGenerateImagePng({
     prompt,
@@ -1128,7 +1168,7 @@ async function integrate(jobId: string) {
         orderBy: { createdAt: 'desc' },
         select: { id: true },
       })
-      const banner = alreadyBanner?.id ? alreadyBanner : await autoGenerateBanner(article)
+      const banner = alreadyBanner?.id ? alreadyBanner : await autoGenerateBanner({ article, finalMarkdown })
 
       // 生成したバナーを本文先頭に差し込む（既に入っていれば何もしない）
       try {
