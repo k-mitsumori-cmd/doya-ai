@@ -992,8 +992,104 @@ async function analyzeSiteVisualViaHeadless(targetUrl: string, timeoutMs = 16_00
       }
     })
 
+    // computed styles から「UI色」を抽出（写真が多いサイトでスクショ色がズレる問題への対策）
+    const computedColorsRaw: Array<{ hex: string; w: number }> = await page.evaluate(() => {
+      const out: Array<{ hex: string; w: number }> = []
+      const toHex = (input: string): string | null => {
+        const raw = String(input || '').trim()
+        if (!raw) return null
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return null
+        ctx.fillStyle = '#000000'
+        const before = String(ctx.fillStyle || '').toLowerCase()
+        ctx.fillStyle = raw
+        const normalized = String(ctx.fillStyle || '').toLowerCase()
+        if (!normalized || normalized === before) return null
+        const hex = normalized.match(/#[0-9a-f]{6}\b/)?.[0]
+        if (hex) return hex.toUpperCase()
+        const m = normalized.replace(/\s+/g, '').match(/^rgba?\((\d+),(\d+),(\d+)(?:,([\d.]+))?\)$/)
+        if (m) {
+          const r = Number(m[1])
+          const g = Number(m[2])
+          const b = Number(m[3])
+          const a = m[4] == null ? 1 : Number(m[4])
+          if (a <= 0.08) return null
+          const to = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')
+          return `#${to(r)}${to(g)}${to(b)}`.toUpperCase()
+        }
+        return null
+      }
+      const push = (value: string, w: number) => {
+        const hex = toHex(value)
+        if (!hex) return
+        out.push({ hex, w })
+      }
+
+      // body/background
+      try {
+        const body = document.body
+        if (body) {
+          const cs = getComputedStyle(body)
+          if (cs.backgroundColor) push(cs.backgroundColor, 3.5)
+          if (cs.color) push(cs.color, 1.0)
+        }
+      } catch {}
+
+      const selectors = [
+        'header',
+        'nav',
+        'main',
+        'footer',
+        'a',
+        'button',
+        '[role="button"]',
+        '[class*="btn"]',
+        '[class*="Button"]',
+        '[class*="button"]',
+        '[class*="cta"]',
+        '[class*="CTA"]',
+      ]
+      const els = Array.from(document.querySelectorAll(selectors.join(','))).slice(0, 220) as HTMLElement[]
+      for (const el of els) {
+        const r = el.getBoundingClientRect()
+        const area = Math.max(0, r.width) * Math.max(0, r.height)
+        if (area < 1200) continue
+        const cs = getComputedStyle(el)
+        // background / border / text / link colors
+        if (cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backgroundColor !== 'transparent') push(cs.backgroundColor, Math.min(6, area / 25000))
+        if (cs.borderColor && cs.borderColor !== 'rgba(0, 0, 0, 0)' && cs.borderColor !== 'transparent') push(cs.borderColor, Math.min(2, area / 60000))
+        if (cs.color) push(cs.color, Math.min(2, area / 60000))
+      }
+
+      return out
+    })
+
     const screenshot = (await page.screenshot({ type: 'png' })) as Buffer
-    const colorsByArea = await extractColorsByAreaFromScreenshot(screenshot)
+    const screenshotColorsByArea = await extractColorsByAreaFromScreenshot(screenshot)
+
+    const computedColorsByArea: VisualColorByArea[] = (() => {
+      const m = new Map<string, number>()
+      for (const item of computedColorsRaw) {
+        const hex = String(item?.hex || '').toUpperCase()
+        const w = Number(item?.w || 0)
+        if (!/^#[0-9A-F]{6}$/.test(hex)) continue
+        if (!Number.isFinite(w) || w <= 0) continue
+        m.set(hex, (m.get(hex) || 0) + w)
+      }
+      const total = Array.from(m.values()).reduce((a, b) => a + b, 0) || 1
+      const arr = Array.from(m.entries())
+        .map(([hex, w]) => ({ hex, ratio: Math.min(1, w / total) }))
+        .sort((a, b) => b.ratio - a.ratio)
+        .slice(0, 10)
+      // 色味を先に（中立色は後ろへ）
+      const colorful = arr.filter((c) => !isNearNeutralHex(c.hex))
+      const neutral = arr.filter((c) => isNearNeutralHex(c.hex))
+      return [...colorful, ...neutral]
+    })()
+
+    const photoHeavy = ((pageInfo?.imgAreaRatio || 0) + (pageInfo?.bgImgAreaRatio || 0)) >= 0.28
+    const colorsByArea = (photoHeavy && computedColorsByArea.length >= 2) ? computedColorsByArea : screenshotColorsByArea
 
     const mainColor = colorsByArea[0]?.hex
     const subs: string[] = []
@@ -1459,7 +1555,11 @@ export async function POST(request: NextRequest) {
         logo_image: body.logoImage ? 'provided' : undefined,
         person_images: Array.isArray(body.personImages) ? body.personImages.length : 0,
       },
-      brand_constraints: { main_color: body.mainColor, sub_color: body.subColor, tone_keywords: body.toneKeywords },
+      brand_constraints: {
+        main_color: body.mainColor || visual?.mainColor || mergedPalette[0],
+        sub_color: body.subColor || (Array.isArray(visual?.subColors) ? visual?.subColors?.[0] : undefined) || mergedPalette[1],
+        tone_keywords: body.toneKeywords,
+      },
       compliance: { avoid: body.avoid, must_include: body.mustInclude },
       page_meta: meta,
       page_text: pageText,
