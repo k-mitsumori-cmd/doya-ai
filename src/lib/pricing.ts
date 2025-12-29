@@ -124,12 +124,13 @@ export const SEO_PRICING: ServicePricing = {
   serviceId: 'seo',
   serviceName: 'ドヤSEO',
   serviceIcon: '🧠',
-  guestLimit: 0,      // ゲスト: 生成はログイン推奨（0回）
-  freeLimit: 1,       // 無料会員: 1日1回（お試し）
-  proLimit: 10,       // 互換用（旧インターフェース向け）: PRO=1日10回
+  guestLimit: 3,      // ゲスト: 合計3回（記事作成）まで
+  freeLimit: 3,       // ログイン無料: 1日3回まで
+  proLimit: 10,       // PRO: 1日10回まで
+  enterpriseLimit: 30, // Enterprise: 1日30回まで
   historyDays: {
-    free: 7,          // 無料: 7日間保存
-    pro: -1,          // プロ: 無制限
+    free: 90,         // 直近3ヶ月（DB肥大化防止）
+    pro: 90,
   },
   plans: [
     {
@@ -140,61 +141,48 @@ export const SEO_PRICING: ServicePricing = {
       period: '',
       description: 'まずは試してみたい方',
       features: [
-        { text: 'ログイン: 1日1回まで生成', included: true },
+        { text: 'ゲスト: 合計3回まで作成', included: true },
+        { text: 'ログイン: 1日3回まで生成', included: true },
         { text: 'アウトライン/セクション生成', included: true },
-        { text: '履歴保存（7日間）', included: true },
+        { text: '履歴保存（直近3ヶ月）', included: true },
+        { text: '画像生成（図解/サムネ）はPROから', included: true },
       ],
       cta: '無料で試す',
     },
     {
       id: 'seo-pro',
       name: 'プロ',
-      price: 3000,
-      priceLabel: '¥3,000',
+      price: 9980,
+      priceLabel: '¥9,980',
       period: '/月（税込）',
-      description: '月額3,000円：1日10回',
+      description: '月額9,980円：1日10回',
       popular: true,
       color: 'slate',
       features: [
         { text: '1日10回まで生成', included: true },
         { text: '分割生成（安定化）', included: true },
         { text: '監査（二重チェック）', included: true },
-        { text: '履歴保存（無制限）', included: true },
+        { text: '履歴保存（直近3ヶ月）', included: true },
+        { text: '画像生成（図解/サムネ）', included: true },
         { text: '優先サポート', included: true },
       ],
       cta: 'プロプランを始める',
     },
     {
-      id: 'seo-business',
-      name: 'ビジネス',
-      price: 9900,
-      priceLabel: '¥9,900',
+      id: 'seo-enterprise',
+      name: 'エンタープライズ',
+      price: 49980,
+      priceLabel: '¥49,980',
       period: '/月（税込）',
-      description: '月額9,900円：1日50回',
+      description: '月額49,980円：1日30回',
       color: 'slate',
       features: [
-        { text: '1日50回まで生成', included: true },
-        { text: '分割生成（安定化）', included: true },
-        { text: '監査（二重チェック）', included: true },
-        { text: '履歴保存（無制限）', included: true },
+        { text: '1日30回まで生成', included: true },
+        { text: '画像生成（図解/サムネ）', included: true },
+        { text: 'チーム運用・大量制作向け', included: true },
         { text: '優先サポート', included: true },
       ],
-      cta: 'ビジネスを始める',
-    },
-    {
-      id: 'seo-enterprise',
-      name: '法人',
-      price: 0,
-      priceLabel: '要相談',
-      period: '',
-      description: '法人：要相談',
-      color: 'slate',
-      features: [
-        { text: '上限のカスタム', included: true },
-        { text: '請求書払い/契約書対応', included: true },
-        { text: 'SLA/専任サポート', included: true },
-      ],
-      cta: 'お問い合わせ',
+      cta: 'エンタープライズを始める',
     },
   ],
 }
@@ -205,9 +193,8 @@ export function getSeoDailyLimitByUserPlan(plan: string | null | undefined): num
   // Vercel側で DOYA_DISABLE_LIMITS=1 を設定すると無制限になる
   if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.SEO_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
-  if (p === 'BUSINESS') return 50
+  if (p === 'ENTERPRISE') return 30
   if (p === 'PRO') return 10
-  if (p === 'STARTER') return 5 // 互換（旧プランを持つユーザーがいても破綻しない）
   return SEO_PRICING.freeLimit
 }
 

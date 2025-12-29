@@ -146,6 +146,11 @@ export async function ensureSeoSchema(): Promise<void> {
     `)
 
     // 新しいカラムの追加（既存テーブルへのマイグレーション）
+    // ゲスト用（未ログインでも記事を作れるように）
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "SeoArticle" ADD COLUMN IF NOT EXISTS "guestId" TEXT;`)
+    } catch { /* column might already exist */ }
+
     // requestText と referenceImages を追加
     try {
       await prisma.$executeRawUnsafe(`ALTER TABLE "SeoArticle" ADD COLUMN IF NOT EXISTS "requestText" TEXT;`)
@@ -183,6 +188,7 @@ export async function ensureSeoSchema(): Promise<void> {
 
     // indexes / uniques（冪等）
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SeoArticle_userId_createdAt_idx" ON "SeoArticle" ("userId", "createdAt");`)
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SeoArticle_guestId_createdAt_idx" ON "SeoArticle" ("guestId", "createdAt");`)
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SeoArticle_status_createdAt_idx" ON "SeoArticle" ("status", "createdAt");`)
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SeoJob_articleId_createdAt_idx" ON "SeoJob" ("articleId", "createdAt");`)
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "SeoJob_status_updatedAt_idx" ON "SeoJob" ("status", "updatedAt");`)

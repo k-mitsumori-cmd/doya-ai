@@ -11,12 +11,22 @@ export const metadata: Metadata = {
 export default async function SeoLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
   const user: any = session?.user || null
-  const planRaw = String(user?.seoPlan || user?.plan || 'FREE').toUpperCase()
+  const isLoggedIn = !!user?.id
+  const planRaw = String(user?.seoPlan || user?.plan || (isLoggedIn ? 'FREE' : 'GUEST')).toUpperCase()
   const currentPlan =
-    planRaw === 'PRO' ? 'PRO' : planRaw === 'ENTERPRISE' ? 'ENTERPRISE' : planRaw === 'FREE' ? 'FREE' : 'UNKNOWN'
+    planRaw === 'PRO'
+      ? 'PRO'
+      : planRaw === 'ENTERPRISE'
+        ? 'ENTERPRISE'
+        : planRaw === 'FREE'
+          ? 'FREE'
+          : planRaw === 'GUEST'
+            ? 'GUEST'
+            : 'UNKNOWN'
+  const firstLoginAt = (user?.firstLoginAt as any) || null
 
   return (
-    <SeoAppLayout currentPlan={currentPlan as any}>
+    <SeoAppLayout currentPlan={currentPlan as any} isLoggedIn={isLoggedIn} firstLoginAt={firstLoginAt}>
       {children}
     </SeoAppLayout>
   )

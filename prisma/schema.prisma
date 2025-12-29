@@ -313,6 +313,8 @@ model SeoArticle {
 
   userId        String?
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // 未ログイン（ゲスト）向けの識別子（cookieで付与）
+  guestId       String?
 
   status        String   @default("DRAFT") // DRAFT | RUNNING | DONE | ERROR
 
@@ -355,6 +357,7 @@ model SeoArticle {
   knowledgeItems SeoKnowledgeItem[]
 
   @@index([userId, createdAt])
+  @@index([guestId, createdAt])
   @@index([status, createdAt])
 }
 

@@ -250,8 +250,8 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
         serviceId === 'banner' &&
         (planId === 'banner-basic' || planId === 'banner-pro' || planId === 'banner-enterprise' || planId === 'banner-starter' || planId === 'banner-business')
       const servicePlan =
-        planId === 'seo-business'
-          ? 'BUSINESS'
+        serviceId === 'seo' && planId === 'seo-enterprise'
+          ? 'ENTERPRISE'
           : serviceId === 'banner' && planId === 'banner-enterprise'
             ? 'ENTERPRISE'
             : (planId.endsWith('-pro') || isBannerPaid)
@@ -283,7 +283,7 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
   // ポータル全体のplanも更新（互換用）
   const userPlan =
     planId === 'bundle' ? 'BUNDLE'
-      : planId === 'seo-business' ? 'BUSINESS'
+      : planId === 'seo-enterprise' ? 'ENTERPRISE'
         : planId === 'banner-enterprise' ? 'ENTERPRISE'
           : (planId === 'banner-basic' || (planId && String(planId).endsWith('-pro'))) ? 'PRO'
             : 'FREE'

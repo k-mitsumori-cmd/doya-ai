@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -280,6 +281,7 @@ export default function SeoCreateWizardPage() {
   // 処理状態
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorCta, setErrorCta] = useState<null | { label: string; href: string }>(null)
   const [showHelp, setShowHelp] = useState(false)
 
   // プレビュー用の計算
@@ -316,6 +318,7 @@ export default function SeoCreateWizardPage() {
     if (loading) return
     setLoading(true)
     setError(null)
+    setErrorCta(null)
 
     try {
       const related = relatedKeywords
@@ -358,6 +361,11 @@ export default function SeoCreateWizardPage() {
 
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
+        if (res.status === 429) {
+          setErrorCta({ label: '料金/プランを見る', href: '/seo/pricing' })
+        } else if (res.status === 401) {
+          setErrorCta({ label: 'ログインする', href: '/auth/signin' })
+        }
         throw new Error(json?.error || `エラーが発生しました (${res.status})`)
       }
 
@@ -852,7 +860,19 @@ export default function SeoCreateWizardPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="mt-4 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm font-bold"
               >
-                {error}
+                <div className="whitespace-pre-wrap break-words">{error}</div>
+                {errorCta && (
+                  <div className="mt-3">
+                    <Link href={errorCta.href}>
+                      <button
+                        type="button"
+                        className="h-10 px-4 rounded-xl bg-white border border-red-200 text-red-700 font-black text-xs hover:bg-red-50 transition-colors"
+                      >
+                        {errorCta.label}
+                      </button>
+                    </Link>
+                  </div>
+                )}
               </motion.div>
             )}
           </div>

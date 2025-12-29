@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardBody, CardHeader, CardTitle, CardDesc } from '@seo/components/ui/Card'
 import { Button } from '@seo/components/ui/Button'
 import { Toggle } from '@seo/components/ui/Toggle'
@@ -219,6 +220,7 @@ export default function SeoNewArticlePage() {
   const [loading, setLoading] = useState(false)
   const [predicting, setPredicting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorCta, setErrorCta] = useState<null | { label: string; href: string }>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
   const keywordList = useMemo(() => {
@@ -698,6 +700,7 @@ export default function SeoNewArticlePage() {
     if (!canSubmit) return
     setLoading(true)
     setError(null)
+    setErrorCta(null)
     try {
       const urls = referenceUrls.split('\n').map(u => u.trim()).filter(Boolean)
       const res = await fetch('/api/seo/articles', {
@@ -734,7 +737,11 @@ export default function SeoNewArticlePage() {
         }),
       })
       const json = await res.json()
-      if (!json.success) throw new Error(json.error || '作成に失敗しました')
+      if (!res.ok || !json.success) {
+        if (res.status === 429) setErrorCta({ label: '料金/プランを見る', href: '/seo/pricing' })
+        else if (res.status === 401) setErrorCta({ label: 'ログインする', href: '/auth/signin' })
+        throw new Error(json.error || '作成に失敗しました')
+      }
 
       // ドラフト削除
       localStorage.removeItem(STORAGE_KEY)
@@ -836,7 +843,19 @@ export default function SeoNewArticlePage() {
           {error && (
             <motion.div key="error" {...fadeUp} className="mb-6 p-4 rounded-xl sm:rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm">
               <p className="font-bold flex items-center gap-2"><X className="w-4 h-4" /> エラーが発生しました</p>
-              <p className="mt-1 ml-6">{error}</p>
+              <p className="mt-1 ml-6 whitespace-pre-wrap break-words">{error}</p>
+              {errorCta && (
+                <div className="mt-3 ml-6">
+                  <Link href={errorCta.href}>
+                    <button
+                      type="button"
+                      className="h-10 px-4 rounded-xl bg-white border border-red-200 text-red-700 font-black text-xs hover:bg-red-50 transition-colors"
+                    >
+                      {errorCta.label}
+                    </button>
+                  </Link>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

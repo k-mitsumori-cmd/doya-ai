@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
           : '/'
     const cancelPath =
       service === 'seo'
-        ? '/pricing?payment=cancelled'
+        ? '/seo/pricing?payment=cancelled'
         : service === 'banner'
           ? '/banner?payment=cancelled'
           : '/pricing?payment=cancelled'
@@ -134,7 +134,7 @@ function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string
   const priceMap: Record<string, { monthly: string; yearly: string }> = {
     // ドヤSEO
     'seo-pro': STRIPE_PRICE_IDS.seo.pro,
-    'seo-business': STRIPE_PRICE_IDS.seo.business,
+    'seo-enterprise': STRIPE_PRICE_IDS.seo.enterprise,
     // ドヤバナーAI
     'banner-basic': STRIPE_PRICE_IDS.banner.basic,
     'banner-pro': STRIPE_PRICE_IDS.banner.pro,
