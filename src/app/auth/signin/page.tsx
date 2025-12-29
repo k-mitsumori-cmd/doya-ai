@@ -23,7 +23,7 @@ const errorMessages: Record<string, string> = {
 function SignInContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const callbackUrl = searchParams.get('callbackUrl') || '/kantan/dashboard'
+  const callbackUrl = searchParams.get('callbackUrl') || '/seo'
   const error = searchParams.get('error')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -87,8 +87,8 @@ function SignInContent() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-4">
             <Sparkles className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">カンタンドヤAI</h1>
-          <p className="text-lg text-gray-600">文章作成がカンタンになる</p>
+          <h1 className="text-2xl font-black text-gray-900 mb-2">ドヤマーケAI</h1>
+          <p className="text-lg text-gray-600">マーケティングのAIならお任せ</p>
         </div>
 
         {/* エラー表示 */}
@@ -127,32 +127,13 @@ function SignInContent() {
           </p>
         </div>
 
-        {/* 無料でできること */}
-        <div className="mt-8 p-5 bg-blue-50 rounded-xl border-2 border-blue-100">
-          <p className="font-bold text-blue-900 mb-3 text-center">✨ 無料でできること</p>
-          <ul className="space-y-2 text-blue-800">
-            <li className="flex items-center gap-2">
-              <span className="text-blue-500">✓</span>
-              1日10回まで文章を作成
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-blue-500">✓</span>
-              68種類のテンプレート
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-blue-500">✓</span>
-              作成履歴を保存
-            </li>
-          </ul>
-        </div>
-
         {/* ログインせずに使う */}
         <div className="mt-6 text-center">
           <Link 
-            href="/kantan/dashboard" 
+            href="/seo" 
             className="text-blue-600 hover:underline text-base"
           >
-            ログインせずに試す（1日3回まで）→
+            ログインせずに試す →
           </Link>
         </div>
 

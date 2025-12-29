@@ -745,25 +745,28 @@ export default function SeoCreateWizardPage() {
                       {CHAR_PRESETS.map((preset) => {
                         const selected = targetChars === preset.value
                         const locked = preset.value > charLimit
-                        const hint = locked
-                          ? `現在のプランでは${preset.value.toLocaleString()}字は選べません（上位プランで解放）`
-                          : `${preset.value.toLocaleString()}字を選択`
+                        const requiredPlan = preset.value >= 50000 ? 'ENTERPRISE' : preset.value > 10000 ? 'PRO' : preset.value > 5000 ? 'FREE' : 'GUEST'
+                        const requiredLabel =
+                          requiredPlan === 'ENTERPRISE' ? 'Enterpriseが必要' : requiredPlan === 'PRO' ? 'PROが必要' : requiredPlan === 'FREE' ? 'ログインが必要' : 'ゲストOK'
+                        const hint = locked ? `${requiredLabel}（クリックで料金プランへ）` : `${preset.value.toLocaleString()}字を選択`
 
                         return (
                           <button
                             key={preset.value}
                             type="button"
                             onClick={() => {
-                              if (locked) return
+                              if (locked) {
+                                window.location.href = '/seo/pricing'
+                                return
+                              }
                               setTargetChars(preset.value)
                             }}
-                            disabled={locked}
                             title={hint}
                             className={`relative p-3 rounded-xl border-2 text-center transition-all overflow-hidden ${
                               selected
                                 ? 'border-blue-500 bg-blue-50'
                                 : locked
-                                  ? 'border-gray-100 bg-gray-50 opacity-70 cursor-not-allowed'
+                                  ? 'border-gray-100 bg-gray-50 opacity-80 hover:border-blue-200 hover:bg-blue-50/30 cursor-pointer'
                                   : 'border-gray-100 bg-gray-50 hover:border-gray-200'
                             }`}
                           >
@@ -772,7 +775,7 @@ export default function SeoCreateWizardPage() {
                                 <div className="absolute inset-0 bg-white/35" />
                                 <div className="absolute right-2 top-2 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-900/85 text-white text-[9px] font-black shadow">
                                   <Lock className="w-3 h-3" />
-                                  LOCK
+                                  {requiredPlan === 'ENTERPRISE' ? 'Enterprise' : requiredPlan === 'PRO' ? 'PRO' : 'LOGIN'}
                                 </div>
                               </div>
                             )}
@@ -780,7 +783,11 @@ export default function SeoCreateWizardPage() {
                               {preset.label}
                             </p>
                             <p className="text-[10px] text-gray-400 mt-0.5">{preset.desc}</p>
-                            {locked && <p className="text-[10px] font-black text-gray-500 mt-1">上位プランで解放</p>}
+                            {locked && (
+                              <p className="text-[10px] font-black text-gray-500 mt-1">
+                                {requiredLabel}
+                              </p>
+                            )}
                           </button>
                         )
                       })}
