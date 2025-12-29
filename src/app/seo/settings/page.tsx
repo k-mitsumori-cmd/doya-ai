@@ -25,7 +25,7 @@ export default function SeoSettingsPage() {
             戻る
           </Link>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">設定</h1>
-          <p className="text-sm text-gray-500 mt-1">ドヤSEOの体験をカスタマイズできます。</p>
+          <p className="text-sm text-gray-500 mt-1">ドヤライティングAIの体験をカスタマイズできます。</p>
           <div className="mt-3">
             <FeatureGuide
               featureId="seo.settings"

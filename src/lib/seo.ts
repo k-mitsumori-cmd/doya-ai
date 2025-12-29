@@ -7,7 +7,7 @@ import { SEO_PRICING, BANNER_PRICING, KANTAN_PRICING } from './pricing'
 export const SITE_CONFIG = {
   name: 'ドヤAI',
   tagline: 'ビジネスを加速するAIツール群',
-  description: 'SEO記事生成、バナー作成、LP制作など、ビジネスに必要なAIツールを1つのアカウントで利用可能。ドヤSEO、ドヤバナーAIなど続々追加中。',
+  description: 'SEO記事生成、バナー作成、LP制作など、ビジネスに必要なAIツールを1つのアカウントで利用可能。ドヤライティングAI、ドヤバナーAIなど続々追加中。',
   url: process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.vercel.app',
   locale: 'ja_JP',
   twitter: '@doya_ai',
@@ -20,7 +20,7 @@ export const SERVICE_SEO = {
   // ポータル
   portal: {
     title: 'ドヤAIポータル | ビジネスを加速するAIツール群',
-    description: 'SEO記事生成、バナー作成、LP制作など、ビジネスに必要なAIツールを1つのアカウントで利用可能。ドヤSEO、ドヤバナーAIなど続々追加中。',
+    description: 'SEO記事生成、バナー作成、LP制作など、ビジネスに必要なAIツールを1つのアカウントで利用可能。ドヤライティングAI、ドヤバナーAIなど続々追加中。',
     keywords: ['AI', 'ビジネスツール', '文章生成', 'バナー作成', 'LP作成', '自動化'],
     ogImage: '/og/portal.png',
   },
@@ -48,24 +48,24 @@ export const SERVICE_SEO = {
     },
   },
   
-  // ドヤSEO
+  // ドヤライティングAI（旧: ドヤSEO）
   seo: {
-    title: 'ドヤSEO | SEO + LLMOに強い長文記事を安定生成',
+    title: 'ドヤライティングAI | SEO + LLMOに強い長文記事を安定生成',
     description: 'アウトライン→分割生成→整合性チェック→統合のパイプラインで、長文でも崩れにくい記事生成を目指します。',
     keywords: ['SEO', '記事生成', 'アウトライン', 'LLMO', 'コンテンツマーケ', '生成AI'],
     ogImage: '/og/seo.png',
     sections: {
       dashboard: {
-        title: 'ダッシュボード | ドヤSEO',
+        title: 'ダッシュボード | ドヤライティングAI',
         description: '記事一覧・進捗を確認し、生成中のジョブにすぐ戻れます。',
       },
       pricing: {
-        title: '料金プラン | ドヤSEO',
+        title: '料金プラン | ドヤライティングAI',
         description: `無料プランはゲスト1日${SEO_PRICING.guestLimit}回、ログイン後1日${SEO_PRICING.freeLimit}回まで。プロプランは1日${SEO_PRICING.proLimit}回まで。月額${SEO_PRICING.plans[1].priceLabel}。`,
       },
       guide: {
-        title: '使い方 | ドヤSEO',
-        description: 'ドヤSEOの使い方を解説。キーワード設計、アウトライン、生成のコツなど。',
+        title: '使い方 | ドヤライティングAI',
+        description: 'ドヤライティングAIの使い方を解説。キーワード設計、アウトライン、生成のコツなど。',
       },
     },
   },
@@ -138,7 +138,7 @@ export function generateSoftwareApplicationSchema(service: 'seo' | 'banner' | 'k
   
   const serviceData = {
     seo: {
-      name: 'ドヤSEO',
+      name: 'ドヤライティングAI',
       applicationCategory: 'BusinessApplication',
       offers: {
         '@type': 'Offer',

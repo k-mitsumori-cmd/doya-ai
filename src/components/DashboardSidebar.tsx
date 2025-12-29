@@ -403,7 +403,7 @@ function DashboardSidebarImpl({
       <nav className="flex-1 overflow-y-auto py-4 sm:py-6 px-3 space-y-1 custom-scrollbar">
         {/* Active Tool Navigation */}
         <div className="space-y-1">
-          <SectionTitle title={isBanner ? "ドヤバナーAI" : "Doya SEO"} />
+          <SectionTitle title={isBanner ? "ドヤバナーAI" : "ドヤライティングAI"} />
           {activeNavItems.map((item) => (
             <NavLink key={item.href + item.label} item={item} />
           ))}

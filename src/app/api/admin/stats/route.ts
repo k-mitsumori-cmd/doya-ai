@@ -138,10 +138,10 @@ export async function GET(request: NextRequest) {
 
     // サービス別統計
     const serviceStats: any[] = []
-    const serviceIds = ['banner', 'seo']
+    const serviceIds = ['banner', 'writing']
     const serviceLabels: Record<string, { name: string; icon: string; gradient: string }> = {
       banner: { name: 'ドヤバナーAI', icon: '🎨', gradient: 'from-violet-500 to-fuchsia-500' },
-      seo: { name: 'ドヤSEO', icon: '🧠', gradient: 'from-emerald-500 to-green-500' },
+      writing: { name: 'ドヤライティングAI', icon: '✍️', gradient: 'from-emerald-500 to-cyan-500' },
     }
 
     for (const serviceId of serviceIds) {
@@ -181,8 +181,8 @@ export async function GET(request: NextRequest) {
           ? ((serviceMonthGenerations - serviceLastMonthGenerations) / serviceLastMonthGenerations * 100)
           : (serviceMonthGenerations > 0 ? 100 : 0)
 
-        // 売上計算（PRO: banner=3980, seo=3000, kantan=4980）
-        const priceMap: Record<string, number> = { banner: 3980, seo: 3000, kantan: 4980 }
+        // 売上計算（PRO: banner=3980, writing=3000）
+        const priceMap: Record<string, number> = { banner: 3980, writing: 3000 }
         const revenue = serviceProUsers * (priceMap[serviceId] || 0)
 
         const label = serviceLabels[serviceId]
@@ -279,7 +279,7 @@ export async function GET(request: NextRequest) {
         id: g.id,
         userName: g.user?.name || g.user?.email || '匿名',
         service: g.serviceId || 'unknown',
-        action: g.serviceId === 'banner' ? 'バナーを生成' : g.serviceId === 'seo' ? 'SEO記事を生成' : 'テキストを生成',
+        action: g.serviceId === 'banner' ? 'バナーを生成' : g.serviceId === 'writing' ? '記事を生成' : 'コンテンツを生成',
         createdAt: g.createdAt,
       })),
       
