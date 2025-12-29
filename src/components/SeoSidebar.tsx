@@ -159,6 +159,8 @@ function SeoSidebarImpl({
     if (isFreeHourActive && freeHourRemainingMs > 0) return null
     if (!showLabel) return null
 
+    const planHref = isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'
+
     return (
       <div className="mx-3 my-2 p-3 rounded-xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
         <div className="relative z-10">
@@ -177,7 +179,7 @@ function SeoSidebarImpl({
             {nextPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
           </p>
           <Link
-            href="/seo/pricing"
+            href={planHref}
             className="mt-2 w-full py-2 bg-white text-blue-600 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md block text-center"
           >
             {nextPlanLabel === 'CONSULT' ? '相談する' : nextPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseへ'}
@@ -220,10 +222,12 @@ function SeoSidebarImpl({
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {SEO_NAV.map((item) => {
+            // 「料金/プラン」は、ログイン済みならプラン管理へ（迷いを無くす）
+            const href = item.href === '/seo/pricing' ? (isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing') : item.href
             const active = isActive(item.href)
             const Icon = item.icon
             return (
-              <Link key={item.href} href={item.href}>
+              <Link key={item.href} href={href}>
                 <motion.div
                   whileHover={{ x: 4 }}
                   className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer group ${

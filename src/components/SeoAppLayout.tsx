@@ -67,6 +67,8 @@ export function SeoAppLayout({
           ? 'bg-white/70 text-gray-700 border-gray-200'
         : 'bg-gray-50 text-gray-600 border-gray-100'
 
+  const planHref = isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'
+
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       {/* Sidebar - Desktop */}
@@ -158,7 +160,7 @@ export function SeoAppLayout({
           </div>
 
           <div className="flex items-center gap-2">
-            <Link href="/seo/pricing" className="hidden sm:block">
+            <Link href={planHref} className="hidden sm:block">
               <div className={`h-10 px-4 rounded-xl border text-xs font-black inline-flex items-center ${planTone}`}>
                 現在のプラン：{planLabel}
               </div>

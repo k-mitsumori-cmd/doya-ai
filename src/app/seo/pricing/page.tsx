@@ -80,8 +80,8 @@ export default function SeoPricingPage() {
         >
           生成記事一覧に戻る
         </Link>
-        <Link href="/seo/dashboard/plan" className="text-xs font-bold text-blue-600 hover:text-blue-700">
-          Account
+        <Link href="/seo/dashboard/plan" className="text-xs font-black text-blue-600 hover:text-blue-700">
+          プラン管理
         </Link>
       </div>
 

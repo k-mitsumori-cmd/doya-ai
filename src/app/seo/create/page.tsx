@@ -748,7 +748,7 @@ export default function SeoCreateWizardPage() {
                         const requiredPlan = preset.value >= 50000 ? 'ENTERPRISE' : preset.value > 10000 ? 'PRO' : preset.value > 5000 ? 'FREE' : 'GUEST'
                         const requiredLabel =
                           requiredPlan === 'ENTERPRISE' ? 'Enterpriseが必要' : requiredPlan === 'PRO' ? 'PROが必要' : requiredPlan === 'FREE' ? 'ログインが必要' : 'ゲストOK'
-                        const hint = locked ? `${requiredLabel}（クリックで料金プランへ）` : `${preset.value.toLocaleString()}字を選択`
+                        const hint = locked ? `${requiredLabel}（クリックでアップグレード）` : `${preset.value.toLocaleString()}字を選択`
 
                         return (
                           <button
@@ -756,7 +756,7 @@ export default function SeoCreateWizardPage() {
                             type="button"
                             onClick={() => {
                               if (locked) {
-                                window.location.href = '/seo/pricing'
+                                window.location.href = isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'
                                 return
                               }
                               setTargetChars(preset.value)
