@@ -26,7 +26,6 @@ import {
   Lock,
 } from 'lucide-react'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
-import { FeatureGuide } from '@/components/FeatureGuide'
 
 // ================== 定数 ==================
 const ARTICLE_TYPES = [
@@ -462,19 +461,6 @@ export default function SeoCreateWizardPage() {
             <p className="text-sm text-gray-400 font-bold mt-2">
               3ステップで高品質な記事を生成
             </p>
-            <div className="mt-4 flex items-center justify-center">
-              <FeatureGuide
-                featureId="seo.create.simple"
-                title="新規記事作成（シンプル）の使い方"
-                description="必要最低限の入力で、記事生成まで一気に進めるための画面です。"
-                steps={[
-                  '主キーワード＋狙いたい内容を入力します（サンプルはクリックで切替できます）',
-                  '一次情報・制約（経験/実績/強み）を入れると品質が上がります（最優先で反映されます）',
-                  '生成後は「記事詳細」で本文・画像・SEO改善をまとめて確認できます',
-                ]}
-                imageMode="off"
-              />
-            </div>
 
             {/* Stepインジケーター */}
             <div className="mt-6 flex items-center justify-center gap-3">
