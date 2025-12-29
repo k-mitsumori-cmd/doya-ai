@@ -89,6 +89,14 @@ function BannerUrlAutoPageInner() {
   const [error, setError] = useState<string>('')
   const [errorType, setErrorType] = useState<'limit' | 'system' | null>(null) // エラー種別
   const [banners, setBanners] = useState<string[]>([])
+  const imageBanners = useMemo(
+    () => banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/')),
+    [banners]
+  )
+  const [selectedBannerIdx, setSelectedBannerIdx] = useState(0)
+  useEffect(() => {
+    if (imageBanners.length > 0) setSelectedBannerIdx(0)
+  }, [imageBanners.length])
   const [bannerAnalysis, setBannerAnalysis] = useState<string>('')
   const [analysisJson, setAnalysisJson] = useState<ApiResponse['analysisJson'] | undefined>(undefined)
   const [usedModelDisplay, setUsedModelDisplay] = useState<string>('')
@@ -597,56 +605,60 @@ function BannerUrlAutoPageInner() {
                     )}
                   </div>
 
-                  {/* 大きなプレビュー表示 */}
-                  <div className={`grid gap-3 sm:gap-4 ${
-                    banners.length === 1 ? 'grid-cols-1' :
-                    banners.length === 2 ? 'grid-cols-1 sm:grid-cols-2' :
-                    banners.length <= 4 ? 'grid-cols-2' :
-                    'grid-cols-2 sm:grid-cols-3'
-                  }`}>
-                    {banners
-                      .filter((b) => typeof b === 'string' && b.startsWith('data:image/'))
-                      .map((img, idx) => (
-                        <div 
-                          key={idx} 
-                          className="group relative rounded-xl sm:rounded-2xl border border-slate-200 overflow-hidden bg-slate-50 hover:border-blue-300 hover:shadow-lg transition-all"
-                        >
-                          <div className="aspect-square bg-white flex items-center justify-center p-2">
-                            <img 
-                              src={img} 
-                              alt={`banner-${idx + 1}`} 
-                              className="max-w-full max-h-full object-contain rounded-lg" 
-                            />
+                  {/* プレビュー（大） */}
+                  {imageBanners.length > 0 ? (
+                    <div className="space-y-3 sm:space-y-4">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
+                        <div className="relative h-[46vh] min-h-[320px] max-h-[560px] sm:h-[520px] bg-white">
+                          <img
+                            src={imageBanners[Math.min(selectedBannerIdx, imageBanners.length - 1)]}
+                            alt={`preview-banner-${Math.min(selectedBannerIdx, imageBanners.length - 1) + 1}`}
+                            className="w-full h-full object-contain"
+                          />
+                          <div className="absolute top-3 left-3 px-2.5 py-1.5 rounded-xl bg-white/90 backdrop-blur-sm border border-slate-200 text-xs font-black text-slate-800 shadow-sm">
+                            No.{Math.min(selectedBannerIdx, imageBanners.length - 1) + 1}
                           </div>
-                          {/* ホバー時のオーバーレイ */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 sm:p-4">
-                            <div className="flex items-center justify-between">
-                              <span className="text-white text-xs sm:text-sm font-black">No.{idx + 1}</span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  downloadImage(img, idx)
-                                }}
-                                className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl bg-white text-blue-600 text-xs font-black hover:bg-blue-50 transition-colors shadow-lg"
-                              >
-                                <Download className="w-4 h-4" />
-                                ダウンロード
-                              </button>
-                            </div>
-                          </div>
-                          {/* 番号バッジ（常時表示） */}
-                          <div className="absolute top-2 left-2 w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-white/90 backdrop-blur-sm border border-slate-200 flex items-center justify-center text-xs font-black text-slate-700 shadow-sm">
-                            {idx + 1}
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => downloadImage(imageBanners[Math.min(selectedBannerIdx, imageBanners.length - 1)], Math.min(selectedBannerIdx, imageBanners.length - 1))}
+                            className="absolute top-3 right-3 inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-black hover:bg-blue-700 transition-colors shadow-lg"
+                          >
+                            <Download className="w-4 h-4" />
+                            ダウンロード
+                          </button>
                         </div>
-                      ))}
-                  </div>
+                      </div>
 
-                  {/* ダウンロードヒント */}
-                  <p className="text-center text-[11px] text-slate-400 font-bold">
-                    画像にカーソルを合わせてダウンロード
-                  </p>
+                      {/* サムネ一覧（クリックで切替） */}
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <p className="text-xs font-black text-slate-700">プレビュー</p>
+                          <p className="text-[11px] font-bold text-slate-500">サムネをタップして切り替え</p>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+                          {imageBanners.map((img, idx) => {
+                            const isSelected = idx === selectedBannerIdx
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setSelectedBannerIdx(idx)}
+                                className={`relative flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-xl border overflow-hidden bg-slate-50 transition-all ${
+                                  isSelected ? 'border-blue-600 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300'
+                                }`}
+                                aria-label={`preview-${idx + 1}`}
+                              >
+                                <img src={img} alt={`thumb-${idx + 1}`} className="w-full h-full object-contain bg-white" />
+                                <div className="absolute top-1 left-1 w-6 h-6 rounded-lg bg-white/90 border border-slate-200 text-[10px] font-black text-slate-700 flex items-center justify-center">
+                                  {idx + 1}
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
