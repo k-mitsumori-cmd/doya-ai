@@ -84,16 +84,32 @@ function normalizeH2Heading(md: string, fallback: string): string {
 }
 
 function computeMinSections(targetChars: number): number {
-  // 1セクションの現実的な安定出力: 2000-3000字
-  // 50,000字なら最低でも18セクション程度は必要
-  const t = Math.max(10000, Number(targetChars || 10000))
-  const min = Math.ceil(t / 2800)
-  return Math.max(12, Math.min(28, min))
+  // 目標文字数に応じた適切なセクション数を計算
+  // 1セクションあたり約1500-2500字を目安
+  const t = Math.max(3000, Number(targetChars || 10000))
+  
+  if (t <= 5000) {
+    // 5,000字以下: 3-5セクション
+    return Math.max(3, Math.ceil(t / 1500))
+  } else if (t <= 10000) {
+    // 5,001-10,000字: 5-8セクション
+    return Math.max(5, Math.ceil(t / 1800))
+  } else if (t <= 20000) {
+    // 10,001-20,000字: 8-12セクション
+    return Math.max(8, Math.ceil(t / 2200))
+  } else {
+    // 20,001字以上: 12-28セクション
+    const min = Math.ceil(t / 2800)
+    return Math.max(12, Math.min(28, min))
+  }
 }
 
 function ensureMinSections(outline: SeoOutline, targetChars: number): SeoOutline {
   const minSections = computeMinSections(targetChars)
   if (outline.sections.length >= minSections) return outline
+
+  // 目標文字数に応じた1セクションあたりの文字数
+  const charsPerSection = Math.max(800, Math.min(2500, Math.round(targetChars / minSections)))
 
   const extras: SeoOutline['sections'] = []
   const templates = [
@@ -109,7 +125,7 @@ function ensureMinSections(outline: SeoOutline, targetChars: number): SeoOutline
     extras.push({
       h2: t.h2,
       intentTag: t.intentTag,
-      plannedChars: 2500,
+      plannedChars: charsPerSection,
       h3: [],
       h4: {},
     })
@@ -286,8 +302,10 @@ function parseOutlineFromMarkdown(md: string, targetChars: number): SeoOutline {
     // 先頭の "# タイトル" は無視
   }
 
-  const baseCount = Math.max(12, sections.length || 0)
-  const per = Math.max(1800, Math.min(3500, Math.round(Math.max(10000, targetChars) / Math.max(1, baseCount))))
+  const minSections = computeMinSections(targetChars)
+  const baseCount = Math.max(minSections, sections.length || 0)
+  // 目標文字数に応じた1セクションあたりの文字数（小さい記事にも対応）
+  const per = Math.max(600, Math.min(3500, Math.round(Math.max(3000, targetChars) / Math.max(1, baseCount))))
   for (const s of sections) s.plannedChars = per
 
   const outline: SeoOutline = {
@@ -488,7 +506,8 @@ async function ensureOutlineAndSections(jobId: string) {
     }
   }
 
-  const target = Math.max(10000, Number(article.targetChars || 10000))
+  // 目標文字数（最低3000字）
+  const target = Math.max(3000, Number(article.targetChars || 10000))
   let outline: SeoOutline
   let outlineMd: string
 
@@ -893,11 +912,13 @@ async function integrate(jobId: string) {
   parts.push(mergedSections)
 
   // 目標文字数に足りない場合は、追補セクションを自動生成して埋める（最大5回）
-  const target = Math.max(10000, Number(article.targetChars || 10000))
-  for (let i = 0; i < 5; i++) {
+  // ただし、目標が小さい場合（10,000字未満）は追補を控えめに
+  const target = Math.max(3000, Number(article.targetChars || 10000))
+  const maxExtraIterations = target < 10000 ? 2 : 5
+  for (let i = 0; i < maxExtraIterations; i++) {
     const cur = mdCharCount(parts.join('\n\n'))
-    if (cur >= target * 0.95) break
-    const need = Math.round(target * 0.98 - cur)
+    if (cur >= target * 0.90) break // 90%以上あればOK（小さい記事向けに緩和）
+    const need = Math.round(target * 0.95 - cur)
     const addPrompt = [
       'You are a Japanese SEO writer.',
       'Write an additional section to improve completeness and meet the target length.',
@@ -909,7 +930,7 @@ async function integrate(jobId: string) {
       `Tone: ${article.tone}`,
       memo ? `User notes (preferences/constraints):\n${clampText(memo, 900)}` : '',
       '',
-      `Target chars for this additional section: ~${Math.min(3500, Math.max(1800, need))}`,
+      `Target chars for this additional section: ~${Math.min(3500, Math.max(600, need))}`,
       '',
       'Context (truncated):',
       clampText(parts.join('\n\n'), 9000),
