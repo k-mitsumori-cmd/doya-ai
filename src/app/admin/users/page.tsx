@@ -56,7 +56,7 @@ const COMPLETE_PACK_PLANS: Record<string, {
   color: string
 }> = {
   FREE: { label: 'おためし', bannerLimit: 9, writingLimit: 1, color: 'gray' },
-  PRO: { label: 'プロ', bannerLimit: 50, writingLimit: 10, color: 'amber' },
+  PRO: { label: 'プロ', bannerLimit: 50, writingLimit: 5, color: 'amber' },
   ENTERPRISE: { label: 'エンタープライズ', bannerLimit: 500, writingLimit: 50, color: 'rose' },
 }
 
