@@ -149,32 +149,6 @@ function formatHhMmSs(ms: number) {
   return `${hh}:${mm}:${ss}`
 }
 
-function estimateTotalSeconds(targetChars: number, isComparison: boolean) {
-  // 体感値ベースの目安（厳密なETAではなく“不安を減らすための目安”）
-  const chars = clamp(Number(targetChars || 10000), 2000, 60000)
-  const base = isComparison ? 240 : 120
-  const per1k = isComparison ? 12 : 8
-  const total = base + per1k * (chars / 1000)
-  return clamp(total, 90, 900)
-}
-
-const STEP_PORTION: Record<string, number> = {
-  init: 0.06,
-  outline: 0.18,
-  sections: 0.52,
-  integrate: 0.12,
-  media: 0.12,
-  done: 0,
-  // 比較記事（ざっくり）
-  cmp_ref: 0.12,
-  cmp_candidates: 0.12,
-  cmp_crawl: 0.16,
-  cmp_extract: 0.16,
-  cmp_sources: 0.08,
-  cmp_tables: 0.12,
-  cmp_outline: 0.12,
-  cmp_polish: 0.12,
-}
 
 export default function SeoJobPage() {
   const params = useParams<{ id: string }>()
@@ -655,35 +629,6 @@ export default function SeoJobPage() {
   const isError = job.status === 'error'
   const isComparison = String(job.step || '').startsWith('cmp_')
   const progressPct = clamp(Number(job.progress || 0), 0, 100)
-  const baseTotalSec = estimateTotalSeconds(job.article?.targetChars || 10000, isComparison)
-  const currentStepKey = String(job.step || '').toLowerCase()
-
-  // 進捗が進むほど「実績ベース推定」を強くする（序盤のブレを抑える）
-  const confidence = clamp((progressPct - 8) / 30, 0, 1)
-  const canUseActual = progressPct >= 5 && elapsed >= 20
-  const actualTotalSec = canUseActual ? elapsed / (progressPct / 100) : Number.NaN
-
-  const totalSec = Number.isFinite(actualTotalSec)
-    ? clamp(
-        lerp(baseTotalSec, actualTotalSec, confidence),
-        baseTotalSec * 0.6,
-        baseTotalSec * (isComparison ? 3.0 : 2.2)
-      )
-    : baseTotalSec
-
-  const remainingSec = Math.max(0, Math.round(totalSec - elapsed))
-
-  // 進捗が進むほどレンジを狭く。統合/図解はブレやすいので少し広め。
-  let spread = lerp(0.45, 0.18, confidence)
-  if (currentStepKey === 'integrate' || currentStepKey === 'media') spread += 0.12
-  spread = clamp(spread, 0.18, 0.6)
-
-  const remainingRange = {
-    min: Math.max(0, Math.round(remainingSec * (1 - spread))),
-    max: Math.round(remainingSec * (1 + spread)),
-  }
-  const stepPortion = STEP_PORTION[currentStepKey] ?? 0.12
-  const stepExpected = Math.round(totalSec * stepPortion)
   const heartbeatAgo = lastHeartbeatAt ? Math.max(0, Math.floor((Date.now() - lastHeartbeatAt) / 1000)) : null
   const articleIdSafe = String(job.articleId || job.article?.id || '').trim()
   const articleHref = articleIdSafe ? `/seo/articles/${articleIdSafe}` : ''
@@ -792,9 +737,9 @@ export default function SeoJobPage() {
             </div>
           </div>
 
-          {/* 時間系（見やすさ優先） */}
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl mx-auto">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left">
+          {/* 経過時間のみ表示 */}
+          <div className="mt-5 max-w-4xl mx-auto">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left max-w-xs mx-auto">
               <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                 <Clock className="w-4 h-4 text-gray-500" />
                 経過時間
@@ -803,35 +748,6 @@ export default function SeoJobPage() {
                 {formatMmSs(elapsed)}
               </p>
               <p className="mt-1 text-[10px] font-bold text-gray-400">開始からの経過</p>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left">
-              <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                <Hourglass className="w-4 h-4 text-blue-600" />
-                {isDone ? '完了' : '残り目安'}
-              </div>
-              <p className="mt-1 text-2xl sm:text-3xl font-black text-gray-900 tabular-nums">
-                {isDone ? '完了' : `${formatMmSs(remainingRange.min)}〜${formatMmSs(remainingRange.max)}`}
-              </p>
-              <p className="mt-1 text-[10px] font-bold text-gray-400">
-                {isDone ? '残り目安の表示は終了しました' : '進捗から推定（目安）'}
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left">
-              <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                <Timer className="w-4 h-4 text-indigo-600" />
-                平均所要（目安）
-              </div>
-              <p className="mt-1 text-2xl sm:text-3xl font-black text-gray-900 tabular-nums">
-                {formatMmSs(totalSec)}
-              </p>
-              <p className="mt-1 text-[10px] font-bold text-gray-400">
-                この工程の平均:{' '}
-                <span className="text-gray-700 font-black tabular-nums">
-                  {isDone ? '—' : formatMmSs(stepExpected)}
-                </span>
-              </p>
             </div>
           </div>
 
@@ -962,7 +878,7 @@ export default function SeoJobPage() {
                       <div>
                         <p className="text-xs font-black text-gray-900">AI稼働中</p>
                         <p className="text-[10px] font-bold text-gray-500">
-                          現在の工程「{STEP_LABELS[job.step] || job.step}」は平均 {Math.max(1, Math.round(stepExpected / 60))}分以内が多いです
+                          現在の工程「{STEP_LABELS[job.step] || job.step}」を実行中です
                         </p>
                       </div>
                     </div>
