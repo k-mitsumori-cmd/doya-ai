@@ -147,7 +147,7 @@ function SignInContent() {
         </div>
 
         {/* RIGHT: form */}
-        <div className="order-1 lg:order-2 p-7 sm:p-10 lg:p-12">
+        <div className="order-1 lg:order-2 p-7 sm:p-10 lg:p-12 flex flex-col justify-center min-h-[70vh] lg:min-h-0">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-black text-slate-400 tracking-widest uppercase">Sign in</p>
@@ -184,6 +184,40 @@ function SignInContent() {
               )}
               <span className="text-base">{isLoading ? 'ログイン中...' : 'Googleでログイン'}</span>
             </button>
+
+            {/* mini promo */}
+            <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+              <p className="text-xs font-black text-slate-700">ドヤマーケAIでできること</p>
+              <div className="mt-3 grid gap-2">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-600/10 border border-emerald-600/15 flex items-center justify-center flex-shrink-0">
+                    <Palette className="w-4 h-4 text-emerald-700" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-slate-900">ドヤバナーAI</p>
+                    <p className="text-xs font-bold text-slate-600">広告バナーを最速で量産（A/Bテストに強い）</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-600/10 border border-indigo-600/15 flex items-center justify-center flex-shrink-0">
+                    <PenLine className="w-4 h-4 text-indigo-700" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-slate-900">ドヤライティングAI</p>
+                    <p className="text-xs font-bold text-slate-600">SEO記事を安定生成（分割生成・監査で品質担保）</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-600/10 border border-amber-600/15 flex items-center justify-center flex-shrink-0">
+                    <BarChart3 className="w-4 h-4 text-amber-700" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-black text-slate-900">改善まで支援</p>
+                    <p className="text-xs font-bold text-slate-600">訴求・コピー・構成を改善して成果に寄せる</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div className="pt-2 flex items-center justify-between gap-3 flex-wrap">
               <Link href="/seo" className="text-sm font-black text-blue-600 hover:text-blue-700">
