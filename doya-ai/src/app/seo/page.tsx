@@ -94,7 +94,6 @@ export default function SeoDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const isLoadingRef = useRef(false)
 
   async function load(opts?: { showLoading?: boolean }) {
@@ -150,10 +149,9 @@ export default function SeoDashboardPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return articles
-      .filter((a) => (statusFilter === 'ALL' ? true : a.status === statusFilter))
       .filter((a) => (!q ? true : a.title.toLowerCase().includes(q) || (a.keywords || []).some(k => k.toLowerCase().includes(q))))
       .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-  }, [articles, query, statusFilter])
+  }, [articles, query])
 
   // 記事の続きへのリンクを決定
   function getResumeLink(a: SeoArticleRow): string {
@@ -226,7 +224,7 @@ export default function SeoDashboardPage() {
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-100 text-[11px] font-bold text-gray-600">
-                直近3ヶ月分のみ表示（それ以前は一覧から自動で除外されます）
+                直近3ヶ月分のみ表示（データ保持容量の都合上、それ以前は自動削除されます）
               </span>
               <FeatureGuide
                 featureId="seo.generatedList"
@@ -251,33 +249,13 @@ export default function SeoDashboardPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
-          {[
-            { id: 'ALL', label: 'すべて' },
-            { id: 'RUNNING', label: '生成中' },
-            { id: 'DONE', label: '完成' },
-            { id: 'DRAFT', label: '構成済み' },
-          ].map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setStatusFilter(f.id)}
-              className={`px-4 py-2 rounded-full text-xs font-black transition-all whitespace-nowrap ${
-                statusFilter === f.id
-                  ? 'bg-gray-900 text-white shadow-lg'
-                  : 'bg-white text-gray-400 border border-gray-100 hover:border-gray-300'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-        <div className="relative w-full sm:max-w-xs">
+      {/* Search */}
+      <div className="flex justify-end mb-6">
+        <div className="relative w-full sm:max-w-sm">
           <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-100 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all"
-            placeholder="タイトル・KWで検索..."
+            placeholder="タイトル・キーワードで検索..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
