@@ -285,7 +285,12 @@ export async function GET(request: NextRequest) {
         id: g.id,
         userName: g.user?.name || g.user?.email || '匿名',
         service: g.serviceId || 'unknown',
-        action: g.serviceId === 'banner' ? 'バナーを生成' : g.serviceId === 'writing' ? '記事を生成' : 'コンテンツを生成',
+        action:
+          g.serviceId === 'banner'
+            ? 'バナーを生成'
+            : g.serviceId === 'seo' || g.serviceId === 'writing'
+              ? '記事を生成'
+              : 'コンテンツを生成',
         createdAt: g.createdAt,
       })),
       
