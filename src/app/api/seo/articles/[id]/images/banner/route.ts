@@ -42,59 +42,38 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       genreHint: genreGuess,
     })
 
-    const support = (plan.supportingPoints || []).filter(Boolean).slice(0, 1)[0] || ''
     const category = mapGenreToNanobannerCategory(plan.genre)
     const headline = plan.mainCopy || title
-    const prompt = [
-      'You are a top-tier editorial banner designer for Japanese articles.',
-      'Goal: Create a 16:9 article banner that matches the article content with readable Japanese text.',
-      '',
-      'CRITICAL RULES:',
-      '- This is NOT an advertisement. Do NOT include CTA text or CTA button (e.g., 今すぐ, 詳しくはこちら).',
-      '- MUST render the provided Japanese text strings directly into the image.',
-      '- Text must be PERFECTLY LEGIBLE Japanese (no garbling, no pseudo-characters).',
-      '- Use a clean Japanese font style (Noto Sans JP-like). Text large and bold.',
-      '- Use solid/gradient panel behind text for contrast.',
-      '- Maximum 3 text blocks (headline / subhead / one support).',
-      '',
-      'ARTICLE CONTEXT (for visual relevance):',
-      `- Title: ${title}`,
-      headings.length ? `- Headings: ${headings.join(' / ')}` : '',
-      excerpt ? `- Excerpt: ${excerpt}` : '',
-      keywords ? `- Keywords: ${keywords}` : '',
-      '',
-      '=== TEXT TO RENDER IN IMAGE (EXACT / REQUIRED) ===',
-      `Headline (必須): ${headline}`,
-      plan.subCopy ? `Subhead (任意): ${plan.subCopy}` : '',
-      support ? `Support (任意): ${support}` : '',
-      '',
-      'DESIGN GUIDANCE:',
-      `- Genre: ${plan.genre}`,
-      `- Palette: ${plan.palette}`,
-      `- Layout: ${plan.layout}`,
-      '',
-      'OUTPUT:',
-      '- 1200x628 pixels (16:9). Fill edge-to-edge, no letterboxing.',
-      '- The headline text MUST appear as real Japanese text inside the image. Do NOT omit it.',
-    ]
-      .filter(Boolean)
-      .join('\n')
 
+    // customImagePromptを削除し、nanobannerのデフォルトプロンプト（テキスト描画強制）を使用
     const result = await generateBanners(
       category,
       headline,
       '1200x628',
       {
-        purpose: 'email',
+        purpose: 'email', // CTAが強く出ない用途（記事バナー向け）
         headlineText: headline,
-        subheadText: plan.subCopy,
-        ctaText: '',
-        imageDescription: plan.visualConcept,
+        subheadText: plan.subCopy || '',
+        ctaText: '', // CTA禁止（記事バナーなので）
+        imageDescription: [
+          plan.visualConcept,
+          `Article: ${title}`,
+          headings.length ? `Key points: ${headings.slice(0, 5).join(', ')}` : '',
+          `Genre: ${plan.genre}`,
+        ].filter(Boolean).join('. '),
         brandColors: ['#2563EB'],
-        customImagePrompt: prompt,
+        // customImagePromptを削除 - nanobannerのデフォルトプロンプトでテキスト描画を強制
       },
       1
     )
+
+    // 保存用のプロンプトログ（表示用）
+    const promptLog = [
+      `Headline: ${headline}`,
+      plan.subCopy ? `Subhead: ${plan.subCopy}` : '',
+      `Genre: ${plan.genre}`,
+      `Visual: ${plan.visualConcept}`,
+    ].filter(Boolean).join('\n')
     const dataUrl = Array.isArray(result?.banners) ? result.banners.find((b) => typeof b === 'string' && b.startsWith('data:image/')) : null
     if (!dataUrl) throw new Error(result?.error || 'バナー画像の生成に失敗しました')
     const base64 = String(dataUrl).split(',')[1] || ''
@@ -108,7 +87,7 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
         kind: 'BANNER',
         title: '記事バナー',
         description: formatBannerPlanDescription(plan),
-        prompt,
+        prompt: promptLog,
         filePath: saved.relativePath,
         mimeType: 'image/png',
       },
