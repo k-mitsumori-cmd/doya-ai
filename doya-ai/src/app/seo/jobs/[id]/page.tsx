@@ -1029,24 +1029,31 @@ export default function SeoJobPage() {
                       </div>
                       
                       {/* 本文エリア */}
-                      <div className="p-5 min-h-[180px] max-h-[320px] overflow-y-auto">
-                        <div 
-                          className="prose prose-sm max-w-none text-gray-800 leading-[1.9] text-left"
-                          style={{ 
+                      <div className="p-6 min-h-[180px] max-h-[320px] overflow-y-auto bg-gradient-to-b from-white via-white to-slate-50/60">
+                        <div
+                          className="relative max-w-none text-left text-gray-900 antialiased selection:bg-blue-200/70 selection:text-blue-950"
+                          style={{
                             fontFamily: "'Noto Serif JP', 'Yu Mincho', 'Hiragino Mincho ProN', serif",
-                            fontSize: '15px',
-                            letterSpacing: '0.02em',
+                            fontSize: '15.5px',
+                            letterSpacing: '0.018em',
+                            lineHeight: 2.05,
                           }}
                         >
-                          {liveTyped.split('\n').map((line, i) => (
-                            <p key={i} className="mb-3 last:mb-0 text-left">
-                              {line || <span className="text-gray-300">　</span>}
-                            </p>
-                          ))}
-                          <span 
-                            className="inline-block w-[3px] h-[1.2em] bg-gradient-to-b from-blue-500 to-indigo-600 ml-0.5 animate-pulse rounded-sm align-middle"
-                            style={{ animationDuration: '0.8s' }}
-                          />
+                          <div className="absolute inset-y-0 left-0 w-[2px] bg-gradient-to-b from-blue-500/40 via-indigo-500/20 to-transparent rounded-full" />
+                          <div className="pl-4">
+                            {liveTyped.split('\n').map((line, i) => (
+                              <p
+                                key={i}
+                                className="mb-3 last:mb-0 text-left whitespace-pre-wrap break-words text-gray-800/95 transition-colors"
+                              >
+                                {line || <span className="text-gray-300">　</span>}
+                              </p>
+                            ))}
+                            <span
+                              className="inline-block w-[3px] h-[1.2em] bg-gradient-to-b from-blue-500 to-indigo-600 ml-0.5 animate-pulse rounded-sm align-middle"
+                              style={{ animationDuration: '0.8s' }}
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
