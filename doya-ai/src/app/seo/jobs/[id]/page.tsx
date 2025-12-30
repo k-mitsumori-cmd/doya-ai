@@ -1031,7 +1031,7 @@ export default function SeoJobPage() {
                       {/* 本文エリア */}
                       <div className="p-5 min-h-[180px] max-h-[320px] overflow-y-auto">
                         <div 
-                          className="prose prose-sm max-w-none text-gray-800 leading-[1.9]"
+                          className="prose prose-sm max-w-none text-gray-800 leading-[1.9] text-left"
                           style={{ 
                             fontFamily: "'Noto Serif JP', 'Yu Mincho', 'Hiragino Mincho ProN', serif",
                             fontSize: '15px',
@@ -1039,7 +1039,7 @@ export default function SeoJobPage() {
                           }}
                         >
                           {liveTyped.split('\n').map((line, i) => (
-                            <p key={i} className="mb-3 last:mb-0">
+                            <p key={i} className="mb-3 last:mb-0 text-left">
                               {line || <span className="text-gray-300">　</span>}
                             </p>
                           ))}
