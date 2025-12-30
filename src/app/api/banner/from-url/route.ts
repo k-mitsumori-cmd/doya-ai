@@ -36,6 +36,9 @@ type FromUrlRequest = {
   // 互換: 旧UIでは targetUrl/camelCase。新UIでは target_url/snake_case（URLのみ入力）
   targetUrl?: string
   target_url?: string
+  // 選択したバナーを基準に“似た形”で再生成する（data:image/...）
+  baseImage?: string
+  base_image?: string
   bannerPurpose?: string
   industry?: string
   size?: string
@@ -1397,6 +1400,11 @@ export async function POST(request: NextRequest) {
 
     const body = (await request.json()) as FromUrlRequest
     const targetUrl = safeTrim(body?.targetUrl || body?.target_url, 2000)
+    const baseImageRaw =
+      typeof (body as any)?.baseImage === 'string'
+        ? (body as any).baseImage
+        : (typeof (body as any)?.base_image === 'string' ? (body as any).base_image : '')
+    const baseImage = typeof baseImageRaw === 'string' && baseImageRaw.startsWith('data:image/') ? baseImageRaw : ''
     const requestedSizeRaw = safeTrim(body?.size, 32) || '1080x1080'
     const category = safeTrim(body?.industry, 40) || 'other'
     const appPurpose = safeTrim(body?.purpose, 32) || 'sns_ad'
@@ -1593,8 +1601,13 @@ export async function POST(request: NextRequest) {
       logoImage: body.logoImage,
       // 人物写真は1名（1枚）に固定
       personImages: Array.isArray(body.personImages) ? body.personImages.slice(0, 1) : undefined,
-      // 明示指定があればそれを優先。なければサイトから自動抽出した参照画像を使用。
-      referenceImages: Array.isArray(body.referenceImages) && body.referenceImages.length > 0 ? body.referenceImages : (autoReferenceImages.length > 0 ? autoReferenceImages : undefined),
+      // 基準バナーが指定されている場合はそれを最優先の参照画像として渡す（似た形で再生成）
+      // 明示指定(referenceImages)があればそれを優先。なければサイトから自動抽出した参照画像を使用。
+      referenceImages: baseImage
+        ? [baseImage, ...(autoReferenceImages.slice(0, 1) || [])]
+        : (Array.isArray(body.referenceImages) && body.referenceImages.length > 0
+            ? body.referenceImages
+            : (autoReferenceImages.length > 0 ? autoReferenceImages : undefined)),
       // brandColors が未指定なら、抽出したパレットを使用（色抽出精度UP）
       brandColors: Array.isArray(body.brandColors)
         ? body.brandColors
@@ -1602,8 +1615,19 @@ export async function POST(request: NextRequest) {
             ? [visual.mainColor, ...(visual.subColors || [])].map((c) => String(c || '').toUpperCase()).filter((c) => /^#[0-9A-F]{6}$/.test(c)).slice(0, 3)
             : (mergedPalette.length > 0 ? mergedPalette : undefined)),
       // URLのみ入力のため、最終プロンプトをそのまま使用
-      customImagePrompt: imagePrompt,
+      customImagePrompt: baseImage
+        ? [
+            imagePrompt,
+            '',
+            '=== BASE DESIGN MODE (SIMILAR REGENERATION) ===',
+            'Use the FIRST provided reference image as the base design template.',
+            '- Keep a similar overall layout / composition / spacing as the reference.',
+            '- Do NOT copy it 1:1. Generate new originals that feel like variations made by the same designer.',
+            '- Across multiple outputs, vary details (photo scene, accent shapes, CTA style, color accent) while staying in the same template.',
+          ].join('\n')
+        : imagePrompt,
       negativePrompt,
+      variationMode: baseImage ? 'similar' : 'diverse',
     }
 
     // keyword は履歴/メタ用途。なければ title を採用（customImagePromptを使うので生成品質には影響しない）

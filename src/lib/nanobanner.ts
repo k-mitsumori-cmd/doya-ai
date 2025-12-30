@@ -443,6 +443,12 @@ export interface GenerateOptions {
    * 追加のネガティブプロンプト（任意）
    */
   negativePrompt?: string
+  /**
+   * バリエーションの出し方
+   * - diverse: レイアウト/構図まで大胆に変えて多様性を最大化
+   * - similar: 参照画像（referenceImages）に寄せて“似た形”のバリエーションを作る
+   */
+  variationMode?: 'diverse' | 'similar'
 }
 
 function parseDataUrl(dataUrl: string): { mimeType: string; data: string } {
@@ -1135,6 +1141,34 @@ const EXTRA_VARIANT_HINTS: string[] = [
   'Make it more playful: friendly shapes, upbeat tone, but keep high CTR and legibility.',
 ]
 
+// バリエーションの“型”（レイアウト差分を強制して似た見た目を回避）
+const DIVERSE_CREATIVE_PRESETS: string[] = [
+  'Layout: split-screen. One side is a solid color text panel (big headline), the other side is the hero photo/product. CTA at bottom of the text panel. Strong hierarchy.',
+  'Layout: centered headline with large numeric/short phrase. Add a prominent badge (e.g., "無料", "限定", "No.1" style) and a clean CTA button below. Minimal background.',
+  'Layout: diagonal / dynamic composition. Use bold shape accents and a high-contrast CTA button. Keep text on a clean panel for readability.',
+  'Layout: premium minimal. Lots of whitespace, thin lines, refined typography, subtle gradient. Small trust badge near the headline. CTA understated but clickable.',
+  'Layout: infographic. 2–3 simple icon bullets (NO extra text beyond provided copy), with a clear headline and CTA. Use grid alignment.',
+  'Layout: testimonial / proof. Include a simple quote bubble shape and a "実績/導入" style proof badge. Keep it clean and realistic (no tiny legal text).',
+  'Layout: product close-up. Large product/scene photo, headline in a translucent panel, CTA as a pill button. Background slightly blurred for focus.',
+  'Layout: comparison / before-after. Split background into two zones, with a clear "変化" feeling. Headline on top, sub on middle, CTA bottom.',
+  'Layout: bold sale/campaign. Big discount/offer number emphasis, urgency accents, but with strong contrast text blocks. CTA very prominent.',
+  'Layout: collage grid. 2–3 image tiles with one dominant tile, headline across the grid, CTA in a corner. Keep it modern and uncluttered.',
+]
+
+// “似た形”再生成時：レイアウトは大きく変えず、要素の強弱/表現だけ変える
+const SIMILAR_CREATIVE_PRESETS: string[] = [
+  'Keep the overall composition close to the reference. Variation: change the CTA button shape and color accent, and adjust text hierarchy (headline bigger, sub smaller).',
+  'Keep the overall composition close to the reference. Variation: swap the hero image angle/scene while keeping similar framing and whitespace for text.',
+  'Keep the overall composition close to the reference. Variation: add/remove a simple badge (e.g., "無料" / "最短" / "実績") without clutter.',
+  'Keep the overall composition close to the reference. Variation: change background treatment (solid → subtle gradient, or light texture) while preserving readability.',
+  'Keep the overall composition close to the reference. Variation: change iconography accents (simple shapes) and adjust alignment slightly (left → center) but keep the same template.',
+  'Keep the overall composition close to the reference. Variation: change typography mood (bold/gothic vs clean/sans) while keeping text fully readable.',
+  'Keep the overall composition close to the reference. Variation: emphasize trust cues (badge/seal silhouette) or remove them for a cleaner version (one per output).',
+  'Keep the overall composition close to the reference. Variation: increase/decrease contrast, adjust color palette within the brand colors, keep the same layout.',
+  'Keep the overall composition close to the reference. Variation: change the CTA placement within the same layout area (bottom-left vs bottom-right) but keep consistent spacing.',
+  'Keep the overall composition close to the reference. Variation: tweak photo vs text balance (photo slightly larger/smaller) while keeping the template consistent.',
+]
+
 function buildHardConstraintsAppendix(keyword: string, size: string, options: GenerateOptions, patternLabel: string): string {
   const [width, height] = size.split('x')
   const headline = (keyword || '').trim() || (options.headlineText || '').trim()
@@ -1237,6 +1271,8 @@ export async function generateBanners(
     const banners: string[] = Array(targetCount).fill('')
     const errors: string[] = []
     let usedModel: string | undefined = undefined
+    const variationMode = options?.variationMode || 'diverse'
+    const creativePresets = variationMode === 'similar' ? SIMILAR_CREATIVE_PRESETS : DIVERSE_CREATIVE_PRESETS
 
     // 10枚は逐次だとVercelの実行上限/フロントAbortに当たりやすいので、
     // 同時実行数を制限した並列生成にする（Nano Banana Pro / Gemini3系は維持）
@@ -1249,7 +1285,9 @@ export async function generateBanners(
       const basePrompt = options?.customImagePrompt
         ? String(options.customImagePrompt)
         : createBannerPrompt(category, keyword, size, appealType, options)
-      const extraHint = i >= appealTypes.length ? EXTRA_VARIANT_HINTS[i - appealTypes.length] : ''
+      const diverseExtraHint =
+        variationMode === 'diverse' && i >= appealTypes.length ? EXTRA_VARIANT_HINTS[i - appealTypes.length] : ''
+      const creativeBrief = creativePresets[i % creativePresets.length] || ''
       console.log(`Generating ${isYouTube ? 'thumbnail' : 'banner'} pattern ${patternLabel} (${appealType.type}/${appealType.japanese})...`)
 
       let finalPrompt = basePrompt
@@ -1275,7 +1313,8 @@ export async function generateBanners(
       finalPrompt = [
         finalPrompt,
         options?.negativePrompt ? `\n=== NEGATIVE PROMPT (AVOID) ===\n${options.negativePrompt}\n` : '',
-        extraHint ? `\n=== VARIATION HINT ===\n${extraHint}\n` : '',
+        creativeBrief ? `\n=== CREATIVE BRIEF (MUST DIFFER PER PATTERN) ===\n${creativeBrief}\n` : '',
+        diverseExtraHint ? `\n=== VARIATION HINT ===\n${diverseExtraHint}\n` : '',
         buildHardConstraintsAppendix(keyword, size, options, `PATTERN ${patternLabel}`),
       ]
         .filter(Boolean)
