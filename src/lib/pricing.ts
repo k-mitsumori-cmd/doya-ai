@@ -139,7 +139,7 @@ export const SEO_PRICING: ServicePricing = {
   charLimit: {
     guest: 5000,       // ゲスト: 5,000字まで
     free: 10000,       // ログイン無料: 10,000字まで
-    pro: 10000,        // PRO: 10,000字まで
+    pro: 20000,        // PRO: 20,000字まで
     enterprise: 50000, // Enterprise: 50,000字まで
   },
   historyDays: {
@@ -169,12 +169,12 @@ export const SEO_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '¥9,980',
       period: '/月（税込）',
-      description: '月額9,980円：1日3回 / 10,000字まで',
+      description: '月額9,980円：1日3回 / 20,000字まで',
       popular: true,
       color: 'slate',
       features: [
         { text: '1日3回まで生成', included: true },
-        { text: '1記事10,000字まで生成可能', included: true },
+        { text: '1記事20,000字まで生成可能', included: true },
         { text: '分割生成（安定化）', included: true },
         { text: '監査（二重チェック）', included: true },
         { text: '履歴保存（直近3ヶ月）', included: true },
@@ -223,7 +223,7 @@ export function getSeoCharLimitByUserPlan(plan: string | null | undefined, isGue
   
   const p = String(plan || 'FREE').toUpperCase()
   if (p === 'ENTERPRISE') return charLimit.enterprise // 50,000字
-  if (p === 'PRO') return charLimit.pro // 10,000字
+  if (p === 'PRO') return charLimit.pro // 20,000字
   return charLimit.free // 10,000字
 }
 
