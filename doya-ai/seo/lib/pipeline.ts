@@ -4,7 +4,8 @@ import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gem
 import { fetchAndExtract } from '@seo/lib/extract'
 import { SeoCreateArticleInput, SeoOutline, SeoOutlineSchema } from '@seo/lib/types'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
-import { formatBannerPlanDescription, generateArticleBannerPlan, guessArticleGenreJa } from '@seo/lib/bannerPlan'
+import { formatBannerPlanDescription, generateArticleBannerPlan, guessArticleGenreJa, mapGenreToNanobannerCategory } from '@seo/lib/bannerPlan'
+import { generateBanners } from '@/lib/nanobanner'
 
 function nowIso() {
   return new Date().toISOString()
@@ -914,56 +915,70 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
     genreHint: genreGuess,
   })
 
-  // 画像生成は“文字なし”に固定（文字生成は崩れやすい＆記事一覧での視認性のため）
-  // 代わりに、planのコピーを「後から載せられる余白」を作るための設計ガイドとして使う
+  // Nano Banana Pro（nanobanner）で「記事バナー」を生成（CTAなし）
+  // 画像内テキストは読みやすさのため “指定文字列のみ” を厳守させる
+  const category = mapGenreToNanobannerCategory(plan.genre)
+  const keyword = plan.mainCopy || title
+  const support = (plan.supportingPoints || []).filter(Boolean).slice(0, 1)[0] || ''
+
   const prompt = [
-    'あなたは記事バナー（アイキャッチ）制作に強いアートディレクターです。',
-    '記事タイトル・見出し・本文要点を理解し、記事内容と一致する“記事アイキャッチ画像”を生成してください。',
+    'You are a top-tier editorial banner designer for Japanese articles (NOT an ad).',
+    'Goal: Create a 16:9 article banner that matches the article content and is readable on mobile feeds.',
     '',
-    '重要ルール:',
-    '- これは広告バナーではない。CTA要素（詳しくはこちら/今すぐ等）は作らない・入れない。',
-    '- 画像内に文字は一切入れない（日本語/英語/数字/記号を含む）。',
-    '- 後から文字を載せられる「大きな余白（ネガティブスペース）」を確保する。',
-    '- 情報を詰め込みすぎない（最大3ブロックの構図）。',
+    'CRITICAL RULES:',
+    '- This is NOT an advertisement. Do NOT include any CTA text or CTA button.',
+    '- Render ONLY the provided Japanese strings below. Do NOT add any other text.',
+    '- Text must be perfectly legible Japanese (no garbling). Use a clean Noto Sans JP-like font.',
+    '- Use a solid/gradient text panel for contrast. Keep text large and bold.',
+    '- Avoid information overload: max 3 text blocks (headline / subhead / one short support).',
     '',
-    `用途: ${usageScene}`,
-    `ジャンル: ${plan.genre}`,
-    `記事タイトル: ${title}`,
-    headingsText ? `見出し要点: ${headingsText}` : '',
-    excerpt ? `本文要点（抜粋）: ${excerpt}` : '',
+    'ARTICLE CONTEXT (for visual relevance):',
+    `- Title: ${title}`,
+    headingsText ? `- Headings: ${headingsText}` : '',
+    excerpt ? `- Excerpt: ${excerpt}` : '',
+    persona ? `- Target reader: ${persona}` : '',
+    searchIntent ? `- Search intent: ${searchIntent}` : '',
     '',
-    '（参考：後から載せる想定のコピー案 / 画像に文字は入れない）',
-    `- main: ${plan.mainCopy}`,
-    `- sub: ${plan.subCopy}`,
-    plan.supportingPoints?.length ? `- support: ${plan.supportingPoints.join(' / ')}` : '',
+    'TEXT TO RENDER (EXACT):',
+    `- Headline: ${keyword}`,
+    plan.subCopy ? `- Subhead: ${plan.subCopy}` : '',
+    support ? `- Support: ${support}` : '',
     '',
-    'デザイン指針（ジャンル別）:',
-    '- IT/転職/スクール: 信頼感、コントラスト強、青/ネイビー、情報整理型',
-    '- 美容/健康/D2C: 余白多め、明るい配色、清潔感、質感重視',
-    '- EC/セール: 視認性最優先、強い色アクセント、整理された強弱',
+    'DESIGN GUIDANCE:',
+    `- Genre: ${plan.genre}`,
+    industryHint ? `- Industry hint: ${industryHint}` : '',
+    `- Visual elements: ${visualElements}`,
+    `- Mood: ${moodKeyword}`,
+    `- Palette: ${plan.palette}`,
+    `- Layout: ${plan.layout}`,
     '',
-    '今回の方針:',
-    industryHint ? `- industry hint: ${industryHint}` : '',
-    `- visual elements: ${visualElements}`,
-    `- mood: ${moodKeyword}`,
-    `- palette: ${plan.palette}`,
-    `- layout: ${plan.layout}`,
-    '',
-    '出力:',
-    '- 16:9 の記事アイキャッチ画像（高品質、広告“風”ではなく記事“用”）',
+    'OUTPUT:',
+    '- 1200x628 pixels (16:9). Fill edge-to-edge, no letterboxing.',
   ]
     .filter(Boolean)
     .join('\n')
 
-  const img = await geminiGenerateImagePng({
-    prompt,
-    aspectRatio: '16:9',
-    imageSize: '2K',
-    model: GEMINI_IMAGE_MODEL_DEFAULT,
-  })
+  const result = await generateBanners(
+    category,
+    keyword,
+    '1200x628',
+    {
+      purpose: 'email', // CTAが強く出ない用途に寄せる
+      headlineText: keyword,
+      subheadText: plan.subCopy,
+      ctaText: '', // CTA禁止
+      imageDescription: plan.visualConcept,
+      brandColors: ['#2563EB'],
+      customImagePrompt: prompt,
+    },
+    1
+  )
+  const dataUrl = Array.isArray(result?.banners) ? result.banners.find((b) => typeof b === 'string' && b.startsWith('data:image/')) : null
+  if (!dataUrl) throw new Error(result?.error || 'バナー画像の生成に失敗しました')
+  const base64 = String(dataUrl).split(',')[1] || ''
 
   const filename = `seo_${article.id}_${Date.now()}_banner.png`
-  const saved = await saveBase64ToFile({ base64: img.dataBase64, filename, subdir: 'images' })
+  const saved = await saveBase64ToFile({ base64, filename, subdir: 'images' })
   const rec = await (prisma as any).seoImage.create({
     data: {
       articleId: article.id,
@@ -972,7 +987,7 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
       description: formatBannerPlanDescription(plan),
       prompt,
       filePath: saved.relativePath,
-      mimeType: img.mimeType || 'image/png',
+      mimeType: 'image/png',
     },
   })
   return rec

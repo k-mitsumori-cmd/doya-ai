@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { formatBannerPlanDescription, generateArticleBannerPlan, guessArticleGenreJa } from '@seo/lib/bannerPlan'
+import { formatBannerPlanDescription, generateArticleBannerPlan, guessArticleGenreJa, mapGenreToNanobannerCategory } from '@seo/lib/bannerPlan'
+import { generateBanners } from '@/lib/nanobanner'
 
 export const runtime = 'nodejs'
 
@@ -41,48 +42,63 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       genreHint: genreGuess,
     })
 
+    const support = (plan.supportingPoints || []).filter(Boolean).slice(0, 1)[0] || ''
+    const category = mapGenreToNanobannerCategory(plan.genre)
+    const headline = plan.mainCopy || title
     const prompt = [
-      'あなたは記事バナー（アイキャッチ）制作に強いアートディレクターです。',
-      '以下の記事内容を正確に理解し、記事内容と一致する「記事アイキャッチ画像」を作成してください。',
+      'You are a top-tier editorial banner designer for Japanese articles (NOT an ad).',
+      'Goal: Create a 16:9 article banner that matches the article content and is readable on mobile feeds.',
       '',
-      '【前提】',
-      '・目的：記事内容が直感的に伝わる（広告っぽくしすぎない）',
-      '・用途：記事一覧/SNS（記事アイキャッチ）',
-      '・情報を盛り込みすぎない（最大3ブロック）',
+      'CRITICAL RULES:',
+      '- This is NOT an advertisement. Do NOT include any CTA text or CTA button.',
+      '- Render ONLY the provided Japanese strings below. Do NOT add any other text.',
+      '- Text must be perfectly legible Japanese (no garbling). Use a clean Noto Sans JP-like font.',
+      '- Use a solid/gradient text panel for contrast. Keep text large and bold.',
+      '- Avoid information overload: max 3 text blocks (headline / subhead / one short support).',
       '',
-      '【必須インプット】',
-      `▼記事タイトル\n${title}`,
-      headings.length ? `\n▼記事見出し（要点）\n${headings.join(' / ')}` : '',
-      excerpt ? `\n▼記事の要約（または本文）\n${excerpt}` : '',
-      keywords ? `\n▼キーワード\n${keywords}` : '',
-      `\n▼記事ジャンル（推定）\n${plan.genre}`,
-      '\n▼カラー指定\nジャンルに合う配色（信頼/清潔感/視認性の最適化）',
-      '\n▼サイズ\n1200×628（16:9）',
+      'ARTICLE CONTEXT (for visual relevance):',
+      `- Title: ${title}`,
+      headings.length ? `- Headings: ${headings.join(' / ')}` : '',
+      excerpt ? `- Excerpt: ${excerpt}` : '',
+      keywords ? `- Keywords: ${keywords}` : '',
       '',
-      '【重要ルール】',
-      '・CTAは禁止（詳しくはこちら/今すぐ等は入れない）',
-      '・画像内に文字は一切入れない（日本語/英語/数字/記号含む）',
-      '・後から文字を載せられる大きな余白（ネガティブスペース）を確保する',
+      'TEXT TO RENDER (EXACT):',
+      `- Headline: ${headline}`,
+      plan.subCopy ? `- Subhead: ${plan.subCopy}` : '',
+      support ? `- Support: ${support}` : '',
       '',
-      '【参考：コピー案（※画像内に文字は入れない / CTAなし）】',
-      `main: ${plan.mainCopy}`,
-      `sub: ${plan.subCopy}`,
-      plan.supportingPoints?.length ? `support: ${plan.supportingPoints.join(' / ')}` : '',
+      'DESIGN GUIDANCE:',
+      `- Genre: ${plan.genre}`,
+      `- Palette: ${plan.palette}`,
+      `- Layout: ${plan.layout}`,
       '',
-      '【最終ゴール】記事内容が、バナーを見た瞬間に直感的に伝わる画像にする。',
+      'OUTPUT:',
+      '- 1200x628 pixels (16:9). Fill edge-to-edge, no letterboxing.',
     ]
       .filter(Boolean)
       .join('\n')
 
-    const img = await geminiGenerateImagePng({
-      prompt,
-      aspectRatio: '16:9',
-      imageSize: '2K',
-      model: GEMINI_IMAGE_MODEL_DEFAULT,
-    })
+    const result = await generateBanners(
+      category,
+      headline,
+      '1200x628',
+      {
+        purpose: 'email',
+        headlineText: headline,
+        subheadText: plan.subCopy,
+        ctaText: '',
+        imageDescription: plan.visualConcept,
+        brandColors: ['#2563EB'],
+        customImagePrompt: prompt,
+      },
+      1
+    )
+    const dataUrl = Array.isArray(result?.banners) ? result.banners.find((b) => typeof b === 'string' && b.startsWith('data:image/')) : null
+    if (!dataUrl) throw new Error(result?.error || 'バナー画像の生成に失敗しました')
+    const base64 = String(dataUrl).split(',')[1] || ''
 
     const filename = `seo_${articleId}_${Date.now()}_banner.png`
-    const saved = await saveBase64ToFile({ base64: img.dataBase64, filename, subdir: 'images' })
+    const saved = await saveBase64ToFile({ base64, filename, subdir: 'images' })
 
     const rec = await (prisma as any).seoImage.create({
       data: {
@@ -92,7 +108,7 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
         description: formatBannerPlanDescription(plan),
         prompt,
         filePath: saved.relativePath,
-        mimeType: img.mimeType || 'image/png',
+        mimeType: 'image/png',
       },
     })
 

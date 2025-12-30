@@ -11,6 +11,20 @@ export type ArticleBannerPlan = {
   designIntent: string
 }
 
+export function mapGenreToNanobannerCategory(genre: string): string {
+  const g = String(genre || '').toLowerCase()
+  if (/転職|採用|人材|hr/.test(g)) return 'recruit'
+  if (/itスクール|スクール|教育|学習|資格/.test(g)) return 'education'
+  if (/美容|コスメ|サロン|エステ|スキンケア/.test(g)) return 'beauty'
+  if (/健康|医療|ヘルスケア|病院|福祉|ダイエット/.test(g)) return 'health'
+  if (/ec|通販|物販|ショップ|d2c|楽天|amazon/.test(g)) return 'ec'
+  if (/ai|人工知能|機械学習|llm|gpt/.test(g)) return 'tech'
+  if (/不動産|住宅|建築|リノベ|物件/.test(g)) return 'realestate'
+  if (/金融|投資|資産|保険|fintech/.test(g)) return 'finance'
+  if (/マーケ|広告|sns|instagram|twitter|x\b|meta/.test(g)) return 'marketing'
+  return 'other'
+}
+
 export function guessArticleGenreJa(text: string): string {
   const t = String(text || '').toLowerCase()
   if (/転職|採用|求人|rpo|人材|hr/.test(t)) return '転職/採用'
