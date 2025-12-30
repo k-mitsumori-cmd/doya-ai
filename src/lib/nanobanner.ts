@@ -335,6 +335,12 @@ const PURPOSE_STYLES: Record<string, { layout: string; emphasis: string; cta: st
     emphasis: 'brand recognition, clear single message',
     cta: 'subtle CTA or none (content in email body)',
   },
+  article_banner: {
+    layout: 'editorial article banner (NOT an advertisement), 16:9, clean and premium, content-aligned',
+    emphasis:
+      'make the headline/subhead extremely readable on mobile: large font, strong contrast, solid/gradient panel behind text, minimal clutter',
+    cta: 'NO CTA button, NO promotional language',
+  },
   campaign: {
     layout: 'promotional campaign banner, festive/urgent feel',
     emphasis: 'discount/offer prominent, limited time messaging',
@@ -714,6 +720,7 @@ function createBannerPrompt(
                       parseInt(width) < parseInt(height) ? 'portrait (vertical)' : 'square'
   
   const isYouTube = options.purpose === 'youtube'
+  const isArticleBanner = options.purpose === 'article_banner'
 
   // YouTube専用プロンプト
   if (isYouTube) {
@@ -733,8 +740,11 @@ function createBannerPrompt(
     ? `${brandColors.join(', ')} (use these as the primary palette)`
     : categoryStyle.colors
 
-  let prompt = `You are a world-class performance ad art director for the Japanese market.
-Goal: generate a HIGH-CTR, premium-quality advertisement creative WITH readable Japanese text.
+  let prompt = isArticleBanner
+    ? `You are a top-tier editorial banner designer for Japanese articles.
+Goal: generate a premium-quality ARTICLE BANNER (NOT an advertisement) WITH readable Japanese text.`
+    : `You are a world-class performance ad art director for the Japanese market.
+Goal: generate a HIGH-CTR, premium-quality advertisement creative WITH readable Japanese text.`
 
 === SYSTEM BRIEF (JP / MUST FOLLOW) ===
 ${buildAgencyMasterPromptJP({
@@ -756,7 +766,7 @@ ${buildAgencyMasterPromptJP({
 === BANNER SPECIFICATIONS ===
 Format: ${aspectRatio} banner (${width}x${height} pixels)
 Purpose: ${options.purpose || 'sns_ad'} - ${purposeStyle.layout}
-Primary KPI: maximize click-through rate (CTR) on mobile feeds.
+Primary KPI: ${isArticleBanner ? 'make the article topic instantly understandable (mobile-first readability)' : 'maximize click-through rate (CTR) on mobile feeds.'}
 
 === SIZE / CROPPING (CRITICAL) ===
 - Output dimensions: EXACTLY ${width}x${height} px. Do NOT change aspect ratio.
@@ -793,10 +803,15 @@ This overrides default imagery suggestions. Make these elements the main visual 
 ` : ''}
 
 === CTR CREATIVE BLUEPRINT (DO THIS) ===
-1) Thumb-stopping focal point: one strong subject or outcome scene that reads in 0.5 seconds.
+${isArticleBanner
+  ? `1) Content-aligned visual hook: match the article topic (no generic stock feel).
+2) Readability first: ensure headline/subhead are the first thing the user reads (high contrast, large, clear).
+3) Clean hierarchy: minimal clutter, large simple shapes, calm premium editorial look.
+4) NO CTA: do not add any buttons or promotional elements.`
+  : `1) Thumb-stopping focal point: one strong subject or outcome scene that reads in 0.5 seconds.
 2) High contrast & depth: clear foreground/background separation, premium lighting, crisp details.
 3) Clean hierarchy: minimal clutter, large simple shapes, strong directional lines guiding to CTA.
-4) Mobile-first legibility: avoid tiny objects/patterns; ensure text is readable on mobile feeds.
+4) Mobile-first legibility: avoid tiny objects/patterns; ensure text is readable on mobile feeds.`}
 
 === TEXT TO RENDER (MUST BE EXACT) ===
 Render these strings exactly as written. Do NOT translate, do NOT paraphrase, do NOT add extra words.
