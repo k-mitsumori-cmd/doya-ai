@@ -923,8 +923,7 @@ export default function SeoNewArticlePage() {
                     {TARGETS.map((n) => {
                       const selected = targetChars === n
                       const locked = n > charLimit
-                      // PROの文字数上限が10,000字の場合、10,000字超はEnterpriseが必要
-                      const requiredPlan = n >= 50000 ? 'ENTERPRISE' : n > 10000 ? 'ENTERPRISE' : n > 5000 ? 'FREE' : 'GUEST'
+                      const requiredPlan = n >= 50000 ? 'ENTERPRISE' : n > 20000 ? 'ENTERPRISE' : n > 10000 ? 'PRO' : n > 5000 ? 'FREE' : 'GUEST'
                       const requiredLabel =
                         requiredPlan === 'ENTERPRISE' ? 'Enterpriseが必要' : requiredPlan === 'PRO' ? 'PROが必要' : requiredPlan === 'FREE' ? 'ログインが必要' : 'ゲストOK'
                       const hint = locked ? `${requiredLabel}（クリックでアップグレード）` : `${n.toLocaleString()}字を選択`
