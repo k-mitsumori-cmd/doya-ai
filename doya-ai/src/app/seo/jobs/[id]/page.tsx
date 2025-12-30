@@ -757,7 +757,7 @@ export default function SeoJobPage() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-left mb-8"
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-100 text-gray-600 text-xs font-black mb-4 shadow-sm">
             <Sparkles className="w-4 h-4" />
@@ -785,7 +785,7 @@ export default function SeoJobPage() {
                   transition={{ duration: 0.5, ease: 'easeOut' }}
                 />
               </div>
-              <div className="mt-2 text-[10px] font-bold text-gray-400 flex items-center justify-center gap-2">
+              <div className="mt-2 text-[10px] font-bold text-gray-400 flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${isDone ? 'bg-emerald-500' : isError ? 'bg-red-500' : isRunning ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
                 <span>{isDone ? '完了しました' : isError ? 'エラーが発生しました' : '進捗を更新中…'}</span>
               </div>
@@ -798,7 +798,7 @@ export default function SeoJobPage() {
           <p className="text-gray-500 mt-3 text-sm font-bold">
             目標: {job.article.targetChars.toLocaleString()}文字
           </p>
-          <div className="mt-4 flex items-center justify-center">
+          <div className="mt-4 flex items-center">
             <FeatureGuide
               featureId="seo.jobProgress"
               title="生成中画面の見方"
@@ -812,7 +812,7 @@ export default function SeoJobPage() {
               imageMode="off"
             />
           </div>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 text-[11px] font-bold text-gray-500">
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-[11px] font-bold text-gray-500">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-100 shadow-sm">
               <span className={`w-2.5 h-2.5 rounded-full ${isRunning ? 'bg-emerald-500' : isPaused ? 'bg-amber-500' : isError ? 'bg-red-500' : 'bg-gray-300'}`} />
               <span>状態: {JOB_STATUS_LABELS[job.status] || job.status}</span>
@@ -825,7 +825,7 @@ export default function SeoJobPage() {
 
           {/* 経過時間のみ表示 */}
           <div className="mt-5 max-w-4xl mx-auto">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left max-w-xs mx-auto">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-left max-w-xs">
               <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
                 <Clock className="w-4 h-4 text-gray-500" />
                 経過時間
