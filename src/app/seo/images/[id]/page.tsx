@@ -116,6 +116,15 @@ export default async function SeoImageDetailPage({ params }: { params: { id: str
                 {String(img.prompt || '').trim() || '（プロンプトが保存されていません）'}
               </pre>
             </div>
+
+            {!!String((img as any).description || '').trim() && (
+              <div className="mt-4 p-4 rounded-2xl bg-white border border-gray-100">
+                <p className="text-xs font-black text-gray-400 uppercase tracking-widest">コピー構成 / デザイン意図（生成結果）</p>
+                <pre className="mt-2 text-[11px] whitespace-pre-wrap text-gray-700 font-medium leading-relaxed">
+                  {String((img as any).description || '').trim()}
+                </pre>
+              </div>
+            )}
           </div>
         </div>
       </div>

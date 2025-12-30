@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateImagePng, geminiGenerateJson, GEMINI_IMAGE_MODEL_DEFAULT, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
+import { formatBannerPlanDescription, generateArticleBannerPlan, guessArticleGenreJa } from '@seo/lib/bannerPlan'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
@@ -55,29 +56,22 @@ function applyTemplate(rawTemplate: string, vars: Record<string, string>) {
 
 function defaultBannerTemplate() {
   return [
-    'あなたは、オウンドメディア・SEO記事の「名乗らないサムネ画像」を専門に制作するトップデザイナーです。',
+    'あなたは記事バナー（アイキャッチ）制作に強いアートディレクターです。',
     '',
-    '今回制作するのは、記事タイトル・サービス名・ロゴを一切出さずに、',
-    '“画像だけで記事の内容と価値が直感的に伝わる”サムネイル画像です。',
+    '記事タイトル・見出し・本文要点をもとに、記事内容と一致する「記事アイキャッチ画像」を生成してください。',
     '',
-    '【目的】',
-    '・検索結果、SNS、記事一覧で一瞬で内容が伝わる',
-    '・「何の記事か」が文字を読まなくても理解できる',
-    '・クリックしたくなるが、煽りすぎない',
-    '・信頼感と分かりやすさを両立する',
+    '【目的】記事内容が直感的に伝わる（広告っぽくしすぎない）',
     '',
-    '【絶対ルール（重要）】',
-    '・サービス名、会社名、ロゴ、人物名は一切入れない',
-    '・「〇〇とは」「完全解説」などの説明文も入れない',
-    '・文字は最小限（使う場合はキーワードのみ）',
-    '・画像単体で意味が成立すること',
+    '【必須ルール】',
+    '・CTA文言は禁止（詳しくはこちら/今すぐ等は入れない）',
+    '・画像内に文字は入れない（日本語/英語/数字/記号を含む）',
+    '・後から文字を載せられる大きな余白（ネガティブスペース）を確保する',
+    '・情報を詰め込みすぎない（最大3ブロックの構図）',
     '',
-    '【デザインの基本方針】',
-    '・雰囲気：分かりやすい／整理されている／知的だけど硬すぎない',
-    '・カラー：ポップすぎず、でも暗くならない（青・水色・黄・オレンジ系）',
-    '・背景：白または薄い単色',
-    '・余白をしっかり取り、ゴチャつかせない',
-    '・線はやや太め、要素は大きく',
+    '【ジャンル別デザイン指針】',
+    '・IT/転職/スクール: 信頼感、コントラスト強、青/ネイビー、情報整理型',
+    '・美容/健康/D2C: 余白多め、明るい配色、清潔感、質感重視',
+    '・EC/セール: 視認性最優先、強い色アクセント、整理された強弱',
     '',
     '【元となる記事内容】',
     '{{ARTICLE_CONTENT}}',
@@ -146,11 +140,18 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
 
     const articleContent = clampText(String(article.finalMarkdown || ''), 7000)
     const headings = (String(article.finalMarkdown).match(/^#{1,3}\s+.+$/gm) || []).slice(0, 18)
+    const headingsPlain = headings
+      .map((h: string) => String(h).replace(/^#{1,6}\s+/, '').trim())
+      .filter(Boolean)
+      .slice(0, 16)
+    const genreGuess = guessArticleGenreJa([String(article.title || ''), headingsPlain.join(' '), articleContent].join(' '))
     const varsBase = {
       ARTICLE_TITLE: String(article.title || ''),
       KEYWORDS: String(((article.keywords as any) || []).join(', ')),
       HEADINGS: headings.join(' / '),
       ARTICLE_CONTENT: articleContent,
+      GENRE: genreGuess,
+      USAGE: '記事一覧/SNS（記事アイキャッチ）',
     }
 
     const bannerTemplate = String(body?.bannerPromptTemplate || '').trim() || defaultBannerTemplate()
@@ -159,7 +160,40 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
     // バナーがなければ生成
     const hasBanner = (article.images || []).some((x: any) => x.kind === 'BANNER')
     if (!hasBanner) {
-      const prompt = applyTemplate(bannerTemplate, varsBase)
+      const plan = await generateArticleBannerPlan({
+        title: String(article.title || ''),
+        headings: headingsPlain,
+        excerpt: articleContent.slice(0, 1800),
+        keywords: ((article.keywords as any) || []) as string[],
+        persona: String(article.persona || ''),
+        searchIntent: String(article.searchIntent || ''),
+        requestText: String(article.requestText || ''),
+        usage: varsBase.USAGE,
+        genreHint: genreGuess,
+      })
+
+      const prompt = [
+        applyTemplate(bannerTemplate, varsBase),
+        '',
+        '---',
+        '【参考：コピー案（※画像内に文字は入れない / CTA禁止）】',
+        `main: ${plan.mainCopy}`,
+        `sub: ${plan.subCopy}`,
+        plan.supportingPoints?.length ? `support: ${plan.supportingPoints.join(' / ')}` : '',
+        '',
+        '【参考：デザイン意図】',
+        `genre: ${plan.genre}`,
+        `concept: ${plan.visualConcept}`,
+        `palette: ${plan.palette}`,
+        `layout: ${plan.layout}`,
+        `intent: ${plan.designIntent}`,
+        '',
+        '【再掲：重要ルール】',
+        '・CTA文言は禁止（詳しくはこちら/今すぐ等は入れない）',
+        '・画像内に文字は入れない（日本語/英語/数字/記号含む）',
+      ]
+        .filter(Boolean)
+        .join('\n')
 
       const img = await geminiGenerateImagePng({
         prompt,
@@ -176,6 +210,7 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
           articleId,
           kind: 'BANNER',
           title: '記事バナー',
+          description: formatBannerPlanDescription(plan),
           prompt,
           filePath: saved.relativePath,
           mimeType: img.mimeType || 'image/png',
