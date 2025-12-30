@@ -1044,10 +1044,43 @@ function SeoArticleInner() {
                           )}
                           {!isMediaLocked && !imgLoaded[img.id] && (
                             <div className="absolute inset-0 pointer-events-none">
-                              <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-50 animate-pulse" />
+                              {/* ベース（少し暗めにして“空白”感を消す） */}
+                              <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-50" />
+                              {/* シマー（流れる光） */}
+                              <motion.div
+                                className="absolute inset-0 opacity-70"
+                                style={{
+                                  backgroundImage:
+                                    'linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 65%, rgba(255,255,255,0) 100%)',
+                                  backgroundSize: '200% 100%',
+                                }}
+                                animate={{ backgroundPositionX: ['200%', '-200%'] }}
+                                transition={{ duration: 1.4, repeat: Infinity, ease: 'linear' }}
+                              />
+                              {/* 生成中ラベル */}
                               <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="px-4 py-2 rounded-full bg-white/80 border border-gray-200 text-gray-700 text-xs font-black shadow-sm">
-                                  画像を生成/読み込み中…
+                                <div className="px-5 py-3 rounded-2xl bg-white/85 border border-gray-200 text-gray-800 text-xs font-black shadow-sm backdrop-blur-[2px]">
+                                  <div className="flex items-center gap-2">
+                                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                    <span>生成中</span>
+                                    <span className="inline-flex items-center gap-0.5 text-gray-500 font-black">
+                                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '140ms' }} />
+                                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '280ms' }} />
+                                    </span>
+                                  </div>
+                                  <div className="mt-2 h-1.5 w-[240px] max-w-[70vw] rounded-full bg-gray-200 overflow-hidden">
+                                    <motion.div
+                                      className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-500"
+                                      initial={{ x: '-60%' }}
+                                      animate={{ x: ['-60%', '110%'] }}
+                                      transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                                      style={{ width: '55%' }}
+                                    />
+                                  </div>
+                                  <div className="mt-1 text-[10px] font-bold text-gray-500">
+                                    ※ 生成→保存→反映まで少し時間がかかる場合があります
+                                  </div>
                                 </div>
                               </div>
                             </div>
