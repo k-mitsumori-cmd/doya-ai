@@ -1178,16 +1178,19 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
 
   return [
     '',
+    '=== CRITICAL: TEXT MUST BE RENDERED IN THE IMAGE ===',
+    'The following Japanese text MUST be drawn directly onto the image canvas.',
+    'Do NOT output a text-free image. The text must be visible and readable.',
+    '',
+    headline ? `【メインコピー（必須・大きく表示）】${headline}` : '',
+    subhead ? `【サブコピー（画像内に表示）】${subhead}` : '',
+    cta ? `【CTA（画像内に表示）】${cta}` : '',
+    company ? `【ブランド名（画像内に表示）】${company}` : '',
+    '',
     '=== HARD CONSTRAINTS (DO NOT DROP) ===',
     `PATTERN: ${patternLabel} (must be a distinct creative variation, but must follow the same content/image intent)`,
     `Output dimensions: EXACTLY ${width}x${height} px. Do NOT change aspect ratio.`,
     '- Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom bars, NO padding, NO borders.',
-    '',
-    'TEXT MUST BE IN THE IMAGE (EXACT):',
-    `- Headline (必須): ${headline || '(empty)'}`,
-    subhead ? `- Subhead (任意): ${subhead}` : '',
-    cta ? `- CTA (任意): ${cta}` : '',
-    company ? `- Brand (任意): ${company}` : '',
     '',
     options.imageDescription
       ? [
@@ -1210,7 +1213,7 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
     options.personImage || options.hasPerson
       ? 'PERSON: include the provided person photo if available; otherwise generate a suitable person. Keep text readable.\n'
       : '',
-    'FINAL: Return ONE PNG image with the Japanese text rendered correctly.',
+    'FINAL: Return ONE PNG image with the Japanese text rendered correctly. The メインコピー MUST be visible.',
   ]
     .filter(Boolean)
     .join('\n')
