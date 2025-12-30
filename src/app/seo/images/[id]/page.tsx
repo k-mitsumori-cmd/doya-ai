@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
+import { canUseSeoImages, isTrialActive, normalizeSeoPlan } from '@/lib/seoAccess'
 
 export const runtime = 'nodejs'
 
@@ -13,6 +14,12 @@ export default async function SeoImageDetailPage({ params }: { params: { id: str
   const user: any = session?.user || null
   const userId = String(user?.id || '')
   if (!userId) notFound()
+
+  // 画像のダウンロード/コピーは「画像生成が解放されている条件」と同じに揃える
+  const plan = normalizeSeoPlan(user?.seoPlan || user?.plan || 'FREE')
+  const trial = isTrialActive(user?.firstLoginAt || null)
+  const trialActive = !!userId && trial.active
+  const imagesAllowed = canUseSeoImages({ isLoggedIn: true, plan, trialActive })
 
   const id = params.id
   const img = await (prisma as any).seoImage.findUnique({
@@ -42,28 +49,65 @@ export default async function SeoImageDetailPage({ params }: { params: { id: str
                 記事に戻る
               </span>
             </Link>
-            <a
-              href={`/api/seo/images/${id}`}
-              download
-              className="h-10 px-4 rounded-xl bg-gray-900 text-white font-black text-xs inline-flex items-center gap-2 hover:bg-gray-800"
-            >
-              ダウンロード
-            </a>
-            <a
-              href={`/api/seo/images/${id}`}
-              target="_blank"
-              rel="noreferrer"
-              className="h-10 px-4 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs inline-flex items-center gap-2 hover:bg-gray-50"
-            >
-              新しいタブで開く
-            </a>
+            {imagesAllowed ? (
+              <>
+                <a
+                  href={`/api/seo/images/${id}`}
+                  download
+                  className="h-10 px-4 rounded-xl bg-gray-900 text-white font-black text-xs inline-flex items-center gap-2 hover:bg-gray-800"
+                >
+                  ダウンロード
+                </a>
+                <a
+                  href={`/api/seo/images/${id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-10 px-4 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs inline-flex items-center gap-2 hover:bg-gray-50"
+                >
+                  新しいタブで開く
+                </a>
+              </>
+            ) : (
+              <Link href="/seo/dashboard/plan" className="inline-flex">
+                <span className="h-10 px-4 rounded-xl bg-gray-900 text-white font-black text-xs inline-flex items-center gap-2 hover:bg-gray-800">
+                  料金プランを見る
+                </span>
+              </Link>
+            )}
           </div>
         </div>
 
         <div className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
           <div className="p-4 sm:p-6">
-            <div className="rounded-2xl border border-gray-100 overflow-hidden bg-gray-50">
+            {!imagesAllowed && (
+              <div className="mb-4 p-5 rounded-2xl bg-amber-50 border border-amber-100">
+                <p className="font-black text-amber-900 text-sm">ダウンロードは有料プラン限定です</p>
+                <p className="text-xs font-bold text-amber-800/80 mt-1">現在のプラン: {plan}</p>
+                <Link href="/seo/dashboard/plan" className="inline-flex mt-3">
+                  <span className="h-10 px-5 rounded-xl bg-gray-900 text-white font-black text-xs inline-flex items-center gap-2 hover:bg-gray-800">
+                    アップグレードする
+                  </span>
+                </Link>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-gray-100 overflow-hidden bg-gray-50 relative">
               <img src={`/api/seo/images/${id}`} alt={title} className="w-full h-auto" />
+              {!imagesAllowed && (
+                <div className="absolute inset-0 bg-black/55 flex items-center justify-center p-4">
+                  <div className="rounded-2xl bg-black/55 border border-white/20 backdrop-blur-[2px] p-4 text-center">
+                    <p className="text-white text-sm font-black">ロック中（表示のみ）</p>
+                    <p className="mt-1 text-white/80 text-[11px] font-bold">
+                      アップグレードでダウンロードできます
+                    </p>
+                    <Link href="/seo/dashboard/plan" className="inline-flex mt-3">
+                      <span className="h-10 px-5 rounded-xl bg-white text-gray-900 font-black text-xs inline-flex items-center gap-2 hover:bg-gray-100">
+                        料金プランを見る
+                      </span>
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 p-4 rounded-2xl bg-gray-50 border border-gray-100">
