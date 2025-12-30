@@ -50,6 +50,7 @@ import {
   CheckCircle2,
   MessageCircle,
   Loader2,
+  Lock,
 } from 'lucide-react'
 
 type SeoImage = {
@@ -279,6 +280,20 @@ function SeoArticleInner() {
   const [bannerPromptTemplate, setBannerPromptTemplate] = useState(DEFAULT_BANNER_PROMPT_TEMPLATE)
   const [diagramPromptTemplate, setDiagramPromptTemplate] = useState(DEFAULT_DIAGRAM_PROMPT_TEMPLATE)
   const [imageDetail, setImageDetail] = useState<SeoImage | null>(null)
+
+  const mediaLockState = useMemo<'loading' | 'locked' | 'unlocked'>(() => {
+    if (tab !== 'media') return 'unlocked'
+    if (!entitlements) return 'loading'
+    return entitlements.canUseSeoImages ? 'unlocked' : 'locked'
+  }, [entitlements, tab])
+
+  const upgradeHref = useMemo(() => {
+    if (!entitlements) return '/seo/pricing'
+    return entitlements.isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'
+  }, [entitlements])
+
+  const isMediaLocked = mediaLockState !== 'unlocked'
+  const mediaLockLabel = mediaLockState === 'loading' ? '権限を確認中…' : '有料プランで解放'
 
 
   const markdown = useMemo(() => article?.finalMarkdown || '', [article])
@@ -857,7 +872,7 @@ function SeoArticleInner() {
                     <div className="mb-6 p-5 rounded-2xl bg-amber-50 border border-amber-100">
                       <p className="font-black text-amber-900 text-sm">画像生成（図解/バナー）は有料プラン限定です</p>
                       <p className="text-xs font-bold text-amber-800/80 mt-1">現在のプラン: {entitlements.plan}</p>
-                      <Link href="/pricing" className="inline-block mt-3">
+                      <Link href={upgradeHref} className="inline-block mt-3">
                         <button className="h-11 px-5 rounded-xl bg-gray-900 text-white font-black text-sm hover:bg-gray-800 transition-colors">
                           料金プランを見る
                         </button>
@@ -963,15 +978,47 @@ function SeoArticleInner() {
                         <div className="aspect-video relative overflow-hidden bg-gray-50">
                           <button
                             type="button"
-                            onClick={() => setImageDetail(img)}
+                            onClick={() => {
+                              if (isMediaLocked) {
+                                router.push(upgradeHref)
+                                return
+                              }
+                              setImageDetail(img)
+                            }}
                             className="block w-full h-full"
-                            title="クリックで拡大表示"
+                            title={isMediaLocked ? '有料プランで解放（クリックで移動）' : 'クリックで拡大表示'}
                           >
-                            <img src={`/api/seo/images/${img.id}`} className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700" alt={img.title || ''} />
+                            <img
+                              src={`/api/seo/images/${img.id}`}
+                              className={`w-full h-full object-cover transition-all duration-700 ${isMediaLocked ? 'grayscale-[0.2]' : 'group-hover:scale-105'}`}
+                              alt={img.title || ''}
+                            />
                           </button>
                           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex gap-2">
                             <Badge tone={img.kind === 'BANNER' ? 'orange' : 'blue'}>{img.kind}</Badge>
                           </div>
+                          {isMediaLocked && (
+                            <div className="absolute inset-0">
+                              <div className="absolute inset-0 bg-black/55" />
+                              <div className="absolute inset-0 flex items-center justify-center p-4">
+                                <div className="w-full max-w-sm rounded-2xl bg-black/55 border border-white/20 backdrop-blur-[2px] p-4 text-center">
+                                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white text-xs font-black">
+                                    <Lock className="w-4 h-4" />
+                                    {mediaLockLabel}
+                                  </div>
+                                  <p className="mt-3 text-white text-sm font-black">アイキャッチの操作（DL/コピー）は有料プラン限定</p>
+                                  <p className="mt-1 text-white/80 text-[11px] font-bold">
+                                    画像は表示のみです。アップグレードでダウンロードできます。
+                                  </p>
+                                  <Link href={upgradeHref} className="inline-flex mt-3">
+                                    <span className="h-10 px-5 rounded-xl bg-white text-gray-900 font-black text-xs inline-flex items-center gap-2 hover:bg-gray-100">
+                                      料金プランを見る
+                                    </span>
+                                  </Link>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div className="p-4 sm:p-5">
                           <p className="font-black text-gray-900 truncate text-sm sm:text-base">{img.title || '無題の画像'}</p>
@@ -979,32 +1026,54 @@ function SeoArticleInner() {
                           <div className="mt-3 flex flex-wrap gap-2">
                             <button
                               type="button"
-                              onClick={() => setImageDetail(img)}
-                              className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                              onClick={() => (isMediaLocked ? router.push(upgradeHref) : setImageDetail(img))}
+                              className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border font-black text-xs transition-colors ${
+                                isMediaLocked
+                                  ? 'bg-gray-900 text-white border-gray-900 hover:bg-gray-800'
+                                  : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
+                              }`}
                             >
-                              <Eye className="w-4 h-4" />
-                              ひらく
+                              {isMediaLocked ? <Lock className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              {isMediaLocked ? 'ロック中' : 'ひらく'}
                             </button>
                             <button
                               type="button"
-                              onClick={() => downloadImage(img)}
-                              className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                              onClick={() => (isMediaLocked ? router.push(upgradeHref) : downloadImage(img))}
+                              className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border font-black text-xs transition-colors ${
+                                isMediaLocked
+                                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
+                              }`}
+                              disabled={isMediaLocked}
                             >
                               <Download className="w-4 h-4" />
                               ダウンロード
                             </button>
                             <button
                               type="button"
-                              onClick={() => copyToClipboard(`![${img.title || 'image'}](/api/seo/images/${img.id})`)}
-                              className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                              onClick={() =>
+                                isMediaLocked
+                                  ? router.push(upgradeHref)
+                                  : copyToClipboard(`![${img.title || 'image'}](/api/seo/images/${img.id})`)
+                              }
+                              className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border font-black text-xs transition-colors ${
+                                isMediaLocked
+                                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
+                              }`}
+                              disabled={isMediaLocked}
                             >
                               <Copy className="w-4 h-4" />
                               Markdownコピー
                             </button>
-                            <Link href={`/seo/images/${img.id}`} className="inline-flex">
-                              <span className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-gray-900 text-white font-black text-xs hover:bg-gray-800">
+                            <Link href={isMediaLocked ? upgradeHref : `/seo/images/${img.id}`} className="inline-flex">
+                              <span
+                                className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl font-black text-xs transition-colors ${
+                                  isMediaLocked ? 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-50' : 'bg-gray-900 text-white hover:bg-gray-800'
+                                }`}
+                              >
                                 <ExternalLink className="w-4 h-4" />
-                                詳細ページ
+                                {isMediaLocked ? '料金プラン' : '詳細ページ'}
                               </span>
                             </Link>
                             {entitlements?.canUseSeoImages && (
@@ -1070,30 +1139,64 @@ function SeoArticleInner() {
                           </button>
                         </div>
                         <div className="p-5 sm:p-6">
-                          <div className="rounded-2xl border border-gray-100 overflow-hidden bg-gray-50">
+                          <div className="rounded-2xl border border-gray-100 overflow-hidden bg-gray-50 relative">
                             <img src={`/api/seo/images/${imageDetail.id}`} className="w-full h-full object-contain" alt={imageDetail.title || ''} />
+                            {isMediaLocked && (
+                              <div className="absolute inset-0 bg-black/55 flex items-center justify-center p-4">
+                                <div className="rounded-2xl bg-black/55 border border-white/20 backdrop-blur-[2px] p-4 text-center">
+                                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white text-xs font-black">
+                                    <Lock className="w-4 h-4" />
+                                    {mediaLockLabel}
+                                  </div>
+                                  <p className="mt-3 text-white text-sm font-black">ダウンロード/コピーは有料プラン限定です</p>
+                                  <Link href={upgradeHref} className="inline-flex mt-3">
+                                    <span className="h-10 px-5 rounded-xl bg-white text-gray-900 font-black text-xs inline-flex items-center gap-2 hover:bg-gray-100">
+                                      料金プランを見る
+                                    </span>
+                                  </Link>
+                                </div>
+                              </div>
+                            )}
                           </div>
                           <div className="mt-4 flex flex-wrap gap-2 justify-end">
                             <button
                               type="button"
-                              onClick={() => downloadImage(imageDetail)}
-                              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                              onClick={() => (isMediaLocked ? router.push(upgradeHref) : downloadImage(imageDetail))}
+                              className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl border font-black text-xs transition-colors ${
+                                isMediaLocked
+                                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
+                              }`}
+                              disabled={isMediaLocked}
                             >
                               <Download className="w-4 h-4" />
                               ダウンロード
                             </button>
                             <button
                               type="button"
-                              onClick={() => copyToClipboard(`![${imageDetail.title || 'image'}](/api/seo/images/${imageDetail.id})`)}
-                              className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50"
+                              onClick={() =>
+                                isMediaLocked
+                                  ? router.push(upgradeHref)
+                                  : copyToClipboard(`![${imageDetail.title || 'image'}](/api/seo/images/${imageDetail.id})`)
+                              }
+                              className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl border font-black text-xs transition-colors ${
+                                isMediaLocked
+                                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
+                              }`}
+                              disabled={isMediaLocked}
                             >
                               <Copy className="w-4 h-4" />
                               Markdownコピー
                             </button>
-                            <Link href={`/seo/images/${imageDetail.id}`} className="inline-flex">
-                              <span className="inline-flex items-center gap-2 h-10 px-4 rounded-xl bg-gray-900 text-white font-black text-xs hover:bg-gray-800">
+                            <Link href={isMediaLocked ? upgradeHref : `/seo/images/${imageDetail.id}`} className="inline-flex">
+                              <span
+                                className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl font-black text-xs transition-colors ${
+                                  isMediaLocked ? 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-50' : 'bg-gray-900 text-white hover:bg-gray-800'
+                                }`}
+                              >
                                 <ExternalLink className="w-4 h-4" />
-                                詳細ページ
+                                {isMediaLocked ? '料金プラン' : '詳細ページ'}
                               </span>
                             </Link>
                             {entitlements?.canUseSeoImages && (
