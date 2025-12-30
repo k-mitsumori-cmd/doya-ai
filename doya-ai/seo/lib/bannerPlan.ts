@@ -76,6 +76,11 @@ export async function generateArticleBannerPlan(args: {
     '- 情報過多は禁止。テキストブロックは最大3要素（メイン/サブ/補足）まで。',
     '- スマホで一瞬で読める前提で、短く太いコピーにする。',
     '',
+    '【文字数制約（最重要）】',
+    '- mainCopy: 12〜16文字（日本語の短い名詞句。句読点は極力避ける）',
+    '- subCopy: 16〜26文字（補足説明。句読点は極力避ける）',
+    '- supportingPoints: 各10〜14文字（最大2つ。箇条書き向け）',
+    '',
     '入力:',
     `- 記事タイトル: ${title}`,
     headings.length ? `- 見出し要点: ${headings.join(' / ')}` : '',
@@ -89,7 +94,7 @@ export async function generateArticleBannerPlan(args: {
     '',
     '出力: JSONのみ（途中で切らない）。',
     'スキーマ:',
-    '{"genre":"ビジネス","mainCopy":"20文字前後（バナー内に大きく表示）","subCopy":"30文字前後（バナー内に表示）","supportingPoints":["15文字前後","15文字前後"],"visualConcept":"ビジュアルの中心アイデア","palette":"配色（例:青/ネイビー）","layout":"レイアウト方針（余白/配置）","designIntent":"1〜2行の意図"}',
+    '{"genre":"ビジネス","mainCopy":"12〜16文字（短い）","subCopy":"16〜26文字（短い）","supportingPoints":["10〜14文字","10〜14文字"],"visualConcept":"ビジュアルの中心アイデア","palette":"配色（例:青/ネイビー）","layout":"レイアウト方針（余白/配置）","designIntent":"1〜2行の意図"}',
   ]
     .filter(Boolean)
     .join('\n')
@@ -105,10 +110,11 @@ export async function generateArticleBannerPlan(args: {
 
   const safe: ArticleBannerPlan = {
     genre,
-    mainCopy: sanitizeLine(out?.mainCopy || title || '要点を整理', 60),
-    subCopy: sanitizeLine(out?.subCopy || headings[0] || '記事のポイントを一目で', 80),
+    // 画像内に直接描画するため、短めに制限（長いとモデルが文字描画を省略しやすい）
+    mainCopy: sanitizeLine(out?.mainCopy || title || '要点を整理', 18),
+    subCopy: sanitizeLine(out?.subCopy || headings[0] || '記事のポイントを一目で', 28),
     supportingPoints: (Array.isArray(out?.supportingPoints) ? out!.supportingPoints : [])
-      .map((x) => sanitizeLine(x, 40))
+      .map((x) => sanitizeLine(x, 14))
       .filter(Boolean)
       .slice(0, 2),
     visualConcept: sanitizeLine(out?.visualConcept || '記事内容を象徴するビジュアル', 120),

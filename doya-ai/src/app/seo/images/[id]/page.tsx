@@ -10,10 +10,38 @@ export const runtime = 'nodejs'
 
 export default async function SeoImageDetailPage({ params }: { params: { id: string } }) {
   await ensureSeoSchema()
+  const id = params.id
   const session = await getServerSession(authOptions)
   const user: any = session?.user || null
   const userId = String(user?.id || '')
-  if (!userId) notFound()
+  // ゲスト/未ログインで「詳細ページ」導線に触れてもエラーページにならないようにする
+  if (!userId) {
+    return (
+      <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white py-10 px-4">
+        <div className="max-w-3xl mx-auto">
+          <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8">
+            <p className="text-xs font-black text-gray-400 uppercase tracking-widest">画像詳細</p>
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 mt-2">ログインが必要です</h1>
+            <p className="text-sm font-bold text-gray-600 mt-3 leading-relaxed">
+              画像の詳細ページはログイン後に利用できます。ログインすると、この画像のプレビューや生成ログが確認できます。
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2">
+              <Link href={`/auth/signin?next=/seo/images/${id}`} className="inline-flex">
+                <span className="h-11 px-6 rounded-xl bg-gray-900 text-white font-black text-sm inline-flex items-center hover:bg-gray-800">
+                  ログインする
+                </span>
+              </Link>
+              <Link href="/seo/pricing" className="inline-flex">
+                <span className="h-11 px-6 rounded-xl bg-white border border-gray-200 text-gray-900 font-black text-sm inline-flex items-center hover:bg-gray-50">
+                  料金プランを見る
+                </span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </main>
+    )
+  }
 
   // 画像のダウンロード/コピーは「画像生成が解放されている条件」と同じに揃える
   const plan = normalizeSeoPlan(user?.seoPlan || user?.plan || 'FREE')
@@ -21,7 +49,6 @@ export default async function SeoImageDetailPage({ params }: { params: { id: str
   const trialActive = !!userId && trial.active
   const imagesAllowed = canUseSeoImages({ isLoggedIn: true, plan, trialActive })
 
-  const id = params.id
   const img = await (prisma as any).seoImage.findUnique({
     where: { id },
     include: { article: { select: { id: true, title: true, userId: true } } },

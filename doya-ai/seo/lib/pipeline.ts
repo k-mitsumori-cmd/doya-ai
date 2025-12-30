@@ -926,7 +926,7 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
     keyword,
     '1200x628',
     {
-      purpose: 'email', // CTAが強く出ない用途に寄せる（記事バナー向け）
+      purpose: 'article_banner', // 記事バナー専用（広告/CTAを避けつつ文字の可読性を最優先）
       headlineText: keyword,
       subheadText: plan.subCopy || '',
       ctaText: '', // CTA禁止（記事バナーなので）

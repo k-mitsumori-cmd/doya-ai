@@ -289,6 +289,7 @@ function SeoArticleInner() {
   const [imageDetail, setImageDetail] = useState<SeoImage | null>(null)
   const [imgLoaded, setImgLoaded] = useState<Record<string, boolean>>({})
   const [imgRetry, setImgRetry] = useState<Record<string, number>>({})
+  const [imgGenerating, setImgGenerating] = useState<Record<string, boolean>>({})
 
   function sanitizeLegacyBannerPrompt(raw: string): string {
     const s = String(raw || '')
@@ -486,6 +487,17 @@ function SeoArticleInner() {
     setMediaBusy(true)
     setMediaError(null)
     try {
+      // 生成中に「白抜け」して見えないことがあるため、表示側を生成中状態に寄せる
+      setImgGenerating((prev) => {
+        const next = { ...prev }
+        for (const x of article?.images || []) next[String(x.id)] = true
+        return next
+      })
+      setImgLoaded((prev) => {
+        const next = { ...prev }
+        for (const x of article?.images || []) next[String(x.id)] = false
+        return next
+      })
       // プロンプトテンプレを送って、記事内容に合わせた生成にする
       const res = await fetch(`/api/seo/articles/${id}/images/ensure`, {
         method: 'POST',
@@ -502,6 +514,8 @@ function SeoArticleInner() {
       setMediaError(e?.message || '画像生成に失敗しました')
     } finally {
       setMediaBusy(false)
+      // 新規IDに差し替わるケースがあるため、時間経過でも解除（onLoadでも解除される）
+      setTimeout(() => setImgGenerating({}), 2500)
     }
   }
 
@@ -538,6 +552,11 @@ function SeoArticleInner() {
     setMediaBusy(true)
     setMediaError(null)
     try {
+      const rid = String(regenImage.id || '')
+      if (rid) {
+        setImgGenerating((prev) => ({ ...prev, [rid]: true }))
+        setImgLoaded((prev) => ({ ...prev, [rid]: false }))
+      }
       const res = await fetch(`/api/seo/images/${regenImage.id}/regenerate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -553,6 +572,8 @@ function SeoArticleInner() {
       setMediaError(e?.message || '再生成に失敗しました')
     } finally {
       setMediaBusy(false)
+      const rid = String(regenImage?.id || '')
+      if (rid) setImgGenerating((prev) => ({ ...prev, [rid]: false }))
     }
   }
 
@@ -1054,10 +1075,14 @@ function SeoArticleInner() {
                               src={`/api/seo/images/${img.id}?v=${imgRetry[img.id] || 0}`}
                               className={`w-full h-full object-cover transition-all duration-700 ${isMediaLocked ? 'grayscale-[0.2]' : 'group-hover:scale-105'}`}
                               alt={img.title || ''}
-                              onLoad={() => setImgLoaded((prev) => ({ ...prev, [img.id]: true }))}
+                              onLoad={() => {
+                                setImgLoaded((prev) => ({ ...prev, [img.id]: true }))
+                                setImgGenerating((prev) => ({ ...prev, [img.id]: false }))
+                              }}
                               onError={() => {
                                 // 生成/保存が遅延することがあるので少し待ってリトライ
                                 setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
+                                setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
                                 setTimeout(() => bumpRetry(img.id), 1200)
                               }}
                             />
@@ -1087,7 +1112,7 @@ function SeoArticleInner() {
                               </div>
                             </div>
                           )}
-                          {!isMediaLocked && !imgLoaded[img.id] && (
+                          {!isMediaLocked && (!imgLoaded[img.id] || !!imgGenerating[img.id]) && (
                             <div className="absolute inset-0 pointer-events-none">
                               {/* ベース（少し暗めにして“空白”感を消す） */}
                               <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-50" />
@@ -1177,14 +1202,17 @@ function SeoArticleInner() {
                               <Copy className="w-4 h-4" />
                               Markdownコピー
                             </button>
-                            <Link href={isMediaLocked ? upgradeHref : `/seo/images/${img.id}`} className="inline-flex">
+                            <Link
+                              href={isMediaLocked || !entitlements?.isLoggedIn ? upgradeHref : `/seo/images/${img.id}`}
+                              className="inline-flex"
+                            >
                               <span
                                 className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl font-black text-xs transition-colors ${
                                   isMediaLocked ? 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-50' : 'bg-gray-900 text-white hover:bg-gray-800'
                                 }`}
                               >
                                 <ExternalLink className="w-4 h-4" />
-                                {isMediaLocked ? '料金プラン' : '詳細ページ'}
+                                {isMediaLocked || !entitlements?.isLoggedIn ? '料金プラン' : '詳細ページ'}
                               </span>
                             </Link>
                             {entitlements?.canUseSeoImages && (
@@ -1300,14 +1328,19 @@ function SeoArticleInner() {
                               <Copy className="w-4 h-4" />
                               Markdownコピー
                             </button>
-                            <Link href={isMediaLocked ? upgradeHref : `/seo/images/${imageDetail.id}`} className="inline-flex">
+                            <Link
+                              href={
+                                isMediaLocked || !entitlements?.isLoggedIn ? upgradeHref : `/seo/images/${imageDetail.id}`
+                              }
+                              className="inline-flex"
+                            >
                               <span
                                 className={`inline-flex items-center gap-2 h-10 px-4 rounded-xl font-black text-xs transition-colors ${
                                   isMediaLocked ? 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-50' : 'bg-gray-900 text-white hover:bg-gray-800'
                                 }`}
                               >
                                 <ExternalLink className="w-4 h-4" />
-                                {isMediaLocked ? '料金プラン' : '詳細ページ'}
+                                {isMediaLocked || !entitlements?.isLoggedIn ? '料金プラン' : '詳細ページ'}
                               </span>
                             </Link>
                             {entitlements?.canUseSeoImages && (
