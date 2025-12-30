@@ -992,26 +992,73 @@ export default function SeoJobPage() {
                     </div>
                   </div>
 
-                  {/* ライブ執筆（タイピング演出） */}
-                  <div className="rounded-2xl border border-gray-100 bg-white p-5">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ライブ執筆</p>
-                        <p className="mt-1 text-sm font-black text-gray-900 truncate">
-                          {liveHeading ? liveHeading : '本文'}
+                  {/* ライブ執筆（タイピング演出） - リッチUI */}
+                  <div className="rounded-3xl border border-gray-200/60 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 p-6 shadow-lg shadow-blue-500/5 relative overflow-hidden">
+                    {/* 背景装飾 */}
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-400/10 to-indigo-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-emerald-400/10 to-cyan-400/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+                    
+                    <div className="relative flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black uppercase tracking-widest shadow-md shadow-blue-500/20">
+                          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                          ライブ執筆
+                        </div>
+                        <h3 className="mt-3 text-lg font-black text-gray-900 leading-tight" style={{ fontFamily: "'Noto Sans JP', 'Hiragino Kaku Gothic ProN', sans-serif" }}>
+                          {liveHeading ? liveHeading : '本文を執筆中...'}
+                        </h3>
+                      </div>
+                      <div className="flex-shrink-0 px-3 py-2 rounded-xl bg-white/80 border border-gray-100 shadow-sm">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">経過</p>
+                        <p className="text-lg font-black text-gray-900 tabular-nums" style={{ fontFamily: "'JetBrains Mono', 'SF Mono', monospace" }}>
+                          {formatMmSs(elapsed)}
                         </p>
                       </div>
-                      <div className="text-[10px] font-black text-gray-500 tabular-nums">
-                        {formatMmSs(elapsed)}
+                    </div>
+                    
+                    {/* 本文プレビュー - エディタ風 */}
+                    <div className="relative mt-5 rounded-2xl border border-gray-200/80 bg-white shadow-inner overflow-hidden">
+                      {/* エディタヘッダー */}
+                      <div className="px-4 py-2.5 bg-gradient-to-r from-gray-50 to-gray-100/80 border-b border-gray-200/60 flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-full bg-red-400/80" />
+                          <span className="w-3 h-3 rounded-full bg-amber-400/80" />
+                          <span className="w-3 h-3 rounded-full bg-emerald-400/80" />
+                        </div>
+                        <span className="ml-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Article Preview</span>
+                      </div>
+                      
+                      {/* 本文エリア */}
+                      <div className="p-5 min-h-[180px] max-h-[320px] overflow-y-auto">
+                        <div 
+                          className="prose prose-sm max-w-none text-gray-800 leading-[1.9]"
+                          style={{ 
+                            fontFamily: "'Noto Serif JP', 'Yu Mincho', 'Hiragino Mincho ProN', serif",
+                            fontSize: '15px',
+                            letterSpacing: '0.02em',
+                          }}
+                        >
+                          {liveTyped.split('\n').map((line, i) => (
+                            <p key={i} className="mb-3 last:mb-0">
+                              {line || <span className="text-gray-300">　</span>}
+                            </p>
+                          ))}
+                          <span 
+                            className="inline-block w-[3px] h-[1.2em] bg-gradient-to-b from-blue-500 to-indigo-600 ml-0.5 animate-pulse rounded-sm align-middle"
+                            style={{ animationDuration: '0.8s' }}
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50 p-4">
-                      <pre className="whitespace-pre-wrap text-[12px] leading-relaxed font-bold text-gray-700">
-                        {liveTyped}
-                        <span className="inline-block w-2 translate-y-[1px] bg-gray-400/70 ml-0.5 animate-pulse">&nbsp;</span>
-                      </pre>
-                      <p className="mt-2 text-[10px] font-bold text-gray-400">
-                        セクションが生成完了すると、実際の本文プレビューにも反映されます
+                    
+                    {/* フッター */}
+                    <div className="mt-4 flex items-center gap-3">
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[10px] font-black text-emerald-700">AIが執筆中</span>
+                      </div>
+                      <p className="text-[11px] font-bold text-gray-400">
+                        セクション完了後、本文プレビューに反映されます
                       </p>
                     </div>
                   </div>
@@ -1343,3 +1390,4 @@ export default function SeoJobPage() {
     </main>
   )
 }
+
