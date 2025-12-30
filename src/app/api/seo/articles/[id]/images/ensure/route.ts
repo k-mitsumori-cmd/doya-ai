@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateImagePng, geminiGenerateJson, GEMINI_IMAGE_MODEL_DEFAULT, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
-import { formatBannerPlanDescription, generateArticleBannerPlan, guessArticleGenreJa } from '@seo/lib/bannerPlan'
+import { formatBannerPlanDescription, generateArticleBannerPlan, guessArticleGenreJa, mapGenreToNanobannerCategory } from '@seo/lib/bannerPlan'
+import { generateBanners } from '@/lib/nanobanner'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
@@ -172,38 +173,59 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
         genreHint: genreGuess,
       })
 
+      const support = (plan.supportingPoints || []).filter(Boolean).slice(0, 1)[0] || ''
+      const category = mapGenreToNanobannerCategory(plan.genre)
+      const headline = plan.mainCopy || String(article.title || '')
+
       const prompt = [
         applyTemplate(bannerTemplate, varsBase),
         '',
         '---',
-        '【参考：コピー案（※画像内に文字は入れない / CTA禁止）】',
-        `main: ${plan.mainCopy}`,
-        `sub: ${plan.subCopy}`,
-        plan.supportingPoints?.length ? `support: ${plan.supportingPoints.join(' / ')}` : '',
+        'You are a top-tier editorial banner designer for Japanese articles (NOT an ad).',
+        'CRITICAL RULES:',
+        '- This is NOT an advertisement. Do NOT include any CTA text or CTA button.',
+        '- Render ONLY the provided Japanese strings below. Do NOT add any other text.',
+        '- Text must be perfectly legible Japanese (no garbling). Use a clean Noto Sans JP-like font.',
+        '- Use a solid/gradient text panel for contrast. Keep text large and bold.',
+        '- Avoid information overload: max 3 text blocks (headline / subhead / one short support).',
         '',
-        '【参考：デザイン意図】',
-        `genre: ${plan.genre}`,
-        `concept: ${plan.visualConcept}`,
-        `palette: ${plan.palette}`,
-        `layout: ${plan.layout}`,
-        `intent: ${plan.designIntent}`,
+        'TEXT TO RENDER (EXACT):',
+        `- Headline: ${headline}`,
+        plan.subCopy ? `- Subhead: ${plan.subCopy}` : '',
+        support ? `- Support: ${support}` : '',
         '',
-        '【再掲：重要ルール】',
-        '・CTA文言は禁止（詳しくはこちら/今すぐ等は入れない）',
-        '・画像内に文字は入れない（日本語/英語/数字/記号含む）',
+        'ARTICLE CONTEXT (for visual relevance):',
+        `- Title: ${String(article.title || '')}`,
+        headingsPlain.length ? `- Headings: ${headingsPlain.join(' / ')}` : '',
+        `- Excerpt: ${articleContent.slice(0, 1400)}`,
+        '',
+        'OUTPUT:',
+        '- 1200x628 pixels (16:9). Fill edge-to-edge, no letterboxing.',
       ]
         .filter(Boolean)
         .join('\n')
 
-      const img = await geminiGenerateImagePng({
-        prompt,
-        aspectRatio: '16:9',
-        imageSize: '2K',
-        model: GEMINI_IMAGE_MODEL_DEFAULT,
-      })
+      const result = await generateBanners(
+        category,
+        headline,
+        '1200x628',
+        {
+          purpose: 'email',
+          headlineText: headline,
+          subheadText: plan.subCopy,
+          ctaText: '',
+          imageDescription: plan.visualConcept,
+          brandColors: ['#2563EB'],
+          customImagePrompt: prompt,
+        },
+        1
+      )
+      const dataUrl = Array.isArray(result?.banners) ? result.banners.find((b) => typeof b === 'string' && b.startsWith('data:image/')) : null
+      if (!dataUrl) throw new Error(result?.error || 'バナー画像の生成に失敗しました')
+      const base64 = String(dataUrl).split(',')[1] || ''
 
       const filename = `seo_${articleId}_${Date.now()}_banner.png`
-      const saved = await saveBase64ToFile({ base64: img.dataBase64, filename, subdir: 'images' })
+      const saved = await saveBase64ToFile({ base64, filename, subdir: 'images' })
 
       await (prisma as any).seoImage.create({
         data: {
@@ -213,7 +235,7 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
           description: formatBannerPlanDescription(plan),
           prompt,
           filePath: saved.relativePath,
-          mimeType: img.mimeType || 'image/png',
+          mimeType: 'image/png',
         },
       })
     }

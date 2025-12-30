@@ -286,6 +286,8 @@ function SeoArticleInner() {
   const [bannerPromptTemplate, setBannerPromptTemplate] = useState(DEFAULT_BANNER_PROMPT_TEMPLATE)
   const [diagramPromptTemplate, setDiagramPromptTemplate] = useState(DEFAULT_DIAGRAM_PROMPT_TEMPLATE)
   const [imageDetail, setImageDetail] = useState<SeoImage | null>(null)
+  const [imgLoaded, setImgLoaded] = useState<Record<string, boolean>>({})
+  const [imgRetry, setImgRetry] = useState<Record<string, number>>({})
 
   const mediaLockState = useMemo<'loading' | 'locked' | 'unlocked'>(() => {
     if (tab !== 'media') return 'unlocked'
@@ -300,6 +302,15 @@ function SeoArticleInner() {
 
   const isMediaLocked = mediaLockState !== 'unlocked'
   const mediaLockLabel = mediaLockState === 'loading' ? '権限を確認中…' : '有料プランで解放'
+
+  const bumpRetry = useCallback((id: string) => {
+    setImgRetry((prev) => {
+      const cur = Number(prev[id] || 0)
+      // 無限ループ回避（最大10回）
+      const next = Math.min(10, cur + 1)
+      return next === cur ? prev : { ...prev, [id]: next }
+    })
+  }, [])
 
 
   const markdown = useMemo(() => article?.finalMarkdown || '', [article])
@@ -995,9 +1006,15 @@ function SeoArticleInner() {
                             title={isMediaLocked ? '有料プランで解放（クリックで移動）' : 'クリックで拡大表示'}
                           >
                             <img
-                              src={`/api/seo/images/${img.id}`}
+                              src={`/api/seo/images/${img.id}?v=${imgRetry[img.id] || 0}`}
                               className={`w-full h-full object-cover transition-all duration-700 ${isMediaLocked ? 'grayscale-[0.2]' : 'group-hover:scale-105'}`}
                               alt={img.title || ''}
+                              onLoad={() => setImgLoaded((prev) => ({ ...prev, [img.id]: true }))}
+                              onError={() => {
+                                // 生成/保存が遅延することがあるので少し待ってリトライ
+                                setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
+                                setTimeout(() => bumpRetry(img.id), 1200)
+                              }}
                             />
                           </button>
                           <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex gap-2">
@@ -1021,6 +1038,16 @@ function SeoArticleInner() {
                                       料金プランを見る
                                     </span>
                                   </Link>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {!isMediaLocked && !imgLoaded[img.id] && (
+                            <div className="absolute inset-0 pointer-events-none">
+                              <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-50 animate-pulse" />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="px-4 py-2 rounded-full bg-white/80 border border-gray-200 text-gray-700 text-xs font-black shadow-sm">
+                                  画像を生成/読み込み中…
                                 </div>
                               </div>
                             </div>
