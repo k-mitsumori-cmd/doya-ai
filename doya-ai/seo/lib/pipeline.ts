@@ -4,6 +4,7 @@ import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gem
 import { fetchAndExtract } from '@seo/lib/extract'
 import { SeoCreateArticleInput, SeoOutline, SeoOutlineSchema } from '@seo/lib/types'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
+import { formatBannerPlanDescription, generateArticleBannerPlan, guessArticleGenreJa } from '@seo/lib/bannerPlan'
 
 function nowIso() {
   return new Date().toISOString()
@@ -819,8 +820,7 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
   const persona = String(article.persona || '').trim()
   const searchIntent = String(article.searchIntent || '').trim()
   const requestText = String(article.requestText || '').trim()
-  const brandName = 'ドヤライティングAI'
-  const usageScene = 'Webサイト/LP/広告/SNS（記事一覧のサムネ）'
+  const usageScene = '記事一覧/SNS（記事アイキャッチ）'
 
   const ctx = extractBannerContextFromMarkdown(String(args.finalMarkdown || ''))
   const headingsText = ctx.headings.length ? ctx.headings.join(' / ') : ''
@@ -828,6 +828,7 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
 
   // キーワード＋本文抜粋から業界・テーマを推測
   const allText = [title, ...keywords, persona, searchIntent, headingsText, excerpt].join(' ').toLowerCase()
+  const genreGuess = guessArticleGenreJa([title, headingsText, excerpt, ...keywords, persona, searchIntent].join(' '))
 
   // 業界・テーマ別のビジュアル要素を決定
   let industryHint = ''
@@ -900,47 +901,56 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
     moodKeyword = 'convenient and trustworthy'
   }
 
-  // ユーザー指定の「バナープロンプト」を反映（ただし文字化け回避のため“画像内テキスト無し”を強制）
+  // まず「記事バナー用のコピー案 + デザイン方針（CTAなし）」を生成し、生成ログとして保存する
+  const plan = await generateArticleBannerPlan({
+    title,
+    headings: ctx.headings,
+    excerpt,
+    keywords,
+    persona,
+    searchIntent,
+    requestText,
+    usage: usageScene,
+    genreHint: genreGuess,
+  })
+
+  // 画像生成は“文字なし”に固定（文字生成は崩れやすい＆記事一覧での視認性のため）
+  // 代わりに、planのコピーを「後から載せられる余白」を作るための設計ガイドとして使う
   const prompt = [
-    'あなたはBtoBマーケティングに精通したプロのデザイナー兼アートディレクターです。',
-    '以下の記事内容を正確に理解し、その要点が一目で伝わる「マーケティング用バナー画像」を作成してください。',
+    'あなたは記事バナー（アイキャッチ）制作に強いアートディレクターです。',
+    '記事タイトル・見出し・本文要点を理解し、記事内容と一致する“記事アイキャッチ画像”を生成してください。',
     '',
-    '【前提条件】',
-    '・目的：記事の訴求内容を視覚的に要約し、クリック・理解を促進する',
-    `・用途：${usageScene}`,
-    '・トーン：信頼感・プロフェッショナル・わかりやすさを重視',
-    '・情報を盛り込みすぎず、「一瞬で伝わる」構成にする',
+    '重要ルール:',
+    '- これは広告バナーではない。CTA要素（詳しくはこちら/今すぐ等）は作らない・入れない。',
+    '- 画像内に文字は一切入れない（日本語/英語/数字/記号を含む）。',
+    '- 後から文字を載せられる「大きな余白（ネガティブスペース）」を確保する。',
+    '- 情報を詰め込みすぎない（最大3ブロックの構図）。',
     '',
-    '【必須インプット】',
-    `▼記事タイトル\n${title}`,
-    excerpt ? `\n▼記事の要約（または本文）\n${excerpt}` : '',
-    persona ? `\n▼想定ターゲット\n${persona}` : '',
-    searchIntent ? `\n▼検索意図・ニーズ\n${searchIntent}` : '',
-    headingsText ? `\n▼見出し（参考）\n${headingsText}` : '',
-    `\n▼ブランド・サービス名\n${brandName}`,
-    '\n▼カラー指定\n#2563EB（指定なしの場合も“青基調のBtoB”で）',
-    '\n▼サイズ\n1200×628（16:9）',
+    `用途: ${usageScene}`,
+    `ジャンル: ${plan.genre}`,
+    `記事タイトル: ${title}`,
+    headingsText ? `見出し要点: ${headingsText}` : '',
+    excerpt ? `本文要点（抜粋）: ${excerpt}` : '',
     '',
-    '【デザイン指示】',
-    '・記事の「最も重要なメッセージ」を1つだけ抽出し、ビジュアルの中心に置く',
-    '・抽象的すぎず、記事内容と乖離しない表現にする',
-    '・BtoB向けのため、過度な装飾やポップすぎる表現は避ける',
-    '・余白を活かし、後で文字を載せられる大きな余白を確保する',
-    '・イラスト／写真／UI風表現は、記事内容と相性の良いものを選択する',
+    '（参考：後から載せる想定のコピー案 / 画像に文字は入れない）',
+    `- main: ${plan.mainCopy}`,
+    `- sub: ${plan.subCopy}`,
+    plan.supportingPoints?.length ? `- support: ${plan.supportingPoints.join(' / ')}` : '',
     '',
-    '【重要：画像生成の制約】',
-    '・画像内に文字は一切入れない（日本語/英語/数字/記号含む）',
+    'デザイン指針（ジャンル別）:',
+    '- IT/転職/スクール: 信頼感、コントラスト強、青/ネイビー、情報整理型',
+    '- 美容/健康/D2C: 余白多め、明るい配色、清潔感、質感重視',
+    '- EC/セール: 視認性最優先、強い色アクセント、整理された強弱',
     '',
-    '【NG事項】',
-    '・記事内容と無関係なビジュアル',
-    '・意味のない装飾や背景',
-    '・読めない/小さすぎる文字（※文字自体を入れない）',
-    '・マーケティング文脈に合わないカジュアル表現',
+    '今回の方針:',
+    industryHint ? `- industry hint: ${industryHint}` : '',
+    `- visual elements: ${visualElements}`,
+    `- mood: ${moodKeyword}`,
+    `- palette: ${plan.palette}`,
+    `- layout: ${plan.layout}`,
     '',
-    '【追加のビジュアルヒント】',
-    industryHint ? `- Industry: ${industryHint}` : '',
-    `- Visual elements: ${visualElements}`,
-    `- Mood: ${moodKeyword}`,
+    '出力:',
+    '- 16:9 の記事アイキャッチ画像（高品質、広告“風”ではなく記事“用”）',
   ]
     .filter(Boolean)
     .join('\n')
@@ -959,6 +969,7 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
       articleId: article.id,
       kind: 'BANNER',
       title: '記事アイキャッチ',
+      description: formatBannerPlanDescription(plan),
       prompt,
       filePath: saved.relativePath,
       mimeType: img.mimeType || 'image/png',
