@@ -32,6 +32,33 @@ export default async function SeoImageDetailPage({ params }: { params: { id: str
   const articleId = String(img.articleId || img.article?.id || '')
   const title = String(img.title || (img.kind === 'BANNER' ? '記事バナー' : '図解') || '画像')
 
+  // 古いプロンプト/descriptionから不要な文言を除去
+  function sanitizePromptText(raw: string): string {
+    let text = String(raw || '').trim()
+    // 古い「文字を入れない」系の文言を除去
+    const removePatterns = [
+      /（参考\s*[：:]\s*後から載せる想定のコピー案\s*[\/\/]\s*画像に文字は入れない）/g,
+      /参考\s*[：:]\s*後から載せる想定のコピー案\s*[\/\/]\s*画像に文字は入れない/g,
+      /画像に文字は入れない（日本語\/英語\/数字\/記号を含む）/g,
+      /画像に文字は一切入れない（日本語\/英語\/数字\/記号を含む）/g,
+      /後から文字を載せられる「大きな余白（ネガティブスペース）」を確保する[。．]?/g,
+      /後から文字を載せられる大きな余白（ネガティブスペース）を確保する[。．]?/g,
+      /・画像内に文字は一切入れない（日本語\/英語\/数字\/記号を含む）\n?/g,
+      /・後から文字を載せられる大きな余白（ネガティブスペース）を確保する\n?/g,
+      /-\s*画像内に文字は一切入れない[^\n]*\n?/g,
+      /-\s*後から文字を載せられる[^\n]*\n?/g,
+    ]
+    for (const pat of removePatterns) {
+      text = text.replace(pat, '')
+    }
+    // 連続空行を整理
+    text = text.replace(/\n{3,}/g, '\n\n').trim()
+    return text
+  }
+
+  const sanitizedPrompt = sanitizePromptText(img.prompt || '')
+  const sanitizedDescription = sanitizePromptText((img as any).description || '')
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white py-8 px-4">
       <div className="max-w-5xl mx-auto">
@@ -113,15 +140,15 @@ export default async function SeoImageDetailPage({ params }: { params: { id: str
             <div className="mt-6 p-4 rounded-2xl bg-gray-50 border border-gray-100">
               <p className="text-xs font-black text-gray-400 uppercase tracking-widest">プロンプト（生成ログ）</p>
               <pre className="mt-2 text-[11px] whitespace-pre-wrap text-gray-700 font-medium leading-relaxed">
-                {String(img.prompt || '').trim() || '（プロンプトが保存されていません）'}
+                {sanitizedPrompt || '（プロンプトが保存されていません）'}
               </pre>
             </div>
 
-            {!!String((img as any).description || '').trim() && (
+            {!!sanitizedDescription && (
               <div className="mt-4 p-4 rounded-2xl bg-white border border-gray-100">
                 <p className="text-xs font-black text-gray-400 uppercase tracking-widest">コピー構成 / デザイン意図（生成結果）</p>
                 <pre className="mt-2 text-[11px] whitespace-pre-wrap text-gray-700 font-medium leading-relaxed">
-                  {String((img as any).description || '').trim()}
+                  {sanitizedDescription}
                 </pre>
               </div>
             )}
