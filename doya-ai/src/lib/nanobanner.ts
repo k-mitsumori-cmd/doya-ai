@@ -20,18 +20,54 @@
 // ========================================
 
 import sharp from 'sharp'
+import satori from 'satori'
+import { Resvg } from '@resvg/resvg-js'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 // ========================================
-// テキストオーバーレイ（画像生成後に日本語テキストを合成）
+// Satori用フォントキャッシュ（CDNから動的取得）
+// ========================================
+let _fontCache: ArrayBuffer | null = null
+let _fontFetchPromise: Promise<ArrayBuffer> | null = null
+
+async function getJapaneseFontAsync(): Promise<ArrayBuffer> {
+  if (_fontCache) return _fontCache
+  if (_fontFetchPromise) return _fontFetchPromise
+
+  _fontFetchPromise = (async () => {
+    // まずローカルファイルを試す
+    try {
+      const fontPath = join(process.cwd(), 'public', 'fonts', 'NotoSansJP-Bold.otf')
+      const localFont = readFileSync(fontPath)
+      _fontCache = localFont.buffer.slice(localFont.byteOffset, localFont.byteOffset + localFont.byteLength)
+      return _fontCache
+    } catch {
+      // ローカルになければGoogle Fontsから取得
+    }
+
+    // Google Fonts APIから取得
+    const fontUrl = 'https://fonts.gstatic.com/s/notosansjp/v53/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75s.otf'
+    const res = await fetch(fontUrl)
+    if (!res.ok) throw new Error(`Failed to fetch font: ${res.status}`)
+    _fontCache = await res.arrayBuffer()
+    return _fontCache
+  })()
+
+  return _fontFetchPromise
+}
+
+// ========================================
+// テキストオーバーレイ（Satori + Resvg で確実な日本語描画）
 // ========================================
 
 /**
- * 画像上にテキストをオーバーレイする
+ * 画像上にテキストをオーバーレイする（Satori + Resvg方式）
  * @param imageBuffer 元画像のBuffer
- * @param texts テキスト配列 [{text, size, y, color}]
+ * @param texts テキスト配列 [{text, size, y, color, bgColor}]
  * @param width 画像幅
  * @param height 画像高さ
  */
@@ -41,59 +77,102 @@ async function overlayTextOnImage(
   width: number,
   height: number
 ): Promise<Buffer> {
-  // テキストをSVGとして描画し、sharpで合成
-  const svgTexts = texts
-    .filter((t) => t.text && t.text.trim())
-    .map((t) => {
-      const text = t.text.trim()
-      const fontSize = t.size || 48
-      const color = t.color || '#FFFFFF'
-      const bgColor = t.bgColor || 'rgba(0,0,0,0.6)'
-      const y = t.y || height / 2
-      const x = width / 2
-
-      // テキスト幅を概算（日本語は1文字≒fontSize）
-      const textWidth = text.length * fontSize * 0.9
-      const padding = fontSize * 0.4
-      const rectWidth = Math.min(textWidth + padding * 2, width - 40)
-      const rectHeight = fontSize * 1.5
-      const rectX = x - rectWidth / 2
-      const rectY = y - fontSize * 0.8
-
-      return `
-        <rect x="${rectX}" y="${rectY}" width="${rectWidth}" height="${rectHeight}" rx="8" fill="${bgColor}" />
-        <text x="${x}" y="${y}" font-family="'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif" font-size="${fontSize}" font-weight="bold" fill="${color}" text-anchor="middle" dominant-baseline="middle">${escapeXml(text)}</text>
-      `
-    })
-    .join('\n')
-
-  if (!svgTexts.trim()) {
+  const validTexts = texts.filter((t) => t.text && t.text.trim())
+  if (validTexts.length === 0) {
     return imageBuffer
   }
 
-  const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      ${svgTexts}
-    </svg>
-  `
+  let fontData: ArrayBuffer
+  try {
+    fontData = await getJapaneseFontAsync()
+  } catch (e) {
+    // フォントが見つからない場合はテキストなしで返す
+    console.warn('[overlayTextOnImage] フォント取得に失敗したためテキストオーバーレイをスキップ', e)
+    return imageBuffer
+  }
 
-  const svgBuffer = Buffer.from(svg)
+  // Satori用のReact-like要素を構築
+  const textElements = validTexts.map((t, idx) => {
+    const fontSize = t.size || 48
+    const color = t.color || '#FFFFFF'
+    const bgColor = t.bgColor || 'rgba(0,0,0,0.65)'
+    const y = t.y || height / 2
 
+    return {
+      type: 'div',
+      key: idx,
+      props: {
+        style: {
+          position: 'absolute' as const,
+          top: y - fontSize * 0.6,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          justifyContent: 'center',
+        },
+        children: {
+          type: 'div',
+          props: {
+            style: {
+              backgroundColor: bgColor,
+              color: color,
+              fontSize: fontSize,
+              fontWeight: 700,
+              fontFamily: 'Noto Sans JP',
+              padding: `${fontSize * 0.2}px ${fontSize * 0.5}px`,
+              borderRadius: 8,
+              maxWidth: width - 40,
+              textAlign: 'center' as const,
+              lineHeight: 1.3,
+            },
+            children: t.text.trim(),
+          },
+        },
+      },
+    }
+  })
+
+  const satoriElement = {
+    type: 'div',
+    props: {
+      style: {
+        width: width,
+        height: height,
+        position: 'relative' as const,
+        display: 'flex',
+      },
+      children: textElements,
+    },
+  }
+
+  // Satoriでsvgを生成
+  const svg = await satori(satoriElement as any, {
+    width,
+    height,
+    fonts: [
+      {
+        name: 'Noto Sans JP',
+        data: fontData,
+        weight: 700,
+        style: 'normal',
+      },
+    ],
+  })
+
+  // ResvgでSVGをPNGに変換
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: 'width', value: width },
+  })
+  const pngData = resvg.render()
+  const overlayBuffer = pngData.asPng()
+
+  // sharpで元画像にオーバーレイ
   const result = await sharp(imageBuffer)
-    .composite([{ input: svgBuffer, top: 0, left: 0 }])
+    .composite([{ input: overlayBuffer, top: 0, left: 0 }])
     .png()
     .toBuffer()
 
   return result
-}
-
-function escapeXml(s: string): string {
-  return String(s || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
 }
 
 type GeminiModel = {
