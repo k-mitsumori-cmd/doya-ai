@@ -24,6 +24,78 @@ import sharp from 'sharp'
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
+// ========================================
+// テキストオーバーレイ（画像生成後に日本語テキストを合成）
+// ========================================
+
+/**
+ * 画像上にテキストをオーバーレイする
+ * @param imageBuffer 元画像のBuffer
+ * @param texts テキスト配列 [{text, size, y, color}]
+ * @param width 画像幅
+ * @param height 画像高さ
+ */
+async function overlayTextOnImage(
+  imageBuffer: Buffer,
+  texts: { text: string; size: number; y: number; color?: string; bgColor?: string }[],
+  width: number,
+  height: number
+): Promise<Buffer> {
+  // テキストをSVGとして描画し、sharpで合成
+  const svgTexts = texts
+    .filter((t) => t.text && t.text.trim())
+    .map((t) => {
+      const text = t.text.trim()
+      const fontSize = t.size || 48
+      const color = t.color || '#FFFFFF'
+      const bgColor = t.bgColor || 'rgba(0,0,0,0.6)'
+      const y = t.y || height / 2
+      const x = width / 2
+
+      // テキスト幅を概算（日本語は1文字≒fontSize）
+      const textWidth = text.length * fontSize * 0.9
+      const padding = fontSize * 0.4
+      const rectWidth = Math.min(textWidth + padding * 2, width - 40)
+      const rectHeight = fontSize * 1.5
+      const rectX = x - rectWidth / 2
+      const rectY = y - fontSize * 0.8
+
+      return `
+        <rect x="${rectX}" y="${rectY}" width="${rectWidth}" height="${rectHeight}" rx="8" fill="${bgColor}" />
+        <text x="${x}" y="${y}" font-family="'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif" font-size="${fontSize}" font-weight="bold" fill="${color}" text-anchor="middle" dominant-baseline="middle">${escapeXml(text)}</text>
+      `
+    })
+    .join('\n')
+
+  if (!svgTexts.trim()) {
+    return imageBuffer
+  }
+
+  const svg = `
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      ${svgTexts}
+    </svg>
+  `
+
+  const svgBuffer = Buffer.from(svg)
+
+  const result = await sharp(imageBuffer)
+    .composite([{ input: svgBuffer, top: 0, left: 0 }])
+    .png()
+    .toBuffer()
+
+  return result
+}
+
+function escapeXml(s: string): string {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+}
+
 type GeminiModel = {
   name?: string
   supportedGenerationMethods?: string[]
@@ -1033,7 +1105,7 @@ async function generateSingleBanner(
         console.log(`Image generated successfully with ${model}`)
         const rawBase64 = String(extracted.base64)
         const [w_num, h_num] = size.split('x').map(v => Number(v))
-        const resized = await sharp(Buffer.from(rawBase64, 'base64'))
+        let resized = await sharp(Buffer.from(rawBase64, 'base64'))
           .resize(
             Number.isFinite(w_num) && Number.isFinite(h_num) && w_num > 0 && h_num > 0
               ? { width: w_num, height: h_num, fit: 'cover', position: 'centre' }
@@ -1041,6 +1113,41 @@ async function generateSingleBanner(
           )
           .png()
           .toBuffer()
+
+        // テキストオーバーレイ（headlineText/subheadText がある場合）
+        const headline = (options.headlineText || '').trim()
+        const subhead = (options.subheadText || '').trim()
+        if (headline || subhead) {
+          const w = Number.isFinite(w_num) && w_num > 0 ? w_num : 1080
+          const h = Number.isFinite(h_num) && h_num > 0 ? h_num : 1080
+          const texts: { text: string; size: number; y: number; color?: string; bgColor?: string }[] = []
+          
+          // メインコピー（中央やや上）
+          if (headline) {
+            texts.push({
+              text: headline,
+              size: Math.min(56, Math.floor(w / 18)),
+              y: h * 0.42,
+              color: '#FFFFFF',
+              bgColor: 'rgba(0,0,0,0.65)',
+            })
+          }
+          // サブコピー（メインの下）
+          if (subhead) {
+            texts.push({
+              text: subhead,
+              size: Math.min(32, Math.floor(w / 30)),
+              y: h * 0.58,
+              color: '#FFFFFF',
+              bgColor: 'rgba(0,0,0,0.55)',
+            })
+          }
+          
+          if (texts.length > 0) {
+            resized = await overlayTextOnImage(resized, texts, w, h)
+          }
+        }
+
         return { image: `data:image/png;base64,${resized.toString('base64')}`, model }
       }
 
@@ -1178,19 +1285,16 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
 
   return [
     '',
-    '=== CRITICAL: TEXT MUST BE RENDERED IN THE IMAGE ===',
-    'The following Japanese text MUST be drawn directly onto the image canvas.',
-    'Do NOT output a text-free image. The text must be visible and readable.',
-    '',
-    headline ? `【メインコピー（必須・大きく表示）】${headline}` : '',
-    subhead ? `【サブコピー（画像内に表示）】${subhead}` : '',
-    cta ? `【CTA（画像内に表示）】${cta}` : '',
-    company ? `【ブランド名（画像内に表示）】${company}` : '',
-    '',
     '=== HARD CONSTRAINTS (DO NOT DROP) ===',
     `PATTERN: ${patternLabel} (must be a distinct creative variation, but must follow the same content/image intent)`,
     `Output dimensions: EXACTLY ${width}x${height} px. Do NOT change aspect ratio.`,
     '- Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom bars, NO padding, NO borders.',
+    '',
+    'TEXT MUST BE IN THE IMAGE (EXACT):',
+    `- Headline (必須): ${headline || '(empty)'}`,
+    subhead ? `- Subhead (任意): ${subhead}` : '',
+    cta ? `- CTA (任意): ${cta}` : '',
+    company ? `- Brand (任意): ${company}` : '',
     '',
     options.imageDescription
       ? [
@@ -1213,7 +1317,7 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
     options.personImage || options.hasPerson
       ? 'PERSON: include the provided person photo if available; otherwise generate a suitable person. Keep text readable.\n'
       : '',
-    'FINAL: Return ONE PNG image with the Japanese text rendered correctly. The メインコピー MUST be visible.',
+    'FINAL: Return ONE PNG image with the Japanese text rendered correctly.',
   ]
     .filter(Boolean)
     .join('\n')
