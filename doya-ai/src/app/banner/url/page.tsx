@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles, ChevronDown, SlidersHorizontal, Menu, X } from 'lucide-react'
+import { ArrowRight, Link2, Loader2, LogIn, Download, Sparkles, ChevronDown, SlidersHorizontal, Menu, X, Check } from 'lucide-react'
 import { Toaster, toast } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -94,8 +94,13 @@ function BannerUrlAutoPageInner() {
     [banners]
   )
   const [selectedBannerIdx, setSelectedBannerIdx] = useState(0)
+  const [baseBannerIdx, setBaseBannerIdx] = useState<number | null>(null)
   useEffect(() => {
     if (imageBanners.length > 0) setSelectedBannerIdx(0)
+  }, [imageBanners.length])
+  useEffect(() => {
+    if (imageBanners.length > 0) setBaseBannerIdx(0)
+    else setBaseBannerIdx(null)
   }, [imageBanners.length])
   const [bannerAnalysis, setBannerAnalysis] = useState<string>('')
   const [analysisJson, setAnalysisJson] = useState<ApiResponse['analysisJson'] | undefined>(undefined)
@@ -250,6 +255,77 @@ function BannerUrlAutoPageInner() {
         setError(e?.message || 'URLからの自動生成に失敗しました')
         setErrorType('system')
         toast.error(e?.message?.length > 50 ? '生成に失敗しました' : (e?.message || '生成に失敗しました'), { icon: '❌', duration: 5000 })
+      }
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleRegenerateFromSelected = async () => {
+    const url = targetUrl.trim()
+    if (!url) {
+      toast.error('サイトURLを入力してください')
+      return
+    }
+    if (baseBannerIdx === null || !imageBanners[baseBannerIdx]) {
+      toast.error('基準にするバナーを選択してください')
+      return
+    }
+    if (!canGenerate) return
+
+    setError('')
+    setErrorType(null)
+    setIsGenerating(true)
+
+    try {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 290_000)
+
+      const res = await fetch('/api/banner/from-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          targetUrl: url,
+          count,
+          size,
+          baseImage: imageBanners[baseBannerIdx],
+        }),
+      })
+
+      window.clearTimeout(timeout)
+
+      const parsed = await safeReadJson(res)
+      const data = (parsed.data || {}) as ApiResponse & { code?: string; usage?: { dailyLimit?: number; dailyUsed?: number; dailyRemaining?: number }; upgradeUrl?: string }
+      if (!parsed.ok) {
+        const isLimitError = data?.code === 'DAILY_LIMIT_REACHED' || parsed.status === 429
+        const msg = data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'バリエーション再生成に失敗しました'
+
+        setError(msg)
+        setErrorType(isLimitError ? 'limit' : 'system')
+
+        if (isLimitError) {
+          toast.error('本日の生成上限に達しました', { icon: '⚠️', duration: 6000 })
+        } else {
+          toast.error(msg.length > 50 ? '再生成に失敗しました' : msg, { icon: '❌', duration: 5000 })
+        }
+        return
+      }
+
+      setBanners(Array.isArray(data.banners) ? data.banners : [])
+      setBannerAnalysis(String(data.bannerAnalysis || ''))
+      setAnalysisJson((data.analysisJson as any) || null)
+      setUsedModelDisplay(String(data.usedModelDisplay || ''))
+      toast.success('選択したデザインでバリエーションを再生成しました！', { icon: '✨' })
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        setError('生成に時間がかかっています。タブは開いたまま、しばらく待つか再試行してください。')
+        setErrorType('system')
+        toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
+      } else {
+        setError(e?.message || 'バリエーション再生成に失敗しました')
+        setErrorType('system')
+        toast.error(e?.message?.length > 50 ? '再生成に失敗しました' : (e?.message || '再生成に失敗しました'), { icon: '❌', duration: 5000 })
       }
     } finally {
       setIsGenerating(false)
@@ -633,28 +709,70 @@ function BannerUrlAutoPageInner() {
                       <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
                         <div className="flex items-center justify-between gap-3 mb-3">
                           <p className="text-xs font-black text-slate-700">プレビュー</p>
-                          <p className="text-[11px] font-bold text-slate-500">サムネをタップして切り替え</p>
+                          <p className="text-[11px] font-bold text-slate-500">タップでプレビュー / チェックで基準選択</p>
                         </div>
                         <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
                           {imageBanners.map((img, idx) => {
                             const isSelected = idx === selectedBannerIdx
+                            const isBase = idx === baseBannerIdx
                             return (
-                              <button
+                              <div
                                 key={idx}
-                                type="button"
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => setSelectedBannerIdx(idx)}
-                                className={`relative flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-xl border overflow-hidden bg-slate-50 transition-all ${
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') setSelectedBannerIdx(idx)
+                                }}
+                                className={`relative flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-xl border overflow-hidden bg-slate-50 transition-all cursor-pointer ${
                                   isSelected ? 'border-blue-600 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300'
                                 }`}
-                                aria-label={`preview-${idx + 1}`}
                               >
                                 <img src={img} alt={`thumb-${idx + 1}`} className="w-full h-full object-contain bg-white" />
                                 <div className="absolute top-1 left-1 w-6 h-6 rounded-lg bg-white/90 border border-slate-200 text-[10px] font-black text-slate-700 flex items-center justify-center">
                                   {idx + 1}
                                 </div>
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setBaseBannerIdx((prev) => (prev === idx ? null : idx))
+                                    setSelectedBannerIdx(idx)
+                                  }}
+                                  className={`absolute bottom-1 right-1 inline-flex items-center justify-center w-7 h-7 rounded-lg border backdrop-blur-sm shadow-sm transition-colors ${
+                                    isBase ? 'bg-blue-600 text-white border-blue-600' : 'bg-white/90 text-slate-700 border-slate-200 hover:bg-slate-50'
+                                  }`}
+                                  aria-label={`base-select-${idx + 1}`}
+                                >
+                                  <Check className={`w-4 h-4 ${isBase ? 'opacity-100' : 'opacity-30'}`} />
+                                </button>
+                              </div>
                             )
                           })}
+                        </div>
+                      </div>
+
+                      {/* 選択バナーから再生成 */}
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-black text-slate-700">選択バナーから再生成（似た形）</p>
+                            <p className="mt-1 text-[11px] text-slate-500 font-bold leading-relaxed">
+                              基準にするバナーをチェックして、同じテイストのバリエーションを{count}枚再生成します。
+                            </p>
+                            <p className="mt-1 text-[11px] text-slate-600 font-black">
+                              基準：{baseBannerIdx === null ? '未選択' : `No.${baseBannerIdx + 1}`}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleRegenerateFromSelected}
+                            disabled={isGenerating || baseBannerIdx === null}
+                            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white text-xs font-black hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            再生成
+                          </button>
                         </div>
                       </div>
                     </div>
