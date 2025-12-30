@@ -67,10 +67,11 @@ export async function generateArticleBannerPlan(args: {
 
   const prompt = [
     'あなたは「記事バナー（アイキャッチ）」制作に強いアートディレクター兼マーケターAIです。',
-    '目的: 記事タイトル・見出し・本文要点から、内容に乖離しない“記事バナー用のコピー案”と“デザイン方針”を作る。',
+    '目的: 記事タイトル・見出し・本文要点から、内容に乖離しない"記事バナー用のコピー"と"デザイン方針"を作る。',
     '',
     '重要:',
     '- これは広告バナーではない。CTA文言（詳しくはこちら/今すぐ等）は絶対に入れない。',
+    '- mainCopy/subCopy/supportingPointsは画像内に直接描画される。',
     '- 記事内容とズレた煽りは禁止。断定/誇張は避ける。',
     '- 情報過多は禁止。テキストブロックは最大3要素（メイン/サブ/補足）まで。',
     '- スマホで一瞬で読める前提で、短く太いコピーにする。',
@@ -88,7 +89,7 @@ export async function generateArticleBannerPlan(args: {
     '',
     '出力: JSONのみ（途中で切らない）。',
     'スキーマ:',
-    '{"genre":"ビジネス","mainCopy":"20文字前後","subCopy":"30文字前後","supportingPoints":["15文字前後","15文字前後"],"visualConcept":"ビジュアルの中心アイデア","palette":"配色（例:青/ネイビー）","layout":"レイアウト方針（余白/配置）","designIntent":"1〜2行の意図"}',
+    '{"genre":"ビジネス","mainCopy":"20文字前後（バナー内に大きく表示）","subCopy":"30文字前後（バナー内に表示）","supportingPoints":["15文字前後","15文字前後"],"visualConcept":"ビジュアルの中心アイデア","palette":"配色（例:青/ネイビー）","layout":"レイアウト方針（余白/配置）","designIntent":"1〜2行の意図"}',
   ]
     .filter(Boolean)
     .join('\n')
@@ -126,19 +127,19 @@ export async function generateArticleBannerPlan(args: {
 
 export function formatBannerPlanDescription(plan: ArticleBannerPlan): string {
   const lines: string[] = []
-  lines.push('=== COPY_PLAN（記事バナー：CTAなし）===')
-  lines.push(`genre: ${plan.genre}`)
-  lines.push(`main: ${plan.mainCopy}`)
-  lines.push(`sub: ${plan.subCopy}`)
+  lines.push('=== 画像内テキスト（バナーに描画）===')
+  lines.push(`メインコピー: ${plan.mainCopy}`)
+  lines.push(`サブコピー: ${plan.subCopy}`)
   if (plan.supportingPoints?.length) {
-    lines.push(`support: ${plan.supportingPoints.join(' / ')}`)
+    lines.push(`補足: ${plan.supportingPoints.join(' / ')}`)
   }
   lines.push('')
-  lines.push('=== DESIGN_INTENT ===')
-  lines.push(`concept: ${plan.visualConcept}`)
-  lines.push(`palette: ${plan.palette}`)
-  lines.push(`layout: ${plan.layout}`)
-  lines.push(`intent: ${plan.designIntent}`)
+  lines.push('=== デザイン方針 ===')
+  lines.push(`ジャンル: ${plan.genre}`)
+  lines.push(`ビジュアル: ${plan.visualConcept}`)
+  lines.push(`配色: ${plan.palette}`)
+  lines.push(`レイアウト: ${plan.layout}`)
+  lines.push(`意図: ${plan.designIntent}`)
   return lines.join('\n')
 }
 

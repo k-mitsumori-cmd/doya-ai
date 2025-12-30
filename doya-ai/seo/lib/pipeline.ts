@@ -922,15 +922,16 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
   const support = (plan.supportingPoints || []).filter(Boolean).slice(0, 1)[0] || ''
 
   const prompt = [
-    'You are a top-tier editorial banner designer for Japanese articles (NOT an ad).',
-    'Goal: Create a 16:9 article banner that matches the article content and is readable on mobile feeds.',
+    'You are a top-tier editorial banner designer for Japanese articles.',
+    'Goal: Create a 16:9 article banner that matches the article content with readable Japanese text.',
     '',
     'CRITICAL RULES:',
-    '- This is NOT an advertisement. Do NOT include any CTA text or CTA button.',
-    '- Render ONLY the provided Japanese strings below. Do NOT add any other text.',
-    '- Text must be perfectly legible Japanese (no garbling). Use a clean Noto Sans JP-like font.',
-    '- Use a solid/gradient text panel for contrast. Keep text large and bold.',
-    '- Avoid information overload: max 3 text blocks (headline / subhead / one short support).',
+    '- This is NOT an advertisement. Do NOT include CTA text or CTA button (e.g., 今すぐ, 詳しくはこちら).',
+    '- MUST render the provided Japanese text strings directly into the image.',
+    '- Text must be PERFECTLY LEGIBLE Japanese (no garbling, no pseudo-characters).',
+    '- Use a clean Japanese font style (Noto Sans JP-like). Text large and bold.',
+    '- Use solid/gradient panel behind text for contrast.',
+    '- Maximum 3 text blocks (headline / subhead / one support).',
     '',
     'ARTICLE CONTEXT (for visual relevance):',
     `- Title: ${title}`,
@@ -939,10 +940,10 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
     persona ? `- Target reader: ${persona}` : '',
     searchIntent ? `- Search intent: ${searchIntent}` : '',
     '',
-    'TEXT TO RENDER (EXACT):',
-    `- Headline: ${keyword}`,
-    plan.subCopy ? `- Subhead: ${plan.subCopy}` : '',
-    support ? `- Support: ${support}` : '',
+    '=== TEXT TO RENDER IN IMAGE (EXACT / REQUIRED) ===',
+    `Headline (必須): ${keyword}`,
+    plan.subCopy ? `Subhead (任意): ${plan.subCopy}` : '',
+    support ? `Support (任意): ${support}` : '',
     '',
     'DESIGN GUIDANCE:',
     `- Genre: ${plan.genre}`,
@@ -954,6 +955,7 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
     '',
     'OUTPUT:',
     '- 1200x628 pixels (16:9). Fill edge-to-edge, no letterboxing.',
+    '- The headline text MUST appear as real Japanese text inside the image. Do NOT omit it.',
   ]
     .filter(Boolean)
     .join('\n')
