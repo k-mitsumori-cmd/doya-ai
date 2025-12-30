@@ -919,59 +919,26 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
   // 画像内テキストは読みやすさのため “指定文字列のみ” を厳守させる
   const category = mapGenreToNanobannerCategory(plan.genre)
   const keyword = plan.mainCopy || title
-  const support = (plan.supportingPoints || []).filter(Boolean).slice(0, 1)[0] || ''
 
-  const prompt = [
-    'You are a top-tier editorial banner designer for Japanese articles.',
-    'Goal: Create a 16:9 article banner that matches the article content with readable Japanese text.',
-    '',
-    'CRITICAL RULES:',
-    '- This is NOT an advertisement. Do NOT include CTA text or CTA button (e.g., 今すぐ, 詳しくはこちら).',
-    '- MUST render the provided Japanese text strings directly into the image.',
-    '- Text must be PERFECTLY LEGIBLE Japanese (no garbling, no pseudo-characters).',
-    '- Use a clean Japanese font style (Noto Sans JP-like). Text large and bold.',
-    '- Use solid/gradient panel behind text for contrast.',
-    '- Maximum 3 text blocks (headline / subhead / one support).',
-    '',
-    'ARTICLE CONTEXT (for visual relevance):',
-    `- Title: ${title}`,
-    headingsText ? `- Headings: ${headingsText}` : '',
-    excerpt ? `- Excerpt: ${excerpt}` : '',
-    persona ? `- Target reader: ${persona}` : '',
-    searchIntent ? `- Search intent: ${searchIntent}` : '',
-    '',
-    '=== TEXT TO RENDER IN IMAGE (EXACT / REQUIRED) ===',
-    `Headline (必須): ${keyword}`,
-    plan.subCopy ? `Subhead (任意): ${plan.subCopy}` : '',
-    support ? `Support (任意): ${support}` : '',
-    '',
-    'DESIGN GUIDANCE:',
-    `- Genre: ${plan.genre}`,
-    industryHint ? `- Industry hint: ${industryHint}` : '',
-    `- Visual elements: ${visualElements}`,
-    `- Mood: ${moodKeyword}`,
-    `- Palette: ${plan.palette}`,
-    `- Layout: ${plan.layout}`,
-    '',
-    'OUTPUT:',
-    '- 1200x628 pixels (16:9). Fill edge-to-edge, no letterboxing.',
-    '- The headline text MUST appear as real Japanese text inside the image. Do NOT omit it.',
-  ]
-    .filter(Boolean)
-    .join('\n')
-
+  // customImagePromptを削除し、nanobannerのデフォルトプロンプト（テキスト描画強制）を使用
   const result = await generateBanners(
     category,
     keyword,
     '1200x628',
     {
-      purpose: 'email', // CTAが強く出ない用途に寄せる
+      purpose: 'email', // CTAが強く出ない用途に寄せる（記事バナー向け）
       headlineText: keyword,
-      subheadText: plan.subCopy,
-      ctaText: '', // CTA禁止
-      imageDescription: plan.visualConcept,
+      subheadText: plan.subCopy || '',
+      ctaText: '', // CTA禁止（記事バナーなので）
+      imageDescription: [
+        plan.visualConcept,
+        `Article context: ${title}`,
+        headingsText ? `Key points: ${headingsText}` : '',
+        `Mood: ${moodKeyword}`,
+        `Industry: ${industryHint || plan.genre}`,
+      ].filter(Boolean).join('. '),
       brandColors: ['#2563EB'],
-      customImagePrompt: prompt,
+      // customImagePromptを削除 - nanobannerのデフォルトプロンプトでテキスト描画を強制
     },
     1
   )
@@ -981,13 +948,22 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
 
   const filename = `seo_${article.id}_${Date.now()}_banner.png`
   const saved = await saveBase64ToFile({ base64, filename, subdir: 'images' })
+
+  // 保存用のプロンプトログ（表示用）
+  const promptLog = [
+    `Headline: ${keyword}`,
+    plan.subCopy ? `Subhead: ${plan.subCopy}` : '',
+    `Genre: ${plan.genre}`,
+    `Visual: ${plan.visualConcept}`,
+  ].filter(Boolean).join('\n')
+
   const rec = await (prisma as any).seoImage.create({
     data: {
       articleId: article.id,
       kind: 'BANNER',
       title: '記事アイキャッチ',
       description: formatBannerPlanDescription(plan),
-      prompt,
+      prompt: promptLog,
       filePath: saved.relativePath,
       mimeType: 'image/png',
     },
