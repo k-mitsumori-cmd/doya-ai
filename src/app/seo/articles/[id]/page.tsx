@@ -524,8 +524,6 @@ function SeoArticleInner() {
       setMediaError(e?.message || '画像生成に失敗しました')
     } finally {
       setMediaBusy(false)
-      // 新規IDに差し替わるケースがあるため、時間経過でも解除（onLoadでも解除される）
-      setTimeout(() => setImgGenerating({}), 2500)
     }
   }
 
@@ -1085,7 +1083,15 @@ function SeoArticleInner() {
                               src={`/api/seo/images/${img.id}?v=${imgRetry[img.id] || 0}`}
                               className={`w-full h-full object-cover transition-all duration-700 ${isMediaLocked ? 'grayscale-[0.2]' : 'group-hover:scale-105'}`}
                               alt={img.title || ''}
-                              onLoad={() => {
+                              onLoad={(e) => {
+                                const el = e.currentTarget
+                                // “白いプレースホルダ/壊れた応答”で onLoad 扱いになってしまうケース対策
+                                if (!el?.naturalWidth || !el?.naturalHeight) {
+                                  setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
+                                  setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
+                                  setTimeout(() => bumpRetry(img.id), 1200)
+                                  return
+                                }
                                 setImgLoaded((prev) => ({ ...prev, [img.id]: true }))
                                 setImgGenerating((prev) => ({ ...prev, [img.id]: false }))
                               }}
@@ -1122,7 +1128,7 @@ function SeoArticleInner() {
                               </div>
                             </div>
                           )}
-                          {!isMediaLocked && (!imgLoaded[img.id] || !!imgGenerating[img.id]) && (
+                          {!isMediaLocked && (mediaBusy || !imgLoaded[img.id] || !!imgGenerating[img.id]) && (
                             <div className="absolute inset-0 pointer-events-none">
                               {/* ベース（少し暗めにして“空白”感を消す） */}
                               <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-50" />
