@@ -434,7 +434,12 @@ function SeoArticleInner() {
       if (tpl?.banner) {
         const b = String(tpl.banner)
         // 旧テンプレ（文字なし前提）が残っている場合は、最新デフォルトへ自動移行
-        if ((b.includes('画像内に文字') && b.includes('入れない')) || b.includes('ネガティブスペース')) {
+        if (
+          (b.includes('画像内に文字') && b.includes('入れない')) ||
+          b.includes('画像に文字は入れない') ||
+          b.includes('ネガティブスペース') ||
+          b.includes('後から文字を載せられる')
+        ) {
           setBannerPromptTemplate(DEFAULT_BANNER_PROMPT_TEMPLATE)
           patchSeoClientSettings({
             seoImagePromptTemplates: {
@@ -1225,7 +1230,8 @@ function SeoArticleInner() {
                                 type="button"
                                 onClick={() => {
                                   setRegenImage(img)
-                                  setRegenPrompt(String(img.prompt || ''))
+                                  const p = String(img.prompt || '')
+                                  setRegenPrompt(img.kind === 'BANNER' ? sanitizeLegacyBannerPrompt(p) : p)
                                   setRegenOpen(true)
                                 }}
                                 className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-blue-600 text-white font-black text-xs hover:bg-blue-700"
