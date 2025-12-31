@@ -49,34 +49,54 @@ function applyTemplate(rawTemplate: string, vars: Record<string, string>) {
 
   // 「▼ここに…▼」のようなダミー行があれば記事本文に差し替える
   if (/▼ここに/.test(t)) {
-    t = t.replace(/▼ここに[\s\S]*?▼/g, vars.ARTICLE_CONTENT || '')
+    t = t.replace(/▼ここに[\s\S]*?▼/g, vars.ARTICLE_TEXT || vars.ARTICLE_CONTENT || '')
   }
 
   return t.trim()
 }
 
 function defaultBannerTemplate() {
-  return [
-    'あなたは記事バナー（アイキャッチ）制作に強いアートディレクターです。',
-    '',
-    '記事タイトル・見出し・本文要点をもとに、記事内容と一致する「記事アイキャッチ画像」を生成してください。',
-    '',
-    '【目的】記事内容が直感的に伝わる（広告っぽくしすぎない）',
-    '',
-    '【必須ルール】',
-    '・CTA文言は禁止（詳しくはこちら/今すぐ等は入れない）',
-    '・日本語のメインコピー/サブコピーを画像内に大きく入れる',
-    '・テキストは読みやすく（Noto Sans JP風のフォント、太字、背景パネルでコントラスト確保）',
-    '・情報を詰め込みすぎない（最大3ブロックの構図）',
-    '',
-    '【ジャンル別デザイン指針】',
-    '・IT/転職/スクール: 信頼感、コントラスト強、青/ネイビー、情報整理型',
-    '・美容/健康/D2C: 余白多め、明るい配色、清潔感、質感重視',
-    '・EC/セール: 視認性最優先、強い色アクセント、整理された強弱',
-    '',
-    '【元となる記事内容】',
-    '{{ARTICLE_CONTENT}}',
-  ].join('\n')
+  return `あなたは成果の出る広告バナーを専門に制作する一流のマーケティングデザイナーです。
+以下の「記事本文テキスト」を読み取り、内容を要約・再構成し、
+クリック率・視認性・訴求力を最大化する広告バナー画像を生成してください。
+
+【前提条件】
+・バナー用途：Web広告 / 記事内バナー / SNS広告
+・ターゲット：記事内容から最も適切なペルソナを自動推定する
+・目的：一瞬で価値が伝わり「詳しく見たい」と思わせること
+
+【必須ルール】
+・画像内に使用するテキストは、必ず記事本文の内容を基に生成する
+・誇張しすぎず、ただし広告として弱くならない表現にする
+・文字は必ず読みやすく、背景と十分なコントラストを確保する
+・日本の広告バナーでよく使われる構成・トーンを踏襲する
+
+【バナーデザイン構成】
+1. メインキャッチ（最も伝えたい価値を短く・強く）
+2. サブコピー（安心感・具体性・実績・限定性など）
+3. 補足要素（実績数値／価格／割引／特徴／権威性など）
+4. CTA文言（例：「詳しくはこちら」「今すぐチェック」など）
+
+【ビジュアル指針】
+・人物が適切な場合：日本人モデル、自然な表情、広告感のある構図
+・商品が主役の場合：清潔感・高級感・信頼感を重視
+・教育／ビジネス系：青・紫・黒系を基調に信頼感を演出
+・美容／EC系：白・ベージュ・淡色を基調に上品さを演出
+・セール／キャンペーン系：赤・オレンジ・黄色で緊急性を演出
+
+【禁止事項】
+・意味のない装飾
+・読みづらい極小文字
+・記事内容と乖離したコピー
+・英語の多用（日本向け広告のため）
+
+【入力】
+▼ 記事本文テキスト：
+{{ARTICLE_TEXT}}
+
+【出力】
+・1枚の完成された広告バナー画像
+・視認性が高く、広告として即利用可能なクオリティ`
 }
 
 function defaultDiagramTemplate() {
@@ -151,6 +171,7 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       KEYWORDS: String(((article.keywords as any) || []).join(', ')),
       HEADINGS: headings.join(' / '),
       ARTICLE_CONTENT: articleContent,
+      ARTICLE_TEXT: articleContent,
       GENRE: genreGuess,
       USAGE: '記事一覧/SNS（記事アイキャッチ）',
     }
@@ -161,39 +182,16 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
     // バナーがなければ生成
     const hasBanner = (article.images || []).some((x: any) => x.kind === 'BANNER')
     if (!hasBanner) {
-      const plan = await generateArticleBannerPlan({
-        title: String(article.title || ''),
-        headings: headingsPlain,
-        excerpt: articleContent.slice(0, 1800),
-        keywords: ((article.keywords as any) || []) as string[],
-        persona: String(article.persona || ''),
-        searchIntent: String(article.searchIntent || ''),
-        requestText: String(article.requestText || ''),
-        usage: varsBase.USAGE,
-        genreHint: genreGuess,
-      })
+      const category = mapGenreToNanobannerCategory(genreGuess)
+      const filledPrompt = applyTemplate(bannerTemplate, varsBase)
 
-      const category = mapGenreToNanobannerCategory(plan.genre)
-      const headline = plan.mainCopy || String(article.title || '')
-
-      // customImagePromptを削除し、nanobannerのデフォルトプロンプト（テキスト描画強制）を使用
       const result = await generateBanners(
         category,
-        headline,
+        String(article.title || '').trim(),
         '1200x628',
         {
-          purpose: 'article_banner', // 記事バナー専用（広告/CTAを避けつつ文字の可読性を最優先）
-          headlineText: headline,
-          subheadText: plan.subCopy || '',
-          ctaText: '', // CTA禁止（記事バナーなので）
-          imageDescription: [
-            plan.visualConcept,
-            `Article: ${String(article.title || '')}`,
-            headingsPlain.length ? `Key points: ${headingsPlain.slice(0, 5).join(', ')}` : '',
-            `Genre: ${plan.genre}`,
-          ].filter(Boolean).join('. '),
-          brandColors: ['#2563EB'],
-          // customImagePromptを削除 - nanobannerのデフォルトプロンプトでテキスト描画を強制
+          purpose: 'sns_ad',
+          customImagePrompt: filledPrompt,
         },
         1
       )
@@ -205,19 +203,13 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       const saved = await saveBase64ToFile({ base64, filename, subdir: 'images' })
 
       // 保存用のプロンプトログ（表示用）
-      const promptLog = [
-        `Headline: ${headline}`,
-        plan.subCopy ? `Subhead: ${plan.subCopy}` : '',
-        `Genre: ${plan.genre}`,
-        `Visual: ${plan.visualConcept}`,
-      ].filter(Boolean).join('\n')
+      const promptLog = filledPrompt
 
       await (prisma as any).seoImage.create({
         data: {
           articleId,
           kind: 'BANNER',
           title: '記事バナー',
-          description: formatBannerPlanDescription(plan),
           prompt: promptLog,
           filePath: saved.relativePath,
           mimeType: 'image/png',
