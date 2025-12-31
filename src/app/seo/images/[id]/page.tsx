@@ -64,6 +64,7 @@ export default async function SeoImageDetailPage({ params }: { params: { id: str
     let text = String(raw || '').trim()
     // 古い「文字を入れない」系の文言を除去
     const removePatterns = [
+      /重要ルール\s*[：:]\s*\n?/g,
       /（参考\s*[：:]\s*後から載せる想定のコピー案\s*[\/\/]\s*画像に文字は入れない）/g,
       /参考\s*[：:]\s*後から載せる想定のコピー案\s*[\/\/]\s*画像に文字は入れない/g,
       /画像に文字は入れない（日本語\/英語\/数字\/記号を含む）/g,
