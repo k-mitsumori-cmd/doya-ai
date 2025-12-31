@@ -1,5 +1,5 @@
 // =============================================================================
-// SlashSlide - Google Slides 作成
+// ドヤスライド - Google Slides 作成
 // サービスアカウントでスライド作成 → ユーザーに編集権限付与
 // =============================================================================
 import { getServiceAccountAccessToken } from './googleServiceAccount'
@@ -261,5 +261,4 @@ export async function createGoogleSlideFromSpec(
   const url = `https://docs.google.com/presentation/d/${presentationId}/edit`
   return { presentationId, url }
 }
-
 

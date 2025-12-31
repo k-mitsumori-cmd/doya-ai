@@ -15,7 +15,7 @@ export async function slashslideGenerateDeck(raw: unknown) {
   const theme = input.customTheme || THEME_PRESETS[input.themePreset] || THEME_PRESETS['コンサルブルー']
 
   const model =
-    process.env.SLASHSLIDE_GEMINI_MODEL ||
+    process.env.SLIDE_GEMINI_MODEL ||
     process.env.SEO_GEMINI_TEXT_MODEL ||
     GEMINI_TEXT_MODEL_DEFAULT ||
     'gemini-3-pro-preview'
@@ -75,7 +75,7 @@ function buildSimpleSlidePrompt(input: SlideGenerateRequest): string {
 
 export async function generateSlideSpec(input: SlideGenerateRequest): Promise<{ slides: SlideSpec[] }> {
   const model =
-    process.env.SLASHSLIDE_GEMINI_MODEL ||
+    process.env.SLIDE_GEMINI_MODEL ||
     process.env.SEO_GEMINI_TEXT_MODEL ||
     GEMINI_TEXT_MODEL_DEFAULT ||
     'gemini-3-pro-preview'

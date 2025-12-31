@@ -62,25 +62,23 @@ export default async function SeoImageDetailPage({ params }: { params: { id: str
   // 古いプロンプト/descriptionから不要な文言を除去
   function sanitizePromptText(raw: string): string {
     let text = String(raw || '').trim()
-    // 古い「文字を入れない」系の文言を除去
-    const removePatterns = [
-      /（参考\s*[：:]\s*後から載せる想定のコピー案\s*[\/\/]\s*画像に文字は入れない）/g,
-      /参考\s*[：:]\s*後から載せる想定のコピー案\s*[\/\/]\s*画像に文字は入れない/g,
-      /画像に文字は入れない（日本語\/英語\/数字\/記号を含む）/g,
-      /画像に文字は一切入れない（日本語\/英語\/数字\/記号を含む）/g,
-      /画像内に文字は入れない[^\n]*\n?/g,
-      /画像内に文字は一切入れない[^\n]*\n?/g,
-      /後から文字を載せられる「大きな余白（ネガティブスペース）」を確保する[。．]?/g,
-      /後から文字を載せられる大きな余白（ネガティブスペース）を確保する[。．]?/g,
-      /・画像内に文字は一切入れない（日本語\/英語\/数字\/記号を含む）\n?/g,
-      /・後から文字を載せられる大きな余白（ネガティブスペース）を確保する\n?/g,
-      /-\s*画像内に文字は一切入れない[^\n]*\n?/g,
-      /-\s*後から文字を載せられる[^\n]*\n?/g,
-      /ネガティブスペース/g,
-    ]
-    for (const pat of removePatterns) {
-      text = text.replace(pat, '')
-    }
+    // 古い「文字を入れない」系の文言を行単位で除去
+    const lines = text.replace(/\r\n/g, '\n').split('\n')
+    const filtered = lines.filter((line) => {
+      const t = line.trim()
+      if (!t) return true
+      // 「文字を入れない」「文字は入れない」「NO TEXT」系を含む行を除去
+      if (/文字.*入れない/i.test(t)) return false
+      if (/NO TEXT/i.test(t)) return false
+      // 「ネガティブスペース」「余白を確保」を含む行を除去
+      if (/ネガティブスペース/i.test(t)) return false
+      if (/後から文字を載せ/i.test(t)) return false
+      if (/余白.*確保/i.test(t)) return false
+      // 「参考：後から載せる…」パターン
+      if (/参考.*後から載せる.*コピー/i.test(t)) return false
+      return true
+    })
+    text = filtered.join('\n')
     // 連続空行を整理
     text = text.replace(/\n{3,}/g, '\n\n').trim()
     return text

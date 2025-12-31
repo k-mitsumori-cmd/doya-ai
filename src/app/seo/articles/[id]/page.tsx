@@ -305,10 +305,13 @@ function SeoArticleInner() {
       const t = line.trim()
       if (!t) return true
       // 過去ログに混入していた「テキストを入れない」系を除去（SEO=ドヤライティングAIのみ）
-      if (t.includes('画像に文字は入れない')) return false
-      if (t.includes('画像内に文字は') && t.includes('入れない')) return false
-      if (t.includes('後から文字を載せられる') || t.includes('ネガティブスペース')) return false
-      if (t.includes('（参考：') && t.includes('画像に文字')) return false
+      // より広範囲にマッチするように正規表現を使用
+      if (/文字.*入れない/i.test(t)) return false
+      if (/NO TEXT/i.test(t)) return false
+      if (/ネガティブスペース/i.test(t)) return false
+      if (/後から文字を載せ/i.test(t)) return false
+      if (/余白.*確保/i.test(t)) return false
+      if (/参考.*後から載せる.*コピー/i.test(t)) return false
       return true
     })
 
@@ -317,7 +320,7 @@ function SeoArticleInner() {
       '',
       '【追記（重要）】',
       '・最終出力ではメイン/サブの日本語テキストが画像内に表示されます（テキストは読みやすく、太字・高コントラスト）。',
-      '・背景はテキストが読みやすいように、無地/ぼかし/パネルで“文字エリア”を確保してください。',
+      '・背景はテキストが読みやすいように、無地/ぼかし/パネルで"文字エリア"を確保してください。',
     ].join('\n')
 
     const out = filtered.join('\n').trimEnd()

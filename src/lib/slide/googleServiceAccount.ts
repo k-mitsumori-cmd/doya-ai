@@ -2,18 +2,18 @@ import jwt from 'jsonwebtoken'
 
 function requiredEnv(name: string): string {
   const v = process.env[name]
-  if (!v || !v.trim()) throw new Error(`${name} が未設定です（SlashSlide Google連携）`)
+  if (!v || !v.trim()) throw new Error(`${name} が未設定です（ドヤスライド Google連携）`)
   return v.trim()
 }
 
 function getPrivateKey(): string {
   // .env では改行が \n として入ることが多い
-  const raw = requiredEnv('SLASHSLIDE_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY')
+  const raw = requiredEnv('SLIDE_GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY')
   return raw.includes('\\n') ? raw.replace(/\\n/g, '\n') : raw
 }
 
 export async function getServiceAccountAccessToken(scopes: string[]): Promise<string> {
-  const email = requiredEnv('SLASHSLIDE_GOOGLE_SERVICE_ACCOUNT_EMAIL')
+  const email = requiredEnv('SLIDE_GOOGLE_SERVICE_ACCOUNT_EMAIL')
   const privateKey = getPrivateKey()
 
   const now = Math.floor(Date.now() / 1000)
@@ -45,6 +45,5 @@ export async function getServiceAccountAccessToken(scopes: string[]): Promise<st
   if (!json.access_token) throw new Error('Google OAuth token response missing access_token')
   return json.access_token
 }
-
 
 
