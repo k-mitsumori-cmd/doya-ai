@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { formatBannerPlanDescription, generateArticleBannerPlan, guessArticleGenreJa, mapGenreToNanobannerCategory } from '@seo/lib/bannerPlan'
+import { guessArticleGenreJa, mapGenreToNanobannerCategory } from '@seo/lib/bannerPlan'
 import { generateBanners } from '@/lib/nanobanner'
 
 export const runtime = 'nodejs'
@@ -32,48 +32,64 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       .filter(Boolean)
       .slice(0, 16)
     const genreGuess = guessArticleGenreJa([title, headings.join(' '), excerpt, keywords].join(' '))
+    const category = mapGenreToNanobannerCategory(genreGuess)
 
-    const plan = await generateArticleBannerPlan({
-      title,
-      headings,
-      excerpt,
-      keywords: keywords ? keywords.split(',').map((s) => s.trim()).filter(Boolean) : [],
-      usage: '記事一覧/SNS（記事アイキャッチ）',
-      genreHint: genreGuess,
-    })
+    // 広告バナー用（本文ベースでコピー生成＋CTAあり）
+    const prompt = `あなたは成果の出る広告バナーを専門に制作する一流のマーケティングデザイナーです。
+以下の「記事本文テキスト」を読み取り、内容を要約・再構成し、
+クリック率・視認性・訴求力を最大化する広告バナー画像を生成してください。
 
-    const category = mapGenreToNanobannerCategory(plan.genre)
-    const headline = plan.mainCopy || title
+【前提条件】
+・バナー用途：Web広告 / 記事内バナー / SNS広告
+・ターゲット：記事内容から最も適切なペルソナを自動推定する
+・目的：一瞬で価値が伝わり「詳しく見たい」と思わせること
 
-    // customImagePromptを削除し、nanobannerのデフォルトプロンプト（テキスト描画強制）を使用
+【必須ルール】
+・画像内に使用するテキストは、必ず記事本文の内容を基に生成する
+・誇張しすぎず、ただし広告として弱くならない表現にする
+・文字は必ず読みやすく、背景と十分なコントラストを確保する
+・日本の広告バナーでよく使われる構成・トーンを踏襲する
+
+【バナーデザイン構成】
+1. メインキャッチ（最も伝えたい価値を短く・強く）
+2. サブコピー（安心感・具体性・実績・限定性など）
+3. 補足要素（実績数値／価格／割引／特徴／権威性など）
+4. CTA文言（例：「詳しくはこちら」「今すぐチェック」など）
+
+【ビジュアル指針】
+・人物が適切な場合：日本人モデル、自然な表情、広告感のある構図
+・商品が主役の場合：清潔感・高級感・信頼感を重視
+・教育／ビジネス系：青・紫・黒系を基調に信頼感を演出
+・美容／EC系：白・ベージュ・淡色を基調に上品さを演出
+・セール／キャンペーン系：赤・オレンジ・黄色で緊急性を演出
+
+【禁止事項】
+・意味のない装飾
+・読みづらい極小文字
+・記事内容と乖離したコピー
+・英語の多用（日本向け広告のため）
+
+【入力】
+▼ 記事本文テキスト：
+${String(article.finalMarkdown || '').slice(0, 7000)}
+
+【出力】
+・1枚の完成された広告バナー画像
+・視認性が高く、広告として即利用可能なクオリティ`
+
     const result = await generateBanners(
       category,
-      headline,
+      title,
       '1200x628',
       {
-        purpose: 'article_banner', // 記事バナー専用（広告/CTAを避けつつ文字の可読性を最優先）
-        headlineText: headline,
-        subheadText: plan.subCopy || '',
-        ctaText: '', // CTA禁止（記事バナーなので）
-        imageDescription: [
-          plan.visualConcept,
-          `Article: ${title}`,
-          headings.length ? `Key points: ${headings.slice(0, 5).join(', ')}` : '',
-          `Genre: ${plan.genre}`,
-        ].filter(Boolean).join('. '),
-        brandColors: ['#2563EB'],
-        // customImagePromptを削除 - nanobannerのデフォルトプロンプトでテキスト描画を強制
+        purpose: 'sns_ad',
+        customImagePrompt: prompt,
       },
       1
     )
 
     // 保存用のプロンプトログ（表示用）
-    const promptLog = [
-      `Headline: ${headline}`,
-      plan.subCopy ? `Subhead: ${plan.subCopy}` : '',
-      `Genre: ${plan.genre}`,
-      `Visual: ${plan.visualConcept}`,
-    ].filter(Boolean).join('\n')
+    const promptLog = prompt
     const dataUrl = Array.isArray(result?.banners) ? result.banners.find((b) => typeof b === 'string' && b.startsWith('data:image/')) : null
     if (!dataUrl) throw new Error(result?.error || 'バナー画像の生成に失敗しました')
     const base64 = String(dataUrl).split(',')[1] || ''
@@ -86,7 +102,6 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
         articleId,
         kind: 'BANNER',
         title: '記事バナー',
-        description: formatBannerPlanDescription(plan),
         prompt: promptLog,
         filePath: saved.relativePath,
         mimeType: 'image/png',

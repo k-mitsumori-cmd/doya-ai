@@ -1196,6 +1196,43 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
   const cta = (options.ctaText || '').trim()
   const company = (options.companyName || '').trim()
 
+  // customImagePrompt を使う場合は、テキストを「完全一致で強制」すると意図が壊れる。
+  // （ユーザーのプロンプト内で“記事内容からコピー生成”する前提のため）
+  if (options?.customImagePrompt) {
+    return [
+      '',
+      '=== HARD CONSTRAINTS (DO NOT DROP) ===',
+      `PATTERN: ${patternLabel} (must be a distinct creative variation, but must follow the same content/image intent)`,
+      `Output dimensions: EXACTLY ${width}x${height} px. Do NOT change aspect ratio.`,
+      '- Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom bars, NO padding, NO borders.',
+      '',
+      options.imageDescription
+        ? [
+            'USER VISUAL DESCRIPTION (HIGHEST PRIORITY):',
+            `"${options.imageDescription}"`,
+            'Reflect this in ALL patterns, including B/C and beyond.',
+            '',
+          ].join('\n')
+        : '',
+      Array.isArray(options.brandColors) && options.brandColors.length > 0
+        ? [
+            'BRAND COLORS (MUST USE):',
+            options.brandColors.slice(0, 8).join(', '),
+            '',
+          ].join('\n')
+        : '',
+      options.logoImage
+        ? 'LOGO PROVIDED: use ONLY the provided logo image. Do NOT invent any logo/mark.\n'
+        : 'NO LOGO: do NOT invent any logo/mark.\n',
+      options.personImage || options.hasPerson
+        ? 'PERSON: include the provided person photo if available; otherwise generate a suitable person. Keep text readable.\n'
+        : '',
+      'FINAL: Return ONE PNG image.',
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }
+
   return [
     '',
     '=== HARD CONSTRAINTS (DO NOT DROP) ===',
