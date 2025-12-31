@@ -9,6 +9,22 @@ import { getGuestIdFromRequest, isTrialActive, normalizeSeoPlan, canUseSeoImages
 
 export const runtime = 'nodejs'
 
+function stripNoTextStatements(raw: string): string {
+  const s = String(raw || '')
+  if (!s) return s
+  const lines = s.replace(/\r\n/g, '\n').split('\n')
+  const filtered = lines.filter((line) => {
+    const t = line.trim()
+    if (!t) return true
+    if (t.includes('画像に文字は入れない')) return false
+    if (t.includes('画像内に文字') && t.includes('入れない')) return false
+    if (t.includes('後から文字を載せられる')) return false
+    if (t.includes('ネガティブスペース')) return false
+    return true
+  })
+  return filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
   await ensureSeoSchema()
   const id = ctx.params.id
@@ -59,8 +75,10 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
 
     await ensureSeoStorage()
     const aspectRatio = kind === 'BANNER' ? '16:9' : '1:1'
+    // 旧データに「文字を入れない」系が残っていても、復元生成では除去して使う（ドヤライティングAI）
+    const prompt = stripNoTextStatements(String(img.prompt || ''))
     const gen = await geminiGenerateImagePng({
-      prompt: String(img.prompt || ''),
+      prompt,
       aspectRatio: aspectRatio as any,
       imageSize: '2K',
       model: GEMINI_IMAGE_MODEL_DEFAULT,
