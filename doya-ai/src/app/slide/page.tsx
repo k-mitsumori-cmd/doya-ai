@@ -6,7 +6,7 @@ import { Presentation, Sparkles, Zap, FileSliders, Users, Briefcase, Video, File
 
 const fadeUp = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }
 
-export default function SlashSlideLanding() {
+export default function ドヤスライドLanding() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white overflow-hidden">
       {/* Hero */}
@@ -50,7 +50,7 @@ export default function SlashSlideLanding() {
 
           <motion.div variants={fadeUp} className="mt-10 flex justify-center gap-4 flex-wrap">
             <Link
-              href="/slashslide/create"
+              href="/slide/create"
               className="inline-flex items-center gap-2 px-8 py-4 rounded-full font-bold text-lg bg-gradient-to-r from-indigo-500 to-fuchsia-500 hover:from-indigo-400 hover:to-fuchsia-400 shadow-lg shadow-indigo-500/30 transition"
             >
               <Sparkles className="w-5 h-5" />
@@ -116,7 +116,7 @@ export default function SlashSlideLanding() {
             登録不要・クレカ不要ですぐに使えます。
           </p>
           <Link
-            href="/slashslide/create"
+            href="/slide/create"
             className="inline-flex items-center gap-2 px-10 py-4 rounded-full font-bold text-lg bg-gradient-to-r from-indigo-500 to-fuchsia-500 hover:from-indigo-400 hover:to-fuchsia-400 shadow-lg shadow-indigo-500/30 transition"
           >
             <Zap className="w-5 h-5" />
@@ -127,7 +127,7 @@ export default function SlashSlideLanding() {
 
       {/* Footer */}
       <footer className="py-8 text-center text-slate-500 text-sm">
-        &copy; {new Date().getFullYear()} SlashSlide — ドヤAIシリーズ
+        &copy; {new Date().getFullYear()} ドヤスライド — ドヤAIシリーズ
       </footer>
     </div>
   )
@@ -145,5 +145,4 @@ const steps = [
   { icon: Sparkles, title: 'AI生成', desc: 'GeminiがスライドをJSON構成' },
   { icon: Presentation, title: 'Google Slides', desc: 'ワンクリックでスライドに変換' },
 ]
-
 

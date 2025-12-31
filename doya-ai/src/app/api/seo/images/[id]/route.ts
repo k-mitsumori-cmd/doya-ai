@@ -16,10 +16,15 @@ function stripNoTextStatements(raw: string): string {
   const filtered = lines.filter((line) => {
     const t = line.trim()
     if (!t) return true
-    if (t.includes('画像に文字は入れない')) return false
-    if (t.includes('画像内に文字') && t.includes('入れない')) return false
-    if (t.includes('後から文字を載せられる')) return false
-    if (t.includes('ネガティブスペース')) return false
+    // 「文字を入れない」「文字は入れない」「NO TEXT」系を含む行を除去
+    if (/文字.*入れない/i.test(t)) return false
+    if (/NO TEXT/i.test(t)) return false
+    // 「ネガティブスペース」「余白を確保」を含む行を除去
+    if (/ネガティブスペース/i.test(t)) return false
+    if (/後から文字を載せ/i.test(t)) return false
+    if (/余白.*確保/i.test(t)) return false
+    // 「参考：後から載せる…」パターン
+    if (/参考.*後から載せる.*コピー/i.test(t)) return false
     return true
   })
   return filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim()

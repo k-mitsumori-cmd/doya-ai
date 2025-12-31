@@ -14,7 +14,7 @@ import {
   Presentation,
   AlertCircle,
 } from 'lucide-react'
-import type { SlideSpec } from '@/lib/slashslide/types'
+import type { SlideSpec } from '@/lib/slide/types'
 
 const PURPOSE_OPTIONS = [
   { value: 'proposal', label: '提案資料', emoji: '📝' },
@@ -36,7 +36,7 @@ const COLOR_PRESETS = [
 
 type Phase = 'input' | 'generating' | 'preview' | 'publishing' | 'done'
 
-export default function SlashSlideCreate() {
+export default function ドヤスライドCreate() {
   const [phase, setPhase] = useState<Phase>('input')
   const [topic, setTopic] = useState('')
   const [purpose, setPurpose] = useState('proposal')
@@ -65,7 +65,7 @@ export default function SlashSlideCreate() {
     setError(null)
     setPhase('generating')
     try {
-      const res = await fetch('/api/slashslide/generate', {
+      const res = await fetch('/api/slide/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -95,7 +95,7 @@ export default function SlashSlideCreate() {
     setError(null)
     setPhase('publishing')
     try {
-      const res = await fetch('/api/slashslide/publish/google-slides', {
+      const res = await fetch('/api/slide/publish/google-slides', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -123,12 +123,12 @@ export default function SlashSlideCreate() {
       {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur bg-slate-900/60 border-b border-white/5">
         <div className="max-w-4xl mx-auto flex items-center gap-4 px-6 py-4">
-          <Link href="/slashslide" className="text-slate-400 hover:text-white transition">
+          <Link href="/slide" className="text-slate-400 hover:text-white transition">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <h1 className="font-bold text-lg flex items-center gap-2">
             <Presentation className="w-5 h-5 text-indigo-400" />
-            SlashSlide
+            ドヤスライド
           </h1>
         </div>
       </header>
@@ -422,5 +422,4 @@ export default function SlashSlideCreate() {
     </div>
   )
 }
-
 

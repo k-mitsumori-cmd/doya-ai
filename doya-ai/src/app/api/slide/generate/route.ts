@@ -1,11 +1,11 @@
 // =============================================================================
-// POST /api/slashslide/generate
+// POST /api/slide/generate
 // GeminiでスライドJSON構成を生成
 // =============================================================================
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { generateSlideSpec } from '@/lib/slashslide/gemini'
-import type { SlideGenerateRequest } from '@/lib/slashslide/types'
+import { generateSlideSpec } from '@/lib/slide/gemini'
+import type { SlideGenerateRequest } from '@/lib/slide/types'
 
 const bodySchema = z.object({
   topic: z.string().min(1),
@@ -34,9 +34,8 @@ export async function POST(req: NextRequest) {
     const slideSpec = await generateSlideSpec(input)
     return NextResponse.json({ ok: true, slideSpec })
   } catch (err: any) {
-    console.error('[slashslide/generate] error:', err)
+    console.error('[slide/generate] error:', err)
     return NextResponse.json({ error: err?.message || 'Unknown error' }, { status: 500 })
   }
 }
-
 

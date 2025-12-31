@@ -1,11 +1,11 @@
 // =============================================================================
-// POST /api/slashslide/publish/google-slides
+// POST /api/slide/publish/google-slides
 // SlideSpec を Google Slides に変換して共有URLを返す
 // =============================================================================
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createGoogleSlideFromSpec } from '@/lib/slashslide/googleSlides'
-import type { SlideSpec } from '@/lib/slashslide/types'
+import { createGoogleSlideFromSpec } from '@/lib/slide/googleSlides'
+import type { SlideSpec } from '@/lib/slide/types'
 
 const bodySchema = z.object({
   title: z.string().min(1),
@@ -43,9 +43,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, ...result })
   } catch (err: any) {
-    console.error('[slashslide/publish/google-slides] error:', err)
+    console.error('[slide/publish/google-slides] error:', err)
     return NextResponse.json({ error: err?.message || 'Unknown error' }, { status: 500 })
   }
 }
-
 
