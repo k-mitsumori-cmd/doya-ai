@@ -75,7 +75,6 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
 
     await ensureSeoStorage()
     const aspectRatio = kind === 'BANNER' ? '16:9' : '1:1'
-    // 旧データに「文字を入れない」系が残っていても、復元生成では除去して使う（ドヤライティングAI）
     const prompt = stripNoTextStatements(String(img.prompt || ''))
     const gen = await geminiGenerateImagePng({
       prompt,
@@ -87,7 +86,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     const saved = await saveBase64ToFile({ base64: gen.dataBase64, filename, subdir: 'images' })
     await (prisma as any).seoImage.update({
       where: { id },
-      data: { filePath: saved.relativePath, mimeType: gen.mimeType || 'image/png' },
+      data: { filePath: saved.relativePath, mimeType: gen.mimeType || 'image/png', prompt },
     })
     buf = Buffer.from(gen.dataBase64, 'base64')
   }
