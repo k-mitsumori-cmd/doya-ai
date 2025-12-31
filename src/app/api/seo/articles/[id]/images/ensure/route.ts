@@ -38,8 +38,25 @@ function clampText(s: string, max: number) {
   return str.length <= max ? str : str.slice(0, max)
 }
 
+function stripNoTextStatements(raw: string): string {
+  const s = String(raw || '')
+  if (!s) return s
+  // 「文字を入れない」系が混入しても生成側から除去（ドヤライティングAIのみ）
+  const lines = s.replace(/\r\n/g, '\n').split('\n')
+  const filtered = lines.filter((line) => {
+    const t = line.trim()
+    if (!t) return true
+    if (t.includes('画像に文字は入れない')) return false
+    if (t.includes('画像内に文字') && t.includes('入れない')) return false
+    if (t.includes('後から文字を載せられる')) return false
+    if (t.includes('ネガティブスペース')) return false
+    return true
+  })
+  return filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 function applyTemplate(rawTemplate: string, vars: Record<string, string>) {
-  let t = String(rawTemplate || '').trim()
+  let t = stripNoTextStatements(String(rawTemplate || '')).trim()
   if (!t) return ''
 
   // ユーザーが貼るテンプレに多いプレースホルダ（そのまま置換）
