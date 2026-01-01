@@ -213,7 +213,7 @@ function SeoSidebarImpl({
                 className="overflow-hidden"
               >
                 <h1 className="text-lg font-black text-white tracking-tighter leading-none">ドヤライティングAI</h1>
-                <p className="text-[10px] font-bold text-blue-100/70 mt-0.5">SEO最適化・分割生成</p>
+                <p className="text-[10px] font-bold text-blue-100/70 mt-0.5">SEOライティングAI</p>
               </motion.div>
             )}
           </AnimatePresence>
