@@ -198,22 +198,45 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       USAGE: '記事一覧/SNS（記事アイキャッチ）',
     }
 
-    const bannerTemplate = String(body?.bannerPromptTemplate || '').trim() || defaultBannerTemplate()
     const diagramTemplate = String(body?.diagramPromptTemplate || '').trim() || defaultDiagramTemplate()
 
     // バナーがなければ生成
     const hasBanner = (article.images || []).some((x: any) => x.kind === 'BANNER')
     if (!hasBanner) {
       const category = mapGenreToNanobannerCategory(genreGuess)
-      const filledPrompt = applyTemplate(bannerTemplate, varsBase)
+      const title = String(article.title || '').trim()
+      const keywords = ((article.keywords as any) || []) as string[]
+      const persona = String(article.persona || '').trim()
+      const searchIntent = String(article.searchIntent || '').trim()
+
+      // バナーコピーを生成（CTAあり、画像内テキスト描画用）
+      const plan = await generateArticleBannerPlan({
+        title,
+        headings: headingsPlain,
+        excerpt: articleContent.slice(0, 2200),
+        keywords,
+        persona,
+        searchIntent,
+        requestText: '',
+        usage: '記事一覧/SNS（記事アイキャッチ）',
+        genreHint: genreGuess,
+      })
+
+      // nanobannerの標準プロンプト生成ロジックを使用（customImagePromptを使わない）
+      const headline = plan.mainCopy || title
+      const subhead = plan.subCopy || ''
+      const ctaText = '詳しくはこちら'
+      const imageDescription = `業界: ${plan.genre} / コンセプト: 記事内容を象徴するビジュアル`
 
       const result = await generateBanners(
         category,
-        String(article.title || '').trim(),
+        headline,
         '1200x628',
         {
           purpose: 'sns_ad',
-          customImagePrompt: filledPrompt,
+          subheadText: subhead,
+          ctaText: ctaText,
+          imageDescription: imageDescription,
         },
         1
       )
@@ -225,13 +248,25 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       const saved = await saveBase64ToFile({ base64, filename, subdir: 'images' })
 
       // 保存用のプロンプトログ（表示用）
-      const promptLog = filledPrompt
+      const promptLog = [
+        `【バナー生成設定】`,
+        `カテゴリ: ${category}`,
+        `メインコピー: ${headline}`,
+        subhead ? `サブコピー: ${subhead}` : '',
+        `CTA: ${ctaText}`,
+        `ビジュアル: ${imageDescription}`,
+        '',
+        `【生成元情報】`,
+        `記事タイトル: ${title}`,
+        `ジャンル: ${plan.genre}`,
+      ].filter(Boolean).join('\n')
 
       await (prisma as any).seoImage.create({
         data: {
           articleId,
           kind: 'BANNER',
           title: '記事バナー',
+          description: formatBannerPlanDescription(plan),
           prompt: promptLog,
           filePath: saved.relativePath,
           mimeType: 'image/png',
