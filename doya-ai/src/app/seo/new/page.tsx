@@ -749,6 +749,7 @@ export default function SeoNewArticlePage() {
           requestText,
           referenceImages,
           autoBundle,
+          createJob: true,
           comparisonConfig:
             mode === 'comparison_research'
               ? {
@@ -774,8 +775,14 @@ export default function SeoNewArticlePage() {
 
       // ドラフト削除
       localStorage.removeItem(STORAGE_KEY)
-      // 記事詳細へ（自動実行フラグ付き）
-      router.push(`/seo/articles/${json.articleId}?auto=1`)
+      // /seo/create と同じ「ライブ執筆」UIへ
+      const jobId = json.jobId || json.job?.id
+      if (jobId) {
+        router.push(`/seo/jobs/${jobId}?auto=1`)
+        return
+      }
+      // フォールバック（万一 job が返らない場合）
+      router.push(`/seo/articles/${json.articleId}`)
     } catch (e: any) {
       setError(e?.message || '不明なエラーが発生しました')
       setLoading(false)
