@@ -299,6 +299,16 @@ function SeoArticleInner() {
   function sanitizeLegacyBannerPrompt(raw: string): string {
     const s = String(raw || '')
     if (!s) return s
+    
+    // 古い「記事バナー」プロンプト全体を検出した場合、新しいデフォルトに置き換え
+    if (
+      s.includes('あなたは記事バナー') &&
+      s.includes('画像内に文字は一切入れない')
+    ) {
+      // 古いプロンプト全体を新しいプロンプトに置き換え
+      return DEFAULT_BANNER_PROMPT_TEMPLATE
+    }
+    
     const lines = s.replace(/\r\n/g, '\n').split('\n')
 
     const filtered = lines.filter((line) => {
@@ -307,7 +317,7 @@ function SeoArticleInner() {
       // 過去ログに混入していた「テキストを入れない」系を除去（SEO=ドヤライティングAIのみ）
       // より広範囲にマッチするように正規表現を使用
       if (/文字.*入れない/i.test(t)) return false
-      if (/文字は一切入れない/i.test(t)) return false
+      if (/文字は一切/i.test(t)) return false
       if (/画像内に文字/i.test(t)) return false
       if (/NO TEXT/i.test(t)) return false
       if (/ネガティブスペース/i.test(t)) return false
@@ -317,10 +327,13 @@ function SeoArticleInner() {
       if (/参考.*後から載せる.*コピー/i.test(t)) return false
       if (/画像に文字は入れない/i.test(t)) return false
       // CTAを作らない系
-      if (/CTA要素.*作らない.*入れない/i.test(t)) return false
+      if (/CTA要素/i.test(t)) return false
       if (/CTA.*入れない/i.test(t)) return false
+      if (/作らない.*入れない/i.test(t)) return false
       // 広告バナーではない系
-      if (/これは広告バナーではない/i.test(t)) return false
+      if (/広告バナーではない/i.test(t)) return false
+      // 重要ルール:のヘッダー
+      if (/^重要ルール[:：]/i.test(t)) return false
       return true
     })
 
