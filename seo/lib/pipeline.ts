@@ -7,8 +7,60 @@ import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPlan'
 import { hasSerpApiKey, serpapiSearchGoogle } from '@seo/lib/serpapi'
 
+type ResearchEvent = {
+  id: string
+  at: number
+  kind: 'search' | 'candidates' | 'discover' | 'queue' | 'fetch' | 'summarize' | 'store' | 'warn' | 'error'
+  title: string
+  detail?: string
+  url?: string
+}
+
 function nowIso() {
   return new Date().toISOString()
+}
+
+function shortHost(u: string): string {
+  try {
+    return new URL(u).host
+  } catch {
+    return ''
+  }
+}
+
+async function pushResearchEvent(jobId: string | undefined | null, ev: Omit<ResearchEvent, 'id'>) {
+  const id = String(jobId || '').trim()
+  if (!id) return
+  const p = prisma as any
+  try {
+    const cur = await p.seoJob.findUnique({ where: { id }, select: { meta: true } })
+    const meta = (cur?.meta as any) || {}
+    const prev = Array.isArray(meta.researchEvents) ? (meta.researchEvents as any[]) : []
+    const event: ResearchEvent = {
+      id: `${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      ...ev,
+    }
+    const next = [...prev, event].slice(-160)
+    meta.researchEvents = next
+    meta.researchLast = event
+    await p.seoJob.update({ where: { id }, data: { meta } })
+  } catch {
+    // ignore (ログはベストエフォート)
+  }
+}
+
+async function setResearchStats(jobId: string | undefined | null, patch: Record<string, any>) {
+  const id = String(jobId || '').trim()
+  if (!id) return
+  const p = prisma as any
+  try {
+    const cur = await p.seoJob.findUnique({ where: { id }, select: { meta: true } })
+    const meta = (cur?.meta as any) || {}
+    meta.researchStats = { ...(meta.researchStats || {}), ...patch, updatedAt: Date.now() }
+    await p.seoJob.update({ where: { id }, data: { meta } })
+  } catch {
+    // ignore
+  }
 }
 
 function clampText(s: string, max = 12000): string {
@@ -298,7 +350,20 @@ function normalizeUrlMaybe(raw: any): string {
   return s
 }
 
+function comparisonCoverageNote(article: any): string {
+  const isComparison = String(article?.mode || '').toLowerCase() === 'comparison_research'
+  if (!isComparison) return ''
+  const cfg = (article?.comparisonConfig as any) || {}
+  const desired = Math.max(0, Math.min(60, Number(cfg?.count || 0)))
+  const candidates = Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
+  const actual = uniqCandidatesByName(candidates).length
+  if (!desired) return ''
+  if (actual >= desired) return ''
+  return `【注意】本記事は当初「${desired}社比較」を想定していましたが、執筆時点で調査できたのは ${actual}社分まででした。以降の比較・表は ${actual}社の範囲で作成しています。`
+}
+
 async function maybeDiscoverReferenceUrls(article: any) {
+  // NOTE: 全記事向け。jobIdは呼び出し元で渡す（ここでは受け取らない）
   const p = prisma as any
   const existing = Array.isArray(article?.referenceUrls) ? (article.referenceUrls as any[]) : []
   if (existing.length) return
@@ -322,7 +387,54 @@ async function maybeDiscoverReferenceUrls(article: any) {
   }
 }
 
-async function progressiveResearchFromReferenceUrls(article: any, opts?: { maxUrls?: number }) {
+async function maybeDiscoverComparisonThirdPartyUrls(article: any, jobId?: string) {
+  const p = prisma as any
+  const isComparison = String(article?.mode || '').toLowerCase() === 'comparison_research'
+  if (!isComparison) return
+  const cfg = (article?.comparisonConfig as any) || {}
+  if (!cfg?.includeThirdParty) return
+  if (!hasSerpApiKey()) return
+
+  const existing = Array.isArray(article?.referenceUrls) ? (article.referenceUrls as any[]) : []
+  const base = (() => {
+    const keywords = Array.isArray(article?.keywords) ? (article.keywords as any[]) : []
+    const q = String(keywords[0] || article?.title || '').trim()
+    return q
+  })()
+  if (!base) return
+
+  // 比較メディア/レビュー/評判など第三者情報を少数追加（コスト/タイムアウト対策）
+  const query = `${base} 比較 評判 口コミ おすすめ`
+  const region = String(cfg?.region || 'JP').toUpperCase() === 'GLOBAL' ? 'GLOBAL' : 'JP'
+  const gl = region === 'JP' ? 'jp' : 'us'
+  const hl = region === 'JP' ? 'ja' : 'en'
+  await pushResearchEvent(jobId, {
+    at: Date.now(),
+    kind: 'search',
+    title: '比較メディア/評判を検索中…',
+    detail: query,
+  })
+  const found = await serpapiSearchGoogle({ query, gl, hl, num: 10 })
+  const urls = found.organic.map((x) => x.url).filter(Boolean).slice(0, 6)
+  if (!urls.length) return
+
+  const merged = Array.from(new Set([...existing, ...urls])).slice(0, 25)
+  try {
+    await p.seoArticle.update({ where: { id: article.id }, data: { referenceUrls: merged as any } })
+    article.referenceUrls = merged
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'discover',
+      title: `参考記事を追加しました（${urls.length}件）`,
+      detail: urls.map((u) => shortHost(u)).filter(Boolean).slice(0, 6).join(' / '),
+    })
+    await setResearchStats(jobId, { referenceUrls: merged.length })
+  } catch {
+    // ignore
+  }
+}
+
+async function progressiveResearchFromReferenceUrls(article: any, opts?: { maxUrls?: number; jobId?: string }) {
   const p = prisma as any
   const urls = Array.isArray(article?.referenceUrls) ? (article.referenceUrls as any[]) : []
   const list = urls.map((u: any) => normalizeUrlMaybe(u)).filter(Boolean)
@@ -339,6 +451,13 @@ async function progressiveResearchFromReferenceUrls(article: any, opts?: { maxUr
   const pending = list.filter((u) => !done.has(u)).slice(0, maxUrls)
   if (!pending.length) return { stored: 0 }
 
+  await pushResearchEvent(opts?.jobId, {
+    at: Date.now(),
+    kind: 'queue',
+    title: `解析キューに追加（${pending.length}件）`,
+    detail: pending.map((u) => shortHost(u)).filter(Boolean).join(' / '),
+  })
+
   // 既存の researchAndStore は article.referenceUrls の先頭から順に回るので、
   // ここでは優先順を入れ替えて一時的に上書き → 解析後に元へ戻す
   const original = Array.isArray(article.referenceUrls) ? (article.referenceUrls as any[]) : []
@@ -349,11 +468,12 @@ async function progressiveResearchFromReferenceUrls(article: any, opts?: { maxUr
     // ignore
   }
 
-  const out = await researchAndStore(article.id, { maxUrls: pending.length }).catch(() => ({ stored: 0 }))
+  const out = await researchAndStore(article.id, { maxUrls: pending.length, jobId: opts?.jobId }).catch(() => ({ stored: 0 }))
+  await setResearchStats(opts?.jobId, { referencesStored: (out as any)?.stored || 0 })
   return out
 }
 
-async function maybeAutoResearchComparison(article: any) {
+async function maybeAutoResearchComparison(article: any, jobId?: string) {
   const p = prisma as any
   const isComparison = String(article?.mode || '').toLowerCase() === 'comparison_research'
   if (!isComparison) return
@@ -383,10 +503,106 @@ async function maybeAutoResearchComparison(article: any) {
 
   // 公式URL中心に抽出→要約を保存（最大2件）
   try {
-    await researchAndStore(article.id, { maxUrls: Math.min(2, urlsFromCandidates.length) })
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'queue',
+      title: '候補企業の公式URLを解析中…',
+      detail: urlsFromCandidates.map((u) => shortHost(u)).filter(Boolean).join(' / '),
+    })
+    await researchAndStore(article.id, { maxUrls: Math.min(2, urlsFromCandidates.length), jobId })
   } catch (e) {
     console.warn('[comparison research] researchAndStore failed', e)
   }
+}
+
+function pickCandidateNameFromTitle(title: string): string {
+  const t = String(title || '').trim()
+  if (!t) return ''
+  const parts = t.split(/[\|\｜\-–—]/).map((s) => s.trim()).filter(Boolean)
+  const head = parts[0] || t
+  return head
+    .replace(/(料金|価格|評判|口コミ|比較|おすすめ|とは|まとめ|ランキング).*/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60)
+}
+
+function uniqCandidatesByName(items: any[]): any[] {
+  const seen = new Set<string>()
+  const out: any[] = []
+  for (const it of items) {
+    const name = String(it?.name || '').trim()
+    const key = name.toLowerCase()
+    if (!name) continue
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(it)
+  }
+  return out
+}
+
+async function ensureComparisonCandidates(article: any, jobId?: string): Promise<any[]> {
+  const isComparison = String(article?.mode || '').toLowerCase() === 'comparison_research'
+  if (!isComparison) return []
+
+  const cfg = (article?.comparisonConfig as any) || {}
+  const desired = Math.max(0, Math.min(60, Number(cfg?.count || 0)))
+  const existing = Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
+  const uniqExisting = uniqCandidatesByName(existing)
+  if (!desired) return uniqExisting
+  if (uniqExisting.length >= desired) return uniqExisting.slice(0, desired)
+
+  // SerpAPIが無いならここで止める（架空サービスで埋めるのを防ぐ）
+  if (!hasSerpApiKey()) return uniqExisting
+
+  const keywords = Array.isArray(article.keywords) ? article.keywords : (article.keywords as any) || []
+  const baseQuery = String(keywords[0] || article.title || '').trim()
+  if (!baseQuery) return uniqExisting
+
+  const region = String(cfg?.region || 'JP').toUpperCase() === 'GLOBAL' ? 'GLOBAL' : 'JP'
+  const gl = region === 'JP' ? 'jp' : 'us'
+  const hl = region === 'JP' ? 'ja' : 'en'
+  const queries = [`${baseQuery} 比較`, `${baseQuery} おすすめ`, `${baseQuery} 料金`]
+
+  const collected: any[] = [...uniqExisting]
+  for (const q of queries) {
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'search',
+      title: '比較企業を検索中…',
+      detail: q,
+    })
+    for (let start = 0; start < 50 && uniqCandidatesByName(collected).length < desired; start += 10) {
+      const found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10, start })
+      if (!found.organic.length) break
+      for (const r of found.organic) {
+        const name = pickCandidateNameFromTitle(r.title) || baseQuery
+        collected.push({ name, websiteUrl: r.url, source: 'serpapi' })
+      }
+      if (uniqCandidatesByName(collected).length >= desired) break
+    }
+    if (uniqCandidatesByName(collected).length >= desired) break
+  }
+
+  const merged = uniqCandidatesByName(collected).slice(0, desired)
+  await pushResearchEvent(jobId, {
+    at: Date.now(),
+    kind: 'candidates',
+    title: `候補を更新しました（${merged.length}/${desired}社）`,
+    detail: merged.slice(0, 8).map((c) => String(c?.name || '').trim()).filter(Boolean).join(' / '),
+  })
+  await setResearchStats(jobId, { candidates: merged.length, candidatesTarget: desired })
+  // 呼び出し元は article を参照し続けるので、DB更新 + ローカルも同期しておく
+  try {
+    await (prisma as any).seoArticle.update({
+      where: { id: article.id },
+      data: { comparisonCandidates: merged as any },
+    })
+  } catch {
+    // ignore
+  }
+  article.comparisonCandidates = merged
+  return merged
 }
 
 function llmoOptionsText(article: any): string {
@@ -479,8 +695,10 @@ async function generateOutline(article: any, researchContext: string): Promise<S
 
   const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
   const comparisonConfig = (article.comparisonConfig as any) || null
+  const desiredCompanies = Math.max(0, Math.min(60, Number(comparisonConfig?.count || 0)))
   const comparisonCandidates = Array.isArray(article.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
   const referenceInputs = Array.isArray(article.referenceInputs) ? (article.referenceInputs as any[]) : []
+  const coverageNote = comparisonCoverageNote(article)
 
   const comparisonBlock = isComparison
     ? [
@@ -493,9 +711,9 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         '',
         'Required structure (must appear in outline):',
         '- 導入（比較が必要な理由/失敗例）',
-        '- 比較対象サービス一覧（表：サービス名/特徴/料金/向いている人/公式URL）',
+        `- 比較対象サービス一覧（表：サービス名/特徴/料金/向いている人/公式URL）※候補が不足する場合は不足注記を入れ、調査できた範囲（M社）で比較する`,
         '- 各サービス詳細（できること/できないこと/料金/メリデメ/おすすめシーン）',
-        '- サービス比較表（横並び：機能/価格帯/特徴/サポートなど）',
+        `- サービス比較表（横並び：機能/価格帯/特徴/サポートなど）※候補が不足する場合は不足注記を入れ、調査できた範囲（M社）で比較する`,
         '- タイプ別おすすめ（初心者/コスト/高機能/中小/大企業）',
         '- まとめ（選び方/チェックポイント/結論）',
         '',
@@ -507,10 +725,12 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         `Require official site: ${comparisonConfig?.requireOfficial ? 'YES' : 'NO'}`,
         `Include third-party: ${comparisonConfig?.includeThirdParty ? 'YES' : 'NO'}`,
         '',
+        coverageNote ? `Coverage notice (must include in the final article): ${coverageNote}` : '',
+        '',
         comparisonCandidates.length
           ? [
               'Final candidate list (do not invent new companies beyond this list):',
-              ...comparisonCandidates.slice(0, 60).map((c, i) => {
+              ...comparisonCandidates.slice(0, desiredCompanies ? Math.min(desiredCompanies, 60) : 60).map((c, i) => {
                 const name = String(c?.name || '').trim()
                 const u = typeof c?.websiteUrl === 'string' ? c.websiteUrl : ''
                 return `${i + 1}. ${name}${u ? ` (${u})` : ''}`
@@ -640,10 +860,36 @@ async function ensureOutlineAndSections(jobId: string) {
 
   const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
 
+  // 比較記事: 候補数が指定より不足していたら、SerpAPIで補完（キーがある場合）
+  if (isComparison) {
+    await p.seoJob.update({
+      where: { id: jobId },
+      data: { step: 'cmp_candidates', progress: Math.max(5, Number(job.progress || 0)), status: 'running' },
+    })
+    const ensured = await ensureComparisonCandidates(article, jobId)
+    // 不足しても止めない（記事内に不足注記を明示して進行する）
+    article.comparisonCandidates = ensured
+  }
+
   // 比較記事は「実在サービスのみ」を担保するため、公式URLがある場合は軽量に自動リサーチ（最大2件）
   // ※ サーバレスのタイムアウトに配慮しつつ、最低限の一次情報を渡して架空要素を抑止する
   try {
-    await maybeAutoResearchComparison(article)
+    await p.seoJob.update({
+      where: { id: jobId },
+      data: { step: isComparison ? 'cmp_crawl' : job.step, progress: Math.max(8, Number(job.progress || 0)), status: 'running' },
+    })
+    await maybeAutoResearchComparison(article, jobId)
+  } catch {
+    // ignore
+  }
+
+  // 比較記事: 第三者情報（比較メディア等）も参考URLに追加（includeThirdPartyがONの場合）
+  try {
+    await p.seoJob.update({
+      where: { id: jobId },
+      data: { step: isComparison ? 'cmp_sources' : job.step, progress: Math.max(10, Number(job.progress || 0)), status: 'running' },
+    })
+    await maybeDiscoverComparisonThirdPartyUrls(article, jobId)
   } catch {
     // ignore
   }
@@ -663,7 +909,11 @@ async function ensureOutlineAndSections(jobId: string) {
 
   // 全記事: 参考URLがある場合は、1回のadvanceで最大1件だけ解析してseoReferenceへ保存（タイムアウト対策）
   try {
-    await progressiveResearchFromReferenceUrls(article, { maxUrls: 1 })
+    await p.seoJob.update({
+      where: { id: jobId },
+      data: { step: isComparison ? 'cmp_extract' : job.step, progress: Math.max(12, Number(job.progress || 0)), status: 'running' },
+    })
+    await progressiveResearchFromReferenceUrls(article, { maxUrls: 1, jobId })
   } catch {
     // ignore（ネットワーク不調でも本文生成は継続）
   }
@@ -754,16 +1004,26 @@ async function generateSection(jobId: string) {
   const next = sections.find((s: any) => s.status !== 'reviewed')
   if (!next) return
 
+  const isComparisonEarly = String(article.mode || '').toLowerCase() === 'comparison_research'
+
   // 比較記事は「実在サービスのみ」を担保するため、公式URLがある場合は軽量に自動リサーチ（最大2件）
   try {
-    await maybeAutoResearchComparison(article)
+    await p.seoJob.update({
+      where: { id: jobId },
+      data: { step: isComparisonEarly ? 'cmp_crawl' : job.step, progress: Math.max(15, Number(job.progress || 0)), status: 'running' },
+    })
+    await maybeAutoResearchComparison(article, jobId)
   } catch {
     // ignore
   }
 
   // 全記事: 参考URLがある場合は、1回のadvanceで最大1件だけ解析してseoReferenceへ保存（タイムアウト対策）
   try {
-    await progressiveResearchFromReferenceUrls(article, { maxUrls: 1 })
+    await p.seoJob.update({
+      where: { id: jobId },
+      data: { step: isComparisonEarly ? 'cmp_extract' : job.step, progress: Math.max(18, Number(job.progress || 0)), status: 'running' },
+    })
+    await progressiveResearchFromReferenceUrls(article, { maxUrls: 1, jobId })
   } catch {
     // ignore
   }
@@ -781,8 +1041,20 @@ async function generateSection(jobId: string) {
   const requestText = article.requestText ? clampText(String(article.requestText || ''), 1800) : ''
   const targetChars = Math.max(3000, Number(article.targetChars || 10000))
   const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
-  const comparisonCandidates = Array.isArray(article.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
   const comparisonConfig = (article.comparisonConfig as any) || null
+  const desiredCompanies = Math.max(0, Math.min(60, Number(comparisonConfig?.count || 0)))
+  let comparisonCandidates = Array.isArray(article.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
+  const coverageNote = comparisonCoverageNote(article)
+
+  // 比較記事: セクション生成前にも候補補完を試す（ジョブが途中から再開されても揃うように）
+  if (isComparison) {
+    await p.seoJob.update({
+      where: { id: jobId },
+      data: { step: 'cmp_candidates', progress: Math.max(20, Number(job.progress || 0)), status: 'running' },
+    })
+    const ensured = await ensureComparisonCandidates(article, jobId)
+    comparisonCandidates = ensured
+  }
 
   const comparisonStrictPrompt = isComparison
     ? [
@@ -800,9 +1072,10 @@ async function generateSection(jobId: string) {
         '━━━━━━━━━━━━━━━━━━',
         '■ 比較対象サービス（このリストのみ使用）',
         '━━━━━━━━━━━━━━━━━━',
+        coverageNote ? `\n${coverageNote}\n` : '',
         comparisonCandidates.length
           ? comparisonCandidates
-              .slice(0, 60)
+              .slice(0, desiredCompanies ? Math.min(desiredCompanies, 60) : 60)
               .map((c, i) => {
                 const name = String(c?.name || '').trim()
                 const url = normalizeUrlMaybe(c?.websiteUrl)
@@ -856,6 +1129,22 @@ async function generateSection(jobId: string) {
           '- Comparison mode: NEVER invent services/features/prices.',
           '- When writing about a service: include official URL (if known) and clearly label unknown fields as "公式に明記なし/要問い合わせ/非公開".',
           '- Prefer facts from RESEARCH blocks (official sources). If not present, do not assert.',
+          (() => {
+            const h = String(next.headingPath || '')
+            const mustCoverAll =
+              /比較対象|サービス一覧|比較表|ランキング|おすすめ|料金比較|機能比較|タイプ別おすすめ/.test(h)
+            const desired = desiredCompanies
+            const actual = uniqCandidatesByName(comparisonCandidates).length
+            if (!mustCoverAll) return ''
+            return [
+              desired
+                ? `- IMPORTANT: This section MUST cover ALL available companies (${actual}社). (original target: ${desired}社)`
+                : `- IMPORTANT: This section MUST cover ALL available companies (${actual}社).`,
+              '- Include at least ONE markdown table that contains ALL available companies.',
+              '- If the table becomes too wide, split into multiple tables, but still include all companies across them.',
+              '- For unknown fields, write "公式に明記なし/要問い合わせ/非公開" instead of guessing.',
+            ].join('\n')
+          })(),
         ].join('\n')
       : '',
     targetChars <= 6500
@@ -1148,6 +1437,12 @@ async function integrate(jobId: string) {
     parts.push(`![記事バナー](/api/seo/images/${existingBanner.id})`)
   }
 
+  // 比較記事: 企業数が不足している場合は、冒頭に明示（止めずに生成を継続）
+  const coverageNote = comparisonCoverageNote(article)
+  if (coverageNote) {
+    parts.push('> ' + coverageNote)
+  }
+
   // 短い記事ほど、冒頭に表を置く（読者のスキャン性を最大化）
   const topTables = await generateTopTables(article, mergedSections)
   if (topTables) parts.push(topTables)
@@ -1396,7 +1691,7 @@ async function integrate(jobId: string) {
 
 export async function researchAndStore(
   articleId: string,
-  opts?: { maxUrls?: number }
+  opts?: { maxUrls?: number; jobId?: string }
 ): Promise<{ stored: number }> {
   const p = prisma as any
   const article = await p.seoArticle.findUnique({ where: { id: articleId } })
@@ -1410,7 +1705,21 @@ export async function researchAndStore(
 
   for (const url of targets) {
     try {
+      await pushResearchEvent(opts?.jobId, {
+        at: Date.now(),
+        kind: 'fetch',
+        title: 'ページを取得中…',
+        url,
+        detail: shortHost(url) || url,
+      })
       const extracted = await fetchAndExtract(url)
+      await pushResearchEvent(opts?.jobId, {
+        at: Date.now(),
+        kind: 'summarize',
+        title: '要点を抽出中…',
+        url,
+        detail: extracted.title ? extracted.title.slice(0, 80) : shortHost(url),
+      })
       const summarizePrompt = [
         'You are a Japanese SEO analyst.',
         'Summarize and analyze this page WITHOUT copying sentences.',
@@ -1474,9 +1783,23 @@ export async function researchAndStore(
       })
 
       stored++
+      await pushResearchEvent(opts?.jobId, {
+        at: Date.now(),
+        kind: 'store',
+        title: '参考情報を保存しました',
+        url,
+        detail: extracted.title ? extracted.title.slice(0, 80) : shortHost(url),
+      })
     } catch (e) {
       // 失敗しても他URLを継続
       console.warn(`[seo research] failed url=${url} at ${nowIso()}`)
+      await pushResearchEvent(opts?.jobId, {
+        at: Date.now(),
+        kind: 'warn',
+        title: '取得に失敗（スキップ）',
+        url,
+        detail: shortHost(url) || url,
+      })
     }
   }
 

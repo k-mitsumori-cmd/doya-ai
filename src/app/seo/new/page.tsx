@@ -275,7 +275,7 @@ export default function SeoNewArticlePage() {
       name: 'RPO（採用代行）比較',
       mode: 'comparison_research' as const,
       articleType: 'comparison' as ArticleTypeId,
-      title: 'RPO（採用代行）おすすめ比較50選｜選び方と料金相場【2024年最新】',
+      title: 'RPO（採用代行）おすすめ比較50選｜選び方と料金相場【2026年最新】',
       keywords: 'RPO, 採用代行, 比較, 料金, おすすめ',
       targetChars: 50000,
       persona: '採用に課題を感じている企業の人事責任者、経営層。コスト削減と採用質向上を両立させたい層。',
@@ -288,7 +288,7 @@ export default function SeoNewArticlePage() {
       name: 'AIライティングツール比較',
       mode: 'comparison_research' as const,
       articleType: 'comparison' as ArticleTypeId,
-      title: 'AIライティングツールおすすめ30選｜機能・料金・精度で徹底比較【2024年版】',
+      title: 'AIライティングツールおすすめ30選｜機能・料金・精度で徹底比較【2026年版】',
       keywords: 'AIライティング, 文章生成AI, 記事作成ツール, 比較',
       targetChars: 30000,
       persona: 'コンテンツマーケター、ブロガー、企業のマーケティング担当者。記事作成の効率化を図りたい層。',
@@ -301,7 +301,7 @@ export default function SeoNewArticlePage() {
       name: 'CRM（顧客管理）ツール比較',
       mode: 'comparison_research' as const,
       articleType: 'comparison' as ArticleTypeId,
-      title: 'CRMツールおすすめ比較20選｜中小企業向け・大企業向け別に解説【2024年】',
+      title: 'CRMツールおすすめ比較20選｜中小企業向け・大企業向け別に解説【2026年】',
       keywords: 'CRM, 顧客管理, SFA, 比較, おすすめ',
       targetChars: 30000,
       persona: '営業部門の責任者、IT担当者。顧客管理の効率化と売上向上を目指す企業。',
@@ -314,7 +314,7 @@ export default function SeoNewArticlePage() {
       name: 'SEO対策ガイド（ハウツー）',
       mode: 'standard' as const,
       articleType: 'howto' as ArticleTypeId,
-      title: 'SEO対策の完全ガイド｜初心者でもできる10ステップ【2024年版】',
+      title: 'SEO対策の完全ガイド｜初心者でもできる10ステップ【2026年版】',
       keywords: 'SEO対策, やり方, 初心者, Google検索',
       targetChars: 20000,
       persona: 'Webサイト運営者、ブロガー、マーケティング初心者。SEOの基礎から学びたい人。',
@@ -1023,6 +1023,39 @@ export default function SeoNewArticlePage() {
               })}
             </div>
 
+            {/* Quick Templates (filtered by type) - 上部に移動 */}
+            <div className="pt-2">
+              <div className="flex items-end justify-between gap-3 flex-wrap mb-3">
+                <div>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">クイックテンプレート</p>
+                  <p className="text-xs font-bold text-gray-500 mt-1">
+                    ワンクリックで「タイトル例・目標文字数・検索意図・比較設定」を自動入力します。
+                  </p>
+                </div>
+                <span className="text-[10px] font-black text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
+                  まずはここから
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {TEMPLATES.filter((t: any) => {
+                  if (articleType === 'comparison') return String((t as any).mode || '') === 'comparison_research'
+                  return !String((t as any).mode || '')
+                }).map((t) => (
+                  <motion.button
+                    key={t.id}
+                    onClick={() => applyTemplate(t)}
+                    whileHover={reduceMotion ? undefined : { y: -2 }}
+                    whileTap={reduceMotion ? undefined : { scale: 0.99 }}
+                    className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-gray-100 hover:border-blue-500 hover:shadow-lg transition-all text-left group"
+                  >
+                    <span className="text-2xl mb-2 block">{t.icon}</span>
+                    <p className="text-sm font-black text-gray-900 leading-tight group-hover:text-blue-600">{t.name}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 font-bold">{t.targetChars.toLocaleString()} CHARS</p>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
             <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-xl shadow-blue-500/5">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
@@ -1136,28 +1169,6 @@ export default function SeoNewArticlePage() {
               </AnimatePresence>
             </div>
 
-            {/* Quick Templates (filtered by type) */}
-            <div>
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4">Quick Templates</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {TEMPLATES.filter((t: any) => {
-                  if (articleType === 'comparison') return String((t as any).mode || '') === 'comparison_research'
-                  return !String((t as any).mode || '')
-                }).map((t) => (
-                  <motion.button
-                    key={t.id}
-                    onClick={() => applyTemplate(t)}
-                    whileHover={reduceMotion ? undefined : { y: -2 }}
-                    whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-                    className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-gray-100 hover:border-blue-500 hover:shadow-lg transition-all text-left group"
-                  >
-                    <span className="text-2xl mb-2 block">{t.icon}</span>
-                    <p className="text-sm font-black text-gray-900 leading-tight group-hover:text-blue-600">{t.name}</p>
-                    <p className="text-[10px] text-gray-400 mt-1 font-bold">{t.targetChars.toLocaleString()} CHARS</p>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
           </div>
 
           {/* Comparison Mode (Research) */}
