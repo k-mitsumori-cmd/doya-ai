@@ -5,6 +5,7 @@ import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 export const runtime = 'nodejs'
+export const maxDuration = 120
 
 /**
  * 複数の図解を一括生成するAPI

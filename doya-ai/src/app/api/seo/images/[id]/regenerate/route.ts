@@ -8,6 +8,7 @@ import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gem
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
+export const maxDuration = 60 // 60秒のタイムアウト
 
 type PlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
 function normalizePlan(raw: any): PlanCode {

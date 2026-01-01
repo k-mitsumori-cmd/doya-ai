@@ -6,6 +6,7 @@ import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 export const runtime = 'nodejs'
+export const maxDuration = 60
 
 const BodySchema = z.object({
   title: z.string().min(1).max(120),
