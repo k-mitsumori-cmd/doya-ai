@@ -290,6 +290,49 @@ async function buildResearchContext(articleId: string): Promise<string> {
   return `\n\n=== RESEARCH (summarized) ===\n${blocks.join('\n\n---\n\n')}\n`
 }
 
+function normalizeUrlMaybe(raw: any): string {
+  const s = String(raw || '').trim()
+  if (!s) return ''
+  if (!/^https?:\/\//i.test(s)) return ''
+  return s
+}
+
+async function maybeAutoResearchComparison(article: any) {
+  const p = prisma as any
+  const isComparison = String(article?.mode || '').toLowerCase() === 'comparison_research'
+  if (!isComparison) return
+
+  const candidates = Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
+  const urlsFromCandidates = candidates
+    .map((c) => normalizeUrlMaybe(c?.websiteUrl))
+    .filter(Boolean)
+    .slice(0, 8) // タイムアウト/コスト対策
+
+  if (!urlsFromCandidates.length) return
+
+  // 既に参照が十分あるなら、毎回は走らせない
+  const existingCount = await p.seoReference.count({
+    where: { articleId: article.id, url: { in: urlsFromCandidates } },
+  })
+  if (existingCount >= Math.min(2, urlsFromCandidates.length)) return
+
+  // referenceUrls にも反映（ログ/ナレッジ用途）
+  const existing = Array.isArray(article.referenceUrls) ? (article.referenceUrls as any[]) : []
+  const merged = Array.from(new Set([...existing, ...urlsFromCandidates])).slice(0, 25)
+  try {
+    await p.seoArticle.update({ where: { id: article.id }, data: { referenceUrls: merged as any } })
+  } catch {
+    // ignore
+  }
+
+  // 公式URL中心に抽出→要約を保存（最大2件）
+  try {
+    await researchAndStore(article.id, { maxUrls: Math.min(2, urlsFromCandidates.length) })
+  } catch (e) {
+    console.warn('[comparison research] researchAndStore failed', e)
+  }
+}
+
 function llmoOptionsText(article: any): string {
   const o = (article.llmoOptions as any) || {}
   const on = (k: string, label: string) => (o?.[k] === false ? `OFF: ${label}` : `ON: ${label}`)
@@ -385,13 +428,20 @@ async function generateOutline(article: any, researchContext: string): Promise<S
 
   const comparisonBlock = isComparison
     ? [
-        'Comparison article mode: ENABLED (research-based).',
-        'You must produce a structure comparable to top-tier Japanese comparison pages:',
-        '- clear evaluation axes',
-        '- strong table-first scanability',
-        '- per-company deep sections (facts + who it fits + cautions)',
-        '- explicit scoring/selection criteria',
-        '- sources/citations plan (URL list, not copy-paste).',
+        'Comparison article mode: ENABLED (research-based / factual).',
+        'CRITICAL FACTUALITY RULES (絶対):',
+        '- 架空のサービス名・架空の機能・架空の料金は絶対に書かない',
+        '- 必ず「実在するサービス」のみを扱う（候補リスト外の追加は禁止）',
+        '- 公式サイト・一次情報を前提に調査した内容のみを記載する',
+        '- 不明な情報は推測しない（「公式に明記なし」「要問い合わせ」「非公開」と明示）',
+        '',
+        'Required structure (must appear in outline):',
+        '- 導入（比較が必要な理由/失敗例）',
+        '- 比較対象サービス一覧（表：サービス名/特徴/料金/向いている人/公式URL）',
+        '- 各サービス詳細（できること/できないこと/料金/メリデメ/おすすめシーン）',
+        '- サービス比較表（横並び：機能/価格帯/特徴/サポートなど）',
+        '- タイプ別おすすめ（初心者/コスト/高機能/中小/大企業）',
+        '- まとめ（選び方/チェックポイント/結論）',
         '',
         `Template type: ${String(comparisonConfig?.template || '')}`,
         `Target companies: ${String(comparisonConfig?.count || '')}`,
@@ -534,6 +584,14 @@ async function ensureOutlineAndSections(jobId: string) {
 
   const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
 
+  // 比較記事は「実在サービスのみ」を担保するため、公式URLがある場合は軽量に自動リサーチ（最大2件）
+  // ※ サーバレスのタイムアウトに配慮しつつ、最低限の一次情報を渡して架空要素を抑止する
+  try {
+    await maybeAutoResearchComparison(article)
+  } catch {
+    // ignore
+  }
+
   await p.seoJob.update({
     where: { id: jobId },
     data: { status: 'running', step: isComparison ? 'cmp_outline' : 'outline', startedAt: job.startedAt ?? new Date() },
@@ -645,6 +703,13 @@ async function generateSection(jobId: string) {
   const next = sections.find((s: any) => s.status !== 'reviewed')
   if (!next) return
 
+  // 比較記事は「実在サービスのみ」を担保するため、公式URLがある場合は軽量に自動リサーチ（最大2件）
+  try {
+    await maybeAutoResearchComparison(article)
+  } catch {
+    // ignore
+  }
+
   const prevSections = sections
     .filter((s: any) => s.index < next.index && s.content)
     .slice(-2)
@@ -657,6 +722,48 @@ async function generateSection(jobId: string) {
   const userKnowledge = await buildUserKnowledgeContext(article.userId)
   const requestText = article.requestText ? clampText(String(article.requestText || ''), 1800) : ''
   const targetChars = Math.max(3000, Number(article.targetChars || 10000))
+  const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
+  const comparisonCandidates = Array.isArray(article.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
+  const comparisonConfig = (article.comparisonConfig as any) || null
+
+  const comparisonStrictPrompt = isComparison
+    ? [
+        'あなたはSEOに強い「リサーチ特化型のプロ編集者・比較記事専門ライター」です。',
+        'これから【実在するサービス同士を比較する記事】を作成してください。',
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '■ 絶対ルール（最重要）',
+        '━━━━━━━━━━━━━━━━━━',
+        '・架空のサービス名・架空の機能・架空の料金は【絶対に使用しない】',
+        '・必ず「実在するサービス」のみを扱うこと（候補リスト外の追加は禁止）',
+        '・公式サイト・一次情報を前提に調査した内容のみを記載すること',
+        '・不明な情報は推測せず、「公式に明記なし」「要問い合わせ」「非公開」と明示すること',
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '■ 比較対象サービス（このリストのみ使用）',
+        '━━━━━━━━━━━━━━━━━━',
+        comparisonCandidates.length
+          ? comparisonCandidates
+              .slice(0, 60)
+              .map((c, i) => {
+                const name = String(c?.name || '').trim()
+                const url = normalizeUrlMaybe(c?.websiteUrl)
+                return `${i + 1}. ${name}${url ? `（公式URL: ${url}）` : '（公式URL: 未設定）'}`
+              })
+              .join('\n')
+          : '（候補が未設定のため、架空のサービスを出さず「候補の集め方」と「比較軸」中心で構成すること）',
+        '',
+        '━━━━━━━━━━━━━━━━━━',
+        '■ 比較対象ジャンル（参考）',
+        '━━━━━━━━━━━━━━━━━━',
+        `- ジャンル: ${String(comparisonConfig?.template || '') || '（未指定）'}`,
+        Array.isArray(comparisonConfig?.tags) && comparisonConfig.tags.length
+          ? `- 優先タグ: ${comparisonConfig.tags.join(' / ')}`
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : ''
 
   const prompt = [
     'You are a Japanese SEO + LLMO expert writer.',
@@ -667,6 +774,7 @@ async function generateSection(jobId: string) {
     '',
     `Article title: ${article.title}`,
     `Tone: ${article.tone}`,
+    comparisonStrictPrompt ? `\n=== 比較記事（実在サービスのみ）ブリーフ ===\n${clampText(comparisonStrictPrompt, 6000)}\n` : '',
     forbidden.length ? `Forbidden: ${(forbidden as string[]).join(' / ')}` : '',
     requestText
       ? `\n【一次情報（最優先で反映）】\n以下はユーザーが提供した固有情報です。必ず本文に具体的に反映してください。\n- ここに無い事実（数字/体験/実績/断定）は作らない\n- 具体例・結論・比較の根拠は可能な限りこの一次情報に基づける\n- 文章の“芯”として扱い、薄い一般論で上書きしない\n\n${requestText}\n`
@@ -685,6 +793,13 @@ async function generateSection(jobId: string) {
     '- Start with "## " heading (H2) that matches the outline.',
     '- Use H3/H4 as needed.',
     '- If you include a checklist, use numbered lists or normal bullet lists (NO checkboxes).',
+    isComparison
+      ? [
+          '- Comparison mode: NEVER invent services/features/prices.',
+          '- When writing about a service: include official URL (if known) and clearly label unknown fields as "公式に明記なし/要問い合わせ/非公開".',
+          '- Prefer facts from RESEARCH blocks (official sources). If not present, do not assert.',
+        ].join('\n')
+      : '',
     targetChars <= 6500
       ? '- For short articles: proactively use markdown tables when it improves scanability (comparison, criteria, checklist, summary). Include at least ONE markdown table in this section if it naturally fits the heading.'
       : '',
