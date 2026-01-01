@@ -315,7 +315,7 @@ function SeoSidebarImpl({
                   <div className="p-2 space-y-1">
                     <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider">ツール一覧</p>
                     <a
-                      href="/"
+                      href="/banner/dashboard"
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-blue-50 transition-colors group"
                     >
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm">
