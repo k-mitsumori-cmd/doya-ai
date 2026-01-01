@@ -276,66 +276,164 @@ export default function SeoPlanPage() {
                   </div>
                 </div>
 
-                {/* 解約/再開 */}
-                <div className="rounded-3xl border border-gray-100 bg-white p-6 sm:p-8">
-                  <p className="text-lg font-black text-gray-900 mb-2">解約・再開</p>
-                  <p className="text-sm text-gray-500 font-bold mb-6">
-                    解約しても、停止日までは機能が使えます。再開もできます。
-                  </p>
+                {/* 解約/再開 - 有料プラン契約中の場合のみ表示 */}
+                {(tier === 'PRO' || tier === 'ENTERPRISE') && sub?.hasSubscription && (
+                  <div className="rounded-3xl border border-gray-100 bg-white p-6 sm:p-8">
+                    <p className="text-lg font-black text-gray-900 mb-2">解約・再開</p>
+                    <p className="text-sm text-gray-500 font-bold mb-6">
+                      解約しても、停止日までは機能が使えます。再開もできます。
+                    </p>
 
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <button
-                      onClick={() => setCancelConfirm(true)}
-                      disabled={busy || tier === 'FREE'}
-                      className="h-12 rounded-2xl bg-red-50 border border-red-100 text-red-700 font-black text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      解約する（次回更新で停止）
-                    </button>
-                    <button
-                      onClick={() => setResumeConfirm(true)}
-                      disabled={busy || !sub?.cancelAtPeriodEnd}
-                      className="h-12 rounded-2xl bg-emerald-600 text-white font-black text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      解約予約を取り消す（再開）
-                    </button>
-                  </div>
+                    {/* 解約予約していない場合：解約ボタンを表示 */}
+                    {!sub?.cancelAtPeriodEnd && (
+                      <button
+                        onClick={() => setCancelConfirm(true)}
+                        disabled={busy}
+                        className="w-full h-12 rounded-2xl bg-red-50 border border-red-100 text-red-700 font-black text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-100 transition-colors"
+                      >
+                        解約する（次回更新で停止）
+                      </button>
+                    )}
 
-                  {cancelAtDays != null && (
-                    <div className="mt-4 rounded-2xl bg-amber-50 border border-amber-100 p-4 text-amber-900">
-                      <div className="flex items-start gap-3">
-                        <Timer className="w-5 h-5 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-black">停止まで残り {cancelAtDays} 日</p>
-                          <p className="text-[11px] font-bold text-amber-800/80 mt-1">
-                            停止日まではPRO/Enterpriseの機能をご利用いただけます。
-                          </p>
+                    {/* 解約予約済みの場合：再開ボタンを表示 */}
+                    {sub?.cancelAtPeriodEnd && (
+                      <>
+                        <div className="mb-4 rounded-2xl bg-amber-50 border border-amber-100 p-4 text-amber-900">
+                          <div className="flex items-start gap-3">
+                            <Timer className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-black">解約予約済み - 停止まで残り {cancelAtDays || 0} 日</p>
+                              <p className="text-[11px] font-bold text-amber-800/80 mt-1">
+                                停止日まではPRO/Enterpriseの機能をご利用いただけます。キャンセルして継続することも可能です。
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                        <button
+                          onClick={() => setResumeConfirm(true)}
+                          disabled={busy}
+                          className="w-full h-12 rounded-2xl bg-emerald-600 text-white font-black text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-emerald-700 transition-colors"
+                        >
+                          解約をキャンセルして継続する
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-6">
-                <div className="rounded-3xl border border-gray-100 bg-white p-6">
-                  <p className="text-sm font-black text-gray-900 flex items-center gap-2">
-                    <Crown className="w-4 h-4 text-blue-600" />
-                    PROで解放される機能
-                  </p>
-                  <div className="mt-4 space-y-2 text-sm font-bold text-gray-700">
-                    {[
-                      '図解/バナー生成（記事に合わせて自動）',
-                      'SEO改善提案のAI自動修正',
-                      '画像の再生成・プロンプト調整',
-                      '運用に耐える進捗UI（分割生成）',
-                    ].map((t) => (
-                      <div key={t} className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span>{t}</span>
+                {/* 現在のプランに応じてアップグレードのメリットを表示 */}
+                {(tier === 'FREE' || tier === 'GUEST') && (
+                  <div className="rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                        <Zap className="w-4 h-4" />
                       </div>
-                    ))}
+                      <p className="text-sm font-black text-blue-900">PROにアップグレードすると</p>
+                    </div>
+                    <p className="text-xs font-bold text-blue-800/80 mb-4">以下の機能が使えるようになります！</p>
+                    <div className="space-y-2.5 text-sm font-bold text-gray-700">
+                      {[
+                        { icon: Image, text: '図解/バナー生成（記事に合わせて自動）' },
+                        { icon: Wand2, text: 'SEO改善提案のAI自動修正' },
+                        { icon: RefreshCcw, text: '画像の再生成・プロンプト調整' },
+                        { icon: FileText, text: `1日${SEO_PRICING.proLimit}記事まで生成可能` },
+                        { icon: LayoutDashboard, text: '運用に耐える進捗UI（分割生成）' },
+                      ].map((item) => (
+                        <div key={item.text} className="flex items-start gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                          <span>{item.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-5">
+                      <CheckoutButton planId="seo-pro" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-3 rounded-2xl text-sm" variant="primary">
+                        PROを始める →
+                      </CheckoutButton>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {tier === 'PRO' && (
+                  <div className="rounded-3xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-white p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center">
+                        <Crown className="w-4 h-4" />
+                      </div>
+                      <p className="text-sm font-black text-purple-900">Enterpriseにアップグレードすると</p>
+                    </div>
+                    <p className="text-xs font-bold text-purple-800/80 mb-4">さらに大規模な運用が可能に！</p>
+                    <div className="space-y-2.5 text-sm font-bold text-gray-700">
+                      {[
+                        { text: `1日${SEO_PRICING.enterpriseLimit || 30}記事まで生成可能` },
+                        { text: '優先サポート対応' },
+                        { text: 'チーム利用・複数アカウント対応' },
+                        { text: 'API連携・カスタム開発相談' },
+                        { text: '専任担当によるオンボーディング' },
+                      ].map((item) => (
+                        <div key={item.text} className="flex items-start gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                          <span>{item.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-5">
+                      <CheckoutButton planId="seo-enterprise" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-3 rounded-2xl text-sm bg-purple-600 hover:bg-purple-700">
+                        Enterpriseを始める →
+                      </CheckoutButton>
+                    </div>
+                  </div>
+                )}
+
+                {tier === 'ENTERPRISE' && (
+                  <div className="rounded-3xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+                        <Crown className="w-4 h-4" />
+                      </div>
+                      <p className="text-sm font-black text-emerald-900">現在の特典（Enterprise）</p>
+                    </div>
+                    <p className="text-xs font-bold text-emerald-800/80 mb-4">最上位プランをご利用中です！</p>
+                    <div className="space-y-2.5 text-sm font-bold text-gray-700">
+                      {[
+                        { text: '図解/バナー生成（記事に合わせて自動）' },
+                        { text: 'SEO改善提案のAI自動修正' },
+                        { text: `1日${SEO_PRICING.enterpriseLimit || 30}記事まで生成可能` },
+                        { text: '優先サポート対応' },
+                        { text: 'API連携・カスタム開発相談' },
+                      ].map((item) => (
+                        <div key={item.text} className="flex items-start gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                          <span>{item.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 共通：PROで解放される機能（現在PROまたはEnterprise以外の場合は追加で表示） */}
+                {(tier === 'FREE' || tier === 'GUEST') && (
+                  <div className="rounded-3xl border border-gray-100 bg-white p-6">
+                    <p className="text-sm font-black text-gray-900 flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-blue-600" />
+                      PROで解放される機能
+                    </p>
+                    <div className="mt-4 space-y-2 text-sm font-bold text-gray-700">
+                      {[
+                        '図解/バナー生成（記事に合わせて自動）',
+                        'SEO改善提案のAI自動修正',
+                        '画像の再生成・プロンプト調整',
+                        '運用に耐える進捗UI（分割生成）',
+                      ].map((t) => (
+                        <div key={t} className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <span>{t}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </>
