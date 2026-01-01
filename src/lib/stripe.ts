@@ -22,17 +22,18 @@ export const getStripePublishableKey = () => {
 // 本番環境では環境変数で管理することを推奨
 
 export const STRIPE_PRICE_IDS = {
-  // ドヤSEO
+  // ドヤSEO（ドヤライティングAI）
+  // ドヤバナーAIと同じStripe価格を共有（環境変数が設定されていない場合はバナーの価格を使用）
   seo: {
-    // PRO: 月額¥9,980（1日10回）※要件に合わせて更新
+    // PRO: 月額¥9,980
     pro: {
-      monthly: process.env.STRIPE_PRICE_SEO_PRO_MONTHLY || 'price_seo_pro_monthly',
-      yearly: process.env.STRIPE_PRICE_SEO_PRO_YEARLY || 'price_seo_pro_yearly',
+      monthly: process.env.STRIPE_PRICE_SEO_PRO_MONTHLY || process.env.STRIPE_PRICE_BANNER_PRO_MONTHLY || 'price_seo_pro_monthly',
+      yearly: process.env.STRIPE_PRICE_SEO_PRO_YEARLY || process.env.STRIPE_PRICE_BANNER_PRO_YEARLY || 'price_seo_pro_yearly',
     },
-    // ENTERPRISE: 月額¥49,980（1日30回）
+    // ENTERPRISE: 月額¥49,980
     enterprise: {
-      monthly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_MONTHLY || 'price_seo_enterprise_monthly',
-      yearly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_YEARLY || 'price_seo_enterprise_yearly',
+      monthly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_MONTHLY || process.env.STRIPE_PRICE_BANNER_ENTERPRISE_MONTHLY || 'price_seo_enterprise_monthly',
+      yearly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_YEARLY || process.env.STRIPE_PRICE_BANNER_ENTERPRISE_YEARLY || 'price_seo_enterprise_yearly',
     },
   },
   // ドヤバナーAI
