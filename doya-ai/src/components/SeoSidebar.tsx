@@ -280,7 +280,7 @@ function SeoSidebarImpl({
               className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-white/20 bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 transition-all text-white ${
                 !isMobile && isCollapsed ? 'justify-center' : 'justify-between'
               }`}
-              title="他のAIツールも使う"
+              title="他のツールを使う"
             >
               <div className="flex items-center gap-2">
                 <LayoutGrid className="w-4 h-4 text-white flex-shrink-0" />
@@ -292,7 +292,7 @@ function SeoSidebarImpl({
                       exit={{ opacity: 0, x: -6 }}
                       className="text-xs font-bold"
                     >
-                      他のAIツールも使う
+                      他のツールを使う
                     </motion.span>
                   )}
                 </AnimatePresence>
