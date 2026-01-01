@@ -135,7 +135,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
 
-    // ユーザー基本情報の更新
+    // ユーザー基本情報の更新（プランはユーザーテーブルと両サービスに同時適用）
     if (plan !== undefined || role !== undefined) {
       await prisma.user.update({
         where: { id: userId },
@@ -144,9 +144,37 @@ export async function PATCH(req: NextRequest) {
           ...(role !== undefined && { role }),
         },
       })
+      
+      // プランが変更された場合、両サービスのサブスクリプションも同じプランに更新
+      if (plan !== undefined) {
+        const serviceIds = ['banner', 'writing']
+        for (const svcId of serviceIds) {
+          const existing = await prisma.userServiceSubscription.findUnique({
+            where: { userId_serviceId: { userId, serviceId: svcId } },
+          })
+          
+          if (existing) {
+            await prisma.userServiceSubscription.update({
+              where: { id: existing.id },
+              data: { plan },
+            })
+          } else {
+            // サブスクリプションが存在しない場合は作成
+            await prisma.userServiceSubscription.create({
+              data: {
+                userId,
+                serviceId: svcId,
+                plan,
+                dailyUsage: 0,
+                monthlyUsage: 0,
+              },
+            })
+          }
+        }
+      }
     }
 
-    // サービス別プラン・使用回数の更新
+    // サービス別プラン・使用回数の更新（個別サービスの設定用）
     if (serviceId) {
       const existing = await prisma.userServiceSubscription.findUnique({
         where: { userId_serviceId: { userId, serviceId } },
