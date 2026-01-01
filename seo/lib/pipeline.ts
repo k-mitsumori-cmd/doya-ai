@@ -915,59 +915,34 @@ async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }
     genreHint: genreGuess,
   })
 
-  // Nano Banana Pro（nanobanner）で「広告バナー」を生成（本文からコピー生成＋CTAあり）
+  // Nano Banana Pro（nanobanner）で「広告バナー」を生成
+  // customImagePromptを使わず、nanobannerの標準プロンプト生成ロジックを使用
+  // これにより「TEXT MUST BE IN THE IMAGE」等の強力なテキスト描画指示が適用される
   const category = mapGenreToNanobannerCategory(plan.genre)
-  const keyword = title
-
-  const adBannerPrompt = `あなたは成果の出る広告バナーを専門に制作する一流のマーケティングデザイナーです。
-以下の「記事本文テキスト」を読み取り、内容を要約・再構成し、
-クリック率・視認性・訴求力を最大化する広告バナー画像を生成してください。
-
-【前提条件】
-・バナー用途：Web広告 / 記事内バナー / SNS広告
-・ターゲット：記事内容から最も適切なペルソナを自動推定する
-・目的：一瞬で価値が伝わり「詳しく見たい」と思わせること
-
-【必須ルール】
-・画像内に使用するテキストは、必ず記事本文の内容を基に生成する
-・誇張しすぎず、ただし広告として弱くならない表現にする
-・文字は必ず読みやすく、背景と十分なコントラストを確保する
-・日本の広告バナーでよく使われる構成・トーンを踏襲する
-
-【バナーデザイン構成】
-1. メインキャッチ（最も伝えたい価値を短く・強く）
-2. サブコピー（安心感・具体性・実績・限定性など）
-3. 補足要素（実績数値／価格／割引／特徴／権威性など）
-4. CTA文言（例：「詳しくはこちら」「今すぐチェック」など）
-
-【ビジュアル指針】
-・人物が適切な場合：日本人モデル、自然な表情、広告感のある構図
-・商品が主役の場合：清潔感・高級感・信頼感を重視
-・教育／ビジネス系：青・紫・黒系を基調に信頼感を演出
-・美容／EC系：白・ベージュ・淡色を基調に上品さを演出
-・セール／キャンペーン系：赤・オレンジ・黄色で緊急性を演出
-
-【禁止事項】
-・意味のない装飾
-・読みづらい極小文字
-・記事内容と乖離したコピー
-・英語の多用（日本向け広告のため）
-
-【入力】
-▼ 記事本文テキスト：
-${clampText(String(article.finalMarkdown || ''), 7000)}
-
-【出力】
-・1枚の完成された広告バナー画像
-・視認性が高く、広告として即利用可能なクオリティ`
+  
+  // プランから取得したコピーをそのまま使用（短く・強く）
+  const headline = plan.mainCopy || title
+  const subhead = plan.subCopy || ''
+  const ctaText = '詳しくはこちら'
+  
+  // 記事内容を反映したビジュアル説明
+  const imageDescription = [
+    `業界: ${plan.genre}`,
+    `コンセプト: ${industryHint || '記事内容を象徴するビジュアル'}`,
+    `要素: ${visualElements}`,
+    `ムード: ${moodKeyword}`,
+  ].join(' / ')
 
   const result = await generateBanners(
     category,
-    keyword,
+    headline, // keyword引数がheadlineとして使用される
     '1200x628',
     {
       purpose: 'sns_ad',
-      customImagePrompt: adBannerPrompt,
+      subheadText: subhead,
+      ctaText: ctaText,
+      imageDescription: imageDescription,
+      // customImagePromptを使わない → createBannerPromptが使用される
     },
     1
   )
@@ -979,14 +954,25 @@ ${clampText(String(article.finalMarkdown || ''), 7000)}
   const saved = await saveBase64ToFile({ base64, filename, subdir: 'images' })
 
   // 保存用のプロンプトログ（表示用）
-  const promptLog = adBannerPrompt
+  const promptLog = [
+    `【バナー生成設定】`,
+    `カテゴリ: ${category}`,
+    `メインコピー: ${headline}`,
+    subhead ? `サブコピー: ${subhead}` : '',
+    `CTA: ${ctaText}`,
+    `ビジュアル: ${imageDescription}`,
+    '',
+    `【生成元情報】`,
+    `記事タイトル: ${title}`,
+    `ジャンル: ${plan.genre}`,
+  ].filter(Boolean).join('\n')
 
   const rec = await (prisma as any).seoImage.create({
     data: {
       articleId: article.id,
       kind: 'BANNER',
       title: '記事アイキャッチ',
-      description: '',
+      description: formatBannerPlanDescription(plan),
       prompt: promptLog,
       filePath: saved.relativePath,
       mimeType: 'image/png',
