@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { z } from 'zod'
+import { serpapiSearchGoogle } from '@seo/lib/serpapi'
 
 export const runtime = 'nodejs'
 
@@ -35,6 +36,20 @@ function uniqByName(items: Candidate[]): Candidate[] {
   return out
 }
 
+function pickNameFromTitle(title: string): string {
+  const t = String(title || '').trim()
+  if (!t) return ''
+  // 区切り記号で左側を優先（ブランド/サービス名であることが多い）
+  const parts = t.split(/[\|\｜\-–—]/).map((s) => s.trim()).filter(Boolean)
+  const head = parts[0] || t
+  // よくある語尾を軽く削る
+  return head
+    .replace(/(料金|価格|評判|口コミ|比較|おすすめ|とは|まとめ|ランキング).*/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 60)
+}
+
 export async function POST(req: NextRequest) {
   try {
     await ensureSeoSchema()
@@ -57,9 +72,36 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 検索API実装は後で差し替え（ここではインターフェースだけ固定）
-    // TODO: SerpAPI実装（Google / Bing）+ ドメイン正規化 + 公式URL推定 + 重複排除
-    const candidates: Candidate[] = uniqByName([]).slice(0, body.count)
+    // SerpAPIで検索 → 上位結果から候補を抽出（完全自動のため精度は100%ではない）
+    // ※ 公式URL推定は「タイトル→リンク」の簡易版。最終的にはUIで確認・編集してもらう想定。
+    const q = `${body.query} 比較`
+    const found = await serpapiSearchGoogle({
+      query: q,
+      gl: body.region === 'JP' ? 'jp' : 'us',
+      hl: body.region === 'JP' ? 'ja' : 'en',
+      num: Math.min(10, body.count),
+    })
+
+    const raw: Candidate[] = found.organic.map((r) => {
+      const name = pickNameFromTitle(r.title) || body.query
+      return {
+        name,
+        websiteUrl: r.url,
+        confidence: 'medium',
+        notes: r.snippet ? r.snippet.slice(0, 140) : undefined,
+        source: 'serpapi',
+      }
+    })
+
+    // exclude は名前に含まれていたら除外
+    const excluded = (body.exclude || []).map((x) => String(x || '').trim()).filter(Boolean)
+    const filtered = raw.filter((c) => {
+      if (!excluded.length) return true
+      const n = String(c.name || '')
+      return !excluded.some((ex) => ex && n.includes(ex))
+    })
+
+    const candidates: Candidate[] = uniqByName(filtered).slice(0, body.count)
 
     return NextResponse.json({
       success: true,

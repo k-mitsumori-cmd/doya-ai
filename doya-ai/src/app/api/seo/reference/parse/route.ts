@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { geminiGenerateJson } from '@seo/lib/gemini'
+import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
+export const maxDuration = 60
 
 const BodySchema = z.object({
   // 参考記事（URL/貼り付け/ファイル）のいずれか
@@ -83,10 +84,7 @@ export async function POST(req: NextRequest) {
     const headings = extractHeadingsFromText(extractedText)
 
     // 比較記事テンプレ生成のための「軸抽出」をAIに依頼（UIプレビュー用）
-    const model =
-      process.env.SEO_GEMINI_TEXT_MODEL ||
-      process.env.SEO_GEMINI_CHAT_MODEL ||
-      'gemini-3-pro-preview'
+    const model = GEMINI_TEXT_MODEL_DEFAULT
 
     const prompt = [
       'You are a Japanese SEO editor specializing in comparison articles.',

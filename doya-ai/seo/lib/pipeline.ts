@@ -5,6 +5,7 @@ import { fetchAndExtract } from '@seo/lib/extract'
 import { SeoCreateArticleInput, SeoOutline, SeoOutlineSchema } from '@seo/lib/types'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPlan'
+import { hasSerpApiKey, serpapiSearchGoogle } from '@seo/lib/serpapi'
 
 function nowIso() {
   return new Date().toISOString()
@@ -295,6 +296,61 @@ function normalizeUrlMaybe(raw: any): string {
   if (!s) return ''
   if (!/^https?:\/\//i.test(s)) return ''
   return s
+}
+
+async function maybeDiscoverReferenceUrls(article: any) {
+  const p = prisma as any
+  const existing = Array.isArray(article?.referenceUrls) ? (article.referenceUrls as any[]) : []
+  if (existing.length) return
+  if (!hasSerpApiKey()) return
+
+  const title = String(article?.title || '').trim()
+  const keywords = Array.isArray(article?.keywords) ? (article.keywords as any[]) : []
+  const q = [title, ...keywords.slice(0, 3)].filter(Boolean).join(' ')
+  if (!q) return
+
+  // 記事の一次情報を入れないと、検索クエリが薄くなりやすいので少し補助
+  const query = `${q} 公式 料金 特徴`
+  const found = await serpapiSearchGoogle({ query, gl: 'jp', hl: 'ja', num: 5 })
+  const urls = found.organic.map((x) => x.url).filter(Boolean).slice(0, 5)
+  if (!urls.length) return
+
+  try {
+    await p.seoArticle.update({ where: { id: article.id }, data: { referenceUrls: urls as any } })
+  } catch {
+    // ignore
+  }
+}
+
+async function progressiveResearchFromReferenceUrls(article: any, opts?: { maxUrls?: number }) {
+  const p = prisma as any
+  const urls = Array.isArray(article?.referenceUrls) ? (article.referenceUrls as any[]) : []
+  const list = urls.map((u: any) => normalizeUrlMaybe(u)).filter(Boolean)
+  if (!list.length) return { stored: 0 }
+
+  const maxUrls = typeof opts?.maxUrls === 'number' && opts.maxUrls > 0 ? opts.maxUrls : 1
+
+  // まだ保存されていないURLだけを対象にする
+  const already = await p.seoReference.findMany({
+    where: { articleId: article.id, url: { in: list } },
+    select: { url: true },
+  })
+  const done = new Set((already || []).map((x: any) => String(x.url || '')))
+  const pending = list.filter((u) => !done.has(u)).slice(0, maxUrls)
+  if (!pending.length) return { stored: 0 }
+
+  // 既存の researchAndStore は article.referenceUrls の先頭から順に回るので、
+  // ここでは優先順を入れ替えて一時的に上書き → 解析後に元へ戻す
+  const original = Array.isArray(article.referenceUrls) ? (article.referenceUrls as any[]) : []
+  const reordered = Array.from(new Set([...pending, ...original.map((u: any) => String(u || '').trim())])).slice(0, 20)
+  try {
+    await p.seoArticle.update({ where: { id: article.id }, data: { referenceUrls: reordered as any } })
+  } catch {
+    // ignore
+  }
+
+  const out = await researchAndStore(article.id, { maxUrls: pending.length }).catch(() => ({ stored: 0 }))
+  return out
 }
 
 async function maybeAutoResearchComparison(article: any) {
@@ -592,29 +648,24 @@ async function ensureOutlineAndSections(jobId: string) {
     // ignore
   }
 
+  // 全記事: 参照URLが未入力なら、SerpAPIで最小限の参考URLを自動収集（キーがある場合のみ）
+  try {
+    await maybeDiscoverReferenceUrls(article)
+  } catch {
+    // ignore
+  }
+
   await p.seoJob.update({
     where: { id: jobId },
     data: { status: 'running', step: isComparison ? 'cmp_outline' : 'outline', startedAt: job.startedAt ?? new Date() },
   })
   await p.seoArticle.update({ where: { id: article.id }, data: { status: 'RUNNING' } })
 
-  // NOTE: Vercel等のサーバレス環境では、ここで「複数URLの取得＋要約」を自動実行するとタイムアウトしやすい。
-  // デフォルトはOFFにして、必要ならUIから「参考URLを解析」を明示的に実行してもらう。
-  // どうしても自動化したい場合は、環境変数でONにする（自己責任）。
-  const autoResearch = process.env.SEO_AUTO_RESEARCH_BEFORE_OUTLINE === '1'
-  if (autoResearch) {
-    const urls = (article.referenceUrls as any) as string[] | null
-    if (Array.isArray(urls) && urls.length) {
-      const hasRef = await p.seoReference.findFirst({ where: { articleId: article.id }, select: { id: true } })
-      if (!hasRef) {
-        try {
-          // 1回のadvanceでやり切ろうとすると落ちやすいので、ここでは最大1件だけに制限
-          await researchAndStore(article.id, { maxUrls: 1 })
-        } catch {
-          // リサーチ失敗は致命にしない（入力中心でも生成可能）
-        }
-      }
-    }
+  // 全記事: 参考URLがある場合は、1回のadvanceで最大1件だけ解析してseoReferenceへ保存（タイムアウト対策）
+  try {
+    await progressiveResearchFromReferenceUrls(article, { maxUrls: 1 })
+  } catch {
+    // ignore（ネットワーク不調でも本文生成は継続）
   }
 
   // 目標文字数（最低3000字）
@@ -706,6 +757,13 @@ async function generateSection(jobId: string) {
   // 比較記事は「実在サービスのみ」を担保するため、公式URLがある場合は軽量に自動リサーチ（最大2件）
   try {
     await maybeAutoResearchComparison(article)
+  } catch {
+    // ignore
+  }
+
+  // 全記事: 参考URLがある場合は、1回のadvanceで最大1件だけ解析してseoReferenceへ保存（タイムアウト対策）
+  try {
+    await progressiveResearchFromReferenceUrls(article, { maxUrls: 1 })
   } catch {
     // ignore
   }
@@ -1105,6 +1163,31 @@ async function integrate(jobId: string) {
 
   parts.push('## 本文')
   parts.push(mergedSections)
+
+  // 引用元（参考URL）を記事末尾に明示（実在サービス・一次情報の担保）
+  try {
+    const refs = await p.seoReference.findMany({
+      where: { articleId: article.id },
+      orderBy: { createdAt: 'asc' },
+      select: { url: true, title: true },
+    })
+    const urls = Array.isArray(article.referenceUrls) ? (article.referenceUrls as any[]) : []
+    const fromInput = urls.map((u: any) => normalizeUrlMaybe(u)).filter(Boolean)
+    const mergedUrls = Array.from(
+      new Set([
+        ...refs.map((r: any) => String(r.url || '').trim()).filter(Boolean),
+        ...fromInput,
+      ])
+    ).slice(0, 25)
+    if (mergedUrls.length) {
+      parts.push('')
+      parts.push('## 参考文献（引用元）')
+      parts.push('※ 本文は引用元の内容をそのまま転載せず、要点を言い換えて整理しています。')
+      for (const u of mergedUrls) parts.push(`- ${u}`)
+    }
+  } catch {
+    // ignore
+  }
 
   // 目標文字数に足りない場合は、追補セクションを自動生成して埋める（最大5回）
   // ただし、目標が小さい場合（10,000字未満）は追補を控えめに
