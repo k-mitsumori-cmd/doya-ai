@@ -18,6 +18,11 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Image,
+  Presentation,
+  LayoutGrid,
+  ExternalLink,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL, SEO_PRICING, isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
@@ -56,6 +61,7 @@ function SeoSidebarImpl({
   const isLoggedIn = !!session?.user
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false)
 
   // プラン判定
   const seoPlanLabel = useMemo(() => {
@@ -266,6 +272,98 @@ function SeoSidebarImpl({
 
         {/* プラン案内バナー */}
         <PlanBanner />
+
+        {/* 他のAIツールも使う */}
+        <div className="px-3 pb-2">
+          <div className="relative">
+            <button
+              onClick={() => setIsToolsMenuOpen(!isToolsMenuOpen)}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-white/20 bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 transition-all text-white ${
+                !isMobile && isCollapsed ? 'justify-center' : 'justify-between'
+              }`}
+              title="他のAIツールも使う"
+            >
+              <div className="flex items-center gap-2">
+                <LayoutGrid className="w-4 h-4 text-white flex-shrink-0" />
+                <AnimatePresence>
+                  {showLabel && (
+                    <motion.span
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -6 }}
+                      className="text-xs font-bold"
+                    >
+                      他のAIツールも使う
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </div>
+              {showLabel && (
+                <ChevronDown className={`w-4 h-4 text-white/70 transition-transform ${isToolsMenuOpen ? 'rotate-180' : ''}`} />
+              )}
+            </button>
+
+            {/* ドロップダウンメニュー */}
+            <AnimatePresence>
+              {isToolsMenuOpen && showLabel && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
+                >
+                  <div className="p-2 space-y-1">
+                    <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider">ツール一覧</p>
+                    <a
+                      href="/"
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-blue-50 transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <Image className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-gray-900 group-hover:text-blue-600 transition-colors">ドヤバナーAI</p>
+                        <p className="text-[10px] font-bold text-gray-500">広告バナー生成</p>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-gray-300 group-hover:text-blue-400" />
+                    </a>
+                    <a
+                      href="/seo"
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-blue-50 border border-blue-100"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <FileText className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-blue-600">ドヤライティングAI</p>
+                        <p className="text-[10px] font-bold text-blue-500">SEO記事生成（現在使用中）</p>
+                      </div>
+                    </a>
+                    <a
+                      href="/slide"
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-blue-50 transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <Presentation className="w-4 h-4 text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-gray-900 group-hover:text-blue-600 transition-colors">ドヤスライドAI</p>
+                        <p className="text-[10px] font-bold text-gray-500">プレゼン資料生成</p>
+                      </div>
+                      <ExternalLink className="w-3.5 h-3.5 text-gray-300 group-hover:text-blue-400" />
+                    </a>
+                  </div>
+                  <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
+                    <p className="text-[10px] font-bold text-gray-400 text-center">
+                      すべて同じアカウントで利用可能
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
 
         {/* お問い合わせ */}
         <div className="px-3 pb-2">
