@@ -6,6 +6,7 @@ import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPl
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 
 export const runtime = 'nodejs'
+export const maxDuration = 60
 
 export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
   try {

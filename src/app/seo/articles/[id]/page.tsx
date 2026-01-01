@@ -51,6 +51,7 @@ import {
   MessageCircle,
   Loader2,
   Lock,
+  LayoutGrid,
 } from 'lucide-react'
 
 type SeoImage = {
@@ -110,6 +111,234 @@ type Article = {
 }
 
 type TocItem = { id: string; text: string; level: 2 | 3 }
+
+// 画像カードコンポーネント（サムネ・図解で共通利用）
+function ImageCard({
+  img,
+  isMediaLocked,
+  mediaLockLabel,
+  upgradeHref,
+  mediaBusy,
+  imgLoaded,
+  imgGenerating,
+  imgRetry,
+  bumpRetry,
+  setImgLoaded,
+  setImgGenerating,
+  setImageDetail,
+  downloadImage,
+  copyToClipboard,
+  setRegenImage,
+  setRegenPrompt,
+  setRegenOpen,
+  sanitizeLegacyBannerPrompt,
+  entitlements,
+  router,
+}: {
+  img: SeoImage
+  isMediaLocked: boolean
+  mediaLockLabel: string
+  upgradeHref: string
+  mediaBusy: boolean
+  imgLoaded: Record<string, boolean>
+  imgGenerating: Record<string, boolean>
+  imgRetry: Record<string, number>
+  bumpRetry: (id: string) => void
+  setImgLoaded: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+  setImgGenerating: React.Dispatch<React.SetStateAction<Record<string, boolean>>>
+  setImageDetail: (img: SeoImage | null) => void
+  downloadImage: (img: SeoImage) => void
+  copyToClipboard: (text: string) => void
+  setRegenImage: (img: SeoImage | null) => void
+  setRegenPrompt: (prompt: string) => void
+  setRegenOpen: (open: boolean) => void
+  sanitizeLegacyBannerPrompt: (p: string) => string
+  entitlements: any
+  router: any
+}) {
+  return (
+    <div className="group bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-500">
+      <div className="aspect-video relative overflow-hidden bg-gray-50">
+        <button
+          type="button"
+          onClick={() => {
+            if (isMediaLocked) {
+              router.push(upgradeHref)
+              return
+            }
+            setImageDetail(img)
+          }}
+          className="block w-full h-full"
+          title={isMediaLocked ? '有料プランで解放（クリックで移動）' : 'クリックで拡大表示'}
+        >
+          <img
+            src={`/api/seo/images/${img.id}?v=${imgRetry[img.id] || 0}`}
+            className={`w-full h-full object-cover transition-all duration-700 ${isMediaLocked ? 'grayscale-[0.2]' : 'group-hover:scale-105'}`}
+            alt={img.title || ''}
+            onLoad={(e) => {
+              const el = e.currentTarget
+              if (!el?.naturalWidth || !el?.naturalHeight) {
+                setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
+                setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
+                setTimeout(() => bumpRetry(img.id), 1200)
+                return
+              }
+              setImgLoaded((prev) => ({ ...prev, [img.id]: true }))
+              setImgGenerating((prev) => ({ ...prev, [img.id]: false }))
+            }}
+            onError={() => {
+              setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
+              setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
+              setTimeout(() => bumpRetry(img.id), 1200)
+            }}
+          />
+        </button>
+        <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex gap-2">
+          <Badge tone={img.kind === 'BANNER' ? 'orange' : 'blue'}>{img.kind === 'BANNER' ? 'サムネイル' : '図解'}</Badge>
+        </div>
+        {isMediaLocked && (
+          <div className="absolute inset-0">
+            <div className="absolute inset-0 bg-black/55" />
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              <div className="w-full max-w-sm rounded-2xl bg-black/55 border border-white/20 backdrop-blur-[2px] p-4 text-center">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white text-xs font-black">
+                  <Lock className="w-4 h-4" />
+                  {mediaLockLabel}
+                </div>
+                <p className="mt-3 text-white text-sm font-black">アイキャッチの操作（DL/コピー）は有料プラン限定</p>
+                <p className="mt-1 text-white/80 text-[11px] font-bold">
+                  画像は表示のみです。アップグレードでダウンロードできます。
+                </p>
+                <Link href={upgradeHref} className="inline-flex mt-3">
+                  <span className="h-10 px-5 rounded-xl bg-white text-gray-900 font-black text-xs inline-flex items-center gap-2 hover:bg-gray-100">
+                    料金プランを見る
+                  </span>
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+        {!isMediaLocked && (mediaBusy || !imgLoaded[img.id] || !!imgGenerating[img.id]) && (
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-50" />
+            <motion.div
+              className="absolute inset-0 opacity-70"
+              style={{
+                backgroundImage:
+                  'linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 65%, rgba(255,255,255,0) 100%)',
+                backgroundSize: '200% 100%',
+              }}
+              animate={{ backgroundPositionX: ['200%', '-200%'] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'linear' }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="px-5 py-3 rounded-2xl bg-white/85 border border-gray-200 text-gray-800 text-xs font-black shadow-sm backdrop-blur-[2px]">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  <span>生成中</span>
+                  <span className="inline-flex items-center gap-0.5 text-gray-500 font-black">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '140ms' }} />
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '280ms' }} />
+                  </span>
+                </div>
+                <div className="mt-2 h-1.5 w-[240px] max-w-[70vw] rounded-full bg-gray-200 overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-500"
+                    initial={{ x: '-60%' }}
+                    animate={{ x: ['-60%', '110%'] }}
+                    transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{ width: '55%' }}
+                  />
+                </div>
+                <div className="mt-1 text-[10px] font-bold text-gray-500">
+                  ※ 生成→保存→反映まで少し時間がかかる場合があります
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="p-4 sm:p-5">
+        <p className="font-black text-gray-900 truncate text-sm sm:text-base">{img.title || '無題の画像'}</p>
+        <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">{new Date(img.createdAt).toLocaleDateString()}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => (isMediaLocked ? router.push(upgradeHref) : setImageDetail(img))}
+            className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border font-black text-xs transition-colors ${
+              isMediaLocked
+                ? 'bg-gray-900 text-white border-gray-900 hover:bg-gray-800'
+                : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
+            }`}
+          >
+            {isMediaLocked ? <Lock className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {isMediaLocked ? 'ロック中' : 'ひらく'}
+          </button>
+          <button
+            type="button"
+            onClick={() => (isMediaLocked ? router.push(upgradeHref) : downloadImage(img))}
+            className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border font-black text-xs transition-colors ${
+              isMediaLocked
+                ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
+            }`}
+            disabled={isMediaLocked}
+          >
+            <Download className="w-4 h-4" />
+            ダウンロード
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              isMediaLocked
+                ? router.push(upgradeHref)
+                : copyToClipboard(`![${img.title || 'image'}](/api/seo/images/${img.id})`)
+            }
+            className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border font-black text-xs transition-colors ${
+              isMediaLocked
+                ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
+            }`}
+            disabled={isMediaLocked}
+          >
+            <Copy className="w-4 h-4" />
+            Markdownコピー
+          </button>
+          <Link
+            href={isMediaLocked || !entitlements?.isLoggedIn ? upgradeHref : `/seo/images/${img.id}`}
+            className="inline-flex"
+          >
+            <span
+              className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl font-black text-xs transition-colors ${
+                isMediaLocked ? 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-50' : 'bg-gray-900 text-white hover:bg-gray-800'
+              }`}
+            >
+              <ExternalLink className="w-4 h-4" />
+              {isMediaLocked || !entitlements?.isLoggedIn ? '料金プラン' : '詳細ページ'}
+            </span>
+          </Link>
+          {entitlements?.canUseSeoImages && (
+            <button
+              type="button"
+              onClick={() => {
+                setRegenImage(img)
+                const p = String(img.prompt || '')
+                setRegenPrompt(img.kind === 'BANNER' ? sanitizeLegacyBannerPrompt(p) : p)
+                setRegenOpen(true)
+              }}
+              className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-blue-600 text-white font-black text-xs hover:bg-blue-700"
+              title="プロンプトを編集して再生成"
+            >
+              <Wand2 className="w-4 h-4" />
+              再生成
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function extractTocFromMarkdown(md: string): TocItem[] {
   const text = String(md || '').replace(/\r\n/g, '\n')
@@ -1120,200 +1349,98 @@ function SeoArticleInner() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    {article.images?.map((img) => (
-                      <div key={img.id} className="group bg-white rounded-2xl sm:rounded-3xl border border-gray-100 overflow-hidden hover:shadow-2xl transition-all duration-500">
-                        <div className="aspect-video relative overflow-hidden bg-gray-50">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (isMediaLocked) {
-                                router.push(upgradeHref)
-                                return
-                              }
-                              setImageDetail(img)
-                            }}
-                            className="block w-full h-full"
-                            title={isMediaLocked ? '有料プランで解放（クリックで移動）' : 'クリックで拡大表示'}
-                          >
-                            <img
-                              src={`/api/seo/images/${img.id}?v=${imgRetry[img.id] || 0}`}
-                              className={`w-full h-full object-cover transition-all duration-700 ${isMediaLocked ? 'grayscale-[0.2]' : 'group-hover:scale-105'}`}
-                              alt={img.title || ''}
-                              onLoad={(e) => {
-                                const el = e.currentTarget
-                                // “白いプレースホルダ/壊れた応答”で onLoad 扱いになってしまうケース対策
-                                if (!el?.naturalWidth || !el?.naturalHeight) {
-                                  setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
-                                  setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
-                                  setTimeout(() => bumpRetry(img.id), 1200)
-                                  return
-                                }
-                                setImgLoaded((prev) => ({ ...prev, [img.id]: true }))
-                                setImgGenerating((prev) => ({ ...prev, [img.id]: false }))
-                              }}
-                              onError={() => {
-                                // 生成/保存が遅延することがあるので少し待ってリトライ
-                                setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
-                                setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
-                                setTimeout(() => bumpRetry(img.id), 1200)
-                              }}
+                  {/* サムネイル（BANNER）セクション */}
+                  {(() => {
+                    const bannerImages = article.images?.filter((img) => img.kind === 'BANNER') || []
+                    return bannerImages.length > 0 ? (
+                      <div className="mb-8">
+                        <h4 className="text-sm font-black text-gray-700 mb-4 flex items-center gap-2">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-orange-100 text-orange-600">
+                            <ImageIcon className="w-3.5 h-3.5" />
+                          </span>
+                          記事バナー（サムネイル）
+                          <span className="text-xs font-bold text-gray-400 ml-1">({bannerImages.length}枚)</span>
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                          {bannerImages.map((img) => (
+                            <ImageCard
+                              key={img.id}
+                              img={img}
+                              isMediaLocked={isMediaLocked}
+                              mediaLockLabel={mediaLockLabel}
+                              upgradeHref={upgradeHref}
+                              mediaBusy={mediaBusy}
+                              imgLoaded={imgLoaded}
+                              imgGenerating={imgGenerating}
+                              imgRetry={imgRetry}
+                              bumpRetry={bumpRetry}
+                              setImgLoaded={setImgLoaded}
+                              setImgGenerating={setImgGenerating}
+                              setImageDetail={setImageDetail}
+                              downloadImage={downloadImage}
+                              copyToClipboard={copyToClipboard}
+                              setRegenImage={setRegenImage}
+                              setRegenPrompt={setRegenPrompt}
+                              setRegenOpen={setRegenOpen}
+                              sanitizeLegacyBannerPrompt={sanitizeLegacyBannerPrompt}
+                              entitlements={entitlements}
+                              router={router}
                             />
-                          </button>
-                          <div className="absolute top-3 sm:top-4 left-3 sm:left-4 flex gap-2">
-                            <Badge tone={img.kind === 'BANNER' ? 'orange' : 'blue'}>{img.kind}</Badge>
-                          </div>
-                          {isMediaLocked && (
-                            <div className="absolute inset-0">
-                              <div className="absolute inset-0 bg-black/55" />
-                              <div className="absolute inset-0 flex items-center justify-center p-4">
-                                <div className="w-full max-w-sm rounded-2xl bg-black/55 border border-white/20 backdrop-blur-[2px] p-4 text-center">
-                                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-white text-xs font-black">
-                                    <Lock className="w-4 h-4" />
-                                    {mediaLockLabel}
-                                  </div>
-                                  <p className="mt-3 text-white text-sm font-black">アイキャッチの操作（DL/コピー）は有料プラン限定</p>
-                                  <p className="mt-1 text-white/80 text-[11px] font-bold">
-                                    画像は表示のみです。アップグレードでダウンロードできます。
-                                  </p>
-                                  <Link href={upgradeHref} className="inline-flex mt-3">
-                                    <span className="h-10 px-5 rounded-xl bg-white text-gray-900 font-black text-xs inline-flex items-center gap-2 hover:bg-gray-100">
-                                      料金プランを見る
-                                    </span>
-                                  </Link>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                          {!isMediaLocked && (mediaBusy || !imgLoaded[img.id] || !!imgGenerating[img.id]) && (
-                            <div className="absolute inset-0 pointer-events-none">
-                              {/* ベース（少し暗めにして“空白”感を消す） */}
-                              <div className="absolute inset-0 bg-gradient-to-br from-slate-200 to-slate-50" />
-                              {/* シマー（流れる光） */}
-                              <motion.div
-                                className="absolute inset-0 opacity-70"
-                                style={{
-                                  backgroundImage:
-                                    'linear-gradient(110deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0.75) 50%, rgba(255,255,255,0) 65%, rgba(255,255,255,0) 100%)',
-                                  backgroundSize: '200% 100%',
-                                }}
-                                animate={{ backgroundPositionX: ['200%', '-200%'] }}
-                                transition={{ duration: 1.4, repeat: Infinity, ease: 'linear' }}
-                              />
-                              {/* 生成中ラベル */}
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="px-5 py-3 rounded-2xl bg-white/85 border border-gray-200 text-gray-800 text-xs font-black shadow-sm backdrop-blur-[2px]">
-                                  <div className="flex items-center gap-2">
-                                    <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                                    <span>生成中</span>
-                                    <span className="inline-flex items-center gap-0.5 text-gray-500 font-black">
-                                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '140ms' }} />
-                                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '280ms' }} />
-                                    </span>
-                                  </div>
-                                  <div className="mt-2 h-1.5 w-[240px] max-w-[70vw] rounded-full bg-gray-200 overflow-hidden">
-                                    <motion.div
-                                      className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-500"
-                                      initial={{ x: '-60%' }}
-                                      animate={{ x: ['-60%', '110%'] }}
-                                      transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
-                                      style={{ width: '55%' }}
-                                    />
-                                  </div>
-                                  <div className="mt-1 text-[10px] font-bold text-gray-500">
-                                    ※ 生成→保存→反映まで少し時間がかかる場合があります
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="p-4 sm:p-5">
-                          <p className="font-black text-gray-900 truncate text-sm sm:text-base">{img.title || '無題の画像'}</p>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase mt-1">{new Date(img.createdAt).toLocaleDateString()}</p>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              onClick={() => (isMediaLocked ? router.push(upgradeHref) : setImageDetail(img))}
-                              className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border font-black text-xs transition-colors ${
-                                isMediaLocked
-                                  ? 'bg-gray-900 text-white border-gray-900 hover:bg-gray-800'
-                                  : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
-                              }`}
-                            >
-                              {isMediaLocked ? <Lock className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              {isMediaLocked ? 'ロック中' : 'ひらく'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => (isMediaLocked ? router.push(upgradeHref) : downloadImage(img))}
-                              className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border font-black text-xs transition-colors ${
-                                isMediaLocked
-                                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                                  : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
-                              }`}
-                              disabled={isMediaLocked}
-                            >
-                              <Download className="w-4 h-4" />
-                              ダウンロード
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                isMediaLocked
-                                  ? router.push(upgradeHref)
-                                  : copyToClipboard(`![${img.title || 'image'}](/api/seo/images/${img.id})`)
-                              }
-                              className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl border font-black text-xs transition-colors ${
-                                isMediaLocked
-                                  ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                                  : 'bg-white border-gray-200 text-gray-800 hover:bg-gray-50'
-                              }`}
-                              disabled={isMediaLocked}
-                            >
-                              <Copy className="w-4 h-4" />
-                              Markdownコピー
-                            </button>
-                            <Link
-                              href={isMediaLocked || !entitlements?.isLoggedIn ? upgradeHref : `/seo/images/${img.id}`}
-                              className="inline-flex"
-                            >
-                              <span
-                                className={`inline-flex items-center gap-2 h-9 px-3 rounded-xl font-black text-xs transition-colors ${
-                                  isMediaLocked ? 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-50' : 'bg-gray-900 text-white hover:bg-gray-800'
-                                }`}
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                                {isMediaLocked || !entitlements?.isLoggedIn ? '料金プラン' : '詳細ページ'}
-                              </span>
-                            </Link>
-                            {entitlements?.canUseSeoImages && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setRegenImage(img)
-                                  const p = String(img.prompt || '')
-                                  setRegenPrompt(img.kind === 'BANNER' ? sanitizeLegacyBannerPrompt(p) : p)
-                                  setRegenOpen(true)
-                                }}
-                                className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-blue-600 text-white font-black text-xs hover:bg-blue-700"
-                                title="プロンプトを編集して再生成"
-                              >
-                                <Wand2 className="w-4 h-4" />
-                                再生成
-                              </button>
-                            )}
-                          </div>
+                          ))}
                         </div>
                       </div>
-                    ))}
-                    {!article.images?.length && (
-                      <div className="sm:col-span-2 py-16 sm:py-20 text-center bg-gray-50 rounded-2xl sm:rounded-3xl border-2 border-dashed border-gray-100 font-black text-gray-300 text-sm sm:text-base">
-                        画像は有料プランで生成できます（上のボタンから生成）
+                    ) : null
+                  })()}
+
+                  {/* 図解（DIAGRAM）セクション */}
+                  {(() => {
+                    const diagramImages = article.images?.filter((img) => img.kind === 'DIAGRAM') || []
+                    return diagramImages.length > 0 ? (
+                      <div className="mb-8">
+                        <h4 className="text-sm font-black text-gray-700 mb-4 flex items-center gap-2">
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-blue-100 text-blue-600">
+                            <LayoutGrid className="w-3.5 h-3.5" />
+                          </span>
+                          図解
+                          <span className="text-xs font-bold text-gray-400 ml-1">({diagramImages.length}枚)</span>
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                          {diagramImages.map((img) => (
+                            <ImageCard
+                              key={img.id}
+                              img={img}
+                              isMediaLocked={isMediaLocked}
+                              mediaLockLabel={mediaLockLabel}
+                              upgradeHref={upgradeHref}
+                              mediaBusy={mediaBusy}
+                              imgLoaded={imgLoaded}
+                              imgGenerating={imgGenerating}
+                              imgRetry={imgRetry}
+                              bumpRetry={bumpRetry}
+                              setImgLoaded={setImgLoaded}
+                              setImgGenerating={setImgGenerating}
+                              setImageDetail={setImageDetail}
+                              downloadImage={downloadImage}
+                              copyToClipboard={copyToClipboard}
+                              setRegenImage={setRegenImage}
+                              setRegenPrompt={setRegenPrompt}
+                              setRegenOpen={setRegenOpen}
+                              sanitizeLegacyBannerPrompt={sanitizeLegacyBannerPrompt}
+                              entitlements={entitlements}
+                              router={router}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    ) : null
+                  })()}
+
+                  {/* 画像がない場合のメッセージ */}
+                  {!article.images?.length && (
+                    <div className="py-16 sm:py-20 text-center bg-gray-50 rounded-2xl sm:rounded-3xl border-2 border-dashed border-gray-100 font-black text-gray-300 text-sm sm:text-base">
+                      画像は有料プランで生成できます（上のボタンから生成）
+                    </div>
+                  )}
                 </div>
 
                 {/* 画像詳細モーダル（クリックで拡大＆操作） */}

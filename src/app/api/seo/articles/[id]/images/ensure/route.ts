@@ -8,6 +8,7 @@ import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPlan'
 
 export const runtime = 'nodejs'
+export const maxDuration = 120 // 120秒のタイムアウト（複数画像生成のため）
 
 type PlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
 
