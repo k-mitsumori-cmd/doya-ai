@@ -1,12 +1,12 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
-// SEO用途は Gemini 2.0 系（品質要件）
-// - テキスト: Gemini 2.0 Flash
-// - 画像(図解/サムネ): Imagen 3
+// SEO用途は Gemini 3 系（品質要件）
+// - テキスト: Gemini 3（未対応環境では自動でフォールバック）
+// - 画像(図解/サムネ): Nano Banana Pro（運用上の事故防止）
 export const GEMINI_TEXT_MODEL_DEFAULT =
-  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-2.0-flash'
+  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-3-pro'
 export const GEMINI_IMAGE_MODEL_DEFAULT =
-  process.env.SEO_GEMINI_IMAGE_MODEL || process.env.SEO_GEMINI_NANO_BANANA_MODEL || 'imagen-3.0-generate-002'
+  process.env.SEO_GEMINI_IMAGE_MODEL || process.env.SEO_GEMINI_NANO_BANANA_MODEL || 'nano-banana-pro-preview'
 
 type GeminiPart =
   | { text: string }
@@ -225,9 +225,11 @@ function closeIncompleteJson(input: string): string {
 
 // レート制限時のフォールバックモデル
 const FALLBACK_MODELS = [
+  // Gemini 3 系（環境によっては未提供の可能性があるため、404時は下へ）
+  'gemini-3-pro',
+  // 安定系
   'gemini-2.0-flash',
   'gemini-1.5-flash',
-  'gemini-1.5-pro-latest',
 ]
 
 // レート制限(429)やサーバーエラー(5xx)時にリトライ
@@ -294,9 +296,14 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
 
       if (!res.ok) {
         const t = await res.text()
-        // レート制限の場合は次のモデルを試す
-        if (res.status === 429 && model !== modelsToTry[modelsToTry.length - 1]) {
-          console.log(`[Gemini] Model ${model} rate limited, trying next model...`)
+        const isNotFound = res.status === 404 || /NOT_FOUND|not found/i.test(t)
+        const isRateLimited = res.status === 429 || /rate limit|RESOURCE_EXHAUSTED/i.test(t)
+
+        // 404(モデル未提供)やレート制限の場合は次のモデルを試す
+        if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
+          console.log(
+            `[Gemini] Model ${model} failed (${res.status}${isNotFound ? ', NOT_FOUND' : ''}), trying next model...`
+          )
           continue
         }
         throw new Error(`Gemini API Error: ${res.status} - ${t.substring(0, 500)}`)
@@ -312,16 +319,20 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
       }
       return text
     } catch (e: any) {
-      // レート制限エラーの場合は次のモデルを試す
-      if (e?.message?.includes('429') && model !== modelsToTry[modelsToTry.length - 1]) {
-        console.log(`[Gemini] Model ${model} failed with rate limit, trying next...`)
+      const msg = String(e?.message || '')
+      const isNotFound = /404|NOT_FOUND|not found/i.test(msg)
+      const isRateLimited = /429|rate limit|RESOURCE_EXHAUSTED/i.test(msg)
+
+      // 404(モデル未提供)やレート制限の場合は次のモデルを試す
+      if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
+        console.log(`[Gemini] Model ${model} failed, trying next...`)
         continue
       }
       throw e
     }
   }
   
-  throw new Error('All Gemini models exhausted (rate limits)')
+  throw new Error('All Gemini models exhausted')
 }
 
 export async function geminiGenerateJson<T>(
