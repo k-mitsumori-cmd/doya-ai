@@ -39,6 +39,7 @@ export async function serpapiSearchGoogle(args: {
   gl?: 'jp' | 'us'
   hl?: 'ja' | 'en'
   num?: number
+  start?: number
 }): Promise<{ organic: { title: string; url: string; snippet?: string }[] }> {
   const apiKey = getSerpApiKey()
   if (!apiKey) throw new Error('SerpAPI key not configured')
@@ -46,7 +47,9 @@ export async function serpapiSearchGoogle(args: {
   const q = String(args.query || '').trim()
   if (!q) return { organic: [] }
 
-  const num = Math.max(1, Math.min(10, Number(args.num || 5)))
+  // SerpAPI(Google)は1回の検索で最大10件程度が安定（必要なら start でページングする）
+  const num = Math.max(1, Math.min(10, Number(args.num || 10)))
+  const start = Math.max(0, Number.isFinite(Number(args.start)) ? Math.floor(Number(args.start)) : 0)
   const gl = args.gl || 'jp'
   const hl = args.hl || 'ja'
 
@@ -55,6 +58,7 @@ export async function serpapiSearchGoogle(args: {
   url.searchParams.set('q', q)
   url.searchParams.set('api_key', apiKey)
   url.searchParams.set('num', String(num))
+  if (start) url.searchParams.set('start', String(start))
   url.searchParams.set('hl', hl)
   url.searchParams.set('gl', gl)
   url.searchParams.set('safe', 'active')

@@ -73,25 +73,40 @@ export async function POST(req: NextRequest) {
     }
 
     // SerpAPIで検索 → 上位結果から候補を抽出（完全自動のため精度は100%ではない）
-    // ※ 公式URL推定は「タイトル→リンク」の簡易版。最終的にはUIで確認・編集してもらう想定。
-    const q = `${body.query} 比較`
-    const found = await serpapiSearchGoogle({
-      query: q,
-      gl: body.region === 'JP' ? 'jp' : 'us',
-      hl: body.region === 'JP' ? 'ja' : 'en',
-      num: Math.min(10, body.count),
-    })
+    // NOTE:
+    // - 1回の検索で取れる件数が少ないため、startでページングして必要数（最大60）を集める
+    // - 最終的にはUIで確認・編集してもらう想定
+    const desired = Math.max(5, Math.min(60, Number(body.count || 10)))
+    const gl = body.region === 'JP' ? 'jp' : 'us'
+    const hl = body.region === 'JP' ? 'ja' : 'en'
 
-    const raw: Candidate[] = found.organic.map((r) => {
-      const name = pickNameFromTitle(r.title) || body.query
-      return {
-        name,
-        websiteUrl: r.url,
-        confidence: 'medium',
-        notes: r.snippet ? r.snippet.slice(0, 140) : undefined,
-        source: 'serpapi',
+    const queries = [
+      `${body.query} 比較`,
+      `${body.query} おすすめ`,
+      `${body.query} 料金`,
+    ]
+
+    const raw: Candidate[] = []
+    for (const q of queries) {
+      // 5ページ分（最大50件）まで。uniq後に desired を満たしたら終了
+      for (let start = 0; start < 50 && uniqByName(raw).length < desired; start += 10) {
+        const found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10, start })
+        if (!found.organic.length) break
+        for (const r of found.organic) {
+          const name = pickNameFromTitle(r.title) || body.query
+          raw.push({
+            name,
+            websiteUrl: r.url,
+            confidence: 'medium',
+            notes: r.snippet ? r.snippet.slice(0, 140) : undefined,
+            source: 'serpapi',
+          })
+        }
+        // 追加が無ければ次ページを打ち切り
+        if (uniqByName(raw).length >= desired) break
       }
-    })
+      if (uniqByName(raw).length >= desired) break
+    }
 
     // exclude は名前に含まれていたら除外
     const excluded = (body.exclude || []).map((x) => String(x || '').trim()).filter(Boolean)
@@ -101,7 +116,7 @@ export async function POST(req: NextRequest) {
       return !excluded.some((ex) => ex && n.includes(ex))
     })
 
-    const candidates: Candidate[] = uniqByName(filtered).slice(0, body.count)
+    const candidates: Candidate[] = uniqByName(filtered).slice(0, desired)
 
     return NextResponse.json({
       success: true,
