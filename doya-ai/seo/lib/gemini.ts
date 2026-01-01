@@ -1,12 +1,12 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
-// SEO用途は Gemini 3 系のみ（品質要件）
-// - テキスト: Gemini 3
-// - 画像(図解/サムネ): Nano Banana Pro のみ
+// SEO用途は Gemini 2.0 系（品質要件）
+// - テキスト: Gemini 2.0 Flash
+// - 画像(図解/サムネ): Imagen 3
 export const GEMINI_TEXT_MODEL_DEFAULT =
-  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-3-pro-preview'
+  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-2.0-flash'
 export const GEMINI_IMAGE_MODEL_DEFAULT =
-  process.env.SEO_GEMINI_IMAGE_MODEL || process.env.SEO_GEMINI_NANO_BANANA_MODEL || 'nano-banana-pro-preview'
+  process.env.SEO_GEMINI_IMAGE_MODEL || process.env.SEO_GEMINI_NANO_BANANA_MODEL || 'imagen-3.0-generate-002'
 
 type GeminiPart =
   | { text: string }
@@ -225,9 +225,9 @@ function closeIncompleteJson(input: string): string {
 
 // レート制限時のフォールバックモデル
 const FALLBACK_MODELS = [
-  'gemini-1.5-pro',
+  'gemini-2.0-flash',
   'gemini-1.5-flash',
-  'gemini-pro',
+  'gemini-1.5-pro-latest',
 ]
 
 // レート制限(429)やサーバーエラー(5xx)時にリトライ
