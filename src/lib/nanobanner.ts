@@ -1196,8 +1196,8 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
   const cta = (options.ctaText || '').trim()
   const company = (options.companyName || '').trim()
 
-  // customImagePrompt を使う場合は、テキストを「完全一致で強制」すると意図が壊れる。
-  // （ユーザーのプロンプト内で“記事内容からコピー生成”する前提のため）
+  // customImagePrompt を使う場合でも、テキストを画像内に描画する制約を追加
+  // ドヤライティングAIのバナーは「テキスト入り」が必須
   if (options?.customImagePrompt) {
     return [
       '',
@@ -1205,6 +1205,15 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
       `PATTERN: ${patternLabel} (must be a distinct creative variation, but must follow the same content/image intent)`,
       `Output dimensions: EXACTLY ${width}x${height} px. Do NOT change aspect ratio.`,
       '- Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom bars, NO padding, NO borders.',
+      '',
+      '=== JAPANESE TEXT RENDERING (CRITICAL - MUST FOLLOW) ===',
+      '- The image MUST contain readable Japanese text (headline, subhead, CTA, etc.).',
+      '- Extract the main message from the article content and render it as large, bold, high-contrast text.',
+      '- Use a clean Japanese font style (Noto Sans JP-like or Gothic style).',
+      '- Place text on a solid/gradient panel for maximum readability.',
+      '- Do NOT output an image without Japanese text. If text rendering fails, retry internally.',
+      '- Text must be perfectly legible (no garbling, no pseudo-characters).',
+      '- Do NOT add text that is not derived from the article content.',
       '',
       options.imageDescription
         ? [
@@ -1227,7 +1236,7 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
       options.personImage || options.hasPerson
         ? 'PERSON: include the provided person photo if available; otherwise generate a suitable person. Keep text readable.\n'
         : '',
-      'FINAL: Return ONE PNG image.',
+      'FINAL: Return ONE PNG image with Japanese text rendered correctly.',
     ]
       .filter(Boolean)
       .join('\n')
