@@ -63,6 +63,16 @@ type SeoJob = {
   startedAt?: string | null
 }
 
+function hostnameFromUrl(url: string): string {
+  const s = String(url || '').trim()
+  if (!s) return ''
+  try {
+    return new URL(s).hostname
+  } catch {
+    return ''
+  }
+}
+
 type ActivityLogItem = {
   id: string
   at: number
@@ -794,6 +804,11 @@ export default function SeoJobPage() {
   const isComparison = String(job.step || '').startsWith('cmp_')
   const researchLast = (job as any)?.meta?.researchLast || null
   const researchStats = (job as any)?.meta?.researchStats || null
+  const researchEvents = useMemo(() => {
+    const list = Array.isArray((job as any)?.meta?.researchEvents) ? ((job as any).meta.researchEvents as any[]) : []
+    // 最新を上に
+    return list.slice(-12).reverse()
+  }, [job])
   const progressPct = clamp(Number(job.progress || 0), 0, 100)
   const heartbeatAgo = lastHeartbeatAt ? Math.max(0, Math.floor((Date.now() - lastHeartbeatAt) / 1000)) : null
   const articleIdSafe = String(job.articleId || job.article?.id || '').trim()
@@ -1075,7 +1090,20 @@ export default function SeoJobPage() {
                     {(isComparison || researchLast) && (
                       <div className="mt-5 pt-5 border-t border-gray-100">
                         <div className="flex items-center justify-between gap-3">
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">リサーチ実況</p>
+                          <div className="flex items-center gap-2">
+                            <div className="relative">
+                              <motion.span
+                                className="absolute -inset-1 rounded-full bg-emerald-400/40 blur"
+                                animate={{ opacity: [0.25, 0.6, 0.25] }}
+                                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                              />
+                              <span className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-black text-emerald-700">
+                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                LIVE
+                              </span>
+                            </div>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">リサーチ実況</p>
+                          </div>
                           <button
                             type="button"
                             onClick={() => setShowResearchPanel((v) => !v)}
@@ -1086,71 +1114,184 @@ export default function SeoJobPage() {
                         </div>
 
                         {showResearchPanel && (
-                          <div className="mt-3 space-y-3">
-                            <div className="p-4 rounded-2xl bg-white border border-gray-100">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="text-xs font-black text-gray-900">
-                                    {researchLast?.title ? `いま：${String(researchLast.title)}` : 'いま：情報を調査中…'}
-                                  </p>
-                                  <p className="mt-1 text-[10px] font-bold text-gray-500 break-words">
-                                    {researchLast?.detail || researchLast?.url || '検索/巡回/抽出を進めています'}
-                                  </p>
-                                </div>
-                                <div className="flex-shrink-0 text-right">
-                                  <p className="text-[10px] font-black text-gray-400 tabular-nums">
-                                    {researchLast?.at ? formatHhMmSs(Number(researchLast.at)) : ''}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
+                          <div className="mt-3">
+                            <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white shadow-2xl shadow-indigo-500/10">
+                              {/* glow */}
+                              <div className="pointer-events-none absolute -inset-12 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.35),rgba(16,185,129,0.18),transparent_60%)]" />
+                              {/* shimmer */}
+                              <motion.div
+                                className="pointer-events-none absolute -inset-y-24 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/10 to-transparent rotate-12"
+                                animate={{ x: ['-30%', '260%'] }}
+                                transition={{ duration: 3.8, repeat: Infinity, ease: 'linear' }}
+                              />
 
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="p-3 rounded-2xl bg-white border border-gray-100">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">候補</p>
-                                <p className="mt-1 text-sm font-black text-gray-900 tabular-nums">
-                                  {typeof researchStats?.candidates === 'number' ? researchStats.candidates : (Array.isArray((job.article as any)?.comparisonCandidates) ? (job.article as any).comparisonCandidates.length : 0)}
-                                  {typeof researchStats?.candidatesTarget === 'number' ? <span className="text-gray-400">/{researchStats.candidatesTarget}</span> : null}
-                                </p>
-                              </div>
-                              <div className="p-3 rounded-2xl bg-white border border-gray-100">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">参考URL</p>
-                                <p className="mt-1 text-sm font-black text-gray-900 tabular-nums">
-                                  {typeof researchStats?.referenceUrls === 'number'
-                                    ? researchStats.referenceUrls
-                                    : (Array.isArray((job.article as any)?.referenceUrls) ? (job.article as any).referenceUrls.length : 0)}
-                                </p>
-                              </div>
-                            </div>
+                              <div className="relative p-5">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-black text-white/90">
+                                      {researchLast?.title ? `いま：${String(researchLast.title)}` : 'いま：情報を調査中…'}
+                                    </p>
+                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                      {researchLast?.url && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-black text-white/90">
+                                          <ExternalLink className="w-3 h-3" />
+                                          {hostnameFromUrl(String(researchLast.url)) || 'source'}
+                                        </span>
+                                      )}
+                                      <span className="text-[10px] font-bold text-white/60">
+                                        {researchLast?.detail || researchLast?.url || '検索/巡回/抽出を進めています'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="flex-shrink-0 text-right">
+                                    <p className="text-[10px] font-black text-white/60 tabular-nums">
+                                      {researchLast?.at ? formatHhMmSs(Number(researchLast.at)) : ''}
+                                    </p>
+                                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-400/15 border border-emerald-300/20 text-[10px] font-black text-emerald-200">
+                                      <Zap className="w-3 h-3" />
+                                      高速巡回中
+                                    </div>
+                                  </div>
+                                </div>
 
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const list = Array.isArray((job.article as any)?.comparisonCandidates)
-                                    ? (job.article as any).comparisonCandidates
-                                    : []
-                                  const lines = list
-                                    .map((c: any) => `${String(c?.name || '').trim()}${c?.websiteUrl ? `\t${String(c.websiteUrl).trim()}` : ''}`)
-                                    .filter(Boolean)
-                                    .join('\n')
-                                  copyText(lines)
-                                }}
-                                className="h-10 px-4 rounded-xl bg-blue-600 text-white text-xs font-black hover:bg-blue-700 transition-colors"
-                              >
-                                候補をコピー
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const list = Array.isArray((job.article as any)?.referenceUrls) ? (job.article as any).referenceUrls : []
-                                  const lines = list.map((u: any) => String(u || '').trim()).filter(Boolean).join('\n')
-                                  copyText(lines)
-                                }}
-                                className="h-10 px-4 rounded-xl bg-white border border-gray-200 text-gray-700 text-xs font-black hover:bg-gray-50 transition-colors"
-                              >
-                                参考URLをコピー
-                              </button>
+                                {/* counters + bars */}
+                                {(() => {
+                                  const candidatesCount =
+                                    typeof researchStats?.candidates === 'number'
+                                      ? researchStats.candidates
+                                      : Array.isArray((job.article as any)?.comparisonCandidates)
+                                        ? (job.article as any).comparisonCandidates.length
+                                        : 0
+                                  const candidatesTarget =
+                                    typeof researchStats?.candidatesTarget === 'number'
+                                      ? researchStats.candidatesTarget
+                                      : typeof (job.article as any)?.comparisonConfig?.count === 'number'
+                                        ? Number((job.article as any).comparisonConfig.count)
+                                        : null
+                                  const urlsCount =
+                                    typeof researchStats?.referenceUrls === 'number'
+                                      ? researchStats.referenceUrls
+                                      : Array.isArray((job.article as any)?.referenceUrls)
+                                        ? (job.article as any).referenceUrls.length
+                                        : 0
+                                  const candPct =
+                                    candidatesTarget && candidatesTarget > 0 ? clamp((candidatesCount / candidatesTarget) * 100, 0, 100) : null
+                                  return (
+                                    <div className="mt-4 grid grid-cols-2 gap-3">
+                                      <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+                                        <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">候補</p>
+                                        <p className="mt-1 text-lg font-black text-white tabular-nums">
+                                          {candidatesCount}
+                                          {candidatesTarget ? <span className="text-white/40">/{candidatesTarget}</span> : null}
+                                        </p>
+                                        <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
+                                          <motion.div
+                                            className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-cyan-300 to-indigo-400"
+                                            initial={{ width: '5%' }}
+                                            animate={{ width: candPct !== null ? `${candPct}%` : ['8%', '70%', '25%'] }}
+                                            transition={{
+                                              duration: candPct !== null ? 0.6 : 1.6,
+                                              repeat: candPct !== null ? 0 : Infinity,
+                                              ease: candPct !== null ? 'easeOut' : 'easeInOut',
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+                                        <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">参考URL</p>
+                                        <p className="mt-1 text-lg font-black text-white tabular-nums">{urlsCount}</p>
+                                        <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
+                                          <motion.div
+                                            className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-fuchsia-300 to-amber-300"
+                                            animate={{ width: ['12%', '85%', '28%'] }}
+                                            transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                })()}
+
+                                {/* timeline */}
+                                <div className="mt-4 rounded-2xl bg-black/20 border border-white/10 p-4">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                                      直近のアクション
+                                    </p>
+                                    <p className="text-[10px] font-black text-white/50 tabular-nums">
+                                      {researchEvents.length ? `${researchEvents.length}件` : ''}
+                                    </p>
+                                  </div>
+
+                                  <div className="mt-3 space-y-2 max-h-40 overflow-auto pr-1">
+                                    {researchEvents.length ? (
+                                      researchEvents.map((ev: any) => {
+                                        const title = String(ev?.title || ev?.name || '調査').trim()
+                                        const detail = String(ev?.detail || ev?.url || '').trim()
+                                        const at = ev?.at ? formatHhMmSs(Number(ev.at)) : ''
+                                        const host = hostnameFromUrl(detail) || hostnameFromUrl(String(ev?.url || ''))
+                                        return (
+                                          <div key={String(ev?.id || `${title}_${at}_${detail}`)} className="flex items-start gap-3">
+                                            <div className="mt-1 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_0_3px_rgba(16,185,129,0.18)] flex-shrink-0" />
+                                            <div className="min-w-0 flex-1">
+                                              <div className="flex items-center justify-between gap-3">
+                                                <p className="text-xs font-black text-white/90 truncate">{title}</p>
+                                                <p className="text-[10px] font-black text-white/45 tabular-nums">{at}</p>
+                                              </div>
+                                              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                                                {host && (
+                                                  <span className="text-[10px] font-black text-white/70 bg-white/10 border border-white/10 px-2 py-0.5 rounded-full">
+                                                    {host}
+                                                  </span>
+                                                )}
+                                                {detail && (
+                                                  <p className="text-[10px] font-bold text-white/55 break-words line-clamp-2">
+                                                    {detail}
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )
+                                      })
+                                    ) : (
+                                      <p className="text-[10px] font-bold text-white/60">リサーチイベントを待っています…</p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* actions */}
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const list = Array.isArray((job.article as any)?.comparisonCandidates)
+                                        ? (job.article as any).comparisonCandidates
+                                        : []
+                                      const lines = list
+                                        .map((c: any) => `${String(c?.name || '').trim()}${c?.websiteUrl ? `\t${String(c.websiteUrl).trim()}` : ''}`)
+                                        .filter(Boolean)
+                                        .join('\n')
+                                      copyText(lines)
+                                    }}
+                                    className="h-11 px-5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-xs font-black hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-lg shadow-blue-500/20"
+                                  >
+                                    候補をコピー
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const list = Array.isArray((job.article as any)?.referenceUrls) ? (job.article as any).referenceUrls : []
+                                      const lines = list.map((u: any) => String(u || '').trim()).filter(Boolean).join('\n')
+                                      copyText(lines)
+                                    }}
+                                    className="h-11 px-5 rounded-2xl bg-white/10 border border-white/15 text-white text-xs font-black hover:bg-white/15 transition-colors"
+                                  >
+                                    参考URLをコピー
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         )}
