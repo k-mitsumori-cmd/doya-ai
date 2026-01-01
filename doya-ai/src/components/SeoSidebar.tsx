@@ -20,7 +20,6 @@ import {
   ChevronRight,
   ChevronDown,
   Image,
-  Presentation,
   LayoutGrid,
   ExternalLink,
 } from 'lucide-react'
@@ -339,19 +338,6 @@ function SeoSidebarImpl({
                         <p className="text-sm font-black text-blue-600">ドヤライティングAI</p>
                         <p className="text-[10px] font-bold text-blue-500">SEO記事生成（現在使用中）</p>
                       </div>
-                    </a>
-                    <a
-                      href="/slide"
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-blue-50 transition-colors group"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Presentation className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-gray-900 group-hover:text-blue-600 transition-colors">ドヤスライドAI</p>
-                        <p className="text-[10px] font-bold text-gray-500">プレゼン資料生成</p>
-                      </div>
-                      <ExternalLink className="w-3.5 h-3.5 text-gray-300 group-hover:text-blue-400" />
                     </a>
                   </div>
                   <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
