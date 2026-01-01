@@ -1379,47 +1379,9 @@ export default function SeoNewArticlePage() {
                   </div>
                 </div>
 
-                {/* 検索APIキー未設定の通知 */}
-                {searchApiNotConfigured && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-4 p-5 rounded-2xl bg-amber-50 border border-amber-200"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                        <Lightbulb className="w-5 h-5 text-amber-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-black text-amber-800">自動収集は現在利用できません</p>
-                        <p className="text-xs text-amber-700 mt-1 leading-relaxed">
-                          検索APIキー（SEO_SERPAPI_KEY）が設定されていないため、候補の自動収集はご利用いただけません。<br />
-                          下の「手動追加」から、比較したい企業・サービスを直接入力してください。
-                        </p>
-                        <div className="mt-3 flex items-center gap-2">
-                          <span className="px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black">
-                            ✓ 手動追加で記事作成できます
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setSearchApiNotConfigured(false)}
-                        className="p-1.5 rounded-lg hover:bg-amber-100 text-amber-500 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-
-                <div className="mt-4 flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={autoCollectCandidates}
-                    className="flex-1 h-12 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-colors"
-                  >
-                    候補を自動収集する
-                  </button>
-                  <div className="flex-1 p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                {/* 手動追加セクション */}
+                <div className="mt-4">
+                  <div className="p-4 rounded-2xl bg-gray-50 border border-gray-100">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">手動追加</p>
                     <div className="flex gap-2">
                       <input
