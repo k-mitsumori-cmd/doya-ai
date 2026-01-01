@@ -365,8 +365,33 @@ export default function SeoPlanPage() {
               <div className="text-center">
                 <Sparkles className="w-12 h-12 text-blue-600 mx-auto mb-4" />
                 <h3 className="text-2xl font-black text-slate-900 mb-2">解約すると、使える機能が制限されます</h3>
-                <p className="text-slate-600 font-bold mb-6">
-                  図解生成・AI自動修正などが停止します。停止日までは利用できます。
+                <p className="text-slate-600 font-bold mb-4">
+                  次回更新日以降、以下の機能が利用できなくなります。
+                </p>
+                <ul className="text-left text-sm font-bold text-slate-700 space-y-2 mb-6 bg-slate-50 rounded-xl p-4">
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">✕</span>
+                    <span>図解・バナー画像の生成（サムネイル含む）</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">✕</span>
+                    <span>SEO改善提案のAI自動修正</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">✕</span>
+                    <span>画像のダウンロード・プロンプト調整・再生成</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">✕</span>
+                    <span>1日の生成上限が1記事に制限</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-red-500 mt-0.5">✕</span>
+                    <span>文字数上限が5,000字に制限</span>
+                  </li>
+                </ul>
+                <p className="text-xs font-bold text-slate-500 mb-4">
+                  ※ 停止日までは現在のプランで引き続きご利用いただけます
                 </p>
                 <div className="grid gap-3">
                   <button
