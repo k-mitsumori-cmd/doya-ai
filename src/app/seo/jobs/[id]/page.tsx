@@ -395,7 +395,25 @@ export default function SeoJobPage() {
       clearTimeout(t)
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || `API Error: ${res.status}`)
+        // 404は「ジョブが存在しない」だけでなく「所有者チェックNG」でも返す（情報漏洩防止）
+        // そのためUI側では分かりやすいガイドを出す
+        const raw = String(json?.error || '').trim()
+        if (res.status === 404 || raw === 'not found') {
+          throw new Error(
+            [
+              'ジョブが見つかりませんでした。',
+              '',
+              '考えられる原因:',
+              '- 作成したブラウザ/端末と違う（ゲストIDが一致せず参照できません）',
+              '- ログイン状態が変わった（別アカウント/ログアウト等）',
+              '',
+              '対処:',
+              '- 作成したブラウザ/端末でこのURLを開き直してください',
+              '- もしくはログインして再度お試しください',
+            ].join('\n')
+          )
+        }
+        throw new Error(raw || `API Error: ${res.status}`)
       }
 
       const newJob = json.job || null
