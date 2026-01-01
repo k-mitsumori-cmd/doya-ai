@@ -1085,218 +1085,6 @@ export default function SeoJobPage() {
                         </div>
                       </div>
                     </div>
-
-                    {/* リサーチ実況（検索/巡回/抽出の“動き”を見せる） */}
-                    {(isComparison || researchLast) && (
-                      <div className="mt-5 pt-5 border-t border-gray-100">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <div className="relative">
-                              <motion.span
-                                className="absolute -inset-1 rounded-full bg-emerald-400/40 blur"
-                                animate={{ opacity: [0.25, 0.6, 0.25] }}
-                                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-                              />
-                              <span className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-black text-emerald-700">
-                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                LIVE
-                              </span>
-                            </div>
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">リサーチ実況</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowResearchPanel((v) => !v)}
-                            className="text-[10px] font-black text-blue-600 hover:text-blue-700"
-                          >
-                            {showResearchPanel ? '隠す' : '表示'}
-                          </button>
-                        </div>
-
-                        {showResearchPanel && (
-                          <div className="mt-3">
-                            <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white shadow-2xl shadow-indigo-500/10">
-                              {/* glow */}
-                              <div className="pointer-events-none absolute -inset-12 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.35),rgba(16,185,129,0.18),transparent_60%)]" />
-                              {/* shimmer */}
-                              <motion.div
-                                className="pointer-events-none absolute -inset-y-24 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/10 to-transparent rotate-12"
-                                animate={{ x: ['-30%', '260%'] }}
-                                transition={{ duration: 3.8, repeat: Infinity, ease: 'linear' }}
-                              />
-
-                              <div className="relative p-5">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <p className="text-xs font-black text-white/90">
-                                      {researchLast?.title ? `いま：${String(researchLast.title)}` : 'いま：情報を調査中…'}
-                                    </p>
-                                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                                      {researchLast?.url && (
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-black text-white/90">
-                                          <ExternalLink className="w-3 h-3" />
-                                          {hostnameFromUrl(String(researchLast.url)) || 'source'}
-                                        </span>
-                                      )}
-                                      <span className="text-[10px] font-bold text-white/60">
-                                        {researchLast?.detail || researchLast?.url || '検索/巡回/抽出を進めています'}
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="flex-shrink-0 text-right">
-                                    <p className="text-[10px] font-black text-white/60 tabular-nums">
-                                      {researchLast?.at ? formatHhMmSs(Number(researchLast.at)) : ''}
-                                    </p>
-                                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-400/15 border border-emerald-300/20 text-[10px] font-black text-emerald-200">
-                                      <Zap className="w-3 h-3" />
-                                      高速巡回中
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* counters + bars */}
-                                {(() => {
-                                  const candidatesCount =
-                                    typeof researchStats?.candidates === 'number'
-                                      ? researchStats.candidates
-                                      : Array.isArray((job.article as any)?.comparisonCandidates)
-                                        ? (job.article as any).comparisonCandidates.length
-                                        : 0
-                                  const candidatesTarget =
-                                    typeof researchStats?.candidatesTarget === 'number'
-                                      ? researchStats.candidatesTarget
-                                      : typeof (job.article as any)?.comparisonConfig?.count === 'number'
-                                        ? Number((job.article as any).comparisonConfig.count)
-                                        : null
-                                  const urlsCount =
-                                    typeof researchStats?.referenceUrls === 'number'
-                                      ? researchStats.referenceUrls
-                                      : Array.isArray((job.article as any)?.referenceUrls)
-                                        ? (job.article as any).referenceUrls.length
-                                        : 0
-                                  const candPct =
-                                    candidatesTarget && candidatesTarget > 0 ? clamp((candidatesCount / candidatesTarget) * 100, 0, 100) : null
-                                  return (
-                                    <div className="mt-4 grid grid-cols-2 gap-3">
-                                      <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-                                        <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">候補</p>
-                                        <p className="mt-1 text-lg font-black text-white tabular-nums">
-                                          {candidatesCount}
-                                          {candidatesTarget ? <span className="text-white/40">/{candidatesTarget}</span> : null}
-                                        </p>
-                                        <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
-                                          <motion.div
-                                            className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-cyan-300 to-indigo-400"
-                                            initial={{ width: '5%' }}
-                                            animate={{ width: candPct !== null ? `${candPct}%` : ['8%', '70%', '25%'] }}
-                                            transition={{
-                                              duration: candPct !== null ? 0.6 : 1.6,
-                                              repeat: candPct !== null ? 0 : Infinity,
-                                              ease: candPct !== null ? 'easeOut' : 'easeInOut',
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-
-                                      <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-                                        <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">参考URL</p>
-                                        <p className="mt-1 text-lg font-black text-white tabular-nums">{urlsCount}</p>
-                                        <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
-                                          <motion.div
-                                            className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-fuchsia-300 to-amber-300"
-                                            animate={{ width: ['12%', '85%', '28%'] }}
-                                            transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )
-                                })()}
-
-                                {/* timeline */}
-                                <div className="mt-4 rounded-2xl bg-black/20 border border-white/10 p-4">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
-                                      直近のアクション
-                                    </p>
-                                    <p className="text-[10px] font-black text-white/50 tabular-nums">
-                                      {researchEvents.length ? `${researchEvents.length}件` : ''}
-                                    </p>
-                                  </div>
-
-                                  <div className="mt-3 space-y-2 max-h-40 overflow-auto pr-1">
-                                    {researchEvents.length ? (
-                                      researchEvents.map((ev: any) => {
-                                        const title = String(ev?.title || ev?.name || '調査').trim()
-                                        const detail = String(ev?.detail || ev?.url || '').trim()
-                                        const at = ev?.at ? formatHhMmSs(Number(ev.at)) : ''
-                                        const host = hostnameFromUrl(detail) || hostnameFromUrl(String(ev?.url || ''))
-                                        return (
-                                          <div key={String(ev?.id || `${title}_${at}_${detail}`)} className="flex items-start gap-3">
-                                            <div className="mt-1 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_0_3px_rgba(16,185,129,0.18)] flex-shrink-0" />
-                                            <div className="min-w-0 flex-1">
-                                              <div className="flex items-center justify-between gap-3">
-                                                <p className="text-xs font-black text-white/90 truncate">{title}</p>
-                                                <p className="text-[10px] font-black text-white/45 tabular-nums">{at}</p>
-                                              </div>
-                                              <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                                                {host && (
-                                                  <span className="text-[10px] font-black text-white/70 bg-white/10 border border-white/10 px-2 py-0.5 rounded-full">
-                                                    {host}
-                                                  </span>
-                                                )}
-                                                {detail && (
-                                                  <p className="text-[10px] font-bold text-white/55 break-words line-clamp-2">
-                                                    {detail}
-                                                  </p>
-                                                )}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        )
-                                      })
-                                    ) : (
-                                      <p className="text-[10px] font-bold text-white/60">リサーチイベントを待っています…</p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* actions */}
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const list = Array.isArray((job.article as any)?.comparisonCandidates)
-                                        ? (job.article as any).comparisonCandidates
-                                        : []
-                                      const lines = list
-                                        .map((c: any) => `${String(c?.name || '').trim()}${c?.websiteUrl ? `\t${String(c.websiteUrl).trim()}` : ''}`)
-                                        .filter(Boolean)
-                                        .join('\n')
-                                      copyText(lines)
-                                    }}
-                                    className="h-11 px-5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-xs font-black hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-lg shadow-blue-500/20"
-                                  >
-                                    候補をコピー
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const list = Array.isArray((job.article as any)?.referenceUrls) ? (job.article as any).referenceUrls : []
-                                      const lines = list.map((u: any) => String(u || '').trim()).filter(Boolean).join('\n')
-                                      copyText(lines)
-                                    }}
-                                    className="h-11 px-5 rounded-2xl bg-white/10 border border-white/15 text-white text-xs font-black hover:bg-white/15 transition-colors"
-                                  >
-                                    参考URLをコピー
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
 
                   {/* ライブ執筆（タイピング演出） - リッチUI */}
@@ -1377,6 +1165,222 @@ export default function SeoJobPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* リサーチ実況（検索/巡回/抽出の“動き”を、2カラムを跨いで“ドーン”と見せる） */}
+                {(isComparison || researchLast) && (
+                  <div className="px-5 sm:px-6 pb-6">
+                    <div className="pt-6 border-t border-gray-100">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <div className="relative">
+                            <motion.span
+                              className="absolute -inset-1 rounded-full bg-emerald-400/40 blur"
+                              animate={{ opacity: [0.25, 0.6, 0.25] }}
+                              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                            />
+                            <span className="relative inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-black text-emerald-700">
+                              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              LIVE
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">リサーチ実況</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowResearchPanel((v) => !v)}
+                          className="text-[10px] font-black text-blue-600 hover:text-blue-700"
+                        >
+                          {showResearchPanel ? '隠す' : '表示'}
+                        </button>
+                      </div>
+
+                      {showResearchPanel && (
+                        <div className="mt-3">
+                          <div className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 text-white shadow-2xl shadow-indigo-500/10">
+                            {/* glow */}
+                            <div className="pointer-events-none absolute -inset-12 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.35),rgba(16,185,129,0.18),transparent_60%)]" />
+                            {/* shimmer */}
+                            <motion.div
+                              className="pointer-events-none absolute -inset-y-24 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/10 to-transparent rotate-12"
+                              animate={{ x: ['-30%', '260%'] }}
+                              transition={{ duration: 3.8, repeat: Infinity, ease: 'linear' }}
+                            />
+
+                            <div className="relative p-6">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-black text-white/95">
+                                    {researchLast?.title ? `いま：${String(researchLast.title)}` : 'いま：情報を調査中…'}
+                                  </p>
+                                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                                    {researchLast?.url && (
+                                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-black text-white/90">
+                                        <ExternalLink className="w-3 h-3" />
+                                        {hostnameFromUrl(String(researchLast.url)) || 'source'}
+                                      </span>
+                                    )}
+                                    <span className="text-[11px] font-bold text-white/60">
+                                      {researchLast?.detail || researchLast?.url || '検索/巡回/抽出を進めています'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="flex-shrink-0 text-right">
+                                  <p className="text-[10px] font-black text-white/60 tabular-nums">
+                                    {researchLast?.at ? formatHhMmSs(Number(researchLast.at)) : ''}
+                                  </p>
+                                  <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-400/15 border border-emerald-300/20 text-[10px] font-black text-emerald-200">
+                                    <Zap className="w-3 h-3" />
+                                    高速巡回中
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* counters + bars */}
+                              {(() => {
+                                const candidatesCount =
+                                  typeof researchStats?.candidates === 'number'
+                                    ? researchStats.candidates
+                                    : Array.isArray((job.article as any)?.comparisonCandidates)
+                                      ? (job.article as any).comparisonCandidates.length
+                                      : 0
+                                const candidatesTarget =
+                                  typeof researchStats?.candidatesTarget === 'number'
+                                    ? researchStats.candidatesTarget
+                                    : typeof (job.article as any)?.comparisonConfig?.count === 'number'
+                                      ? Number((job.article as any).comparisonConfig.count)
+                                      : null
+                                const urlsCount =
+                                  typeof researchStats?.referenceUrls === 'number'
+                                    ? researchStats.referenceUrls
+                                    : Array.isArray((job.article as any)?.referenceUrls)
+                                      ? (job.article as any).referenceUrls.length
+                                      : 0
+                                const candPct =
+                                  candidatesTarget && candidatesTarget > 0
+                                    ? clamp((candidatesCount / candidatesTarget) * 100, 0, 100)
+                                    : null
+                                return (
+                                  <div className="mt-5 grid sm:grid-cols-2 gap-4">
+                                    <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+                                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">候補</p>
+                                      <p className="mt-1 text-xl font-black text-white tabular-nums">
+                                        {candidatesCount}
+                                        {candidatesTarget ? <span className="text-white/40">/{candidatesTarget}</span> : null}
+                                      </p>
+                                      <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
+                                        <motion.div
+                                          className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-cyan-300 to-indigo-400"
+                                          initial={{ width: '5%' }}
+                                          animate={{ width: candPct !== null ? `${candPct}%` : ['8%', '70%', '25%'] }}
+                                          transition={{
+                                            duration: candPct !== null ? 0.6 : 1.6,
+                                            repeat: candPct !== null ? 0 : Infinity,
+                                            ease: candPct !== null ? 'easeOut' : 'easeInOut',
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+                                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">参考URL</p>
+                                      <p className="mt-1 text-xl font-black text-white tabular-nums">{urlsCount}</p>
+                                      <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
+                                        <motion.div
+                                          className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-fuchsia-300 to-amber-300"
+                                          animate={{ width: ['12%', '85%', '28%'] }}
+                                          transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })()}
+
+                              {/* timeline */}
+                              <div className="mt-5 rounded-2xl bg-black/20 border border-white/10 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                                    直近のアクション
+                                  </p>
+                                  <p className="text-[10px] font-black text-white/50 tabular-nums">
+                                    {researchEvents.length ? `${researchEvents.length}件` : ''}
+                                  </p>
+                                </div>
+
+                                <div className="mt-3 space-y-2 max-h-56 overflow-auto pr-1">
+                                  {researchEvents.length ? (
+                                    researchEvents.map((ev: any) => {
+                                      const title = String(ev?.title || ev?.name || '調査').trim()
+                                      const detail = String(ev?.detail || ev?.url || '').trim()
+                                      const at = ev?.at ? formatHhMmSs(Number(ev.at)) : ''
+                                      const host = hostnameFromUrl(detail) || hostnameFromUrl(String(ev?.url || ''))
+                                      return (
+                                        <div key={String(ev?.id || `${title}_${at}_${detail}`)} className="flex items-start gap-3">
+                                          <div className="mt-1 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_0_3px_rgba(16,185,129,0.18)] flex-shrink-0" />
+                                          <div className="min-w-0 flex-1">
+                                            <div className="flex items-center justify-between gap-3">
+                                              <p className="text-sm font-black text-white/90 truncate">{title}</p>
+                                              <p className="text-[10px] font-black text-white/45 tabular-nums">{at}</p>
+                                            </div>
+                                            <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                                              {host && (
+                                                <span className="text-[10px] font-black text-white/70 bg-white/10 border border-white/10 px-2 py-0.5 rounded-full">
+                                                  {host}
+                                                </span>
+                                              )}
+                                              {detail && (
+                                                <p className="text-[11px] font-bold text-white/55 break-words line-clamp-2">
+                                                  {detail}
+                                                </p>
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )
+                                    })
+                                  ) : (
+                                    <p className="text-[10px] font-bold text-white/60">リサーチイベントを待っています…</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* actions */}
+                              <div className="mt-5 flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const list = Array.isArray((job.article as any)?.comparisonCandidates)
+                                      ? (job.article as any).comparisonCandidates
+                                      : []
+                                    const lines = list
+                                      .map((c: any) => `${String(c?.name || '').trim()}${c?.websiteUrl ? `\t${String(c.websiteUrl).trim()}` : ''}`)
+                                      .filter(Boolean)
+                                      .join('\n')
+                                    copyText(lines)
+                                  }}
+                                  className="h-11 px-5 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white text-xs font-black hover:from-blue-700 hover:to-indigo-700 transition-colors shadow-lg shadow-blue-500/20"
+                                >
+                                  候補をコピー
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const list = Array.isArray((job.article as any)?.referenceUrls) ? (job.article as any).referenceUrls : []
+                                    const lines = list.map((u: any) => String(u || '').trim()).filter(Boolean).join('\n')
+                                    copyText(lines)
+                                  }}
+                                  className="h-11 px-5 rounded-2xl bg-white/10 border border-white/15 text-white text-xs font-black hover:bg-white/15 transition-colors"
+                                >
+                                  参考URLをコピー
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
