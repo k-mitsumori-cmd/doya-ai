@@ -1023,38 +1023,7 @@ export default function SeoNewArticlePage() {
               })}
             </div>
 
-            {/* Quick Templates (filtered by type) - 上部に移動 */}
-            <div className="pt-2">
-              <div className="flex items-end justify-between gap-3 flex-wrap mb-3">
-                <div>
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">クイックテンプレート</p>
-                  <p className="text-xs font-bold text-gray-500 mt-1">
-                    ワンクリックで「タイトル例・目標文字数・検索意図・比較設定」を自動入力します。
-                  </p>
-                </div>
-                <span className="text-[10px] font-black text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
-                  まずはここから
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {TEMPLATES.filter((t: any) => {
-                  if (articleType === 'comparison') return String((t as any).mode || '') === 'comparison_research'
-                  return !String((t as any).mode || '')
-                }).map((t) => (
-                  <motion.button
-                    key={t.id}
-                    onClick={() => applyTemplate(t)}
-                    whileHover={reduceMotion ? undefined : { y: -2 }}
-                    whileTap={reduceMotion ? undefined : { scale: 0.99 }}
-                    className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-white border border-gray-100 hover:border-blue-500 hover:shadow-lg transition-all text-left group"
-                  >
-                    <span className="text-2xl mb-2 block">{t.icon}</span>
-                    <p className="text-sm font-black text-gray-900 leading-tight group-hover:text-blue-600">{t.name}</p>
-                    <p className="text-[10px] text-gray-400 mt-1 font-bold">{t.targetChars.toLocaleString()} CHARS</p>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
+            {/* クイックテンプレート欄はユーザー要望で削除 */}
 
             <div className="bg-white rounded-2xl sm:rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-xl shadow-blue-500/5">
               <div className="flex items-start justify-between gap-4 flex-wrap">

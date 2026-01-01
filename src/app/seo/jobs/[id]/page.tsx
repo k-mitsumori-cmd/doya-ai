@@ -253,17 +253,6 @@ export default function SeoJobPage() {
   const seenResearchEventIdsRef = useRef<Set<string>>(new Set())
   const [showResearchPanel, setShowResearchPanel] = useState(true)
 
-  const copyText = useCallback(async (text: string) => {
-    const s = String(text || '').trim()
-    if (!s) return
-    try {
-      await navigator.clipboard.writeText(s)
-      pushLog({ at: Date.now(), kind: 'success', title: '📋 クリップボードにコピーしました', detail: s.slice(0, 120) })
-    } catch {
-      pushLog({ at: Date.now(), kind: 'error', title: 'コピーに失敗しました', detail: 'ブラウザの権限を確認してください' })
-    }
-  }, [pushLog])
-
   const reviewedCount = useMemo(
     () => (job?.sections || []).filter((s) => s.status === 'reviewed' || s.status === 'generated').length,
     [job]
@@ -327,6 +316,21 @@ export default function SeoJobPage() {
       return next
     })
   }, [])
+
+  // NOTE: pushLog を依存配列に入れる都合上、必ず pushLog の「後」に定義する（TDZ回避）
+  const copyText = useCallback(
+    async (text: string) => {
+      const s = String(text || '').trim()
+      if (!s) return
+      try {
+        await navigator.clipboard.writeText(s)
+        pushLog({ at: Date.now(), kind: 'success', title: '📋 クリップボードにコピーしました', detail: s.slice(0, 120) })
+      } catch {
+        pushLog({ at: Date.now(), kind: 'error', title: 'コピーに失敗しました', detail: 'ブラウザの権限を確認してください' })
+      }
+    },
+    [pushLog]
+  )
 
   // ログの自動スクロール（ユーザーが上に戻ったら停止）
   useEffect(() => {
