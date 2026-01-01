@@ -307,26 +307,25 @@ function SeoArticleInner() {
       // 過去ログに混入していた「テキストを入れない」系を除去（SEO=ドヤライティングAIのみ）
       // より広範囲にマッチするように正規表現を使用
       if (/文字.*入れない/i.test(t)) return false
+      if (/文字は一切入れない/i.test(t)) return false
+      if (/画像内に文字/i.test(t)) return false
       if (/NO TEXT/i.test(t)) return false
       if (/ネガティブスペース/i.test(t)) return false
       if (/後から文字を載せ/i.test(t)) return false
       if (/余白.*確保/i.test(t)) return false
+      if (/大きな余白/i.test(t)) return false
       if (/参考.*後から載せる.*コピー/i.test(t)) return false
+      if (/画像に文字は入れない/i.test(t)) return false
+      // CTAを作らない系
+      if (/CTA要素.*作らない.*入れない/i.test(t)) return false
+      if (/CTA.*入れない/i.test(t)) return false
+      // 広告バナーではない系
+      if (/これは広告バナーではない/i.test(t)) return false
       return true
     })
 
-    // 置き換えガイドを追記（既存のプロンプトの趣旨を壊さず、テキスト前提に寄せる）
-    const inject = [
-      '',
-      '【追記（重要）】',
-      '・最終出力ではメイン/サブの日本語テキストが画像内に表示されます（テキストは読みやすく、太字・高コントラスト）。',
-      '・背景はテキストが読みやすいように、無地/ぼかし/パネルで"文字エリア"を確保してください。',
-    ].join('\n')
-
-    const out = filtered.join('\n').trimEnd()
-    // 既に同様の追記があるなら二重挿入しない
-    if (out.includes('【追記（重要）】') || out.includes('最終出力ではメイン/サブ')) return out
-    return `${out}\n${inject}`.trim()
+    const out = filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+    return out
   }
 
   const mediaLockState = useMemo<'loading' | 'locked' | 'unlocked'>(() => {
