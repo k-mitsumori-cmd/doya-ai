@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CheckCircle2, Crown, ExternalLink, Loader2, RefreshCcw, Shield, Sparkles, Timer, X } from 'lucide-react'
+import { CheckCircle2, Crown, ExternalLink, Loader2, RefreshCcw, Shield, Sparkles, Timer, X, Zap, Image, Wand2, FileText, LayoutDashboard } from 'lucide-react'
 import { SEO_PRICING, getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
+import confetti from 'canvas-confetti'
 
 type SubStatus = {
   ok?: boolean
@@ -48,6 +49,48 @@ export default function SeoPlanPage() {
   const [error, setError] = useState<string | null>(null)
   const [cancelConfirm, setCancelConfirm] = useState(false)
   const [resumeConfirm, setResumeConfirm] = useState(false)
+  const [welcomeOpen, setWelcomeOpen] = useState(false)
+  const [welcomePlan, setWelcomePlan] = useState<string>('')
+
+  // URLパラメータからプランアップグレード成功を検出
+  useEffect(() => {
+    const url = new URL(window.location.href)
+    const success = url.searchParams.get('success') === 'true'
+    const plan = String(url.searchParams.get('plan') || '')
+    const sessionId = url.searchParams.get('session_id')
+    
+    if (!success || !plan) return
+    
+    // 同じセッションで複数回表示しないようにする
+    const key = `doyaSeo.welcome.shown.${sessionId || plan}`
+    try {
+      if (window.sessionStorage.getItem(key)) return
+      window.sessionStorage.setItem(key, '1')
+    } catch {
+      // ignore
+    }
+    
+    // 紙吹雪アニメーション
+    try {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#3B82F6', '#8B5CF6', '#EC4899', '#10B981'],
+      })
+    } catch {
+      // confetti未対応の場合はスキップ
+    }
+    
+    setWelcomePlan(plan)
+    setWelcomeOpen(true)
+    
+    // URLからパラメータを削除（履歴に残さない）
+    url.searchParams.delete('success')
+    url.searchParams.delete('plan')
+    url.searchParams.delete('session_id')
+    window.history.replaceState({}, '', url.pathname + url.search)
+  }, [])
 
   async function loadStatus() {
     if (!isLoggedIn) return
@@ -427,6 +470,117 @@ export default function SeoPlanPage() {
                     閉じる
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Welcome / Upgrade Success Modal */}
+      <AnimatePresence>
+        {welcomeOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setWelcomeOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="relative bg-gradient-to-br from-white to-blue-50 rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-blue-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setWelcomeOpen(false)}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className="text-center">
+                {/* アイコンとタイトル */}
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2, type: 'spring', damping: 15 }}
+                  className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white mx-auto mb-6 flex items-center justify-center shadow-lg shadow-blue-200"
+                >
+                  <Zap className="w-10 h-10" />
+                </motion.div>
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
+                    🎉 {welcomePlan === 'enterprise' ? 'Enterprise' : 'PRO'}プランが有効になりました！
+                  </h3>
+                  <p className="text-slate-600 font-bold">
+                    すべての機能が解放されました。早速使ってみましょう！
+                  </p>
+                </motion.div>
+
+                {/* 解放された機能一覧 */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="mt-6 bg-white rounded-2xl p-5 border border-slate-100 text-left"
+                >
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
+                    解放された機能
+                  </p>
+                  <div className="space-y-3">
+                    {[
+                      { icon: Image, text: '図解/バナー自動生成', desc: '記事に合わせてAIが画像を自動生成' },
+                      { icon: Wand2, text: 'AI自動修正', desc: 'SEO改善提案をワンクリックで適用' },
+                      { icon: FileText, text: `1日${welcomePlan === 'enterprise' ? SEO_PRICING.enterpriseLimit || 30 : SEO_PRICING.proLimit}記事まで生成`, desc: '大量のコンテンツ制作に対応' },
+                      { icon: LayoutDashboard, text: '進捗UI（分割生成）', desc: 'リアルタイムで生成状況を確認' },
+                    ].map((item, i) => (
+                      <motion.div
+                        key={item.text}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.5 + i * 0.1 }}
+                        className="flex items-start gap-3"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
+                          <item.icon className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-900">{item.text}</p>
+                          <p className="text-xs text-slate-500 font-bold">{item.desc}</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                {/* アクションボタン */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8 }}
+                  className="mt-6 grid gap-3"
+                >
+                  <Link href="/seo/create">
+                    <button className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-base hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+                      <Sparkles className="w-5 h-5" />
+                      新しい記事を作成する
+                    </button>
+                  </Link>
+                  <button
+                    onClick={() => setWelcomeOpen(false)}
+                    className="w-full h-12 rounded-2xl bg-white border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors"
+                  >
+                    閉じる
+                  </button>
+                </motion.div>
               </div>
             </motion.div>
           </motion.div>
