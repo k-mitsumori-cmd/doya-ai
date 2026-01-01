@@ -21,19 +21,25 @@ export const getStripePublishableKey = () => {
 // Stripeダッシュボードで作成した価格IDをここに設定
 // 本番環境では環境変数で管理することを推奨
 
+// ドヤバナーAIの価格ID（先に定義してSEOで参照できるようにする）
+const BANNER_PRO_MONTHLY = process.env.STRIPE_PRICE_BANNER_PRO_MONTHLY || 'price_banner_pro_monthly'
+const BANNER_PRO_YEARLY = process.env.STRIPE_PRICE_BANNER_PRO_YEARLY || 'price_banner_pro_yearly'
+const BANNER_ENTERPRISE_MONTHLY = process.env.STRIPE_PRICE_BANNER_ENTERPRISE_MONTHLY || 'price_banner_enterprise_monthly'
+const BANNER_ENTERPRISE_YEARLY = process.env.STRIPE_PRICE_BANNER_ENTERPRISE_YEARLY || 'price_banner_enterprise_yearly'
+
 export const STRIPE_PRICE_IDS = {
   // ドヤSEO（ドヤライティングAI）
-  // ドヤバナーAIと同じStripe価格を共有（環境変数が設定されていない場合はバナーの価格を使用）
+  // ドヤバナーAIと完全に同じStripe価格を使用（同一商品として課金）
   seo: {
-    // PRO: 月額¥9,980
+    // PRO: 月額¥9,980（ドヤバナーAIと共通）
     pro: {
-      monthly: process.env.STRIPE_PRICE_SEO_PRO_MONTHLY || process.env.STRIPE_PRICE_BANNER_PRO_MONTHLY || 'price_seo_pro_monthly',
-      yearly: process.env.STRIPE_PRICE_SEO_PRO_YEARLY || process.env.STRIPE_PRICE_BANNER_PRO_YEARLY || 'price_seo_pro_yearly',
+      monthly: process.env.STRIPE_PRICE_SEO_PRO_MONTHLY || BANNER_PRO_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_SEO_PRO_YEARLY || BANNER_PRO_YEARLY,
     },
-    // ENTERPRISE: 月額¥49,980
+    // ENTERPRISE: 月額¥49,980（ドヤバナーAIと共通）
     enterprise: {
-      monthly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_MONTHLY || process.env.STRIPE_PRICE_BANNER_ENTERPRISE_MONTHLY || 'price_seo_enterprise_monthly',
-      yearly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_YEARLY || process.env.STRIPE_PRICE_BANNER_ENTERPRISE_YEARLY || 'price_seo_enterprise_yearly',
+      monthly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_MONTHLY || BANNER_ENTERPRISE_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_YEARLY || BANNER_ENTERPRISE_YEARLY,
     },
   },
   // ドヤバナーAI
