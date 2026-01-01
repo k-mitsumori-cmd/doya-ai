@@ -438,9 +438,13 @@ function SeoArticleInner() {
         // 旧テンプレ（文字なし前提）が残っている場合は、最新デフォルトへ自動移行
         if (
           (b.includes('画像内に文字') && b.includes('入れない')) ||
+          b.includes('文字は一切入れない') ||
           b.includes('画像に文字は入れない') ||
           b.includes('ネガティブスペース') ||
-          b.includes('後から文字を載せられる')
+          b.includes('後から文字を載せられる') ||
+          b.includes('これは広告バナーではない') ||
+          b.includes('CTA要素') ||
+          b.includes('記事アイキャッチ画像')
         ) {
           setBannerPromptTemplate(DEFAULT_BANNER_PROMPT_TEMPLATE)
           patchSeoClientSettings({
