@@ -5,8 +5,6 @@ import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
-import { guessArticleGenreJa, mapGenreToNanobannerCategory } from '@seo/lib/bannerPlan'
-import { generateBanners } from '@/lib/nanobanner'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
@@ -22,28 +20,6 @@ function normalizePlan(raw: any): PlanCode {
 }
 function isPaid(plan: PlanCode) {
   return plan === 'PRO' || plan === 'ENTERPRISE'
-}
-
-// 古い「文字を入れない」系プロンプトを除去
-function sanitizePrompt(raw: string): string {
-  const s = String(raw || '')
-  if (!s) return s
-  const lines = s.replace(/\r\n/g, '\n').split('\n')
-  const filtered = lines.filter((line) => {
-    const t = line.trim()
-    if (!t) return true
-    // 「文字を入れない」「文字は入れない」「NO TEXT」系を含む行を除去
-    if (/文字.*入れない/i.test(t)) return false
-    if (/NO TEXT/i.test(t)) return false
-    // 「ネガティブスペース」「余白を確保」を含む行を除去
-    if (/ネガティブスペース/i.test(t)) return false
-    if (/後から文字を載せ/i.test(t)) return false
-    if (/余白.*確保/i.test(t)) return false
-    // 「参考：後から載せる…」パターン
-    if (/参考.*後から載せる.*コピー/i.test(t)) return false
-    return true
-  })
-  return filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 const BodySchema = z.object({
@@ -83,45 +59,24 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     await ensureSeoStorage()
 
     const kind = String(imgRec.kind || 'BANNER')
-    const cleanPrompt = sanitizePrompt(body.prompt)
+    const prompt = body.prompt.trim()
+
+    // バナー・図解ともにGeminiで直接生成（新しいプロンプトを使用）
+    const aspectRatio = kind === 'BANNER' ? '16:9' : '1:1'
     
-    let base64: string
-    let mimeType = 'image/png'
+    const img = await geminiGenerateImagePng({
+      prompt,
+      aspectRatio,
+      imageSize: '2K',
+      model: GEMINI_IMAGE_MODEL_DEFAULT,
+    })
 
-    if (kind === 'BANNER') {
-      // バナーはnanobannerを使用（テキスト描画のため）
-      const articleTitle = String(article.title || '').trim()
-      const articleContent = String(article.finalMarkdown || '').slice(0, 5000)
-      const genreGuess = guessArticleGenreJa([articleTitle, articleContent].join(' '))
-      const category = mapGenreToNanobannerCategory(genreGuess)
-
-      const result = await generateBanners(
-        category,
-        articleTitle,
-        '1200x628',
-        {
-          purpose: 'sns_ad',
-          customImagePrompt: cleanPrompt,
-        },
-        1
-      )
-      const dataUrl = Array.isArray(result?.banners) ? result.banners.find((b) => typeof b === 'string' && b.startsWith('data:image/')) : null
-      if (!dataUrl) throw new Error(result?.error || 'バナー画像の再生成に失敗しました')
-      base64 = String(dataUrl).split(',')[1] || ''
-    } else {
-      // 図解はGeminiを使用
-      const img = await geminiGenerateImagePng({
-        prompt: cleanPrompt,
-        aspectRatio: '1:1',
-        imageSize: '2K',
-        model: GEMINI_IMAGE_MODEL_DEFAULT,
-      })
-      base64 = img.dataBase64
-      mimeType = img.mimeType || 'image/png'
+    if (!img?.dataBase64) {
+      throw new Error('画像の再生成に失敗しました')
     }
 
     const filename = `seo_${imgRec.articleId}_${Date.now()}_${kind.toLowerCase()}_regen.png`
-    const saved = await saveBase64ToFile({ base64, filename, subdir: 'images' })
+    const saved = await saveBase64ToFile({ base64: img.dataBase64, filename, subdir: 'images' })
 
     const newRec = await (prisma as any).seoImage.create({
       data: {
@@ -129,16 +84,15 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
         kind,
         title: imgRec.title,
         description: imgRec.description,
-        prompt: cleanPrompt,
+        prompt,
         filePath: saved.relativePath,
-        mimeType,
+        mimeType: img.mimeType || 'image/png',
       },
     })
 
     return NextResponse.json({ success: true, image: newRec })
   } catch (e: any) {
+    console.error('Image regeneration error:', e)
     return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 400 })
   }
 }
-
-
