@@ -1,18 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import {
+  BANNER_PRICING,
+  getBannerDailyLimitByUserPlan,
+  shouldResetDailyUsage,
+  getTodayDateJST,
+  isWithinFreeHour,
+  HIGH_USAGE_CONTACT_URL,
+} from '@/lib/pricing'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
 
+// ========================================
+// Schema
+// ========================================
 const PersonaGenerateRequestSchema = z.object({
   url: z.string().min(1).max(2000),
-  // 追加情報（任意）
   productName: z.string().max(200).optional(),
   price: z.string().max(200).optional(),
   features: z.string().max(4000).optional(),
   target: z.string().max(1000).optional(),
-  objective: z.string().max(200).optional(), // 例: 問い合わせ/資料DL/購入/応募
+  objective: z.string().max(200).optional(),
   mustInclude: z.string().max(1000).optional(),
   avoid: z.string().max(1000).optional(),
   notes: z.string().max(6000).optional(),
@@ -32,8 +45,36 @@ type PersonaGenerateResponse = {
   site: SiteExtract
   output: any
   model: string
+  usage?: {
+    dailyLimit: number
+    dailyUsed: number
+    dailyRemaining: number
+  }
 }
 
+// ========================================
+// Guest usage cookie (shared with banner)
+// ========================================
+const PERSONA_GUEST_USAGE_COOKIE = 'doya_persona_guest_usage'
+type GuestDailyUsage = { date: string; count: number }
+
+function readGuestDailyUsage(request: NextRequest, today: string): GuestDailyUsage {
+  try {
+    const raw = request.cookies.get(PERSONA_GUEST_USAGE_COOKIE)?.value
+    if (!raw) return { date: today, count: 0 }
+    const parsed = JSON.parse(raw) as any
+    const date = typeof parsed?.date === 'string' ? parsed.date : today
+    const count = typeof parsed?.count === 'number' ? parsed.count : 0
+    if (date !== today) return { date: today, count: 0 }
+    return { date, count }
+  } catch {
+    return { date: today, count: 0 }
+  }
+}
+
+// ========================================
+// Helpers
+// ========================================
 function safeTrim(v: any, max = 4000): string {
   const s = typeof v === 'string' ? v : ''
   return s.trim().slice(0, max)
@@ -113,7 +154,6 @@ async function fetchHtml(targetUrl: string, timeoutMs = 12_000): Promise<string>
     })
     const html = await res.text()
     if (!res.ok) throw new Error(`status=${res.status}`)
-    // 念のため過大HTMLを抑制
     return html.slice(0, 900_000)
   } finally {
     clearTimeout(t)
@@ -229,8 +269,18 @@ ${userDetails || '（なし）'}
 `
 }
 
+// ========================================
+// POST Handler
+// ========================================
 export async function POST(request: NextRequest) {
   try {
+    const disableLimits = process.env.DOYA_DISABLE_LIMITS === '1'
+    const session = await getServerSession(authOptions)
+    const isGuest = !session
+    const today = getTodayDateJST()
+    const userId = !isGuest ? ((session?.user as any)?.id as string | undefined) : undefined
+
+    // Parse request
     const body = (await request.json().catch(() => null)) as unknown
     const parsed = PersonaGenerateRequestSchema.safeParse(body)
     if (!parsed.success) {
@@ -243,6 +293,81 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'URLが不正です（https://〜 を入力してください）' }, { status: 400 })
     }
 
+    // ========================================
+    // Usage limit check (same as Banner AI)
+    // ========================================
+    const planRaw = !isGuest
+      ? String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
+      : 'GUEST'
+
+    // 1時間生成し放題の判定
+    const firstLoginAt = (session?.user as any)?.firstLoginAt
+    const isFreeHourActive = !isGuest && isWithinFreeHour(firstLoginAt)
+
+    let guestUsage: GuestDailyUsage | null = null
+    let usageInfo: { dailyLimit: number; dailyUsed: number; dailyRemaining: number } | null = null
+
+    if (!disableLimits) {
+      if (isGuest) {
+        // Guest: use cookie
+        guestUsage = readGuestDailyUsage(request, today)
+        const dailyLimit = BANNER_PRICING.guestLimit
+        const dailyUsed = guestUsage.count
+        usageInfo = { dailyLimit, dailyUsed, dailyRemaining: Math.max(0, dailyLimit - dailyUsed) }
+
+        if (dailyUsed >= dailyLimit) {
+          return NextResponse.json(
+            {
+              error: 'ゲストは本日分の生成上限を超えています。ログインしてご利用ください。',
+              code: 'DAILY_LIMIT_REACHED',
+              usage: usageInfo,
+              upgradeUrl: '/auth/doyamarke/signin?callbackUrl=%2Fpersona',
+            },
+            { status: 429 }
+          )
+        }
+      } else {
+        // Logged-in user
+        if (!isFreeHourActive) {
+          const dailyLimit = getBannerDailyLimitByUserPlan(planRaw)
+          if (userId && dailyLimit !== -1) {
+            const sub = await prisma.userServiceSubscription.findUnique({
+              where: { userId_serviceId: { userId, serviceId: 'banner' } },
+              select: { dailyUsage: true, lastUsageReset: true, plan: true },
+            })
+
+            let used = sub?.dailyUsage || 0
+            if (shouldResetDailyUsage(sub?.lastUsageReset)) {
+              used = 0
+              prisma.userServiceSubscription
+                .update({
+                  where: { userId_serviceId: { userId, serviceId: 'banner' } },
+                  data: { dailyUsage: 0, lastUsageReset: new Date() },
+                })
+                .catch(() => {})
+            }
+
+            usageInfo = { dailyLimit, dailyUsed: used, dailyRemaining: Math.max(0, dailyLimit - used) }
+
+            if (used >= dailyLimit) {
+              return NextResponse.json(
+                {
+                  error: '本日の生成上限に達しました。',
+                  code: 'DAILY_LIMIT_REACHED',
+                  usage: usageInfo,
+                  upgradeUrl: planRaw === 'FREE' ? '/banner/pricing' : HIGH_USAGE_CONTACT_URL || '/banner/pricing',
+                },
+                { status: 429 }
+              )
+            }
+          }
+        }
+      }
+    }
+
+    // ========================================
+    // Fetch and parse HTML
+    // ========================================
     const html = await fetchHtml(url).catch((e: any) => {
       throw new Error(`URLの取得に失敗しました（${e?.message || 'timeout'}）`)
     })
@@ -258,6 +383,9 @@ export async function POST(request: NextRequest) {
       text: safeTrim(text, 26000),
     }
 
+    // ========================================
+    // Generate with Gemini
+    // ========================================
     const prompt = buildPrompt({ req, site })
 
     const output = await geminiGenerateJson<any>(
@@ -269,16 +397,68 @@ export async function POST(request: NextRequest) {
       'DoyaPersonaSchema'
     )
 
+    // ========================================
+    // Increment usage
+    // ========================================
+    if (!disableLimits) {
+      if (isGuest && guestUsage) {
+        guestUsage = { date: today, count: guestUsage.count + 1 }
+        if (usageInfo) {
+          usageInfo = {
+            dailyLimit: usageInfo.dailyLimit,
+            dailyUsed: guestUsage.count,
+            dailyRemaining: Math.max(0, usageInfo.dailyLimit - guestUsage.count),
+          }
+        }
+      } else if (!isGuest && userId) {
+        try {
+          await prisma.userServiceSubscription
+            .update({
+              where: { userId_serviceId: { userId, serviceId: 'banner' } },
+              data: { dailyUsage: { increment: 1 }, monthlyUsage: { increment: 1 } },
+            })
+            .catch(() => {})
+
+          // Update usageInfo
+          if (usageInfo) {
+            usageInfo = {
+              dailyLimit: usageInfo.dailyLimit,
+              dailyUsed: usageInfo.dailyUsed + 1,
+              dailyRemaining: Math.max(0, usageInfo.dailyRemaining - 1),
+            }
+          }
+        } catch (e: any) {
+          console.error('persona usage increment failed:', e)
+        }
+      }
+    }
+
+    // ========================================
+    // Response
+    // ========================================
     const res: PersonaGenerateResponse = {
       site,
       output,
       model: GEMINI_TEXT_MODEL_DEFAULT,
+      usage: usageInfo || undefined,
     }
-    return NextResponse.json(res)
+
+    const response = NextResponse.json(res)
+
+    // Set guest cookie
+    if (!disableLimits && isGuest && guestUsage) {
+      response.cookies.set(PERSONA_GUEST_USAGE_COOKIE, JSON.stringify(guestUsage), {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 2, // 2日
+      })
+    }
+
+    return response
   } catch (e: any) {
     console.error('persona/generate error:', e)
     return NextResponse.json({ error: e?.message || '生成に失敗しました' }, { status: 500 })
   }
 }
-
-

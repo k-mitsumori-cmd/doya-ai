@@ -1036,7 +1036,7 @@ function SeoArticleInner() {
                         className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm shadow-lg shadow-blue-500/20 hover:opacity-95 disabled:opacity-50"
                       >
                         {mediaBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                        記事に合わせて画像を生成
+                        図解を作成
                       </button>
                       <button
                         type="button"
