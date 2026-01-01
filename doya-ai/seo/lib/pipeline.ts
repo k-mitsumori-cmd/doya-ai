@@ -4,8 +4,7 @@ import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gem
 import { fetchAndExtract } from '@seo/lib/extract'
 import { SeoCreateArticleInput, SeoOutline, SeoOutlineSchema } from '@seo/lib/types'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
-import { formatBannerPlanDescription, generateArticleBannerPlan, guessArticleGenreJa, mapGenreToNanobannerCategory } from '@seo/lib/bannerPlan'
-import { generateBanners } from '@/lib/nanobanner'
+import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPlan'
 
 function nowIso() {
   return new Date().toISOString()
@@ -794,186 +793,56 @@ async function generateSection(jobId: string) {
   })
 }
 
-function extractBannerContextFromMarkdown(md: string): { headings: string[]; excerpt: string } {
-  const text = String(md || '').replace(/\r\n/g, '\n')
-  const headings = (text.match(/^#{1,3}\s+.+$/gm) || [])
-    .map((h) => h.replace(/^#{1,6}\s+/, '').trim())
-    .filter(Boolean)
-    .slice(0, 16)
-  const excerpt = text
-    .replace(/!\[[^\]]*?\]\([^)]+\)/g, '')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/`{3}[\s\S]*?`{3}/g, '')
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .slice(0, 2800)
-  return { headings, excerpt }
-}
-
 async function autoGenerateBanner(args: { article: any; finalMarkdown?: string }) {
   const article = args.article
   await ensureSeoStorage()
 
-  // 記事内容を分析してビジュアルコンセプトを決定
   const title = String(article.title || '').trim()
-  const keywords = ((article.keywords as any) || []) as string[]
-  const persona = String(article.persona || '').trim()
-  const searchIntent = String(article.searchIntent || '').trim()
-  const requestText = String(article.requestText || '').trim()
-  const usageScene = '記事一覧/SNS（記事アイキャッチ）'
+  
+  // 記事本文を整形（マークダウンから不要要素を除去）
+  const articleText = String(args.finalMarkdown || article.outline || '')
+    .replace(/!\[[^\]]*?\]\([^)]+\)/g, '') // 画像を除去
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // リンクをテキストに変換
+    .replace(/`{3}[\s\S]*?`{3}/g, '') // コードブロックを除去
+    .replace(/^#{1,6}\s+/gm, '') // 見出し記号を除去
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, 5000)
 
-  const ctx = extractBannerContextFromMarkdown(String(args.finalMarkdown || ''))
-  const headingsText = ctx.headings.length ? ctx.headings.join(' / ') : ''
-  const excerpt = ctx.excerpt
+  // ジャンルを推定
+  const genre = guessArticleGenreJa([title, articleText].join(' '))
 
-  // キーワード＋本文抜粋から業界・テーマを推測
-  const allText = [title, ...keywords, persona, searchIntent, headingsText, excerpt].join(' ').toLowerCase()
-  const genreGuess = guessArticleGenreJa([title, headingsText, excerpt, ...keywords, persona, searchIntent].join(' '))
-
-  // 業界・テーマ別のビジュアル要素を決定
-  let industryHint = ''
-  let visualElements = 'abstract geometric shapes, flowing lines'
-  let moodKeyword = 'professional'
-
-  if (/マーケティング|広告|集客|sns|instagram|twitter/.test(allText)) {
-    industryHint = 'Digital marketing and social media growth'
-    visualElements = 'upward arrows, network graphs, growth charts, connected nodes'
-    moodKeyword = 'dynamic and growth-oriented'
-  } else if (/rpo|人材|採用|求人|転職|hr/.test(allText)) {
-    industryHint = 'Human resources and talent acquisition'
-    visualElements = 'handshake silhouettes, connected people icons, building blocks'
-    moodKeyword = 'trustworthy and human-centered'
-  } else if (/ai|人工知能|機械学習|deep|gpt|llm/.test(allText)) {
-    industryHint = 'Artificial intelligence and technology'
-    visualElements = 'neural network patterns, circuit board designs, futuristic glowing elements'
-    moodKeyword = 'innovative and cutting-edge'
-  } else if (/seo|検索|google|アクセス|pv|流入/.test(allText)) {
-    industryHint = 'Search engine optimization and web traffic'
-    visualElements = 'magnifying glass, rising graphs, webpage layouts, search bar elements'
-    moodKeyword = 'analytical and results-driven'
-  } else if (/営業|sales|商談|crm|顧客|リード/.test(allText)) {
-    industryHint = 'Sales and customer relationship'
-    visualElements = 'funnel shapes, handshake imagery, target symbols, pipeline flows'
-    moodKeyword = 'confident and success-oriented'
-  } else if (/経営|戦略|事業|ビジネス|コンサル/.test(allText)) {
-    industryHint = 'Business strategy and management'
-    visualElements = 'chess pieces, roadmap paths, compass, interconnected gears'
-    moodKeyword = 'strategic and authoritative'
-  } else if (/開発|プログラミング|エンジニア|システム|saas/.test(allText)) {
-    industryHint = 'Software development and technology'
-    visualElements = 'code brackets, server stacks, cloud shapes, modular blocks'
-    moodKeyword = 'technical and modern'
-  } else if (/金融|投資|資産|保険|fintech/.test(allText)) {
-    industryHint = 'Finance and investment'
-    visualElements = 'upward trending lines, coin stacks, security shields, growth symbols'
-    moodKeyword = 'trustworthy and stable'
-  } else if (/教育|学習|研修|スキル|資格/.test(allText)) {
-    industryHint = 'Education and learning'
-    visualElements = 'open books, lightbulb moments, stepping stones, graduation elements'
-    moodKeyword = 'inspiring and knowledge-focused'
-  } else if (/健康|医療|ヘルスケア|病院|福祉/.test(allText)) {
-    industryHint = 'Healthcare and wellness'
-    visualElements = 'heart shapes, protective shields, gentle curves, care symbols'
-    moodKeyword = 'caring and professional'
-  } else if (/製造|工場|メーカー|生産|品質/.test(allText)) {
-    industryHint = 'Manufacturing and production'
-    visualElements = 'interlocking gears, assembly line patterns, precision tools'
-    moodKeyword = 'reliable and efficient'
-  } else if (/不動産|物件|住宅|建築|リノベ/.test(allText)) {
-    industryHint = 'Real estate and property'
-    visualElements = 'building silhouettes, key symbols, floor plan hints, roof shapes'
-    moodKeyword = 'stable and aspirational'
-  } else if (/美容|コスメ|サロン|エステ|スキンケア/.test(allText)) {
-    industryHint = 'Beauty and cosmetics'
-    visualElements = 'elegant curves, soft gradients, luxury patterns, botanical hints'
-    moodKeyword = 'elegant and refined'
-  } else if (/飲食|レストラン|カフェ|フード|料理/.test(allText)) {
-    industryHint = 'Food and restaurant industry'
-    visualElements = 'abstract food shapes, warm color accents, welcoming curves'
-    moodKeyword = 'warm and inviting'
-  } else if (/旅行|観光|ホテル|ツアー|レジャー/.test(allText)) {
-    industryHint = 'Travel and tourism'
-    visualElements = 'compass, horizon lines, journey paths, destination markers'
-    moodKeyword = 'adventurous and exciting'
-  } else if (/ec|通販|ショップ|物販|アマゾン|楽天/.test(allText)) {
-    industryHint = 'E-commerce and retail'
-    visualElements = 'shopping cart elements, delivery boxes, package symbols, store fronts'
-    moodKeyword = 'convenient and trustworthy'
-  }
-
-  // まず「記事バナー用のコピー案 + デザイン方針（CTAなし）」を生成し、生成ログとして保存する
-  const plan = await generateArticleBannerPlan({
+  // 新しいプロンプトでバナー生成
+  const prompt = buildArticleBannerPrompt({
     title,
-    headings: ctx.headings,
-    excerpt,
-    keywords,
-    persona,
-    searchIntent,
-    requestText,
-    usage: usageScene,
-    genreHint: genreGuess,
+    articleText,
+    bannerSize: '1200x628（16:9、SNS/広告向け）',
+    genre,
   })
 
-  // Nano Banana Pro（nanobanner）で「広告バナー」を生成
-  // customImagePromptを使わず、nanobannerの標準プロンプト生成ロジックを使用
-  // これにより「TEXT MUST BE IN THE IMAGE」等の強力なテキスト描画指示が適用される
-  const category = mapGenreToNanobannerCategory(plan.genre)
-  
-  // プランから取得したコピーをそのまま使用（短く・強く）
-  const headline = plan.mainCopy || title
-  const subhead = plan.subCopy || ''
-  const ctaText = '詳しくはこちら'
-  
-  // 記事内容を反映したビジュアル説明
-  const imageDescription = [
-    `業界: ${plan.genre}`,
-    `コンセプト: ${industryHint || '記事内容を象徴するビジュアル'}`,
-    `要素: ${visualElements}`,
-    `ムード: ${moodKeyword}`,
-  ].join(' / ')
+  // Geminiで画像生成
+  const result = await geminiGenerateImagePng({
+    prompt,
+    aspectRatio: '16:9',
+    imageSize: '2K',
+    model: GEMINI_IMAGE_MODEL_DEFAULT,
+  })
 
-  const result = await generateBanners(
-    category,
-    headline, // keyword引数がheadlineとして使用される
-    '1200x628',
-    {
-      purpose: 'sns_ad',
-      subheadText: subhead,
-      ctaText: ctaText,
-      imageDescription: imageDescription,
-      // customImagePromptを使わない → createBannerPromptが使用される
-    },
-    1
-  )
-  const dataUrl = Array.isArray(result?.banners) ? result.banners.find((b) => typeof b === 'string' && b.startsWith('data:image/')) : null
-  if (!dataUrl) throw new Error(result?.error || 'バナー画像の生成に失敗しました')
-  const base64 = String(dataUrl).split(',')[1] || ''
+  if (!result?.dataBase64) {
+    throw new Error('バナー画像の生成に失敗しました')
+  }
 
   const filename = `seo_${article.id}_${Date.now()}_banner.png`
-  const saved = await saveBase64ToFile({ base64, filename, subdir: 'images' })
+  const saved = await saveBase64ToFile({ base64: result.dataBase64, filename, subdir: 'images' })
 
-  // 保存用のプロンプトログ（表示用）
-  const promptLog = [
-    `【バナー生成設定】`,
-    `カテゴリ: ${category}`,
-    `メインコピー: ${headline}`,
-    subhead ? `サブコピー: ${subhead}` : '',
-    `CTA: ${ctaText}`,
-    `ビジュアル: ${imageDescription}`,
-    '',
-    `【生成元情報】`,
-    `記事タイトル: ${title}`,
-    `ジャンル: ${plan.genre}`,
-  ].filter(Boolean).join('\n')
-
+  // DBに保存
   const rec = await (prisma as any).seoImage.create({
     data: {
       articleId: article.id,
       kind: 'BANNER',
-      title: '記事アイキャッチ',
-      description: formatBannerPlanDescription(plan),
-      prompt: promptLog,
+      title: '記事バナー',
+      description: `記事「${title}」のバナー画像\nジャンル: ${genre}`,
+      prompt: prompt,
       filePath: saved.relativePath,
       mimeType: 'image/png',
     },

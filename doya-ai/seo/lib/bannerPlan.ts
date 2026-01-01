@@ -1,30 +1,96 @@
-import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+/**
+ * ドヤライティングAI - 記事バナー生成用プロンプト
+ * 
+ * 記事内容に基づいた「クリックされる記事バナー画像」を生成する
+ */
 
-export type ArticleBannerPlan = {
-  genre: string
-  mainCopy: string
-  subCopy: string
-  supportingPoints: string[]
-  visualConcept: string
-  palette: string
-  layout: string
-  designIntent: string
-}
+/**
+ * 記事バナー生成用プロンプトテンプレート
+ */
+export const ARTICLE_BANNER_PROMPT_TEMPLATE = `あなたは「広告・記事バナーを専門に制作するトップレベルのAIデザイナー」です。
+以下の記事内容を正確に理解し、成果が出ている記事バナー画像の構成・情報設計・視線誘導を踏襲した
+"クリックされる記事バナー画像"を生成してください。
 
-export function mapGenreToNanobannerCategory(genre: string): string {
-  const g = String(genre || '').toLowerCase()
-  if (/転職|採用|人材|hr/.test(g)) return 'recruit'
-  if (/itスクール|スクール|教育|学習|資格/.test(g)) return 'education'
-  if (/美容|コスメ|サロン|エステ|スキンケア/.test(g)) return 'beauty'
-  if (/健康|医療|ヘルスケア|病院|福祉|ダイエット/.test(g)) return 'health'
-  if (/ec|通販|物販|ショップ|d2c|楽天|amazon/.test(g)) return 'ec'
-  if (/ai|人工知能|機械学習|llm|gpt/.test(g)) return 'tech'
-  if (/不動産|住宅|建築|リノベ|物件/.test(g)) return 'realestate'
-  if (/金融|投資|資産|保険|fintech/.test(g)) return 'finance'
-  if (/マーケ|広告|sns|instagram|twitter|x\b|meta/.test(g)) return 'marketing'
-  return 'other'
-}
+# 参照するバナーの共通特徴（必ず反映）
+- 大きく強いメインコピー（一目で内容が伝わる）
+- 数字・実績・条件などの"判断材料"を明示
+- 人物 or 商品を主役にした視線誘導
+- 情報は多いが、整理されていて読みやすい
+- 広告感はあるが「記事内容と完全一致」している
 
+# 入力情報
+【記事タイトル】
+{{ARTICLE_TITLE}}
+
+【記事本文】
+{{ARTICLE_TEXT}}
+
+【用途】
+記事バナー（アイキャッチ／SNS／広告流用可）
+
+【サイズ】
+{{BANNER_SIZE}}
+
+【想定ジャンル】
+{{GENRE}}
+（例：転職 / スクール / 美容 / EC / IT / ビジネス / 情報商材）
+
+# ステップ1：記事理解（必須）
+以下を内部で必ず整理してください。
+- 記事の結論・一番伝えたいこと
+- 読者が「自分ごと」と感じる悩み・欲求
+- 記事内で最も強い訴求ポイント
+- 記事の信頼性を支える要素（実績・数字・条件・専門性）
+
+# ステップ2：コピー設計（超重要）
+以下の構成で文字情報を設計してください。
+
+■ メインコピー（最重要・20〜30文字）
+- 記事の結論 or ベネフィットを端的に
+- 強いが誇張しない
+- 記事内表現を優先
+
+■ サブコピー（補足・10〜20文字）
+- 条件・背景・安心材料
+
+■ 強調ワード
+- 数字（％、年齢、金額、実績など）
+- 限定性・簡単さ・変化
+
+■ CTAテキスト（短く）
+- 「詳しくはこちら」
+- 「今すぐチェック」
+- 「無料で見る」など
+
+※ 記事に書かれていない数字・実績は絶対に作らない
+
+# ステップ3：デザイン指示（成果バナー準拠）
+- 広告で実際に使われている記事バナーの構図を採用
+- メインコピーは大きく、背景と強いコントラスト
+- 人物がいる場合は、自然で信頼感のある表情
+- 商品がある場合は、清潔感・質感が伝わる配置
+- 色はジャンルに合わせて最適化
+  - 転職・IT：青・ネイビー
+  - 美容：白・パステル・透明感
+  - EC：オレンジ・赤で訴求
+- 情報は多くても「ブロック化」して整理
+
+# 禁止事項
+- 記事内容とズレた煽り表現
+- 根拠のないNo.1表記
+- 読めないほど小さい文字
+- 世界観だけで中身が伝わらないデザイン
+
+# 出力要件
+- 記事バナー画像を1枚生成
+- 広告・記事一覧に並んでも"負けない"視認性
+- 見ただけで「この記事、気になる」と思わせる完成度
+
+以上をすべて満たした、プロ品質の記事バナー画像を生成してください。`
+
+/**
+ * 記事内容からジャンルを推定
+ */
 export function guessArticleGenreJa(text: string): string {
   const t = String(text || '').toLowerCase()
   if (/転職|採用|求人|rpo|人材|hr/.test(t)) return '転職/採用'
@@ -32,121 +98,31 @@ export function guessArticleGenreJa(text: string): string {
   if (/美容|コスメ|サロン|エステ|スキンケア/.test(t)) return '美容'
   if (/健康|医療|ヘルスケア|病院|福祉|ダイエット/.test(t)) return '健康'
   if (/ec|通販|物販|ショップ|d2c|楽天|アマゾン|amazon/.test(t)) return 'EC'
-  if (/ai|人工知能|機械学習|llm|gpt/.test(t)) return 'AI'
+  if (/ai|人工知能|機械学習|llm|gpt/.test(t)) return 'AI/IT'
   if (/不動産|物件|住宅|建築|リノベ/.test(t)) return '不動産'
   if (/金融|投資|資産|保険|fintech/.test(t)) return '金融'
   if (/マーケ|広告|sns|instagram|twitter|x\\b|meta/.test(t)) return 'マーケティング'
+  if (/情報商材|副業|稼ぐ|収入|ノウハウ/.test(t)) return '情報商材'
   return 'ビジネス'
 }
 
-function sanitizeLine(s: string, max = 60): string {
-  const t = String(s || '').replace(/\s+/g, ' ').trim()
-  return t.length > max ? t.slice(0, max) : t
-}
-
-export async function generateArticleBannerPlan(args: {
+/**
+ * バナー生成用プロンプトを組み立て
+ */
+export function buildArticleBannerPrompt(args: {
   title: string
-  headings: string[]
-  excerpt: string
-  keywords?: string[]
-  persona?: string
-  searchIntent?: string
-  requestText?: string
-  usage?: string
-  genreHint?: string
-}): Promise<ArticleBannerPlan> {
-  const title = sanitizeLine(args.title, 120)
-  const headings = (args.headings || []).map((h) => sanitizeLine(h, 60)).filter(Boolean).slice(0, 12)
-  const excerpt = String(args.excerpt || '').replace(/\s+/g, ' ').trim().slice(0, 1200)
-  const keywords = (args.keywords || []).map((k) => sanitizeLine(k, 30)).filter(Boolean).slice(0, 10)
-  const persona = sanitizeLine(args.persona || '', 120)
-  const searchIntent = sanitizeLine(args.searchIntent || '', 160)
-  const requestText = String(args.requestText || '').trim().slice(0, 800)
-  const usage = sanitizeLine(args.usage || '記事一覧/SNS', 80)
-  const genre = sanitizeLine(args.genreHint || guessArticleGenreJa([title, headings.join(' '), excerpt, keywords.join(' ')].join(' ')), 40)
+  articleText: string
+  bannerSize?: string
+  genre?: string
+}): string {
+  const title = String(args.title || '').trim().slice(0, 200)
+  const articleText = String(args.articleText || '').trim().slice(0, 5000)
+  const bannerSize = args.bannerSize || '1200x628（16:9、SNS/広告向け）'
+  const genre = args.genre || guessArticleGenreJa([title, articleText].join(' '))
 
-  const prompt = [
-    'あなたは「記事バナー（アイキャッチ）」制作に強いアートディレクター兼マーケターAIです。',
-    '目的: 記事タイトル・見出し・本文要点から、内容に乖離しない"記事バナー用のコピー"と"デザイン方針"を作る。',
-    '',
-    '重要:',
-    '- これは広告バナーではない。CTA文言（詳しくはこちら/今すぐ等）は絶対に入れない。',
-    '- mainCopy/subCopy/supportingPointsは画像内に直接描画される。',
-    '- 記事内容とズレた煽りは禁止。断定/誇張は避ける。',
-    '- 情報過多は禁止。テキストブロックは最大3要素（メイン/サブ/補足）まで。',
-    '- スマホで一瞬で読める前提で、短く太いコピーにする。',
-    '',
-    '【文字数制約（最重要）】',
-    '- mainCopy: 12〜16文字（日本語の短い名詞句。句読点は極力避ける）',
-    '- subCopy: 16〜26文字（補足説明。句読点は極力避ける）',
-    '- supportingPoints: 各10〜14文字（最大2つ。箇条書き向け）',
-    '',
-    '入力:',
-    `- 記事タイトル: ${title}`,
-    headings.length ? `- 見出し要点: ${headings.join(' / ')}` : '',
-    genre ? `- 記事ジャンル: ${genre}` : '',
-    keywords.length ? `- キーワード: ${keywords.join(', ')}` : '',
-    persona ? `- 想定ターゲット: ${persona}` : '',
-    searchIntent ? `- 検索意図: ${searchIntent}` : '',
-    requestText ? `- 主な訴求ポイント（一次情報）: ${requestText}` : '',
-    `- 使用用途: ${usage}`,
-    excerpt ? `- 本文要点（抜粋）: ${excerpt}` : '',
-    '',
-    '出力: JSONのみ（途中で切らない）。',
-    'スキーマ:',
-    '{"genre":"ビジネス","mainCopy":"12〜16文字（短い）","subCopy":"16〜26文字（短い）","supportingPoints":["10〜14文字","10〜14文字"],"visualConcept":"ビジュアルの中心アイデア","palette":"配色（例:青/ネイビー）","layout":"レイアウト方針（余白/配置）","designIntent":"1〜2行の意図"}',
-  ]
-    .filter(Boolean)
-    .join('\n')
-
-  const out = await geminiGenerateJson<ArticleBannerPlan>(
-    {
-      model: GEMINI_TEXT_MODEL_DEFAULT,
-      prompt,
-      generationConfig: { temperature: 0.35, maxOutputTokens: 1200 },
-    },
-    'JSON'
-  ).catch(() => null)
-
-  const safe: ArticleBannerPlan = {
-    genre,
-    // 画像内に直接描画するため、短めに制限（長いとモデルが文字描画を省略しやすい）
-    mainCopy: sanitizeLine(out?.mainCopy || title || '要点を整理', 18),
-    subCopy: sanitizeLine(out?.subCopy || headings[0] || '記事のポイントを一目で', 28),
-    supportingPoints: (Array.isArray(out?.supportingPoints) ? out!.supportingPoints : [])
-      .map((x) => sanitizeLine(x, 14))
-      .filter(Boolean)
-      .slice(0, 2),
-    visualConcept: sanitizeLine(out?.visualConcept || '記事内容を象徴するビジュアル', 120),
-    palette: sanitizeLine(out?.palette || '青/ネイビー基調（信頼感）', 80),
-    layout: sanitizeLine(out?.layout || '余白多め、情報は3ブロックまで', 120),
-    designIntent: sanitizeLine(out?.designIntent || '記事の要点が直感的に伝わるように整理', 140),
-  }
-
-  // CTAっぽい文言の混入を保険で除去（ルール強制）
-  const ban = /(詳しくはこちら|今すぐ|チェック|無料で|申込|申し込み|購入|登録|クリック)/g
-  safe.mainCopy = safe.mainCopy.replace(ban, '').trim()
-  safe.subCopy = safe.subCopy.replace(ban, '').trim()
-  safe.supportingPoints = safe.supportingPoints.map((s) => s.replace(ban, '').trim()).filter(Boolean)
-  return safe
+  return ARTICLE_BANNER_PROMPT_TEMPLATE
+    .replace('{{ARTICLE_TITLE}}', title)
+    .replace('{{ARTICLE_TEXT}}', articleText)
+    .replace('{{BANNER_SIZE}}', bannerSize)
+    .replace('{{GENRE}}', genre)
 }
-
-export function formatBannerPlanDescription(plan: ArticleBannerPlan): string {
-  const lines: string[] = []
-  lines.push('=== 画像内テキスト（バナーに描画）===')
-  lines.push(`メインコピー: ${plan.mainCopy}`)
-  lines.push(`サブコピー: ${plan.subCopy}`)
-  if (plan.supportingPoints?.length) {
-    lines.push(`補足: ${plan.supportingPoints.join(' / ')}`)
-  }
-  lines.push('')
-  lines.push('=== デザイン方針 ===')
-  lines.push(`ジャンル: ${plan.genre}`)
-  lines.push(`ビジュアル: ${plan.visualConcept}`)
-  lines.push(`配色: ${plan.palette}`)
-  lines.push(`レイアウト: ${plan.layout}`)
-  lines.push(`意図: ${plan.designIntent}`)
-  return lines.join('\n')
-}
-
-
