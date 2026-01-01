@@ -740,11 +740,13 @@ function createBannerPrompt(
     ? `${brandColors.join(', ')} (use these as the primary palette)`
     : categoryStyle.colors
 
-  let prompt = isArticleBanner
+  const introText = isArticleBanner
     ? `You are a top-tier editorial banner designer for Japanese articles.
 Goal: generate a premium-quality ARTICLE BANNER (NOT an advertisement) WITH readable Japanese text.`
     : `You are a world-class performance ad art director for the Japanese market.
 Goal: generate a HIGH-CTR, premium-quality advertisement creative WITH readable Japanese text.`
+
+  let prompt = `${introText}
 
 === SYSTEM BRIEF (JP / MUST FOLLOW) ===
 ${buildAgencyMasterPromptJP({
