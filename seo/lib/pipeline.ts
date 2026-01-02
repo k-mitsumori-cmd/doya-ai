@@ -727,6 +727,40 @@ function inferComparisonCountFromTitle(title: string, keywords: any): number {
   return 0
 }
 
+function buildComparisonBaseQuery(title: any, keywords: any): string {
+  const t = String(title || '').replace(/\r\n/g, ' ').trim()
+  const ks = Array.isArray(keywords) ? keywords.map((x: any) => String(x || '')).join(' ') : String(keywords || '')
+  const raw = `${t} ${ks}`.replace(/\s+/g, ' ').trim()
+  if (!raw) return ''
+
+  // 例: 「RPO（採用代行）おすすめ比較50選｜選び方と料金相場【2026年最新】」
+  // → 「RPO 採用代行」
+  let s = raw
+    // 記号/飾りを落とす
+    .replace(/[｜|]/g, ' ')
+    .replace(/【[^】]*】/g, ' ')
+    .replace(/（[^）]*）/g, (m) => ` ${m.replace(/[（）]/g, '')} `) // 括弧の中身は残す（採用代行など）
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/（\s*[^）]*\s*）/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ') // 記号類を空白へ（日本語/英数は残す）
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // 比較ワード/ノイズを削る
+  s = s
+    .replace(/(?:おすすめ|比較|ランキング|厳選|まとめ|選び方|料金相場|とは|最新|完全版|保存版)/g, ' ')
+    .replace(/(?:top)\s*\d{1,3}/gi, ' ')
+    .replace(/\d{1,3}\s*(?:選|社)/g, ' ')
+    .replace(/\b20\d{2}\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // 極端に長いと検索が死ぬので短く
+  const tokens = s.split(' ').filter(Boolean)
+  const compact = tokens.slice(0, 4).join(' ')
+  return compact
+}
+
 async function maybeAutoEnableComparisonResearchMode(article: any, jobId?: string) {
   // 「おすすめ50選」「比較30社」などのタイトルを検知したら、比較調査モードに自動で切り替える
   // 目的: standardモードで"サンプル数社"になってしまう失敗を防ぐ
@@ -1036,7 +1070,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   }
 
   const keywords = Array.isArray(article.keywords) ? article.keywords : (article.keywords as any) || []
-  const baseQuery = String(keywords[0] || article.title || '').trim()
+  const baseQuery = buildComparisonBaseQuery(article.title, keywords) || String(keywords[0] || article.title || '').trim()
   if (!baseQuery) {
     await pushResearchEvent(jobId, {
       at: Date.now(),
@@ -1060,13 +1094,27 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   })
 
   const comparisonMediaUrls: string[] = []
-  const queries = [`${baseQuery} 比較 おすすめ 一覧`, `${baseQuery} サービス比較 ランキング`]
+  // desired が大きいほど検索のバリエーションを増やす（必要に応じて機能を調整）
+  const queries = [
+    `${baseQuery} 比較 おすすめ 一覧`,
+    `${baseQuery} サービス比較 ランキング`,
+    ...(desired >= 30
+      ? [
+          `${baseQuery} 会社 一覧`,
+          `${baseQuery} 事業者 一覧`,
+          `${baseQuery} サービス 提供`,
+          `${baseQuery} 企業 おすすめ`,
+          `${baseQuery} 評判 口コミ 比較`,
+        ]
+      : []),
+  ]
 
   for (const q of queries) {
     try {
       const found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10 })
       for (const r of found.organic) {
-        if (comparisonMediaUrls.length >= 5) break
+        const maxMedia = desired >= 30 ? 10 : 6
+        if (comparisonMediaUrls.length >= maxMedia) break
         const url = normalizeUrlMaybe(r.url)
         if (!url) continue
         // 比較メディアっぽいURLを優先
@@ -1095,7 +1143,8 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
         detail: String(e?.message || e || '').slice(0, 240),
       })
     }
-    if (comparisonMediaUrls.length >= 5) break
+    const maxMedia = desired >= 30 ? 10 : 6
+    if (comparisonMediaUrls.length >= maxMedia) break
   }
 
   // 比較メディアURLを引用元として保存（記事本文で「比較サイトから抽出」として出典表示できるように）
@@ -1126,7 +1175,8 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
 
   // 比較メディアからサービスを抽出（最大5記事をパース）
   const collected: any[] = [...uniqExisting]
-  for (const mediaUrl of comparisonMediaUrls.slice(0, 5)) {
+  const maxParse = desired >= 30 ? 10 : 5
+  for (const mediaUrl of comparisonMediaUrls.slice(0, maxParse)) {
     if (uniqCandidatesByName(collected).length >= desired) break
     const services = await extractServicesFromComparisonArticle(mediaUrl, baseQuery, jobId)
     for (const s of services) {
@@ -1144,7 +1194,16 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
 
   // フォールバック: まだ足りなければ従来の検索も実行
   if (uniqCandidatesByName(collected).length < desired) {
-    const fallbackQueries = [`${baseQuery} 比較`, `${baseQuery} おすすめ`, `${baseQuery} 料金`]
+    const fallbackQueries = Array.from(
+      new Set([
+        `${baseQuery} 比較`,
+        `${baseQuery} おすすめ`,
+        `${baseQuery} 料金`,
+        `${baseQuery} 会社`,
+        `${baseQuery} 事業者`,
+        ...(desired >= 30 ? [`${baseQuery} サービス`, `${baseQuery} 導入 事例`, `${baseQuery} 支援 会社`] : []),
+      ])
+    )
     for (const q of fallbackQueries) {
       await pushResearchEvent(jobId, {
         at: Date.now(),
@@ -1153,7 +1212,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
         detail: q,
       })
       // desired が大きいほどページングを増やす（必要に応じて検索量を調整）
-      const maxStart = desired >= 40 ? 50 : desired >= 20 ? 40 : 30
+      const maxStart = desired >= 40 ? 100 : desired >= 20 ? 60 : 30
       const organicPool: { title: string; url: string; snippet?: string }[] = []
 
       for (let start = 0; start < maxStart && uniqCandidatesByName(collected).length < desired; start += 10) {
@@ -1526,6 +1585,19 @@ async function ensureOutlineAndSections(jobId: string) {
       data: { step: 'cmp_candidates', progress: Math.max(5, Number(job.progress || 0)), status: 'running' },
     })
     const ensured = await ensureComparisonCandidates(article, jobId)
+    const cfg = (article?.comparisonConfig as any) || {}
+    const desired = Math.max(0, Math.min(60, Number(cfg?.count || 0)))
+    // 「おすすめ50選」等、比較数が明示されている場合は “候補0件で比較記事を完成させない”
+    if (desired > 0 && ensured.length === 0) {
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'error',
+        title: '比較候補が0件のため、比較記事を生成できません',
+        detail:
+          'SerpAPI検索/抽出に失敗しました。SEO_SERPAPI_KEYの有効性、検索クエリ（キーワード/タイトル）、または候補の手動追加を確認してください。',
+      })
+      throw new Error('比較候補が0件のため、比較記事を生成できません（候補収集に失敗）')
+    }
     // 不足しても止めない（記事内に不足注記を明示して進行する）
     article.comparisonCandidates = ensured
   }
@@ -2205,6 +2277,25 @@ async function integrate(jobId: string) {
   }
 
   let finalMarkdown = parts.join('\n\n')
+
+  // 比較記事: 候補0件で本文を完成させない（「比較になってない」記事を防ぐ）
+  if (isComparison) {
+    const cfg0 = (article?.comparisonConfig as any) || {}
+    const desired0 = Math.max(0, Math.min(60, Number(cfg0?.count || 0)))
+    const candidates0 = uniqCandidatesByName(
+      Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
+    )
+    if (desired0 > 0 && candidates0.length === 0) {
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'error',
+        title: '比較候補が0件のため、記事を完成できません',
+        detail:
+          '候補が取得できない状態で比較記事を完成させると、サービス名が入らず「比較になってない」記事になります。SerpAPI設定/検索クエリ/候補手動追加を確認してください。',
+      })
+      throw new Error('比較候補が0件のため、比較記事を完成できません')
+    }
+  }
 
   // 比較記事で「（ツール名）」等のテンプレが混ざった場合は、そのまま公開しない（実在名に矯正）
   if (isComparison && containsPlaceholderNames(finalMarkdown)) {
