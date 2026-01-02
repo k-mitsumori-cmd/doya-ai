@@ -303,6 +303,13 @@ export default function SeoJobPage() {
     return idx >= 0 ? idx : 0
   }, [job])
 
+  // リサーチイベント (フックは早期リターンの前で呼び出す必要がある)
+  const researchEvents = useMemo(() => {
+    const list = Array.isArray((job as any)?.meta?.researchEvents) ? ((job as any).meta.researchEvents as any[]) : []
+    // 最新を上に
+    return list.slice(-12).reverse()
+  }, [job])
+
   // ポーリング中かどうかのref（再レンダリングを避けるため）
   const isPollingRef = useRef(false)
   const jobRef = useRef<SeoJob | null>(null)
@@ -829,11 +836,7 @@ export default function SeoJobPage() {
   const isComparison = String(job.step || '').startsWith('cmp_')
   const researchLast = (job as any)?.meta?.researchLast || null
   const researchStats = (job as any)?.meta?.researchStats || null
-  const researchEvents = useMemo(() => {
-    const list = Array.isArray((job as any)?.meta?.researchEvents) ? ((job as any).meta.researchEvents as any[]) : []
-    // 最新を上に
-    return list.slice(-12).reverse()
-  }, [job])
+  // researchEvents は上でuseMemoとして定義済み（早期リターン前でフックを呼び出す必要があるため）
   const progressPct = clamp(Number(job.progress || 0), 0, 100)
   const heartbeatAgo = lastHeartbeatAt ? Math.max(0, Math.floor((Date.now() - lastHeartbeatAt) / 1000)) : null
   const articleIdSafe = String(job.articleId || job.article?.id || '').trim()
