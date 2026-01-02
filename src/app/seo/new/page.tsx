@@ -246,6 +246,7 @@ export default function SeoNewArticlePage() {
   const [error, setError] = useState<string | null>(null)
   const [errorCta, setErrorCta] = useState<null | { label: string; href: string }>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [showUpgradePopup, setShowUpgradePopup] = useState(false)
 
   const keywordList = useMemo(() => {
     return keywords.split(/[,、\s]+/).filter(Boolean)
@@ -768,8 +769,11 @@ export default function SeoNewArticlePage() {
       })
       const json = await res.json()
       if (!res.ok || !json.success) {
-        if (res.status === 429) setErrorCta({ label: '料金/プランを見る', href: '/seo/pricing' })
-        else if (res.status === 401) setErrorCta({ label: 'ログインする', href: '/auth/signin' })
+        if (res.status === 429) {
+          setShowUpgradePopup(true) // アップグレード提案ポップアップを表示
+        } else if (res.status === 401) {
+          setErrorCta({ label: 'ログインする', href: '/auth/signin' })
+        }
         throw new Error(json.error || '作成に失敗しました')
       }
 
@@ -1638,6 +1642,111 @@ export default function SeoNewArticlePage() {
             </div>
           </div>
         </motion.div>
+
+      {/* アップグレード提案ポップアップ（429:プラン制限時） */}
+      <AnimatePresence>
+        {showUpgradePopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setShowUpgradePopup(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="relative bg-gradient-to-br from-white to-blue-50 rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-blue-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setShowUpgradePopup(false)}
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className="text-center">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.15, type: 'spring', damping: 15 }}
+                  className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 text-white mx-auto mb-6 flex items-center justify-center shadow-lg shadow-orange-200"
+                >
+                  <Lock className="w-10 h-10" />
+                </motion.div>
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                >
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
+                    本日の生成上限に達しました
+                  </h3>
+                  <p className="text-slate-600 font-bold">
+                    {userPlan === 'GUEST' || userPlan === 'FREE'
+                      ? 'PROプランにアップグレードすると、1日最大3記事まで生成できます！'
+                      : 'Enterpriseプランにアップグレードすると、1日最大30記事まで生成できます！'}
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 }}
+                  className="mt-6 bg-white rounded-2xl p-5 border border-slate-100 text-left"
+                >
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
+                    アップグレードで解放される機能
+                  </p>
+                  <div className="space-y-2.5 text-sm font-bold text-gray-700">
+                    {userPlan === 'GUEST' || userPlan === 'FREE' ? (
+                      <>
+                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>1日3記事まで生成可能（PROプラン）</span></div>
+                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>図解/バナー自動生成</span></div>
+                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>SEO改善提案のAI自動修正</span></div>
+                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>20,000字まで生成可能</span></div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>1日30記事まで生成可能（Enterprise）</span></div>
+                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>優先サポート対応</span></div>
+                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>チーム利用・複数アカウント対応</span></div>
+                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>API連携・カスタム開発相談</span></div>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="mt-6 grid gap-3"
+                >
+                  <Link href="/seo/pricing">
+                    <button type="button" className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-base hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+                      <Zap className="w-5 h-5" />
+                      {userPlan === 'GUEST' || userPlan === 'FREE' ? 'PROプランを見る →' : 'Enterpriseプランを見る →'}
+                    </button>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setShowUpgradePopup(false)}
+                    className="w-full h-12 rounded-2xl bg-white border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors"
+                  >
+                    閉じる
+                  </button>
+                </motion.div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   )
 }
