@@ -171,21 +171,21 @@ function SeoSidebarImpl({
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
-              <Zap className="w-4 h-4 text-blue-600 fill-blue-600" />
+              <Zap className="w-4 h-4 text-emerald-700 fill-emerald-700" />
             </div>
             <p className="text-xs font-black text-white">プラン案内</p>
           </div>
           <p className="text-[11px] text-white font-bold leading-relaxed mb-1">
             現在：{seoPlanLabel === 'GUEST' ? 'ゲスト' : seoPlanLabel === 'FREE' ? '無料' : seoPlanLabel}
           </p>
-          <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
+          <p className="text-[10px] text-emerald-100 font-bold leading-relaxed opacity-80">
             {nextPlanLabel === 'PRO' && <>PRO: 月額¥9,980で20,000字まで</>}
             {nextPlanLabel === 'ENTERPRISE' && <>Enterprise: 月額¥49,980で50,000字まで</>}
             {nextPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
           </p>
           <Link
             href={planHref}
-            className="mt-2 w-full py-2 bg-white text-blue-600 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md block text-center"
+            className="mt-2 w-full py-2 bg-white text-emerald-700 text-[11px] font-black rounded-lg hover:bg-emerald-50 transition-colors shadow-md block text-center"
           >
             {nextPlanLabel === 'CONSULT' ? '相談する' : nextPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseへ'}
           </Link>
@@ -202,7 +202,7 @@ function SeoSidebarImpl({
           width: isCollapsed ? 72 : 240,
         }}
         transition={{ duration: 0.2, ease: 'easeInOut' }}
-        className={`${isMobile ? 'relative' : 'fixed left-0 top-0'} h-screen bg-[#2563EB] flex flex-col z-50 shadow-xl`}
+        className={`${isMobile ? 'relative' : 'fixed left-0 top-0'} h-screen bg-gradient-to-b from-emerald-600 via-green-600 to-teal-700 flex flex-col z-50 shadow-xl`}
       >
         {/* Logo */}
         <div className="px-4 py-5 flex items-center gap-2">
@@ -218,7 +218,7 @@ function SeoSidebarImpl({
                 className="overflow-hidden"
               >
                 <h1 className="text-lg font-black text-white tracking-tighter leading-none">ドヤライティングAI</h1>
-                <p className="text-[10px] font-bold text-blue-100/70 mt-0.5">SEOライティングAI</p>
+                <p className="text-[10px] font-bold text-emerald-100/70 mt-0.5">SEOライティングAI</p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -238,10 +238,12 @@ function SeoSidebarImpl({
                   className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer group ${
                     active
                       ? 'bg-white/15 text-white'
-                      : 'text-blue-100/70 hover:text-white hover:bg-white/10'
+                      : 'text-emerald-100/75 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-white' : 'text-blue-200/70 group-hover:text-white'}`} />
+                  <Icon
+                    className={`w-5 h-5 flex-shrink-0 ${active ? 'text-white' : 'text-emerald-200/75 group-hover:text-white'}`}
+                  />
                   <AnimatePresence>
                     {showLabel && (
                       <motion.span
@@ -379,14 +381,14 @@ function SeoSidebarImpl({
         </div>
 
         {/* User Profile */}
-        <div className="p-3 border-t border-white/5 bg-blue-700/30">
+        <div className="p-3 border-t border-white/5 bg-emerald-900/25">
           <div className={`flex items-center gap-2 ${!isMobile && isCollapsed ? 'justify-center' : ''}`}>
             <Link
               href="/seo/settings"
               className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer flex-1 min-w-0"
               title="設定"
             >
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-inner border border-white/10">
+              <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0 shadow-inner border border-white/10">
                 {session?.user?.image ? (
                   <img
                     src={session.user.image}
@@ -408,7 +410,7 @@ function SeoSidebarImpl({
                     <p className="text-xs font-bold text-white truncate">
                       {session?.user?.name || (isLoggedIn ? 'ユーザー' : 'ゲスト')}
                     </p>
-                    <p className="text-[10px] font-bold text-blue-100/60 truncate">
+                    <p className="text-[10px] font-bold text-emerald-100/60 truncate">
                       {seoPlanLabel === 'GUEST' ? 'ゲスト' : seoPlanLabel === 'FREE' ? '無料プラン' : `${seoPlanLabel}プラン`}
                     </p>
                   </motion.div>
@@ -428,7 +430,7 @@ function SeoSidebarImpl({
                 ) : (
                   <Link
                     href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(pathname || '/seo')}`}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white text-[#2563EB] text-[10px] font-black hover:bg-blue-50 transition-colors shadow-sm"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white text-emerald-700 text-[10px] font-black hover:bg-emerald-50 transition-colors shadow-sm"
                     title="ログイン"
                   >
                     <LogIn className="w-3.5 h-3.5" />
@@ -444,7 +446,7 @@ function SeoSidebarImpl({
         {!isMobile && (
           <button
             onClick={toggle}
-            className="absolute -right-3 top-24 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors border border-gray-100 z-10"
+            className="absolute -right-3 top-24 w-6 h-6 bg-white rounded-full shadow-lg flex items-center justify-center text-emerald-700 hover:bg-emerald-50 transition-colors border border-gray-100 z-10"
           >
             {isCollapsed ? (
               <ChevronRight className="w-4 h-4" />
@@ -463,7 +465,7 @@ function SeoSidebarImpl({
               exit={{ opacity: 0 }}
               className="px-4 py-3 text-center border-t border-white/5"
             >
-              <p className="text-[10px] text-blue-100/30 font-bold tracking-widest">ドヤライティングAI</p>
+              <p className="text-[10px] text-emerald-100/35 font-bold tracking-widest">ドヤライティングAI</p>
             </motion.div>
           )}
         </AnimatePresence>
