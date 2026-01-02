@@ -374,7 +374,8 @@ async function maybeDiscoverReferenceUrls(article: any, jobId?: string) {
 
   const title = String(article?.title || '').trim()
   const keywords = Array.isArray(article?.keywords) ? (article.keywords as any[]) : []
-  const q = [title, ...keywords.slice(0, 3)].filter(Boolean).join(' ')
+  // NOTE: タイトル丸ごとだとノイズで検索精度が落ちるため「核だけ」に正規化
+  const q = buildResearchBaseQuery(title, keywords) || [title, ...keywords.slice(0, 3)].filter(Boolean).join(' ')
   if (!q) return
 
   await pushResearchEvent(jobId, {
@@ -444,7 +445,7 @@ async function maybeDiscoverComparisonThirdPartyUrls(article: any, jobId?: strin
   const existing = Array.isArray(article?.referenceUrls) ? (article.referenceUrls as any[]) : []
   const base = (() => {
     const keywords = Array.isArray(article?.keywords) ? (article.keywords as any[]) : []
-    const q = String(keywords[0] || article?.title || '').trim()
+    const q = buildResearchBaseQuery(article?.title, keywords) || String(keywords[0] || article?.title || '').trim()
     return q
   })()
   if (!base) return
@@ -759,6 +760,38 @@ function buildComparisonBaseQuery(title: any, keywords: any): string {
   const tokens = s.split(' ').filter(Boolean)
   const compact = tokens.slice(0, 4).join(' ')
   return compact
+}
+
+function buildResearchBaseQuery(title: any, keywords: any): string {
+  // 比較だけでなく通常記事でも「核だけ」を検索するための正規化
+  const t = String(title || '').replace(/\r\n/g, ' ').trim()
+  const ks = Array.isArray(keywords) ? keywords.map((x: any) => String(x || '')).join(' ') : String(keywords || '')
+  const raw = `${t} ${ks}`.replace(/\s+/g, ' ').trim()
+  if (!raw) return ''
+
+  let s = raw
+    .replace(/[｜|]/g, ' ')
+    .replace(/【[^】]*】/g, ' ')
+    .replace(/（[^）]*）/g, (m) => ` ${m.replace(/[（）]/g, '')} `)
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // 記事タイトルによく入るノイズ語を削る
+  s = s
+    .replace(
+      /(?:おすすめ|比較|ランキング|厳選|まとめ|完全版|保存版|初心者|入門|ガイド|やり方|方法|手順|テンプレ|例文|チェックリスト|料金|費用|相場|口コミ|評判|最新)/g,
+      ' '
+    )
+    .replace(/(?:top)\s*\d{1,3}/gi, ' ')
+    .replace(/\d{1,3}\s*(?:選|社)/g, ' ')
+    .replace(/\b20\d{2}\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  const tokens = s.split(' ').filter(Boolean)
+  return tokens.slice(0, 5).join(' ')
 }
 
 async function maybeAutoEnableComparisonResearchMode(article: any, jobId?: string) {
