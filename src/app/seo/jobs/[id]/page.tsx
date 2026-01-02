@@ -1068,23 +1068,55 @@ export default function SeoJobPage() {
                   </div>
                 </div>
 
-                {/* 長文生成の案内（タブ移動OK） */}
-                <div className="px-5 sm:px-6 pt-4">
-                  <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20">
-                        <Rocket className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-black text-gray-900">20,000字以上は10分以上かかることがあります</p>
-                        <p className="mt-1 text-[11px] font-bold text-gray-600">
-                          リサーチしながら生成しているため時間がかかります。<span className="text-indigo-700">他のタブに移動しても問題ありません</span>
-                          （このタブは開いたままでOK）。戻ってきたら自動で最新状態に追いつきます。
-                        </p>
+                {/* 長文生成の案内（タブ移動OK）- 比較社数・文字数に応じた動的表示 */}
+                {(() => {
+                  const targetChars = job.article.targetChars || 0
+                  const comparisonCount = Array.isArray(job.article.comparisonCandidates)
+                    ? job.article.comparisonCandidates.length
+                    : (job.article.comparisonConfig?.count || 0)
+                  const isComparison = comparisonCount > 0
+
+                  // 時間目安を計算
+                  let timeEstimate = '5〜10分'
+                  let timeDetail = 'リサーチしながら生成しています。'
+
+                  if (isComparison && comparisonCount >= 40) {
+                    timeEstimate = '20〜30分'
+                    timeDetail = `${comparisonCount}社の公式サイトを調査し、料金・特徴を抽出しています。`
+                  } else if (isComparison && comparisonCount >= 20) {
+                    timeEstimate = '15〜20分'
+                    timeDetail = `${comparisonCount}社の詳細情報を収集・分析しています。`
+                  } else if (isComparison && comparisonCount >= 10) {
+                    timeEstimate = '10〜15分'
+                    timeDetail = `${comparisonCount}社を比較リサーチしています。`
+                  } else if (targetChars >= 20000) {
+                    timeEstimate = '10〜15分'
+                    timeDetail = '長文記事のため、じっくりリサーチしながら生成しています。'
+                  }
+
+                  return (
+                    <div className="px-5 sm:px-6 pt-4">
+                      <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20">
+                            <Clock className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-black text-gray-900">
+                              推定生成時間: <span className="text-indigo-700">{timeEstimate}</span>
+                              {isComparison && <span className="ml-2 text-xs font-bold text-orange-600">（{comparisonCount}社比較）</span>}
+                            </p>
+                            <p className="mt-1 text-[11px] font-bold text-gray-600">
+                              {timeDetail}
+                              <span className="text-indigo-700 ml-1">他のタブに移動しても問題ありません</span>
+                              （戻ってきたら自動で最新状態に追いつきます）
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  )
+                })()}
 
                 <div className="p-5 sm:p-6 grid lg:grid-cols-2 gap-5">
                   {/* 進行アクション */}
@@ -1598,24 +1630,24 @@ export default function SeoJobPage() {
                                 <p className="text-[10px] font-bold text-gray-500 mt-1 break-words">
                                   {it.detail}
                                 </p>
-                              )}
-                            </div>
-                          </div>
+                        )}
+                      </div>
+              </div>
                           <div className="flex-shrink-0 text-right">
                             <p className="text-[10px] font-black text-gray-400 tabular-nums">{formatHhMmSs(it.at)}</p>
                             <p className="text-[10px] font-bold text-gray-400 tabular-nums">{ageSec}秒前</p>
-                          </div>
-                        </div>
+            </div>
+              </div>
                       )
                     })}
-                  </div>
-                </div>
+              </div>
+            </div>
               </div>
             )}
 
             {/* アクションボタン */}
             <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-              {isDone ? (
+                {isDone ? (
                 articleHref ? (
                   <Link
                     href={articleHref}
@@ -1635,8 +1667,8 @@ export default function SeoJobPage() {
                     記事を見る（準備中）
                   </button>
                 )
-              ) : (
-                <>
+                    ) : (
+                      <>
                   <button
                     className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black shadow-sm opacity-90 cursor-not-allowed"
                     disabled
@@ -1738,7 +1770,7 @@ export default function SeoJobPage() {
                   const open = !!openPreviewIds[s.id]
                   const heading = s.headingPath || `セクション ${Number(s.index ?? 0) + 1}`
                   const content = String(s.content || '').trim()
-                  return (
+                return (
                     <div key={s.id} className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
                       <button
                         type="button"
@@ -1751,11 +1783,11 @@ export default function SeoJobPage() {
                           <p className="text-xs font-black text-gray-900 truncate">{heading}</p>
                           <p className="mt-0.5 text-[10px] font-bold text-gray-500">
                             {content ? `${Math.min(99999, content.length).toLocaleString()}文字` : '本文生成中…'}
-                          </p>
-                        </div>
+                        </p>
+                      </div>
                         <div className="flex-shrink-0 text-gray-400">
                           {open ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                        </div>
+                    </div>
                       </button>
                       <AnimatePresence initial={false}>
                         {open && (
@@ -1777,12 +1809,12 @@ export default function SeoJobPage() {
                                 <div className="mt-2 h-3 w-5/6 bg-gray-200 rounded animate-pulse" />
                               </div>
                             )}
-                          </motion.div>
+                  </motion.div>
                         )}
                       </AnimatePresence>
                     </div>
-                  )
-                })}
+                )
+              })}
               </div>
             </div>
           </motion.div>
@@ -1797,13 +1829,13 @@ export default function SeoJobPage() {
         >
           {articleHref ? (
             isDone ? (
-              <Link
+          <Link
                 href={articleHref}
-                className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-                記事ページを開く
-              </Link>
+            className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-800 text-sm font-bold transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+            記事ページを開く
+          </Link>
             ) : (
               <span
                 className="inline-flex items-center gap-2 text-gray-300 text-sm font-bold"
