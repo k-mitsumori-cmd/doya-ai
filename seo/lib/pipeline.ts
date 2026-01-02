@@ -1175,6 +1175,16 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     'LLMO elements toggles:',
     llmoOptionsText(article),
     '',
+    researchContext
+      ? [
+          'RESEARCH USAGE (must follow):',
+          '- The article MUST reflect the research below (最新情報/具体例/実例/根拠).',
+          '- Ensure the outline includes at least ONE section tagged "最新動向" and at least ONE section tagged "事例" when research exists.',
+          '- If the title implies a list/comparison ("おすすめ◯◯選/比較◯◯社/TOP◯◯"), ensure the outline contains sections that produce full tables (no samples).',
+          '- Never add fabricated "YYYY年MM月時点" statements unless explicitly present in research or user-provided requestText.',
+          '',
+        ].join('\n')
+      : '',
     researchContext ? clampText(researchContext, 4000) : '',
     comparisonBlock ? `\n=== COMPARISON BRIEF ===\n${clampText(comparisonBlock, 5000)}\n` : '',
     '',
@@ -1539,6 +1549,15 @@ async function generateSection(jobId: string) {
     '- Start with "## " heading (H2) that matches the outline.',
     '- Use H3/H4 as needed.',
     '- If you include a checklist, use numbered lists or normal bullet lists (NO checkboxes).',
+    researchContext
+      ? [
+          '- RESEARCH is available at the end of this prompt. You MUST reflect it in this section.',
+          '- When you use a concrete fact/number/example from RESEARCH, add an in-text source like: （出典: https://example.com/） right after the sentence.',
+          '- Include at least 2 cited concrete points in this section if RESEARCH exists (more is better).',
+          '- Do NOT write placeholder strings like "（他サービス名）", "URL未定", "調査中". If unknown, write "公式に明記なし/要問い合わせ/非公開".',
+          '- Do NOT claim "YYYY年MM月時点" unless that exact date exists in RESEARCH or requestText.',
+        ].join('\n')
+      : '',
     isComparison
       ? [
           '- Comparison mode: NEVER invent services/features/prices.',
