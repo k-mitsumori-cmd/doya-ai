@@ -547,9 +547,9 @@ export default function SeoJobPage() {
     try {
       setActionError(null)
       if (job?.status === 'paused') {
-        await fetch(`/api/seo/jobs/${jobId}/resume`, { method: 'POST' })
+        await fetch(`/api/seo/jobs/${jobId}/resume`, { method: 'POST', keepalive: true })
       }
-      const res = await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST' })
+      const res = await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST', keepalive: true })
       let json: any = null
       try {
         json = await res.json()
@@ -577,6 +577,31 @@ export default function SeoJobPage() {
     }, 4000)
     return () => clearInterval(t)
   }, [jobId, load])
+
+  // 長文生成は10分以上かかることもあるため、タブ移動/バックグラウンドでも進行が止まりにくいように補助ループを回す
+  // NOTE: ブラウザは非表示タブでタイマーを間引くので、周期を長めにして“継続的に叩く機会”を作る
+  useEffect(() => {
+    const isTerminal = job?.status === 'done' || job?.status === 'error' || job?.status === 'cancelled'
+    if (!job || isTerminal) return
+
+    let disposed = false
+    let timer: any = null
+
+    const tick = async () => {
+      if (disposed) return
+      // 連打は busy で弾く
+      await advanceOnce()
+      const visible = typeof document !== 'undefined' ? document.visibilityState !== 'hidden' : true
+      const nextMs = visible ? 2000 : 9000
+      timer = setTimeout(tick, nextMs)
+    }
+
+    timer = setTimeout(tick, 1800)
+    return () => {
+      disposed = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [job?.id, job?.status, advanceOnce])
 
   useEffect(() => {
     setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
@@ -1037,6 +1062,24 @@ export default function SeoJobPage() {
                   </div>
                   <div className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
                     生成中
+                  </div>
+                </div>
+
+                {/* 長文生成の案内（タブ移動OK） */}
+                <div className="px-5 sm:px-6 pt-4">
+                  <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20">
+                        <Rocket className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black text-gray-900">20,000字以上は10分以上かかることがあります</p>
+                        <p className="mt-1 text-[11px] font-bold text-gray-600">
+                          リサーチしながら生成しているため時間がかかります。<span className="text-indigo-700">他のタブに移動しても問題ありません</span>
+                          （このタブは開いたままでOK）。戻ってきたら自動で最新状態に追いつきます。
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
