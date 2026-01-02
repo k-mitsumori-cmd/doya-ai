@@ -5,9 +5,23 @@ import Link from 'next/link'
 import { ArrowLeft, BellRing, CreditCard, ArrowRight } from 'lucide-react'
 import { readSeoClientSettings, patchSeoClientSettings, type SeoClientSettings } from '@seo/lib/clientSettings'
 import { FeatureGuide } from '@/components/FeatureGuide'
+import { useSession, signOut } from 'next-auth/react'
+import { AccountSummaryCard } from '@/components/AccountSummaryCard'
 
 export default function SeoSettingsPage() {
   const [settings, setSettings] = useState<SeoClientSettings>(() => readSeoClientSettings())
+  const { data: session } = useSession()
+  const isLoggedIn = !!session?.user?.email
+
+  const planLabel = (() => {
+    const seoPlan = String((session?.user as any)?.seoPlan || '').toUpperCase()
+    const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
+    const p = seoPlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
+    if (p === 'ENTERPRISE') return 'Enterprise'
+    if (p === 'PRO') return 'PRO'
+    if (p === 'FREE') return '無料'
+    return 'ゲスト'
+  })()
 
   useEffect(() => {
     setSettings(readSeoClientSettings())
@@ -26,19 +40,32 @@ export default function SeoSettingsPage() {
           </Link>
           <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">設定</h1>
           <p className="text-sm text-gray-500 mt-1">ドヤライティングAIの体験をカスタマイズできます。</p>
-          <div className="mt-3">
-            <FeatureGuide
-              featureId="seo.settings"
-              title="設定の使い方"
-              description="通知や演出など、使い勝手に関わる設定を切り替えられます。"
-              steps={[
-                '「完成！」ポップアップは、記事生成完了の瞬間だけ表示する演出です',
-                'ON/OFFはいつでも変更できます（ローカル設定として保存されます）',
-              ]}
-              imageMode="off"
-            />
-          </div>
         </div>
+      </div>
+
+      {/* アカウント情報（最上部） */}
+      <div className="mb-6">
+        <AccountSummaryCard
+          serviceName="ドヤライティングAI"
+          planLabel={planLabel}
+          isLoggedIn={isLoggedIn}
+          user={session?.user || null}
+          loginHref="/auth/doyamarke/signin?callbackUrl=/seo/settings"
+          onLogout={() => signOut({ callbackUrl: '/seo?loggedOut=1' })}
+        />
+      </div>
+
+      <div className="mb-6">
+        <FeatureGuide
+          featureId="seo.settings"
+          title="設定の使い方"
+          description="通知や演出など、使い勝手に関わる設定を切り替えられます。"
+          steps={[
+            '「完成！」ポップアップは、記事生成完了の瞬間だけ表示する演出です',
+            'ON/OFFはいつでも変更できます（ローカル設定として保存されます）',
+          ]}
+          imageMode="off"
+        />
       </div>
 
       {/* 料金プラン変更セクション */}
