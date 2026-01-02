@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { AccountSummaryCard } from '@/components/AccountSummaryCard'
 
 export default function SettingsPage() {
   const { data: session, status } = useSession()
@@ -149,50 +150,15 @@ export default function SettingsPage() {
           <p className="text-sm text-slate-500 font-bold mt-1">アカウント情報とプランの管理</p>
         </div>
 
-        {/* アカウント情報 */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
-            <User className="w-5 h-5 text-blue-600" />
-            アカウント情報
-          </h2>
-          {isLoggedIn ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center overflow-hidden border border-blue-200">
-                  {session?.user?.image ? (
-                    <img src={session.user.image} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <User className="w-8 h-8 text-blue-600" />
-                  )}
-                </div>
-                <div>
-                  <p className="text-lg font-black text-slate-900">{session?.user?.name || 'ユーザー'}</p>
-                  <p className="text-sm text-slate-500 flex items-center gap-1">
-                    <Mail className="w-4 h-4" />
-                    {session?.user?.email}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => signOut({ callbackUrl: '/banner' })}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                ログアウト
-              </button>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-slate-500 font-bold mb-4">ログインしていません</p>
-              <Link
-                href="/auth/doyamarke/signin?callbackUrl=/banner/dashboard/settings"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white font-black hover:bg-blue-700 transition-colors"
-              >
-                ログイン
-              </Link>
-            </div>
-          )}
-        </section>
+        {/* アカウント情報（最上部） */}
+        <AccountSummaryCard
+          serviceName="ドヤバナーAI"
+          planLabel={bannerPlanTier === 'ENTERPRISE' ? 'Enterprise' : bannerPlanTier === 'PRO' ? 'PRO' : isLoggedIn ? '無料' : 'ゲスト'}
+          isLoggedIn={isLoggedIn}
+          user={session?.user || null}
+          loginHref="/auth/doyamarke/signin?callbackUrl=/banner/dashboard/settings"
+          onLogout={() => signOut({ callbackUrl: '/banner' })}
+        />
 
         {/* 現在のプラン */}
         <section className="rounded-2xl border border-slate-200 bg-white p-6">
