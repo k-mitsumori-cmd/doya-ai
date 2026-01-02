@@ -52,6 +52,7 @@ import {
   Loader2,
   Lock,
   LayoutGrid,
+  Braces,
 } from 'lucide-react'
 
 type SeoImage = {
@@ -1668,15 +1669,54 @@ function SeoArticleInner() {
               <div className="bg-white rounded-2xl sm:rounded-[40px] border border-gray-100 shadow-xl p-6 sm:p-8">
                 <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-6 sm:mb-8">ダウンロード</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  <a href={`/api/seo/articles/${id}/export/markdown`} className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-blue-500 bg-gray-50/30 hover:bg-white transition-all group">
+                  <a
+                    href={`/api/seo/articles/${id}/export/markdown`}
+                    download
+                    className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-blue-500 bg-gray-50/30 hover:bg-white transition-all group"
+                  >
                     <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-blue-500 mb-4" />
                     <h4 className="text-base sm:text-lg font-black text-gray-900">Markdown (.md)</h4>
                     <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">GitHub, Notion, Qiita等に最適</p>
                   </a>
-                  <a href={`/api/seo/articles/${id}/export/wp`} className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-emerald-500 bg-gray-50/30 hover:bg-white transition-all group">
-                    <Layout className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-emerald-500 mb-4" />
-                    <h4 className="text-base sm:text-lg font-black text-gray-900">WordPress</h4>
-                    <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">ブロックエディタ用HTML形式</p>
+
+                  <a
+                    href={`/api/seo/articles/${id}/export/txt`}
+                    download
+                    className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-slate-500 bg-gray-50/30 hover:bg-white transition-all group"
+                  >
+                    <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-slate-600 mb-4" />
+                    <h4 className="text-base sm:text-lg font-black text-gray-900">Text (.txt)</h4>
+                    <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">プレーンテキスト（メール/Docs貼り付け用）</p>
+                  </a>
+
+                  <a
+                    href={`/api/seo/articles/${id}/export/html`}
+                    download
+                    className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-amber-500 bg-gray-50/30 hover:bg-white transition-all group"
+                  >
+                    <Layout className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-amber-600 mb-4" />
+                    <h4 className="text-base sm:text-lg font-black text-gray-900">HTML (.html)</h4>
+                    <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">ブラウザ表示/社内共有用（基本CSS付き）</p>
+                  </a>
+
+                  <a
+                    href={`/api/seo/articles/${id}/export/note`}
+                    download
+                    className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-rose-500 bg-gray-50/30 hover:bg-white transition-all group"
+                  >
+                    <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-rose-600 mb-4" />
+                    <h4 className="text-base sm:text-lg font-black text-gray-900">note用Markdown (.md)</h4>
+                    <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">note向けに見出し/画像/表を調整</p>
+                  </a>
+
+                  <a
+                    href={`/api/seo/articles/${id}/export/json`}
+                    download
+                    className="p-6 sm:p-8 rounded-2xl sm:rounded-[40px] border-2 border-gray-50 hover:border-violet-500 bg-gray-50/30 hover:bg-white transition-all group"
+                  >
+                    <Braces className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 group-hover:text-violet-600 mb-4" />
+                    <h4 className="text-base sm:text-lg font-black text-gray-900">JSON (.json)</h4>
+                    <p className="text-[10px] sm:text-xs text-gray-400 font-bold mt-2">連携/自動処理用（markdown + text入り）</p>
                   </a>
                 </div>
               </div>
