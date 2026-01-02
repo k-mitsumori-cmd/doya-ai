@@ -803,7 +803,7 @@ async function extractServicesFromComparisonArticle(
   articleUrl: string,
   baseQuery: string,
   jobId?: string
-): Promise<{ name: string; websiteUrl?: string; notes?: string }[]> {
+): Promise<{ name: string; websiteUrl?: string; notes?: string; sourceUrl?: string }[]> {
   try {
     await pushResearchEvent(jobId, {
       at: Date.now(),
@@ -848,6 +848,7 @@ async function extractServicesFromComparisonArticle(
         name: String(x.name || '').trim().slice(0, 60),
         websiteUrl: typeof x.websiteUrl === 'string' ? normalizeUrlMaybe(x.websiteUrl) : undefined,
         notes: typeof x.notes === 'string' ? x.notes.slice(0, 150) : undefined,
+        sourceUrl: articleUrl,
       }))
       .slice(0, 60)
   } catch (e) {
@@ -1097,6 +1098,32 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
     if (comparisonMediaUrls.length >= 5) break
   }
 
+  // 比較メディアURLを引用元として保存（記事本文で「比較サイトから抽出」として出典表示できるように）
+  try {
+    if (comparisonMediaUrls.length) {
+      const cfg2 = (article?.comparisonConfig as any) || {}
+      const includeThirdParty = cfg2?.includeThirdParty !== false
+      if (includeThirdParty) {
+        const existingRefs = Array.isArray(article?.referenceUrls) ? (article.referenceUrls as any[]) : []
+        const mergedRefs = Array.from(new Set([...existingRefs, ...comparisonMediaUrls])).slice(0, 25)
+        await (prisma as any).seoArticle.update({
+          where: { id: article.id },
+          data: { referenceUrls: mergedRefs as any },
+        })
+        article.referenceUrls = mergedRefs
+        await pushResearchEvent(jobId, {
+          at: Date.now(),
+          kind: 'discover',
+          title: `比較メディアURLを引用元として保存しました（${comparisonMediaUrls.length}件）`,
+          detail: comparisonMediaUrls.map((u) => shortHost(u)).filter(Boolean).slice(0, 5).join(' / '),
+        })
+        await setResearchStats(jobId, { referenceUrls: mergedRefs.length })
+      }
+    }
+  } catch {
+    // ignore
+  }
+
   // 比較メディアからサービスを抽出（最大5記事をパース）
   const collected: any[] = [...uniqExisting]
   for (const mediaUrl of comparisonMediaUrls.slice(0, 5)) {
@@ -1104,7 +1131,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
     const services = await extractServicesFromComparisonArticle(mediaUrl, baseQuery, jobId)
     for (const s of services) {
       if (s.name && !containsPlaceholderNames(s.name)) {
-        collected.push({ ...s, source: 'comparison_media' })
+        collected.push({ ...s, source: 'comparison_media', sourceUrl: s.sourceUrl || mediaUrl })
       }
     }
     await pushResearchEvent(jobId, {
@@ -1700,6 +1727,7 @@ async function generateSection(jobId: string) {
         '・架空のサービス名・架空の機能・架空の料金は【絶対に使用しない】',
         '・必ず「実在するサービス」のみを扱うこと（候補リスト外の追加は禁止）',
         '・公式サイト・一次情報を前提に調査した内容のみを記載すること',
+        '・比較サイト（第三者メディア）から抽出した情報を使う場合は、必ず「比較メディアより抽出」と明記し、出典URLを併記すること',
         '・不明な情報は推測せず、「公式に明記なし」「要問い合わせ」「非公開」と明示すること',
         '・「サンプルとして数社のみ記載」「実際には〜社分を記載します」等の逃げ表現は禁止（必ず候補リストの件数分を出す）',
         '',
@@ -1713,12 +1741,14 @@ async function generateSection(jobId: string) {
               .map((c, i) => {
                 const name = String(c?.name || '').trim()
                 const url = normalizeUrlMaybe(c?.websiteUrl)
+                const src = normalizeUrlMaybe((c as any)?.sourceUrl)
                 const pricing = c?.pricing ? `料金: ${c.pricing}` : ''
                 const features = Array.isArray(c?.features) && c.features.length ? `特徴: ${c.features.join('、')}` : ''
                 const desc = c?.description || c?.notes || ''
                 const details = [pricing, features].filter(Boolean).join(' / ')
                 return [
                   `${i + 1}. ${name}${url ? `（公式URL: ${url}）` : '（公式URL: 未設定）'}`,
+                  src ? `   → 比較メディア抽出元（出典）: ${src}` : '',
                   details ? `   → ${details}` : '',
                   desc ? `   → 概要: ${desc.slice(0, 80)}` : '',
                 ].filter(Boolean).join('\n')
