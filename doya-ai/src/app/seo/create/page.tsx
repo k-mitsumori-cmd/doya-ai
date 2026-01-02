@@ -362,6 +362,21 @@ export default function SeoCreateWizardPage() {
         casual: 'カジュアル',
       }
 
+      // NOTE: /seo/create は簡易UIのため比較設定UIが無い
+      // それでも「比較/ランキング」を選んだ場合は comparison_research にして
+      // SerpAPIで実在候補を自動収集→架空/プレースホルダを混ぜない経路に乗せる
+      const isComparisonMode = articleType === 'comparison' || articleType === 'ranking'
+      const mode = isComparisonMode ? 'comparison_research' : 'standard'
+      const comparisonConfig = isComparisonMode
+        ? {
+            template: articleType === 'ranking' ? 'ranking' : 'tools',
+            count: 10,
+            region: 'JP',
+            requireOfficial: true,
+            includeThirdParty: true,
+          }
+        : undefined
+
       const requestText = [
         originalContent.trim() ? `【一次情報（経験・訴求ポイント）】\n${originalContent.trim()}` : '',
         constraints.trim() ? `【制約・NG表現】\n${constraints.trim()}` : '',
@@ -379,10 +394,15 @@ export default function SeoCreateWizardPage() {
           tone: toneMap[tone] || '丁寧',
           targetChars,
           searchIntent: preview.seoIntent,
-          llmoOptions: DEFAULT_LLMO,
+          llmoOptions: {
+            ...DEFAULT_LLMO,
+            comparison: isComparisonMode ? true : DEFAULT_LLMO.comparison,
+          },
           autoBundle: true,
           createJob: true,
           requestText: requestText || undefined,
+          mode,
+          comparisonConfig,
         }),
       })
 
