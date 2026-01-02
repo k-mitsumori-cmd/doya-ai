@@ -366,7 +366,10 @@ async function maybeDiscoverReferenceUrls(article: any, jobId?: string) {
   // NOTE: 全記事向け。どのタイプの記事でも最新情報・具体例を収集
   const p = prisma as any
   const existing = Array.isArray(article?.referenceUrls) ? (article.referenceUrls as any[]) : []
-  if (existing.length >= 5) return // 既に十分あればスキップ
+  const targetChars = Math.max(3000, Number(article?.targetChars || 10000))
+  // 文字数が小さい記事ほど検索を軽く（必要に応じて機能を調整）
+  const maxUrls = targetChars >= 20000 ? 12 : targetChars >= 10000 ? 10 : 6
+  if (existing.length >= Math.min(5, maxUrls)) return // 既に十分あればスキップ
   if (!hasSerpApiKey()) return
 
   const title = String(article?.title || '').trim()
@@ -382,18 +385,26 @@ async function maybeDiscoverReferenceUrls(article: any, jobId?: string) {
   })
 
   // 複数の検索クエリで多角的に情報収集
-  const queries = [
-    `${q} 最新`,           // 最新情報
-    `${q} 事例 成功事例`,   // 具体例・実例
-    `${q} やり方 方法`,     // ハウツー
-    `${q} 料金 費用`,       // 料金情報
-  ]
+  const queries =
+    targetChars >= 10000
+      ? [
+          `${q} 最新`, // 最新情報
+          `${q} 事例 成功事例`, // 具体例・実例
+          `${q} やり方 方法`, // ハウツー
+          `${q} 料金 費用`, // 料金情報
+        ]
+      : [
+          `${q} 最新`,
+          `${q} やり方 方法`,
+          `${q} 料金 費用`,
+        ]
 
   const allUrls: string[] = [...existing]
   for (const query of queries) {
-    if (allUrls.length >= 10) break
+    if (allUrls.length >= maxUrls) break
     try {
-      const found = await serpapiSearchGoogle({ query, gl: 'jp', hl: 'ja', num: 5 })
+      const perQuery = targetChars >= 10000 ? 5 : 3
+      const found = await serpapiSearchGoogle({ query, gl: 'jp', hl: 'ja', num: perQuery })
       for (const r of found.organic) {
         if (r.url && !allUrls.includes(r.url)) {
           allUrls.push(r.url)
@@ -404,7 +415,7 @@ async function maybeDiscoverReferenceUrls(article: any, jobId?: string) {
     }
   }
 
-  const urls = allUrls.slice(0, 10)
+  const urls = allUrls.slice(0, maxUrls)
   if (!urls.length) return
 
   await pushResearchEvent(jobId, {
@@ -568,6 +579,70 @@ function pickCandidateNameFromTitle(title: string): string {
   // 極端に短い/汎用語のみなら候補として採用しない
   if (cleaned.length < 2) return ''
   return cleaned
+}
+
+async function extractCandidatesFromSerpOrganic(args: {
+  baseQuery: string
+  organic: { title: string; url: string; snippet?: string }[]
+  maxCandidates: number
+  jobId?: string
+}): Promise<{ name: string; websiteUrl?: string; notes?: string }[]> {
+  const organic = Array.isArray(args.organic) ? args.organic : []
+  if (!organic.length) return []
+
+  // 検索結果一覧を渡して「サービス名」を抽出する（タイトルパースだけに依存しない）
+  // NOTE: 比較メディアのタイトルが多い領域（例: RPO）で特に効く
+  const max = Math.max(1, Math.min(80, Number(args.maxCandidates || 30)))
+  const list = organic
+    .slice(0, 60)
+    .map((r, i) => `${i + 1}. TITLE: ${r.title}\nURL: ${r.url}\nSNIPPET: ${String(r.snippet || '').slice(0, 160)}`)
+    .join('\n\n')
+
+  const prompt = [
+    'あなたは検索結果から「実在するサービス名」を抽出するデータ抽出器です。',
+    '',
+    `テーマ: ${args.baseQuery}`,
+    '',
+    '入力はGoogle検索結果（SerpAPI）の一覧です。ここから比較対象になり得る「サービス名（固有名詞）」をできるだけ多く抽出してください。',
+    '',
+    '重要ルール:',
+    '- 架空のサービス名は絶対に作らない',
+    '- できるだけ「サービス/プロダクト名」を優先（企業名しか分からない場合は企業名でもOK）',
+    '- 比較メディア/口コミサイト/まとめサイト自体（例: ITreview, BOXIL, note, Qiita, Wikipedia等）は候補に入れない',
+    '- URLは公式が確実なら websiteUrl に入れる。不確実なら空文字にしてよい（後段で公式URL補完する）',
+    `- 最大 ${max} 件まで`,
+    '',
+    '出力形式: JSON配列のみ（説明不要）',
+    '例: [{"name":"◯◯","websiteUrl":"https://...","notes":"短い補足"}]',
+    '',
+    '検索結果一覧:',
+    list,
+  ].join('\n')
+
+  try {
+    const result = await geminiGenerateJson({
+      model: GEMINI_TEXT_MODEL_DEFAULT,
+      parts: [{ text: prompt }],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 4000 },
+    })
+    if (!Array.isArray(result)) return []
+    return result
+      .map((x: any) => ({
+        name: String(x?.name || '').trim().slice(0, 60),
+        websiteUrl: typeof x?.websiteUrl === 'string' ? normalizeUrlMaybe(x.websiteUrl) : undefined,
+        notes: typeof x?.notes === 'string' ? String(x.notes).trim().slice(0, 140) : undefined,
+      }))
+      .filter((x) => x.name.length >= 2 && !containsPlaceholderNames(x.name))
+      .slice(0, max)
+  } catch (e: any) {
+    await pushResearchEvent(args.jobId, {
+      at: Date.now(),
+      kind: 'error',
+      title: '検索結果からの候補抽出（AI）に失敗しました',
+      detail: String(e?.message || e || '').slice(0, 240),
+    })
+    return []
+  }
 }
 
 function containsPlaceholderNames(text: string): boolean {
@@ -1050,7 +1125,11 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
         title: '追加候補を検索中…',
         detail: q,
       })
-      for (let start = 0; start < 30 && uniqCandidatesByName(collected).length < desired; start += 10) {
+      // desired が大きいほどページングを増やす（必要に応じて検索量を調整）
+      const maxStart = desired >= 40 ? 50 : desired >= 20 ? 40 : 30
+      const organicPool: { title: string; url: string; snippet?: string }[] = []
+
+      for (let start = 0; start < maxStart && uniqCandidatesByName(collected).length < desired; start += 10) {
         let found: { organic: { title: string; url: string; snippet?: string }[] } | null = null
         try {
           found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10, start })
@@ -1064,14 +1143,27 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
           break
         }
         if (!found?.organic?.length) break
-        for (const r of found.organic) {
-          const name = pickCandidateNameFromTitle(r.title)
-          if (name && !containsPlaceholderNames(name)) {
-            collected.push({ name, websiteUrl: r.url, source: 'serpapi' })
-          }
-        }
+        organicPool.push(...found.organic.slice(0, 10))
         if (uniqCandidatesByName(collected).length >= desired) break
       }
+
+      // Serp結果一覧からAIでサービス名を抽出（タイトルパースだけに頼らない）
+      try {
+        const extracted = await extractCandidatesFromSerpOrganic({
+          baseQuery,
+          organic: organicPool,
+          maxCandidates: Math.min(80, Math.max(20, desired * 2)),
+          jobId,
+        })
+        for (const x of extracted) {
+          if (x.name && !containsPlaceholderNames(x.name)) {
+            collected.push({ name: x.name, websiteUrl: x.websiteUrl, notes: x.notes, source: 'serpapi_ai' })
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       if (uniqCandidatesByName(collected).length >= desired) break
     }
   }
