@@ -1118,55 +1118,10 @@ export default function SeoJobPage() {
                   )
                 })()}
 
+                {/* ライブ執筆を横長いっぱい（全幅）にして視認性を上げる */}
                 <div className="p-5 sm:p-6 grid lg:grid-cols-2 gap-5">
-                  {/* 進行アクション */}
-                  <div className="rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-slate-50 p-5">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">いま起きていること</p>
-                    <div className="mt-3 space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
-                          <CheckCircle2 className="w-5 h-5 text-emerald-700" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-gray-900">タイトル確定</p>
-                          <p className="text-[11px] font-bold text-gray-500 truncate">{job.article.title}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <div className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${
-                          job.article.outline ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'
-                        }`}>
-                          {job.article.outline ? (
-                            <CheckCircle2 className="w-5 h-5 text-emerald-700" />
-                          ) : (
-                            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-gray-900">見出し（構成）</p>
-                          <p className="text-[11px] font-bold text-gray-500">
-                            {job.article.outline ? '見出しが確定しました' : '見出しを設計しています'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
-                          <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-gray-900">本文執筆</p>
-                          <p className="text-[11px] font-bold text-gray-500">
-                            {generatingSection ? `「${String(generatingSection.headingPath || '').replace(/^#+\\s*/, '').slice(0, 26)}」を書いています` : '推敲しながら書き進めています'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* ライブ執筆（タイピング演出） - リッチUI */}
-                  <div className="rounded-3xl border border-gray-200/60 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 p-6 sm:p-7 shadow-lg shadow-blue-500/5 relative overflow-hidden">
+                  <div className="lg:col-span-2 rounded-3xl border border-gray-200/60 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 p-6 sm:p-7 shadow-lg shadow-blue-500/5 relative overflow-hidden">
                     {/* 背景装飾 */}
                     <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-400/10 to-indigo-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                     <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-tr from-emerald-400/10 to-cyan-400/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
@@ -1308,6 +1263,56 @@ export default function SeoJobPage() {
                               />
                             </div>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 進行アクション（ライブ執筆の下に配置） */}
+                  <div className="rounded-2xl border border-gray-100 bg-gradient-to-b from-white to-slate-50 p-5">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">いま起きていること</p>
+                    <div className="mt-3 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-gray-900">タイトル確定</p>
+                          <p className="text-[11px] font-bold text-gray-500 truncate">{job.article.title}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${
+                            job.article.outline ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'
+                          }`}
+                        >
+                          {job.article.outline ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+                          ) : (
+                            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-gray-900">見出し（構成）</p>
+                          <p className="text-[11px] font-bold text-gray-500">
+                            {job.article.outline ? '見出しが確定しました' : '見出しを設計しています'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0">
+                          <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-gray-900">本文執筆</p>
+                          <p className="text-[11px] font-bold text-gray-500">
+                            {generatingSection
+                              ? `「${String(generatingSection.headingPath || '').replace(/^#+\\s*/, '').slice(0, 26)}」を書いています`
+                              : '推敲しながら書き進めています'}
+                          </p>
                         </div>
                       </div>
                     </div>
