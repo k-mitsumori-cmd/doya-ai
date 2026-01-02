@@ -33,7 +33,31 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
         return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
       }
     }
-    return NextResponse.json({ success: true, job })
+
+    // リサーチ実況用：直近の要約/抽出結果（SeoReference）を返す
+    // NOTE: extractedTextは巨大なので返さない
+    let references: any[] = []
+    try {
+      references = await (prisma as any).seoReference.findMany({
+        where: { articleId: job.articleId },
+        orderBy: { updatedAt: 'desc' },
+        take: 6,
+        select: {
+          url: true,
+          title: true,
+          summary: true,
+          headings: true,
+          insights: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+    } catch {
+      references = []
+    }
+
+    const jobWithRefs = { ...job, references }
+    return NextResponse.json({ success: true, job: jobWithRefs })
   } catch (e: any) {
     const msg = e?.message || '不明なエラー'
     console.error('[seo job get] failed', { jobId: ctx.params.id, msg })
