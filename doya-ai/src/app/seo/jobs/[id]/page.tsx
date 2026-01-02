@@ -57,6 +57,15 @@ type SeoJob = {
     comparisonCandidates?: any
     comparisonConfig?: any
   }
+  references?: Array<{
+    url: string
+    title?: string | null
+    summary?: string | null
+    headings?: any
+    insights?: any
+    createdAt?: string
+    updatedAt?: string
+  }>
   sections: SeoSection[]
   createdAt?: string
   updatedAt?: string
@@ -1444,6 +1453,108 @@ export default function SeoJobPage() {
                                           transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}
                                         />
                                       </div>
+                                    </div>
+                                  </div>
+                                )
+                              })()}
+
+                              {/* 直近でリサーチできた内容（要約/抽出） */}
+                              {(() => {
+                                const refs = Array.isArray((job as any)?.references) ? ((job as any).references as any[]) : []
+                                const items = refs
+                                  .map((r) => ({
+                                    url: String(r?.url || '').trim(),
+                                    host: hostnameFromUrl(String(r?.url || '')) || '',
+                                    title: String(r?.title || '').trim(),
+                                    summary: String(r?.summary || '').trim(),
+                                    claims: Array.isArray(r?.insights?.claims) ? (r.insights.claims as any[]).map((x: any) => String(x || '').trim()).filter(Boolean) : [],
+                                    faq: Array.isArray(r?.insights?.faq) ? (r.insights.faq as any[]).map((x: any) => String(x || '').trim()).filter(Boolean) : [],
+                                  }))
+                                  .filter((x) => x.url)
+                                  .slice(0, 3)
+
+                                if (!items.length) return null
+
+                                return (
+                                  <div className="mt-5 rounded-2xl bg-white/5 border border-white/10 p-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                                        いままでに分かったこと（要約）
+                                      </p>
+                                      <p className="text-[10px] font-black text-white/50 tabular-nums">
+                                        {items.length}件
+                                      </p>
+                                    </div>
+                                    <div className="mt-3 space-y-3">
+                                      {items.map((it) => (
+                                        <div key={it.url} className="rounded-2xl bg-black/20 border border-white/10 p-4">
+                                          <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                              <p className="text-sm font-black text-white/90 truncate">
+                                                {it.title || it.host || '参考記事'}
+                                              </p>
+                                              <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                {it.host && (
+                                                  <span className="text-[10px] font-black text-white/75 bg-white/10 border border-white/10 px-2 py-0.5 rounded-full">
+                                                    {it.host}
+                                                  </span>
+                                                )}
+                                                {it.url && (
+                                                  <a
+                                                    href={it.url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-[10px] font-black text-indigo-200 hover:text-indigo-100 underline decoration-white/20"
+                                                  >
+                                                    開く
+                                                  </a>
+                                                )}
+                                              </div>
+                                            </div>
+                                            <div className="flex-shrink-0">
+                                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-400/15 border border-emerald-300/20 text-[10px] font-black text-emerald-200">
+                                                <Brain className="w-3 h-3" />
+                                                要点抽出
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          {it.summary && (
+                                            <p className="mt-3 text-[12px] font-bold text-white/75 leading-relaxed">
+                                              {it.summary.length > 220 ? `${it.summary.slice(0, 220)}…` : it.summary}
+                                            </p>
+                                          )}
+
+                                          {(it.claims.length || it.faq.length) && (
+                                            <div className="mt-3 grid md:grid-cols-2 gap-3">
+                                              {it.claims.length ? (
+                                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                                                  <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">抽出した主張</p>
+                                                  <ul className="mt-2 space-y-1">
+                                                    {it.claims.slice(0, 4).map((c, idx) => (
+                                                      <li key={idx} className="text-[11px] font-bold text-white/75 leading-relaxed">
+                                                        - {c.length > 80 ? `${c.slice(0, 80)}…` : c}
+                                                      </li>
+                                                    ))}
+                                                  </ul>
+                                                </div>
+                                              ) : null}
+                                              {it.faq.length ? (
+                                                <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                                                  <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">よくある疑問</p>
+                                                  <ul className="mt-2 space-y-1">
+                                                    {it.faq.slice(0, 4).map((q, idx) => (
+                                                      <li key={idx} className="text-[11px] font-bold text-white/75 leading-relaxed">
+                                                        - {q.length > 80 ? `${q.slice(0, 80)}…` : q}
+                                                      </li>
+                                                    ))}
+                                                  </ul>
+                                                </div>
+                                              ) : null}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 )
