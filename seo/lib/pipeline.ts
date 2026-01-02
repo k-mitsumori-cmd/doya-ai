@@ -576,6 +576,81 @@ function containsPlaceholderNames(text: string): boolean {
   return /（\s*(ツール名|サービス名|企業名|会社名)\s*）|\(\s*(tool name|service name|company name)\s*\)|サービス[ＡA]|会社[ＡA]|ツール[ＡA]|XXX|ＸＸＸ|〇〇/.test(s)
 }
 
+function inferComparisonCountFromTitle(title: string, keywords: any): number {
+  const t = String(title || '')
+  const ks = Array.isArray(keywords) ? keywords.map((x: any) => String(x || '')).join(' ') : String(keywords || '')
+  const hay = `${t} ${ks}`.replace(/\s+/g, ' ').trim()
+  if (!hay) return 0
+
+  // 例: "おすすめ50選", "比較30社", "ランキング20選", "TOP50"
+  const patterns = [
+    /(?:おすすめ|比較|ランキング|厳選)\s*([0-9]{1,2})\s*(?:選|社)/i,
+    /TOP\s*([0-9]{1,2})/i,
+    /([0-9]{1,2})\s*(?:選|社)\s*(?:おすすめ|比較|ランキング)/i,
+  ]
+  for (const re of patterns) {
+    const m = hay.match(re)
+    const n = m?.[1] ? Number(m[1]) : 0
+    if (Number.isFinite(n) && n > 0) return Math.max(0, Math.min(60, Math.floor(n)))
+  }
+  return 0
+}
+
+async function maybeAutoEnableComparisonResearchMode(article: any, jobId?: string) {
+  // 「おすすめ50選」「比較30社」などのタイトルを検知したら、比較調査モードに自動で切り替える
+  // 目的: standardモードで"サンプル数社"になってしまう失敗を防ぐ
+  try {
+    const curMode = String(article?.mode || '').toLowerCase()
+    const desired = inferComparisonCountFromTitle(article?.title, article?.keywords)
+    if (!desired) return
+    if (!hasSerpApiKey()) return
+
+    // 比較ワードがタイトル/キーワードにある場合のみ発動（過検知を防ぐ）
+    const hay = `${String(article?.title || '')} ${(Array.isArray(article?.keywords) ? article.keywords : []).join(' ')}`.toLowerCase()
+    const looksLikeList = /おすすめ|比較|ランキング|top/i.test(hay)
+    if (!looksLikeList) return
+
+    const cfg = (article?.comparisonConfig as any) || {}
+    const nextCfg = {
+      ...cfg,
+      count: desired,
+      region: cfg?.region || 'JP',
+      requireOfficial: cfg?.requireOfficial !== false, // default true
+      includeThirdParty: cfg?.includeThirdParty !== false, // default true
+      template: cfg?.template || 'list',
+    }
+
+    const llmo = (article?.llmoOptions as any) || {}
+    const nextLlmo = { ...llmo, comparison: llmo?.comparison !== false }
+
+    if (curMode !== 'comparison_research' || Number(cfg?.count || 0) !== desired) {
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'discover',
+        title: 'タイトルから比較リサーチを自動適用',
+        detail: `「${desired}選/社」形式を検知したため、比較モードで候補収集→表を作成します。`,
+      })
+      try {
+        await (prisma as any).seoArticle.update({
+          where: { id: article.id },
+          data: {
+            mode: 'comparison_research',
+            comparisonConfig: nextCfg as any,
+            llmoOptions: nextLlmo as any,
+          },
+        })
+      } catch {
+        // ignore
+      }
+      article.mode = 'comparison_research'
+      article.comparisonConfig = nextCfg
+      article.llmoOptions = nextLlmo
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function uniqCandidatesByName(items: any[]): any[] {
   const seen = new Set<string>()
   const out: any[] = []
@@ -1185,6 +1260,9 @@ async function ensureOutlineAndSections(jobId: string) {
   const hasSections = await p.seoSection.findFirst({ where: { jobId }, select: { id: true } })
   if (article.outline && hasSections) return
 
+  // 「おすすめ50選」等のタイトルから、比較調査モードを自動適用（standardでサンプル数社になりやすいのを防ぐ）
+  await maybeAutoEnableComparisonResearchMode(article, jobId)
+
   const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
 
   // 比較記事: 候補数が指定より不足していたら、SerpAPIで補完（キーがある場合）
@@ -1396,6 +1474,7 @@ async function generateSection(jobId: string) {
         '・必ず「実在するサービス」のみを扱うこと（候補リスト外の追加は禁止）',
         '・公式サイト・一次情報を前提に調査した内容のみを記載すること',
         '・不明な情報は推測せず、「公式に明記なし」「要問い合わせ」「非公開」と明示すること',
+        '・「サンプルとして数社のみ記載」「実際には〜社分を記載します」等の逃げ表現は禁止（必ず候補リストの件数分を出す）',
         '',
         '━━━━━━━━━━━━━━━━━━',
         '■ 比較対象サービス（このリストのみ使用）',
