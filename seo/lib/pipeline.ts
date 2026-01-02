@@ -794,6 +794,61 @@ function buildResearchBaseQuery(title: any, keywords: any): string {
   return tokens.slice(0, 5).join(' ')
 }
 
+function isWeakSearchQuery(q: string): boolean {
+  const s = String(q || '').trim()
+  if (!s) return true
+  // 例: 「年最新版」などの“中身が無い”検索を弾く
+  const stop = new Set([
+    '年',
+    '最新版',
+    '最新',
+    'おすすめ',
+    '比較',
+    'ランキング',
+    '厳選',
+    'まとめ',
+    '完全版',
+    '保存版',
+    '選び方',
+    '料金',
+    '費用',
+    '相場',
+    '口コミ',
+    '評判',
+    'ガイド',
+    '入門',
+    '初心者',
+  ])
+  const tokens = s
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .filter((t) => !stop.has(t))
+  if (!tokens.length) return true
+  if (tokens.join('').length < 3) return true
+  return false
+}
+
+function buildCandidateSearchSeed(article: any): string {
+  const title = String(article?.title || '').trim()
+  const keywords = Array.isArray(article?.keywords) ? (article.keywords as any[]) : []
+  const k0 = String(keywords?.[0] || '').trim()
+
+  // 1) 比較向けに圧縮した核
+  const q1 = buildComparisonBaseQuery(title, keywords)
+  if (!isWeakSearchQuery(q1)) return q1
+
+  // 2) 全記事向けの核（やや広め）
+  const q2 = buildResearchBaseQuery(title, keywords)
+  if (!isWeakSearchQuery(q2)) return q2
+
+  // 3) キーワード先頭（ユーザーが意図してる可能性が高い）
+  if (!isWeakSearchQuery(k0)) return k0
+
+  // 4) タイトルをそのまま（最後の手段）
+  return title
+}
+
 async function maybeAutoEnableComparisonResearchMode(article: any, jobId?: string) {
   // 「おすすめ50選」「比較30社」などのタイトルを検知したら、比較調査モードに自動で切り替える
   // 目的: standardモードで"サンプル数社"になってしまう失敗を防ぐ
@@ -1103,7 +1158,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   }
 
   const keywords = Array.isArray(article.keywords) ? article.keywords : (article.keywords as any) || []
-  const baseQuery = buildComparisonBaseQuery(article.title, keywords) || String(keywords[0] || article.title || '').trim()
+  const baseQuery = buildCandidateSearchSeed(article)
   if (!baseQuery) {
     await pushResearchEvent(jobId, {
       at: Date.now(),
@@ -1113,6 +1168,23 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
     })
     return uniqExisting
   }
+  if (isWeakSearchQuery(baseQuery)) {
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'error',
+      title: '比較候補を自動収集できません',
+      detail:
+        `検索クエリが曖昧すぎます: "${baseQuery}"。例: 「RPO 採用代行」「オンライン英会話」など“テーマの核”をタイトル/キーワードに入れてください。`,
+    })
+    return uniqExisting
+  }
+
+  await pushResearchEvent(jobId, {
+    at: Date.now(),
+    kind: 'discover',
+    title: '候補収集の検索クエリ（核）を決定しました',
+    detail: baseQuery,
+  })
 
   const region = String(cfg?.region || 'JP').toUpperCase() === 'GLOBAL' ? 'GLOBAL' : 'JP'
   const gl = region === 'JP' ? 'jp' : 'us'
@@ -1127,20 +1199,38 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   })
 
   const comparisonMediaUrls: string[] = []
+  // テーマが「RPO/採用代行」系なら、同義語/補助語も併用して拾いやすくする
+  const extraSeeds = Array.from(
+    new Set(
+      [
+        baseQuery,
+        baseQuery.includes('RPO') || baseQuery.includes('採用代行') ? 'RPO 採用代行' : '',
+        baseQuery.includes('RPO') || baseQuery.includes('採用代行') ? '採用アウトソーシング' : '',
+        baseQuery.includes('RPO') || baseQuery.includes('採用代行') ? '採用代行' : '',
+      ].filter(Boolean)
+    )
+  )
+
   // desired が大きいほど検索のバリエーションを増やす（必要に応じて機能を調整）
-  const queries = [
-    `${baseQuery} 比較 おすすめ 一覧`,
-    `${baseQuery} サービス比較 ランキング`,
-    ...(desired >= 30
-      ? [
-          `${baseQuery} 会社 一覧`,
-          `${baseQuery} 事業者 一覧`,
-          `${baseQuery} サービス 提供`,
-          `${baseQuery} 企業 おすすめ`,
-          `${baseQuery} 評判 口コミ 比較`,
-        ]
-      : []),
-  ]
+  const queries = Array.from(
+    new Set(
+      extraSeeds.flatMap((seed) => [
+        `${seed} 比較 おすすめ 一覧`,
+        `${seed} サービス比較 ランキング`,
+        `${seed} 比較 50社`,
+        ...(desired >= 30
+          ? [
+              `${seed} 会社 一覧`,
+              `${seed} 事業者 一覧`,
+              `${seed} サービス 一覧`,
+              `${seed} 提供 企業`,
+              `${seed} ベンダー 一覧`,
+              `${seed} 評判 口コミ 比較`,
+            ]
+          : []),
+      ])
+    )
+  )
 
   for (const q of queries) {
     try {
