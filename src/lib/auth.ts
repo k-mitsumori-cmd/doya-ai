@@ -59,7 +59,8 @@ export const authOptions: NextAuthOptions = {
               dbUser.serviceSubscriptions.map((s) => [s.serviceId, s.plan])
             )
             ;(session.user as any).bannerPlan = byService['banner'] || 'FREE'
-            ;(session.user as any).seoPlan = byService['seo'] || undefined
+            // SEOプランは 'writing' または 'seo' サービスIDを参照（後方互換性）
+            ;(session.user as any).seoPlan = byService['writing'] || byService['seo'] || undefined
             ;(session.user as any).kantanPlan = byService['kantan'] || undefined
             // 初回ログイン時刻（1時間生成し放題の判定用）
             ;(session.user as any).firstLoginAt = dbUser.firstLoginAt?.toISOString() || null
