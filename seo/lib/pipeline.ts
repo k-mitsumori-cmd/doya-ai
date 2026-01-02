@@ -520,11 +520,25 @@ function pickCandidateNameFromTitle(title: string): string {
   if (!t) return ''
   const parts = t.split(/[\|\｜\-–—]/).map((s) => s.trim()).filter(Boolean)
   const head = parts[0] || t
-  return head
+  const cleaned = head
+    // よくある括弧注記を落とす（例: "〇〇（公式）", "△△【2026年】" など）
+    .replace(/（[^）]{0,24}）/g, '')
+    .replace(/【[^】]{0,24}】/g, '')
+    // プレースホルダっぽい語を排除
+    .replace(/(ツール名|サービス名|企業名|会社名|サービスA|会社A|ツールA|XXX|ＸＸＸ|〇〇).*/gi, '')
     .replace(/(料金|価格|評判|口コミ|比較|おすすめ|とは|まとめ|ランキング).*/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 60)
+  // 極端に短い/汎用語のみなら候補として採用しない
+  if (cleaned.length < 2) return ''
+  return cleaned
+}
+
+function containsPlaceholderNames(text: string): boolean {
+  const s = String(text || '')
+  // 「（ツール名）」などのテンプレや、A/B/XXX/〇〇 のダミーを検知
+  return /（\s*(ツール名|サービス名|企業名|会社名)\s*）|\(\s*(tool name|service name|company name)\s*\)|サービス[ＡA]|会社[ＡA]|ツール[ＡA]|XXX|ＸＸＸ|〇〇/.test(s)
 }
 
 function uniqCandidatesByName(items: any[]): any[] {
@@ -1522,7 +1536,75 @@ async function integrate(jobId: string) {
     }
   }
 
-  const finalMarkdown = parts.join('\n\n')
+  let finalMarkdown = parts.join('\n\n')
+
+  // 比較記事で「（ツール名）」等のテンプレが混ざった場合は、そのまま公開しない（実在名に矯正）
+  if (isComparison && containsPlaceholderNames(finalMarkdown)) {
+    const cfg = (article?.comparisonConfig as any) || {}
+    const desired = Math.max(0, Math.min(60, Number(cfg?.count || 0)))
+    // 候補が空なら、まず自動収集を試みる（SerpAPIがある前提）
+    try {
+      await ensureComparisonCandidates(article, jobId)
+    } catch {
+      // ignore
+    }
+    const candidates = uniqCandidatesByName(
+      Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
+    )
+    const candidateText = candidates.length
+      ? candidates
+          .slice(0, desired ? Math.min(desired, 60) : 60)
+          .map((c, i) => `${i + 1}. ${String(c?.name || '').trim()}${c?.websiteUrl ? ` (${c.websiteUrl})` : ''}`)
+          .join('\n')
+      : '(empty)'
+
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'warn',
+      title: '本文にテンプレ（仮のサービス名）が混在していたため修正中…',
+      detail: candidates.length ? `候補: ${candidates.slice(0, 8).map((c) => c.name).join(' / ')}` : '候補が空です',
+    })
+
+    const fixPrompt = [
+      'You are a Japanese editor specialized in factual comparison articles.',
+      'Task: remove placeholder/dummy service names and ensure only REAL service names are used.',
+      '',
+      'CRITICAL RULES:',
+      '- Do NOT invent any new service/company names.',
+      '- Use ONLY the services listed in the candidate list below.',
+      '- If the candidate list is empty, remove all placeholder names and rewrite the text so it stays truthful and general (no specific names).',
+      '- Remove patterns like: （ツール名）, （サービス名）, サービスA, 会社A, XXX, 〇〇, etc.',
+      '',
+      'Candidate list (ONLY allowed proper nouns):',
+      candidateText,
+      '',
+      'Return: FULL MARKDOWN of the corrected article (no JSON).',
+      '',
+      'Original markdown:',
+      clampText(finalMarkdown, 14000),
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    try {
+      const fixed = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: fixPrompt }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 22000 },
+      })
+      if (fixed && fixed.trim() && !containsPlaceholderNames(fixed)) {
+        finalMarkdown = sanitizeAiMarkdown(fixed.trim())
+      }
+    } catch {
+      // 失敗しても本文完成は優先（ただしテンプレが残る可能性があるので、次の工程で気づけるようログに残す）
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'error',
+        title: 'テンプレ除去の自動修正に失敗しました',
+        detail: '候補が不足している可能性があります。比較候補の入力/SerpAPI設定を確認してください。',
+      })
+    }
+  }
 
   await p.seoArticle.update({
     where: { id: article.id },
