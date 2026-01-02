@@ -923,21 +923,53 @@ async function enrichCandidatesWithDetails(
 
 async function ensureComparisonCandidates(article: any, jobId?: string): Promise<any[]> {
   const isComparison = String(article?.mode || '').toLowerCase() === 'comparison_research'
-  if (!isComparison) return []
+  if (!isComparison) {
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'warn',
+      title: '比較候補の自動抽出はスキップされました',
+      detail: 'mode が comparison_research ではありません。',
+    })
+    return []
+  }
 
   const cfg = (article?.comparisonConfig as any) || {}
   const desired = Math.max(0, Math.min(60, Number(cfg?.count || 0)))
   const existing = Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
   const uniqExisting = uniqCandidatesByName(existing)
-  if (!desired) return uniqExisting
+  if (!desired) {
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'warn',
+      title: '比較候補の自動抽出はスキップされました',
+      detail: 'comparisonConfig.count が 0（未設定）です。',
+    })
+    return uniqExisting
+  }
   if (uniqExisting.length >= desired) return uniqExisting.slice(0, desired)
 
   // SerpAPIが無いならここで止める（架空サービスで埋めるのを防ぐ）
-  if (!hasSerpApiKey()) return uniqExisting
+  if (!hasSerpApiKey()) {
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'error',
+      title: '比較候補を自動収集できません',
+      detail: 'SEO_SERPAPI_KEY（または SERPAPI_API_KEY）が未設定です。Vercelの環境変数を確認してください。',
+    })
+    return uniqExisting
+  }
 
   const keywords = Array.isArray(article.keywords) ? article.keywords : (article.keywords as any) || []
   const baseQuery = String(keywords[0] || article.title || '').trim()
-  if (!baseQuery) return uniqExisting
+  if (!baseQuery) {
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'error',
+      title: '比較候補を自動収集できません',
+      detail: '検索クエリ（キーワード/タイトル）が空です。',
+    })
+    return uniqExisting
+  }
 
   const region = String(cfg?.region || 'JP').toUpperCase() === 'GLOBAL' ? 'GLOBAL' : 'JP'
   const gl = region === 'JP' ? 'jp' : 'us'
@@ -955,20 +987,37 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   const queries = [`${baseQuery} 比較 おすすめ 一覧`, `${baseQuery} サービス比較 ランキング`]
 
   for (const q of queries) {
-    const found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10 })
-    for (const r of found.organic) {
-      if (comparisonMediaUrls.length >= 5) break
-      const url = normalizeUrlMaybe(r.url)
-      if (!url) continue
-      // 比較メディアっぽいURLを優先
-      const host = shortHost(url).toLowerCase()
-      if (host.includes('itreview') || host.includes('boxil') || host.includes('comparison') ||
-          host.includes('best') || host.includes('recommend') || host.includes('ranking') ||
-          r.title?.includes('比較') || r.title?.includes('おすすめ') || r.title?.includes('選')) {
-        if (!comparisonMediaUrls.includes(url)) {
-          comparisonMediaUrls.push(url)
+    try {
+      const found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10 })
+      for (const r of found.organic) {
+        if (comparisonMediaUrls.length >= 5) break
+        const url = normalizeUrlMaybe(r.url)
+        if (!url) continue
+        // 比較メディアっぽいURLを優先
+        const host = shortHost(url).toLowerCase()
+        if (
+          host.includes('itreview') ||
+          host.includes('boxil') ||
+          host.includes('comparison') ||
+          host.includes('best') ||
+          host.includes('recommend') ||
+          host.includes('ranking') ||
+          r.title?.includes('比較') ||
+          r.title?.includes('おすすめ') ||
+          r.title?.includes('選')
+        ) {
+          if (!comparisonMediaUrls.includes(url)) {
+            comparisonMediaUrls.push(url)
+          }
         }
       }
+    } catch (e: any) {
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'error',
+        title: 'SerpAPI検索に失敗しました',
+        detail: String(e?.message || e || '').slice(0, 240),
+      })
     }
     if (comparisonMediaUrls.length >= 5) break
   }
@@ -1002,8 +1051,19 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
         detail: q,
       })
       for (let start = 0; start < 30 && uniqCandidatesByName(collected).length < desired; start += 10) {
-        const found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10, start })
-        if (!found.organic.length) break
+        let found: { organic: { title: string; url: string; snippet?: string }[] } | null = null
+        try {
+          found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10, start })
+        } catch (e: any) {
+          await pushResearchEvent(jobId, {
+            at: Date.now(),
+            kind: 'error',
+            title: 'SerpAPI検索に失敗しました',
+            detail: String(e?.message || e || '').slice(0, 240),
+          })
+          break
+        }
+        if (!found?.organic?.length) break
         for (const r of found.organic) {
           const name = pickCandidateNameFromTitle(r.title)
           if (name && !containsPlaceholderNames(name)) {
@@ -1017,6 +1077,15 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   }
 
   let merged = uniqCandidatesByName(collected).slice(0, desired)
+  if (!merged.length) {
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'error',
+      title: '比較候補が0件でした',
+      detail:
+        '検索結果からサービス名を抽出できませんでした（検索クエリが広すぎる/比較メディアの取得失敗/抽出フィルタで除外の可能性）。キーワードを具体化するか、候補を手動追加してください。',
+    })
+  }
 
   // ========= 改善: 公式URLが不足している候補を補完 =========
   await pushResearchEvent(jobId, {
