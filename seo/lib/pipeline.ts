@@ -619,7 +619,7 @@ async function extractServicesFromComparisonArticle(
       clampText(extracted.text, 8000),
       '',
       '=== Task ===',
-      'Extract up to 30 services/companies mentioned in this comparison article.',
+      'Extract up to 60 services/companies mentioned in this comparison article.',
       'For each, extract:',
       '- name: The exact service/company name (e.g., "マルゴト人事", "doda PRO")',
       '- websiteUrl: Official website URL if mentioned (leave empty if not found)',
@@ -632,7 +632,7 @@ async function extractServicesFromComparisonArticle(
     const result = await geminiGenerateJson({
       model: GEMINI_TEXT_MODEL_DEFAULT,
       parts: [{ text: prompt }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 2500 },
+      generationConfig: { temperature: 0.2, maxOutputTokens: 4000 },
     })
 
     if (!Array.isArray(result)) return []
@@ -643,7 +643,7 @@ async function extractServicesFromComparisonArticle(
         websiteUrl: typeof x.websiteUrl === 'string' ? normalizeUrlMaybe(x.websiteUrl) : undefined,
         notes: typeof x.notes === 'string' ? x.notes.slice(0, 150) : undefined,
       }))
-      .slice(0, 30)
+      .slice(0, 60)
   } catch (e) {
     console.warn('[extractServicesFromComparisonArticle] failed', e)
     return []
@@ -661,7 +661,7 @@ async function enrichCandidatesWithOfficialUrls(
 ): Promise<any[]> {
   const enriched: any[] = []
   let enrichCount = 0
-  const maxEnrich = 20 // タイムアウト対策
+  const maxEnrich = 50 // 最大50社まで公式URL補完
 
   for (const c of candidates) {
     const name = String(c?.name || '').trim()
@@ -717,7 +717,7 @@ async function enrichCandidatesWithDetails(
 ): Promise<any[]> {
   const enriched: any[] = []
   let detailCount = 0
-  const maxDetail = 15 // タイムアウト対策
+  const maxDetail = 50 // 最大50社まで詳細情報取得
 
   for (const c of candidates) {
     const url = normalizeUrlMaybe(c?.websiteUrl)
@@ -842,9 +842,9 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
     if (comparisonMediaUrls.length >= 5) break
   }
 
-  // 比較メディアからサービスを抽出
+  // 比較メディアからサービスを抽出（最大5記事をパース）
   const collected: any[] = [...uniqExisting]
-  for (const mediaUrl of comparisonMediaUrls.slice(0, 3)) {
+  for (const mediaUrl of comparisonMediaUrls.slice(0, 5)) {
     if (uniqCandidatesByName(collected).length >= desired) break
     const services = await extractServicesFromComparisonArticle(mediaUrl, baseQuery, jobId)
     for (const s of services) {
