@@ -576,6 +576,62 @@ function containsPlaceholderNames(text: string): boolean {
   return /（\s*(ツール名|サービス名|企業名|会社名)\s*）|\(\s*(tool name|service name|company name)\s*\)|サービス[ＡA]|会社[ＡA]|ツール[ＡA]|XXX|ＸＸＸ|〇〇/.test(s)
 }
 
+function escapeMdCell(s: any): string {
+  const t = String(s || '').replace(/\r\n/g, '\n').replace(/\n+/g, ' ').trim()
+  // markdown table のセルを壊す記号を軽く抑える
+  return t.replace(/\|/g, '｜')
+}
+
+function buildServiceListTableMarkdown(candidates: any[], maxRows: number): string {
+  const rows = (Array.isArray(candidates) ? candidates : []).slice(0, Math.max(0, maxRows))
+  const header = ['サービス名', '特徴', '料金', '得意な業界・職種', 'URL']
+  const sep = ['---', '---', '---', '---', '---']
+  const lines: string[] = []
+  lines.push(`| ${header.join(' | ')} |`)
+  lines.push(`| ${sep.join(' | ')} |`)
+  for (const c of rows) {
+    const name = escapeMdCell(c?.name || '')
+    const features = Array.isArray(c?.features) && c.features.length ? escapeMdCell(c.features.slice(0, 3).join('、')) : ''
+    const desc = escapeMdCell(c?.description || c?.notes || '')
+    const featureCell = features || desc || '要問い合わせ'
+    const pricing = escapeMdCell(c?.pricing || '要問い合わせ')
+    // 得意領域がない場合は、説明から軽く推測せず「要問い合わせ」に寄せる（架空抑止）
+    const domain = escapeMdCell(c?.domain || c?.specialty || '') || '要問い合わせ'
+    const url = escapeMdCell(normalizeUrlMaybe(c?.websiteUrl) || '')
+    lines.push(`| ${name || '（名称不明）'} | ${featureCell} | ${pricing} | ${domain} | ${url} |`)
+  }
+  return lines.join('\n')
+}
+
+function fillEmptyServiceTables(md: string, candidates: any[], maxRows: number): string {
+  let s = String(md || '')
+  if (!s.trim()) return s
+  const table = buildServiceListTableMarkdown(candidates, maxRows)
+  if (!table.trim() || table.split('\n').length < 3) return s
+
+  // 「サービス名/特徴/料金/得意な業界・職種/URL」の表がヘッダーだけ（行が無い）なら差し替える
+  // 例:
+  // | サービス名 | 特徴 | 料金 | 得意な業界・職種 | URL |
+  // | --- | --- | --- | --- | --- |
+  // （ここで途切れる/空行/次の見出しに行く）
+  const emptyTableRe =
+    /\|\s*サービス名\s*\|\s*特徴\s*\|\s*料金\s*\|\s*得意な業界・職種\s*\|\s*URL\s*\|\s*\n\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*(?:\n(?!(\|)).*)?/g
+
+  // まずはシンプルな「ヘッダー+区切りのみ」のケースを置換
+  s = s.replace(
+    /\|\s*サービス名\s*\|\s*特徴\s*\|\s*料金\s*\|\s*得意な業界・職種\s*\|\s*URL\s*\|\s*\n\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*(?=\n(?!\|))/g,
+    table + '\n'
+  )
+
+  // それでも残っていたら、やや広めに（次行が見出し/注釈で始まる等）を置換
+  s = s.replace(
+    /\|\s*サービス名\s*\|\s*特徴\s*\|\s*料金\s*\|\s*得意な業界・職種\s*\|\s*URL\s*\|\s*\n\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*-{3,}\s*\|\s*\n(?=(?:\n|##\s|注\s*:|※|$))/g,
+    table + '\n\n'
+  )
+
+  return s
+}
+
 function inferComparisonCountFromTitle(title: string, keywords: any): number {
   const t = String(title || '')
   const ks = Array.isArray(keywords) ? keywords.map((x: any) => String(x || '')).join(' ') : String(keywords || '')
@@ -1575,6 +1631,7 @@ async function generateSection(jobId: string) {
                 ? `- IMPORTANT: This section MUST cover ALL available companies (${actual}社). (original target: ${desired}社)`
                 : `- IMPORTANT: This section MUST cover ALL available companies (${actual}社).`,
               '- Include at least ONE markdown table that contains ALL available companies.',
+              '- Do NOT label tables as "例" or write disclaimers like "上記の表はあくまで例です". Output the real table.',
               '- If the table becomes too wide, split into multiple tables, but still include all companies across them.',
               '- For unknown fields, write "公式に明記なし/要問い合わせ/非公開" instead of guessing.',
             ].join('\n')
@@ -2023,6 +2080,24 @@ async function integrate(jobId: string) {
         title: 'テンプレ除去の自動修正に失敗しました',
         detail: '候補が不足している可能性があります。比較候補の入力/SerpAPI設定を確認してください。',
       })
+    }
+  }
+
+  // 比較記事: 「表が空（ヘッダーだけ）」で出てしまう事故を最終段で防ぐ（候補から自動補完）
+  // 例: 「RPOサービス比較表（例）」のようにヘッダーだけ出て本文が空になることがある
+  if (isComparison) {
+    try {
+      const cfg = (article?.comparisonConfig as any) || {}
+      const desired = Math.max(0, Math.min(60, Number(cfg?.count || 0)))
+      const candidates = uniqCandidatesByName(
+        Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
+      )
+      const maxRows = desired || candidates.length
+      if (candidates.length) {
+        finalMarkdown = fillEmptyServiceTables(finalMarkdown, candidates, maxRows)
+      }
+    } catch {
+      // ignore
     }
   }
 
