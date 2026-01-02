@@ -1038,6 +1038,86 @@ async function enrichCandidatesWithOfficialUrls(
 }
 
 /**
+ * Gemini知識ベースからサービス候補を生成（検索結果から取得できなかった場合のフォールバック）
+ */
+async function generateCandidatesFromGeminiKnowledge(args: {
+  baseQuery: string
+  keywords: string[]
+  title: string
+  existingNames: string[]
+  maxCandidates: number
+  jobId?: string
+}): Promise<{ name: string; websiteUrl?: string; pricing?: string; features?: string[]; description?: string }[]> {
+  const { baseQuery, keywords, title, existingNames, maxCandidates, jobId } = args
+
+  await pushResearchEvent(jobId, {
+    at: Date.now(),
+    kind: 'search',
+    title: 'Gemini知識からサービス候補を生成中…',
+    detail: `「${baseQuery}」に関連する実在サービスを${maxCandidates}件程度抽出`,
+  })
+
+  const prompt = [
+    'You are a Japanese business research expert with comprehensive knowledge of various service providers.',
+    '',
+    '=== Task ===',
+    `Generate a list of REAL, EXISTING service providers/companies related to the following topic.`,
+    'These must be actual companies that exist in the real world - DO NOT invent fictional names.',
+    '',
+    `Topic/Query: ${baseQuery}`,
+    `Keywords: ${keywords.join(', ')}`,
+    `Article title: ${title}`,
+    '',
+    existingNames.length ? `Already collected (do NOT include these): ${existingNames.slice(0, 20).join(', ')}` : '',
+    '',
+    '=== Requirements ===',
+    '- Only include real, verifiable companies/services',
+    '- Focus on well-known and reputable providers in Japan',
+    '- Include a mix of large enterprises and notable mid-size companies',
+    '- Provide official website URL if known (or leave empty if unsure)',
+    '- Include typical pricing information if known publicly',
+    '- List 3-5 key features for each service',
+    '',
+    `=== Output ===`,
+    `Provide exactly ${Math.min(60, maxCandidates)} services in JSON array format:`,
+    '[{"name":"サービス名","websiteUrl":"https://...","pricing":"月額○○円〜/要問い合わせ","features":["特徴1","特徴2","特徴3"],"description":"概要説明"}]',
+    '',
+    'IMPORTANT:',
+    '- Output valid JSON array only',
+    '- All text in Japanese',
+    '- If pricing is unknown, use "要問い合わせ"',
+    '- If URL is unknown, omit websiteUrl field',
+  ].filter(Boolean).join('\n')
+
+  const result = await geminiGenerateJson<any[]>({
+    model: GEMINI_TEXT_MODEL_DEFAULT,
+    prompt,
+    generationConfig: { temperature: 0.3, maxOutputTokens: 8000 },
+  })
+
+  if (!Array.isArray(result)) return []
+
+  const existingSet = new Set(existingNames.map((n) => n.toLowerCase().trim()))
+
+  return result
+    .filter((x: any) => {
+      const name = String(x?.name || '').trim()
+      if (name.length < 2) return false
+      if (existingSet.has(name.toLowerCase())) return false
+      if (containsPlaceholderNames(name)) return false
+      return true
+    })
+    .map((x: any) => ({
+      name: String(x.name || '').trim().slice(0, 60),
+      websiteUrl: typeof x.websiteUrl === 'string' ? normalizeUrlMaybe(x.websiteUrl) : undefined,
+      pricing: typeof x.pricing === 'string' ? x.pricing.slice(0, 100) : '要問い合わせ',
+      features: Array.isArray(x.features) ? x.features.slice(0, 5).map((f: any) => String(f || '').slice(0, 50)) : [],
+      description: typeof x.description === 'string' ? x.description.slice(0, 200) : undefined,
+    }))
+    .slice(0, maxCandidates)
+}
+
+/**
  * 候補の詳細情報（料金・特徴）を公式サイトから抽出
  */
 async function enrichCandidatesWithDetails(
@@ -1132,30 +1212,54 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   }
 
   const cfg = (article?.comparisonConfig as any) || {}
-  const desired = Math.max(0, Math.min(60, Number(cfg?.count || 0)))
+  let desired = Math.max(0, Math.min(60, Number(cfg?.count || 0)))
   const existing = Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
   const uniqExisting = uniqCandidatesByName(existing)
+
+  // count が未設定（0）の場合、タイトルから推定するか、デフォルト10社で進める
   if (!desired) {
-    await pushResearchEvent(jobId, {
-      at: Date.now(),
-      kind: 'warn',
-      title: '比較候補の自動抽出はスキップされました',
-      detail: 'comparisonConfig.count が 0（未設定）です。',
-    })
-    return uniqExisting
+    const inferred = inferComparisonCountFromTitle(article?.title, article?.keywords)
+    if (inferred > 0) {
+      desired = inferred
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'discover',
+        title: `タイトルから比較数を推定しました（${desired}社）`,
+        detail: `「${String(article?.title || '').slice(0, 40)}」から自動検出`,
+      })
+      // DB にも反映
+      try {
+        const nextCfg = { ...cfg, count: desired }
+        await (prisma as any).seoArticle.update({
+          where: { id: article.id },
+          data: { comparisonConfig: nextCfg as any },
+        })
+        article.comparisonConfig = nextCfg
+      } catch {
+        // ignore
+      }
+    } else {
+      // タイトルからも推定できない場合はデフォルト10社で進める
+      desired = 10
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'warn',
+        title: '比較数が未設定のためデフォルト10社で進行します',
+        detail: '比較したいサービス数を明示的に設定することをお勧めします。',
+      })
+      try {
+        const nextCfg = { ...cfg, count: desired }
+        await (prisma as any).seoArticle.update({
+          where: { id: article.id },
+          data: { comparisonConfig: nextCfg as any },
+        })
+        article.comparisonConfig = nextCfg
+      } catch {
+        // ignore
+      }
+    }
   }
   if (uniqExisting.length >= desired) return uniqExisting.slice(0, desired)
-
-  // SerpAPIが無いならここで止める（架空サービスで埋めるのを防ぐ）
-  if (!hasSerpApiKey()) {
-    await pushResearchEvent(jobId, {
-      at: Date.now(),
-      kind: 'error',
-      title: '比較候補を自動収集できません',
-      detail: 'SEO_SERPAPI_KEY（または SERPAPI_API_KEY）が未設定です。Vercelの環境変数を確認してください。',
-    })
-    return uniqExisting
-  }
 
   const keywords = Array.isArray(article.keywords) ? article.keywords : (article.keywords as any) || []
   const baseQuery = buildCandidateSearchSeed(article)
@@ -1177,6 +1281,115 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
         `検索クエリが曖昧すぎます: "${baseQuery}"。例: 「RPO 採用代行」「オンライン英会話」など“テーマの核”をタイトル/キーワードに入れてください。`,
     })
     return uniqExisting
+  }
+
+  // SerpAPIが無い場合でも、すでに referenceUrls（比較メディア等）が入っていればそこから抽出して進める
+  // （架空サービスで埋めないため「実在ページの抽出」に限定したフォールバック）
+  if (!hasSerpApiKey()) {
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'warn',
+      title: 'SerpAPIが未設定のため、参照URLから比較候補を抽出します',
+      detail: 'SEO_SERPAPI_KEY（または SERPAPI_API_KEY）が未設定です。referenceUrls（比較メディア/公式URL）があればそこから抽出して続行します。',
+    })
+
+    const refUrls = Array.isArray(article?.referenceUrls) ? (article.referenceUrls as any[]) : []
+    const normalizedRefs = refUrls
+      .map((u: any) => normalizeUrlMaybe(u))
+      .filter(Boolean) as string[]
+
+    const collected: any[] = [...uniqExisting]
+    const maxParse = desired >= 30 ? 10 : 5
+    for (const u of normalizedRefs.slice(0, maxParse)) {
+      if (uniqCandidatesByName(collected).length >= desired) break
+      const services = await extractServicesFromComparisonArticle(u, baseQuery, jobId)
+      for (const s of services) {
+        if (s.name && !containsPlaceholderNames(s.name)) {
+          collected.push({ ...s, source: 'reference_urls', sourceUrl: s.sourceUrl || u })
+        }
+      }
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'candidates',
+        title: `候補を追加（${services.length}件）`,
+        detail: services.slice(0, 5).map((s) => s.name).join(' / '),
+      })
+    }
+
+    let merged = uniqCandidatesByName(collected).slice(0, desired)
+
+    // referenceUrlsからの抽出でも足りない場合、Gemini知識で補完
+    if (merged.length < Math.max(3, Math.ceil(desired * 0.3))) {
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'warn',
+        title: '参照URLからの候補収集が不十分でした',
+        detail: `${merged.length}/${desired}社しか取得できませんでした。Gemini知識から補完します。`,
+      })
+
+      try {
+        const geminiCandidates = await generateCandidatesFromGeminiKnowledge({
+          baseQuery,
+          keywords: Array.isArray(article.keywords) ? article.keywords : [],
+          title: article.title,
+          existingNames: merged.map((c) => String(c?.name || '').trim()).filter(Boolean),
+          maxCandidates: Math.min(60, desired - merged.length),
+          jobId,
+        })
+
+        for (const gc of geminiCandidates) {
+          if (gc.name && !containsPlaceholderNames(gc.name)) {
+            collected.push({ ...gc, source: 'gemini_knowledge' })
+          }
+        }
+        merged = uniqCandidatesByName(collected).slice(0, desired)
+
+        await pushResearchEvent(jobId, {
+          at: Date.now(),
+          kind: 'candidates',
+          title: `Gemini知識から候補を追加しました（${geminiCandidates.length}件）`,
+          detail: geminiCandidates.slice(0, 5).map((c) => c.name).join(' / '),
+        })
+      } catch (e: any) {
+        await pushResearchEvent(jobId, {
+          at: Date.now(),
+          kind: 'error',
+          title: 'Gemini知識からの候補生成に失敗しました',
+          detail: String(e?.message || e || '').slice(0, 200),
+        })
+      }
+    }
+
+    // 公式URLがある候補は、可能な範囲で詳細を補完（SerpAPI不要）
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'fetch',
+      title: '詳細情報を取得中…',
+      detail: `上位${Math.min(15, merged.length)}社の料金・特徴を調査`,
+    })
+    merged = await enrichCandidatesWithDetails(merged, jobId)
+
+    try {
+      await (prisma as any).seoArticle.update({
+        where: { id: article.id },
+        data: { comparisonCandidates: merged as any },
+      })
+    } catch {
+      // ignore
+    }
+    article.comparisonCandidates = merged
+    await setResearchStats(jobId, { candidates: merged.length, candidatesTarget: desired })
+
+    if (!merged.length) {
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'error',
+        title: '比較候補が0件でした',
+        detail: '参照URL・Gemini知識の両方からサービス名を取得できませんでした。キーワードを具体化するか、候補を手動追加してください。',
+      })
+    }
+
+    return merged
   }
 
   await pushResearchEvent(jobId, {
@@ -1378,13 +1591,56 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   }
 
   let merged = uniqCandidatesByName(collected).slice(0, desired)
+
+  // ========= 最終フォールバック: 検索結果から候補が得られなかった場合はGemini知識から生成 =========
+  if (merged.length < Math.max(3, Math.ceil(desired * 0.3))) {
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'warn',
+      title: '検索からの候補収集が不十分でした',
+      detail: `${merged.length}/${desired}社しか取得できませんでした。Gemini知識から補完します。`,
+    })
+
+    try {
+      const geminiCandidates = await generateCandidatesFromGeminiKnowledge({
+        baseQuery,
+        keywords: Array.isArray(article.keywords) ? article.keywords : [],
+        title: article.title,
+        existingNames: merged.map((c) => String(c?.name || '').trim()).filter(Boolean),
+        maxCandidates: Math.min(60, desired - merged.length),
+        jobId,
+      })
+
+      for (const gc of geminiCandidates) {
+        if (gc.name && !containsPlaceholderNames(gc.name)) {
+          collected.push({ ...gc, source: 'gemini_knowledge' })
+        }
+      }
+      merged = uniqCandidatesByName(collected).slice(0, desired)
+
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'candidates',
+        title: `Gemini知識から候補を追加しました（${geminiCandidates.length}件）`,
+        detail: geminiCandidates.slice(0, 5).map((c) => c.name).join(' / '),
+      })
+    } catch (e: any) {
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'error',
+        title: 'Gemini知識からの候補生成に失敗しました',
+        detail: String(e?.message || e || '').slice(0, 200),
+      })
+    }
+  }
+
   if (!merged.length) {
     await pushResearchEvent(jobId, {
       at: Date.now(),
       kind: 'error',
       title: '比較候補が0件でした',
       detail:
-        '検索結果からサービス名を抽出できませんでした（検索クエリが広すぎる/比較メディアの取得失敗/抽出フィルタで除外の可能性）。キーワードを具体化するか、候補を手動追加してください。',
+        '検索結果・Gemini知識の両方からサービス名を取得できませんでした。キーワードを具体化するか、候補を手動追加してください。',
     })
   }
 

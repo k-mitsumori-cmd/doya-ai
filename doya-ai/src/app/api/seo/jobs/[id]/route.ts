@@ -14,7 +14,10 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     const session = await getServerSession(authOptions)
     const user: any = session?.user || null
     const userId = String(user?.id || '').trim()
-    const guestId = !userId ? getGuestIdFromRequest(_req) : null
+    // NOTE:
+    // ログイン済みでも、同一ブラウザで作成した「ゲスト記事/ジョブ」を閲覧できるようにするため
+    // guestId は常に取得しておき、所有者判定で userId OR guestId のどちらかが一致すればOKとする。
+    const guestId = getGuestIdFromRequest(_req)
     const job = await (prisma as any).seoJob.findUnique({
       where: { id },
       include: {
@@ -24,14 +27,12 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     })
     if (!job) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     // 所有者チェック（ユーザー/ゲストで分離）
-    if (userId) {
-      if (String(job.article?.userId || '') !== userId) {
-        return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-      }
-    } else {
-      if (!guestId || String(job.article?.guestId || '') !== guestId) {
-        return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-      }
+    const articleUserId = String(job.article?.userId || '').trim()
+    const articleGuestId = String(job.article?.guestId || '').trim()
+    const canReadByUser = !!userId && !!articleUserId && articleUserId === userId
+    const canReadByGuest = !!guestId && !!articleGuestId && articleGuestId === guestId
+    if (!canReadByUser && !canReadByGuest) {
+      return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     }
 
     // リサーチ実況用：直近の要約/抽出結果（SeoReference）を返す
