@@ -14,6 +14,14 @@ export const metadata: Metadata = {
       'ドヤライティングAIは、SEOに強い記事をテンプレ化。キーワードと記事タイプを選ぶだけで、最適な記事を自動生成。マーケターは「選ぶだけ」で記事が完成。',
     images: [
       {
+        // 添付画像をそのまま配置する場合（推奨）
+        url: '/seo/ogp.png',
+        width: 1200,
+        height: 630,
+        alt: 'ドヤライティングAI|SEOライティングまるなげ',
+      },
+      {
+        // フォールバック（静的画像が未配置でも表示が壊れないように）
         url: '/seo/opengraph-image',
         width: 1200,
         height: 630,
@@ -26,7 +34,7 @@ export const metadata: Metadata = {
     title: 'ドヤライティングAI|SEOライティングまるなげ',
     description:
       'ドヤライティングAIは、SEOに強い記事をテンプレ化。キーワードと記事タイプを選ぶだけで、最適な記事を自動生成。マーケターは「選ぶだけ」で記事が完成。',
-    images: ['/seo/twitter-image'],
+    images: ['/seo/ogp.png', '/seo/twitter-image'],
   },
 }
 
