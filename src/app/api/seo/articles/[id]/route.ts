@@ -37,7 +37,20 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
         return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
       }
     }
-    return NextResponse.json({ success: true, article })
+    // 比較記事の場合は候補数も含める
+    const comparisonCandidates = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
+    const comparisonConfig = article.comparisonConfig || null
+    const comparisonCount = comparisonCandidates.length
+
+    return NextResponse.json({
+      success: true,
+      article: {
+        ...article,
+        comparisonCount,
+        comparisonCandidates,
+        comparisonConfig,
+      },
+    })
   } catch (e: any) {
     const msg = e?.message || '不明なエラー'
     console.error('[seo article get] failed', { articleId: ctx.params.id, msg })
