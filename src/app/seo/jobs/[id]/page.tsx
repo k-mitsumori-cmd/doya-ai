@@ -1153,8 +1153,8 @@ export default function SeoJobPage() {
                       </div>
                     </div>
 
-                    {/* 本文執筆：2カラム（左=状況/要点、右=本文プレビュー） */}
-                    <div className="relative mt-5 grid gap-5 lg:grid-cols-2">
+                    {/* 本文執筆：1カラム（縦積み）にして本文プレビューを横いっぱいにする */}
+                    <div className="relative mt-5 grid gap-5">
                       {/* 左カラム：状況/要点 */}
                       <div className="rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm overflow-hidden">
                         <div className="px-5 py-4 bg-gradient-to-r from-white to-slate-50 border-b border-gray-200/60">
@@ -1233,7 +1233,7 @@ export default function SeoJobPage() {
                         </div>
                       </div>
 
-                      {/* 右カラム：本文プレビュー（エディタ風） */}
+                      {/* 本文プレビュー（エディタ風） */}
                       <div className="relative rounded-2xl border border-gray-200/80 bg-white shadow-inner overflow-hidden">
                         {/* エディタヘッダー */}
                         <div className="px-4 py-2.5 bg-gradient-to-r from-gray-50 to-gray-100/80 border-b border-gray-200/60 flex items-center gap-2">
