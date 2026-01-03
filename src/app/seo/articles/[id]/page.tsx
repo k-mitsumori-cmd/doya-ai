@@ -566,6 +566,7 @@ function SeoArticleInner() {
   const [entitlements, setEntitlements] = useState<null | { canUseSeoImages: boolean; plan: string; isLoggedIn: boolean }>(null)
   const [mediaBusy, setMediaBusy] = useState(false)
   const [mediaError, setMediaError] = useState<string | null>(null)
+  const [mediaBusyDetail, setMediaBusyDetail] = useState<string>('')
   const [regenOpen, setRegenOpen] = useState(false)
   const [regenImage, setRegenImage] = useState<SeoImage | null>(null)
   const [regenPrompt, setRegenPrompt] = useState('')
@@ -853,6 +854,7 @@ function SeoArticleInner() {
     if (mediaBusy) return
     setMediaBusy(true)
     setMediaError(null)
+    setMediaBusyDetail('準備中…')
     try {
       // 生成中に「白抜け」して見えないことがあるため、表示側を生成中状態に寄せる
       setImgGenerating((prev) => {
@@ -865,22 +867,41 @@ function SeoArticleInner() {
         for (const x of article?.images || []) next[String(x.id)] = false
         return next
       })
-      // プロンプトテンプレを送って、記事内容に合わせた生成にする
-      const res = await fetch(`/api/seo/articles/${id}/images/ensure`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          bannerPromptTemplate: bannerPromptTemplate?.trim() || undefined,
-          diagramPromptTemplate: diagramPromptTemplate?.trim() || undefined,
-        }),
-      })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || json?.success === false) throw new Error(json?.error || `生成に失敗しました (${res.status})`)
+      // 504回避のため、図解は「少量ずつ」複数回呼び出して生成する
+      // （サーバ側も1回あたりの生成枚数を絞っている）
+      let last: any = null
+      let remaining = 999
+      const maxLoops = 12
+      for (let i = 0; i < maxLoops; i++) {
+        setMediaBusyDetail(`生成中…（${i + 1}/${maxLoops}）`)
+        const res = await fetch(`/api/seo/articles/${id}/images/ensure`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            // サーバ側のテンプレ差し替えに利用
+            diagramPromptTemplate: diagramPromptTemplate?.trim() || undefined,
+            // 1回に生成する図解枚数（小さくして504を避ける）
+            diagramsPerRequest: 1,
+          }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok || json?.success === false) throw new Error(json?.error || `生成に失敗しました (${res.status})`)
+        last = json
+        remaining = Number(json?.remainingDiagrams ?? 0)
+        if (Number.isFinite(remaining) && remaining <= 0) break
+        // 少し待って次の生成へ
+        await new Promise((r) => setTimeout(r, 600))
+      }
+      if (remaining > 0 && last) {
+        // エラーにはしないが、ユーザーに追加生成が必要なことを伝える
+        setMediaError(`一部生成しました（残り図解 ${remaining} 枚）。必要ならもう一度「図解を作成」を押してください。`)
+      }
       await load({ showLoading: false })
     } catch (e: any) {
       setMediaError(e?.message || '画像生成に失敗しました')
     } finally {
       setMediaBusy(false)
+      setMediaBusyDetail('')
     }
   }
 
@@ -1878,7 +1899,9 @@ function SeoArticleInner() {
                         </div>
                         <div className="p-6 flex items-center gap-3">
                           <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-                          <p className="text-sm font-black text-gray-700">生成しています…</p>
+                          <p className="text-sm font-black text-gray-700">
+                            {mediaBusyDetail ? mediaBusyDetail : '生成しています…'}
+                          </p>
                         </div>
                       </motion.div>
                     </motion.div>

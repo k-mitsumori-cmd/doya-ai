@@ -8,7 +8,14 @@ import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPlan'
 
 export const runtime = 'nodejs'
-export const maxDuration = 120 // 120秒のタイムアウト（複数画像生成のため）
+// 画像生成は外部API待ちで時間がかかるため、Vercelの関数タイムアウトを長めに確保
+export const maxDuration = 300
+
+function clampInt(v: any, min: number, max: number, fallback: number) {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return fallback
+  return Math.max(min, Math.min(max, Math.trunc(n)))
+}
 
 type PlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
 
@@ -73,6 +80,11 @@ function applyDiagramTemplate(rawTemplate: string, vars: Record<string, string>)
 export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
   try {
     await ensureSeoSchema()
+    const body: any = await _req.json().catch(() => ({}))
+    // 1回のリクエストで生成する図解枚数（多すぎると504になりやすいので小さく）
+    const diagramsPerRequest = clampInt(body?.diagramsPerRequest ?? body?.maxDiagramsPerRequest ?? body?.maxPerRequest, 1, 2, 1)
+    const diagramPromptTemplate = String(body?.diagramPromptTemplate || '').trim()
+
     const session = await getServerSession(authOptions)
     const user: any = session?.user || null
     const userId = String(user?.id || '')
@@ -158,14 +170,16 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
     }
 
     // === 図解候補を提案して最大9枚生成（既にある場合は不足分のみ）===
+    // NOTE: 504回避のため、1回のリクエストでは少数だけ生成し、クライアント側で複数回呼び出して埋める
     const MAX_DIAGRAMS = 9
     const existingDiagrams = (article.images || []).filter((x: any) => x.kind === 'DIAGRAM')
     const remain = Math.max(0, MAX_DIAGRAMS - existingDiagrams.length)
     
     if (remain > 0) {
+      const want = Math.max(1, Math.min(remain, diagramsPerRequest))
       const suggestPrompt = `
 あなたは記事のビジュアル設計者です。
-以下の記事内容を分析して、読者の理解を助ける図解（DIAGRAM）を最大${remain}個提案してください。
+以下の記事内容を分析して、読者の理解を助ける図解（DIAGRAM）を最大${want}個提案してください。
 
 タイトル: ${title}
 見出し: ${headings.slice(0, 15).join(' / ')}
@@ -180,14 +194,14 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
         generationConfig: { temperature: 0.3, maxOutputTokens: 1200 },
       }).catch(() => ({ diagrams: [] }))
 
-      let diagrams = Array.isArray(suggestion?.diagrams) ? suggestion.diagrams.slice(0, remain) : []
+      let diagrams = Array.isArray(suggestion?.diagrams) ? suggestion.diagrams.slice(0, want) : []
 
       // 提案が空でも生成が進むよう、見出しからフォールバックで図解案を作る
       if (!diagrams.length) {
         const base = headings
           .map((h: string) => String(h).replace(/^#{1,6}\s+/, '').trim())
           .filter(Boolean)
-          .slice(0, remain)
+          .slice(0, want)
         diagrams = base.map((t: string, i: number) => ({
           title: t || `図解 ${i + 1}`,
           description: `記事「${title}」の「${t}」の内容を、要点が一目で分かるように図解化してください。` +
@@ -196,7 +210,7 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       }
       
       if (diagrams.length) {
-        const diagramTemplate = defaultDiagramTemplate()
+        const diagramTemplate = diagramPromptTemplate ? diagramPromptTemplate : defaultDiagramTemplate()
         
         for (const diagram of diagrams) {
           const prompt = [
@@ -245,7 +259,18 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       where: { id: articleId },
       include: { images: { orderBy: { createdAt: 'desc' } } },
     })
-    return NextResponse.json({ success: true, images: refreshed?.images || [] })
+    const imgs = (refreshed?.images || []) as any[]
+    const hasBanner2 = imgs.some((x) => String(x?.kind || '').toUpperCase() === 'BANNER')
+    const diagCount2 = imgs.filter((x) => String(x?.kind || '').toUpperCase() === 'DIAGRAM').length
+    const remainingDiagrams = Math.max(0, 9 - diagCount2)
+    return NextResponse.json({
+      success: true,
+      images: imgs,
+      hasBanner: hasBanner2,
+      diagramCount: diagCount2,
+      remainingDiagrams,
+      diagramsPerRequest,
+    })
   } catch (e: any) {
     console.error('Ensure images error:', e)
     return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
