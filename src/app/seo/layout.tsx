@@ -4,8 +4,30 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
 export const metadata: Metadata = {
-  title: 'ドヤ記事作成',
-  description: 'SEO + LLMOに強い長文記事を分割生成で安定作成するツール。',
+  title: { absolute: 'ドヤライティングAI|SEOライティングまるなげ' },
+  description:
+    'ドヤライティングAIは、SEOに強い記事をテンプレ化。キーワードと記事タイプを選ぶだけで、最適な記事を自動生成。マーケターは「選ぶだけ」で記事が完成。',
+  openGraph: {
+    type: 'website',
+    title: 'ドヤライティングAI|SEOライティングまるなげ',
+    description:
+      'ドヤライティングAIは、SEOに強い記事をテンプレ化。キーワードと記事タイプを選ぶだけで、最適な記事を自動生成。マーケターは「選ぶだけ」で記事が完成。',
+    images: [
+      {
+        url: '/seo/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'ドヤライティングAI|SEOライティングまるなげ',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ドヤライティングAI|SEOライティングまるなげ',
+    description:
+      'ドヤライティングAIは、SEOに強い記事をテンプレ化。キーワードと記事タイプを選ぶだけで、最適な記事を自動生成。マーケターは「選ぶだけ」で記事が完成。',
+    images: ['/seo/twitter-image'],
+  },
 }
 
 export default async function SeoLayout({ children }: { children: React.ReactNode }) {
