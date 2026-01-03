@@ -20,6 +20,7 @@ import {
   Image,
   Wand2,
   LayoutDashboard,
+  RefreshCcw,
   X,
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
@@ -100,6 +101,8 @@ export default function SeoDashboardPage() {
   const [articles, setArticles] = useState<SeoArticleRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [regenBusyId, setRegenBusyId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const isLoadingRef = useRef(false)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
@@ -208,6 +211,30 @@ export default function SeoDashboardPage() {
     return `/seo/articles/${a.id}`
   }
 
+  async function regenerate(articleId: string) {
+    if (!articleId) return
+    setActionError(null)
+    setRegenBusyId(articleId)
+    try {
+      const res = await fetch(`/api/seo/articles/${articleId}/jobs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resetSections: true }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || `API Error: ${res.status}`)
+      }
+      const jobId = String(json?.jobId || '').trim()
+      if (!jobId) throw new Error('jobIdが取得できませんでした')
+      router.push(`/seo/jobs/${jobId}?auto=1`)
+    } catch (e: any) {
+      setActionError(e?.message || '再生成に失敗しました')
+    } finally {
+      setRegenBusyId(null)
+    }
+  }
+
   return (
     <main className="max-w-6xl mx-auto py-6 sm:py-8 px-4">
       {/* 統計カード */}
@@ -310,6 +337,12 @@ export default function SeoDashboardPage() {
           />
         </div>
       </div>
+
+      {actionError && (
+        <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+          {actionError}
+        </div>
+      )}
 
       {/* Article Cards */}
       <div className="space-y-3">
@@ -432,6 +465,21 @@ export default function SeoDashboardPage() {
                               </div>
                               <ProgressBar value={job.progress} />
                             </div>
+                          )}
+                          {a.status === 'ERROR' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                regenerate(a.id)
+                              }}
+                              disabled={regenBusyId === a.id}
+                              className="h-10 px-4 rounded-xl bg-white border border-red-200 text-red-700 hover:bg-red-50 text-xs font-black shadow-sm hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                              title="同じ記事を再生成します（新しいジョブを作成）"
+                            >
+                              <RefreshCcw className={`w-4 h-4 ${regenBusyId === a.id ? 'animate-spin' : ''}`} />
+                              再生成
+                            </button>
                           )}
                           <button
                             type="button"
