@@ -357,9 +357,20 @@ function comparisonCoverageNote(article: any): string {
   const desired = Math.max(0, Math.min(60, Number(cfg?.count || 0)))
   const candidates = Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
   const actual = uniqCandidatesByName(candidates).length
-  if (!desired) return ''
-  if (actual >= desired) return ''
-  return `【注意】本記事は当初「${desired}社比較」を想定していましたが、執筆時点で調査できたのは ${actual}社分まででした。以降の比較・表は ${actual}社の範囲で作成しています。`
+  const names = uniqCandidatesByName(candidates)
+    .map((c: any) => String(c?.name || '').trim())
+    .filter(Boolean)
+    .slice(0, 10)
+  const nameNote = names.length ? `（比較対象: ${names.join(' / ')}${actual > names.length ? ' …' : ''}）` : ''
+
+  // 比較件数は必ず本文に明記する（仕様）
+  if (!desired) {
+    return `本記事はオンライン検索・公式サイト等の公開情報をもとに、実在する ${actual}社を比較して作成しています。${nameNote}`.trim()
+  }
+  if (actual >= desired) {
+    return `本記事はオンライン検索・公式サイト等の公開情報をもとに、実在する ${actual}社（目標: ${desired}社）を比較して作成しています。${nameNote}`.trim()
+  }
+  return `【注意】本記事は当初「${desired}社比較」を想定していましたが、執筆時点で調査できたのは ${actual}社分まででした。以降の比較・表は ${actual}社の範囲で作成しています。${nameNote}`.trim()
 }
 
 async function maybeDiscoverReferenceUrls(article: any, jobId?: string) {
@@ -706,6 +717,96 @@ function fillEmptyServiceTables(md: string, candidates: any[], maxRows: number):
   )
 
   return s
+}
+
+function deriveStrengthWeakness(c: any): { strength: string; weakness: string } {
+  const features =
+    Array.isArray(c?.features) && c.features.length
+      ? c.features
+          .slice(0, 4)
+          .map((x: any) => String(x || '').trim())
+          .filter(Boolean)
+      : []
+  const desc = String(c?.description || c?.notes || '').trim()
+  const pricing = String(c?.pricing || '').trim()
+  const url = String(normalizeUrlMaybe(c?.websiteUrl) || '').trim()
+
+  // 強み: 公式サイトから抽出できた特徴（features/description）をベースにする
+  const strength = escapeMdCell(features.length ? features.join('、') : desc ? desc.slice(0, 80) : '要確認（公式サイトで確認）')
+
+  // 弱み: 断定・推測を避け、公開情報の不足/確認点を中心に記載する（架空抑止）
+  const weaknessHints: string[] = []
+  if (!pricing || pricing.includes('要問い合わせ')) weaknessHints.push('料金が公開されていない/要問い合わせ')
+  if (!url) weaknessHints.push('公式URLが不明（要確認）')
+  if (!weaknessHints.length) weaknessHints.push('プラン/条件により内容が変わる可能性（要確認）')
+  const weakness = escapeMdCell(weaknessHints.slice(0, 2).join('、'))
+
+  return { strength, weakness }
+}
+
+function buildProsConsTableMarkdown(candidates: any[], maxRows: number): string {
+  const rows = (Array.isArray(candidates) ? candidates : []).slice(0, Math.max(0, maxRows))
+  const header = ['サービス名', '強み（特徴）', '弱み（注意点）', '料金', '公式URL']
+  const sep = ['---', '---', '---', '---', '---']
+  const lines: string[] = []
+  lines.push(`| ${header.join(' | ')} |`)
+  lines.push(`| ${sep.join(' | ')} |`)
+  for (const c of rows) {
+    const name = escapeMdCell(c?.name || '') || '（名称不明）'
+    const { strength, weakness } = deriveStrengthWeakness(c)
+    const pricingCell = escapeMdCell(c?.pricing || '要問い合わせ')
+    const urlCell = escapeMdCell(normalizeUrlMaybe(c?.websiteUrl) || '')
+    lines.push(`| ${name} | ${strength} | ${weakness} | ${pricingCell} | ${urlCell} |`)
+  }
+  return lines.join('\n')
+}
+
+function insertAfterH1(md: string, block: string): string {
+  const s = String(md || '').replace(/\r\n/g, '\n')
+  if (!s.trim() || !block.trim()) return s
+  const lines = s.split('\n')
+  if (!lines.length) return s
+  // 既に挿入済みなら何もしない
+  if (s.includes('## 比較表（強み・弱み）')) return s
+
+  const out: string[] = []
+  let i = 0
+  out.push(lines[i] || '')
+  i++
+  // drop/keep blanks
+  while (i < lines.length && !lines[i].trim()) {
+    out.push(lines[i])
+    i++
+  }
+  // keep banner image line if already present
+  if (i < lines.length && /^!\[.*\]\(.+\)/.test(lines[i].trim())) {
+    out.push(lines[i])
+    i++
+    while (i < lines.length && !lines[i].trim()) {
+      out.push(lines[i])
+      i++
+    }
+  }
+  out.push('')
+  out.push(block.trim())
+  out.push('')
+  out.push(...lines.slice(i))
+  return out.join('\n').replace(/\n{4,}/g, '\n\n\n').trim()
+}
+
+function ensureProsConsTable(md: string, candidates: any[], maxRows: number): string {
+  const list = uniqCandidatesByName(Array.isArray(candidates) ? candidates : [])
+  if (!list.length) return md
+  const table = buildProsConsTableMarkdown(list, maxRows)
+  if (!table.trim() || table.split('\n').length < 3) return md
+  const block = [
+    '## 比較表（強み・弱み）',
+    '',
+    '※ 強みは公式サイト等の公開情報から抽出した特徴ベース、弱みは「要確認点（公開情報の不足/条件差）」中心に記載しています。',
+    '',
+    table,
+  ].join('\n')
+  return insertAfterH1(md, block)
 }
 
 function inferComparisonCountFromTitle(title: string, keywords: any): number {
@@ -2664,7 +2765,8 @@ async function integrate(jobId: string) {
     const candidates0 = uniqCandidatesByName(
       Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
     )
-    if (desired0 > 0 && candidates0.length === 0) {
+    // 比較記事は「比較対象0社」で完成させない（テーブル/強み弱みが成立しない）
+    if (candidates0.length === 0) {
       await pushResearchEvent(jobId, {
         at: Date.now(),
         kind: 'error',
@@ -2756,6 +2858,8 @@ async function integrate(jobId: string) {
       const maxRows = desired || candidates.length
       if (candidates.length) {
         finalMarkdown = fillEmptyServiceTables(finalMarkdown, candidates, maxRows)
+        // 仕様: 強み/弱みの比較表は必ず本文内に含める
+        finalMarkdown = ensureProsConsTable(finalMarkdown, candidates, maxRows)
       }
     } catch {
       // ignore
