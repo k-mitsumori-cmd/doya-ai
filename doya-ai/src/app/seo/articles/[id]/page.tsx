@@ -88,6 +88,15 @@ type SeoReference = {
   createdAt: string
 }
 
+type ComparisonCandidate = {
+  name: string
+  websiteUrl?: string
+  pricing?: string
+  features?: string[]
+  description?: string
+  source?: string
+}
+
 type Article = {
   id: string
   title: string
@@ -109,6 +118,11 @@ type Article = {
   referenceImages?: { name: string; dataUrl: string }[] | null
   autoBundle?: boolean
   createdAt: string
+  // 比較記事関連
+  mode?: string
+  comparisonCount?: number
+  comparisonCandidates?: ComparisonCandidate[]
+  comparisonConfig?: { count?: number; region?: string; template?: string }
 }
 
 type TocItem = { id: string; text: string; level: 2 | 3 }
@@ -559,6 +573,15 @@ function SeoArticleInner() {
   const [promptOpen, setPromptOpen] = useState(false)
   const [bannerPromptTemplate, setBannerPromptTemplate] = useState(DEFAULT_BANNER_PROMPT_TEMPLATE)
   const [diagramPromptTemplate, setDiagramPromptTemplate] = useState(DEFAULT_DIAGRAM_PROMPT_TEMPLATE)
+  
+  // 比較サービス追加モーダル
+  const [addServiceOpen, setAddServiceOpen] = useState(false)
+  const [newServiceName, setNewServiceName] = useState('')
+  const [newServiceUrl, setNewServiceUrl] = useState('')
+  const [newServicePricing, setNewServicePricing] = useState('')
+  const [newServiceDescription, setNewServiceDescription] = useState('')
+  const [addingService, setAddingService] = useState(false)
+  const [addServiceError, setAddServiceError] = useState<string | null>(null)
   const [imageDetail, setImageDetail] = useState<SeoImage | null>(null)
   const [imgLoaded, setImgLoaded] = useState<Record<string, boolean>>({})
   const [imgRetry, setImgRetry] = useState<Record<string, number>>({})
@@ -684,6 +707,53 @@ function SeoArticleInner() {
       setMessage(e?.message || '失敗しました')
     } finally {
       setBusy(null)
+    }
+  }
+
+  // サービスを追加して再生成
+  async function handleAddService(regenerate: boolean = false) {
+    if (!newServiceName.trim()) {
+      setAddServiceError('サービス名を入力してください')
+      return
+    }
+    setAddingService(true)
+    setAddServiceError(null)
+    try {
+      const res = await fetch(`/api/seo/articles/${id}/candidates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidates: [{
+            name: newServiceName.trim(),
+            websiteUrl: newServiceUrl.trim() || undefined,
+            pricing: newServicePricing.trim() || undefined,
+            description: newServiceDescription.trim() || undefined,
+          }],
+          regenerate,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || '追加に失敗しました')
+      }
+      // 成功したらフォームをリセット
+      setNewServiceName('')
+      setNewServiceUrl('')
+      setNewServicePricing('')
+      setNewServiceDescription('')
+      setAddServiceOpen(false)
+      await load({ showLoading: false })
+      if (regenerate && json.jobId) {
+        // 再生成ジョブが作成された場合、ジョブページへ遷移
+        router.push(`/seo/jobs/${json.jobId}?auto=1`)
+      } else {
+        setMessage(`サービスを追加しました（現在${json.count}社）`)
+        setTimeout(() => setMessage(null), 3000)
+      }
+    } catch (e: any) {
+      setAddServiceError(e?.message || '追加に失敗しました')
+    } finally {
+      setAddingService(false)
     }
   }
 
@@ -977,6 +1047,120 @@ function SeoArticleInner() {
             dontShowAgainRef.current = v
           }}
         />
+
+        {/* サービス追加モーダル */}
+        <AnimatePresence>
+          {addServiceOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+              onClick={() => !addingService && setAddServiceOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center">
+                      <Zap className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-gray-900">比較サービスを追加</h3>
+                      <p className="text-sm text-gray-500">記事に追加する新しいサービスを入力してください</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">
+                      サービス名 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newServiceName}
+                      onChange={(e) => setNewServiceName(e.target.value)}
+                      placeholder="例：DMM英会話"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none text-sm"
+                      disabled={addingService}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">公式サイトURL（任意）</label>
+                    <input
+                      type="url"
+                      value={newServiceUrl}
+                      onChange={(e) => setNewServiceUrl(e.target.value)}
+                      placeholder="https://example.com"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none text-sm"
+                      disabled={addingService}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">料金情報（任意）</label>
+                    <input
+                      type="text"
+                      value={newServicePricing}
+                      onChange={(e) => setNewServicePricing(e.target.value)}
+                      placeholder="例：月額6,480円〜"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none text-sm"
+                      disabled={addingService}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">概要・特徴（任意）</label>
+                    <textarea
+                      value={newServiceDescription}
+                      onChange={(e) => setNewServiceDescription(e.target.value)}
+                      placeholder="例：24時間レッスン可能、フィリピン人講師が中心"
+                      rows={2}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none text-sm resize-none"
+                      disabled={addingService}
+                    />
+                  </div>
+                  {addServiceError && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold">
+                      {addServiceError}
+                    </div>
+                  )}
+                </div>
+                <div className="p-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => !addingService && setAddServiceOpen(false)}
+                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 text-sm font-bold hover:bg-gray-50 transition-colors"
+                    disabled={addingService}
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddService(false)}
+                    className="flex-1 px-4 py-3 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-colors disabled:opacity-50"
+                    disabled={addingService || !newServiceName.trim()}
+                  >
+                    {addingService ? '追加中...' : '候補に追加'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddService(true)}
+                    className="flex-1 px-4 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    disabled={addingService || !newServiceName.trim()}
+                  >
+                    <RefreshCcw className="w-4 h-4" />
+                    {addingService ? '追加中...' : '追加して再生成'}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Header */}
         <div className="mb-6 sm:mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="w-full md:w-auto">
@@ -1148,12 +1332,72 @@ function SeoArticleInner() {
                       <span className="px-3 py-1 rounded-full bg-white/10 border border-white/15 text-white text-[10px] font-black">
                         {new Date(article.createdAt).toLocaleDateString()}
                       </span>
+                      {article.mode === 'comparison_research' && article.comparisonCount && article.comparisonCount > 0 && (
+                        <span className="px-3 py-1 rounded-full bg-emerald-500/80 border border-emerald-400/50 text-white text-[10px] font-black flex items-center gap-1">
+                          <Target className="w-3 h-3" />
+                          {article.comparisonCount}社を比較
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Body - 記事本文を全幅で表示 */}
                 <div className="p-4 sm:p-6 lg:p-10">
+                  {/* 比較記事の場合：サービス追加バー */}
+                  {article.mode === 'comparison_research' && (
+                    <div className="mb-6 p-4 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-2xl border border-emerald-100">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
+                            <Target className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-black text-gray-900">
+                              {article.comparisonCount || 0}社を比較した記事
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              サービスを追加して、より網羅的な比較記事に
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAddServiceOpen(true)}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 text-white text-sm font-black hover:bg-emerald-700 transition-colors"
+                        >
+                          <Zap className="w-4 h-4" />
+                          サービスを追加
+                        </button>
+                      </div>
+                      {/* 現在の候補一覧（折りたたみ） */}
+                      {article.comparisonCandidates && article.comparisonCandidates.length > 0 && (
+                        <details className="mt-4">
+                          <summary className="cursor-pointer text-xs font-bold text-gray-500 hover:text-gray-700">
+                            現在の比較対象を見る（{article.comparisonCandidates.length}社）
+                          </summary>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {article.comparisonCandidates.map((c, i) => (
+                              <span
+                                key={i}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-gray-200 text-xs font-bold text-gray-700"
+                              >
+                                {c.websiteUrl ? (
+                                  <a href={c.websiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 flex items-center gap-1">
+                                    {c.name}
+                                    <ExternalLink className="w-3 h-3" />
+                                  </a>
+                                ) : (
+                                  c.name
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  )}
+
                   {markdown ? (
                     <>
                       {/* Mobile TOC */}
