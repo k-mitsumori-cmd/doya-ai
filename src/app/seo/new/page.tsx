@@ -33,7 +33,8 @@ import { FeatureGuide } from '@/components/FeatureGuide'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { SEO_PRICING } from '@/lib/pricing'
 
-const TARGETS = [5000, 10000, 20000, 30000, 40000, 50000, 60000]
+// 文字数プリセット（軽量な記事から試せるよう 3,000字を追加）
+const TARGETS = [3000, 5000, 8000, 10000, 20000, 30000, 40000, 50000, 60000]
 const TONES = ['丁寧', 'フランク', 'ビジネス', '専門的'] as const
 const STORAGE_KEY = 'doya_seo_new_draft_v2'
 
@@ -95,8 +96,17 @@ const ARTICLE_TYPES: Array<{
   },
 ]
 
-// よく使うテンプレート
+// よく使うテンプレート（3,000〜10,000字中心に寄せる）
 const TEMPLATES = [
+  {
+    id: 'mini',
+    name: 'ミニ記事（まず試す）',
+    icon: '⚡',
+    title: '○○とは？3分で分かる要点まとめ',
+    targetChars: 3000,
+    searchIntent: '定義/要点/メリット/注意点（短く）',
+    llmo: { tldr: true, conclusionFirst: true, faq: false, glossary: false, comparison: false, quotes: false, templates: false, objections: false },
+  },
   {
     id: 'note',
     name: 'note記事',
@@ -106,6 +116,26 @@ const TEMPLATES = [
     searchIntent: '体験談/気づき/学び/おすすめ/読者へのメッセージ',
     llmo: { tldr: false, conclusionFirst: false, faq: false, glossary: false, comparison: false, quotes: false, templates: false, objections: false },
     isNote: true,
+  },
+  {
+    id: 'quick-howto',
+    name: 'クイック解説（手順）',
+    icon: '🧩',
+    title: '○○のやり方｜最短5ステップ【初心者向け】',
+    targetChars: 8000,
+    searchIntent: '手順/注意点/失敗しないコツ/FAQ（短め）',
+    llmo: { tldr: true, conclusionFirst: true, faq: true, glossary: false, comparison: false, quotes: false, templates: true, objections: true },
+  },
+  {
+    id: 'cmp10-lite',
+    name: '比較（調査型）10社ライト',
+    icon: '🔎',
+    title: '【厳選10社】○○おすすめ比較｜料金・特徴・選び方',
+    targetChars: 10000,
+    searchIntent: '比較表/選び方/料金相場/おすすめ/FAQ（ライト）',
+    llmo: { tldr: true, conclusionFirst: true, faq: true, glossary: true, comparison: true, quotes: true, templates: true, objections: true },
+    mode: 'comparison_research' as const,
+    comparison: { template: 'comparison', count: 10 },
   },
   {
     id: 'thorough',
@@ -269,21 +299,79 @@ export default function SeoNewArticlePage() {
     [reduceMotion]
   )
 
-  // サンプルデータ定義
-  const SAMPLES = [
+  // サンプルデータ定義（3,000〜10,000字中心。表示/初期値は必ず文字数の少ない順）
+  const SAMPLE_RAW = [
+    // まず試す（3,000）
     {
-      id: 'rpo',
-      name: 'RPO（採用代行）比較',
+      id: 'mini-summary',
+      name: 'ミニ記事（要点まとめ）',
+      mode: 'standard' as const,
+      articleType: 'howto' as ArticleTypeId,
+      title: '○○とは？3分で分かる要点まとめ【初心者向け】',
+      keywords: '○○, とは, 要点, 初心者',
+      targetChars: 3000,
+      persona: 'まず全体像を短時間で把握したい初心者。',
+      searchIntent: '定義と要点を短く知りたい。今日からできることを知りたい。',
+      cmpTemplate: 'comparison' as const,
+      cmpCount: 10 as const,
+    },
+    // 体験談（5,000）
+    {
+      id: 'startup-note',
+      name: '起業体験談（note記事）',
+      mode: 'standard' as const,
+      articleType: 'note' as ArticleTypeId,
+      title: '1年間で売上ゼロから月商1000万円達成するまでにやったこと',
+      keywords: '起業, スタートアップ, 売上, 成長',
+      targetChars: 5000,
+      persona: '起業を考えている人、スタートアップ経営者、ビジネスに興味がある人。',
+      searchIntent: 'リアルな起業体験を知りたい。成功のコツや失敗談を学びたい。',
+      cmpTemplate: 'comparison' as const,
+      cmpCount: 10 as const,
+    },
+    // 8,000（手順）
+    {
+      id: 'quick-howto',
+      name: 'クイック解説（5ステップ）',
+      mode: 'standard' as const,
+      articleType: 'howto' as ArticleTypeId,
+      title: '○○のやり方｜最短5ステップ【初心者向け】',
+      keywords: '○○, やり方, 手順, 初心者',
+      targetChars: 8000,
+      persona: 'まず実務で試したい担当者。',
+      searchIntent: '最短手順と注意点を知りたい。失敗しないコツも欲しい。',
+      cmpTemplate: 'comparison' as const,
+      cmpCount: 10 as const,
+    },
+    // 10,000（比較ライト）
+    {
+      id: 'ai-writing-lite',
+      name: 'AIライティングツール比較（10社ライト）',
       mode: 'comparison_research' as const,
       articleType: 'comparison' as ArticleTypeId,
-      title: 'RPO（採用代行）おすすめ比較50選｜選び方と料金相場【2026年最新】',
-      keywords: 'RPO, 採用代行, 比較, 料金, おすすめ',
-      targetChars: 50000,
-      persona: '採用に課題を感じている企業の人事責任者、経営層。コスト削減と採用質向上を両立させたい層。',
-      searchIntent: 'RPOの主要プレイヤーを一覧で比較したい。自社に合うサービスの選び方を知りたい。相場感と導入メリットを把握したい。',
-      cmpTemplate: 'ranking' as const,
-      cmpCount: 50 as const,
+      title: 'AIライティングツールおすすめ10選｜料金・特徴・選び方【ライト版】',
+      keywords: 'AIライティング, 文章生成AI, 比較, おすすめ',
+      targetChars: 10000,
+      persona: 'コンテンツマーケター、ブロガー。まず候補を絞りたい層。',
+      searchIntent: '主要ツールを短時間で比較したい。料金と特徴を押さえたい。',
+      cmpTemplate: 'comparison' as const,
+      cmpCount: 10 as const,
     },
+    // 10,000（通常）
+    {
+      id: 'seo-mini',
+      name: 'SEO入門（1万字）',
+      mode: 'standard' as const,
+      articleType: 'howto' as ArticleTypeId,
+      title: 'SEO対策の基本｜初心者でもできる10ステップ【まずは1万字】',
+      keywords: 'SEO対策, やり方, 初心者, Google検索',
+      targetChars: 10000,
+      persona: 'Webサイト運営者、マーケティング初心者。',
+      searchIntent: 'SEOの具体的な手順を知りたい。最低限のやることを学びたい。',
+      cmpTemplate: 'comparison' as const,
+      cmpCount: 10 as const,
+    },
+    // ここから上は“重め”のサンプル（後ろに配置される）
     {
       id: 'ai-writing',
       name: 'AIライティングツール比較',
@@ -337,25 +425,30 @@ export default function SeoNewArticlePage() {
       cmpCount: 10 as const,
     },
     {
-      id: 'startup-note',
-      name: '起業体験談（note記事）',
-      mode: 'standard' as const,
-      articleType: 'note' as ArticleTypeId,
-      title: '1年間で売上ゼロから月商1000万円達成するまでにやったこと',
-      keywords: '起業, スタートアップ, 売上, 成長',
-      targetChars: 5000,
-      persona: '起業を考えている人、スタートアップ経営者、ビジネスに興味がある人。',
-      searchIntent: 'リアルな起業体験を知りたい。成功のコツや失敗談を学びたい。',
-      cmpTemplate: 'comparison' as const,
-      cmpCount: 10 as const,
+      id: 'rpo',
+      name: 'RPO（採用代行）比較（50社・長文）',
+      mode: 'comparison_research' as const,
+      articleType: 'comparison' as ArticleTypeId,
+      title: 'RPO（採用代行）おすすめ比較50選｜選び方と料金相場【2026年最新】',
+      keywords: 'RPO, 採用代行, 比較, 料金, おすすめ',
+      targetChars: 50000,
+      persona: '採用に課題を感じている企業の人事責任者、経営層。コスト削減と採用質向上を両立させたい層。',
+      searchIntent: 'RPOの主要プレイヤーを一覧で比較したい。自社に合うサービスの選び方を知りたい。相場感と導入メリットを把握したい。',
+      cmpTemplate: 'ranking' as const,
+      cmpCount: 50 as const,
     },
   ]
+
+  const SAMPLES = useMemo(() => {
+    return [...SAMPLE_RAW].sort((a: any, b: any) => Number(a?.targetChars || 0) - Number(b?.targetChars || 0))
+  }, [])
 
   const [showSampleMenu, setShowSampleMenu] = useState(false)
 
   // 1. サンプル入力
   function fillSample(sampleId?: string) {
-    const sample = sampleId ? SAMPLES.find(s => s.id === sampleId) : SAMPLES[0]
+    const defaultSample = SAMPLES.find((s: any) => Number(s?.targetChars || 0) === 3000) || SAMPLES[0]
+    const sample = sampleId ? SAMPLES.find((s: any) => s.id === sampleId) : defaultSample
     if (!sample) return
 
     setMode(sample.mode)
