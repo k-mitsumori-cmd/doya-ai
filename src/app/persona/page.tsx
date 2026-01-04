@@ -24,6 +24,30 @@ const LOADING_CANDIDATES = [
   { name: '渡辺 由衣', age: 45, role: '人事責任者', note: '採用・ブランド重視' },
 ] as const
 
+const LOADING_STEPS = [
+  { title: 'サイト解析', desc: '見出し/本文から価値と文脈を抽出', stage: 'サイトを解析しています…', artifact: 'サイト情報' },
+  { title: '課題抽出', desc: '悩み/不安/摩擦を言語化', stage: 'ユーザーの悩みを抽出しています…', artifact: '課題リスト' },
+  { title: '意思決定推定', desc: '購入条件/反論/稟議を推定', stage: '意思決定パターンを推定中…', artifact: '意思決定モデル' },
+  { title: '差別化設計', desc: '競合/強み/訴求軸を整理', stage: '競合と差別化ポイントを特定中…', artifact: '訴求軸' },
+  { title: '人物設計', desc: '年齢/職業/生活/価値観を具体化', stage: 'ペルソナ候補を調査中…', artifact: 'ペルソナ' },
+  { title: '履歴書生成', desc: '枠線/項目/整形で“履歴書”化', stage: '履歴書レイアウトを組み立てています…', artifact: '履歴書' },
+  { title: '生活スケジュール', desc: '1日の行動を時系列で作成', stage: '生活スケジュールを生成しています…', artifact: 'スケジュール' },
+  { title: '日記執筆', desc: '生活感ある日記で実在感を増幅', stage: '日記を執筆しています…', artifact: '日記' },
+  { title: '広告コピー設計', desc: 'Google/Meta用の文言を生成', stage: '広告コピーを設計しています…', artifact: '広告コピー' },
+  { title: '画像生成準備', desc: '日記/スケジュール用の絵を準備', stage: '画像生成の準備をしています…', artifact: '画像' },
+] as const
+
+const LOADING_HINTS = [
+  '履歴書の「枠」を引いています…',
+  '価値観の“芯”を言語化しています…',
+  '購買のトリガーを特定中…',
+  '稟議で刺さる要素を抽出中…',
+  '検索キーワードを推定中…',
+  '日常のディテールを濃くしています…',
+  '広告のトーン&マナーを調整中…',
+  '画像内テキストの可読性を最適化中…',
+] as const
+
 function formatJpDate(d: Date): string {
   const yyyy = d.getFullYear()
   const mm = String(d.getMonth() + 1).padStart(2, '0')
@@ -165,17 +189,13 @@ export default function PersonaPage() {
     if (!loading) return
     setShowFlash(true)
     setStageIdx(0)
-    const stages = [
-      'サイトを解析しています…',
-      'ユーザーの悩みを抽出しています…',
-      '意思決定パターンを推定中…',
-      '競合と差別化ポイントを特定中…',
-      'ペルソナ候補をスキャン中…',
-      '売れるコピーの筋を作っています…',
-    ]
+    const stages = LOADING_STEPS.map((s) => s.stage)
     const t = window.setInterval(() => {
-      setStageIdx((v) => (v + 1) % stages.length)
-      setStageText((prev) => stages[(stages.indexOf(prev) + 1 + stages.length) % stages.length] || stages[0])
+      setStageIdx((v) => {
+        const next = (v + 1) % stages.length
+        setStageText(stages[next] || stages[0])
+        return next
+      })
     }, 850)
     return () => window.clearInterval(t)
   }, [loading])
@@ -668,6 +688,90 @@ export default function PersonaPage() {
                     />
                   </div>
 
+                  {/* What we are building now */}
+                  <div className="mt-4 grid md:grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                      <div className="text-white/70 text-[11px] font-black tracking-widest">NOW BUILDING</div>
+                      <div className="mt-1 text-white text-base font-black">
+                        {LOADING_STEPS[stageIdx]?.artifact || '生成物'}
+                      </div>
+                      <div className="mt-1 text-white/70 text-xs font-bold">
+                        {LOADING_STEPS[stageIdx]?.desc || '生成しています…'}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                      <div className="text-white/70 text-[11px] font-black tracking-widest">TARGET</div>
+                      <div className="mt-1 text-white/90 text-sm font-black truncate">
+                        {serviceName ? `サービス：${serviceName}` : 'サービス名：未指定'}
+                      </div>
+                      <div className="mt-1 text-white/70 text-xs font-bold truncate">
+                        {url ? `URL：${url}` : 'URL：未入力'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Stepper */}
+                  <div className="mt-4 grid lg:grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                      <div className="text-white/80 text-xs font-black mb-2">生成ロードマップ</div>
+                      <div className="space-y-2">
+                        {LOADING_STEPS.map((s, idx) => {
+                          const active = idx === stageIdx
+                          return (
+                            <div key={s.title} className="flex items-start gap-2">
+                              <div
+                                className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-black border ${
+                                  active
+                                    ? 'bg-white/20 border-white/30 text-white'
+                                    : 'bg-white/5 border-white/10 text-white/60'
+                                }`}
+                              >
+                                {idx + 1}
+                              </div>
+                              <div className="min-w-0">
+                                <div className={`text-sm font-black truncate ${active ? 'text-white' : 'text-white/70'}`}>
+                                  {s.title}
+                                  {active ? <span className="ml-2 text-[11px] font-black text-pink-200">作業中</span> : null}
+                                </div>
+                                <div className="text-[11px] font-bold text-white/60 truncate">{s.desc}</div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                      <div className="text-white/80 text-xs font-black mb-2">生成中の成果物プレビュー</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { k: '履歴書', v: '枠線/項目/整形' },
+                          { k: 'ペルソナ', v: '年齢/職業/価値観' },
+                          { k: 'スケジュール', v: '業務/ランチ/移動' },
+                          { k: '日記', v: '生活感の文章' },
+                          { k: '広告コピー', v: 'Google/Meta' },
+                          { k: '画像', v: '日記/スケジュール' },
+                        ].map((a, i) => {
+                          const on = i <= stageIdx % 6
+                          return (
+                            <motion.div
+                              key={a.k}
+                              initial={{ opacity: 0, y: 6 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className={`rounded-lg border px-3 py-2 ${
+                                on ? 'border-white/20 bg-white/10' : 'border-white/10 bg-white/5'
+                              }`}
+                            >
+                              <div className={`text-xs font-black ${on ? 'text-white' : 'text-white/60'}`}>{a.k}</div>
+                              <div className="text-[11px] font-bold text-white/60 truncate">{a.v}</div>
+                            </motion.div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* sliding candidates */}
                   <div className="mt-5 overflow-hidden">
                     <motion.div
@@ -698,9 +802,9 @@ export default function PersonaPage() {
                   {/* popup-like hints */}
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2">
                     {[
-                      'LPの勝ち筋を推定中…',
-                      '広告クリック心理を逆算中…',
-                      '刺さる言葉のトーンを調整中…',
+                      LOADING_HINTS[(stageIdx + 0) % LOADING_HINTS.length],
+                      LOADING_HINTS[(stageIdx + 2) % LOADING_HINTS.length],
+                      LOADING_HINTS[(stageIdx + 4) % LOADING_HINTS.length],
                     ].map((t, i) => (
                       <motion.div
                         key={t}
