@@ -2797,66 +2797,69 @@ async function integrate(jobId: string) {
 
   let finalMarkdown = parts.join('\n\n')
 
-  // 目標文字数を大きく超えた場合は、最終段で短縮して暴走を防ぐ
-  // NOTE: 5,000字指定でもLLMが長く書くことがあるため、ここで必ず上限に収める
+  // 文字数制御（方針: 上限は緩め / 下限は厳しめ）
+  // - 上限: 目標の2倍程度までは許容（例: 5000字→1万字でもOK）
+  // - 下限: 目標を大きく下回る短文（例: 3000字→1000字）を絶対に作らない
+  const maxAllowed = Math.round(target * 2.0)
+  const minAllowed = Math.round(target * 0.85)
+
+  // 上限を大幅に超えたら、AI短縮は使わず段落単位で安全にトリム（短くなりすぎ事故を防ぐ）
   try {
     const cur = mdCharCount(finalMarkdown)
-    const over = cur > target * 1.25
-    if (over) {
-      const originalBeforeCompress = finalMarkdown
+    if (cur > maxAllowed) {
       await pushResearchEvent(jobId, {
         at: Date.now(),
         kind: 'warn',
-        title: '文字数が目標を超過したため短縮します',
-        detail: `${cur.toLocaleString()}字 → 目標${target.toLocaleString()}字付近へ`,
+        title: '文字数が上限を超過したため、段落単位で調整します',
+        detail: `${cur.toLocaleString()}字 → 上限${maxAllowed.toLocaleString()}字付近へ`,
+      })
+      finalMarkdown = truncateMarkdownByParagraph(finalMarkdown, Math.round(maxAllowed * 1.02))
+    }
+  } catch {
+    // ignore
+  }
+
+  // もし短すぎる場合は、統合の最終段で追加セクションを生成して底上げする（最大3回）
+  try {
+    for (let i = 0; i < 3; i++) {
+      const cur = mdCharCount(finalMarkdown)
+      if (cur >= minAllowed) break
+      const need = Math.round(minAllowed - cur)
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'warn',
+        title: '本文が短すぎるため追記で補います',
+        detail: `${cur.toLocaleString()}字 → 最低${minAllowed.toLocaleString()}字へ（+${need.toLocaleString()}字目安）`,
       })
 
-      const compressPrompt = [
-        'You are a Japanese editor.',
-        'Task: compress the following markdown article to meet the target length, while keeping clarity and SEO usefulness.',
+      const addPrompt = [
+        'You are a Japanese SEO writer.',
+        'Write ONE additional section to improve completeness.',
+        'Do NOT copy from sources; add originality (experience, tradeoffs, failure cases, checklists).',
+        'Return Markdown only and start with "## ".',
         '',
-        'CRITICAL RULES:',
-        `- Target length: about ${target} Japanese characters (±10%).`,
-        '- Keep the title and main headings structure as much as possible.',
-        '- Remove repetition, overly long explanations, and examples first.',
-        '- Keep at least one table if it exists and is useful.',
-        '- Output FULL MARKDOWN only (no JSON).',
+        `Article title: ${article.title}`,
+        `Keywords: ${((article.keywords as any) || []).join(', ')}`,
+        `Tone: ${article.tone}`,
+        memo ? `User notes (preferences/constraints):\n${clampText(memo, 900)}` : '',
         '',
-        'Original markdown (truncated):',
-        clampText(finalMarkdown, 16000),
-      ].join('\n')
+        `Target chars for this additional section: ~${Math.min(3000, Math.max(700, need))}`,
+        '',
+        'Context (truncated):',
+        clampText(finalMarkdown, 9000),
+      ]
+        .filter(Boolean)
+        .join('\n')
 
       try {
-        const shorter = await geminiGenerateText({
+        const extra = await geminiGenerateText({
           model: GEMINI_TEXT_MODEL_DEFAULT,
-          parts: [{ text: compressPrompt }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 9000 },
+          parts: [{ text: addPrompt }],
+          generationConfig: { temperature: 0.6, maxOutputTokens: 4500 },
         })
-        const cleaned = shorter && shorter.trim() ? sanitizeAiMarkdown(shorter.trim()) : ''
-        if (cleaned) {
-          const after = mdCharCount(cleaned)
-          const minOk = Math.max(900, Math.round(target * 0.45))
-          const maxOk = Math.round(target * 1.2)
-          if (after >= minOk && after <= maxOk) {
-            finalMarkdown = cleaned
-          } else if (after > maxOk) {
-            // まだ長ければ段落単位でカット（品質より「指定を守る」を優先）
-            finalMarkdown = truncateMarkdownByParagraph(cleaned, Math.round(target * 1.05))
-          } else {
-            // 逆に短すぎる場合は「圧縮しすぎ」なので、元本文から確実にカットして目標付近に寄せる
-            await pushResearchEvent(jobId, {
-              at: Date.now(),
-              kind: 'warn',
-              title: '短縮結果が短すぎたため、段落単位のトリムに切り替えます',
-              detail: `${after.toLocaleString()}字（短すぎ） → 元本文から${Math.round(target * 1.05).toLocaleString()}字付近へ`,
-            })
-            finalMarkdown = truncateMarkdownByParagraph(originalBeforeCompress, Math.round(target * 1.05))
-          }
-        } else {
-          finalMarkdown = truncateMarkdownByParagraph(originalBeforeCompress, Math.round(target * 1.05))
-        }
+        if (extra && extra.trim()) finalMarkdown = `${finalMarkdown.trim()}\n\n${extra.trim()}`
       } catch {
-        finalMarkdown = truncateMarkdownByParagraph(originalBeforeCompress, Math.round(target * 1.05))
+        break
       }
     }
   } catch {
