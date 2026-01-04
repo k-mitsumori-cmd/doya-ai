@@ -59,11 +59,11 @@ export default function PersonaHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 p-4 lg:p-8">
+    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-black text-white flex items-center gap-3">
+            <h1 className="text-2xl lg:text-3xl font-black text-slate-900 flex items-center gap-3">
               <Clock className="w-7 h-7 text-purple-400" />
               生成履歴
             </h1>
@@ -84,8 +84,8 @@ export default function PersonaHistoryPage() {
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-800 flex items-center justify-center">
               <Target className="w-10 h-10 text-slate-600" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">履歴がありません</h2>
-            <p className="text-slate-400 mb-6 text-sm">ペルソナを生成すると、ここに履歴が表示されます</p>
+            <h2 className="text-xl font-bold text-slate-900 mb-2">履歴がありません</h2>
+            <p className="text-slate-600 mb-6 text-sm">ペルソナを生成すると、ここに履歴が表示されます</p>
             <Link
               href="/persona"
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg"
@@ -98,7 +98,7 @@ export default function PersonaHistoryPage() {
             {history.map((item, index) => (
               <div
                 key={index}
-                className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-colors"
+                className="bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-300 transition-colors shadow-sm"
               >
                 <div className="flex items-center gap-4">
                   {/* Portrait */}
@@ -114,10 +114,10 @@ export default function PersonaHistoryPage() {
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-bold text-white truncate">
+                    <h3 className="text-base font-bold text-slate-900 truncate">
                       {item.data?.persona?.name || '不明'}
                     </h3>
-                    <p className="text-sm text-slate-400 truncate">
+                    <p className="text-sm text-slate-600 truncate">
                       {item.data?.persona?.age}歳 / {item.data?.persona?.gender} / {item.data?.persona?.occupation}
                     </p>
                     <p className="text-xs text-slate-500 mt-1 truncate">

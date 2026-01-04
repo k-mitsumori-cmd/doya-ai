@@ -230,22 +230,22 @@ export default function PersonaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30">
+    <div className="min-h-screen bg-slate-50">
       <div className="max-w-6xl mx-auto p-4 lg:p-8">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl lg:text-3xl font-black text-white mb-1 flex items-center gap-3">
+          <h1 className="text-2xl lg:text-3xl font-black text-slate-900 mb-1 flex items-center gap-3">
             <Target className="w-8 h-8 text-purple-400" />
             ドヤペルソナAI
           </h1>
-          <p className="text-slate-400 text-sm">URLからマーケティングペルソナを自動生成</p>
+          <p className="text-slate-600 text-sm">URLからマーケティングペルソナを自動生成</p>
         </div>
 
         {/* Input Section */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 mb-6">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 mb-6 shadow-sm">
           {/* URL Input - Primary */}
           <div className="mb-4">
-            <label className="block text-sm font-bold text-white mb-2">
+            <label className="block text-sm font-bold text-slate-900 mb-2">
               サイトURL <span className="text-purple-400">*</span>
             </label>
             <input
@@ -253,14 +253,14 @@ export default function PersonaPage() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com"
-              className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 text-base"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 text-base"
             />
           </div>
 
           {/* Advanced Settings Toggle */}
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
-            className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors mb-4"
+            className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition-colors mb-4"
           >
             <ChevronDown className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
             詳細設定（任意）
@@ -277,7 +277,7 @@ export default function PersonaPage() {
               >
                 <div className="space-y-4 pb-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
                       サービス名（任意）
                     </label>
                     <input
@@ -285,11 +285,11 @@ export default function PersonaPage() {
                       value={serviceName}
                       onChange={(e) => setServiceName(e.target.value)}
                       placeholder="例: ドヤマーケ"
-                      className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
                       追加情報（任意）
                     </label>
                     <textarea
@@ -297,7 +297,7 @@ export default function PersonaPage() {
                       onChange={(e) => setAdditionalInfo(e.target.value)}
                       placeholder="ターゲット層や商品の特徴など、補足情報があれば入力してください"
                       rows={3}
-                      className="w-full px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 resize-none"
+                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 resize-none"
                     />
                   </div>
                 </div>
@@ -325,7 +325,7 @@ export default function PersonaPage() {
           </button>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-sm">
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
             </div>
           )}
@@ -335,7 +335,7 @@ export default function PersonaPage() {
         {generatedData && (
           <div className="space-y-6">
             {/* Tabs */}
-            <div className="flex gap-1 bg-slate-900/50 p-1 rounded-xl border border-slate-800">
+            <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
               {[
                 { key: 'persona', label: 'ペルソナ', icon: Target },
                 { key: 'creatives', label: 'クリエイティブ', icon: Sparkles },
@@ -349,7 +349,7 @@ export default function PersonaPage() {
                     className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${
                       activeTab === tab.key
                         ? 'bg-purple-600 text-white shadow-lg'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -364,19 +364,19 @@ export default function PersonaPage() {
               <div className="grid lg:grid-cols-3 gap-6">
                 {/* Portrait Card */}
                 <div className="lg:col-span-1">
-                  <div className="bg-slate-900/80 border border-slate-700 rounded-2xl p-5 text-center sticky top-6">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 text-center sticky top-6 shadow-sm">
                     <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-4 border-purple-500/30 overflow-hidden">
                       {portraitImage ? (
                         <img src={portraitImage} alt="Persona" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-5xl text-slate-600">
+                        <div className="w-full h-full flex items-center justify-center text-5xl text-slate-400">
                           👤
                         </div>
                       )}
                     </div>
-                    <h2 className="text-xl font-black text-white mb-1">{generatedData.persona.name}</h2>
+                    <h2 className="text-xl font-black text-slate-900 mb-1">{generatedData.persona.name}</h2>
                     <p className="text-purple-400 font-bold text-sm mb-1">{generatedData.persona.occupation}</p>
-                    <p className="text-slate-500 text-xs mb-4">
+                    <p className="text-slate-600 text-xs mb-4">
                       {generatedData.persona.age}歳 / {generatedData.persona.gender} / {generatedData.persona.location}
                     </p>
 
@@ -384,7 +384,7 @@ export default function PersonaPage() {
                       <button
                         onClick={handleGeneratePortrait}
                         disabled={portraitLoading}
-                        className="w-full py-2 px-4 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm font-bold hover:bg-slate-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="w-full py-2 px-4 rounded-lg bg-slate-900 text-white text-sm font-bold hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {portraitLoading ? (
                           <>
@@ -409,8 +409,8 @@ export default function PersonaPage() {
                     )}
 
                     {generatedData.persona.quote && (
-                      <div className="mt-4 p-3 bg-slate-800/50 rounded-lg border-l-4 border-purple-500">
-                        <p className="text-slate-300 text-sm italic">&ldquo;{generatedData.persona.quote}&rdquo;</p>
+                      <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 border-l-4 border-purple-500">
+                        <p className="text-slate-700 text-sm italic">&ldquo;{generatedData.persona.quote}&rdquo;</p>
                       </div>
                     )}
                   </div>
@@ -419,8 +419,8 @@ export default function PersonaPage() {
                 {/* Details */}
                 <div className="lg:col-span-2 space-y-4">
                   {/* Basic Info */}
-                  <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                    <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
+                  <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                    <h3 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
                       <FileText className="w-4 h-4 text-purple-400" />
                       基本情報
                     </h3>
@@ -431,9 +431,9 @@ export default function PersonaPage() {
                         { label: 'ライフスタイル', value: generatedData.persona.lifestyle },
                         { label: '一日の過ごし方', value: generatedData.persona.dayInLife },
                       ].map((item, i) => (
-                        <div key={i} className="p-3 bg-slate-800/50 rounded-lg">
+                        <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
                           <p className="text-xs text-slate-500 mb-1">{item.label}</p>
-                          <p className="text-white text-sm">{item.value}</p>
+                          <p className="text-slate-900 text-sm">{item.value}</p>
                         </div>
                       ))}
                     </div>
@@ -441,22 +441,22 @@ export default function PersonaPage() {
 
                   {/* Challenges & Goals */}
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                      <h3 className="text-base font-bold text-white mb-3">🎯 課題・悩み</h3>
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                      <h3 className="text-base font-bold text-slate-900 mb-3">🎯 課題・悩み</h3>
                       <ul className="space-y-2">
                         {generatedData.persona.challenges?.map((c, i) => (
-                          <li key={i} className="flex items-start gap-2 text-slate-300 text-sm">
+                          <li key={i} className="flex items-start gap-2 text-slate-700 text-sm">
                             <span className="text-red-400 mt-0.5">•</span>
                             {c}
                           </li>
                         ))}
                       </ul>
                     </div>
-                    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                      <h3 className="text-base font-bold text-white mb-3">🚀 目標・願望</h3>
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                      <h3 className="text-base font-bold text-slate-900 mb-3">🚀 目標・願望</h3>
                       <ul className="space-y-2">
                         {generatedData.persona.goals?.map((g, i) => (
-                          <li key={i} className="flex items-start gap-2 text-slate-300 text-sm">
+                          <li key={i} className="flex items-start gap-2 text-slate-700 text-sm">
                             <span className="text-green-400 mt-0.5">•</span>
                             {g}
                           </li>
@@ -467,21 +467,21 @@ export default function PersonaPage() {
 
                   {/* Media & Personality */}
                   <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                      <h3 className="text-base font-bold text-white mb-3">📱 メディア利用</h3>
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                      <h3 className="text-base font-bold text-slate-900 mb-3">📱 メディア利用</h3>
                       <div className="flex flex-wrap gap-2">
                         {generatedData.persona.mediaUsage?.map((m, i) => (
-                          <span key={i} className="px-2.5 py-1 bg-blue-900/50 text-blue-300 rounded-full text-xs font-bold">
+                          <span key={i} className="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-bold border border-blue-100">
                             {m}
                           </span>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                      <h3 className="text-base font-bold text-white mb-3">💡 性格特性</h3>
+                    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                      <h3 className="text-base font-bold text-slate-900 mb-3">💡 性格特性</h3>
                       <div className="flex flex-wrap gap-2">
                         {generatedData.persona.personalityTraits?.map((t, i) => (
-                          <span key={i} className="px-2.5 py-1 bg-purple-900/50 text-purple-300 rounded-full text-xs font-bold">
+                          <span key={i} className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-bold border border-purple-100">
                             {t}
                           </span>
                         ))}
@@ -496,10 +496,10 @@ export default function PersonaPage() {
             {activeTab === 'creatives' && generatedData.creatives && (
               <div className="space-y-6">
                 {/* Catchphrases with Banner Generation */}
-                <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
-                  <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                  <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
                     ✨ キャッチコピー候補
-                    <span className="text-xs text-slate-500 font-normal">（クリックで選択→バナー生成）</span>
+                    <span className="text-xs text-slate-500 font-normal">（クリックで選択 → バナー生成）</span>
                   </h3>
                   <div className="space-y-2 mb-5">
                     {generatedData.creatives.catchphrases?.map((c, i) => (
@@ -508,15 +508,15 @@ export default function PersonaPage() {
                         onClick={() => setSelectedCatchphrase(c)}
                         className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between ${
                           selectedCatchphrase === c
-                            ? 'bg-purple-900/30 border-purple-500 text-purple-300'
-                            : 'bg-slate-800/50 border-slate-700 text-white hover:border-slate-600'
+                            ? 'bg-purple-50 border-purple-200 text-purple-800'
+                            : 'bg-white border-slate-200 text-slate-900 hover:border-slate-300'
                         }`}
                       >
                         <span className="font-medium text-sm">{c}</span>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); copyToClipboard(c, `catch-${i}`) }}
-                            className="p-1 hover:bg-slate-700 rounded"
+                            className="p-1 hover:bg-slate-100 rounded"
                             title="コピー"
                           >
                             {copied === `catch-${i}` ? <Check className="w-4 h-4 text-green-400" /> : <Clipboard className="w-4 h-4" />}
@@ -528,13 +528,13 @@ export default function PersonaPage() {
                   </div>
 
                   {selectedCatchphrase && (
-                    <div className="border-t border-slate-700 pt-5">
-                      <h4 className="text-sm font-bold text-white mb-3">🎨 バナー画像生成</h4>
+                    <div className="border-t border-slate-200 pt-5">
+                      <h4 className="text-sm font-bold text-slate-900 mb-3">🎨 バナー画像生成</h4>
                       <div className="flex flex-wrap gap-3 mb-4">
                         <select
                           value={selectedBannerSize}
                           onChange={(e) => setSelectedBannerSize(e.target.value)}
-                          className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+                          className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30"
                         >
                           {BANNER_SIZES.map((size) => (
                             <option key={size.key} value={size.key}>{size.label}</option>
@@ -561,7 +561,7 @@ export default function PersonaPage() {
 
                       {bannerImage && (
                         <div className="mt-4">
-                          <img src={bannerImage} alt="Generated Banner" className="max-w-full h-auto rounded-lg border border-slate-700" />
+                          <img src={bannerImage} alt="Generated Banner" className="max-w-full h-auto rounded-lg border border-slate-200" />
                           <button
                             onClick={() => downloadImage(bannerImage, `banner-${selectedBannerSize}.png`)}
                             className="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 flex items-center gap-2 text-sm font-bold"
@@ -576,35 +576,35 @@ export default function PersonaPage() {
                 </div>
 
                 {/* LP Structure */}
-                <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
-                  <h3 className="text-base font-bold text-white mb-4">📄 LP構成案</h3>
+                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                  <h3 className="text-base font-bold text-slate-900 mb-4">📄 LP構成案</h3>
                   <div className="space-y-3">
-                    <div className="p-3 bg-slate-800/50 rounded-lg border-l-4 border-purple-500">
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 border-l-4 border-purple-500">
                       <p className="text-xs text-purple-400 font-bold mb-1">ヒーローセクション</p>
-                      <p className="text-white text-sm">{generatedData.creatives.lpStructure?.hero}</p>
+                      <p className="text-slate-900 text-sm">{generatedData.creatives.lpStructure?.hero}</p>
                     </div>
-                    <div className="p-3 bg-slate-800/50 rounded-lg border-l-4 border-red-500">
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 border-l-4 border-red-500">
                       <p className="text-xs text-red-400 font-bold mb-1">課題提起</p>
-                      <p className="text-white text-sm">{generatedData.creatives.lpStructure?.problem}</p>
+                      <p className="text-slate-900 text-sm">{generatedData.creatives.lpStructure?.problem}</p>
                     </div>
-                    <div className="p-3 bg-slate-800/50 rounded-lg border-l-4 border-green-500">
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 border-l-4 border-green-500">
                       <p className="text-xs text-green-400 font-bold mb-1">解決策</p>
-                      <p className="text-white text-sm">{generatedData.creatives.lpStructure?.solution}</p>
+                      <p className="text-slate-900 text-sm">{generatedData.creatives.lpStructure?.solution}</p>
                     </div>
                     {generatedData.creatives.lpStructure?.benefits && (
-                      <div className="p-3 bg-slate-800/50 rounded-lg">
-                        <p className="text-xs text-blue-400 font-bold mb-2">ベネフィット</p>
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <p className="text-xs text-blue-700 font-bold mb-2">ベネフィット</p>
                         <ul className="space-y-1">
                           {generatedData.creatives.lpStructure.benefits.map((b, i) => (
-                            <li key={i} className="text-slate-300 text-sm">✓ {b}</li>
+                            <li key={i} className="text-slate-700 text-sm">✓ {b}</li>
                           ))}
                         </ul>
                       </div>
                     )}
                     {generatedData.creatives.lpStructure?.cta && (
-                      <div className="p-3 bg-gradient-to-r from-purple-900/30 to-pink-900/30 rounded-lg text-center">
-                        <p className="text-xs text-slate-400 mb-1">CTA</p>
-                        <p className="text-lg font-bold text-white">{generatedData.creatives.lpStructure.cta}</p>
+                      <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg text-center border border-purple-100">
+                        <p className="text-xs text-slate-500 mb-1">CTA</p>
+                        <p className="text-lg font-bold text-slate-900">{generatedData.creatives.lpStructure.cta}</p>
                       </div>
                     )}
                   </div>
@@ -612,15 +612,15 @@ export default function PersonaPage() {
 
                 {/* Ad Copy */}
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
-                    <h3 className="text-base font-bold text-white mb-3">🔍 Google検索広告</h3>
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <h3 className="text-base font-bold text-slate-900 mb-3">🔍 Google検索広告</h3>
                     <div className="space-y-2">
                       {generatedData.creatives.adCopy?.google?.map((ad, i) => (
-                        <div key={i} className="p-3 bg-slate-800/50 rounded-lg group">
-                          <p className="text-slate-300 text-sm">{ad}</p>
+                        <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100 group">
+                          <p className="text-slate-700 text-sm">{ad}</p>
                           <button
                             onClick={() => copyToClipboard(ad, `google-${i}`)}
-                            className="mt-2 text-xs text-slate-500 hover:text-purple-400 flex items-center gap-1"
+                            className="mt-2 text-xs text-slate-500 hover:text-purple-700 flex items-center gap-1"
                           >
                             {copied === `google-${i}` ? <Check className="w-3 h-3 text-green-400" /> : <Clipboard className="w-3 h-3" />}
                             コピー
@@ -629,15 +629,15 @@ export default function PersonaPage() {
                       ))}
                     </div>
                   </div>
-                  <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
-                    <h3 className="text-base font-bold text-white mb-3">📱 Meta/SNS広告</h3>
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <h3 className="text-base font-bold text-slate-900 mb-3">📱 Meta/SNS広告</h3>
                     <div className="space-y-2">
                       {generatedData.creatives.adCopy?.meta?.map((ad, i) => (
-                        <div key={i} className="p-3 bg-slate-800/50 rounded-lg">
-                          <p className="text-slate-300 text-sm">{ad}</p>
+                        <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                          <p className="text-slate-700 text-sm">{ad}</p>
                           <button
                             onClick={() => copyToClipboard(ad, `meta-${i}`)}
-                            className="mt-2 text-xs text-slate-500 hover:text-purple-400 flex items-center gap-1"
+                            className="mt-2 text-xs text-slate-500 hover:text-purple-700 flex items-center gap-1"
                           >
                             {copied === `meta-${i}` ? <Check className="w-3 h-3 text-green-400" /> : <Clipboard className="w-3 h-3" />}
                             コピー
@@ -654,26 +654,26 @@ export default function PersonaPage() {
             {activeTab === 'checklist' && generatedData.marketingChecklist && (
               <div className="space-y-4">
                 {generatedData.marketingChecklist.map((category, i) => (
-                  <div key={i} className="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
-                    <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
+                  <div key={i} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                    <h3 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
                       <BarChart3 className="w-4 h-4 text-purple-400" />
                       {category.category}
                     </h3>
                     <div className="space-y-2">
                       {category.items?.map((item, j) => (
-                        <div key={j} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
+                        <div key={j} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
                           <span
                             className={`px-2 py-0.5 text-xs font-bold rounded ${
                               item.priority === 'high'
-                                ? 'bg-red-900/50 text-red-400'
+                                ? 'bg-red-100 text-red-700'
                                 : item.priority === 'medium'
-                                ? 'bg-yellow-900/50 text-yellow-400'
-                                : 'bg-slate-700 text-slate-400'
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-slate-200 text-slate-700'
                             }`}
                           >
                             {item.priority === 'high' ? '高' : item.priority === 'medium' ? '中' : '低'}
                           </span>
-                          <span className="text-slate-300 text-sm">{item.task}</span>
+                          <span className="text-slate-700 text-sm">{item.task}</span>
                         </div>
                       ))}
                     </div>

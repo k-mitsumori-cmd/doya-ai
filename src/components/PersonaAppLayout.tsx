@@ -22,7 +22,7 @@ export default function PersonaAppLayout({ children }: PersonaAppLayoutProps) {
   }, [])
 
   return (
-    <div className="flex h-screen bg-slate-950 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex">
         <PersonaSidebar
@@ -69,16 +69,16 @@ export default function PersonaAppLayout({ children }: PersonaAppLayoutProps) {
         style={{ marginLeft: isMobile ? 0 : sidebarCollapsed ? 72 : 240 }}
       >
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center gap-4 p-4 border-b border-slate-800 bg-gradient-to-r from-purple-900/50 to-slate-900">
+        <div className="md:hidden flex items-center gap-4 p-4 border-b border-slate-200 bg-white/80 backdrop-blur-md">
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="p-2 rounded-lg hover:bg-white/10 text-white"
+            className="p-2 rounded-lg hover:bg-slate-100 text-slate-700"
           >
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2">
             <span className="text-xl">🎯</span>
-            <span className="text-lg font-bold text-white">ドヤペルソナAI</span>
+            <span className="text-lg font-bold text-slate-900">ドヤペルソナAI</span>
           </div>
         </div>
 
