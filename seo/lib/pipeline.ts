@@ -2803,6 +2803,7 @@ async function integrate(jobId: string) {
     const cur = mdCharCount(finalMarkdown)
     const over = cur > target * 1.25
     if (over) {
+      const originalBeforeCompress = finalMarkdown
       await pushResearchEvent(jobId, {
         at: Date.now(),
         kind: 'warn',
@@ -2834,17 +2835,28 @@ async function integrate(jobId: string) {
         const cleaned = shorter && shorter.trim() ? sanitizeAiMarkdown(shorter.trim()) : ''
         if (cleaned) {
           const after = mdCharCount(cleaned)
-          if (after <= target * 1.2) {
+          const minOk = Math.max(900, Math.round(target * 0.45))
+          const maxOk = Math.round(target * 1.2)
+          if (after >= minOk && after <= maxOk) {
             finalMarkdown = cleaned
-          } else {
+          } else if (after > maxOk) {
             // まだ長ければ段落単位でカット（品質より「指定を守る」を優先）
             finalMarkdown = truncateMarkdownByParagraph(cleaned, Math.round(target * 1.05))
+          } else {
+            // 逆に短すぎる場合は「圧縮しすぎ」なので、元本文から確実にカットして目標付近に寄せる
+            await pushResearchEvent(jobId, {
+              at: Date.now(),
+              kind: 'warn',
+              title: '短縮結果が短すぎたため、段落単位のトリムに切り替えます',
+              detail: `${after.toLocaleString()}字（短すぎ） → 元本文から${Math.round(target * 1.05).toLocaleString()}字付近へ`,
+            })
+            finalMarkdown = truncateMarkdownByParagraph(originalBeforeCompress, Math.round(target * 1.05))
           }
         } else {
-          finalMarkdown = truncateMarkdownByParagraph(finalMarkdown, Math.round(target * 1.05))
+          finalMarkdown = truncateMarkdownByParagraph(originalBeforeCompress, Math.round(target * 1.05))
         }
       } catch {
-        finalMarkdown = truncateMarkdownByParagraph(finalMarkdown, Math.round(target * 1.05))
+        finalMarkdown = truncateMarkdownByParagraph(originalBeforeCompress, Math.round(target * 1.05))
       }
     }
   } catch {
