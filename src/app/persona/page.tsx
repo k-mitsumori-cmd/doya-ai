@@ -1127,8 +1127,7 @@ export default function PersonaPage() {
         {generatedData && generatedData.persona && (
           <div className="space-y-6">
             {/* Persona Only (no tabs) */}
-            <div className="mx-auto max-w-5xl">(
-              <div className="mx-auto max-w-5xl">
+            <div className="mx-auto max-w-5xl">
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="text-slate-700 text-sm font-black">履歴書（ペルソナ）</div>
