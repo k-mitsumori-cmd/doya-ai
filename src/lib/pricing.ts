@@ -322,6 +322,86 @@ export const SUPPORT_CONTACT_URL =
   'https://doyamarke.surisuta.jp/contact'
 
 // ========================================
+// ドヤペルソナAI 料金設定
+// ========================================
+// ペルソナ生成＋クリエイティブ生成のコストを考慮
+export const PERSONA_PRICING: ServicePricing = {
+  serviceId: 'persona',
+  serviceName: 'ドヤペルソナAI',
+  serviceIcon: '🎯',
+  guestLimit: 2,      // ゲスト: 1日2回
+  freeLimit: 5,       // 無料会員: 1日5回
+  proLimit: 30,       // PRO: 1日30回
+  enterpriseLimit: 100, // ENTERPRISE: 1日100回
+  historyDays: {
+    free: 7,          // 無料: 7日間保存
+    pro: 90,          // 有料: 3ヶ月保存
+  },
+  plans: [
+    {
+      id: 'persona-free',
+      name: 'おためしプラン',
+      price: 0,
+      priceLabel: '無料',
+      period: '',
+      description: '1日5回までペルソナ生成（ログイン時）',
+      features: [
+        { text: 'ゲスト: 1日2回まで', included: true },
+        { text: 'ログイン: 1日5回まで', included: true },
+        { text: 'ペルソナ自動生成', included: true },
+        { text: 'ポートレート画像生成', included: true },
+        { text: '履歴保存（7日間）', included: true },
+      ],
+      cta: '無料で試す',
+    },
+    {
+      id: 'persona-pro',
+      name: 'プロプラン',
+      price: 9980,
+      priceLabel: '月額 ¥9,980',
+      period: '/月（税込）',
+      description: '1日30回まで生成（PRO）',
+      popular: true,
+      color: 'slate',
+      features: [
+        { text: '1日30回まで生成', included: true },
+        { text: 'ペルソナ＋バナー一括生成', included: true },
+        { text: '広告サイズ指定対応', included: true },
+        { text: '履歴閲覧（3ヶ月）', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+    {
+      id: 'persona-enterprise',
+      name: 'エンタープライズ',
+      price: 49800,
+      priceLabel: '月額 ¥49,800',
+      period: '/月（税込）',
+      description: '1日100回まで生成（Enterprise）',
+      color: 'slate',
+      features: [
+        { text: '1日100回まで生成', included: true },
+        { text: 'チーム運用向け', included: true },
+        { text: '履歴閲覧（3ヶ月）', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'エンタープライズを始める',
+    },
+  ],
+}
+
+// Persona: user.plan から日次上限を決定
+export function getPersonaDailyLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.PERSONA_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'BUNDLE') return PERSONA_PRICING.proLimit
+  if (p === 'ENTERPRISE') return PERSONA_PRICING.enterpriseLimit || 100
+  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return PERSONA_PRICING.proLimit
+  return PERSONA_PRICING.freeLimit
+}
+
+// ========================================
 // ポータル全体のセット割引
 // ========================================
 // セット割引（表示文言は価格改定の影響を受けやすいので、金額の直書きは避ける）
@@ -366,6 +446,8 @@ export function getPricingByService(serviceId: string): ServicePricing | null {
       return SEO_PRICING
     case 'banner':
       return BANNER_PRICING
+    case 'persona':
+      return PERSONA_PRICING
     default:
       return null
   }
@@ -393,7 +475,7 @@ export function getDailyLimit(serviceId: string, userType: 'guest' | 'free' | 'p
 
 // プランを取得（無料版/有料版など）
 export function getPlanById(planId: string): Plan | null {
-  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans]
+  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...PERSONA_PRICING.plans]
   return allPlans.find(p => p.id === planId) || null
 }
 
