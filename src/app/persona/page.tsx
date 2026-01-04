@@ -96,7 +96,6 @@ function compactPersonaHistory(raw: any): any[] {
       const clean = { ...(h as any) }
       delete (clean as any).portrait
       delete (clean as any).diaryImage
-      delete (clean as any).bannerImage
       delete (clean as any).scheduleImages
 
       // data自体も大きくなり過ぎる場合があるので、最低限の構造だけ残す（互換維持）
@@ -158,15 +157,6 @@ function LoadingProgress({ label }: { label: string }) {
   )
 }
 
-// バナーサイズオプション
-const BANNER_SIZES = [
-  { key: 'google-responsive', label: 'Google レスポンシブ (1200×628)', width: 1200, height: 628 },
-  { key: 'google-square', label: 'Google スクエア (1200×1200)', width: 1200, height: 1200 },
-  { key: 'meta-feed', label: 'Meta フィード (1080×1080)', width: 1080, height: 1080 },
-  { key: 'meta-story', label: 'Meta ストーリー (1080×1920)', width: 1080, height: 1920 },
-  { key: 'twitter', label: 'Twitter/X (1200×675)', width: 1200, height: 675 },
-  { key: 'youtube', label: 'YouTube サムネイル (1280×720)', width: 1280, height: 720 },
-]
 
 interface PersonaData {
   name: string
@@ -196,29 +186,8 @@ interface PersonaData {
   diary?: { title: string; body: string; captionText: string; sceneKeywords: string[] }
 }
 
-interface CreativesData {
-  topCatchphrases?: { rank: 1 | 2 | 3; text: string; reason: string }[]
-  catchphrases: string[]
-  lpStructure?: {
-    hero: string
-    problem: string
-    solution: string
-    benefits: string[]
-    cta: string
-  }
-  adCopy?: {
-    google: string[]
-    meta: string[]
-  }
-  emailDraft?: {
-    subject: string
-    body: string
-  }
-}
-
 interface GeneratedData {
   persona: PersonaData
-  creatives: CreativesData
 }
 
 export default function PersonaPage() {
@@ -232,17 +201,12 @@ export default function PersonaPage() {
   const [generatedData, setGeneratedData] = useState<GeneratedData | null>(null)
   const [portraitImage, setPortraitImage] = useState<string | null>(null)
   const [portraitLoading, setPortraitLoading] = useState(false)
-  const [bannerImage, setBannerImage] = useState<string | null>(null)
-  const [bannerLoading, setBannerLoading] = useState(false)
   const [diaryImage, setDiaryImage] = useState<string | null>(null)
   const [diaryCaption, setDiaryCaption] = useState<string>('ある日の記録')
   const [diaryLoading, setDiaryLoading] = useState(false)
   const [scheduleImages, setScheduleImages] = useState<Record<number, string>>({})
   const [scheduleImagesLoading, setScheduleImagesLoading] = useState(false)
   const [scheduleImageLoadingMap, setScheduleImageLoadingMap] = useState<Record<number, boolean>>({})
-  const [selectedBannerSize, setSelectedBannerSize] = useState(BANNER_SIZES[0].key)
-  const [selectedCatchphrase, setSelectedCatchphrase] = useState('')
-  const [activeTab, setActiveTab] = useState<'persona' | 'creatives'>('persona')
   const [copied, setCopied] = useState<string | null>(null)
   const [stageText, setStageText] = useState<string>('サイトを解析しています…')
   const [stageIdx, setStageIdx] = useState<number>(0)
@@ -398,71 +362,6 @@ export default function PersonaPage() {
     }
   }
 
-  const handleGenerateBanner = async () => {
-    if (!generatedData?.persona || !selectedCatchphrase) {
-      setError('キャッチコピーを選択してください')
-      return
-    }
-
-    setBannerLoading(true)
-    try {
-      const res = await fetch('/api/persona/banner', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          persona: generatedData.persona,
-          serviceName,
-          catchphrase: selectedCatchphrase,
-          sizeKey: selectedBannerSize,
-        }),
-      })
-
-      const data = await res.json()
-      if (data.success && data.image) {
-        setBannerImage(data.image)
-      } else {
-        throw new Error(data.error || 'バナー生成失敗')
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'バナー生成エラー')
-    } finally {
-      setBannerLoading(false)
-    }
-  }
-
-  const generateBannerFromText = async (text: string) => {
-    if (!generatedData?.persona) return
-    setSelectedCatchphrase(text)
-    setBannerLoading(true)
-    setBannerImage(null)
-    try {
-      const res = await fetch('/api/persona/banner', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          persona: generatedData.persona,
-          serviceName,
-          catchphrase: text,
-          sizeKey: selectedBannerSize,
-        }),
-      })
-      const raw = await res.text()
-      let data: any = null
-      try {
-        data = raw ? JSON.parse(raw) : null
-      } catch {
-        data = null
-      }
-      if (!res.ok || !data?.success || !data?.image) {
-        throw new Error((data && (data.error || data.message)) || 'バナー生成失敗')
-      }
-      setBannerImage(data.image)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'バナー生成エラー')
-    } finally {
-      setBannerLoading(false)
-    }
-  }
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
@@ -630,7 +529,6 @@ export default function PersonaPage() {
       url,
       serviceName,
       persona: generatedData.persona,
-      creatives: generatedData.creatives,
       portraitImage,
       diaryImage,
     }
@@ -1226,34 +1124,10 @@ export default function PersonaPage() {
         </div>
 
         {/* Results */}
-        {generatedData && (
+        {generatedData && generatedData.persona && (
           <div className="space-y-6">
-            {/* Tabs */}
-            <div className="flex gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-              {[
-                { key: 'persona', label: 'ペルソナ', icon: Target },
-                { key: 'creatives', label: 'クリエイティブ', icon: Sparkles },
-              ].map((tab) => {
-                const Icon = tab.icon
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key as any)}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${
-                      activeTab === tab.key
-                        ? 'bg-purple-600 text-white shadow-lg'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Persona Tab */}
-            {activeTab === 'persona' && generatedData.persona && (
+            {/* Persona Only (no tabs) */}
+            <div className="mx-auto max-w-5xl">(
               <div className="mx-auto max-w-5xl">
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1663,214 +1537,7 @@ export default function PersonaPage() {
                   </div>
                 </div>
               </div>
-            )}
-
-            {/* Creatives Tab */}
-            {activeTab === 'creatives' && generatedData.creatives && (
-              <div className="space-y-6">
-                {/* TOP3 */}
-                {Array.isArray(generatedData.creatives.topCatchphrases) && generatedData.creatives.topCatchphrases.length > 0 && (
-                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <div className="text-slate-900 text-lg font-black">おすすめキャッチコピー TOP3</div>
-                        <div className="text-slate-500 text-xs font-bold mt-1">
-                          「このコピー、こんなに素晴らしい」まで理由つきで出します（クリックで即バナー生成）。
-                        </div>
-                      </div>
-                      <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-100 text-purple-700 text-xs font-black">
-                        <Sparkles className="w-4 h-4" />
-                        TOP PICKS
-                      </div>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-3">
-                      {generatedData.creatives.topCatchphrases.slice(0, 3).map((t) => (
-                        <button
-                          key={t.rank}
-                          onClick={() => void generateBannerFromText(t.text)}
-                          className="text-left rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 hover:border-purple-200 hover:shadow-lg transition-all p-4"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="inline-flex items-center gap-2">
-                              <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 text-white font-black flex items-center justify-center">
-                                {t.rank}
-                              </span>
-                              <span className="text-xs font-black text-slate-600">おすすめ</span>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-purple-400" />
-                          </div>
-                          <div className="text-slate-900 text-lg font-black leading-snug">{t.text}</div>
-                          <div className="mt-3 text-slate-600 text-xs font-bold leading-relaxed">
-                            {t.reason}
-                          </div>
-                          <div className="mt-3 inline-flex items-center gap-2 text-xs font-black text-purple-700">
-                            <ImageIcon className="w-4 h-4" />
-                            これでバナー生成
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* TOP3直下：バナー生成（見やすく） */}
-                    <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                        <div>
-                          <div className="text-slate-900 font-black">バナー生成</div>
-                          <div className="text-slate-500 text-xs font-bold mt-1">
-                            クリックしたキャッチコピーを使って、ここですぐ画像を作れます。
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <select
-                            value={selectedBannerSize}
-                            onChange={(e) => setSelectedBannerSize(e.target.value)}
-                            className="h-10 px-3 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/30"
-                          >
-                            {BANNER_SIZES.map((size) => (
-                              <option key={size.key} value={size.key}>
-                                {size.label}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => selectedCatchphrase && void generateBannerFromText(selectedCatchphrase)}
-                            disabled={bannerLoading || !selectedCatchphrase}
-                            className="h-10 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-black disabled:opacity-50 flex items-center gap-2"
-                          >
-                            {bannerLoading ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                生成中…
-                              </>
-                            ) : (
-                              <>
-                                <ImageIcon className="w-4 h-4" />
-                                バナーを生成
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 text-slate-700 text-sm font-bold">
-                        選択中：<span className="text-slate-900 font-black">{selectedCatchphrase || '（TOP3のどれかをクリック）'}</span>
-                      </div>
-
-                      <div className="mt-4">
-                        {bannerImage ? (
-                          <div className="bg-white border border-slate-200 rounded-2xl p-3">
-                            <img src={bannerImage} alt="Generated Banner" className="w-full h-auto rounded-xl border border-slate-200" />
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              <button
-                                onClick={() => selectedCatchphrase && void generateBannerFromText(selectedCatchphrase)}
-                                disabled={bannerLoading || !selectedCatchphrase}
-                                className="h-10 px-4 rounded-xl bg-slate-900 text-white text-sm font-black hover:bg-slate-800 disabled:opacity-50"
-                              >
-                                もう一度生成
-                              </button>
-                              <button
-                                onClick={() => downloadImage(bannerImage, `banner-${selectedBannerSize}.png`)}
-                                className="h-10 px-4 rounded-xl bg-purple-600 text-white text-sm font-black hover:bg-purple-500"
-                              >
-                                ダウンロード
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-500 text-sm font-bold">
-                            ここにバナー画像が表示されます
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Catchphrases with Banner Generation */}
-                <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                  <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-                    ✨ キャッチコピー候補
-                    <span className="text-xs text-slate-500 font-normal">（クリックで選択 → バナー生成）</span>
-                  </h3>
-                  <div className="space-y-2 mb-5">
-                    {generatedData.creatives.catchphrases?.map((c, i) => (
-                      <button
-                        key={i}
-                        onClick={() => {
-                          if (!bannerLoading) void generateBannerFromText(c)
-                        }}
-                        className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between ${
-                          selectedCatchphrase === c
-                            ? 'bg-purple-50 border-purple-200 text-purple-800'
-                            : 'bg-white border-slate-200 text-slate-900 hover:border-slate-300'
-                        }`}
-                      >
-                        <span className="font-medium text-sm">{c}</span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(c, `catch-${i}`) }}
-                            className="p-1 hover:bg-slate-100 rounded"
-                            title="コピー"
-                          >
-                            {copied === `catch-${i}` ? <Check className="w-4 h-4 text-green-400" /> : <Clipboard className="w-4 h-4" />}
-                          </button>
-                          {selectedCatchphrase === c && <ChevronRight className="w-4 h-4 text-purple-400" />}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {selectedCatchphrase && (
-                    <div className="border-t border-slate-200 pt-5">
-                      <h4 className="text-sm font-bold text-slate-900 mb-3">🎨 バナー画像生成</h4>
-                      <div className="flex flex-wrap gap-3 mb-4">
-                        <select
-                          value={selectedBannerSize}
-                          onChange={(e) => setSelectedBannerSize(e.target.value)}
-                          className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/30"
-                        >
-                          {BANNER_SIZES.map((size) => (
-                            <option key={size.key} value={size.key}>{size.label}</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => void generateBannerFromText(selectedCatchphrase)}
-                          disabled={bannerLoading}
-                          className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-bold hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 flex items-center gap-2"
-                        >
-                          {bannerLoading ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              生成中...
-                            </>
-                          ) : (
-                            <>
-                              <ImageIcon className="w-4 h-4" />
-                              バナー生成
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      {bannerImage && (
-                        <div className="mt-4">
-                          <img src={bannerImage} alt="Generated Banner" className="max-w-full h-auto rounded-lg border border-slate-200" />
-                          <button
-                            onClick={() => downloadImage(bannerImage, `banner-${selectedBannerSize}.png`)}
-                            className="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 flex items-center gap-2 text-sm font-bold"
-                          >
-                            <Download className="w-4 h-4" />
-                            ダウンロード
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
+            )
           </div>
         )}
       </div>
