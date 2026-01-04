@@ -174,6 +174,23 @@ function sanitizeAiMarkdown(md: string): string {
   return s
 }
 
+function truncateMarkdownByParagraph(md: string, maxChars: number): string {
+  const max = Math.max(500, Number(maxChars || 0))
+  const chunks = String(md || '').replace(/\r\n/g, '\n').split(/\n{2,}/g)
+  const out: string[] = []
+  let cur = 0
+  for (const c of chunks) {
+    const t = c.trim()
+    if (!t) continue
+    const nextLen = cur + t.length + (out.length ? 2 : 0)
+    if (nextLen > max) break
+    out.push(t)
+    cur = nextLen
+  }
+  const trimmed = out.join('\n\n').trim()
+  return trimmed || String(md || '').slice(0, max).trim()
+}
+
 const NO_AI_MARKDOWN_RULES = [
   'Important formatting rules (must follow):',
   '- Do NOT use Markdown emphasis markers: do not output "**", "*", "__", "_".',
@@ -2779,6 +2796,60 @@ async function integrate(jobId: string) {
   }
 
   let finalMarkdown = parts.join('\n\n')
+
+  // 目標文字数を大きく超えた場合は、最終段で短縮して暴走を防ぐ
+  // NOTE: 5,000字指定でもLLMが長く書くことがあるため、ここで必ず上限に収める
+  try {
+    const cur = mdCharCount(finalMarkdown)
+    const over = cur > target * 1.25
+    if (over) {
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'warn',
+        title: '文字数が目標を超過したため短縮します',
+        detail: `${cur.toLocaleString()}字 → 目標${target.toLocaleString()}字付近へ`,
+      })
+
+      const compressPrompt = [
+        'You are a Japanese editor.',
+        'Task: compress the following markdown article to meet the target length, while keeping clarity and SEO usefulness.',
+        '',
+        'CRITICAL RULES:',
+        `- Target length: about ${target} Japanese characters (±10%).`,
+        '- Keep the title and main headings structure as much as possible.',
+        '- Remove repetition, overly long explanations, and examples first.',
+        '- Keep at least one table if it exists and is useful.',
+        '- Output FULL MARKDOWN only (no JSON).',
+        '',
+        'Original markdown (truncated):',
+        clampText(finalMarkdown, 16000),
+      ].join('\n')
+
+      try {
+        const shorter = await geminiGenerateText({
+          model: GEMINI_TEXT_MODEL_DEFAULT,
+          parts: [{ text: compressPrompt }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 9000 },
+        })
+        const cleaned = shorter && shorter.trim() ? sanitizeAiMarkdown(shorter.trim()) : ''
+        if (cleaned) {
+          const after = mdCharCount(cleaned)
+          if (after <= target * 1.2) {
+            finalMarkdown = cleaned
+          } else {
+            // まだ長ければ段落単位でカット（品質より「指定を守る」を優先）
+            finalMarkdown = truncateMarkdownByParagraph(cleaned, Math.round(target * 1.05))
+          }
+        } else {
+          finalMarkdown = truncateMarkdownByParagraph(finalMarkdown, Math.round(target * 1.05))
+        }
+      } catch {
+        finalMarkdown = truncateMarkdownByParagraph(finalMarkdown, Math.round(target * 1.05))
+      }
+    }
+  } catch {
+    // ignore
+  }
 
   // 比較記事: 候補0件で本文を完成させない（「比較になってない」記事を防ぐ）
   if (isComparison) {
