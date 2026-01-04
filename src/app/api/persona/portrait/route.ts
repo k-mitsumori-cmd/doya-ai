@@ -3,6 +3,86 @@
 // ========================================
 import { NextRequest, NextResponse } from 'next/server'
 
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+
+type GeminiModel = {
+  name?: string
+  supportedGenerationMethods?: string[]
+} & Record<string, any>
+
+function normalizeModelId(model: string): string {
+  const m = String(model || '').trim()
+  if (!m) return ''
+  return m.startsWith('models/') ? m.slice('models/'.length) : m
+}
+
+let modelsCache: { at: number; models: GeminiModel[] } | null = null
+const MODELS_CACHE_TTL_MS = 10 * 60 * 1000 // 10分
+
+async function listModels(apiKey: string): Promise<GeminiModel[]> {
+  const now = Date.now()
+  if (modelsCache && now - modelsCache.at < MODELS_CACHE_TTL_MS) return modelsCache.models
+  const res = await fetch(`${GEMINI_API_BASE}/models`, {
+    method: 'GET',
+    headers: { 'x-goog-api-key': apiKey },
+  })
+  if (!res.ok) {
+    const t = await res.text()
+    throw new Error(`ListModels failed: ${res.status} - ${t.substring(0, 300)}`)
+  }
+  const json = await res.json()
+  const models = Array.isArray(json?.models) ? (json.models as GeminiModel[]) : []
+  modelsCache = { at: now, models }
+  return models
+}
+
+function isGenerateContentSupported(m: GeminiModel): boolean {
+  const methods = m?.supportedGenerationMethods
+  return Array.isArray(methods) && methods.includes('generateContent')
+}
+
+async function resolvePortraitImageModel(apiKey: string, configured: string): Promise<string[]> {
+  const cfg = normalizeModelId(configured)
+  const lower = cfg.toLowerCase()
+
+  // エイリアス許容
+  const isAlias =
+    lower === 'nano-banana-pro' ||
+    lower === 'nanobanana-pro' ||
+    lower === 'nano_banana_pro' ||
+    lower === 'nano-banana' ||
+    lower === 'nano-banana-pro-preview' ||
+    lower === 'gemini-3-pro-image-preview'
+
+  // 明示指定があるならまず試す（存在しない場合は後でフォールバック）
+  const preferred: string[] = []
+  if (cfg) preferred.push(cfg)
+
+  // エイリアス/未指定なら ListModels から画像系を探す
+  if (!cfg || isAlias) {
+    const models = await listModels(apiKey)
+    const candidates = models
+      .filter((m) => isGenerateContentSupported(m))
+      .map((m) => String(m?.name || ''))
+      .filter(Boolean)
+      .map((full) => normalizeModelId(full))
+
+    const banana = candidates.find((n) => n.toLowerCase().includes('banana'))
+    if (banana) preferred.push(banana)
+
+    // 画像っぽい次点（環境差異対策）
+    const proImage = candidates.find((n) => n.toLowerCase() === 'gemini-3-pro-image-preview')
+    if (proImage) preferred.push(proImage)
+  }
+
+  // 最終フォールバック（よくある名称を順に）
+  preferred.push('gemini-3-pro-image-preview')
+  preferred.push('nano-banana-pro-preview')
+
+  // 重複除去
+  return Array.from(new Set(preferred.filter(Boolean)))
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -43,47 +123,71 @@ IMPORTANT:
 Output a single high-quality portrait image.
 `
 
-    // Gemini 3 Pro Image Preview で画像生成
-    const model = process.env.DOYA_BANNER_IMAGE_MODEL || 'gemini-3-pro-image-preview'
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+    const configuredModel =
+      process.env.DOYA_BANNER_IMAGE_MODEL ||
+      process.env.NANO_BANANA_PRO_MODEL ||
+      process.env.GEMINI_IMAGE_MODEL ||
+      'nano-banana-pro'
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          responseModalities: ['IMAGE'],
-          temperature: 0.4,
-          candidateCount: 1,
+    const modelsToTry = await resolvePortraitImageModel(apiKey, configuredModel)
+
+    let lastErrText = ''
+    let lastStatus = 0
+    let lastModel = ''
+    let result: any = null
+
+    for (const model of modelsToTry) {
+      lastModel = model
+      const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
         },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-        ],
-      }),
-    })
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            responseModalities: ['IMAGE'],
+            temperature: 0.4,
+            candidateCount: 1,
+          },
+          safetySettings: [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+          ],
+        }),
+      })
 
-    if (!response.ok) {
-      const errText = await response.text()
-      console.error('Portrait generation failed:', errText)
+      if (!response.ok) {
+        lastStatus = response.status
+        lastErrText = await response.text()
+        console.warn(`Portrait model failed: ${model}`, response.status, lastErrText.slice(0, 200))
+        continue
+      }
+
+      result = await response.json()
+      break
+    }
+
+    if (!result) {
       return NextResponse.json(
-        { error: `画像生成に失敗しました: ${response.status}` },
+        {
+          error:
+            `ポートレート生成に失敗しました（model=${lastModel || 'unknown'} / status=${lastStatus}）。` +
+            ` モデルID（DOYA_BANNER_IMAGE_MODEL）をご確認ください。`,
+          details: lastErrText?.slice?.(0, 500) || '',
+        },
         { status: 500 }
       )
     }
-
-    const result = await response.json()
     
     // 画像データを抽出
     const parts = result?.candidates?.[0]?.content?.parts
