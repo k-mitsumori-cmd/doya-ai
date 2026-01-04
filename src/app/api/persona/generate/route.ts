@@ -197,7 +197,14 @@ interface PersonaResult {
     dayInLife: string
     quote: string
     // 生活の具体（履歴書下に出す）
-    dailySchedule: { time: string; title: string; detail: string; mood?: string }[]
+    dailySchedule: {
+      time: string
+      title: string
+      detail: string
+      mood?: string
+      imageCaption?: string
+      sceneKeywords?: string[]
+    }[]
     diary: {
       title: string
       body: string // 600〜1200字くらいの“日記”
@@ -230,7 +237,7 @@ interface PersonaResult {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { url, additionalInfo, serviceName } = body
+    const { url, additionalInfo, serviceName, basePersona, revision } = body
 
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: 'URLが必要です' }, { status: 400 })
@@ -364,6 +371,14 @@ export async function POST(req: NextRequest) {
     const headings = extractHeadings(html)
     const plainText = extractTextFromHTML(html)
 
+    const basePersonaJson =
+      basePersona && typeof basePersona === 'object'
+        ? JSON.stringify(basePersona).slice(0, 8000)
+        : basePersona
+        ? String(basePersona).slice(0, 8000)
+        : ''
+    const revisionText = revision ? String(revision).slice(0, 2000) : ''
+
     // ペルソナ生成プロンプト（チェックリストは生成しない：ユーザー要望）
     const prompt = `
 あなたは超優秀なマーケティングコンサルタントです。
@@ -378,10 +393,13 @@ export async function POST(req: NextRequest) {
 
 ${additionalInfo ? `## 追加情報\n${additionalInfo}` : ''}
 ${serviceName ? `## サービス名\n${serviceName}` : ''}
+${basePersonaJson ? `## 現在のペルソナ（JSON）\n${basePersonaJson}` : ''}
+${revisionText ? `## 変更したいポイント（ユーザー指示）\n${revisionText}` : ''}
 
 ## 出力形式（JSON）
 以下の構造で **必ず有効なJSONのみ** を出力してください（Markdown不可）。
 ユーザーが「この人、実在するのでは？」と錯覚するレベルで、生活/行動/思考を具体化してください。
+${basePersonaJson && revisionText ? '重要: 上の「現在のペルソナ」を、ユーザー指示に沿って改善してください。既存の良い要素は残しつつ、矛盾なく更新してください。' : ''}
 **チェックリスト（marketingChecklist）は不要です。絶対に出力しないでください。**
 
 {
@@ -410,8 +428,22 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
     "dayInLife": "1日の過ごし方の概要（200〜400字）",
     "quote": "ペルソナの口癖や価値観を表す一言",
     "dailySchedule": [
-      { "time": "06:30", "title": "起床", "detail": "行動の描写（具体）", "mood": "気分（任意）" },
-      { "time": "09:15", "title": "通勤/移動", "detail": "…", "mood": "…" }
+      {
+        "time": "06:30",
+        "title": "起床",
+        "detail": "行動の描写（具体）",
+        "mood": "気分（任意）",
+        "imageCaption": "朝、整える",
+        "sceneKeywords": ["朝", "自宅", "スマホ", "コーヒー", "静けさ"]
+      },
+      {
+        "time": "09:15",
+        "title": "業務開始",
+        "detail": "…（どんな仕事をどのツールで、何を気にして）",
+        "mood": "…",
+        "imageCaption": "今日も、数字と向き合う",
+        "sceneKeywords": ["PC", "デスク", "ダッシュボード", "集中", "オフィス/自宅"]
+      }
     ],
     "diary": {
       "title": "今日の日記タイトル（日本語）",
