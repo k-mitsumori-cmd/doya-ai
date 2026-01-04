@@ -732,6 +732,108 @@ export default function PersonaPage() {
     URL.revokeObjectURL(a.href)
   }
 
+  const downloadPersonaPdf = () => {
+    if (!generatedData) return
+    // 依存を増やさずPDF対応：印刷（A4）→「PDFとして保存」
+    const escape = (s: string) =>
+      String(s || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
+
+    const schedule = Array.isArray(generatedData.persona.dailySchedule) ? generatedData.persona.dailySchedule : []
+    const diary = generatedData.persona.diary
+
+    const html = `<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ペルソナ履歴書（PDF） - ${escape(generatedData.persona.name)}</title>
+  <style>
+    @page { size: A4; margin: 12mm; }
+    body{font-family: ui-sans-serif, system-ui, -apple-system, 'Noto Sans JP', sans-serif; background:#fff; }
+    .paper{max-width:980px; margin:0 auto; background:#fff; border:2px solid #0f172a;}
+    .grid{display:grid; grid-template-columns:3fr 1fr;}
+    .cell{padding:16px; border-bottom:1px solid #0f172a;}
+    .right{border-left:1px solid #0f172a;}
+    .photo{aspect-ratio:3/4; border:2px solid #0f172a; background:#fff; overflow:hidden;}
+    .label{font-size:11px; font-weight:800; color:#475569;}
+    .value{font-size:14px; font-weight:700; color:#0f172a;}
+    .name{font-size:28px; font-weight:900; letter-spacing:0.02em;}
+    .row{display:grid; grid-template-columns:120px 1fr; border-top:1px solid #e2e8f0;}
+    .row > div{padding:10px 12px;}
+    .row .k{background:#f8fafc; font-weight:800; color:#334155; border-right:1px solid #e2e8f0;}
+    .diary{border-top:1px solid #0f172a; padding:16px;}
+    .img{max-width:100%; border:1px solid #e2e8f0; border-radius:10px;}
+    table{width:100%; border-collapse:collapse; margin-top:8px;}
+    th,td{border:1px solid #e2e8f0; padding:8px; font-size:12px; vertical-align:top;}
+    th{background:#f8fafc; text-align:left;}
+    .muted{color:#64748b; font-weight:700; font-size:11px;}
+  </style>
+</head>
+<body>
+  <div class="paper">
+    <div class="grid">
+      <div class="cell">
+        <div class="label">ふりがな（仮）</div>
+        <div class="name">${escape(generatedData.persona.name)}</div>
+        <div style="margin-top:10px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+          <div style="border:1px solid #e2e8f0; background:#f8fafc; padding:10px;"><div class="label">年齢</div><div class="value">${escape(String(generatedData.persona.age))}歳</div></div>
+          <div style="border:1px solid #e2e8f0; background:#f8fafc; padding:10px;"><div class="label">性別</div><div class="value">${escape(generatedData.persona.gender)}</div></div>
+          <div style="border:1px solid #e2e8f0; background:#f8fafc; padding:10px;"><div class="label">職業</div><div class="value">${escape(generatedData.persona.occupation)}</div></div>
+        </div>
+        <div style="margin-top:10px; border:1px solid #e2e8f0; padding:10px;"><div class="label">本人の一言</div><div class="value">${escape(generatedData.persona.quote || '')}</div></div>
+      </div>
+      <div class="cell right">
+        <div class="label">写真（AI生成）</div>
+        <div class="photo">${portraitImage ? `<img src="${portraitImage}" style="width:100%;height:100%;object-fit:cover;"/>` : ''}</div>
+      </div>
+    </div>
+    <div class="row"><div class="k">現住所</div><div>${escape(generatedData.persona.location)}</div></div>
+    <div class="row"><div class="k">家族構成</div><div>${escape(generatedData.persona.familyStructure)}</div></div>
+    <div class="row"><div class="k">年収</div><div>${escape(generatedData.persona.income)}</div></div>
+    <div class="row"><div class="k">生活</div><div>${escape(generatedData.persona.lifestyle)}</div></div>
+    <div class="row"><div class="k">一日</div><div>${escape(generatedData.persona.dayInLife)}</div></div>
+    <div class="diary">
+      <h2 style="margin:0 0 8px; font-size:16px; font-weight:900;">特徴：こういったスケジュールで1日を送っています</h2>
+      <div class="muted">※PDFでは画像は省略しています（画面上で生成した画像はHTML/画像保存をご利用ください）</div>
+      <table>
+        <thead><tr><th style="width:80px;">時間</th><th>内容</th><th style="width:120px;">気分</th></tr></thead>
+        <tbody>
+          ${schedule
+            .map((s) => `<tr><td>${escape(s.time)}</td><td><b>${escape(s.title)}</b><br/>${escape(s.detail)}</td><td>${escape(s.mood || '')}</td></tr>`)
+            .join('')}
+        </tbody>
+      </table>
+      ${diary ? `<h2 style="margin:16px 0 8px; font-size:16px; font-weight:900;">日記：${escape(diary.title)}</h2>
+      <p style="white-space:pre-wrap; font-size:13px; color:#0f172a; line-height:1.8;">${escape(diary.body)}</p>` : ''}
+      ${diaryImage ? `<h3 style="margin:16px 0 8px; font-size:14px; font-weight:900;">日記イメージ</h3>
+      <img class="img" src="${diaryImage}" />` : ''}
+    </div>
+  </div>
+  <script>
+    window.onload = function() {
+      try { window.focus(); } catch(e) {}
+      try { window.print(); } catch(e) {}
+    };
+  </script>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const urlObj = URL.createObjectURL(blob)
+    const w = window.open(urlObj, '_blank', 'noopener,noreferrer')
+    if (!w) {
+      setError('ポップアップがブロックされました。ブラウザのポップアップ許可後に再度お試しください。')
+      return
+    }
+    // URLは少し遅らせて解放
+    setTimeout(() => URL.revokeObjectURL(urlObj), 30_000)
+  }
+
   const handleRegenerateWithRevision = async () => {
     if (!generatedData?.persona) {
       setError('先にペルソナを生成してください')
@@ -1174,6 +1276,13 @@ export default function PersonaPage() {
                     >
                       HTML
                     </button>
+                    <button
+                      onClick={downloadPersonaPdf}
+                      className="h-8 px-3 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black hover:bg-slate-50"
+                      title="印刷用ページを開き、PDFとして保存できます"
+                    >
+                      PDF
+                    </button>
                   </div>
                 </div>
 
@@ -1465,56 +1574,88 @@ export default function PersonaPage() {
                     </div>
 
                     {generatedData.persona.diary && (
-                      <div className="mt-6 grid lg:grid-cols-2 gap-4">
-                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                          <div className="text-slate-900 font-black">日記：{generatedData.persona.diary.title}</div>
-                          <p className="mt-2 text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">
-                            {generatedData.persona.diary.body}
-                          </p>
-                          <div className="mt-4">
-                            <div className="text-xs font-black text-slate-700 mb-1">画像に入れるテキスト（編集OK）</div>
-                            <input
-                              value={diaryCaption}
-                              onChange={(e) => setDiaryCaption(e.target.value)}
-                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/30"
-                              placeholder="例：今日も、ちゃんと頑張った。"
-                            />
-                            <div className="mt-3 flex gap-2">
-                              <button
-                                onClick={generateDiaryImage}
-                                disabled={diaryLoading}
-                                className="h-10 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-black disabled:opacity-50"
-                              >
-                                {diaryLoading ? '日記イメージ生成中…' : '日記イメージを生成（Nano Banana Pro）'}
-                              </button>
-                              {diaryImage ? (
-                                <button
-                                  onClick={() => downloadImage(diaryImage, `diary-${generatedData.persona.name}.png`)}
-                                  className="h-10 px-4 rounded-lg bg-slate-900 text-white text-sm font-black hover:bg-slate-800"
-                                >
-                                  画像保存
-                                </button>
-                              ) : (
-                                <button disabled className="h-10 px-4 rounded-lg bg-slate-200 text-slate-500 text-sm font-black">
-                                  画像保存
-                                </button>
-                              )}
-                            </div>
+                      <div className="mt-6">
+                        {/* ノート/手紙っぽい日記 */}
+                        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                          <div className="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                            <div className="text-slate-900 font-black">日記：{generatedData.persona.diary.title}</div>
+                            <div className="text-slate-500 text-xs font-bold mt-1">“手書きノート”っぽく、生活感が出るように表示しています。</div>
                           </div>
-                        </div>
 
-                        <div className="bg-white border border-slate-200 rounded-xl p-4">
-                          <div className="text-slate-900 font-black">日記イメージ</div>
-                          <div className="mt-3 aspect-[1200/628] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
-                            {diaryImage ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={diaryImage} alt="diary" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="text-slate-400 text-sm font-bold">まだ生成されていません</div>
-                            )}
-                          </div>
-                          <div className="mt-3 text-xs text-slate-500 font-bold">
-                            ※「日記イメージを生成」を押すと、日記内容に合わせた画像を作り、テキストも入れます。
+                          <div className="p-5">
+                            <div
+                              className="relative rounded-2xl border border-slate-200 overflow-hidden"
+                              style={{
+                                background:
+                                  'repeating-linear-gradient(to bottom, #ffffff 0px, #ffffff 26px, #eef2ff 27px, #ffffff 28px)',
+                              }}
+                            >
+                              {/* 左の赤い罫線 */}
+                              <div className="absolute inset-y-0 left-10 w-px bg-red-300/70" />
+                              <div className="absolute inset-y-0 left-12 w-px bg-red-200/60" />
+
+                              {/* 余白 */}
+                              <div className="px-6 py-6">
+                                <p
+                                  className="text-slate-900 leading-[2.05] whitespace-pre-wrap text-lg"
+                                  style={{
+                                    fontFamily:
+                                      "'Hannotate SC','YuKyokasho','YuKyokasho Yoko','Hiragino Maru Gothic ProN','Hiragino Sans','Segoe Print','Bradley Hand','Comic Sans MS',ui-sans-serif,system-ui",
+                                  }}
+                                >
+                                  {generatedData.persona.diary.body}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* 日記イメージ（縦に伸ばす） */}
+                            <div className="mt-5">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                <div>
+                                  <div className="text-slate-900 font-black">日記イメージ</div>
+                                  <div className="text-slate-500 text-xs font-bold mt-1">日記内容に合わせた画像を自動生成します。</div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={generateDiaryImage}
+                                    disabled={diaryLoading}
+                                    className="h-10 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-black disabled:opacity-50"
+                                  >
+                                    {diaryLoading ? '生成中…' : '画像を生成'}
+                                  </button>
+                                  {diaryImage ? (
+                                    <button
+                                      onClick={() => downloadImage(diaryImage, `diary-${generatedData.persona.name}.png`)}
+                                      className="h-10 px-4 rounded-xl bg-slate-900 text-white text-sm font-black hover:bg-slate-800"
+                                    >
+                                      画像保存
+                                    </button>
+                                  ) : (
+                                    <button
+                                      disabled
+                                      className="h-10 px-4 rounded-xl bg-slate-200 text-slate-500 text-sm font-black"
+                                    >
+                                      画像保存
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
+                                <div className="aspect-[1200/628] flex items-center justify-center">
+                                  {diaryImage ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={diaryImage} alt="diary" className="w-full h-full object-cover" />
+                                  ) : diaryLoading ? (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                      <LoadingProgress label="日記イメージを生成しています" />
+                                    </div>
+                                  ) : (
+                                    <div className="text-slate-400 text-sm font-bold">まだ生成されていません</div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
