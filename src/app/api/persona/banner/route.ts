@@ -2,6 +2,7 @@
 // ドヤペルソナAI - バナー画像生成API
 // ========================================
 import { NextRequest, NextResponse } from 'next/server'
+import { generateBanners } from '@/lib/nanobanner'
 
 // バナーサイズプリセット
 const BANNER_SIZES: Record<string, { width: number; height: number; label: string }> = {
@@ -26,11 +27,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ペルソナとキャッチコピーが必要です' }, { status: 400 })
     }
 
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'APIキーが設定されていません' }, { status: 500 })
-    }
-
     // サイズ決定
     let width = 1200
     let height = 628
@@ -48,106 +44,66 @@ export async function POST(req: NextRequest) {
 
     const { name, age, gender, occupation, challenges, goals } = persona
 
-    // バナー生成プロンプト
-    const prompt = `
-Create a high-converting Japanese advertisement banner.
+    const size = `${width}x${height}`
+    const customImagePrompt = [
+      'Create a high-converting Japanese advertisement banner.',
+      '',
+      '=== BANNER SPECIFICATIONS ===',
+      `Size: ${width}x${height} pixels`,
+      `Platform: ${sizeLabel}`,
+      '',
+      '=== TARGET PERSONA ===',
+      `- Name: ${name}`,
+      `- Age: ${age}`,
+      `- Gender: ${gender}`,
+      `- Occupation: ${occupation}`,
+      `- Challenges: ${Array.isArray(challenges) ? challenges.slice(0, 3).join(', ') : 'not specified'}`,
+      `- Goals: ${Array.isArray(goals) ? goals.slice(0, 2).join(', ') : 'not specified'}`,
+      '',
+      '=== CONTENT TO RENDER ===',
+      `Headline (MUST BE EXACT): ${catchphrase}`,
+      serviceName ? `Brand/Service: ${serviceName}` : '',
+      '',
+      '=== DESIGN REQUIREMENTS ===',
+      '1. Japanese text must be perfectly legible (no garbling)',
+      '2. Use clean, modern Japanese font style',
+      '3. High contrast between text and background',
+      '4. Professional, premium look',
+      '5. Eye-catching for the target persona',
+      '6. Include a clear CTA button area',
+      '7. Fill entire canvas - NO letterboxing or empty margins',
+      '',
+      `Output size must be EXACTLY ${size} px.`,
+    ]
+      .filter(Boolean)
+      .join('\n')
 
-=== BANNER SPECIFICATIONS ===
-Size: ${width}x${height} pixels
-Aspect Ratio: ${width > height ? 'landscape' : width < height ? 'portrait' : 'square'}
-Platform: ${sizeLabel}
-
-=== TARGET PERSONA ===
-- Name: ${name}
-- Age: ${age}
-- Gender: ${gender}
-- Occupation: ${occupation}
-- Challenges: ${Array.isArray(challenges) ? challenges.slice(0, 3).join(', ') : 'not specified'}
-- Goals: ${Array.isArray(goals) ? goals.slice(0, 2).join(', ') : 'not specified'}
-
-=== CONTENT TO RENDER ===
-Headline (MUST BE EXACT): ${catchphrase}
-${serviceName ? `Brand/Service: ${serviceName}` : ''}
-
-=== DESIGN REQUIREMENTS ===
-1. Japanese text must be perfectly legible (no garbling)
-2. Use clean, modern Japanese font style
-3. High contrast between text and background
-4. Professional, premium look
-5. Eye-catching for the target persona
-6. Include a clear CTA button area
-7. Fill entire canvas - NO letterboxing or empty margins
-
-=== STYLE GUIDELINES ===
-- Modern, clean design suitable for Japanese market
-- Color scheme appropriate for ${occupation} professional
-- Visual elements that resonate with ${age}-year-old ${gender}
-- Premium feel, not cheap or generic
-
-=== OUTPUT ===
-Single high-quality banner image at exactly ${width}x${height} pixels.
-`
-
-    const model = process.env.DOYA_BANNER_IMAGE_MODEL || 'gemini-3-pro-image-preview'
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
+    const result = await generateBanners(
+      'other',
+      catchphrase,
+      size,
+      {
+        purpose: 'ad_banner',
+        customImagePrompt,
+        headlineText: catchphrase,
+        subheadText: serviceName ? String(serviceName).slice(0, 30) : '',
+        ctaText: '詳しく見る',
+        variationMode: 'similar',
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          responseModalities: ['IMAGE'],
-          temperature: 0.5,
-          candidateCount: 1,
-        },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-        ],
-      }),
+      1
+    )
+
+    const img = result?.banners?.[0]
+    if (!img || typeof img !== 'string' || !img.startsWith('data:image/')) {
+      return NextResponse.json({ error: result?.error || 'バナー生成に失敗しました' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      image: img,
+      size: { width, height, label: sizeLabel },
+      usedModel: result.usedModel || null,
     })
-
-    if (!response.ok) {
-      const errText = await response.text()
-      console.error('Banner generation failed:', errText)
-      return NextResponse.json(
-        { error: `バナー生成に失敗しました: ${response.status}` },
-        { status: 500 }
-      )
-    }
-
-    const result = await response.json()
-
-    // 画像データを抽出
-    const parts = result?.candidates?.[0]?.content?.parts
-    if (!Array.isArray(parts)) {
-      return NextResponse.json({ error: '画像データが見つかりません' }, { status: 500 })
-    }
-
-    for (const part of parts) {
-      const inline = part?.inlineData || part?.inline_data
-      if (inline?.data && typeof inline.data === 'string') {
-        const mimeType = inline?.mimeType || 'image/png'
-        return NextResponse.json({
-          success: true,
-          image: `data:${mimeType};base64,${inline.data}`,
-          size: { width, height, label: sizeLabel },
-        })
-      }
-    }
-
-    return NextResponse.json({ error: '画像の抽出に失敗しました' }, { status: 500 })
   } catch (error) {
     console.error('Banner generation error:', error)
     return NextResponse.json(
