@@ -303,7 +303,7 @@ export default function PersonaDetailPage() {
           <div>
             <h1 className="text-2xl lg:text-3xl font-black text-slate-900 flex items-center gap-3">
               <FileText className="w-8 h-8 text-purple-600" />
-              ペルソナ先生（詳細版）
+              ペルソナ生成（詳細版）
             </h1>
             <p className="text-slate-500 text-sm mt-2">
               URLがなくても、プルダウンとテキスト入力だけでペルソナを生成できます。

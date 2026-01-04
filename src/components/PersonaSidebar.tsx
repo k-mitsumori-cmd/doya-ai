@@ -35,7 +35,7 @@ interface NavItem {
 
 const personaNavItems: NavItem[] = [
   { href: '/persona', label: 'ペルソナ生成（URL）', icon: Target, hot: true },
-  { href: '/persona/detail', label: 'ペルソナ先生（詳細版）', icon: FileText },
+  { href: '/persona/detail', label: 'ペルソナ生成（詳細版）', icon: FileText },
 ]
 
 interface PersonaSidebarProps {
