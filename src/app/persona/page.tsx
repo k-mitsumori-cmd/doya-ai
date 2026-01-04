@@ -6,7 +6,6 @@ import {
   Sparkles,
   Image as ImageIcon,
   FileText,
-  BarChart3,
   Download,
   Clipboard,
   ChevronRight,
@@ -32,6 +31,31 @@ function formatJpDate(d: Date): string {
   return `${yyyy}年${mm}月${dd}日`
 }
 
+function GoogleGMark({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path
+        d="M21.35 11.1H12v2.98h5.38c-.54 3.05-3.12 4.38-5.38 4.38a6.2 6.2 0 1 1 0-12.4c1.76 0 2.95.72 3.62 1.34l2.02-1.96C16.4 4.31 14.46 3.5 12 3.5A8.5 8.5 0 1 0 12 20.5c4.88 0 8.2-3.43 8.2-8.26 0-.55-.07-1.01-.15-1.14z"
+        fill="#4285F4"
+      />
+      <path d="M3.55 8.66l2.45 1.8A6.2 6.2 0 0 1 12 6.06c1.76 0 2.95.72 3.62 1.34l2.02-1.96C16.4 4.31 14.46 3.5 12 3.5A8.48 8.48 0 0 0 3.55 8.66z" fill="#EA4335" opacity=".0" />
+      <path d="M12 20.5c2.33 0 4.28-.77 5.7-2.09l-2.26-1.86c-.63.43-1.48.72-3.44.72a6.2 6.2 0 0 1-5.86-4.3l-2.52 1.94A8.5 8.5 0 0 0 12 20.5z" fill="#34A853" opacity=".0" />
+      <path d="M6.14 12.97A6.2 6.2 0 0 1 5.8 11c0-.68.12-1.34.34-1.97L3.56 7.23A8.48 8.48 0 0 0 3.5 11c0 1.37.33 2.67.92 3.77l1.72-1.8z" fill="#FBBC05" opacity=".0" />
+    </svg>
+  )
+}
+
+function MetaMark({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path
+        d="M12 6.3c-2.2 0-3.7 2.1-4.9 4.4-1.2 2.3-2 4.7-2 6.1 0 1.2.7 1.9 1.6 1.9 1.2 0 2.2-1.2 3.6-3.8.6-1.1 1.1-2.1 1.7-3.1.6 1 1.1 2 1.7 3.1 1.4 2.6 2.4 3.8 3.6 3.8.9 0 1.6-.7 1.6-1.9 0-1.4-.8-3.8-2-6.1C15.7 8.4 14.2 6.3 12 6.3zm0 2.2c.9 0 2 1.5 3 3.4 1 2 1.7 4.1 1.7 4.9 0 .2 0 .4-.2.4-.2 0-.6-.3-1.3-1.4-.6-.9-1.3-2.2-2-3.6-.4-.8-.8-1.6-1.2-2.3-.4.7-.8 1.5-1.2 2.3-.7 1.4-1.4 2.7-2 3.6-.7 1.1-1.1 1.4-1.3 1.4-.2 0-.2-.2-.2-.4 0-.8.7-2.9 1.7-4.9 1-1.9 2.1-3.4 3-3.4z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
 // バナーサイズオプション
 const BANNER_SIZES = [
   { key: 'google-responsive', label: 'Google レスポンシブ (1200×628)', width: 1200, height: 628 },
@@ -47,21 +71,31 @@ interface PersonaData {
   age: number
   gender: string
   occupation: string
+  industry?: string
+  companySize?: string
   income: string
   location: string
   familyStructure: string
+  education?: string
   lifestyle: string
+  devices?: string[]
   challenges: string[]
   goals: string[]
+  values?: string[]
   mediaUsage: string[]
+  searchKeywords?: string[]
   purchaseMotivation: string[]
   objections: string[]
+  objectionHandling?: string[]
   personalityTraits: string[]
   dayInLife: string
   quote: string
+  dailySchedule?: { time: string; title: string; detail: string; mood?: string }[]
+  diary?: { title: string; body: string; captionText: string; sceneKeywords: string[] }
 }
 
 interface CreativesData {
+  topCatchphrases?: { rank: 1 | 2 | 3; text: string; reason: string }[]
   catchphrases: string[]
   lpStructure: {
     hero: string
@@ -83,7 +117,6 @@ interface CreativesData {
 interface GeneratedData {
   persona: PersonaData
   creatives: CreativesData
-  marketingChecklist: { category: string; items: { task: string; priority: string }[] }[]
 }
 
 export default function PersonaPage() {
@@ -98,9 +131,12 @@ export default function PersonaPage() {
   const [portraitLoading, setPortraitLoading] = useState(false)
   const [bannerImage, setBannerImage] = useState<string | null>(null)
   const [bannerLoading, setBannerLoading] = useState(false)
+  const [diaryImage, setDiaryImage] = useState<string | null>(null)
+  const [diaryCaption, setDiaryCaption] = useState<string>('ある日の記録')
+  const [diaryLoading, setDiaryLoading] = useState(false)
   const [selectedBannerSize, setSelectedBannerSize] = useState(BANNER_SIZES[0].key)
   const [selectedCatchphrase, setSelectedCatchphrase] = useState('')
-  const [activeTab, setActiveTab] = useState<'persona' | 'creatives' | 'checklist'>('persona')
+  const [activeTab, setActiveTab] = useState<'persona' | 'creatives'>('persona')
   const [copied, setCopied] = useState<string | null>(null)
   const [stageText, setStageText] = useState<string>('サイトを解析しています…')
   const [stageIdx, setStageIdx] = useState<number>(0)
@@ -217,6 +253,9 @@ export default function PersonaPage() {
       }
 
       setGeneratedData(data.data)
+      setDiaryImage(null)
+      const cap = String(data?.data?.persona?.diary?.captionText || '').trim()
+      setDiaryCaption(cap || 'ある日の記録')
       // 生成と同時にポートレートも自動生成
       try {
         await generatePortraitForPersona(data.data.persona)
@@ -282,6 +321,40 @@ export default function PersonaPage() {
     }
   }
 
+  const generateBannerFromText = async (text: string) => {
+    if (!generatedData?.persona) return
+    setSelectedCatchphrase(text)
+    setBannerLoading(true)
+    setBannerImage(null)
+    try {
+      const res = await fetch('/api/persona/banner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          persona: generatedData.persona,
+          serviceName,
+          catchphrase: text,
+          sizeKey: selectedBannerSize,
+        }),
+      })
+      const raw = await res.text()
+      let data: any = null
+      try {
+        data = raw ? JSON.parse(raw) : null
+      } catch {
+        data = null
+      }
+      if (!res.ok || !data?.success || !data?.image) {
+        throw new Error((data && (data.error || data.message)) || 'バナー生成失敗')
+      }
+      setBannerImage(data.image)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'バナー生成エラー')
+    } finally {
+      setBannerLoading(false)
+    }
+  }
+
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
     setCopied(id)
@@ -293,6 +366,150 @@ export default function PersonaPage() {
     link.href = dataUrl
     link.download = filename
     link.click()
+  }
+
+  const generateDiaryImage = async () => {
+    if (!generatedData?.persona?.diary?.body) {
+      setError('日記が未生成です（再生成してください）')
+      return
+    }
+    setDiaryLoading(true)
+    try {
+      const res = await fetch('/api/persona/diary-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          diaryText: generatedData.persona.diary.body,
+          captionText: diaryCaption,
+          keywords: generatedData.persona.diary.sceneKeywords || [],
+          size: '1200x628',
+        }),
+      })
+      const raw = await res.text()
+      let data: any = null
+      try {
+        data = raw ? JSON.parse(raw) : null
+      } catch {
+        data = null
+      }
+      if (!res.ok || !data?.success || !data?.image) {
+        throw new Error((data && (data.error || data.message)) || '日記イメージ生成に失敗しました')
+      }
+      setDiaryImage(data.image)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '日記イメージ生成エラー')
+    } finally {
+      setDiaryLoading(false)
+    }
+  }
+
+  const downloadPersonaJson = () => {
+    if (!generatedData) return
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      url,
+      serviceName,
+      persona: generatedData.persona,
+      creatives: generatedData.creatives,
+      portraitImage,
+      diaryImage,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `persona-${generatedData.persona.name}-${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  const downloadPersonaHtml = () => {
+    if (!generatedData) return
+    const escape = (s: string) =>
+      String(s || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('\"', '&quot;')
+        .replaceAll(\"'\", '&#39;')
+
+    const schedule = Array.isArray(generatedData.persona.dailySchedule) ? generatedData.persona.dailySchedule : []
+    const diary = generatedData.persona.diary
+    const html = `<!doctype html>
+<html lang=\"ja\">
+<head>
+  <meta charset=\"utf-8\" />
+  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />
+  <title>ペルソナ履歴書 - ${escape(generatedData.persona.name)}</title>
+  <style>
+    body{font-family: ui-sans-serif, system-ui, -apple-system, 'Noto Sans JP', sans-serif; background:#f8fafc; padding:24px;}
+    .paper{max-width:980px; margin:0 auto; background:#fff; border:2px solid #0f172a;}
+    .grid{display:grid; grid-template-columns:3fr 1fr;}
+    .cell{padding:16px; border-bottom:1px solid #0f172a;}
+    .right{border-left:1px solid #0f172a;}
+    .photo{aspect-ratio:3/4; border:2px solid #0f172a; background:#fff; overflow:hidden;}
+    .label{font-size:11px; font-weight:800; color:#475569;}
+    .value{font-size:14px; font-weight:700; color:#0f172a;}
+    .name{font-size:28px; font-weight:900; letter-spacing:0.02em;}
+    .row{display:grid; grid-template-columns:120px 1fr; border-top:1px solid #e2e8f0;}
+    .row > div{padding:10px 12px;}
+    .row .k{background:#f8fafc; font-weight:800; color:#334155; border-right:1px solid #e2e8f0;}
+    .diary{border-top:1px solid #0f172a; padding:16px;}
+    .img{max-width:100%; border:1px solid #e2e8f0; border-radius:10px;}
+    table{width:100%; border-collapse:collapse; margin-top:8px;}
+    th,td{border:1px solid #e2e8f0; padding:8px; font-size:12px;}
+    th{background:#f8fafc; text-align:left;}
+  </style>
+</head>
+<body>
+  <div class=\"paper\">
+    <div class=\"grid\">
+      <div class=\"cell\">
+        <div class=\"label\">ふりがな（仮）</div>
+        <div class=\"name\">${escape(generatedData.persona.name)}</div>
+        <div style=\"margin-top:10px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;\">
+          <div style=\"border:1px solid #e2e8f0; background:#f8fafc; padding:10px;\"><div class=\"label\">年齢</div><div class=\"value\">${escape(String(generatedData.persona.age))}歳</div></div>
+          <div style=\"border:1px solid #e2e8f0; background:#f8fafc; padding:10px;\"><div class=\"label\">性別</div><div class=\"value\">${escape(generatedData.persona.gender)}</div></div>
+          <div style=\"border:1px solid #e2e8f0; background:#f8fafc; padding:10px;\"><div class=\"label\">職業</div><div class=\"value\">${escape(generatedData.persona.occupation)}</div></div>
+        </div>
+        <div style=\"margin-top:10px; border:1px solid #e2e8f0; padding:10px;\"><div class=\"label\">本人の一言</div><div class=\"value\">${escape(generatedData.persona.quote || '')}</div></div>
+      </div>
+      <div class=\"cell right\">
+        <div class=\"label\">写真（AI生成）</div>
+        <div class=\"photo\">${portraitImage ? `<img src=\"${portraitImage}\" style=\"width:100%;height:100%;object-fit:cover;\"/>` : ''}</div>
+      </div>
+    </div>
+
+    <div class=\"row\"><div class=\"k\">現住所</div><div>${escape(generatedData.persona.location)}</div></div>
+    <div class=\"row\"><div class=\"k\">家族構成</div><div>${escape(generatedData.persona.familyStructure)}</div></div>
+    <div class=\"row\"><div class=\"k\">年収</div><div>${escape(generatedData.persona.income)}</div></div>
+    <div class=\"row\"><div class=\"k\">生活</div><div>${escape(generatedData.persona.lifestyle)}</div></div>
+    <div class=\"row\"><div class=\"k\">一日</div><div>${escape(generatedData.persona.dayInLife)}</div></div>
+
+    <div class=\"diary\">
+      <h2 style=\"margin:0 0 8px; font-size:16px; font-weight:900;\">特徴：日々の生活（1日のスケジュール）</h2>
+      <table>
+        <thead><tr><th style=\"width:80px;\">時間</th><th>内容</th><th style=\"width:120px;\">気分</th></tr></thead>
+        <tbody>
+          ${schedule.map((s) => `<tr><td>${escape(s.time)}</td><td><b>${escape(s.title)}</b><br/>${escape(s.detail)}</td><td>${escape(s.mood || '')}</td></tr>`).join('')}
+        </tbody>
+      </table>
+
+      ${diary ? `<h2 style=\"margin:16px 0 8px; font-size:16px; font-weight:900;\">日記：${escape(diary.title)}</h2>
+      <p style=\"white-space:pre-wrap; font-size:13px; color:#0f172a; line-height:1.8;\">${escape(diary.body)}</p>` : ''}
+
+      ${diaryImage ? `<h3 style=\"margin:16px 0 8px; font-size:14px; font-weight:900;\">日記イメージ</h3>
+      <img class=\"img\" src=\"${diaryImage}\" />` : ''}
+    </div>
+  </div>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `persona-${generatedData.persona.name}-${Date.now()}.html`
+    a.click()
+    URL.revokeObjectURL(a.href)
   }
 
   const resumeIssueDate = useMemo(() => formatJpDate(new Date()), [])
@@ -509,7 +726,6 @@ export default function PersonaPage() {
               {[
                 { key: 'persona', label: 'ペルソナ', icon: Target },
                 { key: 'creatives', label: 'クリエイティブ', icon: Sparkles },
-                { key: 'checklist', label: 'チェックリスト', icon: BarChart3 },
               ].map((tab) => {
                 const Icon = tab.icon
                 return (
@@ -533,8 +749,27 @@ export default function PersonaPage() {
             {activeTab === 'persona' && generatedData.persona && (
               <div className="mx-auto max-w-5xl">
                 <div className="mb-3 flex items-center justify-between">
-                  <div className="text-slate-700 text-sm font-black">履歴書（ペルソナ）</div>
-                  <div className="text-slate-500 text-xs font-bold">作成日：{resumeIssueDate}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-slate-700 text-sm font-black">履歴書（ペルソナ）</div>
+                    <span className="hidden sm:inline text-slate-400 text-xs font-bold">/ ダウンロード可能</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-slate-500 text-xs font-bold">作成日：{resumeIssueDate}</div>
+                    <button
+                      onClick={downloadPersonaJson}
+                      className="h-8 px-3 rounded-lg bg-slate-900 text-white text-xs font-black hover:bg-slate-800"
+                      title="JSONでダウンロード"
+                    >
+                      JSON
+                    </button>
+                    <button
+                      onClick={downloadPersonaHtml}
+                      className="h-8 px-3 rounded-lg bg-purple-600 text-white text-xs font-black hover:bg-purple-500"
+                      title="HTMLでダウンロード（画像も埋め込み）"
+                    >
+                      HTML
+                    </button>
+                  </div>
                 </div>
 
                 {/* 履歴書風：A4っぽい枠線 */}
@@ -669,12 +904,148 @@ export default function PersonaPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* 履歴書の下：特徴（スケジュール＋日記＋日記イメージ） */}
+                <div className="mt-6 bg-white border border-slate-200 rounded-xl shadow-sm">
+                  <div className="px-5 py-4 border-b border-slate-200">
+                    <div className="text-slate-900 font-black text-base">特徴：日々の生活（1日のスケジュール）</div>
+                    <div className="text-slate-500 text-xs font-bold mt-1">“実在感”を出すため、日常のリズムをそのまま使えます。</div>
+                  </div>
+
+                  <div className="p-5">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50">
+                            <th className="text-left text-xs font-black text-slate-700 border border-slate-200 px-3 py-2 w-[92px]">時間</th>
+                            <th className="text-left text-xs font-black text-slate-700 border border-slate-200 px-3 py-2">内容</th>
+                            <th className="text-left text-xs font-black text-slate-700 border border-slate-200 px-3 py-2 w-[140px]">気分</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(generatedData.persona.dailySchedule || []).slice(0, 18).map((s, i) => (
+                            <tr key={i} className="align-top">
+                              <td className="border border-slate-200 px-3 py-2 text-xs font-black text-slate-900">{s.time}</td>
+                              <td className="border border-slate-200 px-3 py-2">
+                                <div className="text-sm font-black text-slate-900">{s.title}</div>
+                                <div className="text-sm text-slate-700 mt-1">{s.detail}</div>
+                              </td>
+                              <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">{s.mood || '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {generatedData.persona.diary && (
+                      <div className="mt-6 grid lg:grid-cols-2 gap-4">
+                        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                          <div className="text-slate-900 font-black">日記：{generatedData.persona.diary.title}</div>
+                          <p className="mt-2 text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">
+                            {generatedData.persona.diary.body}
+                          </p>
+                          <div className="mt-4">
+                            <div className="text-xs font-black text-slate-700 mb-1">画像に入れるテキスト（編集OK）</div>
+                            <input
+                              value={diaryCaption}
+                              onChange={(e) => setDiaryCaption(e.target.value)}
+                              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+                              placeholder="例：今日も、ちゃんと頑張った。"
+                            />
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                onClick={generateDiaryImage}
+                                disabled={diaryLoading}
+                                className="h-10 px-4 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-black disabled:opacity-50"
+                              >
+                                {diaryLoading ? '日記イメージ生成中…' : '日記イメージを生成（Nano Banana Pro）'}
+                              </button>
+                              {diaryImage ? (
+                                <button
+                                  onClick={() => downloadImage(diaryImage, `diary-${generatedData.persona.name}.png`)}
+                                  className="h-10 px-4 rounded-lg bg-slate-900 text-white text-sm font-black hover:bg-slate-800"
+                                >
+                                  画像保存
+                                </button>
+                              ) : (
+                                <button disabled className="h-10 px-4 rounded-lg bg-slate-200 text-slate-500 text-sm font-black">
+                                  画像保存
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border border-slate-200 rounded-xl p-4">
+                          <div className="text-slate-900 font-black">日記イメージ</div>
+                          <div className="mt-3 aspect-[1200/628] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center">
+                            {diaryImage ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={diaryImage} alt="diary" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="text-slate-400 text-sm font-bold">まだ生成されていません</div>
+                            )}
+                          </div>
+                          <div className="mt-3 text-xs text-slate-500 font-bold">
+                            ※「日記イメージを生成」を押すと、日記内容に合わせた画像を作り、テキストも入れます。
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Creatives Tab */}
             {activeTab === 'creatives' && generatedData.creatives && (
               <div className="space-y-6">
+                {/* TOP3 */}
+                {Array.isArray(generatedData.creatives.topCatchphrases) && generatedData.creatives.topCatchphrases.length > 0 && (
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <div className="text-slate-900 text-lg font-black">おすすめキャッチコピー TOP3</div>
+                        <div className="text-slate-500 text-xs font-bold mt-1">
+                          「このコピー、こんなに素晴らしい」まで理由つきで出します（クリックで即バナー生成）。
+                        </div>
+                      </div>
+                      <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-100 text-purple-700 text-xs font-black">
+                        <Sparkles className="w-4 h-4" />
+                        TOP PICKS
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-3">
+                      {generatedData.creatives.topCatchphrases.slice(0, 3).map((t) => (
+                        <button
+                          key={t.rank}
+                          onClick={() => void generateBannerFromText(t.text)}
+                          className="text-left rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 hover:border-purple-200 hover:shadow-lg transition-all p-4"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="inline-flex items-center gap-2">
+                              <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 text-white font-black flex items-center justify-center">
+                                {t.rank}
+                              </span>
+                              <span className="text-xs font-black text-slate-600">おすすめ</span>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-purple-400" />
+                          </div>
+                          <div className="text-slate-900 text-lg font-black leading-snug">{t.text}</div>
+                          <div className="mt-3 text-slate-600 text-xs font-bold leading-relaxed">
+                            {t.reason}
+                          </div>
+                          <div className="mt-3 inline-flex items-center gap-2 text-xs font-black text-purple-700">
+                            <ImageIcon className="w-4 h-4" />
+                            これでバナー生成
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Catchphrases with Banner Generation */}
                 <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
                   <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
@@ -686,44 +1057,7 @@ export default function PersonaPage() {
                       <button
                         key={i}
                         onClick={() => {
-                          setSelectedCatchphrase(c)
-                          // クリック→即バナー生成（要望）
-                          if (!bannerLoading) {
-                            // 選択反映後に実行
-                            setTimeout(() => {
-                              // selectedCatchphrase はstateなので、cを直接使う
-                              void (async () => {
-                                setBannerLoading(true)
-                                try {
-                                  const res = await fetch('/api/persona/banner', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                      persona: generatedData.persona,
-                                      serviceName,
-                                      catchphrase: c,
-                                      sizeKey: selectedBannerSize,
-                                    }),
-                                  })
-                                  const raw = await res.text()
-                                  let data: any = null
-                                  try {
-                                    data = raw ? JSON.parse(raw) : null
-                                  } catch {
-                                    data = null
-                                  }
-                                  if (!res.ok || !data?.success || !data?.image) {
-                                    throw new Error((data && (data.error || data.message)) || 'バナー生成失敗')
-                                  }
-                                  setBannerImage(data.image)
-                                } catch (e) {
-                                  setError(e instanceof Error ? e.message : 'バナー生成エラー')
-                                } finally {
-                                  setBannerLoading(false)
-                                }
-                              })()
-                            }, 0)
-                          }
+                          if (!bannerLoading) void generateBannerFromText(c)
                         }}
                         className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between ${
                           selectedCatchphrase === c
@@ -760,7 +1094,7 @@ export default function PersonaPage() {
                           ))}
                         </select>
                         <button
-                          onClick={handleGenerateBanner}
+                          onClick={() => void generateBannerFromText(selectedCatchphrase)}
                           disabled={bannerLoading}
                           className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-bold hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 flex items-center gap-2"
                         >
@@ -831,36 +1165,78 @@ export default function PersonaPage() {
 
                 {/* Ad Copy */}
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-900 mb-3">🔍 Google検索広告</h3>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
+                          <GoogleGMark className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="text-slate-900 font-black">Google 検索広告</div>
+                          <div className="text-slate-500 text-xs font-bold">“公式っぽい”見た目で、そのまま運用に落とせます</div>
+                        </div>
+                      </div>
+                      <span className="text-xs font-black text-slate-500">ADS</span>
+                    </div>
                     <div className="space-y-2">
                       {generatedData.creatives.adCopy?.google?.map((ad, i) => (
-                        <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100 group">
-                          <p className="text-slate-700 text-sm">{ad}</p>
-                          <button
-                            onClick={() => copyToClipboard(ad, `google-${i}`)}
-                            className="mt-2 text-xs text-slate-500 hover:text-purple-700 flex items-center gap-1"
-                          >
-                            {copied === `google-${i}` ? <Check className="w-3 h-3 text-green-400" /> : <Clipboard className="w-3 h-3" />}
-                            コピー
-                          </button>
+                        <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-100 group">
+                          <p className="text-slate-800 text-sm font-bold">{ad}</p>
+                          <div className="mt-2 flex items-center gap-3">
+                            <button
+                              onClick={() => copyToClipboard(ad, `google-${i}`)}
+                              className="text-xs text-slate-500 hover:text-purple-700 flex items-center gap-1 font-bold"
+                            >
+                              {copied === `google-${i}` ? <Check className="w-3 h-3 text-green-400" /> : <Clipboard className="w-3 h-3" />}
+                              コピー
+                            </button>
+                            <button
+                              onClick={() => void generateBannerFromText(ad)}
+                              disabled={bannerLoading}
+                              className="text-xs font-black text-purple-700 hover:text-purple-800 flex items-center gap-1"
+                            >
+                              <ImageIcon className="w-3 h-3" />
+                              この広告文でバナー生成
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                  <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-900 mb-3">📱 Meta/SNS広告</h3>
+                  <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                          <MetaMark className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="text-slate-900 font-black">Meta / SNS広告</div>
+                          <div className="text-slate-500 text-xs font-bold">スクロールを止める一言に寄せます</div>
+                        </div>
+                      </div>
+                      <span className="text-xs font-black text-slate-500">META</span>
+                    </div>
                     <div className="space-y-2">
                       {generatedData.creatives.adCopy?.meta?.map((ad, i) => (
-                        <div key={i} className="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                          <p className="text-slate-700 text-sm">{ad}</p>
-                          <button
-                            onClick={() => copyToClipboard(ad, `meta-${i}`)}
-                            className="mt-2 text-xs text-slate-500 hover:text-purple-700 flex items-center gap-1"
-                          >
-                            {copied === `meta-${i}` ? <Check className="w-3 h-3 text-green-400" /> : <Clipboard className="w-3 h-3" />}
-                            コピー
-                          </button>
+                        <div key={i} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                          <p className="text-slate-800 text-sm font-bold">{ad}</p>
+                          <div className="mt-2 flex items-center gap-3">
+                            <button
+                              onClick={() => copyToClipboard(ad, `meta-${i}`)}
+                              className="text-xs text-slate-500 hover:text-purple-700 flex items-center gap-1 font-bold"
+                            >
+                              {copied === `meta-${i}` ? <Check className="w-3 h-3 text-green-400" /> : <Clipboard className="w-3 h-3" />}
+                              コピー
+                            </button>
+                            <button
+                              onClick={() => void generateBannerFromText(ad)}
+                              disabled={bannerLoading}
+                              className="text-xs font-black text-purple-700 hover:text-purple-800 flex items-center gap-1"
+                            >
+                              <ImageIcon className="w-3 h-3" />
+                              この広告文でバナー生成
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -869,37 +1245,6 @@ export default function PersonaPage() {
               </div>
             )}
 
-            {/* Checklist Tab */}
-            {activeTab === 'checklist' && generatedData.marketingChecklist && (
-              <div className="space-y-4">
-                {generatedData.marketingChecklist.map((category, i) => (
-                  <div key={i} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-                    <h3 className="text-base font-bold text-slate-900 mb-3 flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-purple-400" />
-                      {category.category}
-                    </h3>
-                    <div className="space-y-2">
-                      {category.items?.map((item, j) => (
-                        <div key={j} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-                          <span
-                            className={`px-2 py-0.5 text-xs font-bold rounded ${
-                              item.priority === 'high'
-                                ? 'bg-red-100 text-red-700'
-                                : item.priority === 'medium'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-slate-200 text-slate-700'
-                            }`}
-                          >
-                            {item.priority === 'high' ? '高' : item.priority === 'medium' ? '中' : '低'}
-                          </span>
-                          <span className="text-slate-700 text-sm">{item.task}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>

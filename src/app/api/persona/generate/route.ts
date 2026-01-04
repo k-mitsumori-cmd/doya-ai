@@ -171,24 +171,43 @@ async function geminiGenerateJson<T>(prompt: string): Promise<T> {
 // レスポンス型
 interface PersonaResult {
   persona: {
+    // 基本
     name: string
     age: number
     gender: string
     occupation: string
+    industry?: string
+    companySize?: string
     income: string
     location: string
     familyStructure: string
+    education?: string
     lifestyle: string
+    devices?: string[]
+    // 深掘り
     challenges: string[]
     goals: string[]
+    values?: string[]
     mediaUsage: string[]
+    searchKeywords?: string[]
     purchaseMotivation: string[]
     objections: string[]
+    objectionHandling?: string[]
     personalityTraits: string[]
     dayInLife: string
     quote: string
+    // 生活の具体（履歴書下に出す）
+    dailySchedule: { time: string; title: string; detail: string; mood?: string }[]
+    diary: {
+      title: string
+      body: string // 600〜1200字くらいの“日記”
+      captionText: string // 画像に入れる短いテキスト（1〜2行）
+      sceneKeywords: string[] // 画像生成の情景ヒント
+    }
   }
   creatives: {
+    // おすすめTOP3 + そのほか
+    topCatchphrases: { rank: 1 | 2 | 3; text: string; reason: string }[]
     catchphrases: string[]
     lpStructure: {
       hero: string
@@ -206,10 +225,6 @@ interface PersonaResult {
       body: string
     }
   }
-  marketingChecklist: {
-    category: string
-    items: { task: string; priority: 'high' | 'medium' | 'low' }[]
-  }[]
 }
 
 export async function POST(req: NextRequest) {
@@ -349,10 +364,10 @@ export async function POST(req: NextRequest) {
     const headings = extractHeadings(html)
     const plainText = extractTextFromHTML(html)
 
-    // ペルソナ生成プロンプト
+    // ペルソナ生成プロンプト（チェックリストは生成しない：ユーザー要望）
     const prompt = `
 あなたは超優秀なマーケティングコンサルタントです。
-以下のウェブサイト情報から、ターゲットペルソナとマーケティング施策を生成してください。
+以下のウェブサイト情報から、ターゲットペルソナ（履歴書レベルの具体性）と売れるクリエイティブを生成してください。
 
 ## サイト情報
 - URL: ${url}
@@ -365,7 +380,9 @@ ${additionalInfo ? `## 追加情報\n${additionalInfo}` : ''}
 ${serviceName ? `## サービス名\n${serviceName}` : ''}
 
 ## 出力形式（JSON）
-以下の構造で出力してください。売れる素材になるよう、具体的で実践的な内容にしてください。
+以下の構造で **必ず有効なJSONのみ** を出力してください（Markdown不可）。
+ユーザーが「この人、実在するのでは？」と錯覚するレベルで、生活/行動/思考を具体化してください。
+**チェックリスト（marketingChecklist）は不要です。絶対に出力しないでください。**
 
 {
   "persona": {
@@ -373,20 +390,42 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
     "age": 35,
     "gender": "男性/女性",
     "occupation": "職業（具体的に）",
+    "industry": "所属業界（例: SaaS/小売/製造など）",
+    "companySize": "会社規模（例: 10名/100名/1000名など）",
     "income": "年収帯",
     "location": "居住地",
     "familyStructure": "家族構成",
-    "lifestyle": "ライフスタイルの特徴",
+    "education": "学歴/専攻（任意）",
+    "lifestyle": "ライフスタイルの特徴（具体）",
+    "devices": ["使うデバイス/OS（例: iPhone/Android/Windows）"],
     "challenges": ["課題1", "課題2", "課題3"],
     "goals": ["目標1", "目標2"],
-    "mediaUsage": ["よく使うメディア/SNS"],
+    "values": ["価値観/大事にすること"],
+    "mediaUsage": ["よく使うメディア/SNS（具体）"],
+    "searchKeywords": ["実際に検索しそうなクエリを5〜8個"],
     "purchaseMotivation": ["購買動機1", "購買動機2"],
     "objections": ["購入しない理由/反論"],
+    "objectionHandling": ["反論をどう解消すれば買うか（3〜6個）"],
     "personalityTraits": ["性格特性1", "性格特性2"],
-    "dayInLife": "1日の過ごし方の概要",
-    "quote": "ペルソナの口癖や価値観を表す一言"
+    "dayInLife": "1日の過ごし方の概要（200〜400字）",
+    "quote": "ペルソナの口癖や価値観を表す一言",
+    "dailySchedule": [
+      { "time": "06:30", "title": "起床", "detail": "行動の描写（具体）", "mood": "気分（任意）" },
+      { "time": "09:15", "title": "通勤/移動", "detail": "…", "mood": "…" }
+    ],
+    "diary": {
+      "title": "今日の日記タイトル（日本語）",
+      "body": "600〜1200字程度の“日記”。生活感/悩み/意思決定/感情の揺れを具体的に。",
+      "captionText": "画像に入れる短いテキスト（1〜2行/短め）",
+      "sceneKeywords": ["日記の情景を表すキーワード（5〜10個）"]
+    }
   },
   "creatives": {
+    "topCatchphrases": [
+      { "rank": 1, "text": "最推しキャッチコピー", "reason": "なぜ刺さるか（具体）" },
+      { "rank": 2, "text": "推しキャッチコピー", "reason": "なぜ刺さるか（具体）" },
+      { "rank": 3, "text": "推しキャッチコピー", "reason": "なぜ刺さるか（具体）" }
+    ],
     "catchphrases": ["キャッチコピー案1", "キャッチコピー案2", "キャッチコピー案3", "キャッチコピー案4", "キャッチコピー案5"],
     "lpStructure": {
       "hero": "ファーストビューのキャッチコピー",
@@ -403,18 +442,10 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
       "subject": "メール件名",
       "body": "メール本文（200字程度）"
     }
-  },
-  "marketingChecklist": [
-    {
-      "category": "カテゴリ名",
-      "items": [
-        { "task": "タスク内容", "priority": "high" }
-      ]
-    }
-  ]
+  }
 }
 
-重要: 必ず有効なJSONのみを出力してください。マークダウンや説明文は不要です。
+重要: JSON以外は一切出力しないでください。
 `
 
     const result = await geminiGenerateJson<PersonaResult>(prompt)
