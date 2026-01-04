@@ -59,6 +59,80 @@ const GENDER_OPTIONS = [
   { value: 'female', label: '女性中心' },
 ]
 
+// サンプルデータ（プルダウンで選択 → 各項目に自動入力）
+const SAMPLE_PRESETS = [
+  {
+    id: '',
+    label: '（サンプルを選択）',
+    data: null,
+  },
+  {
+    id: 'saas_marketing',
+    label: 'SaaSマーケティングツール',
+    data: {
+      industry: 'it_saas',
+      targetType: 'b2b_smb',
+      ageRange: '30-40',
+      genderPref: '',
+      serviceName: 'クラウドMA（マーケティングオートメーション）',
+      serviceDetail: 'メール配信・リード管理・スコアリングを一元化できるクラウドサービス。中小企業のマーケティング担当者がメインターゲット。',
+      additionalInfo: '導入ハードルの低さと日本語サポートが強み。競合はHubSpotやMarketoなど。',
+    },
+  },
+  {
+    id: 'ec_cosmetics',
+    label: 'ECコスメブランド',
+    data: {
+      industry: 'ec_retail',
+      targetType: 'b2c_general',
+      ageRange: '20-30',
+      genderPref: 'female',
+      serviceName: 'オーガニックスキンケア「NaturaBelle」',
+      serviceDetail: '天然由来成分100%のスキンケアライン。敏感肌でも使える低刺激処方。D2Cで直販。',
+      additionalInfo: 'SNS（Instagram/TikTok）での口コミ拡散を狙う。価格帯は中〜高価格帯。',
+    },
+  },
+  {
+    id: 'consulting_dx',
+    label: 'DXコンサルティング',
+    data: {
+      industry: 'consulting',
+      targetType: 'b2b_enterprise',
+      ageRange: '40-50',
+      genderPref: 'male',
+      serviceName: 'DX推進パートナーシップ',
+      serviceDetail: '製造業・物流業向けのDX戦略立案〜システム導入支援。業務効率化とデータ活用がメインテーマ。',
+      additionalInfo: '決裁者は経営層・情シス部長クラス。ROI可視化が重要。',
+    },
+  },
+  {
+    id: 'education_online',
+    label: 'オンライン学習サービス',
+    data: {
+      industry: 'education',
+      targetType: 'b2c_youth',
+      ageRange: '20-30',
+      genderPref: '',
+      serviceName: 'スキルアップオンライン',
+      serviceDetail: 'プログラミング・デザイン・ビジネススキルが学べるサブスク型オンライン学習プラットフォーム。',
+      additionalInfo: '転職・副業目的のユーザーが多い。月額制で動画見放題。',
+    },
+  },
+  {
+    id: 'food_delivery',
+    label: 'フードデリバリーアプリ',
+    data: {
+      industry: 'food',
+      targetType: 'b2c_general',
+      ageRange: '20-30',
+      genderPref: '',
+      serviceName: 'ごはんNOW',
+      serviceDetail: '地元飲食店と提携したフードデリバリーアプリ。30分以内配達が売り。',
+      additionalInfo: '一人暮らし・共働き世帯がメイン。クーポン施策で新規獲得。',
+    },
+  },
+]
+
 const LOADING_STAGES = [
   'ペルソナを調査中…',
   '候補を洗い出しています…',
@@ -103,6 +177,9 @@ const formatJpDate = (d: Date) =>
   `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
 
 export default function PersonaDetailPage() {
+  // サンプル選択
+  const [selectedSample, setSelectedSample] = useState('')
+
   // Form fields
   const [industry, setIndustry] = useState('')
   const [targetType, setTargetType] = useState('')
@@ -119,6 +196,21 @@ export default function PersonaDetailPage() {
   const [generatedData, setGeneratedData] = useState<GeneratedData | null>(null)
   const [portraitImage, setPortraitImage] = useState<string | null>(null)
   const [portraitLoading, setPortraitLoading] = useState(false)
+
+  // サンプル選択時に各フィールドを自動入力
+  const handleSampleChange = (sampleId: string) => {
+    setSelectedSample(sampleId)
+    const preset = SAMPLE_PRESETS.find((p) => p.id === sampleId)
+    if (preset?.data) {
+      setIndustry(preset.data.industry)
+      setTargetType(preset.data.targetType)
+      setAgeRange(preset.data.ageRange)
+      setGenderPref(preset.data.genderPref)
+      setServiceName(preset.data.serviceName)
+      setServiceDetail(preset.data.serviceDetail)
+      setAdditionalInfo(preset.data.additionalInfo)
+    }
+  }
 
   // Loading animation
   useEffect(() => {
@@ -181,10 +273,12 @@ export default function PersonaDetailPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '生成に失敗しました')
-      if (!data.persona) throw new Error('ペルソナ情報がありません')
-      setGeneratedData({ persona: data.persona })
+      // APIは { success, data: { persona }, meta } を返す
+      const persona = data.data?.persona || data.persona
+      if (!persona) throw new Error('ペルソナ情報がありません')
+      setGeneratedData({ persona })
       // Auto generate portrait
-      void generatePortrait(data.persona)
+      void generatePortrait(persona)
     } catch (e) {
       setError(e instanceof Error ? e.message : '生成エラー')
     } finally {
@@ -205,14 +299,31 @@ export default function PersonaDetailPage() {
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl lg:text-3xl font-black text-slate-900 flex items-center gap-3">
-            <FileText className="w-8 h-8 text-purple-600" />
-            ペルソナ先生（詳細版）
-          </h1>
-          <p className="text-slate-500 text-sm mt-2">
-            URLがなくても、プルダウンとテキスト入力だけでペルソナを生成できます。
-          </p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-black text-slate-900 flex items-center gap-3">
+              <FileText className="w-8 h-8 text-purple-600" />
+              ペルソナ先生（詳細版）
+            </h1>
+            <p className="text-slate-500 text-sm mt-2">
+              URLがなくても、プルダウンとテキスト入力だけでペルソナを生成できます。
+            </p>
+          </div>
+          {/* サンプル選択 */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-600 whitespace-nowrap">サンプル：</span>
+            <select
+              value={selectedSample}
+              onChange={(e) => handleSampleChange(e.target.value)}
+              className="h-10 px-3 bg-white border border-purple-200 rounded-xl text-slate-900 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-purple-500/30 min-w-[200px]"
+            >
+              {SAMPLE_PRESETS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Form */}
