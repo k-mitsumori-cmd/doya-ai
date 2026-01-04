@@ -457,12 +457,37 @@ export default function PersonaPage() {
     const schedule = Array.isArray(data.persona.dailySchedule) ? data.persona.dailySchedule : []
     if (schedule.length === 0) return
 
-    const hit = (t: string) => /業務|仕事|始業|会議|商談|提案|作業|ランチ|昼食|昼|夕食|帰宅|移動/i.test(t)
-    const targetIdx = schedule
-      .map((s, i) => ({ s, i }))
-      .filter(({ s }) => hit(`${s.title} ${s.detail}`))
-      .slice(0, 6)
-      .map(({ i }) => i)
+    // 画像は「1日あたり約4枚」に絞る（読みやすさ＆コスト最適化）
+    const textOf = (s: any) => `${String(s?.title || '')} ${String(s?.detail || '')}`
+    const pickFirst = (re: RegExp, used: Set<number>) => {
+      const idx = schedule.findIndex((s, i) => !used.has(i) && re.test(textOf(s)))
+      if (idx >= 0) {
+        used.add(idx)
+        return idx
+      }
+      return -1
+    }
+    const used = new Set<number>()
+    const priority: RegExp[] = [
+      /業務開始|始業|仕事開始|出社/i,
+      /会議|商談|提案|打合せ|MTG/i,
+      /ランチ|昼食|昼休み|食事/i,
+      /作業|分析|制作|運用|資料/i,
+      /帰宅|退勤|夕食|夜|子ども|家族/i,
+    ]
+    const targetIdx: number[] = []
+    for (const re of priority) {
+      const idx = pickFirst(re, used)
+      if (idx >= 0) targetIdx.push(idx)
+      if (targetIdx.length >= 4) break
+    }
+    // 足りなければ前から埋める
+    for (let i = 0; i < schedule.length && targetIdx.length < 4; i++) {
+      if (!used.has(i)) {
+        used.add(i)
+        targetIdx.push(i)
+      }
+    }
 
     if (targetIdx.length === 0) return
     setScheduleImagesLoading(true)
@@ -635,6 +660,36 @@ export default function PersonaPage() {
   }
 
   const resumeIssueDate = useMemo(() => formatJpDate(new Date()), [])
+
+  const keyScheduleIndices = useMemo(() => {
+    const schedule = generatedData?.persona?.dailySchedule || []
+    if (!Array.isArray(schedule) || schedule.length === 0) return []
+    const textOf = (s: any) => `${String(s?.title || '')} ${String(s?.detail || '')}`
+    const used = new Set<number>()
+    const picked: number[] = []
+    const priority: RegExp[] = [
+      /業務開始|始業|仕事開始|出社/i,
+      /会議|商談|提案|打合せ|MTG/i,
+      /ランチ|昼食|昼休み|食事/i,
+      /作業|分析|制作|運用|資料/i,
+      /帰宅|退勤|夕食|夜|子ども|家族/i,
+    ]
+    for (const re of priority) {
+      const idx = schedule.findIndex((s, i) => !used.has(i) && re.test(textOf(s)))
+      if (idx >= 0) {
+        used.add(idx)
+        picked.push(idx)
+      }
+      if (picked.length >= 4) break
+    }
+    for (let i = 0; i < schedule.length && picked.length < 4; i++) {
+      if (!used.has(i)) {
+        used.add(i)
+        picked.push(i)
+      }
+    }
+    return picked.sort((a, b) => a - b)
+  }, [generatedData?.persona?.dailySchedule])
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -1210,7 +1265,7 @@ export default function PersonaPage() {
                   <div className="px-5 py-4 border-b border-slate-200">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <div className="text-slate-900 font-black text-base">特徴：日々の生活（1日のスケジュール）</div>
+                        <div className="text-slate-900 font-black text-base">特徴：こういったスケジュールで1日を送っています</div>
                         <div className="text-slate-500 text-xs font-bold mt-1">“実在感”を出すため、日常のリズムをそのまま使えます。</div>
                       </div>
                       <button
@@ -1225,79 +1280,138 @@ export default function PersonaPage() {
                   </div>
 
                   <div className="p-5">
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50">
-                            <th className="text-left text-xs font-black text-slate-700 border border-slate-200 px-3 py-2 w-[92px]">時間</th>
-                            <th className="text-left text-xs font-black text-slate-700 border border-slate-200 px-3 py-2 w-[140px]">画像</th>
-                            <th className="text-left text-xs font-black text-slate-700 border border-slate-200 px-3 py-2">内容</th>
-                            <th className="text-left text-xs font-black text-slate-700 border border-slate-200 px-3 py-2 w-[140px]">気分</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(generatedData.persona.dailySchedule || []).slice(0, 18).map((s, i) => (
-                            <tr key={i} className="align-top">
-                              <td className="border border-slate-200 px-3 py-2 text-xs font-black text-slate-900">{s.time}</td>
-                              <td className="border border-slate-200 px-2 py-2">
-                                <div className="w-[120px]">
-                                  <div className="aspect-[1200/628] rounded-lg overflow-hidden border border-slate-200 bg-white flex items-center justify-center">
-                                    {scheduleImages[i] ? (
-                                      // eslint-disable-next-line @next/next/no-img-element
-                                      <img src={scheduleImages[i]} alt={`${s.title}`} className="w-full h-full object-cover" />
-                                    ) : (
-                                      <div className="text-[11px] text-slate-400 font-bold px-2 text-center">
-                                        {scheduleImagesLoading ? '生成中…' : '未生成'}
+                    {/* ドキュメント風：1日の流れ（画像は約4枚だけ） */}
+                    <div className="grid lg:grid-cols-12 gap-4">
+                      <div className="lg:col-span-8">
+                        <div className="prose prose-slate max-w-none">
+                          <p className="text-slate-700 text-sm font-bold leading-relaxed">
+                            {generatedData.persona.dayInLife}
+                          </p>
+                        </div>
+
+                        <div className="mt-4 space-y-4">
+                          {(generatedData.persona.dailySchedule || []).slice(0, 18).map((s, i) => {
+                            const showImg = keyScheduleIndices.includes(i)
+                            return (
+                              <div key={i} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                                <div className="p-4">
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-black">
+                                          {s.time}
+                                        </span>
+                                        <span className="text-slate-900 text-sm font-black truncate">{s.title}</span>
+                                        {s.mood ? (
+                                          <span className="hidden sm:inline text-slate-500 text-xs font-bold truncate">
+                                            気分：{s.mood}
+                                          </span>
+                                        ) : null}
                                       </div>
-                                    )}
-                                  </div>
-                                  <div className="mt-1 flex gap-1">
-                                    <button
-                                      onClick={() => void (async () => {
-                                        try {
-                                          const img = await generateScheduleImageFor({
-                                            title: s.title,
-                                            detail: s.detail,
-                                            mood: s.mood,
-                                            captionText: s.imageCaption || s.title,
-                                            keywords: s.sceneKeywords || [],
-                                          })
-                                          setScheduleImages((prev) => ({ ...prev, [i]: img }))
-                                        } catch (e) {
-                                          setError(e instanceof Error ? e.message : 'スケジュール画像生成エラー')
-                                        }
-                                      })()}
-                                      className="flex-1 h-7 rounded-md bg-white border border-slate-200 text-slate-700 text-[11px] font-black hover:bg-slate-50"
-                                    >
-                                      生成
-                                    </button>
-                                    {scheduleImages[i] ? (
-                                      <button
-                                        onClick={() => downloadImage(scheduleImages[i], `schedule-${i + 1}-${generatedData.persona.name}.png`)}
-                                        className="flex-1 h-7 rounded-md bg-slate-900 text-white text-[11px] font-black hover:bg-slate-800"
-                                      >
-                                        保存
-                                      </button>
-                                    ) : (
-                                      <button
-                                        disabled
-                                        className="flex-1 h-7 rounded-md bg-slate-200 text-slate-500 text-[11px] font-black"
-                                      >
-                                        保存
-                                      </button>
-                                    )}
+                                      <div className="mt-2 text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">
+                                        {s.detail}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                              </td>
-                              <td className="border border-slate-200 px-3 py-2">
-                                <div className="text-sm font-black text-slate-900">{s.title}</div>
-                                <div className="text-sm text-slate-700 mt-1">{s.detail}</div>
-                              </td>
-                              <td className="border border-slate-200 px-3 py-2 text-sm text-slate-700">{s.mood || '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+
+                                {showImg && (
+                                  <div className="border-t border-slate-200 bg-slate-50">
+                                    <div className="p-4 grid sm:grid-cols-12 gap-3 items-start">
+                                      <div className="sm:col-span-7">
+                                        <div className="text-slate-900 text-xs font-black">このシーンのイメージ</div>
+                                        <div className="mt-2 aspect-[1200/628] rounded-xl overflow-hidden border border-slate-200 bg-white flex items-center justify-center">
+                                          {scheduleImages[i] ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={scheduleImages[i]} alt={`${s.title}`} className="w-full h-full object-cover" />
+                                          ) : (
+                                            <div className="text-slate-400 text-sm font-bold">
+                                              {scheduleImagesLoading ? '生成中…' : '未生成（必要な4枚だけ作ります）'}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="sm:col-span-5">
+                                        <div className="text-slate-700 text-xs font-black">画像に入れるテキスト（任意）</div>
+                                        <div className="mt-2 text-slate-600 text-xs font-bold">
+                                          {s.imageCaption || s.title}
+                                        </div>
+                                        <div className="mt-3 flex gap-2">
+                                          <button
+                                            onClick={() => void (async () => {
+                                              try {
+                                                const img = await generateScheduleImageFor({
+                                                  title: s.title,
+                                                  detail: s.detail,
+                                                  mood: s.mood,
+                                                  captionText: s.imageCaption || s.title,
+                                                  keywords: s.sceneKeywords || [],
+                                                })
+                                                setScheduleImages((prev) => ({ ...prev, [i]: img }))
+                                              } catch (e) {
+                                                setError(e instanceof Error ? e.message : 'スケジュール画像生成エラー')
+                                              }
+                                            })()}
+                                            className="flex-1 h-9 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black hover:bg-slate-100"
+                                          >
+                                            画像を生成
+                                          </button>
+                                          {scheduleImages[i] ? (
+                                            <button
+                                              onClick={() =>
+                                                downloadImage(scheduleImages[i], `schedule-${i + 1}-${generatedData.persona.name}.png`)
+                                              }
+                                              className="flex-1 h-9 rounded-lg bg-slate-900 text-white text-xs font-black hover:bg-slate-800"
+                                            >
+                                              保存
+                                            </button>
+                                          ) : (
+                                            <button
+                                              disabled
+                                              className="flex-1 h-9 rounded-lg bg-slate-200 text-slate-500 text-xs font-black"
+                                            >
+                                              保存
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 4枚だけ：1日のイメージギャラリー */}
+                      <div className="lg:col-span-4">
+                        <div className="sticky top-6">
+                          <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                            <div className="text-slate-900 font-black text-sm">1日のイメージ（約4枚）</div>
+                            <div className="text-slate-500 text-xs font-bold mt-1">重要シーンだけを抜粋して画像化します。</div>
+                            <div className="mt-3 grid grid-cols-2 gap-2">
+                              {keyScheduleIndices.slice(0, 4).map((idx) => (
+                                <div key={idx} className="rounded-lg border border-slate-200 bg-slate-50 overflow-hidden">
+                                  <div className="aspect-[1200/628] bg-white flex items-center justify-center">
+                                    {scheduleImages[idx] ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img src={scheduleImages[idx]} alt="scene" className="w-full h-full object-cover" />
+                                    ) : (
+                                      <div className="text-[11px] text-slate-400 font-bold px-2 text-center">未生成</div>
+                                    )}
+                                  </div>
+                                  <div className="p-2">
+                                    <div className="text-[11px] font-black text-slate-700 truncate">
+                                      {(generatedData.persona.dailySchedule || [])[idx]?.title || `シーン${idx + 1}`}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     {generatedData.persona.diary && (
