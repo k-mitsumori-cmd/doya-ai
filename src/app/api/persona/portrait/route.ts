@@ -119,6 +119,9 @@ IMPORTANT:
 - High quality, professional photography style
 - Face clearly visible, looking at camera
 - Upper body / headshot framing
+- COMPOSITION: Subject MUST be centered (no left/right offset), with balanced margins on both sides.
+- CROPPING: Fill the frame; avoid large empty space. Keep head and shoulders centered.
+- CAMERA: Eye-level, straight-on, minimal tilt. No extreme angles.
 
 Output a single high-quality portrait image.
 `

@@ -612,7 +612,7 @@ export default function PersonaPage() {
       </div>
       <div class=\"cell right\">
         <div class=\"label\">写真（AI生成）</div>
-        <div class=\"photo\">${portraitImage ? `<img src=\"${portraitImage}\" style=\"width:100%;height:100%;object-fit:cover;\"/>` : ''}</div>
+        <div class=\"photo\">${portraitImage ? `<img src=\"${portraitImage}\" style=\"width:100%;height:100%;object-fit:cover;object-position:center;\"/>` : ''}</div>
       </div>
     </div>
 
@@ -706,7 +706,7 @@ export default function PersonaPage() {
       </div>
       <div class="cell right">
         <div class="label">写真（AI生成）</div>
-        <div class="photo">${portraitImage ? `<img src="${portraitImage}" style="width:100%;height:100%;object-fit:cover;"/>` : ''}</div>
+        <div class="photo">${portraitImage ? `<img src="${portraitImage}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : ''}</div>
       </div>
     </div>
     <div class="row"><div class="k">現住所</div><div>${escape(generatedData.persona.location)}</div></div>
@@ -1345,7 +1345,7 @@ export default function PersonaPage() {
                       <div className="mt-2 aspect-[3/4] border-2 border-slate-800 bg-white overflow-hidden flex items-center justify-center">
                         {portraitImage ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={portraitImage} alt="portrait" className="w-full h-full object-cover" />
+                          <img src={portraitImage} alt="portrait" className="w-full h-full object-cover object-center" />
                         ) : (
                           <div className="text-slate-400 text-xs font-bold">生成中…</div>
                         )}
