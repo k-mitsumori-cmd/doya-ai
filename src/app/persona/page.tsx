@@ -187,6 +187,13 @@ interface PersonaData {
 }
 
 interface GeneratedData {
+  analysis?: {
+    siteSummary?: string
+    keyOffer?: string
+    targetHypothesis?: string
+    whyThisPersona?: string
+    evidence?: string[]
+  }
   persona: PersonaData
 }
 
@@ -289,10 +296,8 @@ export default function PersonaPage() {
     setError('')
     setGeneratedData(null)
     setPortraitImage(null)
-    setBannerImage(null)
     setDiaryImage(null)
     setScheduleImages({})
-    setSelectedCatchphrase('')
 
     try {
       const res = await fetch('/api/persona/generate', {
@@ -1128,6 +1133,95 @@ export default function PersonaPage() {
           <div className="space-y-6">
             {/* Persona Only (no tabs) */}
             <div className="mx-auto max-w-5xl">
+              {/* Site analysis & rationale */}
+              {generatedData.analysis && (
+                <motion.div
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, ease: 'easeOut' }}
+                  className="mb-4 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden"
+                >
+                  <div className="relative px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-purple-600 to-pink-600">
+                    <div className="absolute inset-0 opacity-20">
+                      <div className="absolute -top-24 -left-24 w-64 h-64 rounded-full bg-white blur-3xl" />
+                      <div className="absolute -bottom-24 -right-24 w-64 h-64 rounded-full bg-white blur-3xl" />
+                    </div>
+                    <div className="relative flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-white/90 text-[11px] font-black tracking-wider">SITE INTELLIGENCE</div>
+                        <div className="text-white text-lg font-black leading-tight">サイト分析 / なぜこのペルソナ？</div>
+                      </div>
+                      <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 border border-white/20 text-white text-xs font-black">
+                        PERSONA RATIONALE
+                        <ChevronRight className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="relative mt-3 flex flex-wrap gap-2 text-xs font-bold text-white/90">
+                      <span className="px-2 py-1 rounded-lg bg-white/15 border border-white/20">
+                        URL: {url || '（未入力）'}
+                      </span>
+                      {serviceName && (
+                        <span className="px-2 py-1 rounded-lg bg-white/15 border border-white/20">
+                          サービス名: {serviceName}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-5">
+                    <div className="grid md:grid-cols-3 gap-3">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-[10px] font-black text-slate-500 mb-1">要約</div>
+                        <div className="text-slate-900 text-sm font-bold leading-relaxed whitespace-pre-wrap">
+                          {generatedData.analysis.siteSummary}
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-[10px] font-black text-slate-500 mb-1">価値提案（誰の課題をどう解決）</div>
+                        <div className="text-slate-900 text-sm font-bold leading-relaxed whitespace-pre-wrap">
+                          {generatedData.analysis.keyOffer}
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="text-[10px] font-black text-slate-500 mb-1">ターゲット仮説</div>
+                        <div className="text-slate-900 text-sm font-bold leading-relaxed whitespace-pre-wrap">
+                          {generatedData.analysis.targetHypothesis}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-slate-900 font-black">なぜこのペルソナになったのか</div>
+                        <div className="hidden sm:flex items-center gap-2 text-xs font-black text-purple-700">
+                          <Sparkles className="w-4 h-4" />
+                          EXPLAINED
+                        </div>
+                      </div>
+                      <div className="mt-2 text-slate-800 text-sm font-bold leading-relaxed whitespace-pre-wrap">
+                        {generatedData.analysis.whyThisPersona}
+                      </div>
+
+                      {Array.isArray(generatedData.analysis.evidence) && generatedData.analysis.evidence.length > 0 && (
+                        <div className="mt-3">
+                          <div className="text-[10px] font-black text-slate-500 mb-2">根拠（抽出）</div>
+                          <div className="flex flex-wrap gap-2">
+                            {generatedData.analysis.evidence.slice(0, 8).map((e, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2.5 py-1 rounded-full bg-purple-50 border border-purple-100 text-purple-700 text-xs font-bold"
+                              >
+                                {e}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="text-slate-700 text-sm font-black">履歴書（ペルソナ）</div>
