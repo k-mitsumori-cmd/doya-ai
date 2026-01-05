@@ -588,6 +588,49 @@ export default function PersonaDetailPage() {
                       <div className="text-slate-900 font-black truncate">{generatedData.persona.occupation}</div>
                     </div>
                   </div>
+                  {/* 履歴書っぽさ強化：上部の情報密度を上げる */}
+                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className="text-[10px] font-bold text-slate-500">現住所</div>
+                      <div className="text-slate-900 font-black truncate">{generatedData.persona.location}</div>
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className="text-[10px] font-bold text-slate-500">年収</div>
+                      <div className="text-slate-900 font-black truncate">{generatedData.persona.income}</div>
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className="text-[10px] font-bold text-slate-500">業界</div>
+                      <div className="text-slate-900 font-black truncate">{generatedData.persona.industry || '—'}</div>
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                      <div className="text-[10px] font-bold text-slate-500">会社規模</div>
+                      <div className="text-slate-900 font-black truncate">{generatedData.persona.companySize || '—'}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                    <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                      <div className="text-[10px] font-bold text-slate-500">家族構成</div>
+                      <div className="text-slate-900 font-black truncate">{generatedData.persona.familyStructure}</div>
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                      <div className="text-[10px] font-bold text-slate-500">学歴</div>
+                      <div className="text-slate-900 font-black truncate">{generatedData.persona.education || '—'}</div>
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                      <div className="text-[10px] font-bold text-slate-500">推定生年</div>
+                      <div className="text-slate-900 font-black">
+                        {generatedData.persona.age ? `${new Date().getFullYear() - generatedData.persona.age}年頃` : '—'}
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-slate-200 bg-white px-3 py-2">
+                      <div className="text-[10px] font-bold text-slate-500">デバイス</div>
+                      <div className="text-slate-900 font-black truncate">
+                        {Array.isArray(generatedData.persona.devices) && generatedData.persona.devices.length > 0
+                          ? generatedData.persona.devices.slice(0, 2).join(' / ')
+                          : '—'}
+                      </div>
+                    </div>
+                  </div>
                   {generatedData.persona.quote && (
                     <div className="mt-3 rounded-md border border-slate-200 bg-white px-3 py-2">
                       <div className="text-[10px] font-bold text-slate-500">本人の一言（口癖）</div>
