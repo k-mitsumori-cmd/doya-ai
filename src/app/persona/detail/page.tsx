@@ -765,7 +765,6 @@ export default function PersonaDetailPage() {
                   fontFamily: '"Klee One", "Zen Kurenaido", "Yomogi", "Kosugi Maru", cursive, serif',
                 }}
               >
-                <div className="absolute left-8 top-0 bottom-0 w-px bg-red-300/60 pointer-events-none" />
                 <h3 className="text-lg font-black text-slate-800 mb-3">📔 {generatedData.persona.diary.title}</h3>
                 <p className="text-base text-slate-800 leading-loose whitespace-pre-wrap">{generatedData.persona.diary.body}</p>
               </div>

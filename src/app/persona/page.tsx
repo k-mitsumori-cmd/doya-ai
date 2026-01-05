@@ -394,6 +394,7 @@ export default function PersonaPage() {
     diaryText: string
     captionText: string
     keywords: string[]
+    gender?: string
   }): Promise<string> => {
     const res = await fetch('/api/persona/diary-image', {
       method: 'POST',
@@ -419,11 +420,12 @@ export default function PersonaPage() {
     mood?: string
     captionText?: string
     keywords?: string[]
+    gender?: string
   }): Promise<string> => {
     const diaryText = `${args.title}\n${args.detail}${args.mood ? `\n気分: ${args.mood}` : ''}`.trim()
     const captionText = String(args.captionText || args.title || '生活の一コマ').slice(0, 32)
     const keywords = Array.isArray(args.keywords) ? args.keywords.map(String).filter(Boolean).slice(0, 12) : []
-    return await generateDiaryImageFor({ diaryText, captionText, keywords })
+    return await generateDiaryImageFor({ diaryText, captionText, keywords, gender: args.gender })
   }
 
   const generateScheduleImageForIndex = async (idx: number, s: any) => {
@@ -435,6 +437,7 @@ export default function PersonaPage() {
         mood: s.mood,
         captionText: s.imageCaption || s.title,
         keywords: s.sceneKeywords || [],
+        gender: generatedData?.persona?.gender,
       })
       setScheduleImages((prev) => ({ ...prev, [idx]: img }))
       return img
@@ -453,6 +456,7 @@ export default function PersonaPage() {
           diaryText: diary.body,
           captionText: String(diary.captionText || diaryCaption || 'ある日の記録'),
           keywords: diary.sceneKeywords || [],
+          gender: data.persona.gender,
         })
         setDiaryImage(img)
       } catch (e) {
@@ -527,6 +531,7 @@ export default function PersonaPage() {
         diaryText: generatedData.persona.diary.body,
         captionText: diaryCaption,
         keywords: generatedData.persona.diary.sceneKeywords || [],
+        gender: generatedData.persona.gender,
       })
       setDiaryImage(img)
     } catch (e) {
@@ -1609,10 +1614,6 @@ export default function PersonaPage() {
                                   'repeating-linear-gradient(to bottom, #ffffff 0px, #ffffff 26px, #eef2ff 27px, #ffffff 28px)',
                               }}
                             >
-                              {/* 左の赤い罫線 */}
-                              <div className="absolute inset-y-0 left-10 w-px bg-red-300/70" />
-                              <div className="absolute inset-y-0 left-12 w-px bg-red-200/60" />
-
                               {/* 余白 */}
                               <div className="px-6 py-6">
                                 <p

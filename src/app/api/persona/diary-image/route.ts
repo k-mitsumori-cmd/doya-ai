@@ -7,11 +7,14 @@ import { generateBanners } from '@/lib/nanobanner'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { diaryText, captionText, keywords, size } = body || {}
+    const { diaryText, captionText, keywords, size, gender } = body || {}
 
     const diary = String(diaryText || '').trim()
     const caption = String(captionText || '').trim()
     const kw = Array.isArray(keywords) ? keywords.map(String).filter(Boolean).slice(0, 12) : []
+    const genderRaw = String(gender || '').trim()
+    const genderHint =
+      /女/.test(genderRaw) ? 'Japanese adult woman' : /男/.test(genderRaw) ? 'Japanese adult man' : ''
 
     if (!diary) {
       return NextResponse.json({ error: '日記テキストが必要です' }, { status: 400 })
@@ -23,6 +26,10 @@ export async function POST(req: NextRequest) {
     const customImagePrompt = [
       'Create a premium editorial illustration/photo-like image for a Japanese persona diary.',
       'It must feel realistic and specific to the diary.',
+      '',
+      genderHint
+        ? `If a person appears in the scene, depict ONE ${genderHint} as the main subject (no gender mismatch).`
+        : 'If a person appears in the scene, depict ONE Japanese adult as the main subject.',
       '',
       '=== DIARY (JP) ===',
       diary,
