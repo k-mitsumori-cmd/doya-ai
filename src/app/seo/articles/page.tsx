@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -21,6 +21,7 @@ import {
   Wand2,
   LayoutDashboard,
   RefreshCcw,
+  Loader2,
   X,
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
@@ -103,8 +104,11 @@ export default function SeoDashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [regenBusyId, setRegenBusyId] = useState<string | null>(null)
+  const [openingId, setOpeningId] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
   const [query, setQuery] = useState('')
   const isLoadingRef = useRef(false)
+  const prefetchedRef = useRef<Set<string>>(new Set())
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   const [welcomePlan, setWelcomePlan] = useState<string>('')
 
@@ -209,6 +213,19 @@ export default function SeoDashboardPage() {
   function getResumeLink(a: SeoArticleRow): string {
     // 一覧からは常に「本文＋画像が見られる記事詳細」へ統一（迷いをなくす）
     return `/seo/articles/${a.id}`
+  }
+
+  function prefetchHref(href: string) {
+    const key = String(href || '').trim()
+    if (!key) return
+    if (prefetchedRef.current.has(key)) return
+    prefetchedRef.current.add(key)
+    try {
+      // ルートJSを先読み（体感の遅さを改善）
+      router.prefetch(key)
+    } catch {
+      // ignore
+    }
   }
 
   async function regenerate(articleId: string) {
@@ -399,9 +416,17 @@ export default function SeoDashboardPage() {
                   <div
                     role="button"
                     tabIndex={0}
-                    onClick={() => router.push(detailHref)}
+                    onMouseEnter={() => prefetchHref(detailHref)}
+                    onFocus={() => prefetchHref(detailHref)}
+                    onClick={() => {
+                      setOpeningId(a.id)
+                      startTransition(() => router.push(detailHref))
+                    }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') router.push(detailHref)
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        setOpeningId(a.id)
+                        startTransition(() => router.push(detailHref))
+                      }
                     }}
                     className="group bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-200 hover:translate-y-[-2px] transition-all cursor-pointer"
                     title="クリックで記事詳細（本文/画像）を開く"
@@ -485,13 +510,26 @@ export default function SeoDashboardPage() {
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              router.push(resumeHref)
+                              setOpeningId(a.id)
+                              startTransition(() => router.push(resumeHref))
                             }}
-                            className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+                            onMouseEnter={() => prefetchHref(resumeHref)}
+                            onFocus={() => prefetchHref(resumeHref)}
+                            className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-wait"
                             title="記事詳細（本文＋画像）を開く"
+                            disabled={openingId === a.id || isPending}
                           >
-                            {a.status === 'RUNNING' ? '途中を見る' : '記事を開く'}
-                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            {(openingId === a.id || isPending) ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                開いています…
+                              </>
+                            ) : (
+                              <>
+                                {a.status === 'RUNNING' ? '途中を見る' : '記事を開く'}
+                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                              </>
+                            )}
                           </button>
                         </div>
                       </div>
