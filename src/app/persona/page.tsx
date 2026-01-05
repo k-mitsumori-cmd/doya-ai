@@ -300,11 +300,14 @@ export default function PersonaPage() {
     setScheduleImages({})
 
     try {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 65_000)
       const res = await fetch('/api/persona/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, serviceName, additionalInfo, basePersona: opts?.basePersona, revision: opts?.revision }),
-      })
+        signal: controller.signal,
+      }).finally(() => window.clearTimeout(timeout))
 
       // NOTE: APIがHTMLや途中切れJSONを返した場合でも、ここで落とさずにメッセージ化する
       const raw = await res.text()
@@ -350,7 +353,13 @@ export default function PersonaPage() {
       nextHistory.unshift({ data: data.data, url, timestamp: Date.now() })
       safeWritePersonaHistory(nextHistory)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'エラーが発生しました')
+      const msg =
+        e instanceof DOMException && e.name === 'AbortError'
+          ? '生成がタイムアウトしました（通信が長時間応答しませんでした）。もう一度お試しください。'
+          : e instanceof Error
+          ? e.message
+          : 'エラーが発生しました'
+      setError(msg)
     } finally {
       setLoading(false)
       setTimeout(() => setShowFlash(false), 250)

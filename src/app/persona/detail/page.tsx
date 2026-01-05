@@ -273,11 +273,14 @@ export default function PersonaDetailPage() {
 
     setLoading(true)
     try {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 65_000)
       const res = await fetch('/api/persona/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brief, serviceName }),
-      })
+        signal: controller.signal,
+      }).finally(() => window.clearTimeout(timeout))
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '生成に失敗しました')
       // APIは { success, data: { persona }, meta } を返す
@@ -288,7 +291,13 @@ export default function PersonaDetailPage() {
       // Auto generate portrait
       void generatePortrait(persona)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '生成エラー')
+      const msg =
+        e instanceof DOMException && e.name === 'AbortError'
+          ? '生成がタイムアウトしました（通信が長時間応答しませんでした）。もう一度お試しください。'
+          : e instanceof Error
+          ? e.message
+          : '生成エラー'
+      setError(msg)
     } finally {
       setLoading(false)
     }
