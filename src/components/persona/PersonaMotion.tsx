@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { ChevronRight, ScanSearch } from 'lucide-react'
@@ -10,11 +9,29 @@ export type MotionMode = 'party' | 'minimal'
 export type OverlayMood = 'idle' | 'search' | 'think' | 'happy'
 
 export function usePersonaMotionMode(): MotionMode {
-  const sp = useSearchParams()
-  const q = (sp?.get('motion') || '').toLowerCase()
+  // NOTE:
+  // Next.jsのプリレンダーで useSearchParams() をページ直下で使うと
+  // "should be wrapped in a suspense boundary" エラーになり得るため、
+  // ここでは query はクライアントで window.location.search から読む。
   const env = (process.env.NEXT_PUBLIC_MOTION_MODE || '').toLowerCase()
-  const mode = (q || env) as MotionMode
-  return mode === 'minimal' ? 'minimal' : 'party' // default: party
+  const envDefault: MotionMode = env === 'minimal' ? 'minimal' : 'party' // default: party
+
+  const [mode, setMode] = useState<MotionMode>(envDefault)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const q = new URLSearchParams(window.location.search).get('motion')?.toLowerCase()
+      if (q === 'minimal') setMode('minimal')
+      else if (q === 'party') setMode('party')
+      else setMode(envDefault)
+    } catch {
+      setMode(envDefault)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return mode
 }
 
 export const pageMount = {
