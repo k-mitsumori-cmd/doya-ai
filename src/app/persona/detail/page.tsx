@@ -153,6 +153,7 @@ const LOADING_STAGES = [
 
 interface PersonaData {
   name: string
+  nameKana?: string
   age: number
   gender: string
   occupation: string
@@ -838,7 +839,10 @@ export default function PersonaDetailPage() {
               {/* Header row */}
               <div className="grid grid-cols-12 border-b border-slate-800">
                 <div className="col-span-9 p-4 border-r border-slate-800">
-                  <div className="text-sm font-black text-slate-900">ふりがな（仮）</div>
+                  <div className="text-sm font-black text-slate-900">ふりがな</div>
+                  <div className="mt-1 text-base font-black text-slate-700 tracking-wide">
+                    {generatedData.persona.nameKana || '—'}
+                  </div>
                   <div className="mt-1 text-2xl font-black text-slate-900 tracking-wide">{generatedData.persona.name}</div>
                   <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
                     <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">

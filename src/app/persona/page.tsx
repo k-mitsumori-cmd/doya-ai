@@ -131,6 +131,7 @@ function MetaMark({ className = '' }: { className?: string }) {
 
 interface PersonaData {
   name: string
+  nameKana?: string
   age: number
   gender: string
   occupation: string
@@ -587,7 +588,7 @@ export default function PersonaPage() {
   <title>ペルソナ履歴書 - ${escape(generatedData.persona.name)}</title>
   <style>
     body{font-family: ui-sans-serif, system-ui, -apple-system, 'Noto Sans JP', sans-serif; background:#f8fafc; padding:24px;}
-    .paper{max-width:980px; margin:0 auto; background:#fff; border:2px solid #0f172a;}
+        .paper{max-width:980px; margin:0 auto; background:#fff; border:2px solid #0f172a;}
     .grid{display:grid; grid-template-columns:3fr 1fr;}
     .cell{padding:16px; border-bottom:1px solid #0f172a;}
     .right{border-left:1px solid #0f172a;}
@@ -608,9 +609,10 @@ export default function PersonaPage() {
 <body>
   <div class=\"paper\">
     <div class=\"grid\">
-      <div class=\"cell\">
-        <div class=\"label\">ふりがな（仮）</div>
-        <div class=\"name\">${escape(generatedData.persona.name)}</div>
+          <div class=\"cell\">
+            <div class=\"label\">ふりがな</div>
+            <div class=\"value\">${escape(generatedData.persona.nameKana || '')}</div>
+            <div class=\"name\">${escape(generatedData.persona.name)}</div>
         <div style=\"margin-top:10px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;\">
           <div style=\"border:1px solid #e2e8f0; background:#f8fafc; padding:10px;\"><div class=\"label\">年齢</div><div class=\"value\">${escape(String(generatedData.persona.age))}歳</div></div>
           <div style=\"border:1px solid #e2e8f0; background:#f8fafc; padding:10px;\"><div class=\"label\">性別</div><div class=\"value\">${escape(generatedData.persona.gender)}</div></div>
@@ -706,7 +708,8 @@ export default function PersonaPage() {
   <div class="paper">
     <div class="grid">
       <div class="cell">
-        <div class="label">ふりがな（仮）</div>
+        <div class="label">ふりがな</div>
+        <div class="value">${escape(generatedData.persona.nameKana || '')}</div>
         <div class="name">${escape(generatedData.persona.name)}</div>
         <div style="margin-top:10px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
           <div style="border:1px solid #e2e8f0; background:#f8fafc; padding:10px;"><div class="label">年齢</div><div class="value">${escape(String(generatedData.persona.age))}歳</div></div>
@@ -1130,7 +1133,10 @@ export default function PersonaPage() {
                   {/* Header row */}
                   <div className="grid grid-cols-12 border-b border-slate-800">
                     <div className="col-span-9 p-4 border-r border-slate-800">
-                      <div className="text-sm font-black text-slate-900">ふりがな（仮）</div>
+            <div className="text-sm font-black text-slate-900">ふりがな</div>
+            <div className="mt-1 text-base font-black text-slate-700 tracking-wide">
+              {generatedData.persona.nameKana || '—'}
+            </div>
                       <div className="mt-1 text-2xl font-black text-slate-900 tracking-wide">{generatedData.persona.name}</div>
                       <div className="mt-2 grid grid-cols-3 gap-2 text-sm">
                         <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
