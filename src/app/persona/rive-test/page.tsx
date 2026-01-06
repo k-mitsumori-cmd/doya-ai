@@ -18,6 +18,8 @@ type View = 'form' | 'result'
 
 type Flavor = 'minimal' | 'party'
 
+type Mood = 'idle' | 'search' | 'think' | 'happy'
+
 // ① 初期表示（マウント時）
 const pageVariants = {
   initial: { opacity: 0 },
@@ -134,11 +136,13 @@ function LoadingOverlay({
   flavor,
   progress,
   stage,
+  mood,
 }: {
   show: boolean
   flavor: Flavor
   progress: number
   stage: string
+  mood: Mood
 }) {
   return (
     <AnimatePresence>
@@ -168,6 +172,31 @@ function LoadingOverlay({
             <div className="px-6 py-5 border-b border-white/10">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
+                  {/* Mascot (inspired placeholder). Replace /public/persona/rive-test/mascot.svg with the provided sprite if needed. */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, rotate: -6 }}
+                    animate={{
+                      opacity: 1,
+                      scale: 1,
+                      rotate: mood === 'happy' ? [0, 8, -8, 0] : mood === 'search' ? [0, -2, 2, 0] : 0,
+                      y: mood === 'search' ? [0, -4, 0] : mood === 'think' ? [0, -2, 0] : 0,
+                    }}
+                    transition={{
+                      duration: mood === 'happy' ? 0.6 : 0.9,
+                      repeat: mood === 'happy' || mood === 'search' || mood === 'think' ? Infinity : 0,
+                      repeatType: 'mirror',
+                      ease: 'easeInOut',
+                    }}
+                    className="w-12 h-12 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center overflow-hidden"
+                    title="Mascot"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/persona/rive-test/mascot.svg"
+                      alt="mascot"
+                      className="w-11 h-11 object-contain"
+                    />
+                  </motion.div>
                   <div className="w-11 h-11 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center">
                     <ScanSearch className="w-6 h-6 text-white" />
                   </div>
@@ -178,6 +207,25 @@ function LoadingOverlay({
                 </div>
                 <div className="w-8 h-8 rounded-full border-2 border-white/25 border-t-white animate-spin" />
               </div>
+
+              {/* Flow indicator (warm + “flow”) */}
+              <div className="mt-4 flex items-center gap-2">
+                {['解析', '設計', '履歴書', '日記'].map((t, i) => {
+                  const active = progress >= [10, 35, 60, 85][i]
+                  return (
+                    <div key={t} className="flex items-center gap-2">
+                      <div
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          active ? 'bg-white' : 'bg-white/25'
+                        }`}
+                      />
+                      <div className={`text-[11px] font-black ${active ? 'text-white' : 'text-white/50'}`}>{t}</div>
+                      {i < 3 && <div className="w-6 h-px bg-white/15" />}
+                    </div>
+                  )
+                })}
+              </div>
+
               <div className="mt-4 h-2.5 rounded-full bg-white/10 overflow-hidden border border-white/10">
                 <motion.div
                   initial={{ width: 0 }}
@@ -396,6 +444,12 @@ export default function PersonaRiveTestPage() {
   const [busy, setBusy] = useState(false)
   const [flavor, setFlavor] = useState<Flavor>('party')
   const [progress, setProgress] = useState(18)
+  const mood = useMemo<Mood>(() => {
+    if (!busy) return 'idle'
+    if (progress < 35) return 'search'
+    if (progress < 70) return 'think'
+    return 'happy'
+  }, [busy, progress])
   const stage = useMemo(() => {
     if (progress < 35) return '候補を探しています…'
     if (progress < 65) return '履歴書を生成しています…'
@@ -464,7 +518,7 @@ export default function PersonaRiveTestPage() {
         </div>
       </div>
 
-      <LoadingOverlay show={busy} flavor={flavor} progress={progress} stage={stage} />
+      <LoadingOverlay show={busy} flavor={flavor} progress={progress} stage={stage} mood={mood} />
     </motion.main>
   )
 }
