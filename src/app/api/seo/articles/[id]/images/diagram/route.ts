@@ -24,16 +24,24 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     await ensureSeoStorage()
 
     const prompt = [
-      'Create a clean monochrome-friendly diagram illustration for a Japanese business article.',
+      'Create a professional, business-like diagram illustration for a Japanese business article.',
       'CRITICAL: NO TEXT at all (no Japanese, no English, no numbers).',
-      'Use simple shapes, icons, arrows, and layout to represent the concept.',
-      'Style: flat vector-like, minimal, high contrast, plenty of whitespace.',
+      '',
+      'Design Requirements:',
+      '- Style: Professional, business-like, sophisticated, and refined',
+      '- Visual approach: Simple, clear, and easy to understand',
+      '- Color scheme: Use muted, professional colors (blues, grays, subtle accents). Avoid bright, pop colors',
+      '- Layout: Clean, organized, with clear visual hierarchy',
+      '- Elements: Use geometric shapes, professional icons, arrows, and connectors',
+      '- Avoid: Playful, cartoon-like, or overly decorative elements',
+      '- Whitespace: Generous whitespace for clarity and professionalism',
+      '- Contrast: High contrast for readability, but maintain a professional tone',
       '',
       `Article title: ${article.title}`,
       `Diagram title (concept): ${body.title}`,
       `What to express: ${body.description}`,
       '',
-      'Output: one square (1:1) diagram image.',
+      'Output: one square (1:1) diagram image that looks like it belongs in a professional business presentation or corporate report.',
     ].join('\n')
 
     const img = await geminiGenerateImagePng({
