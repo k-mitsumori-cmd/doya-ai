@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Trash2, ExternalLink, Clock, Target } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { ctaMotion, pageMount, stagger, staggerItem, usePersonaMotionMode } from '@/components/persona/PersonaMotion'
 
 interface HistoryItem {
   data: {
@@ -19,6 +21,7 @@ interface HistoryItem {
 }
 
 export default function PersonaHistoryPage() {
+  const motionMode = usePersonaMotionMode()
   const [history, setHistory] = useState<HistoryItem[]>([])
 
   useEffect(() => {
@@ -59,7 +62,7 @@ export default function PersonaHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
+    <motion.div variants={pageMount} initial="initial" animate="animate" className="min-h-screen bg-slate-50 p-4 lg:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -70,12 +73,13 @@ export default function PersonaHistoryPage() {
             <p className="text-slate-400 text-sm mt-1">過去に生成したペルソナの一覧</p>
           </div>
           {history.length > 0 && (
-            <button
+            <motion.button
               onClick={clearAll}
               className="px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
+              {...ctaMotion(motionMode)}
             >
               すべて削除
-            </button>
+            </motion.button>
           )}
         </div>
 
@@ -86,19 +90,22 @@ export default function PersonaHistoryPage() {
             </div>
             <h2 className="text-xl font-bold text-slate-900 mb-2">履歴がありません</h2>
             <p className="text-slate-600 mb-6 text-sm">ペルソナを生成すると、ここに履歴が表示されます</p>
-            <Link
-              href="/persona"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg"
-            >
-              ペルソナを生成する
-            </Link>
+            <motion.div className="inline-flex" {...ctaMotion(motionMode)}>
+              <Link
+                href="/persona"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg"
+              >
+                ペルソナを生成する
+              </Link>
+            </motion.div>
           </div>
         ) : (
-          <div className="space-y-3">
+          <motion.div variants={stagger} initial="initial" animate="animate" className="space-y-3">
             {history.map((item, index) => (
-              <div
+              <motion.div
                 key={index}
                 className="bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-300 transition-colors shadow-sm"
+                variants={staggerItem}
               >
                 <div className="flex items-center gap-4">
                   {/* Portrait */}
@@ -137,21 +144,22 @@ export default function PersonaHistoryPage() {
                       >
                         <ExternalLink className="w-5 h-5" />
                       </Link>
-                      <button
+                      <motion.button
                         onClick={() => deleteItem(index)}
                         className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
                         title="削除"
+                        {...ctaMotion(motionMode)}
                       >
                         <Trash2 className="w-5 h-5" />
-                      </button>
+                      </motion.button>
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
