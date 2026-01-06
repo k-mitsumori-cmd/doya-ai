@@ -161,6 +161,7 @@ function PersonaSidebarImpl({
     const free = planLabel === 'FREE'
     const pro = planLabel === 'PRO'
     const ent = planLabel === 'ENTERPRISE'
+    const planDisplay = guest ? 'ゲスト' : free ? '無料' : pro ? 'PRO' : ent ? 'エンタープライズ' : planLabel
 
     return (
       <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
@@ -172,7 +173,7 @@ function PersonaSidebarImpl({
             <p className="text-xs font-black text-white">プラン案内</p>
           </div>
           <p className="text-[11px] text-white font-bold leading-relaxed mb-1">
-            現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
+            現在：{planDisplay}
           </p>
           <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-80">
             {guest
@@ -205,7 +206,7 @@ function PersonaSidebarImpl({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[11px] text-white font-bold leading-snug truncate">
-              {planLabel === 'GUEST' ? 'ゲスト' : planLabel}
+              {planDisplay}
             </p>
             <p className="text-[10px] text-purple-100/90 font-bold leading-snug truncate">
               {guest
