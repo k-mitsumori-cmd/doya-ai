@@ -34,7 +34,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { SEO_PRICING } from '@/lib/pricing'
 
 // 文字数プリセット（軽量な記事から試せるよう 3,000字を追加）
-const TARGETS = [3000, 5000, 8000, 10000, 20000, 30000, 40000, 50000, 60000]
+const TARGETS = [3000, 5000, 8000, 10000, 20000, 30000, 40000, 50000]
 const TONES = ['丁寧', 'フランク', 'ビジネス', '専門的'] as const
 const STORAGE_KEY = 'doya_seo_new_draft_v2'
 
