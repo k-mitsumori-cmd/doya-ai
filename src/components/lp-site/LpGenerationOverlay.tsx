@@ -186,7 +186,6 @@ export function LpGenerationOverlay({
                     </p>
                   </div>
                 </div>
-                </div>
 
                 {/* ステップインジケーター */}
                 <div className="mt-4 flex items-center gap-2 flex-wrap">
@@ -240,6 +239,7 @@ export function LpGenerationOverlay({
                   <span className="text-teal-600">{Math.round(p)}%</span>
                 </div>
               </div>
+            </div>
 
               {/* コンテンツエリア */}
               <div className="p-6">
