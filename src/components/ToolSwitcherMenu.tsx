@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target, Globe } from 'lucide-react'
+import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target } from 'lucide-react'
 
-type ToolId = 'persona' | 'banner' | 'writing' | 'lp-site'
+type ToolId = 'persona' | 'banner' | 'writing'
 
 type ToolSwitcherMenuProps = {
   currentTool: ToolId
@@ -46,14 +46,6 @@ const TOOLS: Array<{
     description: 'SEO記事生成',
     icon: FileText,
     iconBgClassName: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-  },
-  {
-    id: 'lp-site',
-    href: '/lp-site',
-    title: 'ドヤサイト',
-    description: 'LP自動生成',
-    icon: Globe,
-    iconBgClassName: 'bg-gradient-to-br from-teal-500 to-cyan-500',
   },
 ]
 
@@ -106,7 +98,6 @@ export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, classNam
                 {TOOLS.map((tool) => {
                   const Icon = tool.icon
                   const isCurrent = tool.id === currentTool
-                  const isBeta = tool.id === 'lp-site'
                   return isCurrent ? (
                     <div
                       key={tool.id}
@@ -118,11 +109,6 @@ export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, classNam
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-black text-slate-900">{tool.title}</p>
-                          {isBeta && (
-                            <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-md">
-                              ベータ版
-                            </span>
-                          )}
                         </div>
                         <p className="text-[10px] font-bold text-slate-600">
                           {tool.description}（現在使用中）
@@ -142,11 +128,6 @@ export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, classNam
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-black text-gray-900 group-hover:text-slate-900 transition-colors">{tool.title}</p>
-                          {isBeta && (
-                            <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-md">
-                              ベータ版
-                            </span>
-                          )}
                         </div>
                         <p className="text-[10px] font-bold text-gray-500">{tool.description}</p>
                       </div>

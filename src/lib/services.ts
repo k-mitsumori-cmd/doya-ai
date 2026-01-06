@@ -296,12 +296,11 @@ export const SERVICES: Service[] = [
         price: 4980,
       },
     },
-    status: 'beta',
+    status: 'coming_soon',
     category: 'web',
     order: 4,
     requiresAuth: false,
-    isNew: true,
-    badge: 'ベータ版',
+    badge: '製作中',
   },
   
   // ----------------------------------------
