@@ -203,6 +203,7 @@ export default function PersonaDetailPage() {
   const isFreeHourActive = isLoggedIn && isWithinFreeHour(firstLoginAt)
   const personaTier = isLoggedIn ? (unifiedPlan === 'ENTERPRISE' ? 'ENTERPRISE' : unifiedPlan === 'PRO' ? 'PRO' : 'FREE') : 'GUEST'
   const canGenerateDiaryScheduleImages = isFreeHourActive || personaTier === 'PRO' || personaTier === 'ENTERPRISE'
+  const canDownloadPdf = personaTier === 'PRO' || personaTier === 'ENTERPRISE'
   // サンプル選択
   const [selectedSample, setSelectedSample] = useState('')
 
@@ -547,13 +548,230 @@ export default function PersonaDetailPage() {
     }
   }
 
-  const downloadJson = () => {
+  const downloadPersonaJson = () => {
     if (!generatedData) return
-    const blob = new Blob([JSON.stringify(generatedData, null, 2)], { type: 'application/json;charset=utf-8' })
+    const payload = {
+      generatedAt: new Date().toISOString(),
+      serviceName,
+      persona: generatedData.persona,
+      portraitImage,
+      diaryImage,
+      scheduleImages,
+    }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
     a.download = `persona-${generatedData.persona.name}-${Date.now()}.json`
     a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  const downloadPersonaHtml = () => {
+    if (!generatedData) return
+    const escape = (s: string) =>
+      String(s || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
+
+    const schedule = Array.isArray(generatedData.persona.dailySchedule) ? generatedData.persona.dailySchedule : []
+    const diary = generatedData.persona.diary
+    const html = `<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ペルソナ履歴書 - ${escape(generatedData.persona.name)}</title>
+  <style>
+    body{font-family: ui-sans-serif, system-ui, -apple-system, 'Noto Sans JP', sans-serif; background:#f8fafc; padding:24px;}
+        .paper{max-width:980px; margin:0 auto; background:#fff; border:2px solid #0f172a;}
+    .grid{display:grid; grid-template-columns:3fr 1fr;}
+    .cell{padding:16px; border-bottom:1px solid #0f172a;}
+    .right{border-left:1px solid #0f172a;}
+    .photo{aspect-ratio:3/4; border:2px solid #0f172a; background:#fff; overflow:hidden;}
+    .label{font-size:11px; font-weight:800; color:#475569;}
+    .value{font-size:14px; font-weight:700; color:#0f172a;}
+    .name{font-size:28px; font-weight:900; letter-spacing:0.02em;}
+    .row{display:grid; grid-template-columns:120px 1fr; border-top:1px solid #e2e8f0;}
+    .row > div{padding:10px 12px;}
+    .row .k{background:#f8fafc; font-weight:800; color:#334155; border-right:1px solid #e2e8f0;}
+    .diary{border-top:1px solid #0f172a; padding:16px;}
+    .img{max-width:100%; border:1px solid #e2e8f0; border-radius:10px;}
+    table{width:100%; border-collapse:collapse; margin-top:8px;}
+    th,td{border:1px solid #e2e8f0; padding:8px; font-size:12px;}
+    th{background:#f8fafc; text-align:left;}
+  </style>
+</head>
+<body>
+  <div class="paper">
+    <div class="grid">
+          <div class="cell">
+            <div class="label">ふりがな</div>
+            <div class="value">${escape(generatedData.persona.nameKana || '')}</div>
+            <div class="name">${escape(generatedData.persona.name)}</div>
+        <div style="margin-top:10px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+          <div style="border:1px solid #e2e8f0; background:#f8fafc; padding:10px;"><div class="label">年齢</div><div class="value">${escape(String(generatedData.persona.age))}歳</div></div>
+          <div style="border:1px solid #e2e8f0; background:#f8fafc; padding:10px;"><div class="label">性別</div><div class="value">${escape(generatedData.persona.gender)}</div></div>
+          <div style="border:1px solid #e2e8f0; background:#f8fafc; padding:10px;"><div class="label">職業</div><div class="value">${escape(generatedData.persona.occupation)}</div></div>
+        </div>
+        <div style="margin-top:10px; border:1px solid #e2e8f0; padding:10px;"><div class="label">本人の一言</div><div class="value">${escape(generatedData.persona.quote || '')}</div></div>
+      </div>
+      <div class="cell right">
+        <div class="label">写真（AI生成）</div>
+        <div class="photo">${portraitImage ? `<img src="${portraitImage}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : ''}</div>
+      </div>
+    </div>
+
+    <div class="row"><div class="k">現住所</div><div>${escape(generatedData.persona.location)}</div></div>
+    <div class="row"><div class="k">家族構成</div><div>${escape(generatedData.persona.familyStructure)}</div></div>
+    <div class="row"><div class="k">年収</div><div>${escape(generatedData.persona.income)}</div></div>
+    <div class="row"><div class="k">生活</div><div>${escape(generatedData.persona.lifestyle)}</div></div>
+    <div class="row"><div class="k">一日</div><div>${escape(generatedData.persona.dayInLife)}</div></div>
+
+    <div class="diary">
+      <h2 style="margin:0 0 8px; font-size:16px; font-weight:900;">特徴：日々の生活（1日のスケジュール）</h2>
+      <table>
+        <thead><tr><th style="width:80px;">時間</th><th>内容</th><th style="width:120px;">気分</th></tr></thead>
+        <tbody>
+          ${schedule.map((s) => `<tr><td>${escape(s.time)}</td><td><b>${escape(s.title)}</b><br/>${escape(s.detail)}</td><td>${escape(s.mood || '')}</td></tr>`).join('')}
+        </tbody>
+      </table>
+
+      ${diary ? `<h2 style="margin:16px 0 8px; font-size:16px; font-weight:900;">日記：${escape(diary.title)}</h2>
+      <p style="white-space:pre-wrap; font-size:13px; color:#0f172a; line-height:1.8;">${escape(diary.body)}</p>` : ''}
+
+      ${diaryImage ? `<h3 style="margin:16px 0 8px; font-size:14px; font-weight:900;">日記イメージ</h3>
+      <img class="img" src="${diaryImage}" />` : ''}
+    </div>
+  </div>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `persona-${generatedData.persona.name}-${Date.now()}.html`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  const downloadPersonaPdf = () => {
+    if (!generatedData) return
+    const canDownloadPdf = personaTier === 'PRO' || personaTier === 'ENTERPRISE'
+    if (!canDownloadPdf) {
+      setError('PDFダウンロードはPRO/ENTERPRISEのみ利用できます')
+      return
+    }
+    // 依存を増やさずPDF対応：印刷（A4）→「PDFとして保存」
+    const escape = (s: string) =>
+      String(s || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
+
+    const schedule = Array.isArray(generatedData.persona.dailySchedule) ? generatedData.persona.dailySchedule : []
+    const scheduleImageMap = scheduleImages || {}
+    const diary = generatedData.persona.diary
+
+    const html = `<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ペルソナ履歴書（PDF） - ${escape(generatedData.persona.name)}</title>
+  <style>
+    @page { size: A4; margin: 12mm; }
+    body{font-family: ui-sans-serif, system-ui, -apple-system, 'Noto Sans JP', sans-serif; background:#fff; }
+    .paper{max-width:980px; margin:0 auto; background:#fff; border:2px solid #0f172a;}
+    .grid{display:grid; grid-template-columns:3fr 1fr;}
+    .cell{padding:16px; border-bottom:1px solid #0f172a;}
+    .right{border-left:1px solid #0f172a;}
+    .photo{aspect-ratio:3/4; border:2px solid #0f172a; background:#fff; overflow:hidden;}
+    .label{font-size:11px; font-weight:800; color:#475569;}
+    .value{font-size:14px; font-weight:700; color:#0f172a;}
+    .name{font-size:28px; font-weight:900; letter-spacing:0.02em;}
+    .row{display:grid; grid-template-columns:120px 1fr; border-top:1px solid #e2e8f0;}
+    .row > div{padding:10px 12px;}
+    .row .k{background:#f8fafc; font-weight:800; color:#334155; border-right:1px solid #e2e8f0;}
+    .diary{border-top:1px solid #0f172a; padding:16px;}
+    .img{max-width:100%; border:1px solid #e2e8f0; border-radius:10px;}
+    table{width:100%; border-collapse:collapse; margin-top:8px;}
+    th,td{border:1px solid #e2e8f0; padding:8px; font-size:12px; vertical-align:top;}
+    th{background:#f8fafc; text-align:left;}
+    .muted{color:#64748b; font-weight:700; font-size:11px;}
+    .sceneImg{width:210px; max-width:210px; height:auto; border:1px solid #e2e8f0; border-radius:10px;}
+    tr{break-inside:avoid; page-break-inside:avoid;}
+  </style>
+</head>
+<body>
+  <div class="paper">
+    <div class="grid">
+      <div class="cell">
+        <div class="label">ふりがな</div>
+        <div class="value">${escape(generatedData.persona.nameKana || '')}</div>
+        <div class="name">${escape(generatedData.persona.name)}</div>
+        <div style="margin-top:10px; display:grid; grid-template-columns:repeat(3,1fr); gap:8px;">
+          <div style="border:1px solid #e2e8f0; background:#f8fafc; padding:10px;"><div class="label">年齢</div><div class="value">${escape(String(generatedData.persona.age))}歳</div></div>
+          <div style="border:1px solid #e2e8f0; background:#f8fafc; padding:10px;"><div class="label">性別</div><div class="value">${escape(generatedData.persona.gender)}</div></div>
+          <div style="border:1px solid #e2e8f0; background:#f8fafc; padding:10px;"><div class="label">職業</div><div class="value">${escape(generatedData.persona.occupation)}</div></div>
+        </div>
+        <div style="margin-top:10px; border:1px solid #e2e8f0; padding:10px;"><div class="label">本人の一言</div><div class="value">${escape(generatedData.persona.quote || '')}</div></div>
+      </div>
+      <div class="cell right">
+        <div class="label">写真（AI生成）</div>
+        <div class="photo">${portraitImage ? `<img src="${portraitImage}" style="width:100%;height:100%;object-fit:cover;object-position:center;"/>` : ''}</div>
+      </div>
+    </div>
+    <div class="row"><div class="k">現住所</div><div>${escape(generatedData.persona.location)}</div></div>
+    <div class="row"><div class="k">家族構成</div><div>${escape(generatedData.persona.familyStructure)}</div></div>
+    <div class="row"><div class="k">年収</div><div>${escape(generatedData.persona.income)}</div></div>
+    <div class="row"><div class="k">生活</div><div>${escape(generatedData.persona.lifestyle)}</div></div>
+    <div class="row"><div class="k">一日</div><div>${escape(generatedData.persona.dayInLife)}</div></div>
+    <div class="diary">
+      <h2 style="margin:0 0 8px; font-size:16px; font-weight:900;">特徴：こういったスケジュールで1日を送っています</h2>
+      <div class="muted">※画像は「生成済みのシーンのみ」PDFに埋め込みます（未生成の行は空欄です）</div>
+      <table>
+        <thead><tr><th style="width:80px;">時間</th><th>内容</th><th style="width:120px;">気分</th><th style="width:230px;">シーン画像</th></tr></thead>
+        <tbody>
+          ${schedule
+            .map((s, idx) => {
+              const img = (scheduleImageMap as any)[idx]
+              const imgHtml = img ? `<img class="sceneImg" src="${img}" />` : ''
+              return `<tr><td>${escape(s.time)}</td><td><b>${escape(s.title)}</b><br/>${escape(s.detail)}</td><td>${escape(
+                s.mood || ''
+              )}</td><td>${imgHtml}</td></tr>`
+            })
+            .join('')}
+        </tbody>
+      </table>
+      ${diary ? `<h2 style="margin:16px 0 8px; font-size:16px; font-weight:900;">日記：${escape(diary.title)}</h2>
+      <p style="white-space:pre-wrap; font-size:13px; color:#0f172a; line-height:1.8;">${escape(diary.body)}</p>` : ''}
+      ${diaryImage ? `<h3 style="margin:16px 0 8px; font-size:14px; font-weight:900;">日記イメージ</h3>
+      <img class="img" src="${diaryImage}" />` : ''}
+    </div>
+  </div>
+  <script>
+    window.onload = function() {
+      try { window.focus(); } catch(e) {}
+      try { window.print(); } catch(e) {}
+    };
+  </script>
+</body>
+</html>`
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const urlObj = URL.createObjectURL(blob)
+    const w = window.open(urlObj, '_blank', 'noopener,noreferrer')
+    if (!w) {
+      setError('ポップアップがブロックされました。ブラウザのポップアップ許可後に再度お試しください。')
+      return
+    }
+    // URLは少し遅らせて解放
+    setTimeout(() => URL.revokeObjectURL(urlObj), 30_000)
   }
 
   return (
@@ -825,12 +1043,36 @@ export default function PersonaDetailPage() {
               <div className="flex items-center gap-2">
                 <div className="text-slate-500 text-xs font-bold">作成日：{resumeIssueDate}</div>
                 <button
-                  onClick={downloadJson}
+                  onClick={downloadPersonaJson}
                   className="h-8 px-3 rounded-lg bg-slate-900 text-white text-xs font-black hover:bg-slate-800"
                   title="JSONでダウンロード"
                 >
                   JSON
                 </button>
+                <button
+                  onClick={downloadPersonaHtml}
+                  className="h-8 px-3 rounded-lg bg-purple-600 text-white text-xs font-black hover:bg-purple-500"
+                  title="HTMLでダウンロード（画像も埋め込み）"
+                >
+                  HTML
+                </button>
+                {canDownloadPdf ? (
+                  <button
+                    onClick={downloadPersonaPdf}
+                    className="h-8 px-3 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black hover:bg-slate-50"
+                    title="印刷用ページを開き、PDFとして保存できます"
+                  >
+                    PDF
+                  </button>
+                ) : (
+                  <button
+                    disabled
+                    className="h-8 px-3 rounded-lg bg-slate-100 border border-slate-200 text-slate-400 text-xs font-black cursor-not-allowed"
+                    title="PDFダウンロードはPRO/ENTERPRISEのみ利用できます"
+                  >
+                    PDF（PRO）
+                  </button>
+                )}
               </div>
             </div>
 
