@@ -1,6 +1,6 @@
 'use client'
 
-import React, { memo, useState } from 'react'
+import React, { memo, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -57,7 +57,16 @@ function PersonaSidebarImpl({
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const planLabel = isLoggedIn ? 'FREE' : 'GUEST'
+  // プラン表示（Complete Packの統一プランを優先）
+  const planLabel = useMemo(() => {
+    const personaPlan = String((session?.user as any)?.personaPlan || '').toUpperCase()
+    const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
+    const p = personaPlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
+    if (p === 'ENTERPRISE') return 'ENTERPRISE'
+    if (p === 'PRO') return 'PRO'
+    if (p === 'FREE') return 'FREE'
+    return isLoggedIn ? 'FREE' : 'GUEST'
+  }, [session, isLoggedIn])
 
   const isCollapsed = forceExpanded ? false : (controlledIsCollapsed ?? internalIsCollapsed)
   const showLabel = isMobile || !isCollapsed

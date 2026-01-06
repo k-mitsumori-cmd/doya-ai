@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { constructWebhookEvent, getPlanIdFromStripePriceId, getServiceIdFromPlanId, stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
+import { normalizeUnifiedPlan, type UnifiedPlan, syncUserPlanAcrossServices, maxPlan } from '@/lib/planSync'
 
 // ========================================
 // Stripe Webhook Handler
@@ -116,6 +117,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
+const ACTIVE_LIKE = new Set(['active', 'trialing', 'past_due', 'unpaid'])
+
 // ========================================
 // イベントハンドラー
 // ========================================
@@ -187,38 +190,15 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     return
   }
 
-  // プランをフリーに戻す
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      plan: 'FREE',
-      stripeSubscriptionId: null,
-      stripePriceId: null,
-      stripeCurrentPeriodEnd: null,
-    },
+  // 削除イベントは「現時点の有効サブスク」から統一プランを再計算して反映する
+  const resolved = await resolveUnifiedPlanForCustomer(customerId)
+  await syncUserPlanAcrossServices({
+    userId: user.id,
+    plan: resolved.plan,
+    stripeSubscriptionId: resolved.best?.subscriptionId || null,
+    stripePriceId: resolved.best?.priceId || null,
+    stripeCurrentPeriodEnd: resolved.best?.currentPeriodEnd || null,
   })
-
-  // サービス別プランもフリーに戻す（どのサービスの解約かは価格ID/metadataから推定）
-  try {
-    const priceId = subscription.items.data[0]?.price.id
-    const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
-    const planIdFromMeta = (subscription.metadata?.planId as any) || null
-    const planId = (planIdFromPrice || planIdFromMeta) as any
-    if (planId && typeof planId === 'string') {
-      const serviceId = getServiceIdFromPlanId(planId)
-      if (serviceId !== 'bundle') {
-        await prisma.userServiceSubscription.update({
-          where: { userId_serviceId: { userId: user.id, serviceId } },
-          data: {
-            plan: 'FREE',
-            stripeSubscriptionId: null,
-            stripePriceId: null,
-            stripeCurrentPeriodEnd: null,
-          },
-        }).catch(() => {})
-      }
-    }
-  } catch {}
 
   console.log(`Subscription canceled for user: ${user.id}`)
 }
@@ -242,61 +222,96 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
   const planIdFromMeta = (subscription.metadata?.planId as any) || null
   const planId = (planIdFromPrice || planIdFromMeta) as any
 
-  // まずはサービス別に確実に反映
+  // サービス別は「参考として」更新（ただし、権限は後段の Complete Pack 同期が最終決定）
   if (planId && typeof planId === 'string' && planId.includes('-')) {
-    const serviceId = getServiceIdFromPlanId(planId)
+    const serviceId = getServiceIdFromPlanId(planId as any)
     if (serviceId !== 'bundle') {
-      const isBannerPaid =
-        serviceId === 'banner' &&
-        (planId === 'banner-basic' || planId === 'banner-pro' || planId === 'banner-enterprise' || planId === 'banner-starter' || planId === 'banner-business')
-      const servicePlan =
-        serviceId === 'seo' && planId === 'seo-enterprise'
-          ? 'ENTERPRISE'
-          : serviceId === 'banner' && planId === 'banner-enterprise'
-            ? 'ENTERPRISE'
-            : (planId.endsWith('-pro') || isBannerPaid)
-              ? 'PRO'
-              : 'FREE'
+      const inferredServicePlan = planFromPlanId(String(planId))
       await prisma.userServiceSubscription.upsert({
         where: { userId_serviceId: { userId, serviceId } },
         create: {
           userId,
           serviceId,
-          plan: servicePlan,
+          plan: inferredServicePlan,
           stripeSubscriptionId: subscription.id,
-          stripePriceId: priceId,
+          stripePriceId: priceId || null,
           stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
           dailyUsage: 0,
           monthlyUsage: 0,
           lastUsageReset: new Date(),
         },
         update: {
-          plan: servicePlan,
+          plan: inferredServicePlan,
           stripeSubscriptionId: subscription.id,
-          stripePriceId: priceId,
+          stripePriceId: priceId || null,
           stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
         },
       })
     }
   }
 
-  // ポータル全体のplanも更新（互換用）
-  const userPlan =
-    planId === 'bundle' ? 'BUNDLE'
-      : planId === 'seo-enterprise' ? 'ENTERPRISE'
-        : planId === 'banner-enterprise' ? 'ENTERPRISE'
-          : (planId === 'banner-basic' || (planId && String(planId).endsWith('-pro'))) ? 'PRO'
-            : 'FREE'
+  // Complete Pack: 顧客に紐づく有効サブスクから「統一プラン」を算出して、全サービスへ同期
+  const customerId = subscription.customer as string
+  const resolved = await resolveUnifiedPlanForCustomer(customerId).catch(() => null)
+  const unified = resolved?.plan || planFromPlanId(String(planId || '')) || normalizeUnifiedPlan('FREE')
+  const best = resolved?.best || {
+    subscriptionId: subscription.id,
+    priceId: priceId || null,
+    currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+  }
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      plan: userPlan,
-      stripeSubscriptionId: subscription.id,
-      stripePriceId: priceId,
-      stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-    },
+  await syncUserPlanAcrossServices({
+    userId,
+    plan: unified,
+    stripeSubscriptionId: best.subscriptionId,
+    stripePriceId: best.priceId,
+    stripeCurrentPeriodEnd: best.currentPeriodEnd,
   })
 
-  console.log(`Updated subscription for user ${userId}: ${userPlan} (${subscription.status})`)
+  console.log(`Updated subscription for user ${userId}: ${unified} (${subscription.status})`)
+}
+
+function planFromPlanId(planId: string): UnifiedPlan {
+  const p = String(planId || '').toLowerCase()
+  if (!p) return 'FREE'
+  if (p.includes('enterprise')) return 'ENTERPRISE'
+  if (p.includes('-pro') || p.includes('basic') || p.includes('starter') || p.includes('business') || p === 'bundle') return 'PRO'
+  return 'FREE'
+}
+
+async function resolveUnifiedPlanForCustomer(customerId: string): Promise<{
+  plan: UnifiedPlan
+  best: null | { subscriptionId: string; priceId: string | null; currentPeriodEnd: Date | null }
+}> {
+  if (!customerId) return { plan: 'FREE', best: null }
+  const subs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 })
+  const activeSubs = subs.data.filter((s) => ACTIVE_LIKE.has(String(s.status)))
+  if (activeSubs.length === 0) return { plan: 'FREE', best: null }
+
+  let overall: UnifiedPlan = 'FREE'
+  let bestSub: Stripe.Subscription | null = null
+  for (const s of activeSubs) {
+    const priceId = s.items.data[0]?.price?.id || null
+    const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
+    const planIdFromMeta = (s.metadata?.planId as any) || null
+    const planId = String(planIdFromPrice || planIdFromMeta || '')
+    const plan = planFromPlanId(planId)
+    const nextOverall = maxPlan(overall, plan)
+    if (nextOverall !== overall) {
+      overall = nextOverall
+      bestSub = s
+    }
+  }
+
+  const picked = bestSub || activeSubs[0]
+  return {
+    plan: overall,
+    best: picked
+      ? {
+          subscriptionId: picked.id,
+          priceId: picked.items.data[0]?.price?.id || null,
+          currentPeriodEnd: picked.current_period_end ? new Date(picked.current_period_end * 1000) : null,
+        }
+      : null,
+  }
 }

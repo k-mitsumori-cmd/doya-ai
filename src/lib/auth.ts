@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from './prisma';
+import { normalizeUnifiedPlan, maxPlan } from '@/lib/planSync'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -52,15 +53,22 @@ export const authOptions: NextAuthOptions = {
           if (dbUser) {
             (session.user as any).id = dbUser.id;
             (session.user as any).role = dbUser.role || 'USER';
-            (session.user as any).plan = dbUser.plan || 'FREE';
+            // Complete Pack: DB上でサービス別プランがズレていても、ユーザー体験は「統一プラン」で表示する
+            // 安全側（権限を落とさない）: user.plan と serviceSubscriptions の最大値を採用
+            const serviceMax = dbUser.serviceSubscriptions
+              .filter((s) => ['banner', 'writing', 'persona', 'seo'].includes(String(s.serviceId)))
+              .map((s) => normalizeUnifiedPlan(s.plan))
+              .reduce((acc, p) => maxPlan(acc, p), 'FREE' as const)
+            const unified = maxPlan(normalizeUnifiedPlan(dbUser.plan || 'FREE'), serviceMax)
+            ;(session.user as any).plan = unified;
             
             // サービス別プランをセッションに載せる
-            const byService = Object.fromEntries(
-              dbUser.serviceSubscriptions.map((s) => [s.serviceId, s.plan])
-            )
-            ;(session.user as any).bannerPlan = byService['banner'] || 'FREE'
-            // SEOプランは 'writing' または 'seo' サービスIDを参照（後方互換性）
-            ;(session.user as any).seoPlan = byService['writing'] || byService['seo'] || undefined
+            // Complete Pack: 各サービスの表示/権限は統一プランを優先（DBがまだ揃っていなくてもUIをズラさない）
+            ;(session.user as any).bannerPlan = unified
+            ;(session.user as any).seoPlan = unified
+            ;(session.user as any).personaPlan = unified
+            // kantan は Complete Pack 対象外（従来通り）
+            const byService = Object.fromEntries(dbUser.serviceSubscriptions.map((s) => [s.serviceId, s.plan]))
             ;(session.user as any).kantanPlan = byService['kantan'] || undefined
             // 初回ログイン時刻（1時間生成し放題の判定用）
             ;(session.user as any).firstLoginAt = dbUser.firstLoginAt?.toISOString() || null
@@ -70,8 +78,11 @@ export const authOptions: NextAuthOptions = {
           // フォールバック: userオブジェクトの情報を使用
           (session.user as any).id = user.id;
           (session.user as any).role = (user as any).role || 'USER';
-          (session.user as any).plan = (user as any).plan || 'FREE';
-          (session.user as any).bannerPlan = 'FREE'
+          const unified = normalizeUnifiedPlan((user as any).plan || 'FREE')
+          ;(session.user as any).plan = unified;
+          ;(session.user as any).bannerPlan = unified
+          ;(session.user as any).seoPlan = unified
+          ;(session.user as any).personaPlan = unified
         }
       }
       return session;

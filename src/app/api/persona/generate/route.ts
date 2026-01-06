@@ -410,13 +410,16 @@ export async function POST(req: NextRequest) {
           select: { firstLoginAt: true, plan: true },
         })
         const isFreeHourActive = isWithinFreeHour(userRecord?.firstLoginAt)
+        const unifiedPlanRaw = String(userRecord?.plan || 'FREE').toUpperCase()
+        const unifiedPlan = unifiedPlanRaw === 'ENTERPRISE' ? 'ENTERPRISE' : unifiedPlanRaw === 'PRO' ? 'PRO' : 'FREE'
 
         const current = await prisma.userServiceSubscription.upsert({
           where: { userId_serviceId: { userId, serviceId: 'persona' } },
           create: {
             userId,
             serviceId: 'persona',
-            plan: 'FREE',
+            // 初回作成時も、ポータルの統一プランに合わせる（ズレ防止）
+            plan: unifiedPlan,
             dailyUsage: 0,
             monthlyUsage: 0,
             lastUsageReset: new Date(),

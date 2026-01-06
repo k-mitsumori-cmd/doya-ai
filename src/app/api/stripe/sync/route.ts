@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { stripe, getPlanIdFromStripePriceId, getServiceIdFromPlanId } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
+import { syncUserPlanAcrossServices, type UnifiedPlan } from '@/lib/planSync'
 
 // ========================================
 // Stripe決済直後の同期（Webhook遅延/不達の保険）
@@ -70,6 +71,13 @@ export async function POST(request: NextRequest) {
     const planIdFromMeta = (subscription.metadata?.planId as any) || null
     const planId = (planIdFromPrice || planIdFromMeta) as any
 
+    const unifiedPlan: UnifiedPlan = (() => {
+      const p = String(planId || '').toLowerCase()
+      if (p.includes('enterprise')) return 'ENTERPRISE'
+      if (p.includes('-pro') || p.includes('basic') || p.includes('starter') || p.includes('business') || p === 'bundle') return 'PRO'
+      return 'FREE'
+    })()
+
     if (planId && typeof planId === 'string' && planId.includes('-')) {
       const serviceId = getServiceIdFromPlanId(planId)
       if (serviceId !== 'bundle') {
@@ -112,31 +120,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 互換用の全体planも更新
-    const userPlan =
-      planId === 'bundle'
-        ? 'BUNDLE'
-        : planId === 'seo-enterprise'
-          ? 'ENTERPRISE'
-          : planId === 'banner-enterprise'
-            ? 'ENTERPRISE'
-            : planId === 'banner-basic' || (planId && String(planId).endsWith('-pro'))
-              ? 'PRO'
-              : 'FREE'
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        plan: userPlan,
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: priceId,
-        stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      },
+    // Complete Pack: 統一プランを全サービスへ同期（Webhook遅延でもUI/権限が揃う）
+    await syncUserPlanAcrossServices({
+      userId: user.id,
+      plan: unifiedPlan,
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: priceId,
+      stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
     })
 
     return NextResponse.json({
       ok: true,
-      plan: userPlan,
+      plan: unifiedPlan,
       servicePlan: planId,
       subscriptionId: subscription.id,
       priceId,
