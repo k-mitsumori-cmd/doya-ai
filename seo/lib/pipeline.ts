@@ -2812,6 +2812,59 @@ async function integrate(jobId: string) {
     }
   }
 
+  // 記事が途中で終わらないよう、必ず「まとめ」セクションを追加
+  const hasSummary = parts.some((p) => /^##\s+(まとめ|結論|まとめと今後のアクション)/i.test(p))
+  if (!hasSummary) {
+    try {
+      const summaryPrompt = [
+        'You are a Japanese SEO writer.',
+        'Write a concise summary section (まとめ) that concludes the article.',
+        'The summary should:',
+        '- Recap the main points discussed in the article',
+        '- Provide actionable next steps or recommendations',
+        '- End with an encouraging message for the reader',
+        'Return Markdown only. Start with "## まとめ".',
+        NO_AI_MARKDOWN_RULES,
+        '',
+        `Article title: ${article.title}`,
+        `Keywords: ${((article.keywords as any) || []).join(', ')}`,
+        `Tone: ${article.tone}`,
+        '',
+        'Article content (truncated):',
+        clampText(parts.join('\n\n'), 12000),
+      ]
+        .filter(Boolean)
+        .join('\n')
+
+      const summary = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: summaryPrompt }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 2000 },
+      })
+      if (summary && summary.trim()) {
+        parts.push('')
+        parts.push(sanitizeAiMarkdown(summary.trim()))
+      } else {
+        // フォールバック: シンプルなまとめを追加
+        parts.push('')
+        parts.push('## まとめ')
+        parts.push('')
+        parts.push(
+          `本記事では、${article.title}について解説しました。記事の内容を参考に、ぜひ実践してみてください。`
+        )
+      }
+    } catch (summaryErr: any) {
+      // エラー時もフォールバックでまとめを追加（記事が途中で終わるのを防ぐ）
+      console.warn('[seo integrate] summary generation failed:', summaryErr?.message)
+      parts.push('')
+      parts.push('## まとめ')
+      parts.push('')
+      parts.push(
+        `本記事では、${article.title}について解説しました。記事の内容を参考に、ぜひ実践してみてください。`
+      )
+    }
+  }
+
   let finalMarkdown = parts.join('\n\n')
 
   // 文字数制御（方針: 上限は緩め / 下限は厳しめ）
