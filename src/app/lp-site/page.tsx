@@ -401,13 +401,14 @@ function LpSitePageInner() {
   return (
     <LpSiteAppLayout>
       {/* 生成中オーバーレイ */}
-      <LpGenerationOverlay
-        open={isGenerating}
-        progress={progress}
-        stageText={stageText}
-        mood={mood}
-        steps={steps}
-      />
+            <LpGenerationOverlay
+              open={isGenerating}
+              progress={progress}
+              stageText={stageText}
+              mood={mood}
+              steps={steps}
+              allowBackgroundView={!!result} // 結果がある場合は背景を表示可能に
+            />
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}

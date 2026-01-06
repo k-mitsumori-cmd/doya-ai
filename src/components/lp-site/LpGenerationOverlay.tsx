@@ -13,6 +13,7 @@ interface LpGenerationOverlayProps {
   stageText: string
   mood: OverlayMood
   steps: { label: string; threshold: number; icon: React.ElementType }[]
+  allowBackgroundView?: boolean // 背景の結果を表示可能にする
 }
 
 const loadingTips = [
@@ -30,6 +31,7 @@ export function LpGenerationOverlay({
   stageText,
   mood,
   steps,
+  allowBackgroundView = false,
 }: LpGenerationOverlayProps) {
   const p = Math.max(0, Math.min(100, Number.isFinite(progress) ? progress : 0))
   const [tipIndex, setTipIndex] = useState(0)
@@ -129,7 +131,11 @@ export function LpGenerationOverlay({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center px-4"
+            className={`fixed inset-0 z-[200] flex items-center justify-center px-4 ${
+              allowBackgroundView 
+                ? 'bg-slate-900/30 backdrop-blur-[2px]' 
+                : 'bg-slate-900/60 backdrop-blur-sm'
+            }`}
           >
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.98 }}
