@@ -31,6 +31,7 @@ function LpSitePageInner() {
   const [apiCompleted, setApiCompleted] = useState(false)
   const [apiResult, setApiResult] = useState<LpGenerationResult | null>(null)
   const [partialResult, setPartialResult] = useState<Partial<LpGenerationResult> | null>(null)
+  const [currentStep, setCurrentStep] = useState<'product' | 'structure' | 'wireframe' | 'image' | 'complete'>('product')
 
   const steps = [
     { label: '商品理解', threshold: 20, icon: Search },
@@ -155,43 +156,146 @@ function LpSitePageInner() {
         tone,
       }
 
-      // 実際のAPI呼び出し（進捗は別途管理）
-      const response = await fetch('/api/lp-site/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request),
-      })
+      // 段階的にAPIを呼び出して途中結果を表示
+      let productInfo: any = null
+      let sections: any[] = []
+      let wireframes: any[] = []
+      let images: any[] = []
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || '生成に失敗しました')
-      }
-
-      const data = await response.json()
-      console.log('[LP-SITE] APIレスポンス受信', { hasResult: !!data.result, partial: data.partial })
-      
-      // API完了をマーク
-      if (data.result) {
-        console.log('[LP-SITE] 結果を設定します', { sections: data.result.sections?.length, images: data.result.images?.length })
-        setApiResult(data.result)
-        setApiCompleted(true)
+      try {
+        // Step 1: 商品理解
+        setCurrentStep('product')
+        setProgress(10)
+        setStageText('商品情報を分析中...')
+        setMood('search')
         
-        // API完了時に100%に設定（進捗が100%未満の場合は100%に）
+        const step1Response = await fetch('/api/lp-site/generate-step', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 'product-understanding', request_data: request }),
+        })
+        if (!step1Response.ok) throw new Error('商品理解に失敗しました')
+        const step1Data = await step1Response.json()
+        productInfo = step1Data.product_info
+
+        // Step 2: LP構成生成
+        setCurrentStep('structure')
+        setProgress(30)
+        setStageText('LP構成案を生成中...')
+        setMood('think')
+        
+        const step2Response = await fetch('/api/lp-site/generate-step', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 'structure-generation', product_info: productInfo }),
+        })
+        if (!step2Response.ok) throw new Error('LP構成生成に失敗しました')
+        const step2Data = await step2Response.json()
+        sections = step2Data.sections
+
+        // Step 3: ワイヤーフレーム生成
+        setCurrentStep('wireframe')
+        setProgress(50)
+        setStageText('ワイヤーフレームを生成中...')
+        setMood('think')
+        
+        const step3Response = await fetch('/api/lp-site/generate-step', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 'wireframe-generation', product_info: productInfo, sections }),
+        })
+        if (!step3Response.ok) throw new Error('ワイヤーフレーム生成に失敗しました')
+        const step3Data = await step3Response.json()
+        wireframes = step3Data.wireframes
+
+        // ここで途中結果を表示（構成とワイヤーフレーム）
+        const partialResult: Partial<LpGenerationResult> = {
+          product_info: productInfo,
+          sections,
+          wireframes,
+          images: [],
+          structure_json: JSON.stringify({ product_info: productInfo, sections, wireframes }, null, 2),
+        }
+        setPartialResult(partialResult)
+        setResult(partialResult as LpGenerationResult)
+        // 生成中でも結果を表示できるようにする（オーバーレイは表示し続ける）
+        toast.success('構成とワイヤーフレームが生成されました！画像生成を続けます...')
+
+        // Step 4: 画像生成（時間がかかる）
+        setCurrentStep('image')
+        setProgress(70)
+        setStageText('セクション画像を生成中...')
+        setMood('think')
+        
+        const step4Response = await fetch('/api/lp-site/generate-step', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 'image-generation', product_info: productInfo, sections }),
+        })
+        if (!step4Response.ok) {
+          // 画像生成に失敗しても、構成とワイヤーフレームは表示済み
+          console.error('画像生成に失敗しましたが、構成とワイヤーフレームは表示できます')
+          setApiResult({
+            product_info: productInfo,
+            sections,
+            wireframes,
+            images: [],
+            structure_json: JSON.stringify({ product_info: productInfo, sections, wireframes }, null, 2),
+          })
+          setApiCompleted(true)
+          setProgress(100)
+          setStageText('完了（一部画像は未生成）')
+          setMood('happy')
+          toast.warning('一部の画像生成に失敗しましたが、構成とワイヤーフレームは表示できます')
+          return
+        }
+        const step4Data = await step4Response.json()
+        images = step4Data.images
+
+        // 最終結果を更新（画像を追加）
+        const finalResult: LpGenerationResult = {
+          product_info: productInfo,
+          sections,
+          wireframes,
+          images,
+          structure_json: JSON.stringify({
+            product_info: productInfo,
+            sections,
+            wireframes,
+            images: images.map(img => ({
+              section_id: img.section_id,
+              has_pc: !!img.image_pc,
+              has_sp: !!img.image_sp,
+            })),
+          }, null, 2),
+        }
+        
+        setCurrentStep('complete')
+        setResult(finalResult) // 結果を更新
+        setApiResult(finalResult)
+        setApiCompleted(true)
         setProgress(100)
         setStageText('完了！')
         setMood('happy')
-      } else if (data.partial && data.result) {
-        // 部分的な結果がある場合は表示
-        console.log('[LP-SITE] 部分的な結果を設定します')
-        setPartialResult(data.result)
-        setApiResult(data.result)
-        setApiCompleted(true)
-        setProgress(100)
-        setStageText('完了（一部画像は未生成）')
-        setMood('happy')
-        toast.warning('一部の画像生成に失敗しましたが、構成とワイヤーフレームは表示できます')
-      } else {
-        throw new Error('結果が取得できませんでした')
+      } catch (error: any) {
+        console.error('生成エラー:', error)
+        // 途中まで完了している場合は、部分的な結果を表示
+        if (sections.length > 0) {
+          const partialResult: Partial<LpGenerationResult> = {
+            product_info: productInfo,
+            sections,
+            wireframes,
+            images: [],
+            structure_json: JSON.stringify({ product_info: productInfo, sections, wireframes }, null, 2),
+          }
+          setPartialResult(partialResult)
+          setResult(partialResult as LpGenerationResult)
+          setIsGenerating(false)
+          toast.warning('一部の処理に失敗しましたが、完了した部分は表示できます')
+        } else {
+          setIsGenerating(false)
+          toast.error(error.message || '生成に失敗しました')
+        }
       }
     } catch (error: any) {
       console.error('生成エラー:', error)
