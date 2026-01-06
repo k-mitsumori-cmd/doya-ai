@@ -912,7 +912,7 @@ export default function PersonaPage() {
                 <button
                   onClick={() => void handleGenerate()}
                   disabled={loading}
-                  className="hidden sm:inline-flex h-9 px-3 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black hover:bg-slate-100 disabled:opacity-50"
+                  className="hidden sm:inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-black hover:bg-slate-100 disabled:opacity-50 px-3 py-2 leading-none"
                   title="同条件で再生成"
                 >
                   同条件で再生成
