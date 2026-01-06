@@ -2867,27 +2867,13 @@ async function integrate(jobId: string) {
 
   let finalMarkdown = parts.join('\n\n')
 
-  // 文字数制御（方針: 上限は緩め / 下限は厳しめ）
-  // - 上限: 目標の2倍程度までは許容（例: 5000字→1万字でもOK）
+  // 文字数制御（方針: 上限は制限しない / 下限は厳しめ）
+  // - 上限: 制限なし（無理に短くしない。長くても品質を優先）
   // - 下限: 目標を大きく下回る短文（例: 3000字→1000字）を絶対に作らない
-  const maxAllowed = Math.round(target * 2.0)
   const minAllowed = Math.round(target * 0.85)
 
-  // 上限を大幅に超えたら、AI短縮は使わず段落単位で安全にトリム（短くなりすぎ事故を防ぐ）
-  try {
-    const cur = mdCharCount(finalMarkdown)
-    if (cur > maxAllowed) {
-      await pushResearchEvent(jobId, {
-        at: Date.now(),
-        kind: 'warn',
-        title: '文字数が上限を超過したため、段落単位で調整します',
-        detail: `${cur.toLocaleString()}字 → 上限${maxAllowed.toLocaleString()}字付近へ`,
-      })
-      finalMarkdown = truncateMarkdownByParagraph(finalMarkdown, Math.round(maxAllowed * 1.02))
-    }
-  } catch {
-    // ignore
-  }
+  // 上限超過時の短縮処理は削除（無理に短くすると記事がおかしくなるため）
+  // 文字数が長くても、品質を優先してそのまま使用する
 
   // もし短すぎる場合は、統合の最終段で追加セクションを生成して底上げする（最大3回）
   try {
