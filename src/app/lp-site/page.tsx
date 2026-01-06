@@ -95,12 +95,21 @@ function LpSitePageInner() {
     return () => clearInterval(interval)
   }, [isGenerating])
 
-  // API完了と進捗100%の両方が揃ったら結果を表示
+  // API完了時に進捗を100%にして結果を表示
   useEffect(() => {
-    if (!isGenerating) return
+    if (!isGenerating || !apiCompleted || !apiResult) return
     
+    // API完了時は確実に100%にする
+    if (progress < 100) {
+      setProgress(100)
+      setStageText('完了！')
+      setMood('happy')
+      return
+    }
+    
+    // 進捗が100%でAPI完了している場合は結果を表示
     if (progress >= 100 && apiCompleted && apiResult) {
-      console.log('[LP-SITE] 完了条件を満たしました。結果を表示します。', { progress, apiCompleted, hasResult: !!apiResult })
+      console.log('[LP-SITE] 完了条件を満たしました。結果を表示します。')
       // 紙吹雪が表示されるのを待ってから結果を表示
       const timer = setTimeout(() => {
         console.log('[LP-SITE] 結果を設定します')
@@ -115,8 +124,6 @@ function LpSitePageInner() {
         toast.success('LP生成が完了しました！')
       }, 1500)
       return () => clearTimeout(timer)
-    } else {
-      console.log('[LP-SITE] 完了条件を満たしていません', { progress, apiCompleted, hasResult: !!apiResult, isGenerating })
     }
   }, [progress, apiCompleted, apiResult, isGenerating])
 
