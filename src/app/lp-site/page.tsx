@@ -28,6 +28,8 @@ function LpSitePageInner() {
   const [progress, setProgress] = useState(0)
   const [stageText, setStageText] = useState('準備中...')
   const [mood, setMood] = useState<'idle' | 'search' | 'think' | 'happy'>('idle')
+  const [apiCompleted, setApiCompleted] = useState(false)
+  const [apiResult, setApiResult] = useState<LpGenerationResult | null>(null)
 
   const steps = [
     { label: '商品理解', threshold: 20, icon: Search },
@@ -43,6 +45,8 @@ function LpSitePageInner() {
       setProgress(0)
       setStageText('準備中...')
       setMood('idle')
+      setApiCompleted(false)
+      setApiResult(null)
       return
     }
 
@@ -74,14 +78,30 @@ function LpSitePageInner() {
       } else {
         setStageText('完了！')
         setMood('happy')
+        setProgress(100)
         clearInterval(interval)
       }
 
-      setProgress(Math.min(100, currentProgress))
+      if (currentProgress < 100) {
+        setProgress(Math.min(100, currentProgress))
+      }
     }, 150)
 
     return () => clearInterval(interval)
   }, [isGenerating])
+
+  // API完了と進捗100%の両方が揃ったら結果を表示
+  useEffect(() => {
+    if (progress >= 100 && apiCompleted && apiResult && isGenerating) {
+      // 紙吹雪が表示されるのを待ってから結果を表示
+      const timer = setTimeout(() => {
+        setResult(apiResult)
+        setIsGenerating(false)
+        toast.success('LP生成が完了しました！')
+      }, 1500)
+      return () => clearTimeout(timer)
+    }
+  }, [progress, apiCompleted, apiResult, isGenerating])
 
   const handleGenerate = async () => {
     if (inputType === 'url' && !url) {
@@ -98,6 +118,8 @@ function LpSitePageInner() {
     setProgress(0)
     setStageText('準備中...')
     setMood('idle')
+    setApiCompleted(false)
+    setApiResult(null)
 
     try {
       const request: LpGenerationRequest = {
@@ -122,20 +144,22 @@ function LpSitePageInner() {
 
       const data = await response.json()
       
-      // 進捗を100%にしてから結果を設定
-      setProgress(100)
-      setStageText('完了！')
-      setMood('happy')
+      // API完了をマーク
+      setApiResult(data.result)
+      setApiCompleted(true)
       
-      // 紙吹雪が表示されるのを待ってから結果を表示
-      setTimeout(() => {
-        setResult(data.result)
-        setIsGenerating(false)
-        toast.success('LP生成が完了しました！')
-      }, 1500)
+      // 進捗がまだ100%でない場合は100%に設定
+      if (progress < 100) {
+        setProgress(100)
+        setStageText('完了！')
+        setMood('happy')
+      }
     } catch (error: any) {
       console.error('生成エラー:', error)
       setIsGenerating(false)
+      setApiCompleted(false)
+      setApiResult(null)
+      setProgress(0)
       toast.error(error.message || '生成に失敗しました')
     }
   }
