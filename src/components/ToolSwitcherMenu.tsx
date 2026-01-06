@@ -99,7 +99,7 @@ export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, classNam
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
+              className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-[200] max-h-[calc(100vh-200px)] overflow-y-auto"
             >
               <div className="p-2 space-y-1">
                 <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider">ツール一覧</p>

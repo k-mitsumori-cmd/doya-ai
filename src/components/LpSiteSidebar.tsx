@@ -159,7 +159,7 @@ function LpSiteSidebarImpl({
           width: isCollapsed ? 72 : 240,
         }}
         transition={{ duration: 0.2, ease: 'easeInOut' }}
-        className={`${isMobile ? 'relative' : 'fixed left-0 top-0'} h-screen bg-gradient-to-b from-teal-600 to-cyan-600 flex flex-col z-50 shadow-xl`}
+        className={`${isMobile ? 'relative' : 'fixed left-0 top-0'} h-screen bg-gradient-to-b from-teal-600 to-cyan-600 flex flex-col z-50 shadow-xl overflow-hidden`}
       >
         {/* Logo */}
         <div className="px-4 py-5 flex items-center gap-2">
@@ -191,88 +191,95 @@ function LpSiteSidebarImpl({
         </div>
 
         {/* Navigation */}
-        <div className="flex-1 overflow-y-auto px-3 pb-4">
-          <div className="space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon
-              const active = isActive(item.href)
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="px-3 pb-4">
+            <div className="space-y-1">
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon
+                const active = isActive(item.href)
 
-              return (
-                <Link key={item.href} href={item.href}>
-                  <motion.div
-                    whileHover={{ x: 4 }}
-                    className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer group ${
-                      active
-                        ? 'bg-white/15 text-white'
-                        : 'text-white/70 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-white' : 'text-white/70 group-hover:text-white'}`} />
-                    
-                    <AnimatePresence>
-                      {showLabel && (
-                        <motion.span
-                          initial={{ opacity: 0, width: 0 }}
-                          animate={{ opacity: 1, width: 'auto' }}
-                          exit={{ opacity: 0, width: 0 }}
-                          className="text-sm font-semibold whitespace-nowrap overflow-hidden"
-                        >
-                          {item.label}
-                        </motion.span>
+                return (
+                  <Link key={item.href} href={item.href}>
+                    <motion.div
+                      whileHover={{ x: 4 }}
+                      className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer group ${
+                        active
+                          ? 'bg-white/15 text-white'
+                          : 'text-white/70 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <Icon className={`w-5 h-5 flex-shrink-0 ${active ? 'text-white' : 'text-white/70 group-hover:text-white'}`} />
+                      
+                      <AnimatePresence>
+                        {showLabel && (
+                          <motion.span
+                            initial={{ opacity: 0, width: 0 }}
+                            animate={{ opacity: 1, width: 'auto' }}
+                            exit={{ opacity: 0, width: 0 }}
+                            className="text-sm font-semibold whitespace-nowrap overflow-hidden"
+                          >
+                            {item.label}
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+
+                      {item.hot && showLabel && (
+                        <span className="ml-auto px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-400 text-[10px] font-bold text-white rounded-md shadow-sm">
+                          HOT
+                        </span>
                       )}
-                    </AnimatePresence>
 
-                    {item.hot && showLabel && (
-                      <span className="ml-auto px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-400 text-[10px] font-bold text-white rounded-md shadow-sm">
-                        HOT
-                      </span>
-                    )}
+                      {active && (
+                        <motion.div
+                          layoutId="activeIndicator"
+                          className="absolute left-0 top-2 bottom-2 w-1 bg-white rounded-r-full"
+                        />
+                      )}
+                    </motion.div>
+                  </Link>
+                )
+              })}
+            </div>
 
-                    {active && (
-                      <motion.div
-                        layoutId="activeIndicator"
-                        className="absolute left-0 top-2 bottom-2 w-1 bg-white rounded-r-full"
-                      />
-                    )}
-                  </motion.div>
-                </Link>
-              )
-            })}
+            <FreeHourBanner />
+            <PlanBanner />
           </div>
 
-          <FreeHourBanner />
-          <PlanBanner />
+          {/* Fixed bottom section */}
+          <div className="px-3 pb-2 mt-auto">
+            <div className="relative">
+              <ToolSwitcherMenu
+                currentTool="lp-site"
+                showLabel={showLabel}
+                isCollapsed={isCollapsed}
+                className="w-full"
+              />
+            </div>
 
-          <ToolSwitcherMenu
-            currentTool="lp-site"
-            showLabel={showLabel}
-            isCollapsed={isCollapsed}
-            className="px-3 pb-2"
-          />
-
-          <div className="px-3 pb-2">
-            <a
-              href={SUPPORT_CONTACT_URL}
-              target="_blank"
-              rel="noreferrer"
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15 transition-colors text-white ${
-                isCollapsed ? 'justify-center' : ''
-              }`}
-              title="お問い合わせ"
-            >
-              <HelpCircle className="w-4 h-4 text-white flex-shrink-0" />
-              <AnimatePresence>
-                {showLabel && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -6 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -6 }}
-                  >
-                    <div className="text-xs font-bold leading-none">お問い合わせ</div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </a>
+            <div className="mt-2">
+              <a
+                href={SUPPORT_CONTACT_URL}
+                target="_blank"
+                rel="noreferrer"
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/10 hover:bg-white/15 transition-colors text-white ${
+                  isCollapsed ? 'justify-center' : ''
+                }`}
+                title="お問い合わせ"
+              >
+                <HelpCircle className="w-4 h-4 text-white flex-shrink-0" />
+                <AnimatePresence>
+                  {showLabel && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -6 }}
+                    >
+                      <div className="text-xs font-bold leading-none">お問い合わせ</div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </a>
+            </div>
           </div>
         </div>
 
