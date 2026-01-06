@@ -28,7 +28,8 @@ export default function PersonaHistoryPage() {
     const stored = localStorage.getItem('doya_persona_history')
     if (stored) {
       try {
-        setHistory(JSON.parse(stored))
+        const parsed = JSON.parse(stored)
+        setHistory(Array.isArray(parsed) ? parsed : [])
       } catch {}
     }
   }, [])
