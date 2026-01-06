@@ -14,6 +14,7 @@ import {
   LogIn,
   User,
   Zap,
+  LayoutGrid,
   FileText,
   Target,
   Loader2,
@@ -33,6 +34,7 @@ interface NavItem {
 const personaNavItems: NavItem[] = [
   { href: '/persona', label: 'ペルソナ生成（URL）', icon: Target, hot: true },
   { href: '/persona/detail', label: 'ペルソナ生成（詳細版）', icon: FileText },
+  { href: '/persona/rive-test', label: 'UIテスト（Rive参考）', icon: LayoutGrid },
 ]
 
 interface PersonaSidebarProps {
