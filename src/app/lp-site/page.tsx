@@ -35,6 +35,11 @@ function LpSitePageInner() {
   const [isGeneratingImages, setIsGeneratingImages] = useState(false)
   const [imageProgress, setImageProgress] = useState(0)
 
+  // 進捗を安全に更新（後戻りしない）
+  const updateProgress = (newProgress: number) => {
+    setProgress((prev) => Math.max(prev, Math.min(100, newProgress)))
+  }
+
   const steps = [
     { label: '商品理解', threshold: 20, icon: Search },
     { label: 'LP構成生成', threshold: 40, icon: Layout },
@@ -46,13 +51,16 @@ function LpSitePageInner() {
   // 進捗リセット（生成開始時のみ）
   useEffect(() => {
     if (!isGenerating) {
-      setProgress(0)
+      // 画像生成中でない場合のみ進捗をリセット
+      if (!isGeneratingImages) {
+        setProgress(0)
+      }
       setStageText('準備中...')
       setMood('idle')
       setApiCompleted(false)
       setApiResult(null)
     }
-  }, [isGenerating])
+  }, [isGenerating, isGeneratingImages])
 
   // API完了時に進捗を100%にして結果を表示
   useEffect(() => {
@@ -123,7 +131,7 @@ function LpSitePageInner() {
       try {
         // Step 1: 商品理解 (0-20%)
         setCurrentStep('product')
-        setProgress(5)
+        updateProgress(5)
         setStageText('商品情報を分析中...')
         setMood('search')
         
@@ -135,11 +143,11 @@ function LpSitePageInner() {
         if (!step1Response.ok) throw new Error('商品理解に失敗しました')
         const step1Data = await step1Response.json()
         productInfo = step1Data.product_info
-        setProgress(20) // Step 1完了
+        updateProgress(20) // Step 1完了
 
         // Step 2: LP構成生成 (20-40%)
         setCurrentStep('structure')
-        setProgress(25)
+        updateProgress(25)
         setStageText('LP構成案を生成中...')
         setMood('think')
         
@@ -151,11 +159,11 @@ function LpSitePageInner() {
         if (!step2Response.ok) throw new Error('LP構成生成に失敗しました')
         const step2Data = await step2Response.json()
         sections = step2Data.sections
-        setProgress(40) // Step 2完了
+        updateProgress(40) // Step 2完了
 
         // Step 3: ワイヤーフレーム生成 (40-60%)
         setCurrentStep('wireframe')
-        setProgress(45)
+        updateProgress(45)
         setStageText('ワイヤーフレームを生成中...')
         setMood('think')
         
@@ -167,7 +175,7 @@ function LpSitePageInner() {
         if (!step3Response.ok) throw new Error('ワイヤーフレーム生成に失敗しました')
         const step3Data = await step3Response.json()
         wireframes = step3Data.wireframes
-        setProgress(60) // Step 3完了
+        updateProgress(60) // Step 3完了
 
         // ワイヤーフレームが生成されたら、すぐに結果を表示（オーバーレイを閉じる）
         const wireframeResult: LpGenerationResult = {
@@ -180,7 +188,7 @@ function LpSitePageInner() {
         setPartialResult(wireframeResult)
         setResult(wireframeResult)
         setIsGenerating(false) // オーバーレイを閉じる
-        setProgress(0)
+        // 進捗はリセットしない（60%のまま維持）
         setStageText('準備中...')
         setMood('idle')
         toast.success('ワイヤーフレームが生成されました！画像を自動生成中...')
@@ -194,7 +202,7 @@ function LpSitePageInner() {
           try {
             setCurrentStep('image')
             setImageProgress(0)
-            setProgress(65) // 画像生成開始
+            updateProgress(65) // 画像生成開始
             setStageText('セクション画像を生成中...')
             setMood('think')
             
@@ -204,7 +212,7 @@ function LpSitePageInner() {
             const progressInterval = setInterval(() => {
               if (progressIndex < progressSteps.length) {
                 const progressValue = progressSteps[progressIndex]
-                setProgress(progressValue)
+                updateProgress(progressValue) // 後戻りしないように安全に更新
                 setImageProgress(Math.round(((progressValue - 60) / 40) * 100)) // 60-100%を0-100%に変換
                 progressIndex++
               } else {
@@ -219,7 +227,7 @@ function LpSitePageInner() {
             })
             
             clearInterval(progressInterval)
-            setProgress(100) // 画像生成完了
+            updateProgress(100) // 画像生成完了（後戻りしない）
             setImageProgress(100)
             setStageText('完了！')
             setMood('happy')
