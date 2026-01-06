@@ -191,7 +191,7 @@ function SignInContent() {
               <div className="text-xs text-slate-500 font-bold">
                 <a href="/terms" className="text-blue-600 hover:underline">利用規約</a>
                 <span className="mx-1">/</span>
-                <a href="/privacy" className="text-blue-600 hover:underline">プライバシーポリシー</a>
+                <a href="https://surisuta.jp/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">プライバシーポリシー</a>
               </div>
             </div>
           </div>

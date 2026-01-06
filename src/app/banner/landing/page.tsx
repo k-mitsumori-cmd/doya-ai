@@ -364,7 +364,7 @@ export default function BannerLandingPage() {
               © 2025 ドヤバナーAI. Powered by DOYA AI.
             </p>
             <div className="flex items-center gap-6 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-              <Link href="#" className="hover:text-slate-400">Privacy Policy</Link>
+              <a href="https://surisuta.jp/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400">Privacy Policy</a>
               <Link href="#" className="hover:text-slate-400">Terms of Service</Link>
             </div>
           </div>

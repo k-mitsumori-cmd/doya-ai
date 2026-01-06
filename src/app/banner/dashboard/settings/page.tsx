@@ -315,9 +315,9 @@ export default function SettingsPage() {
             利用規約・プライバシー
           </h2>
           <div className="space-y-2">
-            <Link href="/privacy" className="block text-sm font-black text-blue-600 hover:text-blue-800">
+            <a href="https://surisuta.jp/privacy" target="_blank" rel="noopener noreferrer" className="block text-sm font-black text-blue-600 hover:text-blue-800">
               プライバシーポリシー
-            </Link>
+            </a>
             <Link href="/terms" className="block text-sm font-black text-blue-600 hover:text-blue-800">
               利用規約
             </Link>

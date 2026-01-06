@@ -2788,7 +2788,7 @@ export default function BannerDashboard() {
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <Link href="/banner" className="hover:text-gray-900 transition-colors">ドヤバナーAIポータル</Link>
               <Link href="/terms" className="hover:text-gray-900 transition-colors">利用規約</Link>
-              <Link href="/privacy" className="hover:text-gray-900 transition-colors">プライバシー</Link>
+              <a href="https://surisuta.jp/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-gray-900 transition-colors">プライバシー</a>
             </div>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
               © 2025 ドヤバナーAI. All rights reserved.

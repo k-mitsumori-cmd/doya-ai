@@ -358,7 +358,7 @@ export default function PortalPage() {
             
             <div className="flex items-center gap-6 text-sm text-gray-500">
               <Link href="/terms" className="hover:text-gray-700">利用規約</Link>
-              <Link href="/privacy" className="hover:text-gray-700">プライバシー</Link>
+              <a href="https://surisuta.jp/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700">プライバシー</a>
               <a href="mailto:support@doya-ai.com" className="hover:text-gray-700">お問い合わせ</a>
             </div>
             
