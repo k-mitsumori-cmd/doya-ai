@@ -328,7 +328,7 @@ export default function PersonaDetailPage() {
     return await generateDiaryImageFor({ diaryText, captionText, keywords, gender: args.gender })
   }
 
-  const generateScheduleImageForIndex = async (idx: number, s: any) => {
+  const generateScheduleImageForIndex = async (idx: number, s: any, gender?: string) => {
     setScheduleImageLoadingMap((prev) => ({ ...prev, [idx]: true }))
     try {
       const img = await generateScheduleImageFor({
@@ -337,7 +337,7 @@ export default function PersonaDetailPage() {
         mood: s.mood,
         captionText: s.imageCaption || s.title,
         keywords: s.sceneKeywords || [],
-        gender: generatedData?.persona?.gender,
+        gender,
       })
       setScheduleImages((prev) => ({ ...prev, [idx]: img }))
       return img
@@ -407,7 +407,7 @@ export default function PersonaDetailPage() {
         const s = schedule[i]
         if (!s) continue
         try {
-          await generateScheduleImageForIndex(i, s)
+          await generateScheduleImageForIndex(i, s, data.persona.gender)
         } catch (e) {
           console.warn('schedule image failed', i, e)
         }
@@ -1044,7 +1044,7 @@ export default function PersonaDetailPage() {
                                     onClick={() =>
                                       void (async () => {
                                         try {
-                                          await generateScheduleImageForIndex(i, s)
+                                                  await generateScheduleImageForIndex(i, s, generatedData.persona.gender)
                                         } catch (e) {
                                           setError(e instanceof Error ? e.message : 'スケジュール画像生成エラー')
                                         }
