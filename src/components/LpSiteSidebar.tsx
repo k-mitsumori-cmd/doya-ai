@@ -172,11 +172,16 @@ function LpSiteSidebarImpl({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                className="overflow-hidden"
+                className="overflow-hidden flex-1"
               >
-                <h1 className="text-lg font-black text-white tracking-tighter leading-none">
-                  ドヤサイト
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-lg font-black text-white tracking-tighter leading-none">
+                    ドヤサイト
+                  </h1>
+                  <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-md shadow-sm">
+                    ベータ版
+                  </span>
+                </div>
                 <p className="text-[10px] font-bold text-white/70 mt-0.5">
                   LP自動生成
                 </p>

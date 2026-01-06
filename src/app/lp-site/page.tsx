@@ -169,9 +169,14 @@ function LpSitePageInner() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-black text-slate-900 mb-2">
-            ドヤサイト
-          </h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-4xl font-black text-slate-900">
+              ドヤサイト
+            </h1>
+            <span className="px-2 py-1 bg-amber-500 text-white text-xs font-black rounded-md shadow-sm">
+              ベータ版
+            </span>
+          </div>
           <p className="text-slate-600">
             商品URLまたは商品情報を入力するだけで、LP構成案・ワイヤーフレーム・画像を自動生成
           </p>

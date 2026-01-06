@@ -94,16 +94,26 @@ export default function ServiceNav({ currentService }: ServiceNavProps) {
                       <span className="text-xl">{service.icon}</span>
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-bold text-gray-900 text-sm">{service.name}</p>
                         {isActive && (
                           <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded">
                             現在
                           </span>
                         )}
-                        {service.isNew && !isActive && (
+                        {service.status === 'beta' && (
+                          <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded">
+                            ベータ版
+                          </span>
+                        )}
+                        {service.isNew && !isActive && service.status !== 'beta' && (
                           <span className="px-1.5 py-0.5 bg-green-500 text-white text-[10px] font-bold rounded">
                             NEW
+                          </span>
+                        )}
+                        {service.badge && service.status !== 'beta' && (
+                          <span className="px-1.5 py-0.5 bg-gray-400 text-white text-[10px] font-bold rounded">
+                            {service.badge}
                           </span>
                         )}
                       </div>

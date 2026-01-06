@@ -106,6 +106,7 @@ export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, classNam
                 {TOOLS.map((tool) => {
                   const Icon = tool.icon
                   const isCurrent = tool.id === currentTool
+                  const isBeta = tool.id === 'lp-site'
                   return isCurrent ? (
                     <div
                       key={tool.id}
@@ -115,7 +116,14 @@ export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, classNam
                         <Icon className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-slate-900">{tool.title}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-black text-slate-900">{tool.title}</p>
+                          {isBeta && (
+                            <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-md">
+                              ベータ版
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] font-bold text-slate-600">
                           {tool.description}（現在使用中）
                         </p>
@@ -132,7 +140,14 @@ export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, classNam
                         <Icon className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-gray-900 group-hover:text-slate-900 transition-colors">{tool.title}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-sm font-black text-gray-900 group-hover:text-slate-900 transition-colors">{tool.title}</p>
+                          {isBeta && (
+                            <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-md">
+                              ベータ版
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] font-bold text-gray-500">{tool.description}</p>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400" />

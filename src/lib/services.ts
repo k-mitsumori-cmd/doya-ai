@@ -296,11 +296,12 @@ export const SERVICES: Service[] = [
         price: 4980,
       },
     },
-    status: 'active',
+    status: 'beta',
     category: 'web',
     order: 4,
     requiresAuth: false,
     isNew: true,
+    badge: 'ベータ版',
   },
   
   // ----------------------------------------
@@ -448,9 +449,9 @@ export function getServiceById(id: string): Service | undefined {
   return SERVICES.find(service => service.id === id)
 }
 
-// アクティブなサービスのみ取得
+// アクティブなサービスのみ取得（active + beta）
 export function getActiveServices(): Service[] {
-  return SERVICES.filter(s => s.status === 'active').sort((a, b) => a.order - b.order)
+  return SERVICES.filter(s => s.status === 'active' || s.status === 'beta').sort((a, b) => a.order - b.order)
 }
 
 // 全サービス（近日公開含む）をorder順で取得
