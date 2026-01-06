@@ -329,10 +329,10 @@ export const PERSONA_PRICING: ServicePricing = {
   serviceId: 'persona',
   serviceName: 'ドヤペルソナAI',
   serviceIcon: '🎯',
-  guestLimit: 2,      // ゲスト: 1日2回
-  freeLimit: 5,       // 無料会員: 1日5回
-  proLimit: 30,       // PRO: 1日30回
-  enterpriseLimit: 100, // ENTERPRISE: 1日100回
+  guestLimit: 3, // ゲスト: 3回まで（画像/PDFは制限）
+  freeLimit: 3, // ログイン無料: 1時間の解放後は 3回まで（画像/PDFは制限）
+  proLimit: 5, // PRO: 1日5回
+  enterpriseLimit: 30, // ENTERPRISE: 1日30回
   historyDays: {
     free: 7,          // 無料: 7日間保存
     pro: 90,          // 有料: 3ヶ月保存
@@ -344,13 +344,13 @@ export const PERSONA_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '無料',
       period: '',
-      description: '1日5回までペルソナ生成（ログイン時）',
+      description: 'ゲストは3回まで。ログインで1時間だけ全解放（※PDF除く）',
       features: [
-        { text: 'ゲスト: 1日2回まで', included: true },
-        { text: 'ログイン: 1日5回まで', included: true },
-        { text: 'ペルソナ自動生成', included: true },
-        { text: 'ポートレート画像生成', included: true },
-        { text: '履歴保存（7日間）', included: true },
+        { text: 'ゲスト: ペルソナ作成 3回まで（画像はブラインド）', included: true },
+        { text: 'ログイン: 初回ログイン後1時間 使い放題（全機能 ※PDF除く）', included: true },
+        { text: 'ログイン後: 1日3回まで（スケジュール/日記画像はブラインド）', included: true },
+        { text: 'PDFダウンロード: 利用不可', included: true },
+        { text: 'ポートレート画像: 利用可', included: true },
       ],
       cta: '無料で試す',
     },
@@ -360,14 +360,12 @@ export const PERSONA_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '月額 ¥9,980',
       period: '/月（税込）',
-      description: '1日30回まで生成（PRO）',
+      description: '1日5回まで生成（PRO）',
       popular: true,
       color: 'slate',
       features: [
-        { text: '1日30回まで生成', included: true },
-        { text: 'ペルソナ＋バナー一括生成', included: true },
-        { text: '広告サイズ指定対応', included: true },
-        { text: '履歴閲覧（3ヶ月）', included: true },
+        { text: '1日5回までペルソナ作成', included: true },
+        { text: 'ペルソナ全機能（スケジュール/日記画像・PDFダウンロード）', included: true },
         { text: '優先サポート', included: true },
       ],
       cta: 'プロプランを始める',
@@ -378,12 +376,12 @@ export const PERSONA_PRICING: ServicePricing = {
       price: 49800,
       priceLabel: '月額 ¥49,800',
       period: '/月（税込）',
-      description: '1日100回まで生成（Enterprise）',
+      description: '1日30回まで生成（Enterprise）',
       color: 'slate',
       features: [
-        { text: '1日100回まで生成', included: true },
+        { text: '1日30回までペルソナ作成', included: true },
+        { text: 'ペルソナ全機能（スケジュール/日記画像・PDFダウンロード）', included: true },
         { text: 'チーム運用向け', included: true },
-        { text: '履歴閲覧（3ヶ月）', included: true },
         { text: '優先サポート', included: true },
       ],
       cta: 'エンタープライズを始める',

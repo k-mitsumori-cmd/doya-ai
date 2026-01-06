@@ -3,9 +3,63 @@
 // ========================================
 import { NextRequest, NextResponse } from 'next/server'
 import { generateBanners } from '@/lib/nanobanner'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { isWithinFreeHour } from '@/lib/pricing'
 
 export async function POST(req: NextRequest) {
   try {
+    // ========================================
+    // 機能制限（persona専用）
+    // - ゲスト: スケジュール/日記画像はブラインド（生成不可）
+    // - ログイン: 初回ログイン後1時間のみ解放
+    // - PRO/ENTERPRISE: 常に解放
+    // ※ 他サービスには影響させない
+    // ========================================
+    const session = await getServerSession(authOptions)
+    const userId = (session?.user as any)?.id as string | undefined
+    if (!userId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '画像生成はログインが必要です（ゲストはブラインド表示）',
+          code: 'FEATURE_LOCKED',
+          upgradeUrl: '/pricing',
+        },
+        { status: 403 }
+      )
+    }
+
+    let planRaw = String((session?.user as any)?.plan || 'FREE').toUpperCase()
+    let firstLoginAtIso = (session?.user as any)?.firstLoginAt as string | null | undefined
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { plan: true, firstLoginAt: true },
+      })
+      if (dbUser?.plan) planRaw = String(dbUser.plan).toUpperCase()
+      if (dbUser?.firstLoginAt) firstLoginAtIso = dbUser.firstLoginAt.toISOString()
+    } catch {
+      // セッション値で続行
+    }
+
+    const isPro = planRaw === 'PRO' || planRaw === 'BUNDLE' || planRaw === 'BASIC' || planRaw === 'STARTER' || planRaw === 'BUSINESS'
+    const isEnt = planRaw === 'ENTERPRISE'
+    const freeHour = isWithinFreeHour(firstLoginAtIso || null)
+
+    if (!isPro && !isEnt && !freeHour) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: '画像生成はPRO/ENTERPRISEまたは初回ログイン後1時間のみ利用できます',
+          code: 'FEATURE_LOCKED',
+          upgradeUrl: '/pricing',
+        },
+        { status: 403 }
+      )
+    }
+
     const body = await req.json()
     const { diaryText, captionText, keywords, size, gender } = body || {}
 

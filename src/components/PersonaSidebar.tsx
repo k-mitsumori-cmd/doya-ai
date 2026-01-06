@@ -157,6 +157,11 @@ function PersonaSidebarImpl({
     const showBanner = isMobile || !isCollapsed
     if (!showBanner) return null
 
+    const guest = planLabel === 'GUEST'
+    const free = planLabel === 'FREE'
+    const pro = planLabel === 'PRO'
+    const ent = planLabel === 'ENTERPRISE'
+
     return (
       <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
         <div className="hidden md:block relative z-10">
@@ -170,7 +175,18 @@ function PersonaSidebarImpl({
             現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
           </p>
           <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-80">
-            PROプラン：¥9,980/月
+            {guest
+              ? 'ペルソナ3回まで / 画像・PDFはブラインド'
+              : free
+              ? '初回ログイン後1時間は全解放（※PDF除く）'
+              : pro
+              ? '1日5回 / 全機能'
+              : ent
+              ? '1日30回 / 全機能'
+              : '—'}
+          </p>
+          <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-80 mt-1">
+            PROプラン：{PERSONA_PRICING.plans.find((p) => p.id === 'persona-pro')?.priceLabel || '¥9,980/月'}
           </p>
           <Link
             href="/pricing"
@@ -190,6 +206,17 @@ function PersonaSidebarImpl({
           <div className="flex-1 min-w-0">
             <p className="text-[11px] text-white font-bold leading-snug truncate">
               {planLabel === 'GUEST' ? 'ゲスト' : planLabel} → PRO
+            </p>
+            <p className="text-[10px] text-purple-100/90 font-bold leading-snug truncate">
+              {guest
+                ? '3回まで / 画像・PDFはブラインド'
+                : free
+                ? '1時間だけ全解放（※PDF除く）'
+                : pro
+                ? '1日5回 / 全機能'
+                : ent
+                ? '1日30回 / 全機能'
+                : '—'}
             </p>
           </div>
           <span className="flex-shrink-0 px-3 py-1.5 bg-white text-purple-600 text-[10px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md whitespace-nowrap">
