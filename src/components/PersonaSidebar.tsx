@@ -189,15 +189,15 @@ function PersonaSidebarImpl({
             PROプラン：{PERSONA_PRICING.plans.find((p) => p.id === 'persona-pro')?.priceLabel || '¥9,980/月'}
           </p>
           <Link
-            href="/pricing"
+            href="/persona/pricing"
             className="mt-3 w-full py-2 bg-white text-purple-600 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center"
           >
-            PROを始める
+            {pro || ent ? 'プランを確認' : 'PROを始める'}
           </Link>
         </div>
 
         <Link
-          href="/pricing"
+          href="/persona/pricing"
           className="md:hidden relative z-10 flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
         >
           <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
@@ -205,7 +205,7 @@ function PersonaSidebarImpl({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[11px] text-white font-bold leading-snug truncate">
-              {planLabel === 'GUEST' ? 'ゲスト' : planLabel} → PRO
+              {planLabel === 'GUEST' ? 'ゲスト' : planLabel}
             </p>
             <p className="text-[10px] text-purple-100/90 font-bold leading-snug truncate">
               {guest
@@ -220,7 +220,7 @@ function PersonaSidebarImpl({
             </p>
           </div>
           <span className="flex-shrink-0 px-3 py-1.5 bg-white text-purple-600 text-[10px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md whitespace-nowrap">
-            UP
+            {pro || ent ? '管理' : 'UP'}
           </span>
         </Link>
       </div>
