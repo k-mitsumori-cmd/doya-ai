@@ -4,12 +4,31 @@ export type SeoPlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE'
 
 export const SEO_GUEST_COOKIE = 'doyaSeo.guestId'
 
+const SEO_PLAN_RANK: Record<SeoPlanCode, number> = {
+  GUEST: 0,
+  FREE: 1,
+  PRO: 2,
+  ENTERPRISE: 3,
+}
+
 export function normalizeSeoPlan(raw: any): SeoPlanCode {
   const s = String(raw || '').toUpperCase().trim()
+  // 上位プラン（SEO側では「有料権限」として扱う）
+  if (s === 'ENTERPRISE' || s === 'BUSINESS' || s === 'BUNDLE' || s === 'PREMIUM') return 'ENTERPRISE'
   if (s === 'PRO') return 'PRO'
-  if (s === 'ENTERPRISE') return 'ENTERPRISE'
-  if (s === 'FREE') return 'FREE'
+  // 下位プラン
+  if (s === 'FREE' || s === 'STARTER') return 'FREE'
   return 'GUEST'
+}
+
+// 権限は「より強い方」を常に採用（EnterpriseなのにFREE表示/ロック等の不整合を防ぐ）
+export function maxSeoPlan(...candidates: any[]): SeoPlanCode {
+  let best: SeoPlanCode = 'GUEST'
+  for (const c of candidates) {
+    const n = normalizeSeoPlan(c)
+    if (SEO_PLAN_RANK[n] > SEO_PLAN_RANK[best]) best = n
+  }
+  return best
 }
 
 export function getGuestIdFromRequest(req: NextRequest): string | null {

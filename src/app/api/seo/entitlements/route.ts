@@ -49,28 +49,34 @@ export async function GET(_req: NextRequest) {
     const globalPlanRaw = dbUser?.plan || user?.plan || (isLoggedIn ? 'FREE' : 'GUEST')
 
     // 追加: Stripe Subscription テーブルから active なものがあればプランを補強（webhook 遅延や DB 不整合対策）
+    // ※ Subscription テーブルが無い環境や、クエリエラー時は無視して続行
     let subscriptionPlanRaw: string | null = null
-    if (isLoggedIn) {
+    if (isLoggedIn && dbUser?.id) {
       try {
-        const activeSub = await (prisma as any).subscription.findFirst({
-          where: {
-            userId: String(dbUser?.id || user.id),
-            status: 'active',
-          },
-          orderBy: { currentPeriodEnd: 'desc' },
-          select: { planId: true, priceId: true },
-        })
-        if (activeSub) {
-          // planId/priceId から判定（seo-pro, seo-enterprise, pro, enterprise 等）
-          const pid = String(activeSub.planId || activeSub.priceId || '').toLowerCase()
-          if (pid.includes('enterprise') || pid.includes('business') || pid.includes('bundle')) {
-            subscriptionPlanRaw = 'ENTERPRISE'
-          } else if (pid.includes('pro')) {
-            subscriptionPlanRaw = 'PRO'
+        // テーブル存在チェック（Prisma が findFirst を持っていない場合は skip）
+        const subModel = (prisma as any).subscription
+        if (subModel && typeof subModel.findFirst === 'function') {
+          const activeSub = await subModel.findFirst({
+            where: {
+              userId: String(dbUser.id),
+              status: 'active',
+            },
+            orderBy: { currentPeriodEnd: 'desc' },
+            select: { planId: true, priceId: true },
+          })
+          if (activeSub) {
+            // planId/priceId から判定（seo-pro, seo-enterprise, pro, enterprise 等）
+            const pid = String(activeSub.planId || activeSub.priceId || '').toLowerCase()
+            if (pid.includes('enterprise') || pid.includes('business') || pid.includes('bundle')) {
+              subscriptionPlanRaw = 'ENTERPRISE'
+            } else if (pid.includes('pro')) {
+              subscriptionPlanRaw = 'PRO'
+            }
           }
         }
-      } catch {
-        // ignore
+      } catch (subErr: any) {
+        // Subscriptionテーブルが無い/クエリ失敗しても全体は続行（ログだけ出す）
+        console.warn('[seo entitlements] subscription query skipped:', subErr?.message || subErr)
       }
     }
 
@@ -152,17 +158,41 @@ export async function GET(_req: NextRequest) {
       canUseSeoImages: imagesAllowed,
     })
   } catch (e: any) {
-    // 失敗時にFREEと誤表示すると混乱を招くため、UNKNOWNで返す（UI側で「権限確認に失敗」と表示できる）
+    // 失敗時でも可能な限りセッション情報から判定を試みる（完全な UNKNOWN を避ける）
     const msg = e?.message || 'entitlements failed'
-    console.error('[seo entitlements] failed', msg)
+    console.error('[seo entitlements] failed', msg, e)
+
+    // セッションから最低限の情報を取得
+    let fallbackPlan = 'UNKNOWN'
+    let fallbackLoggedIn = false
+    try {
+      const session = await getServerSession(authOptions)
+      const u: any = session?.user || null
+      fallbackLoggedIn = !!u?.id
+      if (u?.plan) {
+        const p = String(u.plan).toUpperCase()
+        if (p === 'ENTERPRISE' || p === 'BUSINESS' || p === 'BUNDLE') fallbackPlan = 'ENTERPRISE'
+        else if (p === 'PRO') fallbackPlan = 'PRO'
+        else if (p === 'FREE' || p === 'STARTER') fallbackPlan = 'FREE'
+        else if (fallbackLoggedIn) fallbackPlan = 'FREE'
+      } else if (fallbackLoggedIn) {
+        fallbackPlan = 'FREE'
+      } else {
+        fallbackPlan = 'GUEST'
+      }
+    } catch {
+      // ignore
+    }
+
+    const canUse = fallbackPlan === 'PRO' || fallbackPlan === 'ENTERPRISE'
     return NextResponse.json(
       {
         success: false,
         error: msg,
-        isLoggedIn: false,
-        plan: 'UNKNOWN',
-        canUseChatEdit: false,
-        canUseSeoImages: false,
+        isLoggedIn: fallbackLoggedIn,
+        plan: fallbackPlan,
+        canUseChatEdit: canUse,
+        canUseSeoImages: canUse,
       },
       { status: 500 }
     )
