@@ -43,7 +43,7 @@ function LpSitePageInner() {
     { label: 'アセット整理', threshold: 100, icon: Package },
   ]
 
-  // 進捗シミュレーション
+  // 進捗リセット（生成開始時のみ）
   useEffect(() => {
     if (!isGenerating) {
       setProgress(0)
@@ -51,51 +51,7 @@ function LpSitePageInner() {
       setMood('idle')
       setApiCompleted(false)
       setApiResult(null)
-      return
     }
-
-    let currentProgress = 0
-    const maxProgress = 95 // 最大95%まで（API完了時に100%にする）
-    const interval = setInterval(() => {
-      // 進捗が遅くなるように調整（後半は遅く）
-      let increment = 0.6
-      if (currentProgress > 70) increment = 0.2
-      else if (currentProgress > 50) increment = 0.4
-      else if (currentProgress > 30) increment = 0.5
-      
-      currentProgress += increment
-      
-      // 最大95%までに制限
-      if (currentProgress >= maxProgress) {
-        currentProgress = maxProgress
-        setStageText('最終調整中...')
-        setMood('think')
-        setProgress(maxProgress)
-        clearInterval(interval)
-        return
-      }
-      
-      if (currentProgress < 20) {
-        setStageText('商品情報を分析中...')
-        setMood('search')
-      } else if (currentProgress < 40) {
-        setStageText('LP構成案を生成中...')
-        setMood('think')
-      } else if (currentProgress < 60) {
-        setStageText('ワイヤーフレームを生成中...')
-        setMood('think')
-      } else if (currentProgress < 80) {
-        setStageText('セクション画像を生成中...')
-        setMood('think')
-      } else {
-        setStageText('最終調整中...')
-        setMood('think')
-      }
-
-      setProgress(Math.min(maxProgress, currentProgress))
-    }, 200)
-
-    return () => clearInterval(interval)
   }, [isGenerating])
 
   // API完了時に進捗を100%にして結果を表示
@@ -165,9 +121,9 @@ function LpSitePageInner() {
       let images: any[] = []
 
       try {
-        // Step 1: 商品理解
+        // Step 1: 商品理解 (0-20%)
         setCurrentStep('product')
-        setProgress(10)
+        setProgress(5)
         setStageText('商品情報を分析中...')
         setMood('search')
         
@@ -179,10 +135,11 @@ function LpSitePageInner() {
         if (!step1Response.ok) throw new Error('商品理解に失敗しました')
         const step1Data = await step1Response.json()
         productInfo = step1Data.product_info
+        setProgress(20) // Step 1完了
 
-        // Step 2: LP構成生成
+        // Step 2: LP構成生成 (20-40%)
         setCurrentStep('structure')
-        setProgress(30)
+        setProgress(25)
         setStageText('LP構成案を生成中...')
         setMood('think')
         
@@ -194,10 +151,11 @@ function LpSitePageInner() {
         if (!step2Response.ok) throw new Error('LP構成生成に失敗しました')
         const step2Data = await step2Response.json()
         sections = step2Data.sections
+        setProgress(40) // Step 2完了
 
-        // Step 3: ワイヤーフレーム生成
+        // Step 3: ワイヤーフレーム生成 (40-60%)
         setCurrentStep('wireframe')
-        setProgress(50)
+        setProgress(45)
         setStageText('ワイヤーフレームを生成中...')
         setMood('think')
         
@@ -209,6 +167,7 @@ function LpSitePageInner() {
         if (!step3Response.ok) throw new Error('ワイヤーフレーム生成に失敗しました')
         const step3Data = await step3Response.json()
         wireframes = step3Data.wireframes
+        setProgress(60) // Step 3完了
 
         // ワイヤーフレームが生成されたら、すぐに結果を表示（オーバーレイを閉じる）
         const wireframeResult: LpGenerationResult = {
@@ -234,17 +193,19 @@ function LpSitePageInner() {
         ;(async () => {
           try {
             setCurrentStep('image')
+            setImageProgress(0)
             
-            // 画像生成の進捗をシミュレート
+            // 画像生成の進捗を段階的に更新（60-100%）
+            const progressSteps = [65, 70, 75, 80, 85, 90, 95]
+            let progressIndex = 0
             const progressInterval = setInterval(() => {
-              setImageProgress((prev) => {
-                if (prev >= 90) {
-                  clearInterval(progressInterval)
-                  return 90
-                }
-                return prev + 2
-              })
-            }, 500)
+              if (progressIndex < progressSteps.length) {
+                setImageProgress(progressSteps[progressIndex])
+                progressIndex++
+              } else {
+                clearInterval(progressInterval)
+              }
+            }, 2000) // 2秒ごとに進捗を更新
 
             const step4Response = await fetch('/api/lp-site/generate-step', {
               method: 'POST',
@@ -253,6 +214,7 @@ function LpSitePageInner() {
             })
             
             clearInterval(progressInterval)
+            setImageProgress(100)
             
             if (!step4Response.ok) {
               throw new Error('画像生成に失敗しました')
