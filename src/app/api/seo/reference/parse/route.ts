@@ -5,6 +5,7 @@ import { z } from 'zod'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
+export const dynamic = 'force-dynamic'
 
 const BodySchema = z.object({
   // 参考記事（URL/貼り付け/ファイル）のいずれか

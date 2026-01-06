@@ -3,6 +3,7 @@ import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 const BodySchema = z.object({
   urls: z.array(z.string().url()).min(1).max(30),
