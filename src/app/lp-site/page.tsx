@@ -194,13 +194,18 @@ function LpSitePageInner() {
           try {
             setCurrentStep('image')
             setImageProgress(0)
+            setProgress(65) // 画像生成開始
+            setStageText('セクション画像を生成中...')
+            setMood('think')
             
             // 画像生成の進捗を段階的に更新（60-100%）
-            const progressSteps = [65, 70, 75, 80, 85, 90, 95]
+            const progressSteps = [70, 75, 80, 85, 90, 95]
             let progressIndex = 0
             const progressInterval = setInterval(() => {
               if (progressIndex < progressSteps.length) {
-                setImageProgress(progressSteps[progressIndex])
+                const progressValue = progressSteps[progressIndex]
+                setProgress(progressValue)
+                setImageProgress(Math.round(((progressValue - 60) / 40) * 100)) // 60-100%を0-100%に変換
                 progressIndex++
               } else {
                 clearInterval(progressInterval)
@@ -214,7 +219,10 @@ function LpSitePageInner() {
             })
             
             clearInterval(progressInterval)
+            setProgress(100) // 画像生成完了
             setImageProgress(100)
+            setStageText('完了！')
+            setMood('happy')
             
             if (!step4Response.ok) {
               throw new Error('画像生成に失敗しました')
