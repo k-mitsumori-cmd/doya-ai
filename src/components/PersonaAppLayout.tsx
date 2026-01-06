@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import PersonaSidebar from './PersonaSidebar'
 import { Menu } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { usePathname } from 'next/navigation'
 
 interface PersonaAppLayoutProps {
   children: React.ReactNode
@@ -13,6 +14,7 @@ export default function PersonaAppLayout({ children }: PersonaAppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const pathname = usePathname()
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -83,7 +85,20 @@ export default function PersonaAppLayout({ children }: PersonaAppLayoutProps) {
         </div>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        <div className="flex-1 overflow-y-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={pathname}
+              initial={{ x: 16, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="min-h-full"
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </main>
     </div>
   )

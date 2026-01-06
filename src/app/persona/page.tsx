@@ -13,16 +13,13 @@ import {
   Target,
   Check,
 } from 'lucide-react'
-
-// 演出用：候補ペルソナ（ダミー）
-const LOADING_CANDIDATES = [
-  { name: '佐藤 まどか', age: 29, role: 'EC運用担当', note: '価格比較→即決タイプ' },
-  { name: '鈴木 恒一', age: 41, role: '情報システム部', note: '稟議・セキュリティ重視' },
-  { name: '高橋 さくら', age: 33, role: 'マーケ責任者', note: 'CVR改善・運用重視' },
-  { name: '田中 健', age: 27, role: '個人事業主', note: 'スピード・コスパ重視' },
-  { name: '伊藤 恒一', age: 38, role: '営業Mgr', note: '導入事例・実績で判断' },
-  { name: '渡辺 由衣', age: 45, role: '人事責任者', note: '採用・ブランド重視' },
-] as const
+import {
+  PartyLoadingOverlay,
+  ctaMotion,
+  pageMount,
+  useConfettiOnComplete,
+  usePersonaMotionMode,
+} from '@/components/persona/PersonaMotion'
 
 const LOADING_STEPS = [
   { title: 'サイト解析', desc: '見出し/本文から価値と文脈を抽出', stage: 'サイトを解析しています…', artifact: 'サイト情報' },
@@ -35,17 +32,6 @@ const LOADING_STEPS = [
   { title: '日記執筆', desc: '生活感ある日記で実在感を増幅', stage: '日記を執筆しています…', artifact: '日記' },
   { title: '広告コピー設計', desc: 'Google/Meta用の文言を生成', stage: '広告コピーを設計しています…', artifact: '広告コピー' },
   { title: '画像生成準備', desc: '日記/スケジュール用の絵を準備', stage: '画像生成の準備をしています…', artifact: '画像' },
-] as const
-
-const LOADING_HINTS = [
-  '履歴書の「枠」を引いています…',
-  '価値観の“芯”を言語化しています…',
-  '購買のトリガーを特定中…',
-  '稟議で刺さる要素を抽出中…',
-  '検索キーワードを推定中…',
-  '日常のディテールを濃くしています…',
-  '広告のトーン&マナーを調整中…',
-  '画像内テキストの可読性を最適化中…',
 ] as const
 
 function isQuotaExceeded(e: any): boolean {
@@ -198,6 +184,7 @@ interface GeneratedData {
 }
 
 export default function PersonaPage() {
+  const motionMode = usePersonaMotionMode()
   const [url, setUrl] = useState('')
   const [serviceName, setServiceName] = useState('')
   const [additionalInfo, setAdditionalInfo] = useState('')
@@ -255,6 +242,24 @@ export default function PersonaPage() {
     }, 850)
     return () => window.clearInterval(t)
   }, [loading])
+
+  const overlayProgress = useMemo(() => {
+    const base = Math.round(((stageIdx + 1) / Math.max(1, LOADING_STEPS.length)) * 100)
+    if (!loading) return 100
+    return Math.min(96, Math.max(10, base))
+  }, [loading, stageIdx])
+
+  const overlayMood = useMemo(() => {
+    if (!loading) return 'idle' as const
+    if (overlayProgress < 35) return 'search' as const
+    if (overlayProgress < 70) return 'think' as const
+    return 'happy' as const
+  }, [loading, overlayProgress])
+
+  useConfettiOnComplete({
+    enabled: motionMode === 'party',
+    when: !loading && Boolean(generatedData),
+  })
 
   const generatePortraitForPersona = async (persona: any) => {
     setPortraitLoading(true)
@@ -801,192 +806,21 @@ export default function PersonaPage() {
   }, [generatedData?.persona?.dailySchedule])
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* ド派手：生成中オーバーレイ */}
-      <AnimatePresence>
-        {showFlash && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm"
-          >
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute -top-40 -left-40 w-[520px] h-[520px] rounded-full bg-purple-500/30 blur-3xl" />
-              <div className="absolute -bottom-40 -right-40 w-[520px] h-[520px] rounded-full bg-pink-500/30 blur-3xl" />
-            </div>
-
-            <div className="relative h-full flex flex-col items-center justify-center px-4">
-              <motion.div
-                initial={{ y: 12, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="w-full max-w-3xl"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/15 text-white">
-                    <Sparkles className="w-4 h-4" />
-                    <span className="text-xs font-black tracking-widest">PERSONA RESEARCH</span>
-                  </div>
-                  <div className="text-white/80 text-xs font-bold">今、ペルソナを調査しています…</div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 md:p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                      <Target className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-black text-lg leading-tight">ペルソナ生成中</p>
-                      <p className="text-white/70 text-sm font-bold truncate">{stageText}</p>
-                    </div>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  </div>
-
-                  {/* progress */}
-                  <div className="mt-4 h-2 rounded-full bg-white/10 overflow-hidden">
-                    <motion.div
-                      className="h-2 bg-gradient-to-r from-purple-400 to-pink-400"
-                      initial={{ width: '12%' }}
-                      animate={{ width: ['12%', '92%', '28%', '100%'] }}
-                      transition={{ duration: 2.6, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
-                    />
-                  </div>
-
-                  {/* What we are building now */}
-                  <div className="mt-4 grid md:grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-white/70 text-[11px] font-black tracking-widest">NOW BUILDING</div>
-                      <div className="mt-1 text-white text-base font-black">
-                        {LOADING_STEPS[stageIdx]?.artifact || '生成物'}
-                      </div>
-                      <div className="mt-1 text-white/70 text-xs font-bold">
-                        {LOADING_STEPS[stageIdx]?.desc || '生成しています…'}
-                      </div>
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-white/70 text-[11px] font-black tracking-widest">TARGET</div>
-                      <div className="mt-1 text-white/90 text-sm font-black truncate">
-                        {serviceName ? `サービス：${serviceName}` : 'サービス名：未指定'}
-                      </div>
-                      <div className="mt-1 text-white/70 text-xs font-bold truncate">
-                        {url ? `URL：${url}` : 'URL：未入力'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Stepper */}
-                  <div className="mt-4 grid lg:grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-white/80 text-xs font-black mb-2">生成ロードマップ</div>
-                      <div className="space-y-2">
-                        {LOADING_STEPS.map((s, idx) => {
-                          const active = idx === stageIdx
-                          return (
-                            <div key={s.title} className="flex items-start gap-2">
-                              <div
-                                className={`mt-0.5 w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-black border ${
-                                  active
-                                    ? 'bg-white/20 border-white/30 text-white'
-                                    : 'bg-white/5 border-white/10 text-white/60'
-                                }`}
-                              >
-                                {idx + 1}
-                              </div>
-                              <div className="min-w-0">
-                                <div className={`text-sm font-black truncate ${active ? 'text-white' : 'text-white/70'}`}>
-                                  {s.title}
-                                  {active ? <span className="ml-2 text-[11px] font-black text-pink-200">作業中</span> : null}
-                                </div>
-                                <div className="text-[11px] font-bold text-white/60 truncate">{s.desc}</div>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-                      <div className="text-white/80 text-xs font-black mb-2">生成中の成果物プレビュー</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          { k: '履歴書', v: '枠線/項目/整形' },
-                          { k: 'ペルソナ', v: '年齢/職業/価値観' },
-                          { k: 'スケジュール', v: '業務/ランチ/移動' },
-                          { k: '日記', v: '生活感の文章' },
-                          { k: '広告コピー', v: 'Google/Meta' },
-                          { k: '画像', v: '日記/スケジュール' },
-                        ].map((a, i) => {
-                          const on = i <= stageIdx % 6
-                          return (
-                            <motion.div
-                              key={a.k}
-                              initial={{ opacity: 0, y: 6 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className={`rounded-lg border px-3 py-2 ${
-                                on ? 'border-white/20 bg-white/10' : 'border-white/10 bg-white/5'
-                              }`}
-                            >
-                              <div className={`text-xs font-black ${on ? 'text-white' : 'text-white/60'}`}>{a.k}</div>
-                              <div className="text-[11px] font-bold text-white/60 truncate">{a.v}</div>
-                            </motion.div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* sliding candidates */}
-                  <div className="mt-5 overflow-hidden">
-                    <motion.div
-                      className="flex gap-3"
-                      animate={{ x: ['0%', '-50%'] }}
-                      transition={{ duration: 6.5, repeat: Infinity, ease: 'linear' }}
-                    >
-                      {[...LOADING_CANDIDATES, ...LOADING_CANDIDATES].map((c, idx) => (
-                        <div
-                          key={`${c.name}-${idx}`}
-                          className="w-[240px] flex-shrink-0 rounded-xl border border-white/15 bg-white/10 p-3"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center text-white/80 font-black">
-                              {c.name.slice(0, 1)}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-white font-black truncate">{c.name}</p>
-                              <p className="text-white/70 text-xs font-bold">{c.age}歳 / {c.role}</p>
-                              <p className="text-white/60 text-[11px] font-bold mt-1 truncate">「{c.note}」</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </motion.div>
-                  </div>
-
-                  {/* popup-like hints */}
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2">
-                    {[
-                      LOADING_HINTS[(stageIdx + 0) % LOADING_HINTS.length],
-                      LOADING_HINTS[(stageIdx + 2) % LOADING_HINTS.length],
-                      LOADING_HINTS[(stageIdx + 4) % LOADING_HINTS.length],
-                    ].map((t, i) => (
-                      <motion.div
-                        key={t}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: [0.4, 1, 0.6], y: [6, 0, 4] }}
-                        transition={{ duration: 1.8, delay: i * 0.2, repeat: Infinity, repeatType: 'mirror' }}
-                        className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white/80 text-xs font-bold"
-                      >
-                        {t}
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <motion.div variants={pageMount} initial="initial" animate="animate" className="min-h-screen bg-slate-50">
+      {/* 生成中オーバーレイ（表示層のみ / partyデフォルト） */}
+      <PartyLoadingOverlay
+        open={showFlash}
+        mode={motionMode}
+        progress={overlayProgress}
+        stageText={stageText || 'ペルソナを調査中…'}
+        mood={overlayMood}
+        steps={[
+          { label: '解析', threshold: 15 },
+          { label: '設計', threshold: 45 },
+          { label: '履歴書', threshold: 70 },
+          { label: '日記', threshold: 90 },
+        ]}
+      />
 
       <div className="max-w-6xl mx-auto p-4 lg:p-8">
         {/* Header */}
@@ -1063,10 +897,11 @@ export default function PersonaPage() {
           </AnimatePresence>
 
           {/* Generate Button */}
-          <button
+          <motion.button
             onClick={handleGenerate}
             disabled={loading || !url.trim()}
             className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-base hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25"
+            {...ctaMotion(motionMode)}
           >
             {loading ? (
               <>
@@ -1079,7 +914,7 @@ export default function PersonaPage() {
                 ペルソナを生成
               </>
             )}
-          </button>
+          </motion.button>
 
           {/* Regenerate Section */}
           {generatedData?.persona && (
@@ -1108,10 +943,11 @@ export default function PersonaPage() {
                 placeholder="例：業界はSaaS、決裁者は部長。慎重派で導入は稟議が必須。ランチは社食で同僚と情報交換…など"
               />
               <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                <button
+                <motion.button
                   onClick={handleRegenerateWithRevision}
                   disabled={regenLoading || loading}
                   className="h-10 px-4 rounded-lg bg-slate-900 text-white text-sm font-black hover:bg-slate-800 disabled:opacity-50 flex items-center justify-center gap-2"
+                  {...ctaMotion(motionMode)}
                 >
                   {regenLoading || loading ? (
                     <>
@@ -1124,7 +960,7 @@ export default function PersonaPage() {
                       この指示で再生成
                     </>
                   )}
-                </button>
+                </motion.button>
                 <button
                   onClick={() => setRevisionInput('')}
                   className="h-10 px-4 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-black hover:bg-slate-100"
@@ -1687,6 +1523,6 @@ export default function PersonaPage() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }

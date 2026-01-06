@@ -13,6 +13,13 @@ import {
   User,
   FileText,
 } from 'lucide-react'
+import {
+  PartyLoadingOverlay,
+  ctaMotion,
+  pageMount,
+  useConfettiOnComplete,
+  usePersonaMotionMode,
+} from '@/components/persona/PersonaMotion'
 
 // ============================================
 // ペルソナ先生（詳細版）
@@ -184,6 +191,7 @@ const formatJpDate = (d: Date) =>
   `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
 
 export default function PersonaDetailPage() {
+  const motionMode = usePersonaMotionMode()
   // サンプル選択
   const [selectedSample, setSelectedSample] = useState('')
 
@@ -228,6 +236,24 @@ export default function PersonaDetailPage() {
     }, 900)
     return () => window.clearInterval(t)
   }, [loading])
+
+  const overlayProgress = useMemo(() => {
+    const base = Math.round(((stageIdx + 1) / Math.max(1, LOADING_STAGES.length)) * 100)
+    if (!loading) return 100
+    return Math.min(96, Math.max(10, base))
+  }, [loading, stageIdx])
+
+  const overlayMood = useMemo(() => {
+    if (!loading) return 'idle' as const
+    if (overlayProgress < 35) return 'search' as const
+    if (overlayProgress < 70) return 'think' as const
+    return 'happy' as const
+  }, [loading, overlayProgress])
+
+  useConfettiOnComplete({
+    enabled: motionMode === 'party',
+    when: !loading && Boolean(generatedData),
+  })
 
   const resumeIssueDate = useMemo(() => formatJpDate(new Date()), [])
 
@@ -313,7 +339,20 @@ export default function PersonaDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
+    <motion.div variants={pageMount} initial="initial" animate="animate" className="min-h-screen bg-slate-50 p-4 lg:p-8">
+      <PartyLoadingOverlay
+        open={loading}
+        mode={motionMode}
+        progress={overlayProgress}
+        stageText={LOADING_STAGES[stageIdx] || 'ペルソナを調査中…'}
+        mood={overlayMood}
+        steps={[
+          { label: '解析', threshold: 15 },
+          { label: '設計', threshold: 45 },
+          { label: '履歴書', threshold: 70 },
+          { label: '日記', threshold: 90 },
+        ]}
+      />
       <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -458,10 +497,11 @@ export default function PersonaDetailPage() {
             </div>
           )}
 
-          <button
+          <motion.button
             onClick={handleGenerate}
             disabled={loading}
             className="w-full h-12 px-6 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white text-base font-black hover:from-purple-500 hover:to-pink-500 disabled:opacity-60 flex items-center justify-center gap-2"
+            {...ctaMotion(motionMode)}
           >
             {loading ? (
               <>
@@ -474,7 +514,7 @@ export default function PersonaDetailPage() {
                 ペルソナを生成
               </>
             )}
-          </button>
+          </motion.button>
         </div>
 
         {/* Results */}
@@ -772,7 +812,7 @@ export default function PersonaDetailPage() {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
