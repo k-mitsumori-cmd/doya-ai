@@ -196,6 +196,7 @@ const NO_AI_MARKDOWN_RULES = [
   '- Do NOT use Markdown emphasis markers: do not output "**", "*", "__", "_".',
   '- Do NOT use checklist notation: do not output "- [ ]" or "- [x]". Use normal bullet/numbered lists instead.',
   '- Do NOT wrap labels like Q/A with bold. Use plain "Q:" / "A:".',
+  '- You can use bullet lists ("- " or "* ") and numbered lists ("1. " "2. ") when appropriate for readability.',
 ].join('\n')
 
 function normalizeH2Heading(md: string, fallback: string): string {

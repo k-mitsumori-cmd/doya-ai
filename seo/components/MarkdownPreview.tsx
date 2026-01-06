@@ -97,12 +97,43 @@ export function MarkdownPreview({ markdown }: { markdown: string }) {
         }
         .md-preview ul,
         .md-preview ol {
-          margin: 1rem 0 1.2rem;
-          padding-left: 1.4rem;
+          margin: 1.2rem 0 1.4rem;
+          padding-left: 0;
           color: #0f172a;
+          list-style: none;
         }
-        .md-preview li {
-          margin: 0.45rem 0;
+        .md-preview ul li {
+          position: relative;
+          padding-left: 1.6rem;
+          margin: 0.65rem 0;
+          line-height: 1.85;
+        }
+        .md-preview ul li::before {
+          content: '•';
+          position: absolute;
+          left: 0.5rem;
+          color: #2563eb;
+          font-weight: 900;
+          font-size: 1.2em;
+          line-height: 1.2;
+        }
+        .md-preview ol {
+          counter-reset: list-counter;
+        }
+        .md-preview ol li {
+          position: relative;
+          padding-left: 2rem;
+          margin: 0.65rem 0;
+          line-height: 1.85;
+          counter-increment: list-counter;
+        }
+        .md-preview ol li::before {
+          content: counter(list-counter) '.';
+          position: absolute;
+          left: 0.5rem;
+          color: #2563eb;
+          font-weight: 800;
+          font-size: 0.95em;
         }
         .md-preview blockquote {
           margin: 1.2rem 0;
