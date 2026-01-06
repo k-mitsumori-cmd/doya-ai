@@ -259,6 +259,51 @@ export const SERVICES: Service[] = [
   },
   
   // ----------------------------------------
+  // ドヤサイト（LP自動生成ツール）
+  // ----------------------------------------
+  {
+    id: 'lp-site',
+    name: 'ドヤサイト',
+    shortName: 'サイト',
+    description: '商品URLからLP構成案・ワイヤーフレーム・画像を自動生成',
+    longDescription: '商品URLまたは商品情報を入力するだけで、LP構成案、PC/SP別ワイヤーフレーム、各セクション画像を自動生成。すべてをダウンロード可能。',
+    icon: '🌐',
+    color: 'teal',
+    gradient: 'from-teal-500 to-cyan-500',
+    bgGradient: 'from-teal-50 to-cyan-50',
+    href: '/lp-site',
+    dashboardHref: '/lp-site',
+    pricingHref: '/lp-site/pricing',
+    guideHref: '/lp-site/guide',
+    features: [
+      '商品URLから自動抽出',
+      'LP構成案を自動生成',
+      'PC/SP別ワイヤーフレーム',
+      'セクションごとの画像生成',
+      '全体プレビュー・ZIPダウンロード',
+    ],
+    pricing: {
+      free: { 
+        name: '無料プラン', 
+        limit: '1日1LPまで', 
+        dailyLimit: 1,
+        price: 0 
+      },
+      pro: { 
+        name: 'プロプラン', 
+        limit: '1日10LPまで', 
+        dailyLimit: 10,
+        price: 4980,
+      },
+    },
+    status: 'active',
+    category: 'web',
+    order: 4,
+    requiresAuth: false,
+    isNew: true,
+  },
+  
+  // ----------------------------------------
   // LP作成AI（近日公開）
   // ----------------------------------------
   {
@@ -298,7 +343,7 @@ export const SERVICES: Service[] = [
     },
     status: 'coming_soon',
     category: 'web',
-    order: 4,
+    order: 5,
     requiresAuth: true,
     badge: '近日公開',
   },

@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target } from 'lucide-react'
+import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target, Globe } from 'lucide-react'
 
-type ToolId = 'persona' | 'banner' | 'writing'
+type ToolId = 'persona' | 'banner' | 'writing' | 'lp-site'
 
 type ToolSwitcherMenuProps = {
   currentTool: ToolId
@@ -46,6 +46,14 @@ const TOOLS: Array<{
     description: 'SEO記事生成',
     icon: FileText,
     iconBgClassName: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+  },
+  {
+    id: 'lp-site',
+    href: '/lp-site',
+    title: 'ドヤサイト',
+    description: 'LP自動生成',
+    icon: Globe,
+    iconBgClassName: 'bg-gradient-to-br from-teal-500 to-cyan-500',
   },
 ]
 
