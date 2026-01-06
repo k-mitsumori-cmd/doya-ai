@@ -20,8 +20,6 @@ type Flavor = 'minimal' | 'party'
 
 type Mood = 'idle' | 'search' | 'think' | 'happy'
 
-type Toast = { id: string; title: string; desc?: string }
-
 // ① 初期表示（マウント時）
 const pageVariants = {
   initial: { opacity: 0 },
@@ -139,18 +137,12 @@ function LoadingOverlay({
   progress,
   stage,
   mood,
-  level,
-  xpPct,
-  quests,
 }: {
   show: boolean
   flavor: Flavor
   progress: number
   stage: string
   mood: Mood
-  level: number
-  xpPct: number
-  quests: { label: string; threshold: number }[]
 }) {
   return (
     <AnimatePresence>
@@ -268,115 +260,11 @@ function LoadingOverlay({
                 ))}
               </div>
 
-              {/* Game-like: Quest log + Level (party only) */}
-              {flavor === 'party' && (
-                <div className="mt-5 grid md:grid-cols-2 gap-4">
-                  <div className="rounded-2xl bg-white/10 border border-white/10 p-4">
-                    <div className="text-white/90 text-[11px] font-black tracking-wider">QUEST LOG</div>
-                    <div className="mt-2 grid gap-2">
-                      {quests.map((q) => {
-                        const done = progress >= q.threshold
-                        const active = !done && progress + 8 >= q.threshold
-                        return (
-                          <div
-                            key={q.label}
-                            className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2 border ${
-                              done
-                                ? 'bg-white/15 border-white/20'
-                                : active
-                                ? 'bg-white/10 border-white/15'
-                                : 'bg-transparent border-white/10'
-                            }`}
-                          >
-                            <div className="text-white text-sm font-black">{q.label}</div>
-                            <div className="text-white/70 text-xs font-black">
-                              {done ? 'COMPLETE' : active ? 'NOW' : `${q.threshold}%`}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl bg-white/10 border border-white/10 p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="text-white/90 text-[11px] font-black tracking-wider">LEVEL UP</div>
-                      <div className="px-2.5 py-1 rounded-full bg-white/15 border border-white/20 text-white text-xs font-black">
-                        Lv.{level}
-                      </div>
-                    </div>
-                    <div className="mt-2 text-white text-sm font-bold">
-                      XP <span className="text-white/70">({Math.round(xpPct)}%)</span>
-                    </div>
-                    <div className="mt-2 h-2.5 rounded-full bg-white/10 overflow-hidden border border-white/10">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${xpPct}%` }}
-                        transition={{ duration: 0.25, ease: 'easeOut' }}
-                        className="h-full bg-gradient-to-r from-amber-300 to-pink-300"
-                      />
-                    </div>
-                    <div className="mt-3 text-white/70 text-xs font-bold">
-                      ※進捗を「成長」として見せることで、待ち時間を“体験”に変換します。
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
-  )
-}
-
-function ToastStack({ toasts }: { toasts: Toast[] }) {
-  return (
-    <div className="fixed right-4 bottom-4 z-[120] w-[320px] max-w-[calc(100vw-32px)] pointer-events-none">
-      <AnimatePresence>
-        {toasts.map((t) => (
-          <motion.div
-            key={t.id}
-            initial={{ opacity: 0, x: 18, y: 6 }}
-            animate={{ opacity: 1, x: 0, y: 0 }}
-            exit={{ opacity: 0, x: 18 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-            className="mb-2 rounded-2xl bg-slate-900 text-white border border-white/10 shadow-2xl px-4 py-3"
-          >
-            <div className="text-xs font-black tracking-wider text-white/70">ACHIEVEMENT</div>
-            <div className="mt-1 text-sm font-black">{t.title}</div>
-            {t.desc ? <div className="mt-1 text-xs font-bold text-white/70">{t.desc}</div> : null}
-          </motion.div>
-        ))}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-function SparkleTrail({
-  enabled,
-  sparkles,
-}: {
-  enabled: boolean
-  sparkles: { id: string; x: number; y: number }[]
-}) {
-  if (!enabled) return null
-  return (
-    <div className="pointer-events-none fixed inset-0 z-[110]">
-      <AnimatePresence>
-        {sparkles.map((s) => (
-          <motion.div
-            key={s.id}
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.2 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            style={{ position: 'absolute', left: s.x, top: s.y }}
-            className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 shadow-[0_0_18px_rgba(236,72,153,0.45)]"
-          />
-        ))}
-      </AnimatePresence>
-    </div>
   )
 }
 
@@ -557,9 +445,6 @@ export default function PersonaRiveTestPage() {
   const [busy, setBusy] = useState(false)
   const [flavor, setFlavor] = useState<Flavor>('party')
   const [progress, setProgress] = useState(18)
-  const [toasts, setToasts] = useState<Toast[]>([])
-  const [sparkles, setSparkles] = useState<{ id: string; x: number; y: number }[]>([])
-  const sparkleLock = useRef(0)
   const mood = useMemo<Mood>(() => {
     if (!busy) return 'idle'
     if (progress < 35) return 'search'
@@ -573,19 +458,6 @@ export default function PersonaRiveTestPage() {
     return '最終仕上げ中…'
   }, [progress])
   const timerRef = useRef<number | null>(null)
-  const lastQuestRef = useRef<number>(-1)
-
-  const quests = useMemo(() => {
-    return [
-      { label: '解析を完了', threshold: 20 },
-      { label: '人物設計を完了', threshold: 45 },
-      { label: '履歴書を作成', threshold: 70 },
-      { label: '日記を仕上げ', threshold: 92 },
-    ]
-  }, [])
-
-  const level = useMemo(() => 1 + Math.floor(progress / 25), [progress])
-  const xpPct = useMemo(() => ((progress % 25) / 25) * 100, [progress])
 
   useEffect(() => {
     return () => {
@@ -593,26 +465,11 @@ export default function PersonaRiveTestPage() {
     }
   }, [])
 
-  // Quest達成トースト（partyのみ）
-  useEffect(() => {
-    if (flavor !== 'party' || !busy) return
-    const idx = quests.findIndex((q) => progress < q.threshold)
-    const doneIdx = idx === -1 ? quests.length - 1 : idx - 1
-    if (doneIdx >= 0 && doneIdx !== lastQuestRef.current) {
-      lastQuestRef.current = doneIdx
-      const q = quests[doneIdx]
-      const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
-      setToasts((prev) => [{ id, title: `Quest Complete: ${q.label}`, desc: `進捗 ${q.threshold}% 達成` }, ...prev].slice(0, 3))
-      window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 2200)
-    }
-  }, [busy, flavor, progress, quests])
-
   // CTA押下の「操作感」テスト（派手モードでは演出を増やす）
   const start = () => {
     if (busy) return
     setBusy(true)
     setProgress(12)
-    lastQuestRef.current = -1
     if (timerRef.current) window.clearInterval(timerRef.current)
     timerRef.current = window.setInterval(() => {
       setProgress((p) => Math.min(96, p + Math.floor(Math.random() * 9 + 5)))
@@ -631,9 +488,6 @@ export default function PersonaRiveTestPage() {
           origin: { y: 0.55 },
           colors: ['#a855f7', '#ec4899', '#60a5fa', '#f59e0b'],
         })
-        const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
-        setToasts((prev) => [{ id, title: 'Persona Ready!', desc: '報酬：レポートUIが解放されました' }, ...prev].slice(0, 3))
-        window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 2600)
       }
     }, flavor === 'party' ? 1200 : 450)
   }
@@ -646,22 +500,6 @@ export default function PersonaRiveTestPage() {
       initial="initial"
       animate="animate"
       className="min-h-screen bg-white"
-      onPointerMove={(e) => {
-        if (flavor !== 'party') return
-        const now = Date.now()
-        if (now - sparkleLock.current < 40) return
-        sparkleLock.current = now
-        const id = `${now}-${Math.random().toString(16).slice(2)}`
-        const x = (e as any).clientX as number
-        const y = (e as any).clientY as number
-        setSparkles((prev) => {
-          const next = [{ id, x, y }, ...prev].slice(0, 14)
-          return next
-        })
-        window.setTimeout(() => {
-          setSparkles((prev) => prev.filter((s) => s.id !== id))
-        }, 350)
-      }}
     >
       <PartyBackground enabled={flavor === 'party'} />
       <TopNav flavor={flavor} onToggleFlavor={() => setFlavor((v) => (v === 'party' ? 'minimal' : 'party'))} />
@@ -682,12 +520,7 @@ export default function PersonaRiveTestPage() {
         progress={progress}
         stage={stage}
         mood={mood}
-        level={level}
-        xpPct={xpPct}
-        quests={quests}
       />
-      <ToastStack toasts={toasts} />
-      <SparkleTrail enabled={flavor === 'party'} sparkles={sparkles} />
     </motion.main>
   )
 }
