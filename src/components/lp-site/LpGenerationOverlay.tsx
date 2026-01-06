@@ -239,7 +239,6 @@ export function LpGenerationOverlay({
                   <span className="text-teal-600">{Math.round(p)}%</span>
                 </div>
               </div>
-            </div>
 
               {/* コンテンツエリア */}
               <div className="p-6">
