@@ -32,6 +32,8 @@ function LpSitePageInner() {
   const [apiResult, setApiResult] = useState<LpGenerationResult | null>(null)
   const [partialResult, setPartialResult] = useState<Partial<LpGenerationResult> | null>(null)
   const [currentStep, setCurrentStep] = useState<'product' | 'structure' | 'wireframe' | 'image' | 'complete'>('product')
+  const [isGeneratingImages, setIsGeneratingImages] = useState(false)
+  const [imageProgress, setImageProgress] = useState(0)
 
   const steps = [
     { label: '商品理解', threshold: 20, icon: Search },
@@ -208,75 +210,86 @@ function LpSitePageInner() {
         const step3Data = await step3Response.json()
         wireframes = step3Data.wireframes
 
-        // ここで途中結果を表示（構成とワイヤーフレーム）
-        const partialResult: Partial<LpGenerationResult> = {
+        // ワイヤーフレームが生成されたら、すぐに結果を表示（オーバーレイを閉じる）
+        const wireframeResult: LpGenerationResult = {
           product_info: productInfo,
           sections,
           wireframes,
           images: [],
           structure_json: JSON.stringify({ product_info: productInfo, sections, wireframes }, null, 2),
         }
-        setPartialResult(partialResult)
-        setResult(partialResult as LpGenerationResult)
-        // 生成中でも結果を表示できるようにする（オーバーレイは表示し続ける）
-        toast.success('構成とワイヤーフレームが生成されました！画像生成を続けます...')
+        setPartialResult(wireframeResult)
+        setResult(wireframeResult)
+        setIsGenerating(false) // オーバーレイを閉じる
+        setProgress(0)
+        setStageText('準備中...')
+        setMood('idle')
+        toast.success('ワイヤーフレームが生成されました！画像を自動生成中...')
 
-        // Step 4: 画像生成（時間がかかる）
-        setCurrentStep('image')
-        setProgress(70)
-        setStageText('セクション画像を生成中...')
-        setMood('think')
+        // Step 4: 画像生成（バックグラウンドで実行）
+        setIsGeneratingImages(true)
+        setImageProgress(0)
         
-        const step4Response = await fetch('/api/lp-site/generate-step', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ step: 'image-generation', product_info: productInfo, sections }),
-        })
-        if (!step4Response.ok) {
-          // 画像生成に失敗しても、構成とワイヤーフレームは表示済み
-          console.error('画像生成に失敗しましたが、構成とワイヤーフレームは表示できます')
-          setApiResult({
-            product_info: productInfo,
-            sections,
-            wireframes,
-            images: [],
-            structure_json: JSON.stringify({ product_info: productInfo, sections, wireframes }, null, 2),
-          })
-          setApiCompleted(true)
-          setProgress(100)
-          setStageText('完了（一部画像は未生成）')
-          setMood('happy')
-          toast.warning('一部の画像生成に失敗しましたが、構成とワイヤーフレームは表示できます')
-          return
-        }
-        const step4Data = await step4Response.json()
-        images = step4Data.images
+        // 画像生成を非同期で実行
+        ;(async () => {
+          try {
+            setCurrentStep('image')
+            
+            // 画像生成の進捗をシミュレート
+            const progressInterval = setInterval(() => {
+              setImageProgress((prev) => {
+                if (prev >= 90) {
+                  clearInterval(progressInterval)
+                  return 90
+                }
+                return prev + 2
+              })
+            }, 500)
 
-        // 最終結果を更新（画像を追加）
-        const finalResult: LpGenerationResult = {
-          product_info: productInfo,
-          sections,
-          wireframes,
-          images,
-          structure_json: JSON.stringify({
-            product_info: productInfo,
-            sections,
-            wireframes,
-            images: images.map(img => ({
-              section_id: img.section_id,
-              has_pc: !!img.image_pc,
-              has_sp: !!img.image_sp,
-            })),
-          }, null, 2),
-        }
-        
-        setCurrentStep('complete')
-        setResult(finalResult) // 結果を更新
-        setApiResult(finalResult)
-        setApiCompleted(true)
-        setProgress(100)
-        setStageText('完了！')
-        setMood('happy')
+            const step4Response = await fetch('/api/lp-site/generate-step', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ step: 'image-generation', product_info: productInfo, sections }),
+            })
+            
+            clearInterval(progressInterval)
+            
+            if (!step4Response.ok) {
+              throw new Error('画像生成に失敗しました')
+            }
+            
+            const step4Data = await step4Response.json()
+            images = step4Data.images
+
+            // 画像を追加して結果を更新
+            const finalResult: LpGenerationResult = {
+              product_info: productInfo,
+              sections,
+              wireframes,
+              images,
+              structure_json: JSON.stringify({
+                product_info: productInfo,
+                sections,
+                wireframes,
+                images: images.map(img => ({
+                  section_id: img.section_id,
+                  has_pc: !!img.image_pc,
+                  has_sp: !!img.image_sp,
+                })),
+              }, null, 2),
+            }
+            
+            setResult(finalResult) // 結果を更新（画像を追加）
+            setImageProgress(100)
+            setIsGeneratingImages(false)
+            toast.success('すべての画像が生成されました！')
+          } catch (error: any) {
+            console.error('画像生成エラー:', error)
+            setIsGeneratingImages(false)
+            setImageProgress(0)
+            toast.error('画像生成に失敗しましたが、ワイヤーフレームは表示できます')
+          }
+        })()
       } catch (error: any) {
         console.error('生成エラー:', error)
         // 途中まで完了している場合は、部分的な結果を表示
@@ -716,21 +729,38 @@ function LpSitePageInner() {
                     </div>
 
                     {hasImage ? (
-                      <div className="mb-4">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3 }}
+                        className="mb-4"
+                      >
                         <img
                           src={imageData}
                           alt={section.headline}
-                          className="w-full rounded-xl border border-slate-200"
+                          className="w-full rounded-xl border border-slate-200 shadow-md"
                         />
-                      </div>
+                      </motion.div>
                     ) : section.image_required && (
-                      <div className="mb-4 p-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center">
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mb-4 p-8 bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl border-2 border-dashed border-teal-300 flex items-center justify-center"
+                      >
                         <div className="text-center">
-                          <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                          <p className="text-sm font-bold text-gray-500">画像生成中...</p>
-                          <p className="text-xs text-gray-400 mt-1">まもなく表示されます</p>
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                            className="inline-block mb-2"
+                          >
+                            <ImageIcon className="w-12 h-12 text-teal-400" />
+                          </motion.div>
+                          <p className="text-sm font-bold text-teal-700">画像生成中...</p>
+                          <p className="text-xs text-teal-500 mt-1">
+                            {isGeneratingImages ? `${imageProgress}% 完了` : 'まもなく表示されます'}
+                          </p>
                         </div>
-                      </div>
+                      </motion.div>
                     )}
 
                     <div className="flex items-center gap-2">
