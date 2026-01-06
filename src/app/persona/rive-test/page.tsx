@@ -474,16 +474,6 @@ export default function PersonaRiveTestPage() {
       setProgress((p) => Math.min(96, p + Math.floor(Math.random() * 9 + 5)))
     }, 260)
 
-    // 派手モード: クリック即反応（紙吹雪）
-    if (flavor === 'party') {
-      confetti({
-        particleCount: 70,
-        spread: 70,
-        origin: { y: 0.75 },
-        colors: ['#a855f7', '#ec4899', '#22c55e', '#f59e0b'],
-      })
-    }
-
     setTimeout(() => {
       if (timerRef.current) window.clearInterval(timerRef.current)
       setProgress(100)

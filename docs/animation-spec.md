@@ -87,8 +87,7 @@ export type MotionMode = 'party' | 'minimal'
 ### 4.3 紙吹雪（任意）
 - `canvas-confetti` を使用
 - 発火タイミング
-  - CTA押下直後（少量）
-  - 完了時（多め）
+  - **完了時のみ**（多め）
 - 連打対策：busy中は発火しない
 
 ### 4.4 動く背景（任意）
