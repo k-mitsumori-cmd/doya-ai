@@ -127,10 +127,8 @@ export type LoadingOverlayProps = {
 ---
 
 ## 7. 参考実装（現状）
-- テストページ：`/persona/rive-test`
-  - `src/app/persona/rive-test/page.tsx`
 - マスコット素材：
-  - `public/persona/rive-test/mascot.svg`
+  - `public/persona/mascot.svg`
 
 # アニメーション仕様（参照用） — Party Mode Default
 
@@ -261,9 +259,7 @@ export type LoadingOverlayProps = {
 ---
 
 ## 7. 参考実装（現状）
-- テストページ：`/persona/rive-test`
-  - `src/app/persona/rive-test/page.tsx`
 - マスコット素材：
-  - `public/persona/rive-test/mascot.svg`
+  - `public/persona/mascot.svg`
 
 

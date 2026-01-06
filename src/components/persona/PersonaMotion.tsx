@@ -118,7 +118,7 @@ export function PartyLoadingOverlay({
   stageText,
   mood,
   steps,
-  mascotSrc = '/persona/rive-test/mascot.svg',
+  mascotSrc = '/persona/mascot.svg',
 }: {
   open: boolean
   mode: MotionMode
