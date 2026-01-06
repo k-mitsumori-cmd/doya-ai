@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Download, RefreshCw, Monitor, Smartphone, Loader2, Search, Layout, Image as ImageIcon, Package } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { LpGenerationOverlay } from '@/components/lp-site/LpGenerationOverlay'
+import { PasonaFrameworkView } from '@/components/lp-site/PasonaFrameworkView'
 
 function LpSitePageInner() {
   const [inputType, setInputType] = useState<'url' | 'form'>('url')
@@ -34,6 +35,7 @@ function LpSitePageInner() {
   const [currentStep, setCurrentStep] = useState<'product' | 'structure' | 'wireframe' | 'image' | 'complete'>('product')
   const [isGeneratingImages, setIsGeneratingImages] = useState(false)
   const [imageProgress, setImageProgress] = useState(0)
+  const [showFramework, setShowFramework] = useState(false)
 
   // 進捗を安全に更新（後戻りしない）
   const updateProgress = (newProgress: number) => {
