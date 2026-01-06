@@ -1,5 +1,6 @@
 // ============================================
 // Step 4: 画像生成フェーズ（Gemini Pro 3）
+// セクション単位で個別生成（PC/SP別）
 // ============================================
 
 import { geminiGenerateImagePng } from '@seo/lib/gemini'
@@ -7,6 +8,7 @@ import { LpSection, SectionImage, ProductInfo } from './types'
 
 /**
  * セクション画像を生成
+ * 各セクションごとにPC/SP別の画像を個別生成
  */
 export async function generateSectionImages(
   sections: LpSection[],
@@ -22,6 +24,7 @@ export async function generateSectionImages(
       continue
     }
 
+    // PC/SP別に必ず別々の画像を生成（リサイズではなく再生成）
     const sectionImage = await generateSectionImagePair(section, productInfo)
     images.push(sectionImage)
   }
@@ -31,19 +34,19 @@ export async function generateSectionImages(
 
 /**
  * セクションのPC/SP画像ペアを生成
+ * 必ず別々の画像を生成（リサイズ禁止）
  */
 export async function generateSectionImagePair(
   section: LpSection,
   productInfo: ProductInfo
 ): Promise<SectionImage> {
-  const imagePrompt = generateImagePrompt(section, productInfo)
-
-  // PC用画像生成
+  // PC用画像生成（横長）
   let imagePc: string | undefined
   try {
+    const pcPrompt = generateImagePrompt(section, productInfo, 'pc')
     const pcResult = await geminiGenerateImagePng({
-      prompt: imagePrompt + '\n\nアスペクト比: 16:9（横長）',
-      aspectRatio: '16:9',
+      prompt: pcPrompt,
+      aspectRatio: '16:9', // PC用は横長
       imageSize: '2K',
     })
     imagePc = `data:${pcResult.mimeType};base64,${pcResult.dataBase64}`
@@ -51,12 +54,13 @@ export async function generateSectionImagePair(
     console.error(`PC画像生成エラー (${section.section_id}):`, error)
   }
 
-  // SP用画像生成
+  // SP用画像生成（縦長）- 必ず別プロンプトで再生成
   let imageSp: string | undefined
   try {
+    const spPrompt = generateImagePrompt(section, productInfo, 'sp')
     const spResult = await geminiGenerateImagePng({
-      prompt: imagePrompt + '\n\nアスペクト比: 9:16（縦長）',
-      aspectRatio: '9:16',
+      prompt: spPrompt,
+      aspectRatio: '9:16', // SP用は縦長
       imageSize: '2K',
     })
     imageSp = `data:${spResult.mimeType};base64,${spResult.dataBase64}`
@@ -72,36 +76,201 @@ export async function generateSectionImagePair(
 }
 
 /**
- * 画像生成用プロンプトを生成
+ * 共通前提プロンプト
  */
-function generateImagePrompt(section: LpSection, productInfo: ProductInfo): string {
-  const toneDescription = {
-    trust: '信頼感のある、落ち着いた、プロフェッショナルな',
-    pop: 'ポップで明るい、カラフルな、親しみやすい',
-    luxury: '高級感のある、洗練された、上質な',
-    simple: 'シンプルでクリーンな、ミニマルな',
-  }[productInfo.tone]
+function getCommonBasePrompt(): string {
+  return `You are generating an image asset for a landing page.
+This image is NOT a full landing page.
+It is a single section image that will be combined with other sections.
 
-  return `LP（ランディングページ）用のセクション画像を生成してください。
+Important constraints:
+- Vertical layout
+- Plenty of empty space for text overlay
+- Clean, commercial, high-quality
+- Suitable for Japanese product landing pages
+- No embedded text unless explicitly instructed
+- Focus on visual storytelling, not UI mockups
+- Do NOT include any text in the image
+- Leave ample space for text overlay at the top, bottom, or sides`
+}
 
-セクション情報:
-- セクションタイプ: ${section.section_type}
-- 目的: ${section.purpose}
-- 見出し: ${section.headline}
-- サブ見出し: ${section.sub_headline || ''}
+/**
+ * セクションタイプ別の詳細プロンプトを生成
+ */
+function generateImagePrompt(
+  section: LpSection,
+  productInfo: ProductInfo,
+  device: 'pc' | 'sp'
+): string {
+  const commonBase = getCommonBasePrompt()
+  const toneDescription = getToneDescription(productInfo.tone)
+  const sectionSpecific = getSectionSpecificPrompt(section, productInfo, device)
 
-商品情報:
-- 商品名: ${productInfo.product_name}
-- ターゲット: ${productInfo.target}
-- トーン: ${toneDescription}
+  return `${commonBase}
 
-画像要件:
-- LP用途の画像（テキストを載せやすい構図）
-- トーン: ${toneDescription}
-- 抽象/UI/写真風を自動判断して最適なスタイルを選択
-- テキストオーバーレイを想定した余白を確保
-- 商品・サービスに関連するビジュアル要素を含める
+${sectionSpecific}
 
-高品質で、LPセクションとして使用できる画像を生成してください。`
+Product Information:
+- Product name: ${productInfo.product_name}
+- Target audience: ${productInfo.target}
+- Tone: ${toneDescription}
+- LP type: ${productInfo.lp_type}
+
+Device-specific requirements:
+- ${device === 'pc' ? 'PC version: Wide horizontal layout (16:9), suitable for desktop viewing' : 'Mobile version: Tall vertical layout (9:16), optimized for smartphone scrolling'}
+- Recompose layout specifically for ${device === 'pc' ? 'desktop' : 'mobile'} - do NOT just resize
+- ${device === 'pc' ? 'Horizontal flow, more elements can be side-by-side' : 'Vertical flow, single column composition'}
+
+Remember:
+- This is ONE section of a larger landing page
+- Text will be overlaid later, so leave space
+- Generate a unique composition for ${device === 'pc' ? 'PC' : 'mobile'}, not a resized version`
+}
+
+/**
+ * トーン説明を取得
+ */
+function getToneDescription(tone: string): string {
+  const descriptions: Record<string, string> = {
+    trust: 'Trustworthy, calm, professional, reliable',
+    pop: 'Pop, bright, colorful, friendly, energetic',
+    luxury: 'Luxury, refined, premium, sophisticated',
+    simple: 'Simple, clean, minimal, uncluttered',
+  }
+  return descriptions[tone] || 'clean and professional'
+}
+
+/**
+ * セクションタイプ別の詳細プロンプト
+ */
+function getSectionSpecificPrompt(
+  section: LpSection,
+  productInfo: ProductInfo,
+  device: 'pc' | 'sp'
+): string {
+  const sectionType = section.section_type.toLowerCase()
+
+  // ファーストビュー（FV）
+  if (sectionType.includes('hero') || sectionType.includes('first') || sectionType.includes('fv')) {
+    return `Section type: First View (Hero Section)
+
+Purpose:
+- Instantly communicate product value and premium feeling
+- Catch attention at first glance
+
+Visual requirements:
+- Main product bottle/object centered or slightly offset
+- Dynamic visual elements (splash, particles, light)
+- Bright, clean background
+- Luxury but gentle impression
+- Commercial advertising style
+
+Composition:
+- ${device === 'pc' ? 'Upper area reserved for headline text, center or lower area for product' : 'Top area for headline, center for product, bottom for CTA'}
+- No small details, bold composition
+- Generous empty space for text overlay
+
+Tone: Clean, Premium, Trustworthy`
+  }
+
+  // 商品特徴・ベネフィット
+  if (sectionType.includes('benefit') || sectionType.includes('feature') || sectionType.includes('value')) {
+    return `Section type: Benefit Explanation
+
+Purpose:
+- Explain key benefits visually
+
+Visual requirements:
+- Abstract representation of benefits (moisture, efficiency, growth, etc.)
+- Soft gradients
+- Light particles or bubbles
+- No people unless necessary
+
+Composition:
+- ${device === 'pc' ? 'Left or right empty area for text, visual flow from top to bottom' : 'Top area for text, visual elements below'}
+- Clean, spacious layout
+
+Tone: Scientific but friendly, clean aesthetic`
+  }
+
+  // 成分・仕組み説明
+  if (sectionType.includes('ingredient') || sectionType.includes('mechanism') || sectionType.includes('how')) {
+    return `Section type: Ingredient / Mechanism
+
+Purpose:
+- Visualize how the product works
+
+Visual requirements:
+- Diagram-like illustration
+- Layers, processes, or interactions
+- Simple, easy-to-understand visuals
+- Educational but beautiful
+
+Composition:
+- Center illustration
+- Space around for explanation text
+- ${device === 'pc' ? 'Horizontal flow possible' : 'Vertical flow'}
+
+Style: Semi-flat illustration, informative`
+  }
+
+  // 使用イメージ・人物
+  if (sectionType.includes('usage') || sectionType.includes('lifestyle') || sectionType.includes('person')) {
+    return `Section type: Usage Image
+
+Purpose:
+- Show how the product fits into daily life
+
+Visual requirements:
+- ${productInfo.lp_type === 'ec' ? 'Japanese person using the product' : 'Professional setting or workspace'}
+- Natural smile or confident expression
+- Clean, bright space
+- Soft lighting
+
+Constraints:
+- No exaggerated expressions
+- Realistic lifestyle photo style
+- Professional but approachable
+
+Composition:
+- ${device === 'pc' ? 'Person on one side, empty space on the other for text' : 'Person centered or top, text space below'}
+- Natural, authentic feeling`
+  }
+
+  // CTA・商品情報
+  if (sectionType.includes('cta') || sectionType.includes('action') || sectionType.includes('pricing')) {
+    return `Section type: CTA / Product Info
+
+Purpose:
+- Encourage purchase or action
+
+Visual requirements:
+- Product clearly visible
+- Simple background
+- Calm but confident mood
+- Focus on the product or action
+
+Composition:
+- Product centered
+- ${device === 'pc' ? 'Space above or below for buttons and text' : 'Space above for headline, below for CTA button'}
+- Clean, uncluttered
+
+Tone: Reliable, Clear, Commercial`
+  }
+
+  // デフォルト（その他のセクション）
+  return `Section type: ${section.section_type}
+
+Purpose: ${section.purpose}
+
+Visual requirements:
+- Clean, commercial style
+- Related to the product or service
+- Spacious layout for text overlay
+- Professional quality
+
+Composition:
+- ${device === 'pc' ? 'Horizontal layout with text space' : 'Vertical layout with text space'}
+- Focus on visual storytelling`
 }
 
