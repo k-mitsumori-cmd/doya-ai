@@ -30,6 +30,7 @@ function LpSitePageInner() {
   const [mood, setMood] = useState<'idle' | 'search' | 'think' | 'happy'>('idle')
   const [apiCompleted, setApiCompleted] = useState(false)
   const [apiResult, setApiResult] = useState<LpGenerationResult | null>(null)
+  const [partialResult, setPartialResult] = useState<Partial<LpGenerationResult> | null>(null)
 
   const steps = [
     { label: '商品理解', threshold: 20, icon: Search },
@@ -96,14 +97,26 @@ function LpSitePageInner() {
 
   // API完了と進捗100%の両方が揃ったら結果を表示
   useEffect(() => {
-    if (progress >= 100 && apiCompleted && apiResult && isGenerating) {
+    if (!isGenerating) return
+    
+    if (progress >= 100 && apiCompleted && apiResult) {
+      console.log('[LP-SITE] 完了条件を満たしました。結果を表示します。', { progress, apiCompleted, hasResult: !!apiResult })
       // 紙吹雪が表示されるのを待ってから結果を表示
       const timer = setTimeout(() => {
+        console.log('[LP-SITE] 結果を設定します')
         setResult(apiResult)
         setIsGenerating(false)
+        setProgress(0)
+        setStageText('準備中...')
+        setMood('idle')
+        setApiCompleted(false)
+        setApiResult(null)
+        setPartialResult(null)
         toast.success('LP生成が完了しました！')
       }, 1500)
       return () => clearTimeout(timer)
+    } else {
+      console.log('[LP-SITE] 完了条件を満たしていません', { progress, apiCompleted, hasResult: !!apiResult, isGenerating })
     }
   }, [progress, apiCompleted, apiResult, isGenerating])
 
@@ -124,6 +137,7 @@ function LpSitePageInner() {
     setMood('idle')
     setApiCompleted(false)
     setApiResult(null)
+    setPartialResult(null)
 
     try {
       const request: LpGenerationRequest = {
@@ -147,15 +161,31 @@ function LpSitePageInner() {
       }
 
       const data = await response.json()
+      console.log('[LP-SITE] APIレスポンス受信', { hasResult: !!data.result, partial: data.partial })
       
       // API完了をマーク
-      setApiResult(data.result)
-      setApiCompleted(true)
-      
-      // API完了時に100%に設定
-      setProgress(100)
-      setStageText('完了！')
-      setMood('happy')
+      if (data.result) {
+        console.log('[LP-SITE] 結果を設定します', { sections: data.result.sections?.length, images: data.result.images?.length })
+        setApiResult(data.result)
+        setApiCompleted(true)
+        
+        // API完了時に100%に設定（進捗が100%未満の場合は100%に）
+        setProgress(100)
+        setStageText('完了！')
+        setMood('happy')
+      } else if (data.partial && data.result) {
+        // 部分的な結果がある場合は表示
+        console.log('[LP-SITE] 部分的な結果を設定します')
+        setPartialResult(data.result)
+        setApiResult(data.result)
+        setApiCompleted(true)
+        setProgress(100)
+        setStageText('完了（一部画像は未生成）')
+        setMood('happy')
+        toast.warning('一部の画像生成に失敗しましたが、構成とワイヤーフレームは表示できます')
+      } else {
+        throw new Error('結果が取得できませんでした')
+      }
     } catch (error: any) {
       console.error('生成エラー:', error)
       setIsGenerating(false)
@@ -491,6 +521,24 @@ function LpSitePageInner() {
         ) : (
           /* Result Preview */
           <div className="space-y-6">
+            {/* 部分的な結果がある場合の警告 */}
+            {partialResult && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-amber-900 mb-1">
+                      一部の画像は生成中です
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      構成とワイヤーフレームは表示できます。画像は生成完了次第、自動的に表示されます。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Device Toggle */}
             <div className="bg-white rounded-2xl shadow-lg p-4">
               <div className="flex items-center gap-4">
@@ -533,6 +581,7 @@ function LpSitePageInner() {
               {result.sections.map((section, index) => {
                 const image = result.images.find(img => img.section_id === section.section_id)
                 const imageData = selectedDevice === 'pc' ? image?.image_pc : image?.image_sp
+                const hasImage = !!imageData
 
                 return (
                   <motion.div
@@ -554,13 +603,21 @@ function LpSitePageInner() {
                       </p>
                     </div>
 
-                    {imageData && (
+                    {hasImage ? (
                       <div className="mb-4">
                         <img
                           src={imageData}
                           alt={section.headline}
                           className="w-full rounded-xl border border-slate-200"
                         />
+                      </div>
+                    ) : section.image_required && (
+                      <div className="mb-4 p-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center">
+                        <div className="text-center">
+                          <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm font-bold text-gray-500">画像生成中...</p>
+                          <p className="text-xs text-gray-400 mt-1">まもなく表示されます</p>
+                        </div>
                       </div>
                     )}
 
