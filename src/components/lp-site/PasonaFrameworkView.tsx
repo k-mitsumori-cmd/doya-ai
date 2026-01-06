@@ -147,7 +147,15 @@ export function PasonaFrameworkView({ sections = [] }: PasonaFrameworkViewProps)
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`${step.bgColor} rounded-xl p-5 border-2 border-transparent hover:border-${step.color.split('-')[1]}-300 transition-all shadow-sm hover:shadow-lg`}
+                className={`${step.bgColor} rounded-xl p-5 border-2 border-transparent hover:border-opacity-50 transition-all shadow-sm hover:shadow-lg`}
+                style={{
+                  borderColor: step.color.includes('red') ? 'rgba(239, 68, 68, 0.3)' :
+                               step.color.includes('pink') ? 'rgba(236, 72, 153, 0.3)' :
+                               step.color.includes('blue') ? 'rgba(37, 99, 235, 0.3)' :
+                               step.color.includes('purple') ? 'rgba(168, 85, 247, 0.3)' :
+                               step.color.includes('orange') ? 'rgba(249, 115, 22, 0.3)' :
+                               'rgba(34, 197, 94, 0.3)'
+                }}
               >
                 <div className="flex items-start gap-4">
                   {/* アイコンと文字 */}
