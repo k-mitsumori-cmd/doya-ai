@@ -51,14 +51,25 @@ function LpSitePageInner() {
     }
 
     let currentProgress = 0
+    const maxProgress = 95 // 最大95%まで（API完了時に100%にする）
     const interval = setInterval(() => {
       // 進捗が遅くなるように調整（後半は遅く）
-      let increment = 0.8
-      if (currentProgress > 80) increment = 0.3
-      else if (currentProgress > 60) increment = 0.5
-      else if (currentProgress > 40) increment = 0.7
+      let increment = 0.6
+      if (currentProgress > 70) increment = 0.2
+      else if (currentProgress > 50) increment = 0.4
+      else if (currentProgress > 30) increment = 0.5
       
       currentProgress += increment
+      
+      // 最大95%までに制限
+      if (currentProgress >= maxProgress) {
+        currentProgress = maxProgress
+        setStageText('最終調整中...')
+        setMood('think')
+        setProgress(maxProgress)
+        clearInterval(interval)
+        return
+      }
       
       if (currentProgress < 20) {
         setStageText('商品情報を分析中...')
@@ -69,23 +80,16 @@ function LpSitePageInner() {
       } else if (currentProgress < 60) {
         setStageText('ワイヤーフレームを生成中...')
         setMood('think')
-      } else if (currentProgress < 90) {
+      } else if (currentProgress < 80) {
         setStageText('セクション画像を生成中...')
         setMood('think')
-      } else if (currentProgress < 100) {
-        setStageText('アセットを整理中...')
-        setMood('happy')
       } else {
-        setStageText('完了！')
-        setMood('happy')
-        setProgress(100)
-        clearInterval(interval)
+        setStageText('最終調整中...')
+        setMood('think')
       }
 
-      if (currentProgress < 100) {
-        setProgress(Math.min(100, currentProgress))
-      }
-    }, 150)
+      setProgress(Math.min(maxProgress, currentProgress))
+    }, 200)
 
     return () => clearInterval(interval)
   }, [isGenerating])
@@ -148,12 +152,10 @@ function LpSitePageInner() {
       setApiResult(data.result)
       setApiCompleted(true)
       
-      // 進捗がまだ100%でない場合は100%に設定
-      if (progress < 100) {
-        setProgress(100)
-        setStageText('完了！')
-        setMood('happy')
-      }
+      // API完了時に100%に設定
+      setProgress(100)
+      setStageText('完了！')
+      setMood('happy')
     } catch (error: any) {
       console.error('生成エラー:', error)
       setIsGenerating(false)

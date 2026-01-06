@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Globe, Layout, Image as ImageIcon, Package, CheckCircle2, Loader2, Zap } from 'lucide-react'
+import { Sparkles, Globe, Layout, Image as ImageIcon, Package, CheckCircle2, Loader2, Zap, Clock } from 'lucide-react'
 import confetti from 'canvas-confetti'
 
 type OverlayMood = 'idle' | 'search' | 'think' | 'happy'
@@ -169,6 +169,17 @@ export function LpGenerationOverlay({
                     </div>
                     <div className="w-8 h-8 rounded-full border-2 border-teal-200 border-t-teal-500 animate-spin" />
                   </div>
+                </div>
+                
+                {/* 時間がかかる旨のメッセージ */}
+                <div className="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <p className="text-xs font-bold text-amber-700">
+                      画像生成のため 2〜5分 ほどかかります。しばらくお待ちください。
+                    </p>
+                  </div>
+                </div>
                 </div>
 
                 {/* ステップインジケーター */}
