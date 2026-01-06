@@ -669,6 +669,7 @@ export default function PersonaPage() {
         .replaceAll("'", '&#39;')
 
     const schedule = Array.isArray(generatedData.persona.dailySchedule) ? generatedData.persona.dailySchedule : []
+    const scheduleImageMap = scheduleImages || {}
     const diary = generatedData.persona.diary
 
     const html = `<!doctype html>
@@ -697,6 +698,8 @@ export default function PersonaPage() {
     th,td{border:1px solid #e2e8f0; padding:8px; font-size:12px; vertical-align:top;}
     th{background:#f8fafc; text-align:left;}
     .muted{color:#64748b; font-weight:700; font-size:11px;}
+    .sceneImg{width:210px; max-width:210px; height:auto; border:1px solid #e2e8f0; border-radius:10px;}
+    tr{break-inside:avoid; page-break-inside:avoid;}
   </style>
 </head>
 <body>
@@ -724,12 +727,18 @@ export default function PersonaPage() {
     <div class="row"><div class="k">一日</div><div>${escape(generatedData.persona.dayInLife)}</div></div>
     <div class="diary">
       <h2 style="margin:0 0 8px; font-size:16px; font-weight:900;">特徴：こういったスケジュールで1日を送っています</h2>
-      <div class="muted">※PDFでは画像は省略しています（画面上で生成した画像はHTML/画像保存をご利用ください）</div>
+      <div class="muted">※画像は「生成済みのシーンのみ」PDFに埋め込みます（未生成の行は空欄です）</div>
       <table>
-        <thead><tr><th style="width:80px;">時間</th><th>内容</th><th style="width:120px;">気分</th></tr></thead>
+        <thead><tr><th style="width:80px;">時間</th><th>内容</th><th style="width:120px;">気分</th><th style="width:230px;">シーン画像</th></tr></thead>
         <tbody>
           ${schedule
-            .map((s) => `<tr><td>${escape(s.time)}</td><td><b>${escape(s.title)}</b><br/>${escape(s.detail)}</td><td>${escape(s.mood || '')}</td></tr>`)
+            .map((s, idx) => {
+              const img = (scheduleImageMap as any)[idx]
+              const imgHtml = img ? `<img class="sceneImg" src="${img}" />` : ''
+              return `<tr><td>${escape(s.time)}</td><td><b>${escape(s.title)}</b><br/>${escape(s.detail)}</td><td>${escape(
+                s.mood || ''
+              )}</td><td>${imgHtml}</td></tr>`
+            })
             .join('')}
         </tbody>
       </table>
