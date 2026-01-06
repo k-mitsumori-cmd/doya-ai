@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState, Suspense } from 'react'
+import React, { useState, Suspense, useEffect } from 'react'
 import { LpSiteAppLayout } from '@/components/LpSiteAppLayout'
 import { LpGenerationRequest, LpGenerationResult, LpType, Tone } from '@/lib/lp-site/types'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Download, RefreshCw, Monitor, Smartphone, Loader2 } from 'lucide-react'
+import { Sparkles, Download, RefreshCw, Monitor, Smartphone, Loader2, Search, Layout, Image as ImageIcon, Package } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { LpGenerationOverlay } from '@/components/lp-site/LpGenerationOverlay'
 
 function LpSitePageInner() {
   const [inputType, setInputType] = useState<'url' | 'form'>('url')
@@ -24,6 +25,63 @@ function LpSitePageInner() {
   const [result, setResult] = useState<LpGenerationResult | null>(null)
   const [selectedDevice, setSelectedDevice] = useState<'pc' | 'sp'>('pc')
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
+  const [progress, setProgress] = useState(0)
+  const [stageText, setStageText] = useState('準備中...')
+  const [mood, setMood] = useState<'idle' | 'search' | 'think' | 'happy'>('idle')
+
+  const steps = [
+    { label: '商品理解', threshold: 20, icon: Search },
+    { label: 'LP構成生成', threshold: 40, icon: Layout },
+    { label: 'ワイヤーフレーム', threshold: 60, icon: Layout },
+    { label: '画像生成', threshold: 90, icon: ImageIcon },
+    { label: 'アセット整理', threshold: 100, icon: Package },
+  ]
+
+  // 進捗シミュレーション
+  useEffect(() => {
+    if (!isGenerating) {
+      setProgress(0)
+      setStageText('準備中...')
+      setMood('idle')
+      return
+    }
+
+    let currentProgress = 0
+    const interval = setInterval(() => {
+      // 進捗が遅くなるように調整（後半は遅く）
+      let increment = 0.8
+      if (currentProgress > 80) increment = 0.3
+      else if (currentProgress > 60) increment = 0.5
+      else if (currentProgress > 40) increment = 0.7
+      
+      currentProgress += increment
+      
+      if (currentProgress < 20) {
+        setStageText('商品情報を分析中...')
+        setMood('search')
+      } else if (currentProgress < 40) {
+        setStageText('LP構成案を生成中...')
+        setMood('think')
+      } else if (currentProgress < 60) {
+        setStageText('ワイヤーフレームを生成中...')
+        setMood('think')
+      } else if (currentProgress < 90) {
+        setStageText('セクション画像を生成中...')
+        setMood('think')
+      } else if (currentProgress < 100) {
+        setStageText('アセットを整理中...')
+        setMood('happy')
+      } else {
+        setStageText('完了！')
+        setMood('happy')
+        clearInterval(interval)
+      }
+
+      setProgress(Math.min(100, currentProgress))
+    }, 150)
+
+    return () => clearInterval(interval)
+  }, [isGenerating])
 
   const handleGenerate = async () => {
     if (inputType === 'url' && !url) {
@@ -37,6 +95,9 @@ function LpSitePageInner() {
 
     setIsGenerating(true)
     setResult(null)
+    setProgress(0)
+    setStageText('準備中...')
+    setMood('idle')
 
     try {
       const request: LpGenerationRequest = {
@@ -47,6 +108,7 @@ function LpSitePageInner() {
         tone,
       }
 
+      // 実際のAPI呼び出し（進捗は別途管理）
       const response = await fetch('/api/lp-site/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,13 +121,22 @@ function LpSitePageInner() {
       }
 
       const data = await response.json()
-      setResult(data.result)
-      toast.success('LP生成が完了しました！')
+      
+      // 進捗を100%にしてから結果を設定
+      setProgress(100)
+      setStageText('完了！')
+      setMood('happy')
+      
+      // 紙吹雪が表示されるのを待ってから結果を表示
+      setTimeout(() => {
+        setResult(data.result)
+        setIsGenerating(false)
+        toast.success('LP生成が完了しました！')
+      }, 1500)
     } catch (error: any) {
       console.error('生成エラー:', error)
-      toast.error(error.message || '生成に失敗しました')
-    } finally {
       setIsGenerating(false)
+      toast.error(error.message || '生成に失敗しました')
     }
   }
 
@@ -162,6 +233,15 @@ function LpSitePageInner() {
 
   return (
     <LpSiteAppLayout>
+      {/* 生成中オーバーレイ */}
+      <LpGenerationOverlay
+        open={isGenerating}
+        progress={progress}
+        stageText={stageText}
+        mood={mood}
+        steps={steps}
+      />
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
