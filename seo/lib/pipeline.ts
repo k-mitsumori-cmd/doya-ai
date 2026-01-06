@@ -2695,10 +2695,26 @@ async function integrate(jobId: string) {
   const sections = job.sections
   const memo = article.memo?.content
 
+  // 全てのセクションが生成済み（reviewed）であることを確認（記事が途中で終わるのを防ぐ）
+  const incompleteSections = sections.filter((s: any) => s.status !== 'reviewed' || !s.content || !s.content.trim())
+  if (incompleteSections.length > 0) {
+    const missingIndices = incompleteSections.map((s: any) => s.index).join(', ')
+    throw new Error(
+      `統合前に全てのセクションを生成する必要があります。未生成セクション: ${missingIndices} (全${sections.length}セクション中${incompleteSections.length}件未完成)`
+    )
+  }
+
+  // reviewed かつ content が存在するセクションのみを統合（記事が途中で終わるのを防ぐ）
   const mergedSections = sections
+    .filter((s: any) => s.status === 'reviewed' && s.content && s.content.trim())
     .map((s: any) => normalizeH2Heading(s.content || '', s.headingPath || `section_${s.index}`))
     .filter(Boolean)
     .join('\n\n')
+
+  // セクションが1つも統合されない場合はエラー
+  if (!mergedSections || !mergedSections.trim()) {
+    throw new Error('統合するセクションがありません。全てのセクションが生成済みであることを確認してください。')
+  }
 
   // まずは“セクション結合”で文字数を担保（ここで短くしない）
   const parts: string[] = [`# ${article.title}`]
@@ -3270,15 +3286,63 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
   try {
     await ensureOutlineAndSections(jobId)
 
-    const afterOutline = await p.seoJob.findUnique({
+    // 全てのセクションが生成されるまで繰り返し実行（記事が途中で終わるのを防ぐ）
+    let maxIterations = 50 // 無限ループ防止
+    let iteration = 0
+    while (iteration < maxIterations) {
+      const currentJob = await p.seoJob.findUnique({
+        where: { id: jobId },
+        include: { sections: true },
+      })
+      if (!currentJob) throw new Error('job not found')
+
+      const remaining = (currentJob.sections || []).filter(
+        (s: any) => s.status !== 'reviewed' || !s.content || !s.content.trim()
+      )
+
+      if (remaining.length === 0) {
+        // 全てのセクションが生成済み
+        break
+      }
+
+      // 未生成のセクションを1つ生成
+      try {
+        await generateSection(jobId)
+      } catch (sectionErr: any) {
+        // セクション生成エラーでも、次のセクションを試みる（ただし、連続エラーは避ける）
+        console.error(`[seo generateSection] failed for job ${jobId}:`, sectionErr?.message)
+        // エラーが続く場合は、残りのセクションをスキップして統合に進む（部分的な記事でも完成させる）
+        if (iteration > 5 && remaining.length > 0) {
+          await pushResearchEvent(jobId, {
+            at: Date.now(),
+            kind: 'warn',
+            title: '一部セクションの生成に失敗しましたが、統合を続行します',
+            detail: `未生成セクション: ${remaining.map((s: any) => s.index).join(', ')}`,
+          })
+          break
+        }
+      }
+
+      iteration++
+    }
+
+    // 最終チェック: 全てのセクションが生成済みか確認
+    const finalCheck = await p.seoJob.findUnique({
       where: { id: jobId },
       include: { sections: true },
     })
-    const remaining = (afterOutline?.sections || []).some((s: any) => s.status !== 'reviewed')
+    const stillRemaining = (finalCheck?.sections || []).filter(
+      (s: any) => s.status !== 'reviewed' || !s.content || !s.content.trim()
+    )
 
-    if (remaining) {
-      await generateSection(jobId)
-      return { jobId }
+    if (stillRemaining.length > 0) {
+      // 未生成セクションがあっても、統合を試みる（部分的な記事でも完成させる）
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'warn',
+        title: '一部セクションが未生成ですが、統合を続行します',
+        detail: `未生成セクション: ${stillRemaining.map((s: any) => s.index).join(', ')}`,
+      })
     }
 
     await p.seoJob.update({ where: { id: jobId }, data: { step: 'integrate', progress: 85, status: 'running' } })
