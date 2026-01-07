@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Save, Key, Bell, Shield, Database, RefreshCw, BarChart3, ExternalLink, Copy, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Save, Key, Bell, Shield, Database, RefreshCw, BarChart3, ExternalLink, Copy, Check, X, FileCode } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function AdminSettingsPage() {
@@ -32,6 +32,8 @@ export default function AdminSettingsPage() {
 
   const [isSaving, setIsSaving] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const [showGtmModal, setShowGtmModal] = useState(false)
+  const [testUrl, setTestUrl] = useState('')
 
   // トラッキング設定
   const [trackingSettings, setTrackingSettings] = useState({
@@ -40,6 +42,27 @@ export default function AdminSettingsPage() {
     fbPixelId: '',
     hubspotId: '',
   })
+
+  // 設定を読み込む
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await fetch('/api/admin/settings')
+        if (res.ok) {
+          const data = await res.json()
+          setTrackingSettings({
+            gtmId: data.gtmId || process.env.NEXT_PUBLIC_GTM_ID || '',
+            gaId: data.gaId || '',
+            fbPixelId: data.fbPixelId || '',
+            hubspotId: data.hubspotId || '',
+          })
+        }
+      } catch (e) {
+        console.error('Failed to load settings:', e)
+      }
+    }
+    loadSettings()
+  }, [])
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text)
@@ -50,10 +73,48 @@ export default function AdminSettingsPage() {
 
   const handleSave = async () => {
     setIsSaving(true)
-    // 実際にはAPIで保存
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    toast.success('設定を保存しました')
-    setIsSaving(false)
+    try {
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trackingSettings),
+      })
+      if (!res.ok) throw new Error('保存に失敗しました')
+      toast.success('設定を保存しました')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '保存に失敗しました')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // GTMコードスニペット生成
+  const getGtmHeadSnippet = (gtmId: string) => {
+    if (!gtmId) return ''
+    return `<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','${gtmId}');</script>
+<!-- End Google Tag Manager -->`
+  }
+
+  const getGtmBodySnippet = (gtmId: string) => {
+    if (!gtmId) return ''
+    return `<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${gtmId}"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->`
+  }
+
+  const handleTestWebsite = () => {
+    if (!testUrl.trim()) {
+      toast.error('URLを入力してください')
+      return
+    }
+    const url = testUrl.trim().startsWith('http') ? testUrl.trim() : `https://${testUrl.trim()}`
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -264,6 +325,15 @@ export default function AdminSettingsPage() {
                     className="btn-secondary px-3"
                   >
                     {copiedField === 'gtm' ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => setShowGtmModal(true)}
+                    className="btn-secondary flex items-center gap-2 text-sm"
+                  >
+                    <FileCode className="w-4 h-4" />
+                    実装手順を表示
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 mt-2">
@@ -490,6 +560,145 @@ export default function AdminSettingsPage() {
           </button>
         </div>
       </div>
+
+      {/* GTM実装手順モーダル */}
+      <AnimatePresence>
+        {showGtmModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+            onClick={() => setShowGtmModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* ヘッダー */}
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <FileCode className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Google タグマネージャーをインストール</h2>
+                    <p className="text-sm text-gray-500">実装手順</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowGtmModal(false)}
+                  className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              {/* コンテンツ */}
+              <div className="p-6 space-y-6">
+                <p className="text-sm text-gray-700">
+                  下のコードをコピーして、ウェブサイトのすべてのページに貼り付けてください。
+                </p>
+
+                {/* Step 1: Head Snippet */}
+                <div>
+                  <p className="text-sm font-medium text-gray-900 mb-3">
+                    1. このコードは、次のようにページの <code className="bg-gray-100 px-1 py-0.5 rounded">&lt;head&gt;</code> 内のなるべく上のほうに貼り付けてください。
+                  </p>
+                  <div className="relative bg-gray-50 rounded-lg border border-gray-200 p-4">
+                    <button
+                      onClick={() => copyToClipboard(getGtmHeadSnippet(trackingSettings.gtmId), 'gtm-head')}
+                      className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center transition-colors"
+                      title="コピー"
+                    >
+                      {copiedField === 'gtm-head' ? (
+                        <Check className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-gray-600" />
+                      )}
+                    </button>
+                    <pre className="text-xs text-gray-800 font-mono overflow-x-auto pr-12">
+                      <code>{getGtmHeadSnippet(trackingSettings.gtmId) || 'GTM IDを入力してください'}</code>
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Step 2: Body Snippet */}
+                <div>
+                  <p className="text-sm font-medium text-gray-900 mb-3">
+                    2. 開始タグ <code className="bg-gray-100 px-1 py-0.5 rounded">&lt;body&gt;</code> の直後にこのコードを次のように貼り付けてください。
+                  </p>
+                  <div className="relative bg-gray-50 rounded-lg border border-gray-200 p-4">
+                    <button
+                      onClick={() => copyToClipboard(getGtmBodySnippet(trackingSettings.gtmId), 'gtm-body')}
+                      className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-white border border-gray-200 hover:bg-gray-50 flex items-center justify-center transition-colors"
+                      title="コピー"
+                    >
+                      {copiedField === 'gtm-body' ? (
+                        <Check className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-gray-600" />
+                      )}
+                    </button>
+                    <pre className="text-xs text-gray-800 font-mono overflow-x-auto pr-12">
+                      <code>{getGtmBodySnippet(trackingSettings.gtmId) || 'GTM IDを入力してください'}</code>
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Step 3: Test Website (Optional) */}
+                <div>
+                  <p className="text-sm font-medium text-gray-900 mb-3">
+                    3. ウェブサイトをテストする（省略可）:
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={testUrl}
+                      onChange={(e) => setTestUrl(e.target.value)}
+                      placeholder="例: https://example.com"
+                      className="input-field flex-1"
+                    />
+                    {testUrl && (
+                      <button
+                        onClick={() => setTestUrl('')}
+                        className="w-10 h-10 rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center justify-center"
+                      >
+                        <X className="w-4 h-4 text-gray-500" />
+                      </button>
+                    )}
+                    <button
+                      onClick={handleTestWebsite}
+                      className="btn-secondary px-4"
+                    >
+                      テスト
+                    </button>
+                  </div>
+                </div>
+
+                {/* 参考リンク */}
+                <div className="pt-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-600">
+                    Google タグマネージャー スニペットの実装について詳しくは、
+                    <a
+                      href="https://support.google.com/tagmanager/answer/6103696"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline ml-1"
+                    >
+                      クイックスタートガイド
+                    </a>
+                    をご覧ください。
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
