@@ -229,10 +229,10 @@ Tone: Scientific but friendly, clean, conversion-focused aesthetic`
 
   // 成分・仕組み説明
   if (sectionType.includes('ingredient') || sectionType.includes('mechanism') || sectionType.includes('how')) {
-    return `Section type: Ingredient / Mechanism
+    return `Section type: Ingredient / Mechanism - COMPLETE LP SECTION WITH TEXT
 
 Purpose:
-- Visualize how the product works
+- Visualize how the product works with embedded explanations
 
 Visual requirements:
 - Diagram-like illustration
@@ -240,26 +240,39 @@ Visual requirements:
 - Simple, easy-to-understand visuals
 - Educational but beautiful
 
-Composition:
-- Center illustration
-- Space around for explanation text
-- ${device === 'pc' ? 'Horizontal flow possible' : 'Vertical flow'}
+Text requirements:
+- Embed headline "${section.headline}" at the top
+- ${section.sub_headline ? `Include explanation "${section.sub_headline}"` : 'Add clear explanations of how it works'}
+- Label key components or steps as text
+- Use clear, readable Japanese typography
+- Educational text that helps understanding
 
-Style: Semi-flat illustration, informative`
+Composition:
+- ${device === 'pc' ? 'Headline at top, diagram in center with labels, explanation below' : 'Headline at top, diagram in center with labels, explanation below - vertical'}
+- Professional, informative layout
+
+Style: Semi-flat illustration, informative, conversion-focused`
   }
 
   // 使用イメージ・人物
   if (sectionType.includes('usage') || sectionType.includes('lifestyle') || sectionType.includes('person')) {
-    return `Section type: Usage Image
+    return `Section type: Usage Image - COMPLETE LP SECTION WITH TEXT
 
 Purpose:
-- Show how the product fits into daily life
+- Show how the product fits into daily life with embedded text
 
 Visual requirements:
-- ${productInfo.lp_type === 'ec' ? 'Japanese person using the product' : 'Professional setting or workspace'}
+- ${productInfo.lp_type === 'ec' ? 'Japanese person using the product naturally' : 'Professional setting or workspace'}
 - Natural smile or confident expression
 - Clean, bright space
 - Soft lighting
+- Authentic lifestyle feeling
+
+Text requirements:
+- Embed headline "${section.headline}" prominently
+- ${section.sub_headline ? `Include description "${section.sub_headline}"` : 'Add text explaining the usage or lifestyle benefit'}
+- Use testimonial-style text if appropriate
+- Clear, relatable Japanese typography
 
 Constraints:
 - No exaggerated expressions
@@ -267,8 +280,8 @@ Constraints:
 - Professional but approachable
 
 Composition:
-- ${device === 'pc' ? 'Person on one side, empty space on the other for text' : 'Person centered or top, text space below'}
-- Natural, authentic feeling`
+- ${device === 'pc' ? 'Headline at top, person/visual in center, description text below' : 'Headline at top, person/visual in center, description text below - vertical'}
+- Natural, authentic, conversion-focused layout`
   }
 
   // CTA・商品情報
@@ -301,18 +314,27 @@ Tone: Reliable, Clear, Commercial, Action-oriented`
   }
 
   // デフォルト（その他のセクション）
-  return `Section type: ${section.section_type}
+  return `Section type: ${section.section_type} - COMPLETE LP SECTION WITH TEXT
 
 Purpose: ${section.purpose}
 
 Visual requirements:
-- Clean, commercial style
+- Clean, commercial, professional style
 - Related to the product or service
-- Spacious layout for text overlay
-- Professional quality
+- Modern LP design aesthetic
+- High-quality visuals
+
+Text requirements:
+- Embed headline "${section.headline}" prominently
+- ${section.sub_headline ? `Include sub text "${section.sub_headline}"` : 'Add supporting text that explains the section'}
+- Use clear, readable Japanese typography
+- Professional text layout
 
 Composition:
-- ${device === 'pc' ? 'Horizontal layout with text space' : 'Vertical layout with text space'}
-- Focus on visual storytelling`
+- ${device === 'pc' ? 'Headline at top, visual in center, supporting text below' : 'Headline at top, visual in center, supporting text below - vertical'}
+- Clean, conversion-focused layout
+- Text and visuals work together harmoniously
+
+Style: Professional Japanese landing page design, conversion-optimized`
 }
 
