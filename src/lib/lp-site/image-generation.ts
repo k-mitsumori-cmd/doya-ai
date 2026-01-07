@@ -77,25 +77,25 @@ export async function generateSectionImagePair(
 
 /**
  * 共通前提プロンプト
- * LPの一部分として生成することを強く意識させる
+ * 完全なLPセクションとして、テキストも含めて生成
+ * rdlp.jp/lp-archive/ のデザインパターンを参考
  */
 function getCommonBasePrompt(): string {
-  return `You are generating a PARTIAL SECTION of a landing page image.
-This is NOT a complete landing page image.
-This is ONE SECTION that will be vertically connected with other sections to form a complete landing page.
+  return `You are generating a COMPLETE LANDING PAGE SECTION with text included.
+This is a functional landing page section that can be used directly as part of an LP.
+Reference Japanese LP design patterns from rdlp.jp/lp-archive/ for authentic LP layouts.
 
 CRITICAL REQUIREMENTS:
-- This image will be placed in a vertical scrolling landing page
-- Other sections will be placed above and below this section
-- The image must seamlessly connect with adjacent sections when combined
+- Generate a COMPLETE, FUNCTIONAL landing page section with text embedded
+- Include headlines, descriptions, and CTAs as actual text in the image
+- Professional Japanese landing page design style
+- High-quality commercial landing page aesthetic
+- Text must be clearly readable and well-designed
+- Use appropriate Japanese typography and layout
+- This section will be vertically connected with other sections
 - Vertical layout optimized for scrolling
-- Plenty of empty space for text overlay (headlines, descriptions, CTAs)
-- Clean, commercial, high-quality Japanese landing page style
-- NO embedded text in the image (text will be overlaid separately)
-- Focus on visual storytelling that supports text content
-- This is a PARTIAL image - it should feel like part of a larger whole
-- Leave generous margins at top and bottom for section transitions
-- The composition should work when stacked vertically with other sections`
+- Clean, modern, conversion-optimized design
+- Follow proven LP design patterns from successful Japanese landing pages`
 }
 
 /**
@@ -116,19 +116,33 @@ ${sectionSpecific}
 
 Product Information:
 - Product name: ${productInfo.product_name}
+- Headline: ${section.headline}
+- Sub headline: ${section.sub_headline || ''}
+- Purpose: ${section.purpose}
 - Target audience: ${productInfo.target}
 - Tone: ${toneDescription}
 - LP type: ${productInfo.lp_type}
 
-Device-specific requirements:
-- ${device === 'pc' ? 'PC version: Wide horizontal layout (16:9), suitable for desktop viewing' : 'Mobile version: Tall vertical layout (9:16), optimized for smartphone scrolling'}
-- Recompose layout specifically for ${device === 'pc' ? 'desktop' : 'mobile'} - do NOT just resize
-- ${device === 'pc' ? 'Horizontal flow, more elements can be side-by-side' : 'Vertical flow, single column composition'}
+TEXT REQUIREMENTS (MUST INCLUDE):
+- Embed the headline "${section.headline}" as actual text in the image
+- ${section.sub_headline ? `Embed the sub headline "${section.sub_headline}" as actual text` : 'Add supporting text that explains the section purpose'}
+- Use clear, readable Japanese typography
+- Text should be prominent and well-positioned
+- Follow Japanese LP text layout conventions
+- Include CTA text if this is a CTA section
 
-Remember:
-- This is ONE section of a larger landing page
-- Text will be overlaid later, so leave space
-- Generate a unique composition for ${device === 'pc' ? 'PC' : 'mobile'}, not a resized version`
+Device-specific requirements:
+- ${device === 'pc' ? 'PC version: Wide horizontal layout (16:9), desktop-optimized' : 'Mobile version: Tall vertical layout (9:16), mobile-optimized'}
+- ${device === 'pc' ? 'Text can be larger, more horizontal layout' : 'Text should be vertically stacked, mobile-friendly size'}
+- Recompose layout specifically for ${device === 'pc' ? 'desktop' : 'mobile'} - do NOT just resize
+
+Design Style (Reference rdlp.jp/lp-archive/):
+- Professional Japanese landing page design
+- Clear visual hierarchy
+- Conversion-optimized layout
+- Modern, clean aesthetic
+- Text and visuals work together harmoniously
+- Generate a complete, functional LP section that can be used directly`
 }
 
 /**
@@ -156,45 +170,61 @@ function getSectionSpecificPrompt(
 
   // ファーストビュー（FV）
   if (sectionType.includes('hero') || sectionType.includes('first') || sectionType.includes('fv')) {
-    return `Section type: First View (Hero Section)
+    return `Section type: First View (Hero Section) - COMPLETE LP SECTION WITH TEXT
 
 Purpose:
 - Instantly communicate product value and premium feeling
 - Catch attention at first glance
+- Include main headline and sub headline as embedded text
 
 Visual requirements:
-- Main product bottle/object centered or slightly offset
-- Dynamic visual elements (splash, particles, light)
+- Main product or key visual element prominently displayed
+- Dynamic visual elements (splash, particles, light, gradients)
 - Bright, clean background
-- Luxury but gentle impression
-- Commercial advertising style
+- Luxury but approachable impression
+- Professional commercial advertising style
+
+Text requirements:
+- Embed the main headline "${section.headline}" prominently at the top
+- ${section.sub_headline ? `Embed sub headline "${section.sub_headline}" below main headline` : 'Add compelling sub text that explains the value proposition'}
+- Use large, bold, readable Japanese typography
+- Text should be the focal point along with the visual
+- Consider adding a CTA button with text if appropriate
 
 Composition:
-- ${device === 'pc' ? 'Upper area reserved for headline text, center or lower area for product' : 'Top area for headline, center for product, bottom for CTA'}
-- No small details, bold composition
-- Generous empty space for text overlay
+- ${device === 'pc' ? 'Headline at top, product/visual in center, CTA at bottom' : 'Headline at top, product/visual in center, CTA at bottom - vertical stack'}
+- Bold, impactful composition
+- Professional LP hero section layout
 
-Tone: Clean, Premium, Trustworthy`
+Tone: Clean, Premium, Trustworthy, Conversion-focused`
   }
 
   // 商品特徴・ベネフィット
   if (sectionType.includes('benefit') || sectionType.includes('feature') || sectionType.includes('value')) {
-    return `Section type: Benefit Explanation
+    return `Section type: Benefit Explanation - COMPLETE LP SECTION WITH TEXT
 
 Purpose:
-- Explain key benefits visually
+- Explain key benefits visually with embedded text
 
 Visual requirements:
 - Abstract representation of benefits (moisture, efficiency, growth, etc.)
-- Soft gradients
+- Soft gradients, modern visuals
 - Light particles or bubbles
-- No people unless necessary
+- Product imagery or illustrations
+
+Text requirements:
+- Embed headline "${section.headline}" prominently
+- ${section.sub_headline ? `Include sub headline "${section.sub_headline}"` : 'Add benefit descriptions as text'}
+- List key benefits as text (3-5 points)
+- Use clear, readable Japanese typography
+- Text should explain the benefits clearly
 
 Composition:
-- ${device === 'pc' ? 'Left or right empty area for text, visual flow from top to bottom' : 'Top area for text, visual elements below'}
-- Clean, spacious layout
+- ${device === 'pc' ? 'Headline at top, benefits listed with visuals, clean layout' : 'Headline at top, benefits vertically stacked with visuals'}
+- Clean, spacious, professional layout
+- Text and visuals work together
 
-Tone: Scientific but friendly, clean aesthetic`
+Tone: Scientific but friendly, clean, conversion-focused aesthetic`
   }
 
   // 成分・仕組み説明
@@ -243,23 +273,31 @@ Composition:
 
   // CTA・商品情報
   if (sectionType.includes('cta') || sectionType.includes('action') || sectionType.includes('pricing')) {
-    return `Section type: CTA / Product Info
+    return `Section type: CTA / Product Info - COMPLETE LP SECTION WITH TEXT
 
 Purpose:
-- Encourage purchase or action
+- Encourage purchase or action with clear CTA text
 
 Visual requirements:
 - Product clearly visible
-- Simple background
+- Simple, focused background
 - Calm but confident mood
 - Focus on the product or action
 
-Composition:
-- Product centered
-- ${device === 'pc' ? 'Space above or below for buttons and text' : 'Space above for headline, below for CTA button'}
-- Clean, uncluttered
+Text requirements:
+- Embed CTA headline "${section.headline}" prominently
+- ${section.sub_headline ? `Include sub text "${section.sub_headline}"` : 'Add compelling CTA description'}
+- Include CTA button with text (e.g., "今すぐ始める", "無料で試す", "資料をダウンロード")
+- ${productInfo.cta ? `Use CTA text: "${productInfo.cta}"` : 'Use appropriate CTA text for the product'}
+- Price information if this is pricing section
+- Clear, action-oriented typography
 
-Tone: Reliable, Clear, Commercial`
+Composition:
+- ${device === 'pc' ? 'Headline at top, product in center, CTA button prominently at bottom' : 'Headline at top, product in center, large CTA button at bottom'}
+- Clean, uncluttered, conversion-focused
+- CTA button should be prominent and clickable-looking
+
+Tone: Reliable, Clear, Commercial, Action-oriented`
   }
 
   // デフォルト（その他のセクション）
