@@ -5,6 +5,7 @@ import { Providers } from '@/components/Providers'
 import { SITE_CONFIG, SERVICE_SEO, generateOrganizationSchema } from '@/lib/seo'
 import { GoogleTagManager, GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
 import LogoutToastListener from '@/components/LogoutToastListener'
+import { getGtmId } from '@/lib/gtm'
 
 // ============================================
 // ルートメタデータ（ポータル全体）
@@ -96,19 +97,22 @@ export const viewport: Viewport = {
   ],
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   // 構造化データ
   const organizationSchema = generateOrganizationSchema()
+  
+  // GTM IDを取得（環境変数優先、なければデータベースから）
+  const gtmId = await getGtmId()
 
   return (
     <html lang="ja">
       <head>
         {/* Google Tag Manager */}
-        <GoogleTagManager />
+        <GoogleTagManager gtmId={gtmId} />
         
         {/* 構造化データ（JSON-LD） */}
         <script
@@ -124,7 +128,7 @@ export default function RootLayout({
       </head>
       <body>
         {/* Google Tag Manager (noscript) */}
-        <GoogleTagManagerNoScript />
+        <GoogleTagManagerNoScript gtmId={gtmId} />
         <Providers>
           {children}
           <LogoutToastListener />

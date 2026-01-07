@@ -2,11 +2,15 @@
 
 import Script from 'next/script'
 
-// 環境変数からGTM IDを取得
-const GTM_ID = process.env.NEXT_PUBLIC_GTM_ID
+interface GoogleTagManagerProps {
+  gtmId?: string | null
+}
 
-export function GoogleTagManager() {
-  if (!GTM_ID) {
+export function GoogleTagManager({ gtmId }: GoogleTagManagerProps) {
+  // propsで渡されたGTM ID、または環境変数から取得
+  const id = gtmId || process.env.NEXT_PUBLIC_GTM_ID
+
+  if (!id) {
     return null
   }
 
@@ -22,7 +26,7 @@ export function GoogleTagManager() {
             new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
             j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-            })(window,document,'script','dataLayer','${GTM_ID}');
+            })(window,document,'script','dataLayer','${id}');
           `,
         }}
       />
@@ -30,15 +34,22 @@ export function GoogleTagManager() {
   )
 }
 
-export function GoogleTagManagerNoScript() {
-  if (!GTM_ID) {
+interface GoogleTagManagerNoScriptProps {
+  gtmId?: string | null
+}
+
+export function GoogleTagManagerNoScript({ gtmId }: GoogleTagManagerNoScriptProps) {
+  // propsで渡されたGTM ID、または環境変数から取得
+  const id = gtmId || process.env.NEXT_PUBLIC_GTM_ID
+
+  if (!id) {
     return null
   }
 
   return (
     <noscript>
       <iframe
-        src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+        src={`https://www.googletagmanager.com/ns.html?id=${id}`}
         height="0"
         width="0"
         style={{ display: 'none', visibility: 'hidden' }}
