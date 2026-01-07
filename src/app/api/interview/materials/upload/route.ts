@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
 
     // ファイルタイプ判定
     const mimeType = file.type
-    const fileName = file.name.toLowerCase()
-    const extension = fileName.split('.').pop()
+    const fileNameLower = file.name.toLowerCase()
+    const extension = fileNameLower.split('.').pop()
 
     let materialType = 'text'
     const isAudio = mimeType.startsWith('audio/') || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(extension || '')
@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
       await mkdir(uploadDir, { recursive: true })
     }
 
-    const fileName = `${Date.now()}-${file.name}`
-    const filePath = join(uploadDir, fileName)
+    const savedFileName = `${Date.now()}-${file.name}`
+    const filePath = join(uploadDir, savedFileName)
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         projectId,
         type: materialType,
         fileName: file.name,
-        filePath: `/uploads/interview/${projectId}/${fileName}`,
+        filePath: `/uploads/interview/${projectId}/${savedFileName}`,
         fileSize: buffer.length,
         mimeType,
         status: 'UPLOADED',
