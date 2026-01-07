@@ -36,18 +36,33 @@ export async function POST(request: NextRequest) {
     const userId = session?.user?.id
     const guestId = request.headers.get('x-guest-id')
 
+    // ゲストIDがなければ生成（ログインしていない場合）
+    let finalGuestId = guestId
     if (!userId && !guestId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      // ゲストユーザーとして処理（一時的なIDを生成）
+      finalGuestId = `guest-${Date.now()}-${Math.random().toString(36).substring(7)}`
     }
 
     const body = await request.json()
-    const { title, intervieweeName, intervieweeRole, intervieweeCompany, theme, purpose, targetAudience, tone, mediaType } = body
+    const { title, intervieweeName, intervieweeRole, intervieweeCompany, theme, purpose, targetAudience, tone, mediaType, status } = body
+
+    // タイトルの検証
+    const projectTitle = title || '無題のプロジェクト'
+    if (projectTitle.length > 200) {
+      return NextResponse.json(
+        {
+          error: 'プロジェクト名が長すぎます',
+          details: 'プロジェクト名は200文字以内で入力してください。',
+        },
+        { status: 400 }
+      )
+    }
 
     const project = await prisma.interviewProject.create({
       data: {
         userId: userId || undefined,
-        guestId: guestId || undefined,
-        title: title || '無題のプロジェクト',
+        guestId: finalGuestId || undefined,
+        title: projectTitle,
         intervieweeName,
         intervieweeRole,
         intervieweeCompany,
@@ -55,15 +70,33 @@ export async function POST(request: NextRequest) {
         purpose,
         targetAudience,
         tone: tone || 'friendly',
-        mediaType,
-        status: 'DRAFT',
+        mediaType: mediaType || 'blog',
+        status: status || 'DRAFT',
       },
     })
 
     return NextResponse.json({ project })
   } catch (error) {
     console.error('[INTERVIEW] Project creation error:', error)
-    return NextResponse.json({ error: 'Failed to create project' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    
+    // Prismaエラーの詳細を取得
+    let details = 'データベースへの保存に失敗しました。'
+    if (errorMessage.includes('Unique constraint')) {
+      details = '同じプロジェクト名が既に存在します。別の名前を試してください。'
+    } else if (errorMessage.includes('Foreign key constraint')) {
+      details = '関連データの参照に失敗しました。'
+    } else if (errorMessage.includes('Invalid value')) {
+      details = '無効な値が入力されています。入力内容を確認してください。'
+    }
+
+    return NextResponse.json(
+      {
+        error: 'プロジェクトの作成に失敗しました',
+        details: `${details} エラー詳細: ${errorMessage}`,
+      },
+      { status: 500 }
+    )
   }
 }
 

@@ -174,11 +174,24 @@ export default function InterviewPage() {
 
       let projectRes
       try {
+        // ゲストIDを生成（ローカルストレージから取得または新規生成）
+        let guestId = null
+        if (typeof window !== 'undefined') {
+          guestId = localStorage.getItem('interview-guest-id')
+          if (!guestId) {
+            guestId = `guest-${Date.now()}-${Math.random().toString(36).substring(7)}`
+            localStorage.setItem('interview-guest-id', guestId)
+          }
+        }
+
         projectRes = await fetch('/api/interview/projects', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(guestId ? { 'x-guest-id': guestId } : {}),
+          },
           body: JSON.stringify({
-            title: file.name.replace(/\.[^/.]+$/, ''),
+            title: file.name.replace(/\.[^/.]+$/, '') || 'アップロードファイル',
             status: 'UPLOADING',
           }),
         })
@@ -188,14 +201,16 @@ export default function InterviewPage() {
 
       if (!projectRes.ok) {
         const errorData = await projectRes.json().catch(() => ({}))
-        throw new Error(errorData.error || 'プロジェクトの作成に失敗しました。もう一度お試しください。')
+        const errorMsg = errorData.error || 'プロジェクトの作成に失敗しました'
+        const errorDetails = errorData.details || 'もう一度お試しください。問題が続く場合は、サポートにお問い合わせください。'
+        throw new Error(`${errorMsg}\n${errorDetails}`)
       }
 
       const projectData = await projectRes.json()
       const newProjectId = projectData.project?.id
 
       if (!newProjectId) {
-        throw new Error('プロジェクトIDの取得に失敗しました。もう一度お試しください。')
+        throw new Error('プロジェクトIDの取得に失敗しました。\nサーバーからの応答が不正です。もう一度お試しください。')
       }
 
       setProjectId(newProjectId)
@@ -206,25 +221,35 @@ export default function InterviewPage() {
       formData.append('projectId', newProjectId)
       formData.append('file', file)
 
+      // ゲストIDをヘッダーに追加
+      let guestId = null
+      if (typeof window !== 'undefined') {
+        guestId = localStorage.getItem('interview-guest-id')
+      }
+
       let uploadRes
       try {
         uploadRes = await fetch('/api/interview/materials/upload', {
           method: 'POST',
+          headers: {
+            ...(guestId ? { 'x-guest-id': guestId } : {}),
+          },
           body: formData,
         })
       } catch (error) {
-        throw new Error('ファイルのアップロードに失敗しました。ファイルサイズが大きすぎる可能性があります。')
+        throw new Error('ファイルのアップロードに失敗しました。\nネットワークエラーが発生しました。インターネット接続を確認してください。')
       }
 
       if (!uploadRes.ok) {
         const errorData = await uploadRes.json().catch(() => ({}))
         const errorMsg = errorData.error || 'ファイルアップロードに失敗しました'
-        throw new Error(`${errorMsg}。ファイル形式やサイズを確認してください。`)
+        const errorDetails = errorData.details || 'ファイル形式やサイズを確認してください。'
+        throw new Error(`${errorMsg}\n${errorDetails}`)
       }
 
       const uploadData = await uploadRes.json()
       if (!uploadData.material?.id) {
-        throw new Error('アップロードしたファイルの情報を取得できませんでした。')
+        throw new Error('アップロードしたファイルの情報を取得できませんでした。\nサーバーからの応答が不正です。もう一度お試しください。')
       }
 
       setProgress(50)
@@ -320,8 +345,15 @@ export default function InterviewPage() {
       }, 1500)
     } catch (error) {
       console.error('Upload process error:', error)
-      setErrorMessage(error instanceof Error ? error.message : '不明なエラーが発生しました')
-      setErrorDetails('詳細なエラー情報はコンソールを確認してください。問題が続く場合は、サポートにお問い合わせください。')
+      const errorMsg = error instanceof Error ? error.message : '不明なエラーが発生しました'
+      
+      // エラーメッセージを分割（改行で分割）
+      const errorLines = errorMsg.split('\n')
+      const mainError = errorLines[0] || 'エラーが発生しました'
+      const errorDetailsText = errorLines.slice(1).join('\n') || '詳細なエラー情報はコンソールを確認してください。問題が続く場合は、サポートにお問い合わせください。'
+      
+      setErrorMessage(mainError)
+      setErrorDetails(errorDetailsText)
       setUploadStatus('error')
       setProgress(0)
     }
