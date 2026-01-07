@@ -65,14 +65,6 @@ export async function POST(request: NextRequest) {
     
     // サービスに応じたリダイレクトURL
     const service = planId.split('-')[0] // 'seo-pro' -> 'seo'
-    const successPath =
-      service === 'seo'
-        ? '/seo'
-        : service === 'banner'
-          ? '/banner'
-          : service === 'persona'
-            ? '/persona'
-          : '/'
     const cancelPath =
       service === 'seo'
         ? '/seo/pricing?payment=cancelled'
@@ -82,10 +74,11 @@ export async function POST(request: NextRequest) {
             ? '/persona/pricing?payment=cancelled'
             : '/pricing?payment=cancelled'
 
-    // 成功URLにプラン情報/Checkout Session IDを追加（決済直後にアプリ側で同期して即反映させる）
+    // 成功URL：専用サンクスページへリダイレクト
     // NOTE: {CHECKOUT_SESSION_ID} はStripeが自動で実IDに置換する
     const planLabel = planId.includes('enterprise') ? 'enterprise' : 'pro'
-    const successUrl = `${baseUrl}${successPath}?success=true&plan=${planLabel}&session_id={CHECKOUT_SESSION_ID}`
+    const thankyouPath = planLabel === 'enterprise' ? '/thankyou-enterprise' : '/thankyou-pro'
+    const successUrl = `${baseUrl}${thankyouPath}?session_id={CHECKOUT_SESSION_ID}&service=${service}`
     const cancelUrl = `${baseUrl}${cancelPath}`
 
     // Checkout Session作成
