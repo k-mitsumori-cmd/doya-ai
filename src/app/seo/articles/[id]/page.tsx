@@ -1745,8 +1745,36 @@ function SeoArticleInner() {
                           </button>
                         </div>
                         <div className="p-5 sm:p-6">
-                          <div className="rounded-2xl border border-gray-100 overflow-hidden bg-gray-50 relative">
-                            <img src={`/api/seo/images/${imageDetail.id}`} className="w-full h-full object-contain" alt={imageDetail.title || ''} />
+                          <div className="rounded-2xl border border-gray-100 overflow-hidden bg-gray-50 relative min-h-[400px] flex items-center justify-center">
+                            <img
+                              src={`/api/seo/images/${imageDetail.id}?v=${imgRetry[imageDetail.id] || 0}`}
+                              className="w-full h-full object-contain"
+                              alt={imageDetail.title || ''}
+                              onLoad={(e) => {
+                                const el = e.currentTarget
+                                if (!el?.naturalWidth || !el?.naturalHeight) {
+                                  setImgLoaded((prev) => ({ ...prev, [imageDetail.id]: false }))
+                                  setImgGenerating((prev) => ({ ...prev, [imageDetail.id]: true }))
+                                  setTimeout(() => bumpRetry(imageDetail.id), 1200)
+                                  return
+                                }
+                                setImgLoaded((prev) => ({ ...prev, [imageDetail.id]: true }))
+                                setImgGenerating((prev) => ({ ...prev, [imageDetail.id]: false }))
+                              }}
+                              onError={() => {
+                                setImgLoaded((prev) => ({ ...prev, [imageDetail.id]: false }))
+                                setImgGenerating((prev) => ({ ...prev, [imageDetail.id]: true }))
+                                setTimeout(() => bumpRetry(imageDetail.id), 1200)
+                              }}
+                            />
+                            {(!imgLoaded[imageDetail.id] || !!imgGenerating[imageDetail.id]) && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+                                <div className="text-center">
+                                  <div className="w-10 h-10 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                                  <p className="text-xs font-black text-gray-400">画像を読み込み中...</p>
+                                </div>
+                              </div>
+                            )}
                             {isMediaLocked && (
                               <div className="absolute inset-0 bg-black/55 flex items-center justify-center p-4">
                                 <div className="rounded-2xl bg-black/55 border border-white/20 backdrop-blur-[2px] p-4 text-center">
