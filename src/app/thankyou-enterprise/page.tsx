@@ -87,21 +87,48 @@ function ThankYouEnterpriseContent() {
   const serviceConfig = {
     seo: {
       name: 'ドヤライティングAI',
-      href: '/seo',
-      action: '記事を生成する',
+      primaryHref: '/seo',
+      primaryAction: '記事を生成する',
+      secondaryHref: '/seo/articles',
+      secondaryAction: '記事一覧を見る',
       description: 'AIが自動で記事を生成します',
+      features: [
+        '最大限の生成回数（1日50回以上）',
+        '全機能が無制限で利用可能',
+        '優先サポート・専任担当者',
+        'チーム運用・大量制作に対応',
+        'カスタム機能のリクエスト可能',
+      ],
     },
     banner: {
       name: 'ドヤバナーAI',
-      href: '/banner',
-      action: 'バナーを生成する',
+      primaryHref: '/banner',
+      primaryAction: 'バナーを生成する',
+      secondaryHref: '/banner/dashboard',
+      secondaryAction: 'ダッシュボードを見る',
       description: 'AIが自動でバナーを生成します',
+      features: [
+        '最大限の生成回数（1日50回以上）',
+        '全機能が無制限で利用可能',
+        '優先サポート・専任担当者',
+        'チーム運用・大量制作に対応',
+        'カスタム機能のリクエスト可能',
+      ],
     },
     persona: {
       name: 'ドヤペルソナAI',
-      href: '/persona',
-      action: 'ペルソナを生成する',
+      primaryHref: '/persona',
+      primaryAction: 'ペルソナを生成する',
+      secondaryHref: '/persona/history',
+      secondaryAction: '履歴を見る',
       description: 'AIが自動でペルソナを生成します',
+      features: [
+        '最大限の生成回数（1日50回以上）',
+        '全機能が無制限で利用可能',
+        '優先サポート・専任担当者',
+        'チーム運用・大量制作に対応',
+        'カスタム機能のリクエスト可能',
+      ],
     },
   }
 
@@ -204,41 +231,39 @@ function ThankYouEnterpriseContent() {
                         Enterpriseプランの特典
                       </h3>
                       <ul className="space-y-2 text-sm text-slate-700">
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>最大限の生成回数（1日50回以上）</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>全機能が無制限で利用可能</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>優先サポート・専任担当者</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>チーム運用・大量制作に対応</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>カスタム機能のリクエスト可能</span>
-                        </li>
+                        {config.features.map((feature, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
                       </ul>
                     </div>
 
-                    <Link href={config.href}>
+                    {/* メインアクション */}
+                    <Link href={config.primaryHref}>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-700 to-pink-600 text-white font-black text-lg flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:from-purple-600 hover:to-pink-500 transition-all"
                       >
-                        {config.action}
+                        {config.primaryAction}
                         <ArrowRight className="w-5 h-5" />
                       </motion.button>
                     </Link>
 
-                    <div className="text-center">
+                    {/* サブアクション */}
+                    <Link href={config.secondaryHref}>
+                      <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        className="w-full py-3 rounded-xl bg-white border-2 border-purple-300 text-purple-700 font-black text-base flex items-center justify-center gap-2 hover:bg-purple-50 transition-all"
+                      >
+                        {config.secondaryAction}
+                      </motion.button>
+                    </Link>
+
+                    <div className="text-center pt-2">
                       <Link
                         href="/pricing"
                         className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors"

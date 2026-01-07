@@ -67,21 +67,45 @@ function ThankYouProContent() {
   const serviceConfig = {
     seo: {
       name: 'ドヤライティングAI',
-      href: '/seo',
-      action: '記事を生成する',
+      primaryHref: '/seo',
+      primaryAction: '記事を生成する',
+      secondaryHref: '/seo/articles',
+      secondaryAction: '記事一覧を見る',
       description: 'AIが自動で記事を生成します',
+      features: [
+        '1日の生成回数が大幅に増加',
+        '画像生成・図解機能が利用可能',
+        'AI自動修正・改善提案が有効',
+        '履歴保存期間が延長',
+      ],
     },
     banner: {
       name: 'ドヤバナーAI',
-      href: '/banner',
-      action: 'バナーを生成する',
+      primaryHref: '/banner',
+      primaryAction: 'バナーを生成する',
+      secondaryHref: '/banner/dashboard',
+      secondaryAction: 'ダッシュボードを見る',
       description: 'AIが自動でバナーを生成します',
+      features: [
+        '1日の生成回数が大幅に増加',
+        '高品質なバナー画像を生成',
+        'URLから自動でバナー生成',
+        '履歴保存期間が延長',
+      ],
     },
     persona: {
       name: 'ドヤペルソナAI',
-      href: '/persona',
-      action: 'ペルソナを生成する',
+      primaryHref: '/persona',
+      primaryAction: 'ペルソナを生成する',
+      secondaryHref: '/persona/history',
+      secondaryAction: '履歴を見る',
       description: 'AIが自動でペルソナを生成します',
+      features: [
+        '1日の生成回数が大幅に増加',
+        '詳細なペルソナ分析が可能',
+        '日記・スケジュール画像も生成',
+        '履歴保存期間が延長',
+      ],
     },
   }
 
@@ -183,37 +207,39 @@ function ThankYouProContent() {
                         PROプランの特典
                       </h3>
                       <ul className="space-y-2 text-sm text-slate-700">
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>1日の生成回数が大幅に増加</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>画像生成・図解機能が利用可能</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>AI自動修正・改善提案が有効</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          <span>履歴保存期間が延長</span>
-                        </li>
+                        {config.features.map((feature, idx) => (
+                          <li key={idx} className="flex items-start gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
                       </ul>
                     </div>
 
-                    <Link href={config.href}>
+                    {/* メインアクション */}
+                    <Link href={config.primaryHref}>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         className="w-full py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black text-lg flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 hover:from-purple-500 hover:to-pink-500 transition-all"
                       >
-                        {config.action}
+                        {config.primaryAction}
                         <ArrowRight className="w-5 h-5" />
                       </motion.button>
                     </Link>
 
-                    <div className="text-center">
+                    {/* サブアクション */}
+                    <Link href={config.secondaryHref}>
+                      <motion.button
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        className="w-full py-3 rounded-xl bg-white border-2 border-purple-200 text-purple-700 font-black text-base flex items-center justify-center gap-2 hover:bg-purple-50 transition-all"
+                      >
+                        {config.secondaryAction}
+                      </motion.button>
+                    </Link>
+
+                    <div className="text-center pt-2">
                       <Link
                         href="/pricing"
                         className="text-sm font-bold text-slate-600 hover:text-slate-900 transition-colors"
