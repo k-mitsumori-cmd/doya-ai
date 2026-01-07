@@ -1,0 +1,14 @@
+{
+  "name": "kouryu-event-manager",
+  "version": "1.0.0",
+  "description": "交流会のタスク管理とスケジュール作成ツール",
+  "type": "module",
+  "main": "app.js",
+  "engines": {
+    "node": ">=18.x"
+  },
+  "scripts": {
+    "dev": "echo '開発サーバーを起動する場合は、Vercel CLIを使用してください: vercel dev'"
+  }
+}
+

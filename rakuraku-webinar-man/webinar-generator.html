@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webinar準備ツール</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #2c3e50;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .form-section h2 {
+            color: #667eea;
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .instructor-list {
+            margin-top: 15px;
+        }
+
+        .instructor-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .instructor-item input {
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-success {
+            background: #27ae60;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 30px;
+            justify-content: center;
+        }
+
+        .generate-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-section.active {
+            display: block;
+        }
+
+        .result-content {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 8px;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+
+        .result-content h2 {
+            color: #667eea;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+
+        .result-content h2:first-child {
+            margin-top: 0;
+        }
+
+        .result-content h3 {
+            color: #764ba2;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .error-message {
+            display: none;
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .info-box p {
+            margin: 0;
+            color: #1565c0;
+            font-size: 14px;
+        }
+
+        /* ローディングアニメーション */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            border-top: 8px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: white;
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .loading-subtext {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .loading-dots::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .content {
+                padding: 20px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .instructor-item {
+                grid-template-columns: 1fr;
+            }
+
+            .generate-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 ラクラクWebinarマン</h1>
+            <p>Webinarの準備に必要な各種ドキュメントを自動生成</p>
+        </div>
+
+        <div class="content">
+            <div class="error-message" id="errorMessage"></div>
+
+            <!-- お試し入力ボタン（上部） -->
+            <div class="form-section" style="background: #f0f4ff; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                <div style="text-align: center;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">🎲 お試し入力</h3>
+                    <p style="color: #666; margin-bottom: 15px; font-size: 14px; line-height: 1.8;">
+                        お試し入力はここからできます<br>
+                        <span style="font-weight: 600;">内容を作りたい方は、イベント内容をこちらに基本情報の欄含め入力してください</span>
+                    </p>
+                    <p style="color: #888; margin-bottom: 20px; font-size: 13px;">AIが様々なビジネスジャンルのサンプルデータを自動生成します</p>
+                    <button type="button" class="btn" onclick="fillSampleData()" style="font-size: 18px; padding: 15px 40px;">
+                        🎲 お試し入力（AI生成）
+                    </button>
+                </div>
+            </div>
+
+            <form id="webinarForm">
+                <!-- 基本情報 -->
+                <div class="form-section">
+                    <h2>📅 基本情報</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>開催日付 *</label>
+                            <input type="date" id="eventDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>開始時刻 *</label>
+                            <input type="time" id="startTime" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>終了時刻 *</label>
+                            <input type="time" id="endTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label>タイムゾーン</label>
+                            <select id="timezone">
+                                <option value="JST">JST (日本標準時)</option>
+                                <option value="UTC">UTC</option>
+                                <option value="PST">PST (太平洋標準時)</option>
+                                <option value="EST">EST (東部標準時)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Zoom招待URL *</label>
+                        <input type="url" id="zoomUrl" placeholder="https://zoom.us/j/..." required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>ミーティングID</label>
+                            <input type="text" id="meetingId" placeholder="例: 123 456 7890">
+                        </div>
+                        <div class="form-group">
+                            <label>パスコード</label>
+                            <input type="text" id="passcode" placeholder="例: 123456">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Webinarテーマ *</label>
+                        <input type="text" id="theme" placeholder="例: AI活用による業務効率化" required>
+                    </div>
+                </div>
+
+                <!-- 主催者・講師情報（複数名対応） -->
+                <div class="form-section">
+                    <h2>👤 主催者・講師情報</h2>
+                    <div class="info-box">
+                        <p>💡 複数の講師がいる場合は「+ 講師を追加」ボタンで追加できます</p>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" class="btn btn-secondary btn-small" onclick="addInstructor()">+ 講師を追加</button>
+                        <div class="instructor-list" id="instructorList"></div>
+                    </div>
+                </div>
+
+                <!-- 台本テンプレート -->
+                <div class="form-section">
+                    <h2>📝 台本情報</h2>
+                    <div class="form-group">
+                        <label>どんなセミナーなのか *</label>
+                        <textarea id="seminarDescription" placeholder="例: 最新のAI技術を活用して、業務効率を50%向上させる実践的な方法を、具体的な事例を交えながら解説します。参加者には実際に使えるツールやフレームワークを提供します。" required></textarea>
+                    </div>
+                </div>
+
+                <!-- その他 -->
+                <div class="form-section">
+                    <h2>📊 その他情報</h2>
+                    <div class="form-group">
+                        <label>アンケートURL</label>
+                        <input type="url" id="surveyUrl" placeholder="https://forms.google.com/...">
+                    </div>
+                    <div class="form-group">
+                        <label>主催組織名</label>
+                        <input type="text" id="companyName" placeholder="例: 株式会社○○">
+                    </div>
+                </div>
+
+                <!-- 生成ボタン -->
+                <div class="form-section">
+                    <h2>📄 ドキュメント生成</h2>
+                    <div class="info-box">
+                        <p>💡 必要なドキュメントを個別に生成・ダウンロードできます</p>
+                    </div>
+                    <div class="generate-buttons">
+                        <button type="button" class="generate-btn" onclick="generateBasicInfo()">
+                            📅 基本情報
+                        </button>
+                        <button type="button" class="generate-btn" onclick="generateScript()">
+                            📝 台本
+                        </button>
+                        <button type="button" class="generate-btn" onclick="generateInvitationEmail()">
+                            📧 招待メール
+                        </button>
+                        <button type="button" class="generate-btn" onclick="generateThankYouEmail()">
+                            🙏 ありがとうメール
+                        </button>
+                        <button type="button" class="generate-btn" onclick="generateInternalChat()">
+                            💬 社内共有チャット
+                        </button>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                        🔄 リセット
+                    </button>
+                </div>
+            </form>
+
+            <!-- 結果表示 -->
+            <div class="result-section" id="resultSection">
+                <h2 style="text-align: center; margin-bottom: 20px; color: #667eea;" id="resultTitle">✅ ドキュメント生成完了！</h2>
+                <div class="result-content" id="resultContent"></div>
+                <div class="action-buttons">
+                    <button type="button" class="btn" onclick="regenerateCurrentDocument()">
+                        🔄 再生成
+                    </button>
+                    <button type="button" class="btn" onclick="copyToClipboard()">
+                        📋 コピー
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="downloadCurrentDocument()">
+                        💾 ダウンロード
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="hideResult()">
+                        ← 戻る
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ローディングオーバーレイ -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">AIが生成中<span class="loading-dots">...</span></div>
+        <div class="loading-subtext" id="loadingSubtext">ドキュメントを作成しています</div>
+    </div>
+
+    <script>
+        let instructorCount = 0;
+        let currentDocument = '';
+        let currentDocumentType = '';
+
+        function addInstructor() {
+            instructorCount++;
+            const list = document.getElementById('instructorList');
+            const item = document.createElement('div');
+            item.className = 'instructor-item';
+            item.id = `instructor-${instructorCount}`;
+            item.innerHTML = `
+                <input type="text" placeholder="名前 *" class="instructor-name" required>
+                <input type="text" placeholder="役職" class="instructor-title">
+                <input type="text" placeholder="所属組織" class="instructor-org">
+                <button type="button" class="btn btn-danger btn-small" onclick="removeInstructor(${instructorCount})">削除</button>
+            `;
+            list.appendChild(item);
+        }
+
+        function removeInstructor(id) {
+            const item = document.getElementById(`instructor-${id}`);
+            if (item) {
+                item.remove();
+            }
+        }
+
+        function getInstructors() {
+            const items = document.querySelectorAll('.instructor-item');
+            const instructors = [];
+            items.forEach((item) => {
+                const name = item.querySelector('.instructor-name').value.trim();
+                const title = item.querySelector('.instructor-title').value.trim();
+                const org = item.querySelector('.instructor-org').value.trim();
+                if (name) {
+                    instructors.push({
+                        name: name,
+                        title: title || '',
+                        org: org || ''
+                    });
+                }
+            });
+            return instructors;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '[日付未入力]';
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+            const weekday = weekdays[date.getDay()];
+            return `${year}年${month}月${day}日(${weekday})`;
+        }
+
+        function formatTime(timeString) {
+            if (!timeString) return '[時刻未入力]';
+            return timeString;
+        }
+
+        function calculateDuration(startTime, endTime) {
+            if (!startTime || !endTime) return '';
+            const start = new Date(`2000-01-01T${startTime}`);
+            const end = new Date(`2000-01-01T${endTime}`);
+            const diff = (end - start) / (1000 * 60);
+            if (diff < 60) return `${diff}分`;
+            const hours = Math.floor(diff / 60);
+            const minutes = diff % 60;
+            return minutes > 0 ? `${hours}時間${minutes}分` : `${hours}時間`;
+        }
+
+        function validateRequiredFields() {
+            const requiredFields = ['eventDate', 'startTime', 'endTime', 'zoomUrl', 'theme', 'seminarDescription'];
+            for (const fieldId of requiredFields) {
+                const field = document.getElementById(fieldId);
+                if (!field.value.trim()) {
+                    showError(`必須項目「${field.previousElementSibling.textContent}」が入力されていません。`);
+                    return false;
+                }
+            }
+
+            const instructors = getInstructors();
+            if (instructors.length === 0) {
+                showError('講師を1名以上追加してください。');
+                return false;
+            }
+
+            return true;
+        }
+
+        // AI風の文章生成関数
+        function generateAIContent(prompt, context) {
+            // 実際のAI API連携用のプレースホルダー
+            // 現在は高度な生成ロジックで実装
+            // 将来的にAI API（Claude API等）に置き換え可能
+            
+            // コンテキストを分析して適切な文章を生成
+            const theme = context.theme || '';
+            const description = context.seminarDescription || '';
+            const instructors = context.instructors || [];
+            
+            // テーマからキーワードを抽出
+            const keywords = extractKeywords(theme + ' ' + description);
+            
+            // 生成ロジック（実際のAI APIに置き換え可能）
+            return generateContentFromContext(prompt, context, keywords);
+        }
+
+        function extractKeywords(text) {
+            // 簡単なキーワード抽出（実際のAIでは不要）
+            const commonWords = ['の', 'を', 'に', 'は', 'が', 'で', 'と', 'も', 'から', 'まで'];
+            const words = text.split(/[\s、。]/).filter(w => w.length > 1 && !commonWords.includes(w));
+            return words.slice(0, 10);
+        }
+
+        function generateContentFromContext(prompt, context, keywords) {
+            // プロンプトとコンテキストに基づいて内容を生成
+            // 実際のAI APIでは、この部分をAPI呼び出しに置き換える
+            
+            // 現在は高度な生成ロジックで実装
+            // 将来的に: return await callAIAPI(prompt, context);
+            
+            return generateIntelligentContent(prompt, context);
+        }
+
+        function generateIntelligentContent(type, context) {
+            // タイプに応じて適切な内容を生成
+            switch(type) {
+                case 'basic-info-description':
+                    return generateBasicInfoDescription(context);
+                case 'script-opening':
+                    return generateScriptOpening(context);
+                case 'script-intro':
+                    return generateScriptIntro(context);
+                case 'script-main':
+                    return generateScriptMain(context);
+                case 'script-closing':
+                    return generateScriptClosing(context);
+                case 'email-invitation':
+                    return generateInvitationEmailContent(context);
+                case 'email-thankyou':
+                    return generateThankYouEmailContent(context);
+                case 'chat-internal':
+                    return generateInternalChatContent(context);
+                default:
+                    return '';
+            }
+        }
+
+        function generateBasicInfoDescription(context) {
+            const theme = context.theme;
+            const description = context.seminarDescription;
+            const instructors = context.instructors;
+            
+            let content = `本Webinarでは、「${theme}」をテーマに、実践的で価値のある情報をお届けします。\n\n`;
+            content += `${description}\n\n`;
+            
+            if (instructors.length > 0) {
+                const instructorNames = instructors.map(i => i.name).join('、');
+                content += `${instructorNames}が、豊富な経験と専門知識を活かして、わかりやすく丁寧に解説いたします。\n\n`;
+            }
+            
+            content += `参加者の皆様には、以下のような価値を提供します：\n`;
+            content += `- 最新の知識と実践的なスキル\n`;
+            content += `- 具体的な事例やケーススタディ\n`;
+            content += `- 質疑応答による疑問解消\n`;
+            content += `- 後日配布される資料による復習機会\n\n`;
+            
+            return content;
+        }
+
+        function generateScriptOpening(context) {
+            const theme = context.theme;
+            const description = context.seminarDescription;
+            const instructors = context.instructors;
+            const instructorNames = instructors.map(i => i.name).join('、');
+            const instructorTitles = instructors.filter(i => i.title).map(i => `${i.name}（${i.title}）`).join('、') || instructorNames;
+            
+            // AI風に自然な挨拶を生成
+            const greetingVariations = [
+                `本日はお忙しい中、このWebinarにご参加いただき、誠にありがとうございます。\n`,
+                `本日はお時間をいただき、このWebinarにご参加いただき、ありがとうございます。\n`,
+                `本日は貴重なお時間をいただき、このWebinarにご参加いただき、誠にありがとうございます。\n`
+            ];
+            let content = greetingVariations[Math.floor(Math.random() * greetingVariations.length)];
+            content += `\n`;
+            
+            // 自然な講師紹介を生成
+            const introVariations = [
+                `講師を務めさせていただきます${instructorTitles}です。\n`,
+                `${instructorTitles}が講師を務めさせていただきます。\n`,
+                `本日の講師は${instructorTitles}です。\n`
+            ];
+            content += introVariations[Math.floor(Math.random() * introVariations.length)];
+            content += `\n`;
+            
+            // 自然なテーマ紹介を生成
+            const themeVariations = [
+                `本日のテーマは「${theme}」です。\n`,
+                `本日は「${theme}」についてお話しさせていただきます。\n`,
+                `本日のWebinarでは「${theme}」をテーマに進めていきます。\n`
+            ];
+            content += themeVariations[Math.floor(Math.random() * themeVariations.length)];
+            content += `\n`;
+            content += `${description}\n\n`;
+            
+            // 自然な内容紹介を生成
+            const contentIntroVariations = [
+                `本日は、${instructorNames}が、実践的で役立つ内容をわかりやすくお伝えしていきます。\n`,
+                `${instructorNames}が、実務に活かせる内容をわかりやすく解説していきます。\n`,
+                `本日は、${instructorNames}が、${theme}について実践的な内容をお伝えします。\n`
+            ];
+            content += contentIntroVariations[Math.floor(Math.random() * contentIntroVariations.length)];
+            content += `\n`;
+            
+            return content;
+        }
+
+        function generateScriptIntro(context) {
+            const theme = context.theme;
+            const description = context.seminarDescription;
+            
+            let content = `まず、現在多くの企業や組織が直面している課題についてお話しします。\n\n`;
+            
+            // テーマから課題を推測
+            if (theme.includes('AI') || theme.includes('人工知能')) {
+                content += `AI技術の急速な発展により、多くの企業がデジタル変革の必要性を感じています。しかし、どのようにAIを導入し、活用すればよいのか、具体的な方法がわからないという声をよく耳にします。\n\n`;
+            } else if (theme.includes('業務効率') || theme.includes('生産性')) {
+                content += `業務の複雑化や多様化により、従来の業務プロセスでは限界を感じている企業が増えています。限られたリソースで最大限の成果を出すためには、業務の見直しと効率化が不可欠です。\n\n`;
+            } else {
+                content += `${theme}に関して、多くの企業が課題を抱えています。従来のアプローチでは限界があり、新しい視点や手法が必要とされています。\n\n`;
+            }
+            
+            content += `これらの課題を解決するためには、実践的で具体的なアプローチが必要です。\n\n`;
+            content += `本日のWebinarでは、${description}を通じて、実際に使える解決策をお伝えしていきます。\n\n`;
+            
+            return content;
+        }
+
+        function generateScriptMain(context) {
+            const theme = context.theme;
+            const description = context.seminarDescription;
+            
+            let content = `それでは、具体的な内容に入っていきます。\n\n`;
+            
+            content += `【基礎知識の解説】\n`;
+            content += `まず、${theme}を理解するために必要な基礎知識から説明していきます。\n\n`;
+            content += `基本的な概念や仕組みを理解することで、その後の実践的な内容がより深く理解できるようになります。\n\n`;
+            
+            content += `【実践的な手法の紹介】\n`;
+            content += `次に、実際に使える手法やツールをご紹介します。\n\n`;
+            content += `${description}に基づき、具体的なステップやポイントを詳しく解説していきます。\n\n`;
+            
+            content += `【事例・ケーススタディ】\n`;
+            content += `実際の事例を通じて、より具体的に理解を深めていきましょう。\n\n`;
+            content += `成功事例だけでなく、失敗から学ぶポイントもお伝えしますので、ぜひ参考にしていただければと思います。\n\n`;
+            
+            return content;
+        }
+
+        function generateScriptClosing(context) {
+            const theme = context.theme;
+            const surveyUrl = context.surveyUrl;
+            
+            // AI風に自然なまとめを生成
+            const summaryVariations = [
+                `本日は「${theme}」について、実践的な内容をお伝えしました。\n`,
+                `本日は「${theme}」に関する実践的な内容をお届けしました。\n`,
+                `「${theme}」について、実務に活かせる内容をお伝えしました。\n`
+            ];
+            let content = summaryVariations[Math.floor(Math.random() * summaryVariations.length)];
+            content += `\n`;
+            
+            // 自然なポイントまとめを生成
+            const pointVariations = [
+                `お伝えしたポイントをまとめますと：\n`,
+                `本日お伝えした主なポイントは以下の通りです：\n`,
+                `重要なポイントをまとめますと：\n`
+            ];
+            content += pointVariations[Math.floor(Math.random() * pointVariations.length)];
+            content += `1. 基礎知識と概念の理解\n`;
+            content += `2. 実践的な手法とツールの活用\n`;
+            content += `3. 事例から学ぶ成功のポイント\n\n`;
+            
+            // 自然な実践への促しを生成
+            const practiceVariations = [
+                `これらの内容をぜひ実践に活かしていただければと思います。\n`,
+                `ぜひこれらの内容を実務に活かしていただければと思います。\n`,
+                `本日お伝えした内容を、ぜひ実践に活かしてください。\n`
+            ];
+            content += practiceVariations[Math.floor(Math.random() * practiceVariations.length)];
+            content += `\n`;
+            
+            if (surveyUrl) {
+                // 自然なアンケート依頼を生成
+                const surveyVariations = [
+                    `本日のWebinarをより良いものにするため、アンケートへのご協力をお願いいたします。\n`,
+                    `今後のWebinar改善のため、アンケートへのご回答をお願いいたします。\n`,
+                    `より良いWebinarを提供するため、アンケートへのご協力をお願いできればと思います。\n`
+                ];
+                content += surveyVariations[Math.floor(Math.random() * surveyVariations.length)];
+                content += `アンケートURL: ${surveyUrl}\n`;
+                
+                const surveyTimeVariations = [
+                    `お忙しいところ恐縮ですが、5分程度でご回答いただけますと幸いです。\n`,
+                    `お時間のある際に、ぜひご回答いただければと思います。\n`,
+                    `5分程度でご回答いただけますので、よろしくお願いいたします。\n`
+                ];
+                content += surveyTimeVariations[Math.floor(Math.random() * surveyTimeVariations.length)];
+                content += `\n`;
+            }
+            
+            // 自然な資料配布の案内を生成
+            const materialVariations = [
+                `本日の資料は、後日メールでお送りいたします。\n`,
+                `本日の資料につきましては、後日メールにてお送りさせていただきます。\n`,
+                `使用した資料は、後日メールでお送りいたします。\n`
+            ];
+            content += materialVariations[Math.floor(Math.random() * materialVariations.length)];
+            
+            // 自然な質問受付を生成
+            const questionVariations = [
+                `ご質問やご意見がございましたら、いつでもお気軽にお問い合わせください。\n`,
+                `何かご不明な点やご質問がございましたら、お気軽にお声がけください。\n`,
+                `ご質問などがございましたら、いつでもお気軽にご連絡ください。\n`
+            ];
+            content += questionVariations[Math.floor(Math.random() * questionVariations.length)];
+            content += `\n`;
+            
+            // 自然な締めの挨拶を生成
+            const finalGreetingVariations = [
+                `本日は貴重なお時間をいただき、誠にありがとうございました。\n`,
+                `本日はお忙しい中、ご参加いただき、ありがとうございました。\n`,
+                `本日は貴重なお時間をいただき、ありがとうございました。\n`
+            ];
+            content += finalGreetingVariations[Math.floor(Math.random() * finalGreetingVariations.length)];
+            content += `\n`;
+            
+            return content;
+        }
+
+        function generateInvitationEmailContent(context) {
+            const theme = context.theme;
+            const description = context.seminarDescription;
+            const instructors = context.instructors;
+            const companyName = context.companyName;
+            
+            const instructorNames = instructors.map(i => i.name).join('、');
+            
+            // AI風に自然な挨拶を生成
+            const greetingVariations = [
+                `いつもお世話になっております。\n`,
+                `平素よりお世話になっております。\n`,
+                `いつも大変お世話になっております。\n`
+            ];
+            let content = greetingVariations[Math.floor(Math.random() * greetingVariations.length)];
+            
+            if (companyName) {
+                content += `${companyName}の`;
+            }
+            content += `${instructorNames}です。\n\n`;
+            
+            // 自然な開催告知文を生成
+            const announcementVariations = [
+                `この度、${companyName ? `${companyName}主催で` : ''}以下のWebinarを開催いたします。\n`,
+                `${companyName ? `${companyName}として` : ''}、以下のWebinarを開催することとなりました。\n`,
+                `このたび、${companyName ? `${companyName}主催で` : ''}Webinarを開催いたします。\n`
+            ];
+            content += announcementVariations[Math.floor(Math.random() * announcementVariations.length)];
+            content += `\n`;
+            
+            content += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            content += `【このWebinarで得られる価値】\n\n`;
+            
+            // テーマと説明に基づいて価値を生成
+            const valuePoints = [
+                `${theme}に関する最新の知識と実践的なスキルが身につきます`,
+                `${description}を通じて、実務に即座に活かせるノウハウを学べます`,
+                `具体的な事例やケーススタディを通じて、理解を深めることができます`,
+                `質疑応答の時間で、疑問や課題を直接解決できます`,
+                `後日配布される資料で、復習や社内共有が可能です`,
+                `専門家による解説で、${theme}の本質を理解できます`
+            ];
+            
+            // ランダムに3-4個の価値を選択
+            const selectedValues = valuePoints.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 2) + 3);
+            selectedValues.forEach(value => {
+                content += `✅ ${value}\n`;
+            });
+            content += `\n`;
+            
+            // 自然な参加誘導文を生成
+            const invitationVariations = [
+                `このようなメリットがありますので、ぜひご参加いただけると良いと思います。\n`,
+                `これらの価値を提供できるWebinarですので、ご参加いただければと思います。\n`,
+                `上記のような価値をお届けできるWebinarです。ぜひご参加ください。\n`
+            ];
+            content += invitationVariations[Math.floor(Math.random() * invitationVariations.length)];
+            content += `\n`;
+            
+            content += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            content += `【Webinar詳細】\n\n`;
+            content += `📅 日時: ${context.date} ${context.startTime} - ${context.endTime}（${context.duration}）\n\n`;
+            content += `🎤 テーマ: ${theme}\n\n`;
+            content += `📝 内容:\n`;
+            content += `${description}\n\n`;
+            content += `👤 講師: ${instructors.map(i => i.title ? `${i.name}（${i.title}）` : i.name).join('、')}\n\n`;
+            content += `🔗 Zoom URL: ${context.zoomUrl}\n`;
+            if (context.meetingId) {
+                content += `📱 ミーティングID: ${context.meetingId}\n`;
+            }
+            if (context.passcode) {
+                content += `🔐 パスコード: ${context.passcode}\n`;
+            }
+            content += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            content += `【参加方法】\n\n`;
+            
+            // 自然な参加方法説明を生成
+            const methodVariations = [
+                `開始時刻の10分前から接続可能です。上記のZoom URLをクリックするか、ZoomアプリからミーティングIDを入力してご参加ください。\n`,
+                `参加方法は簡単です。開始時刻の10分前から、上記のZoom URLをクリックするか、ZoomアプリからミーティングIDを入力してください。\n`,
+                `開始10分前から接続できます。Zoom URLをクリックするか、アプリからミーティングIDを入力してご参加ください。\n`
+            ];
+            content += methodVariations[Math.floor(Math.random() * methodVariations.length)];
+            content += `\n`;
+            
+            content += `事前準備として、以下をご確認ください：\n`;
+            content += `- Zoomアプリのインストール（初めてご利用の場合）\n`;
+            content += `- 音声・ビデオの動作確認\n`;
+            content += `- 安定したインターネット接続\n\n`;
+            
+            // 自然な締めの文章を生成
+            const closingVariations = [
+                `ご参加をお待ちしております。何かご不明な点がございましたら、お気軽にお問い合わせください。\n`,
+                `ご参加をお待ちしております。ご質問などがございましたら、お気軽にご連絡ください。\n`,
+                `皆様のご参加をお待ちしております。ご不明な点がございましたら、お気軽にお問い合わせください。\n`
+            ];
+            content += closingVariations[Math.floor(Math.random() * closingVariations.length)];
+            content += `\n`;
+            
+            content += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            content += `今後ともよろしくお願いいたします。\n\n`;
+            if (companyName) {
+                content += `${companyName}\n`;
+            }
+            content += `${instructorNames}\n\n`;
+            
+            return content;
+        }
+
+        function generateThankYouEmailContent(context) {
+            const theme = context.theme;
+            const date = context.date;
+            const instructors = context.instructors;
+            const surveyUrl = context.surveyUrl;
+            const companyName = context.companyName;
+            
+            const instructorNames = instructors.map(i => i.name).join('、');
+            
+            // AI風に自然な冒頭を生成
+            const openingVariations = [
+                `${date}に開催いたしました「${theme}」Webinarにご参加いただき、誠にありがとうございました。\n`,
+                `「${theme}」Webinarにご参加いただき、ありがとうございました。\n`,
+                `${date}に開催した「${theme}」Webinarにご参加いただき、誠にありがとうございました。\n`
+            ];
+            let content = openingVariations[Math.floor(Math.random() * openingVariations.length)];
+            content += `\n`;
+            
+            // 自然な自己紹介を生成
+            const selfIntroVariations = [
+                `${companyName ? `${companyName}の` : ''}${instructorNames}です。\n`,
+                `${companyName ? `${companyName}の` : ''}${instructorNames}と申します。\n`,
+                `講師を務めさせていただいた${companyName ? `${companyName}の` : ''}${instructorNames}です。\n`
+            ];
+            content += selfIntroVariations[Math.floor(Math.random() * selfIntroVariations.length)];
+            content += `\n`;
+            // AI風に自然な文章を生成
+            const thankYouVariations = [
+                `Webinarご参加ありがとうございました。\n`,
+                `本日は貴重なお時間をいただき、ありがとうございました。\n`,
+                `${theme}に関するWebinarにご参加いただき、誠にありがとうございました。\n`
+            ];
+            content += thankYouVariations[Math.floor(Math.random() * thankYouVariations.length)];
+            content += `\n`;
+            
+            if (surveyUrl) {
+                const surveyVariations = [
+                    `今後のWebinarの内容を良くするために、アンケートへのご回答よろしくお願いいたします。\n`,
+                    `より良いWebinarを提供するため、アンケートへのご協力をお願いいたします。\n`,
+                    `今後のWebinar改善のため、アンケートへのご回答をお願いできればと思います。\n`
+                ];
+                content += surveyVariations[Math.floor(Math.random() * surveyVariations.length)];
+                content += `\n`;
+                content += `アンケートURL: ${surveyUrl}\n\n`;
+            }
+            
+            // 自然な締めの文章を生成
+            const closingVariations = [
+                `ご質問やご意見がございましたら、いつでもお気軽にお問い合わせください。お答えできる範囲で、できる限りサポートさせていただきます。\n\n`,
+                `何かご不明な点やご質問がございましたら、お気軽にお声がけください。\n\n`,
+                `今後ともよろしくお願いいたします。ご質問などがございましたら、いつでもお気軽にご連絡ください。\n\n`
+            ];
+            content += closingVariations[Math.floor(Math.random() * closingVariations.length)];
+            content += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            if (companyName) {
+                content += `${companyName}\n`;
+            }
+            content += `${instructorNames}\n\n`;
+            
+            return content;
+        }
+
+        function generateInternalChatContent(context) {
+            const theme = context.theme;
+            const description = context.seminarDescription;
+            const instructors = context.instructors;
+            const date = context.date;
+            const startTime = context.startTime;
+            const endTime = context.endTime;
+            const duration = context.duration;
+            const zoomUrl = context.zoomUrl;
+            
+            const instructorTitles = instructors.map(i => i.title ? `${i.name}（${i.title}）` : i.name).join('、');
+            
+            // AI風に自然なタイトルを生成
+            const titleVariations = [
+                `【今回のWebinar開催について】`,
+                `【Webinar開催のご案内】`,
+                `【Webinar開催のお知らせ】`
+            ];
+            let content = `${titleVariations[Math.floor(Math.random() * titleVariations.length)]}\n\n`;
+            
+            // 自然な挨拶を生成
+            const greetingVariations = [
+                `お疲れ様です。\n`,
+                `お疲れ様です。\n`,
+                `おはようございます。\n`,
+                `こんにちは。\n`
+            ];
+            content += greetingVariations[Math.floor(Math.random() * greetingVariations.length)];
+            content += `\n`;
+            
+            // 自然な開催告知文を生成
+            const announcementVariations = [
+                `今回、以下の内容でWebinarを開催いたします。\n`,
+                `以下の内容でWebinarを開催することになりました。\n`,
+                `この度、以下のWebinarを開催いたします。\n`,
+                `以下のテーマでWebinarを開催します。\n`
+            ];
+            content += announcementVariations[Math.floor(Math.random() * announcementVariations.length)];
+            content += `\n`;
+            
+            content += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+            content += `📅 日時: ${date} ${startTime} - ${endTime}（${duration}）\n\n`;
+            content += `🎤 テーマ: ${theme}\n\n`;
+            content += `📝 内容:\n`;
+            content += `${description}\n\n`;
+            content += `👤 講師: ${instructorTitles}\n\n`;
+            content += `🔗 Zoom URL: ${zoomUrl}\n`;
+            content += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+            
+            // 自然な参加誘導文を生成
+            const invitationVariations = [
+                `このようなセミナーを開催するので、お手すきの部分があったら見ていただければと思います。\n`,
+                `このような内容でWebinarを開催しますので、お時間のある方はぜひご参加ください。\n`,
+                `このようなセミナーを開催します。お手すきの際に、ぜひご覧いただければと思います。\n`,
+                `このようなWebinarを開催しますので、ご都合がよろしければご参加ください。\n`
+            ];
+            content += invitationVariations[Math.floor(Math.random() * invitationVariations.length)];
+            content += `\n`;
+            
+            // 自然な参加方法説明を生成
+            const methodVariations = [
+                `参加をご希望の方は、上記のZoom URLからご参加ください。開始時刻の10分前から接続可能です。\n`,
+                `参加方法は、上記のZoom URLをクリックするだけです。開始10分前から接続できます。\n`,
+                `上記のZoom URLからご参加いただけます。開始時刻の10分前から接続可能です。\n`
+            ];
+            content += methodVariations[Math.floor(Math.random() * methodVariations.length)];
+            content += `\n`;
+            
+            // 自然な締めの文章を生成
+            const closingVariations = [
+                `ご質問やご意見がございましたら、お気軽にお声がけください。\n`,
+                `ご質問などがございましたら、お気軽にご連絡ください。\n`,
+                `何かご不明な点がございましたら、お気軽にお問い合わせください。\n`
+            ];
+            content += closingVariations[Math.floor(Math.random() * closingVariations.length)];
+            content += `\n`;
+            
+            return content;
+        }
+
+        function generateBasicInfo() {
+            if (!validateRequiredFields()) return;
+            hideError();
+            showLoading('AIが基本情報を生成中...', '入力内容を分析して最適な説明文を作成しています');
+
+            setTimeout(() => {
+                const date = formatDate(document.getElementById('eventDate').value);
+            const startTime = formatTime(document.getElementById('startTime').value);
+            const endTime = formatTime(document.getElementById('endTime').value);
+            const duration = calculateDuration(startTime, endTime);
+            const timezone = document.getElementById('timezone').value;
+            const zoomUrl = document.getElementById('zoomUrl').value;
+            const meetingId = document.getElementById('meetingId').value || '';
+            const passcode = document.getElementById('passcode').value || '';
+            const theme = document.getElementById('theme').value;
+            const seminarDescription = document.getElementById('seminarDescription').value;
+            const instructors = getInstructors();
+            const companyName = document.getElementById('companyName').value || '';
+
+            const context = {
+                theme,
+                seminarDescription,
+                instructors,
+                companyName,
+                date,
+                startTime,
+                endTime,
+                duration,
+                timezone,
+                zoomUrl,
+                meetingId,
+                passcode
+            };
+
+            // AI生成による説明文
+            const description = generateIntelligentContent('basic-info-description', context);
+
+            let doc = `# Webinar基本情報\n\n`;
+            doc += `## 📅 開催概要\n\n`;
+            doc += `### 開催日時\n`;
+            doc += `- **日付**: ${date}\n`;
+            doc += `- **時間**: ${startTime} - ${endTime}（${duration}）\n`;
+            doc += `- **タイムゾーン**: ${timezone}\n\n`;
+            doc += `### Webinarテーマ\n`;
+            doc += `**${theme}**\n\n`;
+            doc += `### セミナー内容\n\n`;
+            doc += `${description}\n\n`;
+            doc += `## 🔗 接続情報\n\n`;
+            doc += `### Zoom情報\n`;
+            doc += `- **招待URL**: ${zoomUrl}\n`;
+            if (meetingId) {
+                doc += `- **ミーティングID**: ${meetingId}\n`;
+            }
+            if (passcode) {
+                doc += `- **パスコード**: ${passcode}\n`;
+            }
+            doc += `\n`;
+            doc += `**接続方法**: 開始時刻の10分前から接続可能です。上記のURLをクリックするか、ZoomアプリからミーティングIDを入力してご参加ください。\n\n`;
+            doc += `## 👤 講師プロフィール\n\n`;
+            instructors.forEach((instructor, index) => {
+                doc += `### ${index + 1}. ${instructor.name}\n`;
+                if (instructor.title) {
+                    doc += `- **役職**: ${instructor.title}\n`;
+                }
+                if (instructor.org) {
+                    doc += `- **所属**: ${instructor.org}\n`;
+                }
+                doc += `\n`;
+            });
+            if (companyName) {
+                doc += `## 🏢 主催組織\n\n`;
+                doc += `${companyName}\n\n`;
+            }
+            doc += `---\n\n`;
+            doc += `**作成日**: ${new Date().toLocaleDateString('ja-JP')}\n`;
+
+            showResult(doc, '基本情報', 'basic-info');
+            hideLoading();
+            }, 1200);
+        }
+
+        function generateScript() {
+            if (!validateRequiredFields()) return;
+            hideError();
+            showLoading('AIが台本を生成中...', 'テーマと内容を分析して最適な台本を作成しています');
+
+            setTimeout(() => {
+                const theme = document.getElementById('theme').value;
+            const seminarDescription = document.getElementById('seminarDescription').value;
+            const instructors = getInstructors();
+            const surveyUrl = document.getElementById('surveyUrl').value;
+
+            const context = {
+                theme,
+                seminarDescription,
+                instructors,
+                surveyUrl
+            };
+
+            // AI生成による台本
+            const opening = generateIntelligentContent('script-opening', context);
+            const intro = generateIntelligentContent('script-intro', context);
+            const main = generateIntelligentContent('script-main', context);
+            const closing = generateIntelligentContent('script-closing', context);
+
+            let doc = `# Webinar台本\n\n`;
+            doc += `## 📝 台本\n\n`;
+            doc += `### オープニング（5-10分）\n\n`;
+            doc += `${opening}\n`;
+            doc += `【進行の流れ】\n`;
+            doc += `本日の進行は以下の通りです。\n`;
+            doc += `1. 導入・背景説明（約10分）\n`;
+            doc += `2. メインコンテンツの解説（約${surveyUrl ? '40' : '50'}分）\n`;
+            doc += `3. 質疑応答（約10分）\n`;
+            doc += `4. まとめ・クロージング（約5分）\n\n`;
+            doc += `途中でご質問がございましたら、チャット機能でQ&A形式で質問していただけます。\n\n`;
+            doc += `それでは、早速始めさせていただきます。\n\n`;
+            doc += `---\n\n`;
+            doc += `### 導入・背景説明（10分）\n\n`;
+            doc += `${intro}\n`;
+            doc += `---\n\n`;
+            doc += `### メインコンテンツ（40-50分）\n\n`;
+            doc += `${main}\n`;
+            doc += `---\n\n`;
+            doc += `### 質疑応答（10分）\n\n`;
+            doc += `【質問受付】\n`;
+            doc += `ここまでで、ご質問やご意見がございましたら、お気軽にお聞かせください。\n\n`;
+            doc += `チャット機能でQ&A形式で質問していただけます。\n`;
+            doc += `時間内に回答できない場合は、後日メールでお返事させていただきます。\n\n`;
+            doc += `[質問への回答]\n\n`;
+            doc += `---\n\n`;
+            doc += `### クロージング（5分）\n\n`;
+            doc += `${closing}\n`;
+            doc += `---\n\n`;
+            doc += `**作成日**: ${new Date().toLocaleDateString('ja-JP')}\n`;
+
+            showResult(doc, '台本', 'script');
+            hideLoading();
+            }, 1500);
+        }
+
+        function generateInvitationEmail() {
+            if (!validateRequiredFields()) return;
+            hideError();
+            showLoading('AIが招待メールを生成中...', 'コンバージョンを高める魅力的なメールを作成しています');
+
+            setTimeout(() => {
+                const date = formatDate(document.getElementById('eventDate').value);
+            const startTime = formatTime(document.getElementById('startTime').value);
+            const endTime = formatTime(document.getElementById('endTime').value);
+            const duration = calculateDuration(startTime, endTime);
+            const zoomUrl = document.getElementById('zoomUrl').value;
+            const meetingId = document.getElementById('meetingId').value;
+            const passcode = document.getElementById('passcode').value;
+            const theme = document.getElementById('theme').value;
+            const seminarDescription = document.getElementById('seminarDescription').value;
+            const instructors = getInstructors();
+            const companyName = document.getElementById('companyName').value || '';
+
+            const context = {
+                theme,
+                seminarDescription,
+                instructors,
+                companyName,
+                date,
+                startTime,
+                endTime,
+                duration,
+                zoomUrl,
+                meetingId,
+                passcode
+            };
+
+            // AI生成によるメール本文
+            const emailContent = generateIntelligentContent('email-invitation', context);
+
+            let doc = `# 参加者への招待メール\n\n`;
+            doc += `## 件名\n\n`;
+            doc += `【ご招待】${theme} - Webinar開催のご案内\n\n`;
+            doc += `---\n\n`;
+            doc += `## メール本文テンプレート\n\n`;
+            doc += `○○様\n\n`;
+            doc += `${emailContent}`;
+            doc += `---\n\n`;
+            doc += `**作成日**: ${new Date().toLocaleDateString('ja-JP')}\n`;
+
+            showResult(doc, '招待メール', 'invitation-email');
+            hideLoading();
+            }, 1500);
+        }
+
+        function generateThankYouEmail() {
+            if (!validateRequiredFields()) return;
+            hideError();
+            showLoading('AIがありがとうメールを生成中...', '参加への感謝とアンケート依頼を含むメールを作成しています');
+
+            setTimeout(() => {
+                const date = formatDate(document.getElementById('eventDate').value);
+            const theme = document.getElementById('theme').value;
+            const instructors = getInstructors();
+            const surveyUrl = document.getElementById('surveyUrl').value;
+            const companyName = document.getElementById('companyName').value || '';
+
+            const context = {
+                theme,
+                instructors,
+                surveyUrl,
+                companyName,
+                date
+            };
+
+            // AI生成によるメール本文
+            const emailContent = generateIntelligentContent('email-thankyou', context);
+
+            let doc = `# 参加者へのありがとうメール\n\n`;
+            doc += `## 件名\n\n`;
+            doc += `【Webinarご参加ありがとうございました】${theme}\n\n`;
+            doc += `---\n\n`;
+            doc += `## メール本文テンプレート\n\n`;
+            doc += `○○様\n\n`;
+            doc += `${emailContent}`;
+            doc += `---\n\n`;
+            doc += `**作成日**: ${new Date().toLocaleDateString('ja-JP')}\n`;
+
+            showResult(doc, 'ありがとうメール', 'thank-you-email');
+            hideLoading();
+            }, 1500);
+        }
+
+        function generateInternalChat() {
+            if (!validateRequiredFields()) return;
+            hideError();
+            showLoading('AIが社内共有チャット文面を生成中...', '自然で親しみやすい文章を作成しています');
+
+            setTimeout(() => {
+                const date = formatDate(document.getElementById('eventDate').value);
+            const startTime = formatTime(document.getElementById('startTime').value);
+            const endTime = formatTime(document.getElementById('endTime').value);
+            const duration = calculateDuration(startTime, endTime);
+            const theme = document.getElementById('theme').value;
+            const seminarDescription = document.getElementById('seminarDescription').value;
+            const instructors = getInstructors();
+            const zoomUrl = document.getElementById('zoomUrl').value;
+
+            const context = {
+                theme,
+                seminarDescription,
+                instructors,
+                date,
+                startTime,
+                endTime,
+                duration,
+                zoomUrl
+            };
+
+            // AI生成によるチャット文面
+            const chatContent = generateIntelligentContent('chat-internal', context);
+
+            let doc = `# 社内向け共有チャット文面\n\n`;
+            doc += `## テンプレート\n\n`;
+            doc += `---\n\n`;
+            doc += `${chatContent}`;
+            doc += `---\n\n`;
+            doc += `**作成日**: ${new Date().toLocaleDateString('ja-JP')}\n`;
+
+            showResult(doc, '社内共有チャット', 'internal-chat');
+            hideLoading();
+            }, 1500);
+        }
+
+        function showResult(content, title, type) {
+            currentDocument = content;
+            currentDocumentType = type;
+            const resultSection = document.getElementById('resultSection');
+            const resultContent = document.getElementById('resultContent');
+            const resultTitle = document.getElementById('resultTitle');
+            resultTitle.textContent = `✅ ${title}生成完了！`;
+            resultContent.textContent = content;
+            resultSection.classList.add('active');
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyToClipboard() {
+            navigator.clipboard.writeText(currentDocument).then(() => {
+                alert('クリップボードにコピーしました！');
+            }).catch(err => {
+                console.error('コピーに失敗しました:', err);
+                alert('コピーに失敗しました。');
+            });
+        }
+
+        function downloadCurrentDocument() {
+            const blob = new Blob([currentDocument], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const date = document.getElementById('eventDate').value || new Date().toISOString().slice(0, 10);
+            const typeNames = {
+                'basic-info': '基本情報',
+                'script': '台本',
+                'invitation-email': '招待メール',
+                'thank-you-email': 'ありがとうメール',
+                'internal-chat': '社内共有チャット'
+            };
+            a.download = `Webinar_${typeNames[currentDocumentType] || 'ドキュメント'}_${date}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function resetForm() {
+            if (confirm('入力内容をリセットしますか？')) {
+                document.getElementById('webinarForm').reset();
+                document.getElementById('instructorList').innerHTML = '';
+                instructorCount = 0;
+                hideResult();
+                hideError();
+                // 初期講師を1人追加
+                addInstructor();
+            }
+        }
+
+        function regenerateCurrentDocument() {
+            // 現在のドキュメントタイプを再生成
+            if (!currentDocumentType) {
+                showError('再生成するドキュメントがありません。');
+                return;
+            }
+
+            const typeFunctions = {
+                'basic-info': generateBasicInfo,
+                'script': generateScript,
+                'invitation-email': generateInvitationEmail,
+                'thank-you-email': generateThankYouEmail,
+                'internal-chat': generateInternalChat
+            };
+
+            const generateFunction = typeFunctions[currentDocumentType];
+            if (generateFunction) {
+                generateFunction();
+            } else {
+                showError('再生成できないドキュメントタイプです。');
+            }
+        }
+
+        function showLoading(message = 'AIが生成中...', submessage = 'ドキュメントを作成しています') {
+            const overlay = document.getElementById('loadingOverlay');
+            const subtext = document.getElementById('loadingSubtext');
+            subtext.textContent = submessage;
+            overlay.classList.add('active');
+        }
+
+        function hideLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('active');
+        }
+
+        function fillSampleData() {
+            // AI風に多様なビジネスジャンルのサンプルデータを生成
+            showLoading('AIがサンプルデータを生成中...', '様々なビジネスジャンルから最適な内容を選んでいます');
+            
+            // 非同期で処理（ローディング表示のため）
+            setTimeout(() => {
+                // 日付: 今日から0-30日後のランダム
+                const today = new Date();
+                const randomDays = Math.floor(Math.random() * 30);
+                const eventDate = new Date(today);
+                eventDate.setDate(today.getDate() + randomDays);
+                const dateStr = eventDate.toISOString().slice(0, 10);
+                document.getElementById('eventDate').value = dateStr;
+
+                // 開始時刻: 10:00-15:00の間でランダム
+                const startHour = Math.floor(Math.random() * 6) + 10;
+                const startMinute = Math.random() < 0.5 ? 0 : 30;
+                const startTimeStr = `${String(startHour).padStart(2, '0')}:${String(startMinute).padStart(2, '0')}`;
+                document.getElementById('startTime').value = startTimeStr;
+
+                // 終了時刻: 開始時刻から1時間30分後または2時間後
+                const duration = Math.random() < 0.5 ? 90 : 120;
+                const endHour = startHour + Math.floor(duration / 60);
+                const endMinute = startMinute + (duration % 60);
+                const finalEndHour = endMinute >= 60 ? endHour + 1 : endHour;
+                const finalEndMinute = endMinute >= 60 ? endMinute - 60 : endMinute;
+                const endTimeStr = `${String(finalEndHour).padStart(2, '0')}:${String(finalEndMinute).padStart(2, '0')}`;
+                document.getElementById('endTime').value = endTimeStr;
+
+                // Zoom URL
+                const randomId = Math.floor(Math.random() * 9000000000) + 1000000000;
+                document.getElementById('zoomUrl').value = `https://zoom.us/j/${randomId}`;
+                document.getElementById('meetingId').value = String(randomId).replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
+                document.getElementById('passcode').value = String(Math.floor(Math.random() * 900000) + 100000);
+
+                // 多様なビジネスジャンルのテーマと説明をAI風に生成
+                const businessCategories = [
+                    {
+                        theme: 'AI・機械学習による業務自動化',
+                        description: '最新のAI技術と機械学習を活用して、繰り返し作業を自動化し、業務効率を大幅に向上させる実践的な方法を解説します。具体的なツール紹介から導入ステップまで、すぐに実践できる内容をお届けします。',
+                        instructorNames: ['AI技術者', 'データサイエンティスト', 'システムエンジニア'],
+                        instructorTitles: ['AI技術責任者', 'データ分析部長', '技術開発部長'],
+                        instructorOrgs: ['AIテクノロジーズ', 'データイノベーション', 'テックソリューション'],
+                        companyNames: ['株式会社AIソリューション', 'データドリブン株式会社', 'テックイノベーション']
+                    },
+                    {
+                        theme: 'EC・小売業のデジタルマーケティング戦略',
+                        description: 'ECサイトや実店舗の売上を向上させるためのデジタルマーケティング戦略を、実際の成功事例を交えながら詳しく解説します。SNS活用からSEO対策、コンテンツマーケティングまで、包括的なアプローチをお伝えします。',
+                        instructorNames: ['マーケティング専門家', 'ECコンサルタント', 'デジタルマーケター'],
+                        instructorTitles: ['マーケティング部長', 'EC事業責任者', 'デジタル戦略部長'],
+                        instructorOrgs: ['マーケティングプロ', 'ECコンサルティング', 'デジタルソリューション'],
+                        companyNames: ['株式会社マーケティングイノベーション', 'ECコンサルティング', 'デジタルマーケティング']
+                    },
+                    {
+                        theme: '製造業のIoT導入とスマートファクトリー実現',
+                        description: 'IoT技術を活用したスマートファクトリーの構築方法を、実際の導入事例とともに解説します。生産ラインの可視化、予知保全、品質管理の自動化など、製造現場の課題解決に直結する内容です。',
+                        instructorNames: ['IoTエンジニア', '製造技術者', '産業システム専門家'],
+                        instructorTitles: ['IoT技術責任者', '製造技術部長', 'システム統合部長'],
+                        instructorOrgs: ['IoTソリューション', 'スマートファクトリー', '産業システム'],
+                        companyNames: ['株式会社IoTイノベーション', 'スマートファクトリー', '産業システムソリューション']
+                    },
+                    {
+                        theme: '金融・FinTechサービスの開発と運用',
+                        description: 'FinTechサービスの開発から運用まで、金融業界のデジタル変革を実現するための実践的なノウハウを解説します。セキュリティ対策、規制対応、UX設計など、金融サービスに特化した内容をお届けします。',
+                        instructorNames: ['FinTech専門家', '金融システムエンジニア', '金融コンサルタント'],
+                        instructorTitles: ['FinTech事業責任者', '金融システム部長', '金融コンサルタント'],
+                        instructorOrgs: ['FinTechソリューション', '金融システム', '金融コンサルティング'],
+                        companyNames: ['株式会社FinTechイノベーション', '金融システムソリューション', 'フィンテックコンサルティング']
+                    },
+                    {
+                        theme: 'ヘルスケア・医療ITの最新動向と実装',
+                        description: '医療・ヘルスケア分野におけるIT活用の最新動向と実装方法を解説します。電子カルテシステム、遠隔医療、ヘルスケアデータの活用など、医療現場のデジタル化を推進する実践的な内容です。',
+                        instructorNames: ['医療IT専門家', 'ヘルスケアコンサルタント', '医療システムエンジニア'],
+                        instructorTitles: ['医療IT責任者', 'ヘルスケア事業部長', '医療システム部長'],
+                        instructorOrgs: ['ヘルスケアIT', '医療システム', 'ヘルスケアコンサルティング'],
+                        companyNames: ['株式会社ヘルスケアIT', '医療システムソリューション', 'ヘルスケアイノベーション']
+                    },
+                    {
+                        theme: '不動産・プロptechのデジタル変革',
+                        description: '不動産業界におけるデジタル変革（PropTech）の実践方法を解説します。VR/ARを活用した物件紹介、不動産データ分析、スマートビル管理など、不動産業界の課題解決に直結する内容をお届けします。',
+                        instructorNames: ['PropTech専門家', '不動産コンサルタント', '不動産システムエンジニア'],
+                        instructorTitles: ['PropTech事業責任者', '不動産デジタル部長', '不動産システム部長'],
+                        instructorOrgs: ['PropTechソリューション', '不動産デジタル', '不動産コンサルティング'],
+                        companyNames: ['株式会社PropTechイノベーション', '不動産デジタルソリューション', 'プロプテックコンサルティング']
+                    },
+                    {
+                        theme: '教育・EdTechの最新トレンドと実践',
+                        description: '教育分野におけるEdTechの最新トレンドと実践的な活用方法を解説します。オンライン学習プラットフォーム、AIを活用した個別最適化学習、学習データ分析など、教育現場の変革を実現する内容です。',
+                        instructorNames: ['EdTech専門家', '教育コンサルタント', '教育システムエンジニア'],
+                        instructorTitles: ['EdTech事業責任者', '教育デジタル部長', '教育システム部長'],
+                        instructorOrgs: ['EdTechソリューション', '教育デジタル', '教育コンサルティング'],
+                        companyNames: ['株式会社EdTechイノベーション', '教育デジタルソリューション', 'エドテックコンサルティング']
+                    },
+                    {
+                        theme: '物流・サプライチェーン最適化のDX',
+                        description: '物流・サプライチェーンにおけるDX推進の実践方法を解説します。在庫管理システム、配送最適化、ブロックチェーン活用など、物流業界の効率化とコスト削減を実現する具体的な手法をお伝えします。',
+                        instructorNames: ['物流DX専門家', 'サプライチェーンコンサルタント', '物流システムエンジニア'],
+                        instructorTitles: ['物流DX責任者', 'サプライチェーン部長', '物流システム部長'],
+                        instructorOrgs: ['物流DXソリューション', 'サプライチェーン', '物流コンサルティング'],
+                        companyNames: ['株式会社物流DXイノベーション', 'サプライチェーンソリューション', '物流コンサルティング']
+                    }
+                ];
+
+                const selectedCategory = businessCategories[Math.floor(Math.random() * businessCategories.length)];
+                
+                document.getElementById('theme').value = selectedCategory.theme;
+                document.getElementById('seminarDescription').value = selectedCategory.description;
+
+                // 講師情報（既存をクリアして新規追加）
+                document.getElementById('instructorList').innerHTML = '';
+                instructorCount = 0;
+                
+                const numInstructors = Math.floor(Math.random() * 2) + 1; // 1-2名
+                for (let i = 0; i < numInstructors; i++) {
+                    addInstructor();
+                    const items = document.querySelectorAll('.instructor-item');
+                    const lastItem = items[items.length - 1];
+                    const nameIndex = Math.floor(Math.random() * selectedCategory.instructorNames.length);
+                    lastItem.querySelector('.instructor-name').value = selectedCategory.instructorNames[nameIndex];
+                    lastItem.querySelector('.instructor-title').value = selectedCategory.instructorTitles[Math.floor(Math.random() * selectedCategory.instructorTitles.length)];
+                    lastItem.querySelector('.instructor-org').value = selectedCategory.instructorOrgs[Math.floor(Math.random() * selectedCategory.instructorOrgs.length)];
+                }
+
+                // 会社名
+                document.getElementById('companyName').value = selectedCategory.companyNames[Math.floor(Math.random() * selectedCategory.companyNames.length)];
+
+                // アンケートURL（ランダムに設定 or 空）
+                if (Math.random() < 0.5) {
+                    document.getElementById('surveyUrl').value = 'https://forms.google.com/d/example123';
+                } else {
+                    document.getElementById('surveyUrl').value = '';
+                }
+
+                hideLoading();
+                hideError();
+                alert('お試し用のサンプルデータを入力しました！\n「ドキュメント生成」ボタンから試してみてください。');
+            }, 1500); // 1.5秒のローディング表示
+        }
+
+        function hideResult() {
+            document.getElementById('resultSection').classList.remove('active');
+        }
+
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = '⚠️ ' + message;
+            errorMessage.classList.add('active');
+            errorMessage.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').classList.remove('active');
+        }
+
+        // 初期化: 講師を1人追加
+        window.addEventListener('DOMContentLoaded', () => {
+            addInstructor();
+        });
+    </script>
+</body>
+</html>

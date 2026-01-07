@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>事例記事自動生成ツール</title>
+    <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 事例記事自動生成ツール</h1>
+            <p>インタビュー音声をアップロードして、自動で事例記事を生成します</p>
+        </div>
+
+        <div class="content">
+            <!-- エラーメッセージ -->
+            <div class="error-message" id="errorMessage"></div>
+
+            <!-- アップロード画面 -->
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">ドラッグ&ドロップ</div>
+                    <div class="upload-hint">またはクリックしてファイルを選択</div>
+                    <div class="upload-hint" style="margin-top: 10px;">対応形式: MP3, WAV</div>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept="audio/mpeg,audio/wav,audio/mp3,.mp3,.wav">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">
+                    📁 ファイルを選択
+                </button>
+            </div>
+
+            <!-- 処理中画面 -->
+            <div class="processing-section" id="processingSection">
+                <h2>処理中...</h2>
+                <ul class="step-list">
+                    <li class="step-item" id="stepUpload">
+                        <span class="step-icon">📤</span>
+                        <span class="step-text">ファイルアップロード</span>
+                    </li>
+                    <li class="step-item" id="stepTranscribe">
+                        <span class="step-icon">🔄</span>
+                        <span class="step-text">文字起こし処理中...</span>
+                    </li>
+                    <li class="step-item" id="stepGenerate">
+                        <span class="step-icon">⏳</span>
+                        <span class="step-text">記事生成待機中...</span>
+                    </li>
+                </ul>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <!-- 結果表示画面 -->
+            <div class="result-section" id="resultSection">
+                <h2 style="text-align: center; margin-bottom: 20px;">✅ 処理完了！</h2>
+                
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('transcript')">文字起こし</button>
+                    <button class="tab" onclick="switchTab('article')">生成記事</button>
+                </div>
+
+                <div class="tab-content active" id="transcriptTab">
+                    <div class="transcript-content" id="transcriptContent"></div>
+                </div>
+
+                <div class="tab-content" id="articleTab">
+                    <div class="article-content" id="articleContent"></div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn" onclick="copyToClipboard()">
+                        <span class="btn-icon">📋</span>コピー
+                    </button>
+                    <button class="btn" onclick="downloadArticle()">
+                        <span class="btn-icon">💾</span>ダウンロード
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetApp()">
+                        <span class="btn-icon">📁</span>新しいファイル
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/script.js"></script>
+</body>
+</html>
+
