@@ -36,6 +36,8 @@ function LpSitePageInner() {
   const [isGeneratingImages, setIsGeneratingImages] = useState(false)
   const [imageProgress, setImageProgress] = useState(0)
   const [showFramework, setShowFramework] = useState(false)
+  const [combinedLpImage, setCombinedLpImage] = useState<{ pc?: string; sp?: string } | null>(null)
+  const [isCombining, setIsCombining] = useState(false)
 
   // 進捗を安全に更新（後戻りしない）
   const updateProgress = (newProgress: number) => {
@@ -713,33 +715,113 @@ function LpSitePageInner() {
             {/* LP全体プレビュー（縦につなげた形） */}
             {result.images.some(img => selectedDevice === 'pc' ? img.image_pc : img.image_sp) && (
               <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-                <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <Layout className="w-6 h-6 text-teal-600" />
-                  LP全体プレビュー（{selectedDevice === 'pc' ? 'PC' : 'スマホ'}版）
-                </h3>
-                <div className="border-4 border-slate-200 rounded-xl overflow-hidden bg-slate-50">
-                  <div className="space-y-0">
-                    {result.sections.map((section, index) => {
-                      const image = result.images.find(img => img.section_id === section.section_id)
-                      const imageData = selectedDevice === 'pc' ? image?.image_pc : image?.image_sp
-                      if (!imageData) return null
-                      
-                      return (
-                        <div key={section.section_id} className="relative">
-                          <img
-                            src={imageData}
-                            alt={section.headline}
-                            className="w-full block"
-                          />
-                          {/* セクション区切り線 */}
-                          {index < result.sections.length - 1 && (
-                            <div className="h-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
-                          )}
-                        </div>
-                      )
-                    })}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <Layout className="w-6 h-6 text-teal-600" />
+                    LP全体画像（{selectedDevice === 'pc' ? 'PC' : 'スマホ'}版）
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        setIsCombining(true)
+                        try {
+                          const response = await fetch('/api/lp-site/combine', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              images: result.images,
+                              device: selectedDevice,
+                            }),
+                          })
+                          if (!response.ok) throw new Error('結合に失敗しました')
+                          const data = await response.json()
+                          if (selectedDevice === 'pc') {
+                            setCombinedLpImage({ ...combinedLpImage, pc: data.combined_image })
+                          } else {
+                            setCombinedLpImage({ ...combinedLpImage, sp: data.combined_image })
+                          }
+                          toast.success('LP全体画像を生成しました！')
+                        } catch (error: any) {
+                          toast.error(error.message || '結合に失敗しました')
+                        } finally {
+                          setIsCombining(false)
+                        }
+                      }}
+                      disabled={isCombining}
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-bold hover:from-teal-600 hover:to-cyan-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isCombining ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          生成中...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4" />
+                          LP全体画像を生成
+                        </>
+                      )}
+                    </button>
+                    {(selectedDevice === 'pc' ? combinedLpImage?.pc : combinedLpImage?.sp) && (
+                      <button
+                        onClick={() => {
+                          const image = selectedDevice === 'pc' ? combinedLpImage?.pc : combinedLpImage?.sp
+                          if (image) {
+                            handleDownload('single', 'lp-combined', image)
+                          }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg font-bold hover:bg-teal-600 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        ダウンロード
+                      </button>
+                    )}
                   </div>
                 </div>
+                
+                {/* 生成されたLP全体画像またはプレビュー */}
+                {(selectedDevice === 'pc' ? combinedLpImage?.pc : combinedLpImage?.sp) ? (
+                  <div className="border-4 border-teal-200 rounded-xl overflow-hidden bg-white shadow-xl">
+                    <img
+                      src={selectedDevice === 'pc' ? combinedLpImage?.pc : combinedLpImage?.sp}
+                      alt="LP全体画像"
+                      className="w-full block"
+                    />
+                  </div>
+                ) : (
+                  <div className="border-4 border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                    <div className="space-y-0">
+                      {result.sections.map((section, index) => {
+                        const image = result.images.find(img => img.section_id === section.section_id)
+                        const imageData = selectedDevice === 'pc' ? image?.image_pc : image?.image_sp
+                        if (!imageData) return null
+                        
+                        return (
+                          <div key={section.section_id} className="relative">
+                            <img
+                              src={imageData}
+                              alt={section.headline}
+                              className="w-full block"
+                            />
+                            {/* セクション区切り線 */}
+                            {index < result.sections.length - 1 && (
+                              <div className="h-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                <p className="text-sm text-slate-600 mt-4 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-teal-500" />
+                  <span>
+                    {combinedLpImage ? 
+                      '生成されたLP全体画像です。これをそのままLPとして使用できます。' :
+                      '「LP全体画像を生成」ボタンで全セクションを縦につなげた完全なLP画像を生成できます。'}
+                  </span>
+                </p>
               </div>
             )}
 
