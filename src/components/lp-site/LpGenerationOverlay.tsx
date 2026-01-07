@@ -110,7 +110,7 @@ export function LpGenerationOverlay({
 
   return (
     <>
-      {/* 動く背景 */}
+      {/* 動く背景 - パーティー演出 */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -119,25 +119,42 @@ export function LpGenerationOverlay({
             exit={{ opacity: 0 }}
             className="fixed inset-0 pointer-events-none z-[199]"
           >
+            {/* グラデーション背景アニメーション */}
             <motion.div
               animate={{
                 background: [
-                  'radial-gradient(circle at 20% 80%, rgba(20, 184, 166, 0.15) 0%, transparent 50%)',
-                  'radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.15) 0%, transparent 50%)',
+                  'radial-gradient(circle at 20% 80%, rgba(20, 184, 166, 0.2) 0%, transparent 50%)',
+                  'radial-gradient(circle at 80% 20%, rgba(6, 182, 212, 0.2) 0%, transparent 50%)',
+                  'radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.15) 0%, transparent 50%)',
+                  'radial-gradient(circle at 20% 80%, rgba(20, 184, 166, 0.2) 0%, transparent 50%)',
                 ],
               }}
-              transition={{ repeat: Infinity, duration: 10, ease: 'linear' }}
+              transition={{ repeat: Infinity, duration: 12, ease: 'linear' }}
               className="absolute inset-0"
             />
+            {/* 回転するブロブ1 */}
             <motion.div
               animate={{ rotate: -360 }}
-              transition={{ duration: 34, repeat: Infinity, ease: 'linear' }}
-              className="absolute -bottom-48 -right-48 w-[560px] h-[560px] rounded-full bg-teal-400/20 blur-3xl"
+              transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+              className="absolute -bottom-48 -right-48 w-[600px] h-[600px] rounded-full bg-gradient-to-br from-teal-400/25 to-cyan-400/25 blur-3xl"
             />
+            {/* 上下に動くブロブ2 */}
             <motion.div
-              animate={{ y: [0, -18, 0] }}
-              transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute top-24 right-20 w-56 h-56 rounded-full bg-cyan-300/20 blur-2xl"
+              animate={{ y: [0, -20, 0], x: [0, 10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute top-24 right-20 w-64 h-64 rounded-full bg-gradient-to-br from-cyan-300/25 to-blue-300/25 blur-2xl"
+            />
+            {/* 左右に動くブロブ3 */}
+            <motion.div
+              animate={{ x: [0, 15, 0], y: [0, -10, 0] }}
+              transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute bottom-32 left-16 w-48 h-48 rounded-full bg-gradient-to-br from-blue-400/20 to-purple-400/20 blur-2xl"
+            />
+            {/* パルスするブロブ4 */}
+            <motion.div
+              animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-gradient-to-br from-teal-300/15 to-cyan-300/15 blur-3xl"
             />
           </motion.div>
         )}
@@ -330,6 +347,7 @@ export function LpGenerationOverlay({
                     </motion.div>
                   </AnimatePresence>
                 </div>
+              </div>
               </div>
             </motion.div>
           </motion.div>
