@@ -237,10 +237,20 @@ function LpSitePageInner() {
             setMood('happy')
             
             if (!step4Response.ok) {
-              throw new Error('画像生成に失敗しました')
+              const errorData = await step4Response.json().catch(() => ({}))
+              console.error('[LP-SITE] 画像生成APIエラー:', errorData)
+              throw new Error(errorData.error || errorData.details || '画像生成に失敗しました')
             }
             
             const step4Data = await step4Response.json()
+            console.log('[LP-SITE] 画像生成レスポンス:', {
+              imagesCount: step4Data.images?.length,
+              images: step4Data.images?.map((img: any) => ({
+                section_id: img.section_id,
+                has_pc: !!img.image_pc,
+                has_sp: !!img.image_sp,
+              })),
+            })
             images = step4Data.images
 
             // 画像を追加して結果を更新
@@ -266,10 +276,34 @@ function LpSitePageInner() {
             setIsGeneratingImages(false)
             toast.success('すべての画像が生成されました！')
           } catch (error: any) {
-            console.error('画像生成エラー:', error)
+            console.error('[LP-SITE] 画像生成エラー:', error)
+            console.error('[LP-SITE] エラー詳細:', error.message, error.stack)
             setIsGeneratingImages(false)
             setImageProgress(0)
-            toast.error('画像生成に失敗しましたが、ワイヤーフレームは表示できます')
+            const errorMessage = error.message || '画像生成に失敗しました'
+            toast.error(`${errorMessage}。ワイヤーフレームは表示できます。`, { duration: 5000 })
+            
+            // エラーが発生しても、部分的に生成された画像があれば表示
+            if (images && images.length > 0) {
+              const partialResult: LpGenerationResult = {
+                product_info: productInfo,
+                sections,
+                wireframes,
+                images,
+                structure_json: JSON.stringify({
+                  product_info: productInfo,
+                  sections,
+                  wireframes,
+                  images: images.map(img => ({
+                    section_id: img.section_id,
+                    has_pc: !!img.image_pc,
+                    has_sp: !!img.image_sp,
+                  })),
+                }, null, 2),
+              }
+              setResult(partialResult)
+              toast.warning('一部の画像は生成されましたが、エラーが発生しました')
+            }
           }
         })()
       } catch (error: any) {

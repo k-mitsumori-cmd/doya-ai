@@ -16,19 +16,35 @@ export async function generateSectionImages(
 ): Promise<SectionImage[]> {
   const images: SectionImage[] = []
 
+  console.log(`[LP-SITE] 画像生成開始: ${sections.length}セクション`)
+
   for (const section of sections) {
     if (!section.image_required) {
+      console.log(`[LP-SITE] 画像不要: ${section.section_id}`)
       images.push({
         section_id: section.section_id,
       })
       continue
     }
 
-    // PC/SP別に必ず別々の画像を生成（リサイズではなく再生成）
-    const sectionImage = await generateSectionImagePair(section, productInfo)
-    images.push(sectionImage)
+    try {
+      console.log(`[LP-SITE] セクション画像生成中: ${section.section_id}`)
+      // PC/SP別に必ず別々の画像を生成（リサイズではなく再生成）
+      const sectionImage = await generateSectionImagePair(section, productInfo)
+      images.push(sectionImage)
+      console.log(`[LP-SITE] セクション画像生成完了: ${section.section_id}`)
+    } catch (error: any) {
+      console.error(`[LP-SITE] セクション画像生成失敗: ${section.section_id}`, error)
+      // エラーが発生しても、空の画像エントリを追加して続行
+      images.push({
+        section_id: section.section_id,
+        image_pc: undefined,
+        image_sp: undefined,
+      })
+    }
   }
 
+  console.log(`[LP-SITE] 画像生成完了: ${images.length}画像`)
   return images
 }
 
@@ -43,29 +59,41 @@ export async function generateSectionImagePair(
   // PC用画像生成（横長）
   let imagePc: string | undefined
   try {
+    console.log(`[LP-SITE] PC画像生成開始: ${section.section_id}`)
     const pcPrompt = generateImagePrompt(section, productInfo, 'pc')
+    console.log(`[LP-SITE] PCプロンプト長: ${pcPrompt.length}文字`)
     const pcResult = await geminiGenerateImagePng({
       prompt: pcPrompt,
       aspectRatio: '16:9', // PC用は横長
       imageSize: '2K',
     })
     imagePc = `data:${pcResult.mimeType};base64,${pcResult.dataBase64}`
-  } catch (error) {
-    console.error(`PC画像生成エラー (${section.section_id}):`, error)
+    console.log(`[LP-SITE] PC画像生成成功: ${section.section_id}, サイズ: ${pcResult.dataBase64.length}文字`)
+  } catch (error: any) {
+    console.error(`[LP-SITE] PC画像生成エラー (${section.section_id}):`, error)
+    console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
+    // エラーを再スローして、呼び出し元で処理できるようにする
+    throw new Error(`PC画像生成に失敗しました (${section.section_id}): ${error.message}`)
   }
 
   // SP用画像生成（縦長）- 必ず別プロンプトで再生成
   let imageSp: string | undefined
   try {
+    console.log(`[LP-SITE] SP画像生成開始: ${section.section_id}`)
     const spPrompt = generateImagePrompt(section, productInfo, 'sp')
+    console.log(`[LP-SITE] SPプロンプト長: ${spPrompt.length}文字`)
     const spResult = await geminiGenerateImagePng({
       prompt: spPrompt,
       aspectRatio: '9:16', // SP用は縦長
       imageSize: '2K',
     })
     imageSp = `data:${spResult.mimeType};base64,${spResult.dataBase64}`
-  } catch (error) {
-    console.error(`SP画像生成エラー (${section.section_id}):`, error)
+    console.log(`[LP-SITE] SP画像生成成功: ${section.section_id}, サイズ: ${spResult.dataBase64.length}文字`)
+  } catch (error: any) {
+    console.error(`[LP-SITE] SP画像生成エラー (${section.section_id}):`, error)
+    console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
+    // エラーを再スローして、呼び出し元で処理できるようにする
+    throw new Error(`SP画像生成に失敗しました (${section.section_id}): ${error.message}`)
   }
 
   return {
