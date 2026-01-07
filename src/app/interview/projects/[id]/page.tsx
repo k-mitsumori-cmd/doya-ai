@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 
 export default function InterviewProjectDetailPage() {
   const params = useParams()
