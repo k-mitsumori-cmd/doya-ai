@@ -75,9 +75,20 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ project })
+    // ゲストIDを生成した場合は、レスポンスに含める
+    const response: any = { project }
+    if (finalGuestId && !guestId) {
+      response.guestId = finalGuestId
+    }
+
+    return NextResponse.json(response)
   } catch (error) {
     console.error('[INTERVIEW] Project creation error:', error)
+    console.error('[INTERVIEW] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    console.error('[INTERVIEW] Request body:', body)
+    console.error('[INTERVIEW] User ID:', userId)
+    console.error('[INTERVIEW] Guest ID:', guestId)
+    
     const errorMessage = error instanceof Error ? error.message : '不明なエラー'
     
     // Prismaエラーの詳細を取得
@@ -88,12 +99,20 @@ export async function POST(request: NextRequest) {
       details = '関連データの参照に失敗しました。'
     } else if (errorMessage.includes('Invalid value')) {
       details = '無効な値が入力されています。入力内容を確認してください。'
+    } else if (errorMessage.includes('P2002')) {
+      details = 'データベースの制約違反が発生しました。同じデータが既に存在する可能性があります。'
+    } else if (errorMessage.includes('P2003')) {
+      details = '外部キー制約違反が発生しました。関連データが見つかりません。'
+    } else if (errorMessage.includes('P2011')) {
+      details = '必須フィールドが不足しています。'
+    } else if (errorMessage.includes('P2012')) {
+      details = '必須フィールドがnullです。'
     }
 
     return NextResponse.json(
       {
         error: 'プロジェクトの作成に失敗しました',
-        details: `${details} エラー詳細: ${errorMessage}`,
+        details: `${details}\nエラー詳細: ${errorMessage}`,
       },
       { status: 500 }
     )

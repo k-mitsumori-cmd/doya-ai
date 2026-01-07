@@ -213,6 +213,11 @@ export default function InterviewPage() {
         throw new Error('プロジェクトIDの取得に失敗しました。\nサーバーからの応答が不正です。もう一度お試しください。')
       }
 
+      // サーバーから返されたゲストIDを保存（新規生成された場合）
+      if (projectData.guestId && typeof window !== 'undefined') {
+        localStorage.setItem('interview-guest-id', projectData.guestId)
+      }
+
       setProjectId(newProjectId)
       setProgress(30)
 
