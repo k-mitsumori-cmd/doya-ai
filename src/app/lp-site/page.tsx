@@ -673,6 +673,7 @@ function LpSitePageInner() {
                 )}
               </motion.button>
             </motion.div>
+            </div>
           </motion.div>
         ) : (
           /* Result Preview */
