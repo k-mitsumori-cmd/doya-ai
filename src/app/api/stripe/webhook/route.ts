@@ -4,6 +4,7 @@ import { constructWebhookEvent, getPlanIdFromStripePriceId, getServiceIdFromPlan
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 import { normalizeUnifiedPlan, type UnifiedPlan, syncUserPlanAcrossServices, maxPlan } from '@/lib/planSync'
+import { sendPaymentNotification } from '@/lib/notifications'
 
 // ========================================
 // Stripe Webhook Handler
@@ -135,6 +136,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   console.log(`Checkout completed for user: ${userId}`)
 
+  // ユーザー情報を取得
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true, plan: true },
+  })
+
   // ユーザーにStripe Customer IDを保存
   await prisma.user.update({
     where: { id: userId },
@@ -144,25 +151,78 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   })
 
   // サブスクリプション情報を取得
+  let subscription: Stripe.Subscription | null = null
   if (subscriptionId) {
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    subscription = await stripe.subscriptions.retrieve(subscriptionId)
     await updateUserSubscription(userId, subscription)
+  }
+
+  // 課金通知を送信（非同期、エラーはログに記録するだけ）
+  if (user && subscription) {
+    const price = subscription.items.data[0]?.price
+    const amount = price?.unit_amount || session.amount_total || 0
+    const currency = price?.currency || session.currency || 'jpy'
+    const plan = normalizeUnifiedPlan(user.plan || 'FREE')
+
+    sendPaymentNotification({
+      userId,
+      email: user.email,
+      name: user.name,
+      plan,
+      amount,
+      currency,
+      subscriptionId,
+      isRecurring: false, // 初回チェックアウト
+    }).catch((e) => {
+      console.error('Failed to send payment notification:', e)
+    })
   }
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const userId = subscription.metadata?.userId
+  let user = null
+  
   if (!userId) {
     // Customer IDからユーザーを検索
-    const user = await prisma.user.findFirst({
+    user = await prisma.user.findFirst({
       where: { stripeCustomerId: subscription.customer as string },
+      select: { id: true, email: true, name: true, plan: true },
     })
     if (user) {
       await updateUserSubscription(user.id, subscription)
+    } else {
+      return
     }
-    return
+  } else {
+    user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, plan: true },
+    })
+    if (!user) {
+      return
+    }
+    await updateUserSubscription(userId, subscription)
   }
-  await updateUserSubscription(userId, subscription)
+
+  // 初回サブスクリプション作成時にも通知を送信（checkout.session.completedと重複する可能性があるが、確実性を優先）
+  const price = subscription.items.data[0]?.price
+  const amount = price?.unit_amount || 0
+  const currency = price?.currency || 'jpy'
+  const plan = normalizeUnifiedPlan(user.plan || 'FREE')
+
+  sendPaymentNotification({
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    plan,
+    amount,
+    currency,
+    subscriptionId: subscription.id,
+    isRecurring: false, // 初回サブスクリプション
+  }).catch((e) => {
+    console.error('Failed to send payment notification:', e)
+  })
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
@@ -205,7 +265,48 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log(`Payment succeeded for invoice: ${invoice.id}`)
-  // 必要に応じて通知メールなどを送信
+  
+  // 顧客IDからユーザーを検索
+  const customerId = invoice.customer as string
+  const user = await prisma.user.findFirst({
+    where: { stripeCustomerId: customerId },
+    select: { id: true, email: true, name: true, plan: true },
+  })
+
+  if (!user) {
+    console.error(`User not found for customer: ${customerId}`)
+    return
+  }
+
+  // サブスクリプション情報を取得
+  const subscriptionId = invoice.subscription as string
+  let subscription: Stripe.Subscription | null = null
+  if (subscriptionId) {
+    try {
+      subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    } catch (e) {
+      console.error('Failed to retrieve subscription:', e)
+    }
+  }
+
+  // 課金通知を送信（非同期、エラーはログに記録するだけ）
+  const amount = invoice.amount_paid || invoice.total || 0
+  const currency = invoice.currency || 'jpy'
+  const plan = normalizeUnifiedPlan(user.plan || 'FREE')
+
+  sendPaymentNotification({
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    plan,
+    amount,
+    currency,
+    subscriptionId: subscriptionId || undefined,
+    invoiceId: invoice.id,
+    isRecurring: true, // 定期課金
+  }).catch((e) => {
+    console.error('Failed to send payment notification:', e)
+  })
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
