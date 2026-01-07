@@ -83,9 +83,28 @@ export function LpGenerationOverlay({
   }, [p, steps])
 
   const mascotAnim = useMemo(() => {
-    if (mood === 'happy') return { rotate: [0, 8, -8, 0], y: [0, -2, 0] }
-    if (mood === 'search') return { rotate: [0, -2, 2, 0], y: [0, -4, 0] }
-    if (mood === 'think') return { rotate: 0, y: [0, -2, 0] }
+    // アニメーション仕様に基づいた動き
+    if (mood === 'happy') {
+      return {
+        x: [-4, 4, -4],
+        rotate: [-5, 5, -5],
+        y: [0, -2, 0],
+        transition: { repeat: Infinity, duration: 0.8, ease: 'easeInOut' },
+      }
+    }
+    if (mood === 'search') {
+      return {
+        y: [0, -4, 0],
+        rotate: [-2, 2, -2],
+        transition: { repeat: Infinity, duration: 0.5, ease: 'easeInOut' },
+      }
+    }
+    if (mood === 'think') {
+      return {
+        y: [0, -8, 0],
+        transition: { repeat: Infinity, duration: 2, ease: 'easeInOut' },
+      }
+    }
     return { rotate: 0, y: 0 }
   }, [mood])
 
@@ -151,15 +170,15 @@ export function LpGenerationOverlay({
                     {/* マスコットアイコン */}
                     <motion.div
                       animate={mascotAnim}
-                      transition={{
-                        duration: 0.7,
-                        repeat: mood !== 'idle' ? Infinity : 0,
-                        repeatType: 'mirror',
-                        ease: 'easeInOut',
-                      }}
-                      className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-teal-500/20"
+                      className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 flex items-center justify-center shadow-xl shadow-teal-500/40 relative overflow-hidden"
                     >
-                      <Globe className="w-6 h-6 text-white" />
+                      {/* グローエフェクト */}
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                        animate={{ x: ['-100%', '100%'] }}
+                        transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                      />
+                      <Globe className="w-7 h-7 text-white relative z-10" />
                     </motion.div>
                     <div className="w-11 h-11 rounded-2xl bg-white/80 border border-teal-200 flex items-center justify-center">
                       <Sparkles className="w-6 h-6 text-teal-600" />

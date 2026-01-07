@@ -410,19 +410,35 @@ function LpSitePageInner() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-4xl font-black text-slate-900">
-              ドヤサイト
-            </h1>
-            <span className="px-2 py-1 bg-amber-500 text-white text-xs font-black rounded-md shadow-sm">
+          <div className="flex items-center gap-3 mb-3">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, duration: 0.3 }}
+              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-teal-500/30"
+            >
+              <Globe className="w-8 h-8 text-white" />
+            </motion.div>
+            <div className="flex-1">
+              <h1 className="text-4xl font-black bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">
+                ドヤサイト
+              </h1>
+              <p className="text-slate-600 mt-1 text-sm">
+                商品URLまたは商品情報を入力するだけで、LP構成案・ワイヤーフレーム・画像を自動生成
+              </p>
+            </div>
+            <motion.span
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+              className="px-3 py-1.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white text-xs font-black rounded-full shadow-lg"
+            >
               ベータ版
-            </span>
+            </motion.span>
           </div>
-          <p className="text-slate-600">
-            商品URLまたは商品情報を入力するだけで、LP構成案・ワイヤーフレーム・画像を自動生成
-          </p>
         </motion.div>
 
         {!result ? (
@@ -430,36 +446,65 @@ function LpSitePageInner() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-lg p-6 md:p-8"
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="bg-white rounded-3xl shadow-xl border border-slate-200/50 p-6 md:p-8 relative overflow-hidden"
           >
+            {/* 装飾的な背景 */}
+            <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-teal-100/20 to-cyan-100/20 rounded-full blur-3xl -mr-48 -mt-48 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-100/20 to-purple-100/20 rounded-full blur-3xl -ml-48 -mb-48 pointer-events-none" />
+            <div className="relative z-10">
             {/* Input Type Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-700 mb-3">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.3 }}
+              className="mb-6"
+            >
+              <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-teal-600" />
                 入力方法
               </label>
-              <div className="flex gap-4">
-                <button
+              <div className="flex gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setInputType('url')}
-                  className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all ${
+                  className={`flex-1 px-6 py-4 rounded-xl font-bold transition-all relative overflow-hidden ${
                     inputType === 'url'
-                      ? 'bg-teal-500 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-500/30'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  URL入力
-                </button>
-                <button
+                  {inputType === 'url' && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute inset-0 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl"
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10">URL入力</span>
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setInputType('form')}
-                  className={`flex-1 px-4 py-3 rounded-xl font-semibold transition-all ${
+                  className={`flex-1 px-6 py-4 rounded-xl font-bold transition-all relative overflow-hidden ${
                     inputType === 'form'
-                      ? 'bg-teal-500 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-500/30'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  フォーム入力
-                </button>
+                  {inputType === 'form' && (
+                    <motion.div
+                      layoutId="activeTab"
+                      className="absolute inset-0 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl"
+                      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10">フォーム入力</span>
+                </motion.button>
               </div>
-            </div>
+            </motion.div>
 
             {/* URL Input */}
             {inputType === 'url' && (
@@ -557,29 +602,40 @@ function LpSitePageInner() {
             )}
 
             {/* LP Type Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-700 mb-3">
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.3 }}
+              className="mb-6"
+            >
+              <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                <Layout className="w-4 h-4 text-teal-600" />
                 LPタイプ
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {(['saas', 'ec', 'service', 'recruit'] as LpType[]).map((type) => (
-                  <button
+                {(['saas', 'ec', 'service', 'recruit'] as LpType[]).map((type, index) => (
+                  <motion.button
                     key={type}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 + index * 0.05, duration: 0.2 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setLpType(type)}
-                    className={`px-4 py-3 rounded-xl font-semibold transition-all ${
+                    className={`px-4 py-3 rounded-xl font-bold transition-all relative overflow-hidden ${
                       lpType === type
-                        ? 'bg-teal-500 text-white shadow-lg'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-500/30'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:shadow-md'
                     }`}
                   >
                     {type === 'saas' && 'SaaS'}
                     {type === 'ec' && 'EC'}
                     {type === 'service' && '無形サービス'}
                     {type === 'recruit' && '採用/広報'}
-                  </button>
+                  </motion.button>
                 ))}
               </div>
-            </div>
+            </motion.div>
 
             {/* Tone Selection */}
             <div className="mb-6">
