@@ -637,30 +637,8 @@ function LpSitePageInner() {
               </div>
             </motion.div>
 
-            {/* Tone Selection */}
-            <div className="mb-6">
-              <label className="block text-sm font-bold text-slate-700 mb-3">
-                トーン
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {(['trust', 'pop', 'luxury', 'simple'] as Tone[]).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTone(t)}
-                    className={`px-4 py-3 rounded-xl font-semibold transition-all ${
-                      tone === t
-                        ? 'bg-teal-500 text-white shadow-lg'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                    }`}
-                  >
-                    {t === 'trust' && '信頼感'}
-                    {t === 'pop' && 'ポップ'}
-                    {t === 'luxury' && '高級感'}
-                    {t === 'simple' && 'シンプル'}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Tone Selection - 後回し */}
+            {/* トーン選択は後で実装 */}
 
             {/* Generate Button */}
             <button
