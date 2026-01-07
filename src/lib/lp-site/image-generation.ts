@@ -77,21 +77,25 @@ export async function generateSectionImagePair(
 
 /**
  * 共通前提プロンプト
+ * LPの一部分として生成することを強く意識させる
  */
 function getCommonBasePrompt(): string {
-  return `You are generating an image asset for a landing page.
-This image is NOT a full landing page.
-It is a single section image that will be combined with other sections.
+  return `You are generating a PARTIAL SECTION of a landing page image.
+This is NOT a complete landing page image.
+This is ONE SECTION that will be vertically connected with other sections to form a complete landing page.
 
-Important constraints:
-- Vertical layout
-- Plenty of empty space for text overlay
-- Clean, commercial, high-quality
-- Suitable for Japanese product landing pages
-- No embedded text unless explicitly instructed
-- Focus on visual storytelling, not UI mockups
-- Do NOT include any text in the image
-- Leave ample space for text overlay at the top, bottom, or sides`
+CRITICAL REQUIREMENTS:
+- This image will be placed in a vertical scrolling landing page
+- Other sections will be placed above and below this section
+- The image must seamlessly connect with adjacent sections when combined
+- Vertical layout optimized for scrolling
+- Plenty of empty space for text overlay (headlines, descriptions, CTAs)
+- Clean, commercial, high-quality Japanese landing page style
+- NO embedded text in the image (text will be overlaid separately)
+- Focus on visual storytelling that supports text content
+- This is a PARTIAL image - it should feel like part of a larger whole
+- Leave generous margins at top and bottom for section transitions
+- The composition should work when stacked vertically with other sections`
 }
 
 /**

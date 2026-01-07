@@ -710,7 +710,85 @@ function LpSitePageInner() {
               </div>
             </div>
 
-            {/* Sections */}
+            {/* LP全体プレビュー（縦につなげた形） */}
+            {result.images.some(img => selectedDevice === 'pc' ? img.image_pc : img.image_sp) && (
+              <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <Layout className="w-6 h-6 text-teal-600" />
+                  LP全体プレビュー（{selectedDevice === 'pc' ? 'PC' : 'スマホ'}版）
+                </h3>
+                <div className="border-4 border-slate-200 rounded-xl overflow-hidden bg-slate-50">
+                  <div className="space-y-0">
+                    {result.sections.map((section, index) => {
+                      const image = result.images.find(img => img.section_id === section.section_id)
+                      const imageData = selectedDevice === 'pc' ? image?.image_pc : image?.image_sp
+                      if (!imageData) return null
+                      
+                      return (
+                        <div key={section.section_id} className="relative">
+                          <img
+                            src={imageData}
+                            alt={section.headline}
+                            className="w-full block"
+                          />
+                          {/* セクション区切り線 */}
+                          {index < result.sections.length - 1 && (
+                            <div className="h-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ワイヤーフレーム表示（3段グリッド） */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Layout className="w-6 h-6 text-teal-600" />
+                ワイヤーフレーム構成（{selectedDevice === 'pc' ? 'PC' : 'スマホ'}版）
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                {result.sections.map((section, index) => {
+                  const wireframe = result.wireframes.find(w => w.section_id === section.section_id)
+                  const wireframeData = selectedDevice === 'pc' ? wireframe?.pc : wireframe?.sp
+                  
+                  return (
+                    <motion.div
+                      key={section.section_id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="border-2 border-slate-300 rounded-xl p-4 bg-gradient-to-br from-slate-50 to-white hover:border-teal-400 hover:shadow-md transition-all"
+                    >
+                      <div className="text-center mb-3">
+                        <div className="inline-block px-3 py-1 bg-teal-100 text-teal-700 text-xs font-bold rounded-full mb-2">
+                          {index + 1}
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-900 line-clamp-2">
+                          {section.headline}
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-1">
+                          {section.purpose}
+                        </p>
+                      </div>
+                      {wireframeData && (
+                        <div className="bg-white rounded-lg p-2 border border-slate-200 min-h-[120px] flex items-center justify-center">
+                          <div className="text-xs text-slate-400 text-center">
+                            <Layout className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                            <div>ワイヤーフレーム</div>
+                            <div className="text-[10px] mt-1">{section.section_type}</div>
+                          </div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* セクション詳細 */}
             <div className="space-y-6">
               {result.sections.map((section, index) => {
                 const image = result.images.find(img => img.section_id === section.section_id)
@@ -723,16 +801,23 @@ function LpSitePageInner() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-white rounded-2xl shadow-lg p-6"
+                    className="bg-white rounded-2xl shadow-lg p-6 border-2 border-slate-200"
                   >
                     <div className="mb-4">
-                      <h3 className="text-xl font-bold text-slate-900 mb-1">
-                        {section.headline}
-                      </h3>
-                      {section.sub_headline && (
-                        <p className="text-slate-600">{section.sub_headline}</p>
-                      )}
-                      <p className="text-sm text-slate-500 mt-2">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-black text-lg">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-slate-900 mb-1">
+                            {section.headline}
+                          </h3>
+                          {section.sub_headline && (
+                            <p className="text-slate-600">{section.sub_headline}</p>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-slate-500 mt-2 pl-13">
                         {section.purpose}
                       </p>
                     </div>
