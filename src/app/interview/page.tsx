@@ -14,14 +14,22 @@ import {
   Music,
   File,
   X,
-  Play,
   Zap,
+  AlertCircle,
+  Rocket,
+  Wand2,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-type UploadStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'completed'
+type UploadStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'completed' | 'error'
 type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
+
+const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB
+const SUPPORTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg']
+const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm']
+const SUPPORTED_TEXT_TYPES = ['text/plain', 'text/markdown']
+const SUPPORTED_PDF_TYPES = ['application/pdf']
 
 export default function InterviewPage() {
   const router = useRouter()
@@ -32,6 +40,8 @@ export default function InterviewPage() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [projectId, setProjectId] = useState<string | null>(null)
   const [materialType, setMaterialType] = useState<MaterialType>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [errorDetails, setErrorDetails] = useState<string | null>(null)
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -56,42 +66,138 @@ export default function InterviewPage() {
     }
   }, [])
 
+  const validateFile = (file: File): { valid: boolean; error?: string; details?: string } => {
+    // ファイルサイズチェック
+    if (file.size > MAX_FILE_SIZE) {
+      return {
+        valid: false,
+        error: 'ファイルサイズが大きすぎます',
+        details: `最大ファイルサイズ: ${formatFileSize(MAX_FILE_SIZE)}。現在のファイル: ${formatFileSize(file.size)}`,
+      }
+    }
+
+    if (file.size === 0) {
+      return {
+        valid: false,
+        error: '空のファイルです',
+        details: 'ファイルが空のため、アップロードできません。別のファイルを選択してください。',
+      }
+    }
+
+    // ファイルタイプチェック
+    const mimeType = file.type
+    const fileName = file.name.toLowerCase()
+    const extension = fileName.split('.').pop()
+
+    let isSupported = false
+    let detectedType: MaterialType = null
+
+    // MIMEタイプで判定
+    if (SUPPORTED_AUDIO_TYPES.includes(mimeType) || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(extension || '')) {
+      isSupported = true
+      detectedType = 'audio'
+    } else if (SUPPORTED_VIDEO_TYPES.includes(mimeType) || ['mp4', 'mov', 'avi', 'webm'].includes(extension || '')) {
+      isSupported = true
+      detectedType = 'video'
+    } else if (SUPPORTED_TEXT_TYPES.includes(mimeType) || ['txt', 'md', 'docx'].includes(extension || '')) {
+      isSupported = true
+      detectedType = extension === 'docx' ? 'text' : 'text'
+    } else if (SUPPORTED_PDF_TYPES.includes(mimeType) || extension === 'pdf') {
+      isSupported = true
+      detectedType = 'pdf'
+    }
+
+    if (!isSupported) {
+      return {
+        valid: false,
+        error: '対応していないファイル形式です',
+        details: `対応形式: 音声（MP3, WAV, M4A）、動画（MP4, MOV, AVI）、テキスト（TXT, DOCX）、PDF。\n検出された形式: ${mimeType || '不明'}（拡張子: ${extension || 'なし'}）`,
+      }
+    }
+
+    return { valid: true }
+  }
+
   const handleFileSelect = async (file: File) => {
+    // エラーメッセージをクリア
+    setErrorMessage(null)
+    setErrorDetails(null)
+
+    // ファイル検証
+    const validation = validateFile(file)
+    if (!validation.valid) {
+      setErrorMessage(validation.error || 'ファイルの検証に失敗しました')
+      setErrorDetails(validation.details)
+      setUploadStatus('error')
+      return
+    }
+
     // ファイルタイプ判定
+    const mimeType = file.type
+    const fileName = file.name.toLowerCase()
+    const extension = fileName.split('.').pop()
     let type: MaterialType = null
-    if (file.type.startsWith('audio/')) type = 'audio'
-    else if (file.type.startsWith('video/')) type = 'video'
-    else if (file.type === 'application/pdf') type = 'pdf'
-    else if (file.type.startsWith('text/')) type = 'text'
+
+    if (SUPPORTED_AUDIO_TYPES.includes(mimeType) || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(extension || '')) {
+      type = 'audio'
+    } else if (SUPPORTED_VIDEO_TYPES.includes(mimeType) || ['mp4', 'mov', 'avi', 'webm'].includes(extension || '')) {
+      type = 'video'
+    } else if (SUPPORTED_TEXT_TYPES.includes(mimeType) || ['txt', 'md'].includes(extension || '')) {
+      type = 'text'
+    } else if (extension === 'docx') {
+      type = 'text'
+    } else if (SUPPORTED_PDF_TYPES.includes(mimeType) || extension === 'pdf') {
+      type = 'pdf'
+    }
 
     if (!type) {
-      alert('対応していないファイル形式です。音声・動画・テキスト・PDFファイルをアップロードしてください。')
+      setErrorMessage('ファイル形式を判定できませんでした')
+      setErrorDetails('ファイルの拡張子またはMIMEタイプを確認してください。')
+      setUploadStatus('error')
       return
     }
 
     setUploadedFile(file)
     setMaterialType(type)
+    setUploadStatus('idle') // エラー状態をリセット
     await startUploadProcess(file, type)
   }
 
   const startUploadProcess = async (file: File, type: MaterialType) => {
     try {
+      setErrorMessage(null)
+      setErrorDetails(null)
+
       // 1. プロジェクト作成
       setUploadStatus('uploading')
       setProgress(10)
 
-      const projectRes = await fetch('/api/interview/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: file.name.replace(/\.[^/.]+$/, ''),
-          status: 'UPLOADING',
-        }),
-      })
+      let projectRes
+      try {
+        projectRes = await fetch('/api/interview/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: file.name.replace(/\.[^/.]+$/, ''),
+            status: 'UPLOADING',
+          }),
+        })
+      } catch (error) {
+        throw new Error('ネットワークエラー: サーバーに接続できませんでした。インターネット接続を確認してください。')
+      }
 
-      if (!projectRes.ok) throw new Error('プロジェクト作成に失敗しました')
+      if (!projectRes.ok) {
+        const errorData = await projectRes.json().catch(() => ({}))
+        throw new Error(errorData.error || 'プロジェクトの作成に失敗しました。もう一度お試しください。')
+      }
+
       const projectData = await projectRes.json()
-      const newProjectId = projectData.project.id
+      const newProjectId = projectData.project?.id
+
+      if (!newProjectId) {
+        throw new Error('プロジェクトIDの取得に失敗しました。もう一度お試しください。')
+      }
+
       setProjectId(newProjectId)
       setProgress(30)
 
@@ -100,13 +206,27 @@ export default function InterviewPage() {
       formData.append('projectId', newProjectId)
       formData.append('file', file)
 
-      const uploadRes = await fetch('/api/interview/materials/upload', {
-        method: 'POST',
-        body: formData,
-      })
+      let uploadRes
+      try {
+        uploadRes = await fetch('/api/interview/materials/upload', {
+          method: 'POST',
+          body: formData,
+        })
+      } catch (error) {
+        throw new Error('ファイルのアップロードに失敗しました。ファイルサイズが大きすぎる可能性があります。')
+      }
 
-      if (!uploadRes.ok) throw new Error('ファイルアップロードに失敗しました')
+      if (!uploadRes.ok) {
+        const errorData = await uploadRes.json().catch(() => ({}))
+        const errorMsg = errorData.error || 'ファイルアップロードに失敗しました'
+        throw new Error(`${errorMsg}。ファイル形式やサイズを確認してください。`)
+      }
+
       const uploadData = await uploadRes.json()
+      if (!uploadData.material?.id) {
+        throw new Error('アップロードしたファイルの情報を取得できませんでした。')
+      }
+
       setProgress(50)
 
       // 3. 文字起こし（音声・動画の場合）
@@ -115,18 +235,27 @@ export default function InterviewPage() {
         setUploadStatus('transcribing')
         setProgress(60)
 
-        const transcribeRes = await fetch('/api/interview/transcribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            projectId: newProjectId,
-            materialId: uploadData.material.id,
-          }),
-        })
+        try {
+          const transcribeRes = await fetch('/api/interview/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              projectId: newProjectId,
+              materialId: uploadData.material.id,
+            }),
+          })
 
-        if (!transcribeRes.ok) throw new Error('文字起こしに失敗しました')
-        const transcribeData = await transcribeRes.json()
-        transcriptionId = transcribeData.transcription?.id
+          if (!transcribeRes.ok) {
+            console.warn('文字起こしに失敗しました（スキップ）')
+            setErrorDetails('文字起こし処理をスキップしました。後で手動で実行できます。')
+          } else {
+            const transcribeData = await transcribeRes.json()
+            transcriptionId = transcribeData.transcription?.id
+          }
+        } catch (error) {
+          console.warn('文字起こしエラー:', error)
+          setErrorDetails('文字起こし処理でエラーが発生しましたが、続行します。')
+        }
         setProgress(75)
       } else if (type === 'text' || type === 'pdf') {
         // テキスト・PDFの場合は抽出テキストを使用
@@ -137,36 +266,48 @@ export default function InterviewPage() {
       setUploadStatus('analyzing')
       setProgress(80)
 
-      const outlineRes = await fetch('/api/interview/outline', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: newProjectId,
-        }),
-      })
+      try {
+        const outlineRes = await fetch('/api/interview/outline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectId: newProjectId,
+          }),
+        })
 
-      if (!outlineRes.ok) {
-        console.warn('構成案生成に失敗しました（スキップ）')
-      } else {
-        setProgress(90)
+        if (!outlineRes.ok) {
+          console.warn('構成案生成に失敗しました（スキップ）')
+          setErrorDetails((prev) => (prev ? prev + '\n構成案生成をスキップしました。' : '構成案生成をスキップしました。'))
+        } else {
+          setProgress(90)
+        }
+      } catch (error) {
+        console.warn('構成案生成エラー:', error)
+        setErrorDetails((prev) => (prev ? prev + '\n構成案生成でエラーが発生しました。' : '構成案生成でエラーが発生しました。'))
       }
 
       // 5. 記事生成
       setUploadStatus('generating')
       setProgress(92)
 
-      const draftRes = await fetch('/api/interview/draft', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: newProjectId,
-        }),
-      })
+      try {
+        const draftRes = await fetch('/api/interview/draft', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectId: newProjectId,
+          }),
+        })
 
-      if (!draftRes.ok) {
-        console.warn('記事生成に失敗しました（後で手動で生成可能）')
-      } else {
-        setProgress(98)
+        if (!draftRes.ok) {
+          console.warn('記事生成に失敗しました（後で手動で生成可能）')
+          setErrorDetails((prev) => (prev ? prev + '\n記事生成をスキップしました。後で手動で実行できます。' : '記事生成をスキップしました。後で手動で実行できます。'))
+        } else {
+          setProgress(98)
+        }
+      } catch (error) {
+        console.warn('記事生成エラー:', error)
+        setErrorDetails((prev) => (prev ? prev + '\n記事生成でエラーが発生しました。' : '記事生成でエラーが発生しました。'))
       }
 
       // 完了
@@ -179,8 +320,9 @@ export default function InterviewPage() {
       }, 1500)
     } catch (error) {
       console.error('Upload process error:', error)
-      alert(`エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`)
-      setUploadStatus('idle')
+      setErrorMessage(error instanceof Error ? error.message : '不明なエラーが発生しました')
+      setErrorDetails('詳細なエラー情報はコンソールを確認してください。問題が続く場合は、サポートにお問い合わせください。')
+      setUploadStatus('error')
       setProgress(0)
     }
   }
@@ -198,6 +340,8 @@ export default function InterviewPage() {
     setProgress(0)
     setProjectId(null)
     setMaterialType(null)
+    setErrorMessage(null)
+    setErrorDetails(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -239,15 +383,71 @@ export default function InterviewPage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 mb-6 shadow-2xl shadow-orange-500/30"
         >
-          <Upload className="w-12 h-12 text-white" />
+          <Rocket className="w-12 h-12 text-white" />
         </motion.div>
         <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4">
-          素材をアップロード
+          <span className="bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+            ファイルをアップロードするだけ
+          </span>
+          <br />
+          <span className="text-slate-900">AIが自動で記事を生成</span>
         </h1>
-        <p className="text-lg text-slate-600 mb-8 max-w-2xl mx-auto">
-          音声・動画・テキストをアップロードするだけで、自動で文字起こし・記事生成まで完了します
+        <p className="text-lg text-slate-600 mb-4 max-w-2xl mx-auto">
+          音声・動画・テキストをアップロードするだけで、<br />
+          <span className="font-black text-orange-600">自動で文字起こし → 構成案作成 → 記事生成</span>まで一気通貫で完了します
         </p>
+        <div className="flex flex-wrap justify-center gap-3 mt-6">
+          {[
+            { icon: Wand2, text: 'AI自動処理' },
+            { icon: Zap, text: '即座に完了' },
+            { icon: Sparkles, text: '高品質な記事' },
+          ].map((item, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 + idx * 0.1 }}
+              className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-200 shadow-sm"
+            >
+              <item.icon className="w-5 h-5 text-orange-500" />
+              <span className="text-sm font-black text-slate-700">{item.text}</span>
+            </motion.div>
+          ))}
+        </div>
       </motion.div>
+
+      {/* エラーメッセージ */}
+      <AnimatePresence>
+        {errorMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-6 p-6 bg-red-50 border-2 border-red-200 rounded-2xl shadow-lg"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-black text-red-900 mb-2">{errorMessage}</h3>
+                {errorDetails && (
+                  <div className="text-sm text-red-700 whitespace-pre-wrap bg-red-100/50 p-3 rounded-lg border border-red-200">
+                    {errorDetails}
+                  </div>
+                )}
+                <button
+                  onClick={resetUpload}
+                  className="mt-4 px-4 py-2 bg-red-600 text-white font-black rounded-lg hover:bg-red-700 transition-colors inline-flex items-center gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  やり直す
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* アップロードエリア */}
       <AnimatePresence mode="wait">
@@ -258,7 +458,9 @@ export default function InterviewPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
-            className="bg-white rounded-3xl border-2 border-dashed border-slate-300 shadow-xl p-12"
+            className={`bg-white rounded-3xl border-2 ${
+              isDragging ? 'border-orange-500 bg-orange-50' : 'border-dashed border-slate-300'
+            } shadow-xl p-12 transition-all`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -273,35 +475,48 @@ export default function InterviewPage() {
                 transition={{ duration: 0.2 }}
                 className="mb-6"
               >
-                <div className="inline-flex items-center justify-center w-32 h-32 rounded-3xl bg-gradient-to-br from-orange-100 to-amber-100 mb-6">
+                <div className="inline-flex items-center justify-center w-32 h-32 rounded-3xl bg-gradient-to-br from-orange-100 to-amber-100 mb-6 shadow-lg">
                   <Upload className="w-16 h-16 text-orange-500" />
                 </div>
               </motion.div>
-              <h2 className="text-2xl font-black text-slate-900 mb-2">
-                {isDragging ? 'ここにドロップしてください' : 'ファイルをドラッグ&ドロップ'}
+              <h2 className="text-3xl font-black text-slate-900 mb-2">
+                {isDragging ? (
+                  <>
+                    <span className="text-orange-600">ここにドロップ！</span>
+                  </>
+                ) : (
+                  <>
+                    ファイルを<span className="text-orange-600">ドラッグ&ドロップ</span>
+                  </>
+                )}
               </h2>
-              <p className="text-slate-600 mb-6">
+              <p className="text-slate-600 mb-2 text-lg">
                 またはクリックしてファイルを選択
               </p>
-              <div className="flex flex-wrap justify-center gap-3 mb-6">
+              <p className="text-sm text-slate-500 mb-6">
+                最大ファイルサイズ: {formatFileSize(MAX_FILE_SIZE)}
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 {[
-                  { icon: Music, label: '音声', formats: 'MP3, WAV, M4A' },
-                  { icon: Video, label: '動画', formats: 'MP4, MOV, AVI' },
-                  { icon: FileText, label: 'テキスト', formats: 'TXT, DOCX' },
-                  { icon: File, label: 'PDF', formats: 'PDF' },
+                  { icon: Music, label: '音声ファイル', formats: 'MP3, WAV, M4A', color: 'from-purple-500 to-pink-500' },
+                  { icon: Video, label: '動画ファイル', formats: 'MP4, MOV, AVI', color: 'from-blue-500 to-cyan-500' },
+                  { icon: FileText, label: 'テキスト', formats: 'TXT, DOCX', color: 'from-emerald-500 to-teal-500' },
+                  { icon: File, label: 'PDF', formats: 'PDF', color: 'from-red-500 to-orange-500' },
                 ].map((item, idx) => (
                   <motion.div
                     key={idx}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: idx * 0.1 }}
-                    className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-200"
+                    className="p-4 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all"
                   >
-                    <div className="flex items-center gap-2">
-                      <item.icon className="w-5 h-5 text-orange-500" />
-                      <div className="text-left">
-                        <p className="text-sm font-black text-slate-900">{item.label}</p>
-                        <p className="text-xs text-slate-500">{item.formats}</p>
+                    <div className="flex flex-col items-center gap-2">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-md`}>
+                        <item.icon className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-black text-slate-900 mb-1">{item.label}</p>
+                        <p className="text-xs text-slate-600">{item.formats}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -311,16 +526,17 @@ export default function InterviewPage() {
                 onClick={() => fileInputRef.current?.click()}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-3 text-lg"
+                className="px-10 py-5 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-3 text-xl"
               >
-                <Upload className="w-6 h-6" />
-                ファイルを選択
+                <Upload className="w-7 h-7" />
+                ファイルを選択して開始
+                <ArrowRight className="w-6 h-6" />
               </motion.button>
               <input
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
-                accept="audio/*,video/*,.pdf,.txt,.docx"
+                accept="audio/*,video/*,.pdf,.txt,.docx,.md"
                 onChange={handleFileInputChange}
               />
             </div>
@@ -352,6 +568,7 @@ export default function InterviewPage() {
                   <button
                     onClick={resetUpload}
                     className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+                    title="キャンセル"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -363,10 +580,10 @@ export default function InterviewPage() {
               {/* ステップ表示 */}
               <div className="space-y-4">
                 {[
-                  { status: 'uploading', label: 'ファイルアップロード', icon: Upload },
-                  { status: 'transcribing', label: '文字起こし処理中', icon: FileText },
-                  { status: 'analyzing', label: '内容分析・構成案作成', icon: Sparkles },
-                  { status: 'generating', label: '記事生成中', icon: Zap },
+                  { status: 'uploading', label: 'ファイルアップロード', icon: Upload, desc: 'サーバーにアップロード中...' },
+                  { status: 'transcribing', label: '文字起こし処理中', icon: FileText, desc: 'AIが音声をテキストに変換中...' },
+                  { status: 'analyzing', label: '内容分析・構成案作成', icon: Sparkles, desc: 'AIが内容を分析し構成案を作成中...' },
+                  { status: 'generating', label: '記事生成中', icon: Zap, desc: 'AIが記事ドラフトを生成中...' },
                 ].map((step, idx) => {
                   const isActive = uploadStatus === step.status
                   const isCompleted =
@@ -383,16 +600,16 @@ export default function InterviewPage() {
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.1 }}
-                      className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+                      className={`flex items-center gap-4 p-5 rounded-xl border-2 transition-all ${
                         isActive
-                          ? 'border-orange-500 bg-orange-50 shadow-md'
+                          ? 'border-orange-500 bg-orange-50 shadow-md scale-105'
                           : isCompleted
                             ? 'border-green-200 bg-green-50'
                             : 'border-slate-200 bg-slate-50'
                       }`}
                     >
                       <div
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                        className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${
                           isActive
                             ? 'bg-orange-500 text-white'
                             : isCompleted
@@ -401,23 +618,23 @@ export default function InterviewPage() {
                         }`}
                       >
                         {isCompleted ? (
-                          <CheckCircle2 className="w-6 h-6" />
+                          <CheckCircle2 className="w-7 h-7" />
                         ) : isActive ? (
-                          <Loader2 className="w-6 h-6 animate-spin" />
+                          <Loader2 className="w-7 h-7 animate-spin" />
                         ) : (
-                          <step.icon className="w-6 h-6" />
+                          <step.icon className="w-7 h-7" />
                         )}
                       </div>
                       <div className="flex-1">
                         <p
-                          className={`font-black ${
+                          className={`text-lg font-black ${
                             isActive ? 'text-orange-900' : isCompleted ? 'text-green-900' : 'text-slate-600'
                           }`}
                         >
                           {step.label}
                         </p>
                         {isActive && (
-                          <p className="text-sm text-orange-600 mt-1">処理中...</p>
+                          <p className="text-sm text-orange-600 mt-1 font-bold">{step.desc}</p>
                         )}
                       </div>
                     </motion.div>
@@ -428,15 +645,15 @@ export default function InterviewPage() {
               {/* 進捗バー */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-bold text-slate-700">進捗</span>
-                  <span className="font-black text-orange-600">{progress}%</span>
+                  <span className="font-bold text-slate-700">処理進捗</span>
+                  <span className="font-black text-orange-600 text-lg">{progress}%</span>
                 </div>
-                <div className="h-4 bg-slate-200 rounded-full overflow-hidden">
+                <div className="h-5 bg-slate-200 rounded-full overflow-hidden shadow-inner">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.3 }}
-                    className="h-full bg-gradient-to-r from-orange-500 to-amber-600 rounded-full shadow-sm"
+                    className="h-full bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 rounded-full shadow-sm"
                   />
                 </div>
               </div>
@@ -456,17 +673,28 @@ export default function InterviewPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-              className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-green-500 mb-6"
+              className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-green-500 mb-6 shadow-lg"
             >
               <CheckCircle2 className="w-12 h-12 text-white" />
             </motion.div>
-            <h2 className="text-3xl font-black text-green-900 mb-4">完了しました！</h2>
-            <p className="text-lg text-green-700 mb-8">
-              記事の生成が完了しました。プロジェクト詳細ページに移動します...
+            <h2 className="text-3xl font-black text-green-900 mb-4">🎉 完了しました！</h2>
+            <p className="text-lg text-green-700 mb-2">
+              記事の生成が完了しました
+            </p>
+            {errorDetails && (
+              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-left">
+                <p className="text-sm text-yellow-800 font-bold mb-1">⚠️ 一部の処理をスキップしました</p>
+                <p className="text-xs text-yellow-700 whitespace-pre-wrap">{errorDetails}</p>
+                <p className="text-xs text-yellow-700 mt-2">プロジェクト詳細ページで手動で実行できます。</p>
+              </div>
+            )}
+            <p className="text-sm text-green-600 mt-6">
+              プロジェクト詳細ページに移動します...
             </p>
             <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ repeat: Infinity, duration: 2 }}
+              className="mt-4"
             >
               <Loader2 className="w-8 h-8 text-green-600 animate-spin mx-auto" />
             </motion.div>
@@ -517,10 +745,19 @@ export default function InterviewPage() {
             <h3 className="font-black text-orange-900 mb-2">使い方</h3>
             <ol className="text-sm text-orange-800 leading-relaxed space-y-1">
               <li>1. 音声・動画・テキストファイルをドラッグ&ドロップまたはクリックで選択</li>
-              <li>2. 自動で文字起こし・内容分析が実行されます</li>
+              <li>2. 自動で文字起こし・内容分析が実行されます（数分かかる場合があります）</li>
               <li>3. AIが構成案を作成し、記事ドラフトを生成</li>
               <li>4. プロジェクト詳細ページで編集・校閲・出力</li>
             </ol>
+            <div className="mt-4 p-3 bg-white/50 rounded-lg border border-orange-200">
+              <p className="text-xs font-black text-orange-900 mb-1">💡 対応ファイル形式</p>
+              <p className="text-xs text-orange-700">
+                音声: MP3, WAV, M4A, AAC, OGG / 動画: MP4, MOV, AVI, WebM / テキスト: TXT, DOCX, MD / PDF: PDF
+              </p>
+              <p className="text-xs text-orange-700 mt-1">
+                最大ファイルサイズ: {formatFileSize(MAX_FILE_SIZE)}
+              </p>
+            </div>
           </div>
         </div>
       </div>

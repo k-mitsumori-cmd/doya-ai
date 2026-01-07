@@ -22,7 +22,29 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File
 
     if (!projectId || !file) {
-      return NextResponse.json({ error: 'Missing projectId or file' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'プロジェクトIDまたはファイルが指定されていません', details: '必須パラメータが不足しています。' },
+        { status: 400 }
+      )
+    }
+
+    // ファイルサイズチェック（500MB制限）
+    const MAX_FILE_SIZE = 500 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        {
+          error: 'ファイルサイズが大きすぎます',
+          details: `最大ファイルサイズは500MBです。現在のファイルサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+        },
+        { status: 400 }
+      )
+    }
+
+    if (file.size === 0) {
+      return NextResponse.json(
+        { error: '空のファイルです', details: 'ファイルが空のため、アップロードできません。' },
+        { status: 400 }
+      )
     }
 
     // プロジェクトの所有権確認
@@ -34,17 +56,36 @@ export async function POST(request: NextRequest) {
     })
 
     if (!project) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'プロジェクトが見つかりません', details: '指定されたプロジェクトIDが存在しないか、アクセス権限がありません。' },
+        { status: 404 }
+      )
     }
 
     // ファイルタイプ判定
     const mimeType = file.type
+    const fileName = file.name.toLowerCase()
+    const extension = fileName.split('.').pop()
+
     let materialType = 'text'
-    if (mimeType.startsWith('audio/')) materialType = 'audio'
-    else if (mimeType.startsWith('video/')) materialType = 'video'
-    else if (mimeType === 'application/pdf') materialType = 'pdf'
-    else if (mimeType.startsWith('image/')) materialType = 'image'
-    else if (mimeType.startsWith('text/')) materialType = 'text'
+    const isAudio = mimeType.startsWith('audio/') || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(extension || '')
+    const isVideo = mimeType.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(extension || '')
+    const isPdf = mimeType === 'application/pdf' || extension === 'pdf'
+    const isText = mimeType.startsWith('text/') || ['txt', 'md'].includes(extension || '') || extension === 'docx'
+
+    if (isAudio) materialType = 'audio'
+    else if (isVideo) materialType = 'video'
+    else if (isPdf) materialType = 'pdf'
+    else if (isText) materialType = 'text'
+    else {
+      return NextResponse.json(
+        {
+          error: '対応していないファイル形式です',
+          details: `対応形式: 音声（MP3, WAV, M4A）、動画（MP4, MOV, AVI）、テキスト（TXT, DOCX）、PDF。\n検出された形式: ${mimeType || '不明'}（拡張子: ${extension || 'なし'}）`,
+        },
+        { status: 400 }
+      )
+    }
 
     // ファイル保存
     const uploadDir = join(process.cwd(), 'uploads', 'interview', projectId)
@@ -75,7 +116,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ material })
   } catch (error) {
     console.error('[INTERVIEW] Material upload error:', error)
-    return NextResponse.json({ error: 'Failed to upload material' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    return NextResponse.json(
+      {
+        error: 'ファイルのアップロードに失敗しました',
+        details: `エラー詳細: ${errorMessage}。ファイルサイズや形式を確認してください。問題が続く場合は、サポートにお問い合わせください。`,
+      },
+      { status: 500 }
+    )
   }
 }
 
