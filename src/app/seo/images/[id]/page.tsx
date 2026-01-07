@@ -4,18 +4,24 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { canUseSeoImages, isTrialActive, normalizeSeoPlan } from '@/lib/seoAccess'
+import { canUseSeoImages, isTrialActive, normalizeSeoPlan, SEO_GUEST_COOKIE } from '@/lib/seoAccess'
+import { cookies } from 'next/headers'
 
 export const runtime = 'nodejs'
 
-export default async function SeoImageDetailPage({ params }: { params: { id: string } }) {
+export default async function SeoImageDetailPage({ params }: { params: Promise<{ id: string }> | { id: string } }) {
   await ensureSeoSchema()
-  const id = params.id
+  const resolvedParams = 'then' in params ? await params : params
+  const id = resolvedParams.id
   const session = await getServerSession(authOptions)
   const user: any = session?.user || null
   const userId = String(user?.id || '')
+  const cookieStore = await cookies()
+  const guestIdCookie = cookieStore.get(SEO_GUEST_COOKIE)
+  const guestId = !userId && guestIdCookie?.value ? guestIdCookie.value.trim() : null
+  
   // ゲスト/未ログインで「詳細ページ」導線に触れてもエラーページにならないようにする
-  if (!userId) {
+  if (!userId && !guestId) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-white py-10 px-4">
         <div className="max-w-3xl mx-auto">
@@ -51,10 +57,15 @@ export default async function SeoImageDetailPage({ params }: { params: { id: str
 
   const img = await (prisma as any).seoImage.findUnique({
     where: { id },
-    include: { article: { select: { id: true, title: true, userId: true } } },
+    include: { article: { select: { id: true, title: true, userId: true, guestId: true } } },
   })
   if (!img) notFound()
-  if (String(img?.article?.userId || '') !== userId) notFound()
+  
+  // 所有者チェック（ユーザーIDまたはゲストIDで判定）
+  const articleUserId = String(img?.article?.userId || '')
+  const articleGuestId = String(img?.article?.guestId || '')
+  const isOwner = userId ? articleUserId === userId : (guestId ? articleGuestId === guestId : false)
+  if (!isOwner) notFound()
 
   const articleId = String(img.articleId || img.article?.id || '')
   const title = String(img.title || (img.kind === 'BANNER' ? '記事バナー' : '図解') || '画像')
