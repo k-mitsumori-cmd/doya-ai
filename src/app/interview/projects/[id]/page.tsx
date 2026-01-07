@@ -3,14 +3,17 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { FileText, Upload, Sparkles, CheckCircle, Clock, Download } from 'lucide-react'
+import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 
 export default function InterviewProjectDetailPage() {
   const params = useParams()
   const projectId = params.id as string
   const [project, setProject] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [processing, setProcessing] = useState(false)
+  const [processingStep, setProcessingStep] = useState<string>('')
   const [activeTab, setActiveTab] = useState<'overview' | 'materials' | 'transcription' | 'draft' | 'review'>('overview')
 
   const fetchProject = async () => {
@@ -31,6 +34,43 @@ export default function InterviewProjectDetailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
+
+  const handleGenerateArticle = async () => {
+    if (!project) return
+
+    setProcessing(true)
+    try {
+      // 1. 構成案生成
+      if (!project.outline) {
+        setProcessingStep('構成案を生成中...')
+        const outlineRes = await fetch('/api/interview/outline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId }),
+        })
+        if (!outlineRes.ok) throw new Error('構成案生成に失敗しました')
+        await fetchProject() // 再取得
+      }
+
+      // 2. 記事生成
+      setProcessingStep('記事を生成中...')
+      const draftRes = await fetch('/api/interview/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      })
+      if (!draftRes.ok) throw new Error('記事生成に失敗しました')
+
+      await fetchProject() // 再取得
+      setActiveTab('draft')
+    } catch (error) {
+      console.error('Failed to generate article:', error)
+      alert(`エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`)
+    } finally {
+      setProcessing(false)
+      setProcessingStep('')
+    }
+  }
 
   if (loading) {
     return (
@@ -88,6 +128,44 @@ export default function InterviewProjectDetailPage() {
           </button>
         ))}
       </div>
+
+      {/* アクションボタン（素材がある場合） */}
+      {project.materials && project.materials.length > 0 && !project.drafts?.length && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-6 bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl border-2 border-orange-200 shadow-lg"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-black text-orange-900 mb-2">記事を生成しましょう</h3>
+              <p className="text-orange-700">
+                アップロードした素材から自動で記事を生成します
+              </p>
+            </div>
+            <motion.button
+              onClick={handleGenerateArticle}
+              disabled={processing}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-8 py-4 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  {processingStep}
+                </>
+              ) : (
+                <>
+                  <Zap className="w-5 h-5" />
+                  記事を生成する
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </motion.button>
+          </div>
+        </motion.div>
+      )}
 
       {/* コンテンツ */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">

@@ -53,14 +53,8 @@ const TOOLS: Array<{
     icon: FileText,
     iconBgClassName: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
   },
-  {
-    id: 'interview',
-    href: '/interview',
-    title: 'ドヤインタビューAI',
-    description: 'インタビュー記事生成',
-    icon: Mic,
-    iconBgClassName: 'bg-gradient-to-br from-orange-500 to-amber-600',
-  },
+  // ベータ版サービス（interview）は他サービスのサイドバーには表示しない
+  // ベータ版サービス自身のサイドバー（InterviewSidebar）でのみ表示する
 ]
 
 export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, className }: ToolSwitcherMenuProps) {

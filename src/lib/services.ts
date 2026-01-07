@@ -22,6 +22,7 @@ export interface Service {
     pro: { name: string; limit: string; dailyLimit: number; price: number }
   }
   status: ServiceStatus
+  badge?: string
   category?: 'text' | 'image' | 'video' | 'other'
   order: number
   requiresAuth?: boolean
@@ -156,11 +157,11 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: '1日3回まで', dailyLimit: 3, price: 0 },
       pro: { name: 'プロプラン', limit: '1日100回まで', dailyLimit: 100, price: 4980 },
     },
-    status: 'active',
+    status: 'beta',
+    badge: 'ベータ版',
     category: 'text',
     order: 10,
     requiresAuth: false,
-    isNew: true,
   },
 ]
 
