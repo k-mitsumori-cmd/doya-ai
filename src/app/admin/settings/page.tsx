@@ -56,6 +56,13 @@ export default function AdminSettingsPage() {
             fbPixelId: data.fbPixelId || '',
             hubspotId: data.hubspotId || '',
           })
+          // 通知設定も読み込む
+          if (data.emailNotifications !== undefined) {
+            setSettings((prev) => ({ ...prev, emailNotifications: data.emailNotifications }))
+          }
+          if (data.slackWebhook !== undefined) {
+            setSettings((prev) => ({ ...prev, slackWebhook: data.slackWebhook }))
+          }
         }
       } catch (e) {
         console.error('Failed to load settings:', e)
@@ -74,10 +81,15 @@ export default function AdminSettingsPage() {
   const handleSave = async () => {
     setIsSaving(true)
     try {
+      // トラッキング設定と通知設定の両方を保存
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(trackingSettings),
+        body: JSON.stringify({
+          ...trackingSettings,
+          emailNotifications: settings.emailNotifications,
+          slackWebhook: settings.slackWebhook,
+        }),
       })
       if (!res.ok) throw new Error('保存に失敗しました')
       toast.success('設定を保存しました')

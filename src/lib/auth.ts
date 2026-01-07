@@ -3,6 +3,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from './prisma';
 import { normalizeUnifiedPlan, maxPlan } from '@/lib/planSync'
+import { sendNewUserNotification } from '@/lib/notifications'
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -19,12 +20,28 @@ export const authOptions: NextAuthOptions = {
         try {
           const existing = await prisma.user.findUnique({
             where: { id: user.id },
-            select: { firstLoginAt: true },
+            select: { firstLoginAt: true, email: true, name: true, image: true },
           })
-          if (!existing?.firstLoginAt) {
+          
+          // 新規ユーザーかどうかを判定（firstLoginAtがnull = 初回登録）
+          const isNewUser = !existing?.firstLoginAt
+          
+          if (isNewUser) {
+            // 初回ログイン時刻を記録
             await prisma.user.update({
               where: { id: user.id },
               data: { firstLoginAt: new Date() },
+            })
+            
+            // 新規ユーザー通知を送信（非同期、エラーはログに記録するだけ）
+            sendNewUserNotification({
+              userId: user.id,
+              email: existing?.email || user.email || null,
+              name: existing?.name || user.name || null,
+              image: existing?.image || user.image || null,
+              provider: account.provider || 'unknown',
+            }).catch((e) => {
+              console.error('Failed to send new user notification:', e)
             })
           }
         } catch (e) {

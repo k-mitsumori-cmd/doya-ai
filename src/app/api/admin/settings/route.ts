@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const settings = await prisma.systemSetting.findMany({
       where: {
         key: {
-          in: ['gtm_id', 'ga_id', 'fb_pixel_id', 'hubspot_id'],
+          in: ['gtm_id', 'ga_id', 'fb_pixel_id', 'hubspot_id', 'email_notifications', 'slack_webhook'],
         },
       },
     })
@@ -38,6 +38,8 @@ export async function GET(request: NextRequest) {
       gaId: result.ga_id || '',
       fbPixelId: result.fb_pixel_id || '',
       hubspotId: result.hubspot_id || '',
+      emailNotifications: result.email_notifications === 'true',
+      slackWebhook: result.slack_webhook || '',
     })
   } catch (e: any) {
     console.error('Get settings error:', e)
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { gtmId, gaId, fbPixelId, hubspotId } = body
+    const { gtmId, gaId, fbPixelId, hubspotId, emailNotifications, slackWebhook } = body
 
     // 設定を保存（upsert）
     const updates = []
@@ -95,6 +97,24 @@ export async function POST(request: NextRequest) {
           where: { key: 'hubspot_id' },
           create: { key: 'hubspot_id', value: String(hubspotId || '') },
           update: { value: String(hubspotId || '') },
+        })
+      )
+    }
+    if (emailNotifications !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: { key: 'email_notifications' },
+          create: { key: 'email_notifications', value: String(emailNotifications ? 'true' : 'false') },
+          update: { value: String(emailNotifications ? 'true' : 'false') },
+        })
+      )
+    }
+    if (slackWebhook !== undefined) {
+      updates.push(
+        prisma.systemSetting.upsert({
+          where: { key: 'slack_webhook' },
+          create: { key: 'slack_webhook', value: String(slackWebhook || '') },
+          update: { value: String(slackWebhook || '') },
         })
       )
     }
