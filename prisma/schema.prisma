@@ -78,6 +78,10 @@ model User {
   seoArticles   SeoArticle[]
   seoKnowledgeItems SeoKnowledgeItem[]
   
+  // ドヤインタビューAI
+  interviewProjects InterviewProject[]
+  interviewRecipes  InterviewRecipe[]
+  
   // Stripe関連（ポータル全体の顧客情報）
   stripeCustomerId       String?   @unique
   stripeSubscriptionId   String?   @unique
@@ -514,4 +518,223 @@ model SeoKnowledgeItem {
 
   @@index([userId, createdAt])
   @@index([type, createdAt])
+}
+
+// ============================================
+// ドヤインタビューAI
+// ============================================
+
+model InterviewProject {
+  id            String   @id @default(cuid())
+  
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId       String?  // 未ログイン（ゲスト）向けの識別子
+
+  // 基本情報
+  title         String
+  status        String   @default("DRAFT") // DRAFT | PLANNING | RECORDING | TRANSCRIBING | EDITING | REVIEWING | COMPLETED
+  
+  // インタビュー対象者情報
+  intervieweeName     String?
+  intervieweeRole     String?
+  intervieweeCompany  String?
+  intervieweeBio      String?  @db.Text
+  
+  // 企画情報
+  theme         String?  @db.Text  // 取材テーマ
+  purpose       String?  @db.Text   // 目的
+  targetAudience String? @db.Text   // 想定読者
+  tone          String?  @default("friendly") // friendly | professional | casual | formal
+  mediaType     String?  // blog | news | sns | pr | other
+  
+  // レシピ（企画案・質問リスト）
+  recipeId      String?
+  recipe        InterviewRecipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  
+  // 素材
+  materials     InterviewMaterial[]
+  
+  // 文字起こし
+  transcriptions InterviewTranscription[]
+  
+  // 構成案・ドラフト
+  outline       String?  @db.Text
+  drafts        InterviewDraft[]
+  
+  // 校閲
+  reviews       InterviewReview[]
+  
+  // 出力
+  finalContent  String?  @db.Text  // 最終記事
+  exportFormats Json?   // {word: string, markdown: string, html: string}
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+  @@index([status, createdAt])
+}
+
+model InterviewRecipe {
+  id            String   @id @default(cuid())
+  
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  // レシピ情報
+  name          String   // レシピ名
+  description   String?  @db.Text
+  category      String?  // formal | casual | panel | technical | pr
+  
+  // 企画案（複数パターン）
+  proposals     Json     // [{title: string, summary: string, questions: string[], value: string}]
+  
+  // 質問リスト
+  questions     Json     // string[]
+  
+  // 編集方針
+  editingGuidelines String? @db.Text
+  
+  // 共有設定
+  isPublic      Boolean  @default(false)
+  isTemplate    Boolean  @default(false)  // テンプレートとして使用可能
+  
+  usageCount    Int      @default(0)
+  
+  projects      InterviewProject[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([category, isTemplate])
+}
+
+model InterviewMaterial {
+  id            String   @id @default(cuid())
+  
+  projectId     String
+  project       InterviewProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  // 素材タイプ
+  type          String   // audio | video | text | pdf | image | url
+  
+  transcriptions InterviewTranscription[]
+  
+  // ファイル情報
+  fileName      String
+  filePath      String?  // サーバー上のパス
+  fileUrl       String?  // 外部URL
+  fileSize      Int?     // バイト数
+  mimeType      String?
+  duration      Int?     // 秒数（音声・動画の場合）
+  
+  // メタデータ
+  metadata      Json?    // {width, height, bitrate, etc.}
+  
+  // 処理状態
+  status        String   @default("UPLOADED") // UPLOADED | PROCESSING | COMPLETED | ERROR
+  error         String?  @db.Text
+  
+  // 抽出テキスト（PDF等）
+  extractedText String?  @db.Text
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+}
+
+model InterviewTranscription {
+  id            String   @id @default(cuid())
+  
+  projectId     String
+  project       InterviewProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  materialId    String?
+  material      InterviewMaterial? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  
+  // 文字起こし内容
+  text          String   @db.Text
+  segments      Json?    // [{start: number, end: number, text: string, speaker?: string}]
+  
+  // 要約・トピック分割
+  summary       String?  @db.Text
+  topics        Json?    // [{topic: string, startTime: number, endTime: number, summary: string}]
+  
+  // 処理情報
+  provider      String?  // google | whisper | deepgram | manual
+  confidence    Float?   // 信頼度スコア
+  status        String   @default("PENDING") // PENDING | PROCESSING | COMPLETED | ERROR
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+}
+
+model InterviewReview {
+  id            String   @id @default(cuid())
+  
+  projectId     String
+  project       InterviewProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  draftId       String?
+  draft         InterviewDraft? @relation(fields: [draftId], references: [id], onDelete: SetNull)
+  
+  // 校閲結果
+  report        String   @db.Text  // 校閲レポート
+  
+  // チェック項目
+  checks        Json?    // {grammar: boolean, facts: boolean, consistency: boolean, readability: boolean}
+  
+  // スコア
+  score         Float?   // 0-100
+  readabilityScore Float? // 読みやすさスコア
+  
+  // 修正提案
+  suggestions   Json?    // [{type: string, position: number, original: string, suggested: string, reason: string}]
+  
+  createdAt     DateTime @default(now())
+
+  @@index([projectId, createdAt])
+}
+
+model InterviewDraft {
+  id            String   @id @default(cuid())
+  
+  projectId     String
+  project       InterviewProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  // ドラフト情報
+  version       Int      @default(1)
+  title         String?
+  lead          String?  @db.Text  // リード文
+  content       String   @db.Text  // 本文
+  
+  // 構成
+  structure     Json?    // [{heading: string, summary: string, quotes: string[], content: string}]
+  
+  // メタデータ
+  wordCount     Int?
+  readingTime   Int?     // 分
+  
+  // SEO用
+  seoTitle      String?
+  seoDescription String? @db.Text
+  socialTitle   String?
+  socialDescription String? @db.Text
+  
+  // 状態
+  status        String   @default("DRAFT") // DRAFT | REVIEWING | APPROVED | PUBLISHED
+  
+  reviews       InterviewReview[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+  @@index([projectId, version])
 }

@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target } from 'lucide-react'
+import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target, Mic } from 'lucide-react'
 
-type ToolId = 'persona' | 'banner' | 'writing'
+type ToolId = 'persona' | 'banner' | 'writing' | 'interview'
 
 type ToolSwitcherMenuProps = {
   currentTool: ToolId
@@ -14,6 +14,12 @@ type ToolSwitcherMenuProps = {
   isMobile?: boolean
   className?: string
 }
+
+// 注意: ベータ版サービス（lp-site等）は他サービスのサイドバーには表示しない
+// ベータ版サービス自身のサイドバーでのみ表示する（LpSiteSidebar.tsx内で独自に定義）
+
+// 注意: ベータ版サービス（lp-site等）は他サービスのサイドバーには表示しない
+// ベータ版サービス自身のサイドバーでのみ表示する（LpSiteSidebar.tsx内で独自に定義）
 
 const TOOLS: Array<{
   id: ToolId
@@ -46,6 +52,14 @@ const TOOLS: Array<{
     description: 'SEO記事生成',
     icon: FileText,
     iconBgClassName: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+  },
+  {
+    id: 'interview',
+    href: '/interview',
+    title: 'ドヤインタビューAI',
+    description: 'インタビュー記事生成',
+    icon: Mic,
+    iconBgClassName: 'bg-gradient-to-br from-orange-500 to-amber-600',
   },
 ]
 
