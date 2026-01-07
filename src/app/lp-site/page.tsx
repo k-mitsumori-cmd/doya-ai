@@ -641,23 +641,38 @@ function LpSitePageInner() {
             {/* トーン選択は後で実装 */}
 
             {/* Generate Button */}
-            <button
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="w-full py-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.3 }}
+              className="mt-8"
             >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  生成中...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-5 h-5" />
-                  生成する
-                </>
-              )}
-            </button>
+              <motion.button
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="w-full py-5 bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 text-white font-black text-lg rounded-2xl shadow-xl shadow-teal-500/30 hover:shadow-2xl hover:shadow-teal-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden group"
+              >
+                {/* シマーエフェクト */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  animate={{ x: ['-100%', '100%'] }}
+                  transition={{ repeat: Infinity, duration: 2, ease: 'linear' }}
+                />
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin relative z-10" />
+                    <span className="relative z-10">生成中...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-6 h-6 relative z-10" />
+                    <span className="relative z-10">LPを生成する</span>
+                  </>
+                )}
+              </motion.button>
+            </motion.div>
           </motion.div>
         ) : (
           /* Result Preview */
