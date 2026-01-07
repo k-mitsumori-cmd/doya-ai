@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, CheckCircle2, ArrowRight, Loader2, Building2 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import Link from 'next/link'
 
-export default function ThankYouEnterprisePage() {
+function ThankYouEnterpriseContent() {
   const searchParams = useSearchParams()
   const sessionId = searchParams.get('session_id')
   const service = searchParams.get('service') || 'seo' // seo, banner, persona
@@ -254,6 +254,23 @@ export default function ThankYouEnterprisePage() {
         </div>
       </motion.div>
     </div>
+  )
+}
+
+export default function ThankYouEnterprisePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex items-center justify-center p-4">
+          <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-8 text-center">
+            <Loader2 className="w-12 h-12 text-purple-600 animate-spin mx-auto mb-4" />
+            <p className="text-slate-700 font-bold">読み込み中...</p>
+          </div>
+        </div>
+      }
+    >
+      <ThankYouEnterpriseContent />
+    </Suspense>
   )
 }
 
