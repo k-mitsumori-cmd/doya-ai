@@ -72,8 +72,7 @@ export async function generateSectionImagePair(
   } catch (error: any) {
     console.error(`[LP-SITE] PC画像生成エラー (${section.section_id}):`, error)
     console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
-    // エラーを再スローして、呼び出し元で処理できるようにする
-    throw new Error(`PC画像生成に失敗しました (${section.section_id}): ${error.message}`)
+    // エラーが発生しても続行（空の画像として扱う）
   }
 
   // SP用画像生成（縦長）- 必ず別プロンプトで再生成
@@ -92,8 +91,7 @@ export async function generateSectionImagePair(
   } catch (error: any) {
     console.error(`[LP-SITE] SP画像生成エラー (${section.section_id}):`, error)
     console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
-    // エラーを再スローして、呼び出し元で処理できるようにする
-    throw new Error(`SP画像生成に失敗しました (${section.section_id}): ${error.message}`)
+    // エラーが発生しても続行（空の画像として扱う）
   }
 
   return {
