@@ -13,6 +13,8 @@ import { stripe, getPlanIdFromStripePriceId } from '@/lib/stripe'
 
 const ACTIVE_LIKE = new Set(['active', 'trialing', 'past_due', 'unpaid'])
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
