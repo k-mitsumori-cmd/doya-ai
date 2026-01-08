@@ -226,27 +226,49 @@ export default function InterviewPage() {
       return lastResult
     }
 
-    // 最終確認: サーバーに問い合わせ
-    console.log(`[CHUNK] All chunks uploaded, but no completion response. Checking server status...`)
-    try {
-      const checkResponse = await fetch(`/api/interview/materials/upload-chunk?projectId=${projectId}&fileName=${encodeURIComponent(file.name)}`, {
-        method: 'GET',
-        headers: {
-          ...(guestId ? { 'x-guest-id': guestId } : {}),
-        },
-      })
+    // すべてのチャンクをアップロードしたが、完了レスポンスが返ってこなかった場合
+    // 最後のチャンクを再度送信して、完了状態を確認（サーバー側でファイル結合が完了するまで少し待機）
+    console.log(`[CHUNK] All chunks uploaded, waiting for server to complete file merge...`)
+    for (let waitAttempt = 0; waitAttempt < 10; waitAttempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1000)) // 1秒待機
       
-      if (checkResponse.ok) {
-        const checkResult = await checkResponse.json()
-        if (checkResult.completed && checkResult.material) {
-          return checkResult
+      try {
+        const lastChunkIndex = totalChunks - 1
+        const start = lastChunkIndex * CHUNK_SIZE
+        const end = Math.min(start + CHUNK_SIZE, file.size)
+        const lastChunk = file.slice(start, end)
+
+        const formData = new FormData()
+        formData.append('projectId', projectId)
+        formData.append('chunk', lastChunk)
+        formData.append('chunkIndex', lastChunkIndex.toString())
+        formData.append('totalChunks', totalChunks.toString())
+        formData.append('fileName', file.name)
+        formData.append('fileSize', file.size.toString())
+        formData.append('mimeType', file.type || '')
+        formData.append('tempFileName', tempFileName)
+
+        const checkResponse = await fetch('/api/interview/materials/upload-chunk', {
+          method: 'POST',
+          headers: {
+            ...(guestId ? { 'x-guest-id': guestId } : {}),
+          },
+          body: formData,
+        })
+
+        if (checkResponse.ok) {
+          const checkResult = await checkResponse.json()
+          if (checkResult.completed && checkResult.material) {
+            console.log(`[CHUNK] Upload completed after wait. Material ID: ${checkResult.material.id}`)
+            return checkResult
+          }
         }
+      } catch (checkError) {
+        console.error(`[CHUNK] Wait attempt ${waitAttempt + 1} failed:`, checkError)
       }
-    } catch (checkError) {
-      console.error('[CHUNK] Failed to check upload status:', checkError)
     }
 
-    throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\nサーバー側でファイルの結合が完了していない可能性があります。`)
+    throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\nサーバー側でファイルの結合が完了していない可能性があります。しばらく待ってから再度お試しください。`)
   }
 
   const handleFileSelect = async (file: File) => {
