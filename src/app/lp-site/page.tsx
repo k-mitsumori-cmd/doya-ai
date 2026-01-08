@@ -34,7 +34,6 @@ function LpSitePageInner() {
   const [currentStep, setCurrentStep] = useState<'product' | 'structure' | 'wireframe' | 'image' | 'complete'>('product')
   const [isGeneratingImages, setIsGeneratingImages] = useState(false)
   const [imageProgress, setImageProgress] = useState(0)
-  const [showFramework, setShowFramework] = useState(false)
   const [combinedLpImage, setCombinedLpImage] = useState<{ pc?: string; sp?: string } | null>(null)
   const [isCombining, setIsCombining] = useState(false)
 
