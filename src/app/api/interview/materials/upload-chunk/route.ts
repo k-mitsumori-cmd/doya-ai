@@ -193,6 +193,38 @@ export async function POST(request: NextRequest) {
       // すべてのチャンクが揃った場合、ファイルを結合
       if (uploadedChunks.length === totalChunks) {
         console.log(`[INTERVIEW] All chunks received. Starting file merge...`)
+        
+        // 結合前に古いファイルをクリーンアップ
+        try {
+          const finalDir = join(baseDir, projectId)
+          if (existsSync(finalDir)) {
+            const { readdir, unlink: unlinkFile } = await import('fs/promises')
+            const files = await readdir(finalDir)
+            // 古いファイルを削除（最新の5ファイル以外）
+            if (files.length > 5) {
+              const fileStats = await Promise.all(
+                files.map(async (f) => {
+                  const filePath = join(finalDir, f)
+                  const { stat } = await import('fs/promises')
+                  return { path: filePath, mtime: (await stat(filePath)).mtime }
+                })
+              )
+              fileStats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
+              const filesToDelete = fileStats.slice(5)
+              for (const file of filesToDelete) {
+                try {
+                  await unlinkFile(file.path)
+                  console.log(`[INTERVIEW] Deleted old file: ${file.path}`)
+                } catch (e) {
+                  console.warn(`[INTERVIEW] Failed to delete old file: ${file.path}`, e)
+                }
+              }
+            }
+          }
+        } catch (cleanupError) {
+          console.warn(`[INTERVIEW] Cleanup error (continuing):`, cleanupError)
+        }
+
         const finalDir = join(baseDir, projectId)
         if (!existsSync(finalDir)) {
           await mkdir(finalDir, { recursive: true })
@@ -202,21 +234,96 @@ export async function POST(request: NextRequest) {
         const finalFilePath = join(finalDir, savedFileName)
 
         // チャンクを順番に結合（結合と同時に削除して容量を確保）
-        for (let i = 0; i < totalChunks; i++) {
-          const chunkFile = join(chunkDir, `${tempFileName}.chunk.${i}`)
-          try {
-            const chunkData = await readFile(chunkFile)
-            if (i === 0) {
-              await writeFile(finalFilePath, chunkData)
-            } else {
-              await appendFile(finalFilePath, chunkData)
+        let mergeError: Error | null = null
+        try {
+          for (let i = 0; i < totalChunks; i++) {
+            const chunkFile = join(chunkDir, `${tempFileName}.chunk.${i}`)
+            try {
+              const chunkData = await readFile(chunkFile)
+              if (i === 0) {
+                await writeFile(finalFilePath, chunkData)
+              } else {
+                await appendFile(finalFilePath, chunkData)
+              }
+              // チャンクファイルを即座に削除（容量を確保）
+              await unlink(chunkFile)
+            } catch (chunkError: any) {
+              console.error(`[INTERVIEW] Error processing chunk ${i}:`, chunkError)
+              
+              // ENOSPCエラーの場合、より積極的にクリーンアップ
+              if (chunkError.code === 'ENOSPC' || chunkError.message?.includes('no space left')) {
+                console.log(`[INTERVIEW] ENOSPC during merge. Cleaning up more aggressively...`)
+                // 他のプロジェクトのチャンクを削除
+                try {
+                  const chunksBaseDir = join(baseDir, 'chunks')
+                  if (existsSync(chunksBaseDir)) {
+                    const { readdir, rm } = await import('fs/promises')
+                    const projectDirs = await readdir(chunksBaseDir)
+                    for (const dir of projectDirs) {
+                      if (dir !== projectId) {
+                        try {
+                          const oldChunkDir = join(chunksBaseDir, dir)
+                          await rm(oldChunkDir, { recursive: true, force: true })
+                          console.log(`[INTERVIEW] Cleaned up chunk directory: ${oldChunkDir}`)
+                        } catch (cleanupError) {
+                          console.warn(`[INTERVIEW] Failed to cleanup ${dir}:`, cleanupError)
+                        }
+                      }
+                    }
+                  }
+                } catch (cleanupError) {
+                  console.warn(`[INTERVIEW] Aggressive cleanup failed:`, cleanupError)
+                }
+                
+                // 再試行
+                try {
+                  if (i === 0) {
+                    await writeFile(finalFilePath, await readFile(chunkFile))
+                  } else {
+                    await appendFile(finalFilePath, await readFile(chunkFile))
+                  }
+                  await unlink(chunkFile)
+                } catch (retryError) {
+                  mergeError = retryError as Error
+                  break
+                }
+              } else {
+                mergeError = chunkError as Error
+                break
+              }
             }
-            // チャンクファイルを即座に削除（容量を確保）
-            await unlink(chunkFile)
-          } catch (chunkError) {
-            console.error(`[INTERVIEW] Error processing chunk ${i}:`, chunkError)
-            // エラーが発生しても続行（他のチャンクは処理済み）
           }
+        } catch (mergeErr) {
+          mergeError = mergeErr as Error
+        }
+        
+        // エラーが発生した場合、作成したファイルを削除
+        if (mergeError) {
+          try {
+            if (existsSync(finalFilePath)) {
+              await unlink(finalFilePath)
+            }
+          } catch (e) {
+            console.warn(`[INTERVIEW] Failed to delete incomplete file: ${finalFilePath}`, e)
+          }
+          
+          // 残っているチャンクファイルを削除
+          try {
+            for (let i = 0; i < totalChunks; i++) {
+              const chunkFile = join(chunkDir, `${tempFileName}.chunk.${i}`)
+              if (existsSync(chunkFile)) {
+                try {
+                  await unlink(chunkFile)
+                } catch (e) {
+                  console.warn(`[INTERVIEW] Failed to delete chunk ${i}:`, e)
+                }
+              }
+            }
+          } catch (e) {
+            console.warn(`[INTERVIEW] Failed to cleanup chunks:`, e)
+          }
+          
+          throw mergeError
         }
         
         // チャンクディレクトリを削除
