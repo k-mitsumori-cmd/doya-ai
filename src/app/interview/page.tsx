@@ -25,10 +25,11 @@ import Link from 'next/link'
 type UploadStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'completed' | 'error'
 type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
 
-// Vercelのサーバーレス関数の制限（4.5MB）を考慮して、50MBに設定
-// より大きなファイル（50MB以上）が必要な場合は、Vercel Blobを使用することを推奨
-const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
-const MAX_FILE_SIZE_WITH_BLOB = 500 * 1024 * 1024 // 500MB（Vercel Blob使用時）
+// Vercelのサーバーレス関数の制限（4.5MB）を考慮
+// チャンクアップロードを使用することで、より大きなファイルもアップロード可能
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB（通常アップロード）
+const MAX_FILE_SIZE_WITH_CHUNK = 500 * 1024 * 1024 // 500MB（チャンクアップロード使用時）
+const CHUNK_SIZE = 4 * 1024 * 1024 // 4MB（チャンクサイズ - Vercelの制限より少し小さく）
 const SUPPORTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg']
 const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm']
 const SUPPORTED_TEXT_TYPES = ['text/plain', 'text/markdown']
@@ -69,27 +70,25 @@ export default function InterviewPage() {
     }
   }, [])
 
-  const validateFile = (file: File): { valid: boolean; error?: string; details?: string; useBlob?: boolean } => {
-    // ファイルサイズチェック（500MBまでVercel Blobで対応可能）
-    const MAX_FILE_SIZE_WITH_BLOB = 500 * 1024 * 1024 // 500MB
-    if (file.size > MAX_FILE_SIZE_WITH_BLOB) {
+  const validateFile = (file: File): { valid: boolean; error?: string; details?: string; useChunk?: boolean } => {
+    // ファイルサイズチェック（500MBまでチャンクアップロードで対応可能）
+    if (file.size > MAX_FILE_SIZE_WITH_CHUNK) {
       const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
-      const maxSizeMB = (MAX_FILE_SIZE_WITH_BLOB / 1024 / 1024).toFixed(0)
+      const maxSizeMB = (MAX_FILE_SIZE_WITH_CHUNK / 1024 / 1024).toFixed(0)
       return {
         valid: false,
         error: 'ファイルサイズが大きすぎます',
-        details: `最大ファイルサイズ: ${formatFileSize(MAX_FILE_SIZE_WITH_BLOB)}（MAX）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB > ${maxSizeMB}MB）\n\n500MBを超えるファイルはアップロードできません。ファイルを分割してください。`,
+        details: `最大ファイルサイズ: ${formatFileSize(MAX_FILE_SIZE_WITH_CHUNK)}（MAX）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB > ${maxSizeMB}MB）\n\n500MBを超えるファイルはアップロードできません。ファイルを分割してください。`,
       }
     }
     
-    // 50MBを超える場合はVercel Blobを使用（現在は未実装のため警告を表示）
+    // 50MBを超える場合はチャンクアップロードを使用
     if (file.size > MAX_FILE_SIZE) {
-      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
       return {
-        valid: false,
-        error: 'ファイルサイズが大きすぎます（現在の実装では50MBまで）',
-        details: `現在の実装では最大${formatFileSize(MAX_FILE_SIZE)}までアップロード可能です。\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB）\n\n50MB以上のファイルをアップロードするには、Vercel Blobの実装が必要です。\n現在は50MB以下のファイルのみアップロード可能です。`,
-        useBlob: true, // 将来的にVercel Blobを使用するフラグ
+        valid: true,
+        useChunk: true, // チャンクアップロードを使用するフラグ
+        error: undefined,
+        details: undefined,
       }
     }
 
@@ -238,46 +237,58 @@ export default function InterviewPage() {
       setProjectId(newProjectId)
       setProgress(30)
 
-      // 2. ファイルアップロード
-      const formData = new FormData()
-      formData.append('projectId', newProjectId)
-      formData.append('file', file)
-
       // ゲストIDをヘッダーに追加
       let guestId = null
       if (typeof window !== 'undefined') {
         guestId = localStorage.getItem('interview-guest-id')
       }
 
-      let uploadRes
-      try {
-        uploadRes = await fetch('/api/interview/materials/upload', {
-          method: 'POST',
-          headers: {
-            ...(guestId ? { 'x-guest-id': guestId } : {}),
-          },
-          body: formData,
-        })
-      } catch (error) {
-        throw new Error('ファイルのアップロードに失敗しました。\nネットワークエラーが発生しました。インターネット接続を確認してください。')
-      }
+      // 2. ファイルアップロード（チャンクアップロード or 通常アップロード）
+      let uploadData
+      if (file.size > MAX_FILE_SIZE) {
+        // チャンクアップロード
+        uploadData = await uploadFileInChunks(file, newProjectId, guestId)
+      } else {
+        // 通常アップロード
+        const formData = new FormData()
+        formData.append('projectId', newProjectId)
+        formData.append('file', file)
 
-      if (!uploadRes.ok) {
-        const errorData = await uploadRes.json().catch(() => ({}))
-        const errorMsg = errorData.error || 'ファイルアップロードに失敗しました'
-        const errorDetails = errorData.details || 'ファイル形式やサイズを確認してください。'
-        throw new Error(`${errorMsg}\n${errorDetails}`)
-      }
+        let uploadRes
+        try {
+          uploadRes = await fetch('/api/interview/materials/upload', {
+            method: 'POST',
+            headers: {
+              ...(guestId ? { 'x-guest-id': guestId } : {}),
+            },
+            body: formData,
+          })
+        } catch (error) {
+          throw new Error('ファイルのアップロードに失敗しました。\nネットワークエラーが発生しました。インターネット接続を確認してください。')
+        }
 
-      const uploadData = await uploadRes.json()
-      if (!uploadData.material?.id) {
-        throw new Error('アップロードしたファイルの情報を取得できませんでした。\nサーバーからの応答が不正です。もう一度お試しください。')
+        if (!uploadRes.ok) {
+          const errorData = await uploadRes.json().catch(() => ({}))
+          const errorMsg = errorData.error || 'ファイルアップロードに失敗しました'
+          const errorDetails = errorData.details || 'ファイル形式やサイズを確認してください。'
+          throw new Error(`${errorMsg}\n${errorDetails}`)
+        }
+
+        uploadData = await uploadRes.json()
+        if (!uploadData.material?.id) {
+          throw new Error('アップロードしたファイルの情報を取得できませんでした。\nサーバーからの応答が不正です。もう一度お試しください。')
+        }
       }
 
       setProgress(50)
 
       // 3. 文字起こし（音声・動画の場合）
       let transcriptionId = null
+      const materialId = uploadData.material?.id
+      if (!materialId) {
+        throw new Error('アップロードしたファイルの情報を取得できませんでした。\nサーバーからの応答が不正です。もう一度お試しください。')
+      }
+
       if (type === 'audio' || type === 'video') {
         setUploadStatus('transcribing')
         setProgress(60)
@@ -813,7 +824,11 @@ export default function InterviewPage() {
                 音声: MP3, WAV, M4A, AAC, OGG / 動画: MP4, MOV, AVI, WebM / テキスト: TXT, DOCX, MD / PDF: PDF
               </p>
               <p className="text-xs text-orange-700 mt-1">
-                最大ファイルサイズ: <span className="font-black">{formatFileSize(MAX_FILE_SIZE)}</span>（MAX）
+                最大ファイルサイズ: <span className="font-black">{formatFileSize(MAX_FILE_SIZE_WITH_CHUNK)}</span>（MAX）
+                <br />
+                <span className="text-[10px] text-orange-600">
+                  50MB以上はチャンクアップロードで自動処理
+                </span>
               </p>
             </div>
           </div>
