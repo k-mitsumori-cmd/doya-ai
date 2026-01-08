@@ -134,6 +134,71 @@ export default function InterviewPage() {
     return { valid: true }
   }
 
+  // チャンクアップロード処理
+  const uploadFileInChunks = async (file: File, projectId: string, guestId: string | null) => {
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
+    let uploadedChunks = 0
+
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * CHUNK_SIZE
+      const end = Math.min(start + CHUNK_SIZE, file.size)
+      const chunk = file.slice(start, end)
+
+      const formData = new FormData()
+      formData.append('projectId', projectId)
+      formData.append('chunk', chunk)
+      formData.append('chunkIndex', chunkIndex.toString())
+      formData.append('totalChunks', totalChunks.toString())
+      formData.append('fileName', file.name)
+      formData.append('fileSize', file.size.toString())
+      formData.append('mimeType', file.type || '')
+
+      let retryCount = 0
+      const maxRetries = 3
+
+      while (retryCount < maxRetries) {
+        try {
+          const response = await fetch('/api/interview/materials/upload-chunk', {
+            method: 'POST',
+            headers: {
+              ...(guestId ? { 'x-guest-id': guestId } : {}),
+            },
+            body: formData,
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(errorData.error || `チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました`)
+          }
+
+          const result = await response.json()
+
+          // 進捗を更新
+          uploadedChunks++
+          const chunkProgress = Math.round((uploadedChunks / totalChunks) * 100)
+          setProgress(30 + Math.round((chunkProgress * 20) / 100)) // 30%から50%の間で進捗表示
+
+          // すべてのチャンクがアップロード完了
+          if (result.completed && result.material) {
+            return result
+          }
+
+          // 次のチャンクへ
+          break
+        } catch (error) {
+          retryCount++
+          if (retryCount >= maxRetries) {
+            throw new Error(`チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました（${maxRetries}回リトライしました）: ${error instanceof Error ? error.message : '不明なエラー'}`)
+          }
+          // リトライ前に少し待機
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+        }
+      }
+    }
+
+    throw new Error('ファイルのアップロードが完了しませんでした')
+  }
+
   const handleFileSelect = async (file: File) => {
     // エラーメッセージをクリア
     setErrorMessage(null)
