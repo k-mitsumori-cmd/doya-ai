@@ -575,6 +575,7 @@ model InterviewProject {
   @@index([userId, createdAt])
   @@index([guestId, createdAt])
   @@index([status, createdAt])
+  @@map("interview_project")
 }
 
 model InterviewRecipe {
