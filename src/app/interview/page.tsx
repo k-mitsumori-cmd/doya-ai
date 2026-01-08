@@ -562,7 +562,7 @@ export default function InterviewPage() {
                 最大ファイルサイズ: <span className="font-black text-orange-600">{formatFileSize(MAX_FILE_SIZE_WITH_CHUNK)}</span>（MAX）
                 <br />
                 <span className="text-xs text-slate-400">
-                  ※ 50MB以上のファイルは現在未対応です（Vercel Blob実装予定）
+                  ※ 50MB以上のファイルは自動的にチャンクアップロードで処理されます
                 </span>
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
