@@ -43,16 +43,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ファイルサイズチェック（500MB制限）
-    const MAX_FILE_SIZE = 500 * 1024 * 1024
+    // ファイルサイズチェック（50MB制限）
+    // 注意: Vercelのサーバーレス関数には4.5MBのリクエストボディサイズ制限があります
+    // より大きなファイルが必要な場合は、Vercel Blobを使用することを推奨します
+    const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
     if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
+      const maxSizeMB = (MAX_FILE_SIZE / 1024 / 1024).toFixed(0)
       return NextResponse.json(
         {
           error: 'ファイルサイズが大きすぎます',
-          details: `最大ファイルサイズは500MBです。現在のファイルサイズ: ${(file.size / 1024 / 1024).toFixed(2)}MB`,
+          details: `最大ファイルサイズは${maxSizeMB}MBです。現在のファイルサイズ: ${fileSizeMB}MB\n\nより大きなファイルをアップロードする場合は、ファイルを分割するか、Vercel Blobの使用を検討してください。`,
         },
         { status: 400 }
       )
+    }
+    
+    // Vercelのサーバーレス関数の制限（4.5MB）を警告
+    const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB
+    if (file.size > VERCEL_LIMIT) {
+      console.warn(`[INTERVIEW] File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds Vercel's serverless function limit (4.5MB). This may cause upload failures.`)
     }
 
     if (file.size === 0) {

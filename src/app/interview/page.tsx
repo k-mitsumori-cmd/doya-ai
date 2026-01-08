@@ -25,7 +25,9 @@ import Link from 'next/link'
 type UploadStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'completed' | 'error'
 type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
 
-const MAX_FILE_SIZE = 500 * 1024 * 1024 // 500MB
+// Vercelのサーバーレス関数の制限（4.5MB）を考慮して、50MBに設定
+// より大きなファイルが必要な場合は、Vercel Blobを使用することを推奨
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 const SUPPORTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg']
 const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm']
 const SUPPORTED_TEXT_TYPES = ['text/plain', 'text/markdown']
@@ -72,7 +74,7 @@ export default function InterviewPage() {
       return {
         valid: false,
         error: 'ファイルサイズが大きすぎます',
-        details: `最大ファイルサイズ: ${formatFileSize(MAX_FILE_SIZE)}。現在のファイル: ${formatFileSize(file.size)}`,
+        details: `最大ファイルサイズ: ${formatFileSize(MAX_FILE_SIZE)}。現在のファイル: ${formatFileSize(file.size)}\n\nより大きなファイルをアップロードする場合は、ファイルを分割するか、Vercel Blobの使用を検討してください。`,
       }
     }
 
