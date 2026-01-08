@@ -25,7 +25,23 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ projects })
   } catch (error) {
     console.error('[INTERVIEW] Projects fetch error:', error)
-    return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
+    
+    // Prismaエラーコードの判定
+    let statusCode = 500
+    let errorMessage = 'プロジェクトの取得に失敗しました'
+    
+    if (error && typeof error === 'object' && 'code' in error) {
+      const prismaError = error as { code: string }
+      if (prismaError.code === 'P2021') {
+        errorMessage = 'データベースのテーブルが存在しません。データベースのマイグレーションが必要です。'
+        statusCode = 503
+      } else if (prismaError.code === 'P1001' || prismaError.code === 'P1017') {
+        errorMessage = 'データベースに接続できません。'
+        statusCode = 503
+      }
+    }
+    
+    return NextResponse.json({ error: errorMessage }, { status: statusCode })
   }
 }
 
@@ -93,20 +109,41 @@ export async function POST(request: NextRequest) {
     
     // Prismaエラーの詳細を取得
     let details = 'データベースへの保存に失敗しました。'
-    if (errorMessage.includes('Unique constraint')) {
+    let statusCode = 500
+    
+    // Prismaエラーコードの判定
+    if (error && typeof error === 'object' && 'code' in error) {
+      const prismaError = error as { code: string; meta?: any }
+      
+      if (prismaError.code === 'P2021') {
+        // テーブルが存在しない
+        details = 'データベースのテーブルが存在しません。データベースのマイグレーションが必要です。'
+        statusCode = 503 // Service Unavailable
+        console.error('[INTERVIEW] Database table missing. Migration required.')
+      } else if (prismaError.code === 'P2002') {
+        details = 'データベースの制約違反が発生しました。同じデータが既に存在する可能性があります。'
+      } else if (prismaError.code === 'P2003') {
+        details = '外部キー制約違反が発生しました。関連データが見つかりません。'
+      } else if (prismaError.code === 'P2011') {
+        details = '必須フィールドが不足しています。'
+      } else if (prismaError.code === 'P2012') {
+        details = '必須フィールドがnullです。'
+      } else if (prismaError.code === 'P1001') {
+        details = 'データベースに接続できません。データベースサーバーが起動しているか確認してください。'
+        statusCode = 503
+      } else if (prismaError.code === 'P1017') {
+        details = 'データベースサーバーへの接続が閉じられました。'
+        statusCode = 503
+      }
+    } else if (errorMessage.includes('Unique constraint')) {
       details = '同じプロジェクト名が既に存在します。別の名前を試してください。'
     } else if (errorMessage.includes('Foreign key constraint')) {
       details = '関連データの参照に失敗しました。'
     } else if (errorMessage.includes('Invalid value')) {
       details = '無効な値が入力されています。入力内容を確認してください。'
-    } else if (errorMessage.includes('P2002')) {
-      details = 'データベースの制約違反が発生しました。同じデータが既に存在する可能性があります。'
-    } else if (errorMessage.includes('P2003')) {
-      details = '外部キー制約違反が発生しました。関連データが見つかりません。'
-    } else if (errorMessage.includes('P2011')) {
-      details = '必須フィールドが不足しています。'
-    } else if (errorMessage.includes('P2012')) {
-      details = '必須フィールドがnullです。'
+    } else if (errorMessage.includes('does not exist')) {
+      details = 'データベースのテーブルが存在しません。データベースのマイグレーションが必要です。'
+      statusCode = 503
     }
 
     return NextResponse.json(
@@ -114,7 +151,7 @@ export async function POST(request: NextRequest) {
         error: 'プロジェクトの作成に失敗しました',
         details: `${details}\nエラー詳細: ${errorMessage}`,
       },
-      { status: 500 }
+      { status: statusCode }
     )
   }
 }
