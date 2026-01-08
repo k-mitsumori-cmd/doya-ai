@@ -83,16 +83,38 @@ export default function InterviewProjectsPage() {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                  whileHover={{ scale: 1.02, y: -4 }}
+                  className="p-6 bg-gradient-to-br from-white to-slate-50 rounded-2xl border-2 border-slate-200 shadow-sm hover:shadow-xl hover:border-orange-300 transition-all cursor-pointer group"
                 >
-                  <h3 className="text-lg font-black text-slate-900 mb-2">{project.title}</h3>
-                  <p className="text-sm text-slate-600 mb-4">{project.intervieweeName || '対象者未設定'}</p>
-                  <div className="flex items-center justify-between text-xs text-slate-500">
-                    <div className="flex items-center gap-1">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-lg font-black text-slate-900 group-hover:text-orange-600 transition-colors flex-1">
+                      {project.title}
+                    </h3>
+                    <span className="px-3 py-1 bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 rounded-lg font-black text-xs border border-orange-200">
+                      {project.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-600 mb-4 flex items-center gap-2">
+                    {project.intervieweeName ? (
+                      <>
+                        <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
+                        {project.intervieweeName}
+                      </>
+                    ) : (
+                      <span className="text-slate-400">対象者未設定</span>
+                    )}
+                  </p>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-slate-500">
                       <Clock className="w-4 h-4" />
-                      {new Date(project.updatedAt).toLocaleDateString('ja-JP')}
+                      <span className="font-medium">{new Date(project.updatedAt).toLocaleDateString('ja-JP')}</span>
                     </div>
-                    <span className="px-2 py-1 bg-slate-100 rounded-lg font-bold">{project.status}</span>
+                    {project.drafts && project.drafts.length > 0 && (
+                      <div className="flex items-center gap-1 text-emerald-600 font-black">
+                        <FileText className="w-4 h-4" />
+                        {project.drafts.length}件の記事
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               </Link>

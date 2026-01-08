@@ -587,18 +587,28 @@ export default function InterviewProjectDetailPage() {
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-slate-600">
-                            <span className="flex items-center gap-1">
-                              <FileText className="w-4 h-4" />
-                              バージョン {draft.version}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <span className="font-bold">{draft.wordCount || 0}</span>文字
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              読了時間 {draft.readingTime || 0}分
-                            </span>
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
+                              <FileText className="w-4 h-4 text-slate-600" />
+                              <span className="font-black text-slate-700">バージョン {draft.version}</span>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
+                              <span className="font-black text-blue-700">{draft.wordCount?.toLocaleString() || 0}</span>
+                              <span className="text-blue-600">文字</span>
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
+                              <Clock className="w-4 h-4 text-purple-600" />
+                              <span className="font-black text-purple-700">{draft.readingTime || 0}</span>
+                              <span className="text-purple-600">分</span>
+                            </div>
+                            {draft.wordCount && (
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200">
+                                <span className="text-emerald-600 text-xs">読みやすさ</span>
+                                <span className="font-black text-emerald-700">
+                                  {Math.min(100, Math.round((draft.wordCount / 2000) * 100))}%
+                                </span>
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-2 relative">
