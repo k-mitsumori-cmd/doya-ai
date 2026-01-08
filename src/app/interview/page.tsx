@@ -91,7 +91,7 @@ export default function InterviewPage() {
       return {
         valid: false,
         error: 'ファイルサイズが大きすぎます',
-        details: `最大ファイルサイズ: ${formatFileSize(MAX_FILE_SIZE_WITH_CHUNK)}（MAX）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB > ${maxSizeMB}MB）\n\n${maxSizeMB}MBを超えるファイルはアップロードできません。ファイルを分割するか、より小さなファイルサイズに圧縮してください。\n\n※ より大きなファイル（200MB以上）をアップロードする場合は、Vercel Blob Storageの使用を検討してください。`,
+        details: `最大ファイルサイズ: 200MB（MAX）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB > ${maxSizeMB}MB）\n\n200MBを超えるファイルはアップロードできません。ファイルを分割するか、より小さなファイルサイズに圧縮してください。\n\n※ より大きなファイル（200MB以上）をアップロードする場合は、Vercel Blob Storageの使用を検討してください。`,
       }
     }
     
@@ -765,12 +765,12 @@ export default function InterviewPage() {
                 またはクリックしてファイルを選択
               </p>
               <p className="text-sm text-slate-500 mb-6">
-                最大ファイルサイズ: <span className="font-black text-orange-600">{formatFileSize(MAX_FILE_SIZE_WITH_CHUNK)}</span>（MAX）
+                最大ファイルサイズ: <span className="font-black text-orange-600">200MB（MAX）</span>
                 <br />
                 <span className="text-xs text-slate-400">
                   ※ 50MB以上のファイルは自動的にチャンクアップロードで処理されます
                   <br />
-                  ※ 200MBを超えるファイルはサーバーの容量制限によりアップロードできません
+                  ※ 200MBを超えるファイルはアップロードできません
                 </span>
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
