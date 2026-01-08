@@ -6,6 +6,21 @@ import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
 
+// Vercel等のサーバーレス環境では /tmp を使用
+function getUploadBaseDir() {
+  // 環境変数で指定されている場合はそれを使用
+  const envDir = process.env.INTERVIEW_STORAGE_DIR || process.env.NEXT_PUBLIC_INTERVIEW_STORAGE_DIR
+  if (envDir) return envDir
+
+  // Vercel/AWS Lambda では /tmp が書き込み可能
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return '/tmp/interview'
+  }
+
+  // ローカル環境: プロジェクト直下に保存
+  return join(process.cwd(), 'uploads', 'interview')
+}
+
 // 素材アップロード（音声・動画・テキスト・PDF等）
 export async function POST(request: NextRequest) {
   try {
@@ -88,17 +103,51 @@ export async function POST(request: NextRequest) {
     }
 
     // ファイル保存
-    const uploadDir = join(process.cwd(), 'uploads', 'interview', projectId)
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true })
+    const baseDir = getUploadBaseDir()
+    let uploadDir = join(baseDir, projectId)
+    
+    try {
+      if (!existsSync(uploadDir)) {
+        await mkdir(uploadDir, { recursive: true })
+      }
+    } catch (mkdirError) {
+      console.error('[INTERVIEW] Failed to create upload directory:', mkdirError)
+      // /tmp へのフォールバック
+      const fallbackDir = `/tmp/interview/${projectId}`
+      try {
+        await mkdir(fallbackDir, { recursive: true })
+        uploadDir = fallbackDir
+      } catch (fallbackError) {
+        console.error('[INTERVIEW] Failed to create fallback directory:', fallbackError)
+        throw new Error('ファイル保存ディレクトリの作成に失敗しました')
+      }
     }
 
-    const savedFileName = `${Date.now()}-${file.name}`
+    const savedFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
     const filePath = join(uploadDir, savedFileName)
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
+    
+    let buffer: Buffer
+    try {
+      const bytes = await file.arrayBuffer()
+      buffer = Buffer.from(bytes)
+    } catch (bufferError) {
+      console.error('[INTERVIEW] Failed to read file buffer:', bufferError)
+      throw new Error('ファイルの読み込みに失敗しました')
+    }
 
-    await writeFile(filePath, buffer)
+    try {
+      await writeFile(filePath, buffer)
+    } catch (writeError) {
+      console.error('[INTERVIEW] Failed to write file:', writeError)
+      console.error('[INTERVIEW] File path:', filePath)
+      console.error('[INTERVIEW] File size:', buffer.length)
+      throw new Error(`ファイルの保存に失敗しました: ${writeError instanceof Error ? writeError.message : '不明なエラー'}`)
+    }
+
+    // 相対パスを保存（/tmp の場合は絶対パスも保存）
+    const relativePath = process.env.VERCEL 
+      ? filePath // Vercelでは絶対パスを保存
+      : `/uploads/interview/${projectId}/${savedFileName}`
 
     // DBに記録
     const material = await prisma.interviewMaterial.create({
@@ -106,7 +155,7 @@ export async function POST(request: NextRequest) {
         projectId,
         type: materialType,
         fileName: file.name,
-        filePath: `/uploads/interview/${projectId}/${savedFileName}`,
+        filePath: relativePath,
         fileSize: buffer.length,
         mimeType,
         status: 'UPLOADED',
@@ -116,11 +165,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ material })
   } catch (error) {
     console.error('[INTERVIEW] Material upload error:', error)
+    console.error('[INTERVIEW] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    console.error('[INTERVIEW] File info:', {
+      name: file?.name,
+      size: file?.size,
+      type: file?.type,
+      projectId,
+    })
+    
     const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    
+    // エラーの種類に応じた詳細メッセージ
+    let details = 'ファイルサイズや形式を確認してください。'
+    if (errorMessage.includes('ENOSPC') || errorMessage.includes('ENOENT')) {
+      details = 'ディスク容量が不足しているか、ファイルシステムへのアクセス権限がありません。'
+    } else if (errorMessage.includes('EACCES')) {
+      details = 'ファイルへの書き込み権限がありません。'
+    } else if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('timeout')) {
+      details = 'ファイルのアップロードがタイムアウトしました。ファイルサイズが大きすぎる可能性があります。'
+    } else if (errorMessage.includes('memory') || errorMessage.includes('Memory')) {
+      details = 'メモリ不足が発生しました。ファイルサイズが大きすぎる可能性があります。'
+    }
+    
     return NextResponse.json(
       {
         error: 'ファイルのアップロードに失敗しました',
-        details: `エラー詳細: ${errorMessage}。ファイルサイズや形式を確認してください。問題が続く場合は、サポートにお問い合わせください。`,
+        details: `${details}\nエラー詳細: ${errorMessage}`,
       },
       { status: 500 }
     )
