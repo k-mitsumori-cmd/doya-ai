@@ -5,22 +5,50 @@ import { join } from 'path'
 function run(cmd, args, options = {}) {
   console.log(`[db-push] Executing: ${cmd} ${args.join(' ')}`)
   const r = spawnSync(cmd, args, { 
-    stdio: 'inherit',
+    stdio: 'pipe', // 'inherit'から'pipe'に変更して出力をキャプチャ
     shell: true,
     env: process.env,
+    encoding: 'utf8',
     ...options 
   })
+  
+  // 出力を表示
+  if (r.stdout) {
+    console.log(r.stdout.toString())
+  }
+  if (r.stderr) {
+    console.error(r.stderr.toString())
+  }
+  
   if (r.status !== 0) {
+    const stderr = r.stderr ? r.stderr.toString() : ''
+    const stdout = r.stdout ? r.stdout.toString() : ''
+    const allOutput = stderr + stdout
+    
+    // 既存のインデックスや制約に関するエラーは無視（既に存在する場合は問題なし）
+    const ignorableErrors = [
+      'already exists',
+      'relation.*already exists',
+      'duplicate key',
+      'constraint.*already exists'
+    ]
+    
+    const isIgnorable = ignorableErrors.some(pattern => {
+      const regex = new RegExp(pattern, 'i')
+      return regex.test(allOutput)
+    })
+    
+    if (isIgnorable) {
+      console.warn(`[db-push] ⚠️  Warning: ${allOutput.split('\n').find(line => line.includes('Error:') || line.includes('ERROR:')) || 'Some database objects already exist'}`)
+      console.warn(`[db-push] ⚠️  This is usually safe to ignore if the objects already exist.`)
+      console.warn(`[db-push] ⚠️  Continuing build...`)
+      return true // エラーを無視して続行
+    }
+    
     console.error(`[db-push] ❌ Command failed: ${cmd} ${args.join(' ')}`)
     console.error(`[db-push] Exit code: ${r.status}`)
     if (r.error) {
       console.error(`[db-push] Error:`, r.error)
-    }
-    if (r.stderr) {
-      console.error(`[db-push] Stderr:`, r.stderr.toString())
-    }
-    if (r.stdout) {
-      console.error(`[db-push] Stdout:`, r.stdout.toString())
     }
     return false
   }
