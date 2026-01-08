@@ -115,10 +115,43 @@ ${transcription.substring(0, 5000)}...
   }
 }
 
+// 記事タイプの定義
+export type ArticleType = 'INTERVIEW' | 'BUSINESS_REPORT' | 'INTERNAL_INTERVIEW' | 'CASE_STUDY'
+export type DisplayFormat = 'QA' | 'MONOLOGUE'
+
+// 記事タイプの説明
+const articleTypeDescriptions: Record<ArticleType, string> = {
+  INTERVIEW: 'インタビュー記事：質問と回答の形式で、インタビュー対象者の発言を中心に構成します。',
+  BUSINESS_REPORT: '商談レポート：商談の内容を報告書形式でまとめます。',
+  INTERNAL_INTERVIEW: '社内インタビュー：社内メンバーへのインタビューを記事形式でまとめます。',
+  CASE_STUDY: '事例取材記事：「使用感はどうでしたか」などの質問に対する回答を事例としてまとめます。',
+}
+
+// 表示形式の説明
+const displayFormatDescriptions: Record<DisplayFormat, string> = {
+  QA: 'Q&A形式：質問と回答を明確に分けて表示します。\n例：\nQ: 質問内容\nA: 回答内容',
+  MONOLOGUE: '一人で喋っている形式：回答者の発言を自然な文章として連続して表示します。\n例：\n「回答者の発言が自然な文章として続きます。質問への回答が含まれています。」',
+}
+
 // 記事ドラフトを生成
-export async function generateDraft(transcription: string, outline: string, tone: string = 'friendly'): Promise<string> {
+export async function generateDraft(
+  transcription: string,
+  outline: string,
+  tone: string = 'friendly',
+  articleType: ArticleType = 'INTERVIEW',
+  displayFormat: DisplayFormat = 'QA'
+): Promise<string> {
+  const articleTypeDesc = articleTypeDescriptions[articleType]
+  const displayFormatDesc = displayFormatDescriptions[displayFormat]
+
   const prompt = `
-以下の文字起こしテキストと構成案を基に、完成度の高いインタビュー記事のドラフトを作成してください。
+以下の文字起こしテキストと構成案を基に、完成度の高い記事のドラフトを作成してください。
+
+【記事タイプ】
+${articleTypeDesc}
+
+【表示形式】
+${displayFormatDesc}
 
 【構成案】
 ${outline}
@@ -132,8 +165,10 @@ ${tone}
 以下の形式で記事を作成してください：
 - リード文（300文字程度）
 - 本文（各見出しごとに段落を構成）
+- ${displayFormat === 'QA' ? '質問と回答を明確に分けて表示（Q: 質問、A: 回答の形式）' : '回答者の発言を自然な文章として連続して表示'}
 - 引用は「」で囲む
 - 読みやすく、自然な日本語で
+- ビジネス向けで、セールスマーケティング的で、見やすく、先進的でおしゃれな表現を心がける
 
 記事全体で3000〜5000文字程度を目安にしてください。
 `

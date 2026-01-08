@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { projectId } = body
+    const { projectId, articleType, displayFormat } = body
 
     if (!projectId) {
       return NextResponse.json({ error: 'Missing projectId' }, { status: 400 })
@@ -47,8 +47,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No transcription found' }, { status: 400 })
     }
 
+    // 記事タイプと表示形式のデフォルト値
+    const articleType = (articleType as string) || 'INTERVIEW'
+    const displayFormat = (displayFormat as string) || 'QA'
+
     // 記事ドラフト生成
-    const draftContent = await generateDraft(transcriptionText, project.outline, project.tone || 'friendly')
+    const draftContent = await generateDraft(
+      transcriptionText,
+      project.outline,
+      project.tone || 'friendly',
+      articleType as any,
+      displayFormat as any
+    )
 
     // 文字数カウント
     const wordCount = draftContent.length
@@ -63,6 +73,8 @@ export async function POST(request: NextRequest) {
         wordCount,
         readingTime,
         status: 'DRAFT',
+        articleType,
+        displayFormat,
       },
     })
 

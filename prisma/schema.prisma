@@ -719,6 +719,10 @@ model InterviewDraft {
   lead          String?  @db.Text  // リード文
   content       String   @db.Text  // 本文
   
+  // 記事タイプと表示形式
+  articleType   String?  // INTERVIEW | BUSINESS_REPORT | INTERNAL_INTERVIEW | CASE_STUDY
+  displayFormat String?  // QA | MONOLOGUE (Q&A形式 or 一人で喋っている形式)
+  
   // 構成
   structure     Json?    // [{heading: string, summary: string, quotes: string[], content: string}]
   

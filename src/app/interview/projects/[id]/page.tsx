@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight, Settings, RefreshCw, MessageSquare, FileEdit, Users, Briefcase } from 'lucide-react'
 import Link from 'next/link'
+
+type ArticleType = 'INTERVIEW' | 'BUSINESS_REPORT' | 'INTERNAL_INTERVIEW' | 'CASE_STUDY'
+type DisplayFormat = 'QA' | 'MONOLOGUE'
 
 export default function InterviewProjectDetailPage() {
   const params = useParams()
@@ -14,6 +17,9 @@ export default function InterviewProjectDetailPage() {
   const [processing, setProcessing] = useState(false)
   const [processingStep, setProcessingStep] = useState<string>('')
   const [activeTab, setActiveTab] = useState<'overview' | 'materials' | 'transcription' | 'draft' | 'review'>('overview')
+  const [showArticleTypeSelector, setShowArticleTypeSelector] = useState(false)
+  const [selectedArticleType, setSelectedArticleType] = useState<ArticleType>('INTERVIEW')
+  const [selectedDisplayFormat, setSelectedDisplayFormat] = useState<DisplayFormat>('QA')
 
   const fetchProject = async () => {
     try {
@@ -34,8 +40,11 @@ export default function InterviewProjectDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
-  const handleGenerateArticle = async () => {
+  const handleGenerateArticle = async (articleType?: ArticleType, displayFormat?: DisplayFormat) => {
     if (!project) return
+
+    const finalArticleType = articleType || selectedArticleType
+    const finalDisplayFormat = displayFormat || selectedDisplayFormat
 
     setProcessing(true)
     try {
@@ -56,12 +65,17 @@ export default function InterviewProjectDetailPage() {
       const draftRes = await fetch('/api/interview/draft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId }),
+        body: JSON.stringify({
+          projectId,
+          articleType: finalArticleType,
+          displayFormat: finalDisplayFormat,
+        }),
       })
       if (!draftRes.ok) throw new Error('記事生成に失敗しました')
 
       await fetchProject() // 再取得
       setActiveTab('draft')
+      setShowArticleTypeSelector(false)
     } catch (error) {
       console.error('Failed to generate article:', error)
       alert(`エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`)
@@ -69,6 +83,10 @@ export default function InterviewProjectDetailPage() {
       setProcessing(false)
       setProcessingStep('')
     }
+  }
+
+  const handleRegenerateArticle = async () => {
+    setShowArticleTypeSelector(true)
   }
 
   if (loading) {
@@ -128,22 +146,142 @@ export default function InterviewProjectDetailPage() {
         ))}
       </div>
 
+      {/* 記事タイプ選択モーダル */}
+      <AnimatePresence>
+        {showArticleTypeSelector && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setShowArticleTypeSelector(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="p-8">
+                <h2 className="text-3xl font-black text-slate-900 mb-2">記事タイプを選択</h2>
+                <p className="text-slate-600 mb-8">記事の形式と表示スタイルを選択してください</p>
+
+                {/* 記事タイプ選択 */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <FileEdit className="w-5 h-5" />
+                    記事タイプ
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { type: 'INTERVIEW' as ArticleType, label: 'インタビュー記事', icon: MessageSquare, desc: '質問と回答の形式で構成' },
+                      { type: 'BUSINESS_REPORT' as ArticleType, label: '商談レポート', icon: Briefcase, desc: '商談内容を報告書形式で' },
+                      { type: 'INTERNAL_INTERVIEW' as ArticleType, label: '社内インタビュー', icon: Users, desc: '社内メンバーへのインタビュー' },
+                      { type: 'CASE_STUDY' as ArticleType, label: '事例取材記事', icon: FileText, desc: '使用感などの事例としてまとめる' },
+                    ].map((item) => (
+                      <motion.button
+                        key={item.type}
+                        onClick={() => setSelectedArticleType(item.type)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`p-6 rounded-2xl border-2 transition-all text-left ${
+                          selectedArticleType === item.type
+                            ? 'border-orange-500 bg-orange-50 shadow-lg'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <item.icon className={`w-8 h-8 mb-3 ${selectedArticleType === item.type ? 'text-orange-600' : 'text-slate-400'}`} />
+                        <h4 className="font-black text-slate-900 mb-1">{item.label}</h4>
+                        <p className="text-sm text-slate-600">{item.desc}</p>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 表示形式選択 */}
+                <div className="mb-8">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                    <Settings className="w-5 h-5" />
+                    表示形式
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { format: 'QA' as DisplayFormat, label: 'Q&A形式', desc: '質問と回答を明確に分けて表示' },
+                      { format: 'MONOLOGUE' as DisplayFormat, label: '一人で喋っている形式', desc: '回答者の発言を自然な文章として連続表示' },
+                    ].map((item) => (
+                      <motion.button
+                        key={item.format}
+                        onClick={() => setSelectedDisplayFormat(item.format)}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className={`p-6 rounded-2xl border-2 transition-all text-left ${
+                          selectedDisplayFormat === item.format
+                            ? 'border-purple-500 bg-purple-50 shadow-lg'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <h4 className="font-black text-slate-900 mb-1">{item.label}</h4>
+                        <p className="text-sm text-slate-600">{item.desc}</p>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* アクションボタン */}
+                <div className="flex gap-4 justify-end">
+                  <button
+                    onClick={() => setShowArticleTypeSelector(false)}
+                    className="px-6 py-3 text-slate-600 font-bold rounded-xl hover:bg-slate-100 transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  <motion.button
+                    onClick={() => handleGenerateArticle()}
+                    disabled={processing}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {processing ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        {processingStep}
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-5 h-5" />
+                        記事を生成する
+                        <ArrowRight className="w-5 h-5" />
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* アクションボタン（素材がある場合） */}
-      {project.materials && project.materials.length > 0 && !project.drafts?.length && (
+      {project.materials && project.materials.length > 0 && project.transcriptions && project.transcriptions.length > 0 && !project.drafts?.length && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-6 bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl border-2 border-orange-200 shadow-lg"
+          className="mb-6 p-8 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-50 rounded-3xl border-2 border-orange-200 shadow-xl"
         >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xl font-black text-orange-900 mb-2">記事を生成しましょう</h3>
-              <p className="text-orange-700">
-                アップロードした素材から自動で記事を生成します
+              <h3 className="text-2xl font-black text-orange-900 mb-2 flex items-center gap-2">
+                <Sparkles className="w-6 h-6" />
+                記事を生成しましょう
+              </h3>
+              <p className="text-orange-700 font-medium">
+                文字起こしが完了しました。記事タイプと表示形式を選択して記事を生成します
               </p>
             </div>
             <motion.button
-              onClick={handleGenerateArticle}
+              onClick={() => setShowArticleTypeSelector(true)}
               disabled={processing}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -235,54 +373,183 @@ export default function InterviewProjectDetailPage() {
 
         {activeTab === 'transcription' && (
           <div>
-            <h3 className="text-lg font-black text-slate-900 mb-4">文字起こし</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-black text-slate-900">文字起こし</h3>
+              {project.transcriptions && project.transcriptions.length > 0 && !project.drafts?.length && (
+                <motion.button
+                  onClick={() => setShowArticleTypeSelector(true)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-2"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  記事を生成する
+                  <ArrowRight className="w-5 h-5" />
+                </motion.button>
+              )}
+            </div>
             {project.transcriptions?.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {project.transcriptions.map((transcription: any) => (
-                  <div key={transcription.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                    <p className="text-sm text-slate-600 mb-2">
-                      {transcription.provider || 'manual'} • {transcription.text.length}文字
-                    </p>
-                    <p className="text-slate-700 whitespace-pre-wrap">{transcription.text}</p>
-                  </div>
+                  <motion.div
+                    key={transcription.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-8 bg-gradient-to-br from-white to-slate-50 rounded-3xl border-2 border-slate-200 shadow-xl"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-black rounded-full">
+                          {transcription.provider || 'manual'}
+                        </span>
+                        <span className="text-sm text-slate-600 font-medium">
+                          {transcription.text.length.toLocaleString()}文字
+                        </span>
+                      </div>
+                    </div>
+                    <div className="prose prose-slate max-w-none">
+                      <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-base">
+                        {transcription.text}
+                      </p>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
-              <p className="text-slate-600">文字起こしがありません</p>
+              <div className="text-center py-16">
+                <FileText className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-600 text-lg font-medium">文字起こしがありません</p>
+              </div>
             )}
           </div>
         )}
 
         {activeTab === 'draft' && (
           <div>
-            <h3 className="text-lg font-black text-slate-900 mb-4">記事ドラフト</h3>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-black text-slate-900">記事ドラフト</h3>
+              {project.drafts?.length > 0 && project.transcriptions && project.transcriptions.length > 0 && (
+                <motion.button
+                  onClick={handleRegenerateArticle}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white font-black rounded-xl shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 transition-all inline-flex items-center gap-2"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  別の形式で再生成
+                </motion.button>
+              )}
+            </div>
             {project.drafts?.length > 0 ? (
-              <div className="space-y-4">
-                {project.drafts.map((draft: any) => (
-                  <div key={draft.id} className="p-6 bg-slate-50 rounded-xl border border-slate-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <h4 className="font-black text-slate-900">{draft.title || '無題'}</h4>
-                        <p className="text-sm text-slate-600">
-                          バージョン {draft.version} • {draft.wordCount || 0}文字 • 読了時間 {draft.readingTime || 0}分
-                        </p>
+              <div className="space-y-6">
+                {project.drafts.map((draft: any) => {
+                  const articleTypeLabels: Record<string, string> = {
+                    INTERVIEW: 'インタビュー記事',
+                    BUSINESS_REPORT: '商談レポート',
+                    INTERNAL_INTERVIEW: '社内インタビュー',
+                    CASE_STUDY: '事例取材記事',
+                  }
+                  const displayFormatLabels: Record<string, string> = {
+                    QA: 'Q&A形式',
+                    MONOLOGUE: '一人で喋っている形式',
+                  }
+
+                  return (
+                    <motion.div
+                      key={draft.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-8 bg-gradient-to-br from-white to-slate-50 rounded-3xl border-2 border-slate-200 shadow-xl"
+                    >
+                      <div className="flex items-start justify-between mb-6">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-3">
+                            <h4 className="text-2xl font-black text-slate-900">{draft.title || '無題'}</h4>
+                            {draft.articleType && (
+                              <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-black rounded-full">
+                                {articleTypeLabels[draft.articleType] || draft.articleType}
+                              </span>
+                            )}
+                            {draft.displayFormat && (
+                              <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-black rounded-full">
+                                {displayFormatLabels[draft.displayFormat] || draft.displayFormat}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-slate-600">
+                            <span className="flex items-center gap-1">
+                              <FileText className="w-4 h-4" />
+                              バージョン {draft.version}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <span className="font-bold">{draft.wordCount || 0}</span>文字
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              読了時間 {draft.readingTime || 0}分
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            エクスポート
+                          </motion.button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button className="px-4 py-2 bg-orange-500 text-white font-bold rounded-lg hover:bg-orange-600 transition-colors">
-                          <Download className="w-4 h-4 inline mr-2" />
-                          エクスポート
-                        </button>
+                      {draft.lead && (
+                        <div className="mb-6 p-6 bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl border-l-4 border-orange-500">
+                          <p className="text-lg font-bold text-slate-800 leading-relaxed">{draft.lead}</p>
+                        </div>
+                      )}
+                      <div className="prose prose-slate max-w-none">
+                        <div className="text-slate-700 whitespace-pre-wrap leading-relaxed text-base">
+                          {draft.content.split('\n').map((line: string, idx: number) => {
+                            // Q&A形式の場合は、Q: と A: をスタイリング
+                            if (draft.displayFormat === 'QA') {
+                              if (line.startsWith('Q:') || line.startsWith('Q：')) {
+                                return (
+                                  <div key={idx} className="mb-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
+                                    <p className="font-black text-blue-900 mb-2">{line}</p>
+                                  </div>
+                                )
+                              }
+                              if (line.startsWith('A:') || line.startsWith('A：')) {
+                                return (
+                                  <div key={idx} className="mb-6 p-4 bg-slate-50 rounded-xl border-l-4 border-slate-400">
+                                    <p className="text-slate-800 leading-relaxed">{line}</p>
+                                  </div>
+                                )
+                              }
+                            }
+                            return <p key={idx} className="mb-4 leading-relaxed">{line || '\u00A0'}</p>
+                          })}
+                        </div>
                       </div>
-                    </div>
-                    {draft.lead && (
-                      <p className="text-lg font-bold text-slate-700 mb-4">{draft.lead}</p>
-                    )}
-                    <div className="text-slate-700 whitespace-pre-wrap">{draft.content}</div>
-                  </div>
-                ))}
+                    </motion.div>
+                  )
+                })}
               </div>
             ) : (
-              <p className="text-slate-600">ドラフトがありません</p>
+              <div className="text-center py-16">
+                <Sparkles className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-600 text-lg font-medium">ドラフトがありません</p>
+                {project.transcriptions && project.transcriptions.length > 0 && (
+                  <motion.button
+                    onClick={() => setShowArticleTypeSelector(true)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="mt-6 px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-2"
+                  >
+                    <Zap className="w-5 h-5" />
+                    記事を生成する
+                  </motion.button>
+                )}
+              </div>
             )}
           </div>
         )}
