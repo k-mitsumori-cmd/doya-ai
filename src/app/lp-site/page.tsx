@@ -439,28 +439,28 @@ function LpSitePageInner() {
         allowBackgroundView={!!result} // 結果がある場合は背景を表示可能に
       />
 
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="mb-8"
+          className="mb-6 sm:mb-8"
         >
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-3">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.1, duration: 0.3 }}
-              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-teal-500/30"
+              className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-teal-500/30 flex-shrink-0"
             >
-              <Globe className="w-8 h-8 text-white" />
+              <Globe className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
             </motion.div>
-            <div className="flex-1">
-              <h1 className="text-4xl font-black bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">
                 ドヤサイト
               </h1>
-              <p className="text-slate-600 mt-1 text-sm">
+              <p className="text-slate-600 mt-1 text-xs sm:text-sm">
                 商品URLまたは商品情報を入力するだけで、LP構成案・ワイヤーフレーム・画像を自動生成
               </p>
             </div>
@@ -760,51 +760,54 @@ function LpSitePageInner() {
               </div>
             )}
             {/* Device Toggle */}
-            <div className="bg-white rounded-2xl shadow-lg p-4">
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-bold text-slate-700">表示:</span>
-                <button
-                  onClick={() => setSelectedDevice('pc')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
-                    selectedDevice === 'pc'
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  <Monitor className="w-4 h-4" />
-                  PC
-                </button>
-                <button
-                  onClick={() => setSelectedDevice('sp')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
-                    selectedDevice === 'sp'
-                      ? 'bg-teal-500 text-white'
-                      : 'bg-slate-100 text-slate-700'
-                  }`}
-                >
-                  <Smartphone className="w-4 h-4" />
-                  スマホ
-                </button>
-                <div className="flex-1" />
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+                  <span className="text-xs sm:text-sm font-bold text-slate-700 whitespace-nowrap">表示:</span>
+                  <button
+                    onClick={() => setSelectedDevice('pc')}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                      selectedDevice === 'pc'
+                        ? 'bg-teal-500 text-white'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    <Monitor className="w-4 h-4" />
+                    PC
+                  </button>
+                  <button
+                    onClick={() => setSelectedDevice('sp')}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
+                      selectedDevice === 'sp'
+                        ? 'bg-teal-500 text-white'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    スマホ
+                  </button>
+                </div>
+                <div className="flex-1 hidden sm:block" />
                 <button
                   onClick={() => handleDownload(selectedDevice === 'pc' ? 'all_pc' : 'all_sp')}
-                  className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-colors"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap"
                 >
                   <Download className="w-4 h-4" />
-                  全体ZIPダウンロード
+                  <span className="hidden sm:inline">全体ZIPダウンロード</span>
+                  <span className="sm:hidden">ZIPダウンロード</span>
                 </button>
               </div>
             </div>
 
             {/* LP全体プレビュー（縦につなげた形） */}
             {result.images.some(img => selectedDevice === 'pc' ? img.image_pc : img.image_sp) && (
-              <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <Layout className="w-6 h-6 text-teal-600" />
-                    LP全体画像（{selectedDevice === 'pc' ? 'PC' : 'スマホ'}版）
+              <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mb-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <Layout className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600" />
+                    <span className="text-sm sm:text-base">LP全体画像（{selectedDevice === 'pc' ? 'PC' : 'スマホ'}版）</span>
                   </h3>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
                     <button
                       onClick={async () => {
                         setIsCombining(true)
@@ -832,17 +835,17 @@ function LpSitePageInner() {
                         }
                       }}
                       disabled={isCombining}
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg font-bold hover:from-teal-600 hover:to-cyan-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg text-xs sm:text-sm font-bold hover:from-teal-600 hover:to-cyan-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-initial"
                     >
                       {isCombining ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          生成中...
+                          <span className="whitespace-nowrap">生成中...</span>
                         </>
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4" />
-                          LP全体画像を生成
+                          <span className="whitespace-nowrap">LP全体画像を生成</span>
                         </>
                       )}
                     </button>
@@ -910,12 +913,12 @@ function LpSitePageInner() {
             )}
 
             {/* ワイヤーフレーム表示（3段グリッド） */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Layout className="w-6 h-6 text-teal-600" />
-                ワイヤーフレーム構成（{selectedDevice === 'pc' ? 'PC' : 'スマホ'}版）
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mb-6">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Layout className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600" />
+                <span className="text-sm sm:text-base">ワイヤーフレーム構成（{selectedDevice === 'pc' ? 'PC' : 'スマホ'}版）</span>
               </h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {result.sections.map((section, index) => {
                   const wireframe = result.wireframes.find(w => w.section_id === section.section_id)
                   const wireframeData = selectedDevice === 'pc' ? wireframe?.pc : wireframe?.sp
@@ -926,21 +929,21 @@ function LpSitePageInner() {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.05 }}
-                      className="border-2 border-slate-300 rounded-xl p-4 bg-gradient-to-br from-slate-50 to-white hover:border-teal-400 hover:shadow-md transition-all"
+                      className="border-2 border-slate-300 rounded-xl p-3 sm:p-4 bg-gradient-to-br from-slate-50 to-white hover:border-teal-400 hover:shadow-md transition-all"
                     >
-                      <div className="text-center mb-3">
-                        <div className="inline-block px-3 py-1 bg-teal-100 text-teal-700 text-xs font-bold rounded-full mb-2">
+                      <div className="text-center mb-2 sm:mb-3">
+                        <div className="inline-block px-2 sm:px-3 py-1 bg-teal-100 text-teal-700 text-xs font-bold rounded-full mb-2">
                           {index + 1}
                         </div>
-                        <h4 className="text-sm font-bold text-slate-900 line-clamp-2">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-2">
                           {section.headline}
                         </h4>
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-1">
+                        <p className="text-[10px] sm:text-xs text-slate-500 mt-1 line-clamp-1">
                           {section.purpose}
                         </p>
                       </div>
                       {wireframeData && (
-                        <div className="bg-white rounded-lg p-2 border border-slate-200 min-h-[120px] flex items-center justify-center">
+                        <div className="bg-white rounded-lg p-2 border border-slate-200 min-h-[100px] sm:min-h-[120px] flex items-center justify-center">
                           <div className="text-xs text-slate-400 text-center">
                             <Layout className="w-8 h-8 mx-auto mb-1 opacity-50" />
                             <div>ワイヤーフレーム</div>
@@ -967,23 +970,23 @@ function LpSitePageInner() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-white rounded-2xl shadow-lg p-6 border-2 border-slate-200"
+                    className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 border-2 border-slate-200"
                   >
                     <div className="mb-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-black text-lg">
+                      <div className="flex items-start gap-2 sm:gap-3 mb-2">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-black text-base sm:text-lg flex-shrink-0">
                           {index + 1}
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-slate-900 mb-1">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base sm:text-lg md:text-xl font-bold text-slate-900 mb-1 break-words">
                             {section.headline}
                           </h3>
                           {section.sub_headline && (
-                            <p className="text-slate-600">{section.sub_headline}</p>
+                            <p className="text-xs sm:text-sm text-slate-600 break-words">{section.sub_headline}</p>
                           )}
                         </div>
                       </div>
-                      <p className="text-sm text-slate-500 mt-2 pl-13">
+                      <p className="text-xs sm:text-sm text-slate-500 mt-2 pl-0 sm:pl-13">
                         {section.purpose}
                       </p>
                     </div>
@@ -1023,33 +1026,33 @@ function LpSitePageInner() {
                       </motion.div>
                     )}
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       {section.image_required && (
                         <>
                           <button
                             onClick={() => handleRegenerateSection(section.section_id, selectedDevice === 'pc' ? 'image_pc' : 'image_sp')}
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-semibold hover:bg-slate-200 transition-colors"
+                            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-slate-200 transition-colors"
                           >
                             <RefreshCw className="w-4 h-4" />
-                            画像を再生成
+                            <span className="whitespace-nowrap">画像を再生成</span>
                           </button>
                           {imageData && (
                             <button
                               onClick={() => handleDownload('single', section.section_id, imageData)}
-                              className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg font-semibold hover:bg-teal-600 transition-colors"
+                              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-teal-500 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-teal-600 transition-colors"
                             >
                               <Download className="w-4 h-4" />
-                              画像をダウンロード
+                              <span className="whitespace-nowrap">画像をダウンロード</span>
                             </button>
                           )}
                         </>
                       )}
                       <button
                         onClick={() => handleDownload('section', section.section_id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-semibold hover:bg-slate-200 transition-colors"
+                        className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-slate-200 transition-colors"
                       >
                         <Download className="w-4 h-4" />
-                        セクションZIP
+                        <span className="whitespace-nowrap">セクションZIP</span>
                       </button>
                     </div>
                   </motion.div>
