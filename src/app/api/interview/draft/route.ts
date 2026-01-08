@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { projectId, articleType, displayFormat } = body
+    const { projectId, articleType: requestedArticleType, displayFormat: requestedDisplayFormat } = body
 
     if (!projectId) {
       return NextResponse.json({ error: 'Missing projectId' }, { status: 400 })
@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 記事タイプと表示形式のデフォルト値
-    const articleType = (articleType as string) || 'INTERVIEW'
-    const displayFormat = (displayFormat as string) || 'QA'
+    const articleType = (requestedArticleType as string) || 'INTERVIEW'
+    const displayFormat = (requestedDisplayFormat as string) || 'QA'
 
     // 記事ドラフト生成
     const draftContent = await generateDraft(
