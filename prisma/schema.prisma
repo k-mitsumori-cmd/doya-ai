@@ -610,6 +610,7 @@ model InterviewRecipe {
 
   @@index([userId, createdAt])
   @@index([category, isTemplate])
+  @@map("interview_recipe")
 }
 
 model InterviewMaterial {
@@ -645,6 +646,7 @@ model InterviewMaterial {
   updatedAt     DateTime @updatedAt
 
   @@index([projectId, createdAt])
+  @@map("interview_material")
 }
 
 model InterviewTranscription {
@@ -673,6 +675,7 @@ model InterviewTranscription {
   updatedAt     DateTime @updatedAt
 
   @@index([projectId, createdAt])
+  @@map("interview_transcription")
 }
 
 model InterviewReview {
@@ -700,6 +703,7 @@ model InterviewReview {
   createdAt     DateTime @default(now())
 
   @@index([projectId, createdAt])
+  @@map("interview_review")
 }
 
 model InterviewDraft {
@@ -737,4 +741,5 @@ model InterviewDraft {
 
   @@index([projectId, createdAt])
   @@index([projectId, version])
+  @@map("interview_draft")
 }
