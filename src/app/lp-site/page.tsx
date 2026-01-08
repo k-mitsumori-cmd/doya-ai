@@ -481,11 +481,11 @@ function LpSitePageInner() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            className="bg-white rounded-3xl shadow-xl border border-slate-200/50 p-6 md:p-8 relative overflow-hidden"
+            className="bg-white rounded-3xl shadow-xl border border-slate-200/50 p-4 sm:p-6 md:p-8 relative overflow-hidden"
           >
             {/* 装飾的な背景 */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-teal-100/20 to-cyan-100/20 rounded-full blur-3xl -mr-48 -mt-48 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-100/20 to-purple-100/20 rounded-full blur-3xl -ml-48 -mb-48 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-br from-teal-100/20 to-cyan-100/20 rounded-full blur-3xl -mr-32 sm:-mr-48 -mt-32 sm:-mt-48 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 sm:w-96 sm:h-96 bg-gradient-to-tr from-blue-100/20 to-purple-100/20 rounded-full blur-3xl -ml-32 sm:-ml-48 -mb-32 sm:-mb-48 pointer-events-none" />
             <div className="relative z-10">
             {/* Input Type Selection */}
             <motion.div
