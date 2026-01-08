@@ -138,6 +138,9 @@ export default function InterviewPage() {
   const uploadFileInChunks = async (file: File, projectId: string, guestId: string | null) => {
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE)
     let uploadedChunks = 0
+    let lastResult: any = null
+
+    console.log(`[CHUNK] Starting chunk upload: ${totalChunks} chunks, file size: ${file.size} bytes`)
 
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
       const start = chunkIndex * CHUNK_SIZE
@@ -155,9 +158,12 @@ export default function InterviewPage() {
 
       let retryCount = 0
       const maxRetries = 3
+      let chunkUploaded = false
 
-      while (retryCount < maxRetries) {
+      while (retryCount < maxRetries && !chunkUploaded) {
         try {
+          console.log(`[CHUNK] Uploading chunk ${chunkIndex + 1}/${totalChunks} (attempt ${retryCount + 1}/${maxRetries})`)
+          
           const response = await fetch('/api/interview/materials/upload-chunk', {
             method: 'POST',
             headers: {
@@ -168,10 +174,15 @@ export default function InterviewPage() {
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.error || `チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました`)
+            const errorMsg = errorData.error || `チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました`
+            const errorDetails = errorData.details || ''
+            throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
           }
 
           const result = await response.json()
+          lastResult = result
+
+          console.log(`[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} uploaded. Completed: ${result.completed}, Progress: ${result.uploadedChunks || uploadedChunks + 1}/${result.totalChunks || totalChunks}`)
 
           // 進捗を更新
           uploadedChunks++
@@ -180,23 +191,58 @@ export default function InterviewPage() {
 
           // すべてのチャンクがアップロード完了
           if (result.completed && result.material) {
+            console.log(`[CHUNK] All chunks uploaded successfully. Material ID: ${result.material.id}`)
             return result
           }
 
-          // 次のチャンクへ
-          break
+          // チャンクのアップロード成功
+          chunkUploaded = true
         } catch (error) {
           retryCount++
+          console.error(`[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} upload failed (attempt ${retryCount}/${maxRetries}):`, error)
+          
           if (retryCount >= maxRetries) {
-            throw new Error(`チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました（${maxRetries}回リトライしました）: ${error instanceof Error ? error.message : '不明なエラー'}`)
+            const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+            throw new Error(`チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました（${maxRetries}回リトライしました）\n${errorMessage}`)
           }
           // リトライ前に少し待機
           await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
         }
       }
+
+      if (!chunkUploaded) {
+        throw new Error(`チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました`)
+      }
     }
 
-    throw new Error('ファイルのアップロードが完了しませんでした')
+    // すべてのチャンクをアップロードしたが、完了レスポンスが返ってこなかった場合
+    // 最後のレスポンスを確認
+    if (lastResult && lastResult.completed && lastResult.material) {
+      console.log(`[CHUNK] Upload completed from last result. Material ID: ${lastResult.material.id}`)
+      return lastResult
+    }
+
+    // 最終確認: サーバーに問い合わせ
+    console.log(`[CHUNK] All chunks uploaded, but no completion response. Checking server status...`)
+    try {
+      const checkResponse = await fetch(`/api/interview/materials/upload-chunk?projectId=${projectId}&fileName=${encodeURIComponent(file.name)}`, {
+        method: 'GET',
+        headers: {
+          ...(guestId ? { 'x-guest-id': guestId } : {}),
+        },
+      })
+      
+      if (checkResponse.ok) {
+        const checkResult = await checkResponse.json()
+        if (checkResult.completed && checkResult.material) {
+          return checkResult
+        }
+      }
+    } catch (checkError) {
+      console.error('[CHUNK] Failed to check upload status:', checkError)
+    }
+
+    throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\nサーバー側でファイルの結合が完了していない可能性があります。`)
   }
 
   const handleFileSelect = async (file: File) => {

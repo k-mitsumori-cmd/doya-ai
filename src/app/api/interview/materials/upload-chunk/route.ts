@@ -95,6 +95,8 @@ export async function POST(request: NextRequest) {
       const buffer = Buffer.from(bytes)
       await writeFile(chunkFilePath, buffer)
 
+      console.log(`[INTERVIEW] Chunk ${chunkIndex + 1}/${totalChunks} saved: ${chunkFilePath}`)
+
       // すべてのチャンクがアップロードされたか確認
       const uploadedChunks: number[] = []
       for (let i = 0; i < totalChunks; i++) {
@@ -104,8 +106,11 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      console.log(`[INTERVIEW] Uploaded chunks: ${uploadedChunks.length}/${totalChunks}`, uploadedChunks)
+
       // すべてのチャンクが揃った場合、ファイルを結合
       if (uploadedChunks.length === totalChunks) {
+        console.log(`[INTERVIEW] All chunks received. Starting file merge...`)
         const finalDir = join(baseDir, projectId)
         if (!existsSync(finalDir)) {
           await mkdir(finalDir, { recursive: true })
@@ -181,6 +186,8 @@ export async function POST(request: NextRequest) {
           throw dbError
         }
 
+        console.log(`[INTERVIEW] File merge completed. Material ID: ${material.id}`)
+        
         return NextResponse.json({
           completed: true,
           material,
