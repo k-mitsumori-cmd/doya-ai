@@ -63,12 +63,39 @@ export async function POST(request: NextRequest) {
     }
 
     // プロジェクトの所有権確認
-    const project = await prisma.interviewProject.findFirst({
-      where: {
-        id: projectId,
-        OR: [{ userId: userId || undefined }, { guestId: guestId || undefined }],
-      },
-    })
+    let project
+    try {
+      project = await prisma.interviewProject.findFirst({
+        where: {
+          id: projectId,
+          OR: [{ userId: userId || undefined }, { guestId: guestId || undefined }],
+        },
+      })
+    } catch (dbError) {
+      console.error('[INTERVIEW] Database query error:', dbError)
+      // Prismaエラーコードの判定
+      if (dbError && typeof dbError === 'object' && 'code' in dbError) {
+        const prismaError = dbError as { code: string }
+        if (prismaError.code === 'P2021') {
+          return NextResponse.json(
+            {
+              error: 'データベースのテーブルが存在しません',
+              details: 'データベースのマイグレーションが必要です。管理者にお問い合わせください。',
+            },
+            { status: 503 }
+          )
+        } else if (prismaError.code === 'P1001' || prismaError.code === 'P1017') {
+          return NextResponse.json(
+            {
+              error: 'データベースに接続できません',
+              details: 'データベースサーバーに接続できませんでした。しばらくしてから再度お試しください。',
+            },
+            { status: 503 }
+          )
+        }
+      }
+      throw dbError
+    }
 
     if (!project) {
       return NextResponse.json(
