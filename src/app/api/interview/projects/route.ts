@@ -121,9 +121,11 @@ export async function POST(request: NextRequest) {
       
       if (prismaError.code === 'P2021') {
         // テーブルが存在しない
-        details = 'データベースのテーブルが存在しません。データベースのマイグレーションが必要です。'
+        details = 'データベースのテーブルが存在しません。\n\nこの問題を解決するには：\n1. Vercelのビルドログで「[db-push]」で始まるログを確認してください\n2. データベース接続（DATABASE_URL）が正しく設定されているか確認してください\n3. データベースへの接続権限があるか確認してください\n4. 必要に応じて、データベース管理者に連絡してください\n\nテーブル名: interview_project'
         statusCode = 503 // Service Unavailable
         console.error('[INTERVIEW] Database table missing. Migration required.')
+        console.error('[INTERVIEW] Table name:', prismaError.meta?.table || 'interview_project')
+        console.error('[INTERVIEW] Model name:', prismaError.meta?.modelName || 'InterviewProject')
       } else if (prismaError.code === 'P2002') {
         details = 'データベースの制約違反が発生しました。同じデータが既に存在する可能性があります。'
       } else if (prismaError.code === 'P2003') {
