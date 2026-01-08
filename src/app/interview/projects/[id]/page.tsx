@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight, Settings, RefreshCw, MessageSquare, FileEdit, Users, Briefcase } from 'lucide-react'
+import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight, Settings, RefreshCw, MessageSquare, FileEdit, Users, Briefcase, Edit, Save, X, FileDown, FileCode, FileType } from 'lucide-react'
 import Link from 'next/link'
 
 type ArticleType = 'INTERVIEW' | 'BUSINESS_REPORT' | 'INTERNAL_INTERVIEW' | 'CASE_STUDY'
@@ -20,6 +20,9 @@ export default function InterviewProjectDetailPage() {
   const [showArticleTypeSelector, setShowArticleTypeSelector] = useState(false)
   const [selectedArticleType, setSelectedArticleType] = useState<ArticleType>('INTERVIEW')
   const [selectedDisplayFormat, setSelectedDisplayFormat] = useState<DisplayFormat>('QA')
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
+  const [editedContent, setEditedContent] = useState<string>('')
+  const [showExportMenu, setShowExportMenu] = useState<string | null>(null)
 
   const fetchProject = async () => {
     try {
@@ -89,6 +92,101 @@ export default function InterviewProjectDetailPage() {
     setShowArticleTypeSelector(true)
   }
 
+  const handleExport = (draft: any, format: 'markdown' | 'html' | 'txt') => {
+    let content = ''
+    let filename = ''
+    let mimeType = ''
+
+    if (format === 'markdown') {
+      content = `# ${draft.title || '無題'}\n\n${draft.lead ? `> ${draft.lead}\n\n` : ''}${draft.content}`
+      filename = `${draft.title || 'article'}-${Date.now()}.md`
+      mimeType = 'text/markdown'
+    } else if (format === 'html') {
+      content = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${draft.title || '無題'}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.8; color: #333; }
+    h1 { color: #f97316; border-bottom: 3px solid #f97316; padding-bottom: 0.5rem; }
+    h2 { color: #ea580c; margin-top: 2rem; }
+    blockquote { border-left: 4px solid #f97316; padding-left: 1rem; margin-left: 0; color: #666; font-style: italic; }
+    p { margin: 1rem 0; }
+    .meta { color: #666; font-size: 0.9rem; margin-bottom: 2rem; }
+  </style>
+</head>
+<body>
+  <h1>${draft.title || '無題'}</h1>
+  <div class="meta">
+    ${draft.wordCount ? `文字数: ${draft.wordCount.toLocaleString()}文字 | ` : ''}
+    ${draft.readingTime ? `読了時間: ${draft.readingTime}分 | ` : ''}
+    バージョン: ${draft.version}
+  </div>
+  ${draft.lead ? `<blockquote>${draft.lead}</blockquote>` : ''}
+  <div>${draft.content.split('\n').map((line: string) => {
+    if (line.startsWith('Q:') || line.startsWith('Q：')) {
+      return `<div style="background: #eff6ff; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border-left: 4px solid #3b82f6;"><strong style="color: #1e40af;">${line}</strong></div>`
+    }
+    if (line.startsWith('A:') || line.startsWith('A：')) {
+      return `<div style="background: #f8fafc; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border-left: 4px solid #64748b;">${line}</div>`
+    }
+    return `<p>${line || '&nbsp;'}</p>`
+  }).join('')}</div>
+</body>
+</html>`
+      filename = `${draft.title || 'article'}-${Date.now()}.html`
+      mimeType = 'text/html'
+    } else {
+      content = `${draft.title || '無題'}\n\n${draft.lead ? `${draft.lead}\n\n` : ''}${draft.content}`
+      filename = `${draft.title || 'article'}-${Date.now()}.txt`
+      mimeType = 'text/plain'
+    }
+
+    const blob = new Blob([content], { type: mimeType })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    setShowExportMenu(null)
+  }
+
+  const handleStartEdit = (draft: any) => {
+    setEditingDraftId(draft.id)
+    setEditedContent(draft.content)
+  }
+
+  const handleSaveEdit = async (draftId: string) => {
+    try {
+      const res = await fetch(`/api/interview/drafts/${draftId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editedContent }),
+      })
+      if (res.ok) {
+        await fetchProject()
+        setEditingDraftId(null)
+        setEditedContent('')
+      } else {
+        const errorData = await res.json().catch(() => ({}))
+        alert(`保存に失敗しました: ${errorData.error || '不明なエラー'}`)
+      }
+    } catch (error) {
+      console.error('Failed to save draft:', error)
+      alert('保存に失敗しました')
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingDraftId(null)
+    setEditedContent('')
+  }
+
   if (loading) {
     return (
       <div className="text-center py-16">
@@ -107,6 +205,19 @@ export default function InterviewProjectDetailPage() {
       </div>
     )
   }
+
+  // エクスポートメニュー外クリックで閉じる
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showExportMenu && !(e.target as Element).closest('.export-menu-container')) {
+        setShowExportMenu(null)
+      }
+    }
+    if (showExportMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showExportMenu])
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -490,15 +601,85 @@ export default function InterviewProjectDetailPage() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-2"
-                          >
-                            <Download className="w-4 h-4" />
-                            エクスポート
-                          </motion.button>
+                        <div className="flex gap-2 relative">
+                          {editingDraftId === draft.id ? (
+                            <>
+                              <motion.button
+                                onClick={() => handleSaveEdit(draft.id)}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-black rounded-xl shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 transition-all inline-flex items-center gap-2"
+                              >
+                                <Save className="w-4 h-4" />
+                                保存
+                              </motion.button>
+                              <motion.button
+                                onClick={handleCancelEdit}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className="px-5 py-2.5 bg-slate-500 text-white font-black rounded-xl hover:bg-slate-600 transition-all inline-flex items-center gap-2"
+                              >
+                                <X className="w-4 h-4" />
+                                キャンセル
+                              </motion.button>
+                            </>
+                          ) : (
+                            <>
+                              <motion.button
+                                onClick={() => handleStartEdit(draft)}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                className="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-black rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all inline-flex items-center gap-2"
+                              >
+                                <Edit className="w-4 h-4" />
+                                編集
+                              </motion.button>
+                              <div className="relative export-menu-container">
+                                <motion.button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setShowExportMenu(showExportMenu === draft.id ? null : draft.id)
+                                  }}
+                                  whileHover={{ scale: 1.05 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-2"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  エクスポート
+                                </motion.button>
+                                {showExportMenu === draft.id && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-2xl border-2 border-slate-200 py-2 z-50 min-w-[200px]"
+                                  >
+                                    <button
+                                      onClick={() => handleExport(draft, 'markdown')}
+                                      className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors flex items-center gap-3"
+                                    >
+                                      <FileCode className="w-5 h-5 text-purple-500" />
+                                      <span className="font-bold text-slate-900">Markdown</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleExport(draft, 'html')}
+                                      className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors flex items-center gap-3"
+                                    >
+                                      <FileType className="w-5 h-5 text-blue-500" />
+                                      <span className="font-bold text-slate-900">HTML</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleExport(draft, 'txt')}
+                                      className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors flex items-center gap-3"
+                                    >
+                                      <FileDown className="w-5 h-5 text-slate-500" />
+                                      <span className="font-bold text-slate-900">テキスト</span>
+                                    </button>
+                                  </motion.div>
+                                )}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                       {draft.lead && (
@@ -506,30 +687,46 @@ export default function InterviewProjectDetailPage() {
                           <p className="text-lg font-bold text-slate-800 leading-relaxed">{draft.lead}</p>
                         </div>
                       )}
-                      <div className="prose prose-slate max-w-none">
-                        <div className="text-slate-700 whitespace-pre-wrap leading-relaxed text-base">
-                          {draft.content.split('\n').map((line: string, idx: number) => {
-                            // Q&A形式の場合は、Q: と A: をスタイリング
-                            if (draft.displayFormat === 'QA') {
-                              if (line.startsWith('Q:') || line.startsWith('Q：')) {
-                                return (
-                                  <div key={idx} className="mb-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
-                                    <p className="font-black text-blue-900 mb-2">{line}</p>
-                                  </div>
-                                )
-                              }
-                              if (line.startsWith('A:') || line.startsWith('A：')) {
-                                return (
-                                  <div key={idx} className="mb-6 p-4 bg-slate-50 rounded-xl border-l-4 border-slate-400">
-                                    <p className="text-slate-800 leading-relaxed">{line}</p>
-                                  </div>
-                                )
-                              }
-                            }
-                            return <p key={idx} className="mb-4 leading-relaxed">{line || '\u00A0'}</p>
-                          })}
+                      {editingDraftId === draft.id ? (
+                        <div className="space-y-4">
+                          <textarea
+                            value={editedContent}
+                            onChange={(e) => setEditedContent(e.target.value)}
+                            className="w-full min-h-[400px] p-6 border-2 border-blue-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-slate-700 leading-relaxed text-base font-medium resize-y"
+                            placeholder="記事の内容を編集..."
+                          />
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <span className="font-bold">{editedContent.length.toLocaleString()}</span>文字
+                            <span className="text-slate-400">|</span>
+                            <span>読了時間: {Math.ceil(editedContent.length / 400)}分</span>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <div className="prose prose-slate max-w-none">
+                          <div className="text-slate-700 whitespace-pre-wrap leading-relaxed text-base">
+                            {draft.content.split('\n').map((line: string, idx: number) => {
+                              // Q&A形式の場合は、Q: と A: をスタイリング
+                              if (draft.displayFormat === 'QA') {
+                                if (line.startsWith('Q:') || line.startsWith('Q：')) {
+                                  return (
+                                    <div key={idx} className="mb-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
+                                      <p className="font-black text-blue-900 mb-2">{line}</p>
+                                    </div>
+                                  )
+                                }
+                                if (line.startsWith('A:') || line.startsWith('A：')) {
+                                  return (
+                                    <div key={idx} className="mb-6 p-4 bg-slate-50 rounded-xl border-l-4 border-slate-400">
+                                      <p className="text-slate-800 leading-relaxed">{line}</p>
+                                    </div>
+                                  )
+                                }
+                              }
+                              return <p key={idx} className="mb-4 leading-relaxed">{line || '\u00A0'}</p>
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )
                 })}
