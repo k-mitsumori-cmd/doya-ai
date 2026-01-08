@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Download, RefreshCw, Monitor, Smartphone, Loader2, Search, Layout, Image as ImageIcon, Package, Globe } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { LpGenerationOverlay } from '@/components/lp-site/LpGenerationOverlay'
-import { PasonaFrameworkView } from '@/components/lp-site/PasonaFrameworkView'
 
 function LpSitePageInner() {
   const [inputType, setInputType] = useState<'url' | 'form'>('url')
@@ -712,35 +711,6 @@ function LpSitePageInner() {
         ) : (
           /* Result Preview */
           <div className="space-y-6">
-            {/* フレームワーク表示ボタン */}
-            <div className="bg-white rounded-2xl shadow-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-1">PASONAフレームワーク</h3>
-                  <p className="text-sm text-slate-600">生成されたLPの構成をフレームワークで確認</p>
-                </div>
-                <button
-                  onClick={() => setShowFramework(!showFramework)}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-xl font-bold hover:from-teal-600 hover:to-cyan-600 transition-all shadow-lg hover:shadow-xl"
-                >
-                  <Layout className="w-5 h-5" />
-                  {showFramework ? 'フレームワークを閉じる' : 'フレームワークを表示'}
-                </button>
-              </div>
-            </div>
-
-            {/* フレームワーク表示 */}
-            {showFramework && result && (
-              <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <PasonaFrameworkView sections={result.sections} />
-              </motion.div>
-            )}
-
             {/* 部分的な結果がある場合の警告 */}
             {partialResult && (
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
