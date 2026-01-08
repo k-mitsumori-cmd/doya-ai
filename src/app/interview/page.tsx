@@ -71,10 +71,12 @@ export default function InterviewPage() {
   const validateFile = (file: File): { valid: boolean; error?: string; details?: string } => {
     // ファイルサイズチェック
     if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
+      const maxSizeMB = (MAX_FILE_SIZE / 1024 / 1024).toFixed(0)
       return {
         valid: false,
         error: 'ファイルサイズが大きすぎます',
-        details: `最大ファイルサイズ: ${formatFileSize(MAX_FILE_SIZE)}。現在のファイル: ${formatFileSize(file.size)}\n\nより大きなファイルをアップロードする場合は、ファイルを分割するか、Vercel Blobの使用を検討してください。`,
+        details: `最大ファイルサイズ: ${formatFileSize(MAX_FILE_SIZE)}（MAX）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB > ${maxSizeMB}MB）\n\n50MBを超えるファイルはアップロードできません。ファイルを分割するか、より小さなファイルをご利用ください。`,
       }
     }
 
@@ -533,7 +535,7 @@ export default function InterviewPage() {
                 またはクリックしてファイルを選択
               </p>
               <p className="text-sm text-slate-500 mb-6">
-                最大ファイルサイズ: {formatFileSize(MAX_FILE_SIZE)}
+                最大ファイルサイズ: <span className="font-black text-orange-600">{formatFileSize(MAX_FILE_SIZE)}</span>（MAX）
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 {[
