@@ -47,10 +47,14 @@ export async function GET(request: NextRequest) {
 
 // プロジェクト作成
 export async function POST(request: NextRequest) {
+  let body: any = null
+  let userId: string | undefined = undefined
+  let guestId: string | null = null
+  
   try {
     const session = await getServerSession(authOptions)
-    const userId = session?.user?.id
-    const guestId = request.headers.get('x-guest-id')
+    userId = session?.user?.id
+    guestId = request.headers.get('x-guest-id')
 
     // ゲストIDがなければ生成（ログインしていない場合）
     let finalGuestId = guestId
@@ -59,7 +63,7 @@ export async function POST(request: NextRequest) {
       finalGuestId = `guest-${Date.now()}-${Math.random().toString(36).substring(7)}`
     }
 
-    const body = await request.json()
+    body = await request.json()
     const { title, intervieweeName, intervieweeRole, intervieweeCompany, theme, purpose, targetAudience, tone, mediaType, status } = body
 
     // タイトルの検証

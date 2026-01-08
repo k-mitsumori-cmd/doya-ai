@@ -166,6 +166,22 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[INTERVIEW] Material upload error:', error)
     console.error('[INTERVIEW] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    
+    // Prismaエラーコードの判定
+    let statusCode = 500
+    let errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    
+    if (error && typeof error === 'object' && 'code' in error) {
+      const prismaError = error as { code: string }
+      if (prismaError.code === 'P2021') {
+        errorMessage = 'データベースのテーブルが存在しません。データベースのマイグレーションが必要です。'
+        statusCode = 503
+      } else if (prismaError.code === 'P1001' || prismaError.code === 'P1017') {
+        errorMessage = 'データベースに接続できません。'
+        statusCode = 503
+      }
+    }
+    
     console.error('[INTERVIEW] File info:', {
       name: file?.name,
       size: file?.size,
@@ -177,7 +193,9 @@ export async function POST(request: NextRequest) {
     
     // エラーの種類に応じた詳細メッセージ
     let details = 'ファイルサイズや形式を確認してください。'
-    if (errorMessage.includes('ENOSPC') || errorMessage.includes('ENOENT')) {
+    if (errorMessage.includes('テーブルが存在しません') || errorMessage.includes('does not exist')) {
+      details = 'データベースのテーブルが存在しません。データベースのマイグレーションが必要です。'
+    } else if (errorMessage.includes('ENOSPC') || errorMessage.includes('ENOENT')) {
       details = 'ディスク容量が不足しているか、ファイルシステムへのアクセス権限がありません。'
     } else if (errorMessage.includes('EACCES')) {
       details = 'ファイルへの書き込み権限がありません。'
@@ -192,7 +210,7 @@ export async function POST(request: NextRequest) {
         error: 'ファイルのアップロードに失敗しました',
         details: `${details}\nエラー詳細: ${errorMessage}`,
       },
-      { status: 500 }
+      { status: statusCode }
     )
   }
 }
