@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir, appendFile, readFile } from 'fs/promises'
+import { writeFile, mkdir, appendFile, readFile, unlink } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
 
@@ -119,11 +119,65 @@ export async function POST(request: NextRequest) {
       }
 
       // チャンクを保存
-      const bytes = await chunk.arrayBuffer()
-      const buffer = Buffer.from(bytes)
-      await writeFile(chunkFilePath, buffer)
+      let writeSuccess = false
+      try {
+        const bytes = await chunk.arrayBuffer()
+        const buffer = Buffer.from(bytes)
+        await writeFile(chunkFilePath, buffer)
+        writeSuccess = true
+        console.log(`[INTERVIEW] Chunk ${chunkIndex + 1}/${totalChunks} saved: ${chunkFilePath}`)
+      } catch (writeError: any) {
+        console.error(`[INTERVIEW] Failed to write chunk file: ${chunkFilePath}`, writeError)
+        
+        // ENOSPCエラーの場合、既存のチャンクファイルをクリーンアップしてから再試行
+        if (writeError.code === 'ENOSPC' || writeError.message?.includes('no space left')) {
+          console.log(`[INTERVIEW] Disk space full. Cleaning up old chunk files...`)
+          try {
+            // 古いチャンクファイルを削除（現在のプロジェクト以外）
+            const chunksBaseDir = join(baseDir, 'chunks')
+            if (existsSync(chunksBaseDir)) {
+              const { readdir, rmdir } = await import('fs/promises')
+              const projectDirs = await readdir(chunksBaseDir)
+              for (const dir of projectDirs) {
+                if (dir !== projectId) {
+                  try {
+                    const oldChunkDir = join(chunksBaseDir, dir)
+                    const { rm } = await import('fs/promises')
+                    await rm(oldChunkDir, { recursive: true, force: true })
+                    console.log(`[INTERVIEW] Cleaned up old chunk directory: ${oldChunkDir}`)
+                  } catch (cleanupError) {
+                    console.warn(`[INTERVIEW] Failed to cleanup ${dir}:`, cleanupError)
+                  }
+                }
+              }
+            }
+            
+            // 再試行
+            const bytes = await chunk.arrayBuffer()
+            const buffer = Buffer.from(bytes)
+            await writeFile(chunkFilePath, buffer)
+            writeSuccess = true
+            console.log(`[INTERVIEW] Chunk ${chunkIndex + 1}/${totalChunks} saved after cleanup`)
+          } catch (retryError) {
+            return NextResponse.json(
+              {
+                error: 'ディスク容量が不足しています',
+                details: 'サーバーの一時ストレージが満杯です。しばらく待ってから再度お試しください。',
+              },
+              { status: 507 } // 507 Insufficient Storage
+            )
+          }
+        } else {
+          throw writeError
+        }
+      }
 
-      console.log(`[INTERVIEW] Chunk ${chunkIndex + 1}/${totalChunks} saved: ${chunkFilePath}`)
+      if (!writeSuccess) {
+        return NextResponse.json(
+          { error: 'チャンクの保存に失敗しました', details: 'ファイルの書き込みに失敗しました。' },
+          { status: 500 }
+        )
+      }
 
       // すべてのチャンクがアップロードされたか確認
       const uploadedChunks: number[] = []
@@ -147,22 +201,30 @@ export async function POST(request: NextRequest) {
         const savedFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`
         const finalFilePath = join(finalDir, savedFileName)
 
-        // チャンクを順番に結合
+        // チャンクを順番に結合（結合と同時に削除して容量を確保）
         for (let i = 0; i < totalChunks; i++) {
           const chunkFile = join(chunkDir, `${tempFileName}.chunk.${i}`)
-          const chunkData = await readFile(chunkFile)
-          if (i === 0) {
-            await writeFile(finalFilePath, chunkData)
-          } else {
-            await appendFile(finalFilePath, chunkData)
-          }
-          // チャンクファイルを削除
           try {
-            const { unlink } = await import('fs/promises')
+            const chunkData = await readFile(chunkFile)
+            if (i === 0) {
+              await writeFile(finalFilePath, chunkData)
+            } else {
+              await appendFile(finalFilePath, chunkData)
+            }
+            // チャンクファイルを即座に削除（容量を確保）
             await unlink(chunkFile)
-          } catch (e) {
-            console.warn(`[INTERVIEW] Failed to delete chunk file: ${chunkFile}`, e)
+          } catch (chunkError) {
+            console.error(`[INTERVIEW] Error processing chunk ${i}:`, chunkError)
+            // エラーが発生しても続行（他のチャンクは処理済み）
           }
+        }
+        
+        // チャンクディレクトリを削除
+        try {
+          const { rmdir } = await import('fs/promises')
+          await rmdir(chunkDir)
+        } catch (e) {
+          console.warn(`[INTERVIEW] Failed to delete chunk directory: ${chunkDir}`, e)
         }
 
         // ファイルタイプ判定
