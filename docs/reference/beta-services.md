@@ -265,7 +265,139 @@ const TOOLS = [
 
 | サービスID | サービス名 | ステータス | 備考 |
 |-----------|----------|----------|------|
-| `lp-site` | ドヤサイト | `beta` | LP自動生成ツール |
+| （現在なし） | - | - | - |
+
+---
+
+## ストップ中のサービス
+
+開発・運用を停止しているサービスです。
+
+### ストップサービスの定義
+
+以下の条件を満たすサービスはストップサービスとして扱います：
+
+1. **開発が停止している**
+2. **新規ユーザーへの公開を停止している**
+3. **既存ユーザーへのサポートも停止している**
+4. **サイドバーやツール切替メニューから非表示**
+5. **将来的に再開する可能性がある**（完全削除ではない）
+
+### 表示ルール
+
+#### ❌ 表示しない場所
+
+1. **全てのサイドバー**
+   - ToolSwitcherMenuに表示しない
+   - どのサービスのサイドバーからも見えない
+
+2. **トップページ（ポータル）**
+   - サービス一覧に表示しない
+
+3. **サービス自身のページ**
+   - アクセスしてもエラーまたは停止メッセージを表示
+
+### 実装方法
+
+#### 1. サービス定義
+
+```typescript
+// src/lib/services.ts
+{
+  id: 'lp-site',
+  name: 'ドヤサイト',
+  status: 'stopped',  // ストップ中
+  badge: undefined,   // バッジなし
+  // ...
+}
+```
+
+#### 2. ToolSwitcherMenu
+
+ストップ中のサービスは、どのサイドバーにも表示しない。
+
+```typescript
+// src/components/ToolSwitcherMenu.tsx
+
+// ストップ中のサービスは含めない
+const TOOLS = [
+  {
+    id: 'persona',
+    // ...
+  },
+  {
+    id: 'banner',
+    // ...
+  },
+  // lp-site は含めない（ストップ中）
+]
+```
+
+#### 3. サービスページ
+
+アクセスされた場合は停止メッセージを表示。
+
+```tsx
+// src/app/lp-site/page.tsx
+export default function LpSitePage() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-4">ドヤサイト</h1>
+        <p className="text-gray-600">
+          現在、このサービスは停止中です。
+        </p>
+      </div>
+    </div>
+  )
+}
+```
+
+### ストップ→再開時の手順
+
+1. **サービス定義の更新**
+
+```typescript
+// src/lib/services.ts
+{
+  id: 'lp-site',
+  status: 'beta',  // stopped → beta に変更
+  badge: 'ベータ版',
+  // ...
+}
+```
+
+2. **サービス自身のサイドバーに追加**
+
+```typescript
+// src/components/LpSiteSidebar.tsx
+const TOOLS_FOR_LP_SITE = [
+  ...TOOLS,
+  {
+    id: 'lp-site',
+    // ...
+    isBeta: true,
+  },
+]
+```
+
+3. **ページの復旧**
+
+- 停止メッセージを削除
+- 通常の機能を復旧
+
+4. **テスト**
+
+- サービス自身のサイドバーからアクセスできることを確認
+- 他サービスのサイドバーには表示されないことを確認
+
+---
+
+## 現在のストップサービス
+
+| サービスID | サービス名 | ステータス | 停止理由 | 備考 |
+|-----------|----------|----------|---------|------|
+| `lp-site` | ドヤサイト | `stopped` | 開発停止 | LP自動生成ツール |
 
 ---
 
