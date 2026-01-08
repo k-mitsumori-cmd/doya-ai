@@ -46,3 +46,4 @@ src/lib/lp-site/
 - Framer Motion (アニメーション)
 - Tailwind CSS
 
+

@@ -140,7 +140,10 @@ export default function InterviewPage() {
     let uploadedChunks = 0
     let lastResult: any = null
 
-    console.log(`[CHUNK] Starting chunk upload: ${totalChunks} chunks, file size: ${file.size} bytes`)
+    // すべてのチャンクで同じtempFileNameを使用する
+    const tempFileName = `${projectId}-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+
+    console.log(`[CHUNK] Starting chunk upload: ${totalChunks} chunks, file size: ${file.size} bytes, tempFileName: ${tempFileName}`)
 
     for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
       const start = chunkIndex * CHUNK_SIZE
@@ -155,6 +158,7 @@ export default function InterviewPage() {
       formData.append('fileName', file.name)
       formData.append('fileSize', file.size.toString())
       formData.append('mimeType', file.type || '')
+      formData.append('tempFileName', tempFileName)
 
       let retryCount = 0
       const maxRetries = 3

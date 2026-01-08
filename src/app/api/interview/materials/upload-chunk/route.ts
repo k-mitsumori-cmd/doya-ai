@@ -37,10 +37,11 @@ export async function POST(request: NextRequest) {
     const fileName = formData.get('fileName') as string
     const fileSize = parseInt(formData.get('fileSize') as string)
     const mimeType = formData.get('mimeType') as string
+    const tempFileName = formData.get('tempFileName') as string
 
-    if (!projectId || !chunk || chunkIndex === undefined || totalChunks === undefined || !fileName) {
+    if (!projectId || !chunk || chunkIndex === undefined || totalChunks === undefined || !fileName || !tempFileName) {
       return NextResponse.json(
-        { error: '必須パラメータが不足しています', details: 'projectId, chunk, chunkIndex, totalChunks, fileNameが必要です。' },
+        { error: '必須パラメータが不足しています', details: 'projectId, chunk, chunkIndex, totalChunks, fileName, tempFileNameが必要です。' },
         { status: 400 }
       )
     }
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest) {
     // チャンクの保存先ディレクトリ
     const baseDir = getUploadBaseDir()
     const chunkDir = join(baseDir, 'chunks', projectId)
-    const tempFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    // tempFileNameはクライアント側から送信される（すべてのチャンクで同じ値）
     const chunkFilePath = join(chunkDir, `${tempFileName}.chunk.${chunkIndex}`)
 
     try {
