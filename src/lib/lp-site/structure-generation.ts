@@ -21,27 +21,39 @@ export async function generateLpStructure(productInfo: ProductInfo): Promise<LpS
 - LPタイプ: ${productInfo.lp_type}
 - トーン: ${productInfo.tone}
 
-標準セクション定義（参考）:
-1. ファーストビュー（FV） - 第一印象で興味を引く
-2. 商品ビジュアル訴求 - 商品の魅力を視覚的に訴求
-3. キャッチコピー強調 - 強力なメッセージを伝える
-4. 特徴・ベネフィット - 商品の価値を説明
-5. 成分・仕組み説明 - 商品の仕組みや成分を説明
-6. 使用イメージ - 実際の使用シーンを提示
-7. 開発者・信頼訴求 - 信頼性を高める
-8. 使用方法・ワンポイント - 使い方を説明
-9. 商品情報・CTA - 購入を促す
+標準セクション定義（利用可能なセクションタイプ）:
+1. hero (ファーストビュー) - 第一印象で興味を引く、メインキャッチコピー、実績数値
+2. stats (実績・数値訴求) - 導入実績、効果数値、信頼指標を示す
+3. problem (課題提示) - ターゲットの課題や悩みを明確化
+4. solution (ソリューション) - 商品・サービスが課題を解決することを提示
+5. features (機能紹介) - 主要機能や特徴を詳しく説明
+6. benefit (ベネフィット) - 顧客が得られる利益や価値を強調
+7. visual_appeal (商品ビジュアル訴求) - 商品の魅力を視覚的に訴求（EC用）
+8. mechanism (仕組み説明) - 商品の仕組み、成分、技術を説明
+9. usage (使用イメージ) - 実際の使用シーン、導入事例を提示
+10. case_study (導入事例) - 具体的な導入事例、成功事例を紹介
+11. trust (信頼訴求) - 選ばれる理由、差別化ポイント、会社情報
+12. testimonial (お客様の声) - 顧客の評価、レビュー、推薦
+13. comparison (比較表) - 競合との比較、プラン比較
+14. pricing (料金) - 料金プラン、価格、特典
+15. faq (よくある質問) - FAQ、疑問点への回答
+16. process (導入プロセス) - 導入の流れ、利用方法
+17. guarantee (保証・特典) - 返金保証、特典、キャンペーン
+18. cta (行動喚起) - 購入、問い合わせ、資料請求を促す
 
-LPタイプ別の推奨構成（標準セクションを組み合わせて）:
-- saas: FV → 課題提示 → ソリューション → 機能紹介 → 料金 → お客様の声 → CTA
-- ec: FV → 商品ビジュアル → 特徴・ベネフィット → 使用イメージ → お客様の声 → 商品情報・CTA
-- service: FV → サービス内容 → メリット → 実績 → 料金 → CTA
-- recruit: FV → 会社紹介 → 募集要項 → 福利厚生 → 応募方法 → CTA
+LPタイプ別の推奨構成（8-12セクションで構成）:
+- saas: hero → stats → problem → solution → features → benefit → case_study → trust → pricing → faq → testimonial → cta
+- ec: hero → visual_appeal → problem → benefit → mechanism → usage → testimonial → comparison → pricing → guarantee → trust → cta
+- service: hero → stats → problem → solution → benefit → usage → case_study → trust → process → pricing → faq → cta
+- recruit: hero → problem → solution → benefit → process → testimonial → trust → faq → cta
 
 重要:
-- LPタイプと商材ジャンルに応じてセクションを増減・入替してください
+- 参考: https://rdlp.jp/archives/otherdesign/lp/226318 のような長めのLP構成を参考にしてください
+- LPタイプと商材ジャンルに応じて、8-12個のセクションで構成してください
 - 各セクションは「場所ごとの画像パーツ」として個別生成されます
-- section_typeは標準セクション定義に合わせて設定してください
+- section_typeは上記の標準セクション定義から選択してください
+- セクションが多いほど、詳細な情報を伝えられ、コンバージョン率が向上します
+- 実績数値、導入事例、お客様の声などは信頼性を高める重要なセクションです
 
 以下のJSON形式で返してください:
 [
@@ -66,7 +78,9 @@ LPタイプ別の推奨構成（標準セクションを組み合わせて）:
   ...
 ]
 
-セクションは5-8個程度で構成してください。各セクションに適切なsection_id、section_type、purpose、headline、sub_headline、text_volume、image_requiredを設定してください。`
+セクションは8-12個で構成してください。長めのLPで、詳しい情報を伝える構成にしてください。
+各セクションに適切なsection_id、section_type、purpose、headline、sub_headline、text_volume、image_requiredを設定してください。
+特に、実績数値、導入事例、お客様の声、FAQなどのセクションを含めることで、信頼性が高まります。`
 
   const result = await generateTextWithGemini(prompt, {})
   
