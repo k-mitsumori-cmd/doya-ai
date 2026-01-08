@@ -152,13 +152,26 @@ export default function InterviewPage() {
 
       const formData = new FormData()
       formData.append('projectId', projectId)
-      formData.append('chunk', chunk)
+      // chunkはBlobとして送信（FileはBlobのサブクラス）
+      formData.append('chunk', chunk, `chunk-${chunkIndex}`)
       formData.append('chunkIndex', chunkIndex.toString())
       formData.append('totalChunks', totalChunks.toString())
       formData.append('fileName', file.name)
       formData.append('fileSize', file.size.toString())
-      formData.append('mimeType', file.type || '')
+      formData.append('mimeType', file.type || 'application/octet-stream')
       formData.append('tempFileName', tempFileName)
+
+      // デバッグ用ログ
+      console.log(`[CHUNK] Sending chunk ${chunkIndex + 1}/${totalChunks}:`, {
+        projectId,
+        chunkSize: chunk.size,
+        chunkIndex,
+        totalChunks,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type || 'application/octet-stream',
+        tempFileName,
+      })
 
       let retryCount = 0
       const maxRetries = 3

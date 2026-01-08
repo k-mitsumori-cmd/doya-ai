@@ -31,20 +31,47 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData()
     const projectId = formData.get('projectId') as string
-    const chunk = formData.get('chunk') as File
-    const chunkIndex = parseInt(formData.get('chunkIndex') as string)
-    const totalChunks = parseInt(formData.get('totalChunks') as string)
+    const chunk = formData.get('chunk') as File | null
+    const chunkIndexStr = formData.get('chunkIndex') as string
+    const totalChunksStr = formData.get('totalChunks') as string
     const fileName = formData.get('fileName') as string
-    const fileSize = parseInt(formData.get('fileSize') as string)
+    const fileSizeStr = formData.get('fileSize') as string
     const mimeType = formData.get('mimeType') as string
     const tempFileName = formData.get('tempFileName') as string
 
-    if (!projectId || !chunk || chunkIndex === undefined || totalChunks === undefined || !fileName || !tempFileName) {
+    // パラメータの検証とデバッグ情報
+    const missingParams: string[] = []
+    if (!projectId) missingParams.push('projectId')
+    if (!chunk) missingParams.push('chunk')
+    if (!chunkIndexStr || isNaN(parseInt(chunkIndexStr))) missingParams.push('chunkIndex')
+    if (!totalChunksStr || isNaN(parseInt(totalChunksStr))) missingParams.push('totalChunks')
+    if (!fileName) missingParams.push('fileName')
+    if (!tempFileName) missingParams.push('tempFileName')
+
+    if (missingParams.length > 0) {
+      console.error('[INTERVIEW] Missing parameters:', missingParams)
+      console.error('[INTERVIEW] Received parameters:', {
+        projectId: projectId || 'missing',
+        chunk: chunk ? `File(${chunk.size} bytes)` : 'missing',
+        chunkIndex: chunkIndexStr || 'missing',
+        totalChunks: totalChunksStr || 'missing',
+        fileName: fileName || 'missing',
+        tempFileName: tempFileName || 'missing',
+        mimeType: mimeType || 'missing',
+        fileSize: fileSizeStr || 'missing',
+      })
       return NextResponse.json(
-        { error: '必須パラメータが不足しています', details: 'projectId, chunk, chunkIndex, totalChunks, fileName, tempFileNameが必要です。' },
+        { 
+          error: '必須パラメータが不足しています', 
+          details: `不足しているパラメータ: ${missingParams.join(', ')}\n必要なパラメータ: projectId, chunk, chunkIndex, totalChunks, fileName, tempFileName` 
+        },
         { status: 400 }
       )
     }
+
+    const chunkIndex = parseInt(chunkIndexStr)
+    const totalChunks = parseInt(totalChunksStr)
+    const fileSize = parseInt(fileSizeStr)
 
     // プロジェクトの所有権確認
     let project
