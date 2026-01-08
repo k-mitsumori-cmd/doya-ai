@@ -28,11 +28,35 @@ export default function InterviewProjectDetailPage() {
   const fetchProject = async () => {
     try {
       setError(null)
-      const res = await fetch(`/api/interview/projects/${projectId}`)
+      
+      // ゲストIDを取得
+      let guestId = null
+      if (typeof window !== 'undefined') {
+        guestId = localStorage.getItem('interview-guest-id')
+      }
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+      if (guestId) {
+        headers['x-guest-id'] = guestId
+      }
+      
+      const res = await fetch(`/api/interview/projects/${projectId}`, {
+        headers,
+      })
       
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
-        throw new Error(errorData.error || `HTTP error! status: ${res.status}`)
+        const errorMessage = errorData.error || `HTTP error! status: ${res.status}`
+        
+        if (res.status === 401) {
+          throw new Error('認証が必要です。ログインしてください。')
+        } else if (res.status === 404) {
+          throw new Error('プロジェクトが見つかりません。')
+        } else {
+          throw new Error(errorMessage)
+        }
       }
       
       const data = await res.json()
@@ -44,7 +68,8 @@ export default function InterviewProjectDetailPage() {
       setProject(data.project)
     } catch (error) {
       console.error('Failed to fetch project:', error)
-      setError(error instanceof Error ? error.message : 'プロジェクトの取得に失敗しました')
+      const errorMessage = error instanceof Error ? error.message : 'プロジェクトの取得に失敗しました'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
