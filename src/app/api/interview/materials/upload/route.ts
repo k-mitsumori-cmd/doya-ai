@@ -216,8 +216,6 @@ export async function POST(request: NextRequest) {
       projectId,
     })
     
-    const errorMessage = error instanceof Error ? error.message : '不明なエラー'
-    
     // エラーの種類に応じた詳細メッセージ
     let details = 'ファイルサイズや形式を確認してください。'
     if (errorMessage.includes('テーブルが存在しません') || errorMessage.includes('does not exist')) {
