@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight, Settings, RefreshCw, MessageSquare, FileEdit, Users, Briefcase, Edit, Save, X, FileDown, FileCode, FileType } from 'lucide-react'
+import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight, Settings, RefreshCw, MessageSquare, FileEdit, Users, Briefcase, Edit, Save, X, FileDown, FileCode, FileType, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 type ArticleType = 'INTERVIEW' | 'BUSINESS_REPORT' | 'INTERNAL_INTERVIEW' | 'CASE_STUDY'
@@ -23,14 +23,28 @@ export default function InterviewProjectDetailPage() {
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null)
   const [editedContent, setEditedContent] = useState<string>('')
   const [showExportMenu, setShowExportMenu] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchProject = async () => {
     try {
+      setError(null)
       const res = await fetch(`/api/interview/projects/${projectId}`)
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP error! status: ${res.status}`)
+      }
+      
       const data = await res.json()
+      
+      if (!data.project) {
+        throw new Error('プロジェクトデータが取得できませんでした')
+      }
+      
       setProject(data.project)
     } catch (error) {
       console.error('Failed to fetch project:', error)
+      setError(error instanceof Error ? error.message : 'プロジェクトの取得に失敗しました')
     } finally {
       setLoading(false)
     }
@@ -191,17 +205,45 @@ export default function InterviewProjectDetailPage() {
     return (
       <div className="text-center py-16">
         <div className="inline-block w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <p className="mt-4 text-slate-600">読み込み中...</p>
       </div>
     )
   }
 
-  if (!project) {
+  if (error || !project) {
     return (
-      <div className="text-center py-16">
-        <p className="text-slate-600">プロジェクトが見つかりません</p>
-        <Link href="/interview/projects" className="mt-4 inline-block text-orange-600 hover:text-orange-700 font-bold">
-          プロジェクト一覧に戻る
-        </Link>
+      <div className="max-w-2xl mx-auto text-center py-16">
+        <div className="mb-8">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-orange-100 mb-6">
+            <AlertCircle className="w-12 h-12 text-orange-600" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 mb-4">エラーが発生しました</h2>
+          <p className="text-slate-600 mb-6">
+            {error || 'プロジェクトが見つかりません'}
+          </p>
+        </div>
+        <div className="flex gap-4 justify-center">
+          <motion.button
+            onClick={() => {
+              setError(null)
+              setLoading(true)
+              fetchProject()
+            }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-2"
+          >
+            <RefreshCw className="w-5 h-5" />
+            再試行する
+          </motion.button>
+          <Link
+            href="/interview/projects"
+            className="px-6 py-3 bg-slate-200 text-slate-700 font-black rounded-xl hover:bg-slate-300 transition-all inline-flex items-center gap-2"
+          >
+            <ArrowRight className="w-5 h-5 rotate-180" />
+            プロジェクト一覧に戻る
+          </Link>
+        </div>
       </div>
     )
   }
