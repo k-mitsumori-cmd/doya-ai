@@ -3,16 +3,24 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 
 function run(cmd, args, options = {}) {
+  console.log(`[db-push] Executing: ${cmd} ${args.join(' ')}`)
   const r = spawnSync(cmd, args, { 
     stdio: 'inherit',
     shell: true,
+    env: process.env,
     ...options 
   })
   if (r.status !== 0) {
-    console.error(`[db-push] Command failed: ${cmd} ${args.join(' ')}`)
+    console.error(`[db-push] ❌ Command failed: ${cmd} ${args.join(' ')}`)
     console.error(`[db-push] Exit code: ${r.status}`)
     if (r.error) {
       console.error(`[db-push] Error:`, r.error)
+    }
+    if (r.stderr) {
+      console.error(`[db-push] Stderr:`, r.stderr.toString())
+    }
+    if (r.stdout) {
+      console.error(`[db-push] Stdout:`, r.stdout.toString())
     }
     return false
   }
@@ -33,19 +41,25 @@ console.log('[db-push] This will sync the Prisma schema to the database...')
 const prismaPath = './node_modules/.bin/prisma'
 const prismaPathAlt = join(process.cwd(), 'node_modules', '.bin', 'prisma')
 
-let prismaCmd = prismaPath
-if (!existsSync(prismaPath) && existsSync(prismaPathAlt)) {
+console.log(`[db-push] Checking Prisma CLI path...`)
+console.log(`[db-push] Current working directory: ${process.cwd()}`)
+console.log(`[db-push] Prisma path (relative): ${prismaPath}, exists: ${existsSync(prismaPath)}`)
+console.log(`[db-push] Prisma path (absolute): ${prismaPathAlt}, exists: ${existsSync(prismaPathAlt)}`)
+
+let prismaCmd = 'npx'
+let args = ['prisma', 'db', 'push', '--skip-generate', '--accept-data-loss']
+
+if (existsSync(prismaPath)) {
+  prismaCmd = prismaPath
+  args = ['db', 'push', '--skip-generate', '--accept-data-loss']
+} else if (existsSync(prismaPathAlt)) {
   prismaCmd = prismaPathAlt
-} else if (!existsSync(prismaPath) && !existsSync(prismaPathAlt)) {
-  // npxを使用
-  prismaCmd = 'npx'
+  args = ['db', 'push', '--skip-generate', '--accept-data-loss']
 }
 
-const args = prismaCmd === 'npx' 
-  ? ['prisma', 'db', 'push', '--skip-generate', '--accept-data-loss']
-  : ['db', 'push', '--skip-generate', '--accept-data-loss']
-
-console.log(`[db-push] Running: ${prismaCmd} ${args.join(' ')}`)
+console.log(`[db-push] Using command: ${prismaCmd}`)
+console.log(`[db-push] Arguments: ${args.join(' ')}`)
+console.log(`[db-push] DATABASE_URL is set: ${!!process.env.DATABASE_URL}`)
 
 const success = run(prismaCmd, args)
 
