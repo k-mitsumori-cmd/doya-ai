@@ -881,13 +881,13 @@ function LpSitePageInner() {
               </div>
             )}
 
-            {/* ワイヤーフレーム表示（3段グリッド） */}
+            {/* ワイヤーフレーム表示（縦並び） */}
             <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mb-6">
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
                 <Layout className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600" />
                 <span className="text-sm sm:text-base">ワイヤーフレーム構成（{selectedDevice === 'pc' ? 'PC' : 'スマホ'}版）</span>
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="space-y-6">
                 {result.sections.map((section, index) => {
                   const wireframe = result.wireframes.find(w => w.section_id === section.section_id)
                   const wireframeData = selectedDevice === 'pc' ? wireframe?.pc : wireframe?.sp
@@ -895,31 +895,54 @@ function LpSitePageInner() {
                   return (
                     <motion.div
                       key={section.section_id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
-                      className="border-2 border-slate-300 rounded-xl p-3 sm:p-4 bg-gradient-to-br from-slate-50 to-white hover:border-teal-400 hover:shadow-md transition-all"
+                      className="border-2 border-slate-200 rounded-xl p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-white hover:border-teal-400 hover:shadow-lg transition-all"
                     >
-                      <div className="text-center mb-2 sm:mb-3">
-                        <div className="inline-block px-2 sm:px-3 py-1 bg-teal-100 text-teal-700 text-xs font-bold rounded-full mb-2">
+                      {/* ヘッダー部分 */}
+                      <div className="flex items-start gap-3 sm:gap-4 mb-4">
+                        {/* 番号バッジ */}
+                        <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-black text-base sm:text-lg shadow-md">
                           {index + 1}
                         </div>
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-2">
-                          {section.headline}
-                        </h4>
-                        <p className="text-[10px] sm:text-xs text-slate-500 mt-1 line-clamp-1">
-                          {section.purpose}
-                        </p>
-                      </div>
-                      {wireframeData && (
-                        <div className="bg-white rounded-lg p-2 border border-slate-200 min-h-[100px] sm:min-h-[120px] flex items-center justify-center">
-                          <div className="text-xs text-slate-400 text-center">
-                            <Layout className="w-8 h-8 mx-auto mb-1 opacity-50" />
-                            <div>ワイヤーフレーム</div>
-                            <div className="text-[10px] mt-1">{section.section_type}</div>
+                        
+                        {/* タイトルと説明 */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-1 break-words">
+                            {section.headline}
+                          </h4>
+                          {section.sub_headline && (
+                            <p className="text-xs sm:text-sm text-slate-600 mb-2 break-words">
+                              {section.sub_headline}
+                            </p>
+                          )}
+                          <p className="text-xs sm:text-sm text-slate-500 leading-relaxed break-words">
+                            {section.purpose}
+                          </p>
+                          {/* セクションタイプのバッジ */}
+                          <div className="mt-2 inline-block px-2 py-1 bg-slate-100 text-slate-600 text-[10px] sm:text-xs font-semibold rounded-md">
+                            {section.section_type}
                           </div>
                         </div>
-                      )}
+                      </div>
+                      
+                      {/* ワイヤーフレームプレースホルダー */}
+                      <div className="bg-white rounded-lg p-4 sm:p-6 border-2 border-dashed border-slate-300 min-h-[200px] sm:min-h-[300px] flex items-center justify-center">
+                        {wireframeData ? (
+                          <div className="w-full text-center">
+                            <div className="text-sm sm:text-base text-slate-400 mb-2">
+                              <Layout className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 opacity-60" />
+                              <div className="font-semibold">ワイヤーフレーム</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center text-slate-400">
+                            <Layout className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 opacity-40" />
+                            <div className="text-xs sm:text-sm">ワイヤーフレームデータなし</div>
+                          </div>
+                        )}
+                      </div>
                     </motion.div>
                   )
                 })}
