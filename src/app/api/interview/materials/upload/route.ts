@@ -177,17 +177,34 @@ export async function POST(request: NextRequest) {
       : `/uploads/interview/${projectId}/${savedFileName}`
 
     // DBに記録
-    const material = await prisma.interviewMaterial.create({
-      data: {
-        projectId,
-        type: materialType,
-        fileName: file.name,
-        filePath: relativePath,
-        fileSize: buffer.length,
-        mimeType,
-        status: 'UPLOADED',
-      },
-    })
+    let material
+    try {
+      material = await prisma.interviewMaterial.create({
+        data: {
+          projectId,
+          type: materialType,
+          fileName: file.name,
+          filePath: relativePath,
+          fileSize: buffer.length,
+          mimeType,
+          status: 'UPLOADED',
+        },
+      })
+    } catch (dbError) {
+      console.error('[INTERVIEW] Database error when creating material:', dbError)
+      // Prismaエラーコードの判定
+      if (dbError && typeof dbError === 'object' && 'code' in dbError) {
+        const prismaError = dbError as { code: string; meta?: any }
+        if (prismaError.code === 'P2021') {
+          throw new Error('データベースのテーブルが存在しません。データベースのマイグレーションが必要です。')
+        } else if (prismaError.code === 'P2003') {
+          throw new Error('プロジェクトが見つかりません。プロジェクトIDが無効です。')
+        } else if (prismaError.code === 'P1001' || prismaError.code === 'P1017') {
+          throw new Error('データベースに接続できません。')
+        }
+      }
+      throw dbError
+    }
 
     return NextResponse.json({ material })
   } catch (error) {
@@ -219,7 +236,11 @@ export async function POST(request: NextRequest) {
     // エラーの種類に応じた詳細メッセージ
     let details = 'ファイルサイズや形式を確認してください。'
     if (errorMessage.includes('テーブルが存在しません') || errorMessage.includes('does not exist')) {
-      details = 'データベースのテーブルが存在しません。データベースのマイグレーションが必要です。'
+      details = 'データベースのテーブルが存在しません。\nデータベースのマイグレーションが必要です。Vercelのビルドログで「[db-push]」を確認してください。'
+    } else if (errorMessage.includes('プロジェクトが見つかりません') || errorMessage.includes('プロジェクトIDが無効')) {
+      details = 'プロジェクトが見つかりません。\nプロジェクトの作成に失敗している可能性があります。もう一度お試しください。'
+    } else if (errorMessage.includes('データベースに接続できません')) {
+      details = 'データベースに接続できません。\nデータベースサーバーに接続できませんでした。しばらくしてから再度お試しください。'
     } else if (errorMessage.includes('ENOSPC') || errorMessage.includes('ENOENT')) {
       details = 'ディスク容量が不足しているか、ファイルシステムへのアクセス権限がありません。'
     } else if (errorMessage.includes('EACCES')) {
@@ -228,6 +249,10 @@ export async function POST(request: NextRequest) {
       details = 'ファイルのアップロードがタイムアウトしました。ファイルサイズが大きすぎる可能性があります。'
     } else if (errorMessage.includes('memory') || errorMessage.includes('Memory')) {
       details = 'メモリ不足が発生しました。ファイルサイズが大きすぎる可能性があります。'
+    } else if (errorMessage.includes('ファイルの読み込みに失敗')) {
+      details = 'ファイルの読み込みに失敗しました。\nファイルが破損しているか、アクセス権限がありません。'
+    } else if (errorMessage.includes('ファイルの保存に失敗')) {
+      details = 'ファイルの保存に失敗しました。\nサーバーのストレージに問題がある可能性があります。'
     }
     
     return NextResponse.json(
