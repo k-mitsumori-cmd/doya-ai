@@ -18,7 +18,8 @@ export async function generateSectionImages(
 
   console.log(`[LP-SITE] 画像生成開始: ${sections.length}セクション`)
 
-  for (const section of sections) {
+  for (let index = 0; index < sections.length; index++) {
+    const section = sections[index]
     if (!section.image_required) {
       console.log(`[LP-SITE] 画像不要: ${section.section_id}`)
       images.push({
@@ -28,9 +29,10 @@ export async function generateSectionImages(
     }
 
     try {
-      console.log(`[LP-SITE] セクション画像生成中: ${section.section_id}`)
+      console.log(`[LP-SITE] セクション画像生成中: ${section.section_id} (${index + 1}/${sections.length})`)
       // PC/SP別に必ず別々の画像を生成（リサイズではなく再生成）
-      const sectionImage = await generateSectionImagePair(section, productInfo)
+      // セクション位置情報を渡して、継ぎ目の処理を最適化
+      const sectionImage = await generateSectionImagePair(section, productInfo, index, sections.length)
       images.push(sectionImage)
       console.log(`[LP-SITE] セクション画像生成完了: ${section.section_id}`)
     } catch (error: any) {
@@ -146,15 +148,31 @@ SEAMLESS CONNECTION REQUIREMENTS (CRITICAL FOR NATURAL TRANSITIONS):
 function generateImagePrompt(
   section: LpSection,
   productInfo: ProductInfo,
-  device: 'pc' | 'sp'
+  device: 'pc' | 'sp',
+  sectionIndex?: number,
+  totalSections?: number
 ): string {
   const commonBase = getCommonBasePrompt()
   const toneDescription = getToneDescription(productInfo.tone)
-  const sectionSpecific = getSectionSpecificPrompt(section, productInfo, device)
+  const sectionSpecific = getSectionSpecificPrompt(section, productInfo, device, sectionIndex, totalSections)
+
+  // セクション位置に応じた継ぎ目の指示
+  let boundaryInstructions = ''
+  if (sectionIndex !== undefined && totalSections !== undefined) {
+    if (sectionIndex === 0) {
+      boundaryInstructions = '- This is the FIRST section: Bottom edge should fade naturally into the next section with a subtle gradient\n'
+    } else if (sectionIndex === totalSections - 1) {
+      boundaryInstructions = '- This is the LAST section: Top edge should blend naturally with the previous section, use subtle gradient\n'
+    } else {
+      boundaryInstructions = '- This is a MIDDLE section: Both top and bottom edges should blend seamlessly with adjacent sections using subtle gradients\n'
+    }
+  }
 
   return `${commonBase}
 
 ${sectionSpecific}
+
+${boundaryInstructions}
 
 Product Information:
 - Product name: ${productInfo.product_name}
@@ -232,7 +250,9 @@ Purpose:
 Visual requirements:
 - Main product or key visual element prominently displayed
 - Dynamic visual elements (splash, particles, light, gradients)
-- Bright, clean background
+- Bright, clean background with unified color scheme
+- Background should extend to edges with soft gradients for seamless connection
+- Use consistent background color/tone that blends naturally with adjacent sections
 - Luxury but approachable impression
 - Professional commercial advertising style
 
@@ -260,9 +280,11 @@ Purpose:
 
 Visual requirements:
 - Abstract representation of benefits (moisture, efficiency, growth, etc.)
-- Soft gradients, modern visuals
-- Light particles or bubbles
+- Soft gradients, modern visuals with unified background color
+- Background should flow naturally to edges with subtle fade at top/bottom
+- Light particles or bubbles that blend naturally at edges
 - Product imagery or illustrations
+- Maintain consistent background color palette for seamless transitions
 
 Text requirements:
 - Embed headline "${section.headline}" prominently
@@ -291,6 +313,8 @@ Visual requirements:
 - Layers, processes, or interactions
 - Simple, easy-to-understand visuals
 - Educational but beautiful
+- Clean, consistent background that extends to edges
+- Soft gradients at top/bottom edges for natural blending
 
 Text requirements:
 - Embed headline "${section.headline}" at the top
@@ -316,8 +340,9 @@ Purpose:
 Visual requirements:
 - ${productInfo.lp_type === 'ec' ? 'Japanese person using the product naturally' : 'Professional setting or workspace'}
 - Natural smile or confident expression
-- Clean, bright space
-- Soft lighting
+- Clean, bright space with consistent background
+- Soft lighting that extends naturally to edges
+- Background should fade subtly at top/bottom for seamless connection
 - Authentic lifestyle feeling
 
 Text requirements:
@@ -377,6 +402,8 @@ Visual requirements:
 - Related to the product or service
 - Modern LP design aesthetic
 - High-quality visuals
+- Unified background color that extends to edges
+- Soft gradients at top/bottom for natural section transitions
 
 Text requirements:
 - Embed headline "${section.headline}" prominently
