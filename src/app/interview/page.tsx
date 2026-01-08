@@ -206,10 +206,49 @@ export default function InterviewPage() {
           const chunkProgress = Math.round((uploadedChunks / totalChunks) * 100)
           setProgress(30 + Math.round((chunkProgress * 20) / 100)) // 30%から50%の間で進捗表示
 
-          // すべてのチャンクがアップロード完了
+          // すべてのチャンクがアップロード完了（最後のチャンクの場合）
           if (result.completed && result.material) {
             console.log(`[CHUNK] All chunks uploaded successfully. Material ID: ${result.material.id}`)
             return result
+          }
+
+          // 最後のチャンクの場合、結合処理が完了するまで少し待機
+          if (chunkIndex === totalChunks - 1 && !result.completed) {
+            console.log(`[CHUNK] Last chunk uploaded, waiting for merge to complete...`)
+            // 結合処理が完了するまで最大10秒待機
+            for (let waitCount = 0; waitCount < 10; waitCount++) {
+              await new Promise(resolve => setTimeout(resolve, 1000))
+              // 最後のチャンクを再送信して状態を確認
+              const lastChunkSlice = file.slice(start, end)
+              const checkFormData = new FormData()
+              checkFormData.append('projectId', projectId)
+              checkFormData.append('chunk', lastChunkSlice)
+              checkFormData.append('chunkIndex', chunkIndex.toString())
+              checkFormData.append('totalChunks', totalChunks.toString())
+              checkFormData.append('fileName', file.name)
+              checkFormData.append('fileSize', file.size.toString())
+              checkFormData.append('mimeType', file.type || '')
+              checkFormData.append('tempFileName', tempFileName)
+
+              try {
+                const checkRes = await fetch('/api/interview/materials/upload-chunk', {
+                  method: 'POST',
+                  headers: {
+                    ...(guestId ? { 'x-guest-id': guestId } : {}),
+                  },
+                  body: checkFormData,
+                })
+                if (checkRes.ok) {
+                  const checkResult = await checkRes.json()
+                  if (checkResult.completed && checkResult.material) {
+                    console.log(`[CHUNK] Merge completed after wait. Material ID: ${checkResult.material.id}`)
+                    return checkResult
+                  }
+                }
+              } catch (checkError) {
+                console.warn(`[CHUNK] Check attempt ${waitCount + 1} failed:`, checkError)
+              }
+            }
           }
 
           // チャンクのアップロード成功
@@ -242,8 +281,12 @@ export default function InterviewPage() {
     // すべてのチャンクをアップロードしたが、完了レスポンスが返ってこなかった場合
     // 最後のチャンクを再度送信して、完了状態を確認（サーバー側でファイル結合が完了するまで少し待機）
     console.log(`[CHUNK] All chunks uploaded, waiting for server to complete file merge...`)
-    for (let waitAttempt = 0; waitAttempt < 10; waitAttempt++) {
-      await new Promise(resolve => setTimeout(resolve, 1000)) // 1秒待機
+    
+    // 最初に少し待機（結合処理が開始される時間を確保）
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
+    for (let waitAttempt = 0; waitAttempt < 20; waitAttempt++) {
+      await new Promise(resolve => setTimeout(resolve, 1500)) // 1.5秒待機
       
       try {
         const lastChunkIndex = totalChunks - 1
@@ -272,7 +315,7 @@ export default function InterviewPage() {
         if (checkResponse.ok) {
           const checkResult = await checkResponse.json()
           if (checkResult.completed && checkResult.material) {
-            console.log(`[CHUNK] Upload completed after wait. Material ID: ${checkResult.material.id}`)
+            console.log(`[CHUNK] Upload completed after wait (attempt ${waitAttempt + 1}). Material ID: ${checkResult.material.id}`)
             return checkResult
           }
         }
