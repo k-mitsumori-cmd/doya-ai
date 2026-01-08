@@ -51,16 +51,19 @@ export async function generateSectionImages(
 /**
  * セクションのPC/SP画像ペアを生成
  * 必ず別々の画像を生成（リサイズ禁止）
+ * 継ぎ目が目立たないようにセクション位置情報を使用
  */
 export async function generateSectionImagePair(
   section: LpSection,
-  productInfo: ProductInfo
+  productInfo: ProductInfo,
+  sectionIndex?: number,
+  totalSections?: number
 ): Promise<SectionImage> {
   // PC用画像生成（横長）
   let imagePc: string | undefined
   try {
     console.log(`[LP-SITE] PC画像生成開始: ${section.section_id}`)
-    const pcPrompt = generateImagePrompt(section, productInfo, 'pc')
+    const pcPrompt = generateImagePrompt(section, productInfo, 'pc', sectionIndex, totalSections)
     console.log(`[LP-SITE] PCプロンプト長: ${pcPrompt.length}文字`)
     const pcResult = await geminiGenerateImagePng({
       prompt: pcPrompt,
@@ -79,7 +82,7 @@ export async function generateSectionImagePair(
   let imageSp: string | undefined
   try {
     console.log(`[LP-SITE] SP画像生成開始: ${section.section_id}`)
-    const spPrompt = generateImagePrompt(section, productInfo, 'sp')
+    const spPrompt = generateImagePrompt(section, productInfo, 'sp', sectionIndex, totalSections)
     console.log(`[LP-SITE] SPプロンプト長: ${spPrompt.length}文字`)
     const spResult = await geminiGenerateImagePng({
       prompt: spPrompt,
@@ -105,10 +108,11 @@ export async function generateSectionImagePair(
  * 共通前提プロンプト
  * 完全なLPセクションとして、テキストも含めて生成
  * rdlp.jp/lp-archive/ のデザインパターンを参考
+ * 継ぎ目が目立たないようにする
  */
 function getCommonBasePrompt(): string {
   return `You are generating a COMPLETE LANDING PAGE SECTION with text included.
-This is a functional landing page section that can be used directly as part of an LP.
+This is a functional landing page section that will be vertically connected with other sections to form a seamless landing page.
 Reference Japanese LP design patterns from rdlp.jp/lp-archive/ for authentic LP layouts.
 
 CRITICAL REQUIREMENTS:
@@ -121,7 +125,19 @@ CRITICAL REQUIREMENTS:
 - This section will be vertically connected with other sections
 - Vertical layout optimized for scrolling
 - Clean, modern, conversion-optimized design
-- Follow proven LP design patterns from successful Japanese landing pages`
+- Follow proven LP design patterns from successful Japanese landing pages
+
+SEAMLESS CONNECTION REQUIREMENTS (CRITICAL FOR NATURAL TRANSITIONS):
+- Use a unified background color scheme throughout the entire section
+- At the top edge: Include a subtle gradient or natural fade that blends with the previous section
+- At the bottom edge: Include a subtle gradient or natural fade that blends with the next section
+- Avoid hard horizontal lines or borders at top/bottom edges
+- Use soft, natural transitions (gentle gradients, soft shadows, or subtle color shifts)
+- Maintain consistent background color/tone with adjacent sections for seamless flow
+- The background should extend naturally to the edges without abrupt color changes
+- If using patterns or textures, make them fade naturally at the edges
+- Ensure the section feels like part of a continuous, flowing landing page
+- Do NOT create clear-cut boundaries - sections should merge smoothly`
 }
 
 /**
@@ -168,7 +184,15 @@ Design Style (Reference rdlp.jp/lp-archive/):
 - Conversion-optimized layout
 - Modern, clean aesthetic
 - Text and visuals work together harmoniously
-- Generate a complete, functional LP section that can be used directly`
+- Generate a complete, functional LP section that can be used directly
+
+SEAMLESS BOUNDARY TREATMENT:
+- Top edge: Subtle gradient or fade to blend with previous section (use similar background color)
+- Bottom edge: Subtle gradient or fade to blend with next section (use similar background color)
+- Background should flow naturally without hard edges
+- Maintain consistent color palette with adjacent sections for smooth transitions
+- Use soft shadows or gentle gradients at boundaries instead of hard lines
+- The section should appear as a natural part of a continuous scrollable page`
 }
 
 /**
@@ -190,7 +214,9 @@ function getToneDescription(tone: string): string {
 function getSectionSpecificPrompt(
   section: LpSection,
   productInfo: ProductInfo,
-  device: 'pc' | 'sp'
+  device: 'pc' | 'sp',
+  sectionIndex?: number,
+  totalSections?: number
 ): string {
   const sectionType = section.section_type.toLowerCase()
 
@@ -319,9 +345,11 @@ Purpose:
 
 Visual requirements:
 - Product clearly visible
-- Simple, focused background
+- Simple, focused background with unified color scheme
+- Background should blend naturally at edges with soft gradients
 - Calm but confident mood
 - Focus on the product or action
+- Maintain consistent background tone for seamless page flow
 
 Text requirements:
 - Embed CTA headline "${section.headline}" prominently
