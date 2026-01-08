@@ -1032,7 +1032,7 @@ export default function InterviewPage() {
                 音声: MP3, WAV, M4A, AAC, OGG / 動画: MP4, MOV, AVI, WebM / テキスト: TXT, DOCX, MD / PDF: PDF
               </p>
               <p className="text-xs text-orange-700 mt-1">
-                最大ファイルサイズ: <span className="font-black">{formatFileSize(MAX_FILE_SIZE_WITH_CHUNK)}</span>（MAX）
+                最大ファイルサイズ: <span className="font-black">200MB（MAX）</span>
                 <br />
                 <span className="text-[10px] text-orange-600">
                   50MB以上はチャンクアップロードで自動処理
