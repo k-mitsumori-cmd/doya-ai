@@ -796,7 +796,7 @@ export default function InterviewPage() {
                 音声: MP3, WAV, M4A, AAC, OGG / 動画: MP4, MOV, AVI, WebM / テキスト: TXT, DOCX, MD / PDF: PDF
               </p>
               <p className="text-xs text-orange-700 mt-1">
-                最大ファイルサイズ: {formatFileSize(MAX_FILE_SIZE)}
+                最大ファイルサイズ: <span className="font-black">{formatFileSize(MAX_FILE_SIZE)}</span>（MAX）
               </p>
             </div>
           </div>
