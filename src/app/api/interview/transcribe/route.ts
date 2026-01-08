@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     // ファイルを読み込む
     let fileBuffer: Buffer
     try {
-      fileBuffer = await readFileAsync(filePath)
+      fileBuffer = await readFile(filePath)
       console.log(`[INTERVIEW] File read successfully: ${fileBuffer.length} bytes`)
     } catch (fileError) {
       console.error('[INTERVIEW] Failed to read file:', fileError)
