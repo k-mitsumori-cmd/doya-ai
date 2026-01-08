@@ -361,6 +361,253 @@ Composition:
 - Natural, authentic, conversion-focused layout`
   }
 
+  // 実績・数値訴求
+  if (sectionType.includes('stats') || sectionType.includes('statistics') || sectionType.includes('numbers')) {
+    return `Section type: Statistics / Numbers - COMPLETE LP SECTION WITH TEXT
+
+Purpose:
+- Display impressive statistics, achievements, or metrics with embedded text
+- Build trust through concrete numbers and data
+
+Visual requirements:
+- Numbers, charts, or graphs prominently displayed
+- Professional data visualization style
+- Clean, modern design with unified background color
+- Background should flow naturally to edges with subtle fade
+- Use icons or visual elements to support the numbers
+- Maintain consistent background color palette for seamless transitions
+
+Text requirements:
+- Embed headline "${section.headline}" prominently at the top
+- ${section.sub_headline ? `Include sub headline "${section.sub_headline}"` : 'Add text explaining the significance of the statistics'}
+- Display key numbers/statistics as large, bold text (e.g., "10,000社導入", "95%満足度")
+- Include brief descriptions for each statistic
+- Use clear, readable Japanese typography
+
+Composition:
+- ${device === 'pc' ? 'Headline at top, statistics displayed in grid or list format, descriptions below' : 'Headline at top, statistics vertically stacked with descriptions'}
+- Clean, professional data presentation
+- Numbers should be eye-catching and easy to scan
+
+Tone: Professional, Data-driven, Trustworthy, Impressive`
+  }
+
+  // 導入事例
+  if (sectionType.includes('case') || sectionType.includes('example') || sectionType.includes('success')) {
+    return `Section type: Case Study / Success Story - COMPLETE LP SECTION WITH TEXT
+
+Purpose:
+- Present real-world success stories or case studies with embedded text
+- Demonstrate proven results and build credibility
+
+Visual requirements:
+- Professional business setting or workspace
+- Charts showing improvement or results
+- Clean, professional design with unified background
+- Background should blend naturally at edges
+- Use imagery that represents success or achievement
+- Maintain consistent background color palette
+
+Text requirements:
+- Embed headline "${section.headline}" prominently
+- ${section.sub_headline ? `Include sub headline "${section.sub_headline}"` : 'Add text introducing the case study'}
+- Include company/client name (if applicable)
+- Display key results or outcomes as prominent text
+- Describe the challenge, solution, and results
+- Use clear, readable Japanese typography
+
+Composition:
+- ${device === 'pc' ? 'Headline at top, case study content in organized layout, results highlighted' : 'Headline at top, case study content vertically stacked'}
+- Professional, credible layout
+- Results should be prominently displayed
+
+Tone: Professional, Credible, Success-oriented, Trustworthy`
+  }
+
+  // お客様の声・レビュー
+  if (sectionType.includes('testimonial') || sectionType.includes('review') || sectionType.includes('voice')) {
+    return `Section type: Testimonial / Customer Review - COMPLETE LP SECTION WITH TEXT
+
+Purpose:
+- Show customer reviews, testimonials, or feedback with embedded text
+- Build social proof and trust
+
+Visual requirements:
+- Professional portrait photos or icons (if appropriate)
+- Clean, modern design with unified background
+- Background should flow naturally to edges
+- Use quotation marks or visual elements for testimonials
+- Maintain consistent background color palette
+
+Text requirements:
+- Embed headline "${section.headline}" prominently at the top
+- ${section.sub_headline ? `Include sub headline "${section.sub_headline}"` : 'Add text introducing testimonials'}
+- Display customer testimonials as quoted text
+- Include customer name, company, or title (if applicable)
+- Use clear, readable Japanese typography
+- Testimonials should feel authentic and genuine
+
+Composition:
+- ${device === 'pc' ? 'Headline at top, testimonials displayed in grid or carousel format' : 'Headline at top, testimonials vertically stacked'}
+- Clean, trustworthy layout
+- Each testimonial should be easy to read
+
+Tone: Authentic, Trustworthy, Relatable, Positive`
+  }
+
+  // FAQ
+  if (sectionType.includes('faq') || sectionType.includes('question') || sectionType.includes('qa')) {
+    return `Section type: FAQ / Questions & Answers - COMPLETE LP SECTION WITH TEXT
+
+Purpose:
+- Address common questions or concerns with embedded text
+- Remove barriers and objections
+
+Visual requirements:
+- Clean, organized layout with unified background
+- Use icons or visual elements for questions/answers
+- Background should blend naturally at edges
+- Maintain consistent background color palette
+- Professional, easy-to-scan design
+
+Text requirements:
+- Embed headline "${section.headline}" prominently
+- ${section.sub_headline ? `Include sub headline "${section.sub_headline}"` : 'Add text introducing the FAQ section'}
+- Display questions in bold or highlighted text
+- Display answers in clear, readable text below each question
+- Use clear, readable Japanese typography
+- Questions and answers should be well-organized
+
+Composition:
+- ${device === 'pc' ? 'Headline at top, FAQ items in organized list or accordion style' : 'Headline at top, FAQ items vertically stacked'}
+- Clean, organized, easy-to-navigate layout
+- Each Q&A pair should be clearly separated
+
+Tone: Helpful, Clear, Informative, Reassuring`
+  }
+
+  // 導入プロセス
+  if (sectionType.includes('process') || sectionType.includes('step') || sectionType.includes('flow')) {
+    return `Section type: Process / Steps - COMPLETE LP SECTION WITH TEXT
+
+Purpose:
+- Explain the process, steps, or flow with embedded text
+- Make it easy for users to understand how to get started
+
+Visual requirements:
+- Step-by-step illustration or flowchart
+- Clean, organized visual representation
+- Unified background color that extends to edges
+- Use numbers, arrows, or visual connectors
+- Soft gradients at top/bottom for natural blending
+- Maintain consistent background color palette
+
+Text requirements:
+- Embed headline "${section.headline}" prominently
+- ${section.sub_headline ? `Include sub headline "${section.sub_headline}"` : 'Add text introducing the process'}
+- Number each step clearly
+- Describe each step with clear, concise text
+- Use clear, readable Japanese typography
+
+Composition:
+- ${device === 'pc' ? 'Headline at top, steps displayed horizontally or in organized grid' : 'Headline at top, steps displayed vertically'}
+- Clean, logical flow
+- Each step should be clearly distinguishable
+
+Tone: Clear, Organized, Easy-to-follow, Helpful`
+  }
+
+  // 比較表
+  if (sectionType.includes('comparison') || sectionType.includes('compare') || sectionType.includes('vs')) {
+    return `Section type: Comparison Table - COMPLETE LP SECTION WITH TEXT
+
+Purpose:
+- Show comparison with competitors or different plans with embedded text
+- Highlight advantages and differences
+
+Visual requirements:
+- Clean table or comparison layout
+- Use visual elements to highlight advantages
+- Unified background color
+- Background should blend naturally at edges
+- Professional, organized design
+- Maintain consistent background color palette
+
+Text requirements:
+- Embed headline "${section.headline}" prominently
+- ${section.sub_headline ? `Include sub headline "${section.sub_headline}"` : 'Add text introducing the comparison'}
+- Display comparison items clearly
+- Highlight key differences or advantages
+- Use clear, readable Japanese typography
+
+Composition:
+- ${device === 'pc' ? 'Headline at top, comparison table in organized layout' : 'Headline at top, comparison items vertically stacked'}
+- Clean, easy-to-compare layout
+- Important points should be highlighted
+
+Tone: Professional, Clear, Competitive, Informative`
+  }
+
+  // 保証・特典
+  if (sectionType.includes('guarantee') || sectionType.includes('warranty') || sectionType.includes('benefit')) {
+    return `Section type: Guarantee / Special Offer - COMPLETE LP SECTION WITH TEXT
+
+Purpose:
+- Present guarantees, warranties, or special offers with embedded text
+- Remove purchase anxiety and create urgency
+
+Visual requirements:
+- Clean, trustworthy design with unified background
+- Use icons or visual elements for guarantees/offers
+- Background should flow naturally to edges
+- Highlight special offers or guarantees
+- Maintain consistent background color palette
+
+Text requirements:
+- Embed headline "${section.headline}" prominently
+- ${section.sub_headline ? `Include sub headline "${section.sub_headline}"` : 'Add text explaining the guarantee or offer'}
+- Display guarantee details or offer terms clearly
+- Use clear, readable Japanese typography
+- Make guarantees/offers stand out
+
+Composition:
+- ${device === 'pc' ? 'Headline at top, guarantee/offer details in organized layout' : 'Headline at top, guarantee/offer details vertically stacked'}
+- Clean, trustworthy layout
+- Important information should be prominent
+
+Tone: Reassuring, Trustworthy, Appealing, Clear`
+  }
+
+  // 信頼訴求・選ばれる理由
+  if (sectionType.includes('trust') || sectionType.includes('reliable') || sectionType.includes('why')) {
+    return `Section type: Trust / Why Choose Us - COMPLETE LP SECTION WITH TEXT
+
+Purpose:
+- Build trust and explain why customers should choose this product/service with embedded text
+- Highlight differentiators and unique value
+
+Visual requirements:
+- Professional, trustworthy visual elements
+- Clean design with unified background color
+- Background should blend naturally at edges
+- Use icons or visual elements for key points
+- Maintain consistent background color palette
+
+Text requirements:
+- Embed headline "${section.headline}" prominently
+- ${section.sub_headline ? `Include sub headline "${section.sub_headline}"` : 'Add text explaining why to choose'}
+- List key reasons or differentiators as text
+- Include company information if applicable
+- Use clear, readable Japanese typography
+
+Composition:
+- ${device === 'pc' ? 'Headline at top, reasons listed with visuals, organized layout' : 'Headline at top, reasons vertically stacked'}
+- Clean, professional, trustworthy layout
+- Key points should be easy to scan
+
+Tone: Trustworthy, Professional, Credible, Reassuring`
+  }
+
   // CTA・商品情報
   if (sectionType.includes('cta') || sectionType.includes('action') || sectionType.includes('pricing')) {
     return `Section type: CTA / Product Info - COMPLETE LP SECTION WITH TEXT
