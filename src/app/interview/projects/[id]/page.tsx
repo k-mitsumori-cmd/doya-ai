@@ -442,7 +442,9 @@ export default function InterviewProjectDetailPage() {
       </AnimatePresence>
 
       {/* アクションボタン（素材がある場合） */}
-      {project.materials && project.materials.length > 0 && project.transcriptions && project.transcriptions.length > 0 && !project.drafts?.length && (
+      {project.materials && Array.isArray(project.materials) && project.materials.length > 0 && 
+       project.transcriptions && Array.isArray(project.transcriptions) && project.transcriptions.length > 0 && 
+       (!project.drafts || !Array.isArray(project.drafts) || project.drafts.length === 0) && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -497,7 +499,7 @@ export default function InterviewProjectDetailPage() {
                       {project.genre === 'PRODUCT_INTERVIEW' && '商品インタビュー'}
                       {project.genre === 'PERSONA_INTERVIEW' && 'ペルソナインタビュー'}
                       {project.genre === 'OTHER' && 'その他'}
-                      {!['CASE_STUDY', 'PRODUCT_INTERVIEW', 'PERSONA_INTERVIEW', 'OTHER'].includes(project.genre) && project.genre}
+                      {project.genre && !['CASE_STUDY', 'PRODUCT_INTERVIEW', 'PERSONA_INTERVIEW', 'OTHER'].includes(project.genre) && project.genre}
                     </dd>
                   </div>
                 )}
@@ -508,13 +510,13 @@ export default function InterviewProjectDetailPage() {
                 {project.intervieweeRole && (
                   <div>
                     <dt className="text-sm font-bold text-slate-600">役職・職業</dt>
-                    <dd className="text-slate-900">{project.intervieweeRole}</dd>
+                    <dd className="text-slate-900">{project.intervieweeRole || '未設定'}</dd>
                   </div>
                 )}
                 {project.intervieweeCompany && (
                   <div>
                     <dt className="text-sm font-bold text-slate-600">所属企業</dt>
-                    <dd className="text-slate-900">{project.intervieweeCompany}</dd>
+                    <dd className="text-slate-900">{project.intervieweeCompany || '未設定'}</dd>
                   </div>
                 )}
               </dl>
@@ -522,13 +524,13 @@ export default function InterviewProjectDetailPage() {
             {project.theme && (
               <div>
                 <h3 className="text-lg font-black text-slate-900 mb-2">取材テーマ</h3>
-                <p className="text-slate-700">{project.theme}</p>
+                <p className="text-slate-700">{project.theme || ''}</p>
               </div>
             )}
             {project.purpose && (
               <div>
                 <h3 className="text-lg font-black text-slate-900 mb-2">目的</h3>
-                <p className="text-slate-700">{project.purpose}</p>
+                <p className="text-slate-700">{project.purpose || ''}</p>
               </div>
             )}
           </div>
@@ -538,18 +540,18 @@ export default function InterviewProjectDetailPage() {
           <div>
             <h3 className="text-lg font-black text-slate-900 mb-4">アップロード済み素材</h3>
             <div className="space-y-4">
-              {project.materials?.length > 0 ? (
+              {project.materials && Array.isArray(project.materials) && project.materials.length > 0 ? (
                 project.materials.map((material: any) => (
-                  <div key={material.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <div key={material?.id || Math.random()} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-bold text-slate-900">{material.fileName}</p>
+                        <p className="font-bold text-slate-900">{material?.fileName || 'ファイル名不明'}</p>
                         <p className="text-sm text-slate-600">
-                          {material.type} • {material.fileSize ? `${(material.fileSize / 1024 / 1024).toFixed(2)} MB` : 'サイズ不明'}
+                          {material?.type || 'タイプ不明'} • {material?.fileSize ? `${(material.fileSize / 1024 / 1024).toFixed(2)} MB` : 'サイズ不明'}
                         </p>
                       </div>
                       <span className="px-2 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">
-                        {material.status}
+                        {material?.status || '不明'}
                       </span>
                     </div>
                   </div>
@@ -565,7 +567,8 @@ export default function InterviewProjectDetailPage() {
           <div>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-black text-slate-900">文字起こし</h3>
-              {project.transcriptions && project.transcriptions.length > 0 && !project.drafts?.length && (
+              {project.transcriptions && Array.isArray(project.transcriptions) && project.transcriptions.length > 0 && 
+               (!project.drafts || !Array.isArray(project.drafts) || project.drafts.length === 0) && (
                 <motion.button
                   onClick={() => setShowArticleTypeSelector(true)}
                   whileHover={{ scale: 1.05 }}
@@ -578,32 +581,35 @@ export default function InterviewProjectDetailPage() {
                 </motion.button>
               )}
             </div>
-            {project.transcriptions?.length > 0 ? (
+            {project.transcriptions && Array.isArray(project.transcriptions) && project.transcriptions.length > 0 ? (
               <div className="space-y-6">
-                {project.transcriptions.map((transcription: any) => (
-                  <motion.div
-                    key={transcription.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-8 bg-gradient-to-br from-white to-slate-50 rounded-3xl border-2 border-slate-200 shadow-xl"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-black rounded-full">
-                          {transcription.provider || 'manual'}
-                        </span>
-                        <span className="text-sm text-slate-600 font-medium">
-                          {transcription.text.length.toLocaleString()}文字
-                        </span>
+                {project.transcriptions.map((transcription: any) => {
+                  if (!transcription || !transcription.id) return null
+                  return (
+                    <motion.div
+                      key={transcription.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-8 bg-gradient-to-br from-white to-slate-50 rounded-3xl border-2 border-slate-200 shadow-xl"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-black rounded-full">
+                            {transcription.provider || 'manual'}
+                          </span>
+                          <span className="text-sm text-slate-600 font-medium">
+                            {(transcription.text || '').length.toLocaleString()}文字
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="prose prose-slate max-w-none">
-                      <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-base">
-                        {transcription.text}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
+                      <div className="prose prose-slate max-w-none">
+                        <p className="text-slate-700 whitespace-pre-wrap leading-relaxed text-base">
+                          {transcription.text || ''}
+                        </p>
+                      </div>
+                    </motion.div>
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-16">
@@ -618,7 +624,8 @@ export default function InterviewProjectDetailPage() {
           <div>
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-black text-slate-900">記事ドラフト</h3>
-              {project.drafts?.length > 0 && project.transcriptions && project.transcriptions.length > 0 && (
+              {project.drafts && Array.isArray(project.drafts) && project.drafts.length > 0 && 
+               project.transcriptions && Array.isArray(project.transcriptions) && project.transcriptions.length > 0 && (
                 <motion.button
                   onClick={handleRegenerateArticle}
                   whileHover={{ scale: 1.05 }}
@@ -630,9 +637,11 @@ export default function InterviewProjectDetailPage() {
                 </motion.button>
               )}
             </div>
-            {project.drafts?.length > 0 ? (
+            {project.drafts && Array.isArray(project.drafts) && project.drafts.length > 0 ? (
               <div className="space-y-6">
                 {project.drafts.map((draft: any) => {
+                  if (!draft || !draft.id) return null
+                  
                   const articleTypeLabels: Record<string, string> = {
                     INTERVIEW: 'インタビュー記事',
                     BUSINESS_REPORT: '商談レポート',
@@ -785,15 +794,15 @@ export default function InterviewProjectDetailPage() {
                             placeholder="記事の内容を編集..."
                           />
                           <div className="flex items-center gap-2 text-sm text-slate-600">
-                            <span className="font-bold">{editedContent.length.toLocaleString()}</span>文字
+                            <span className="font-bold">{(editedContent || '').length.toLocaleString()}</span>文字
                             <span className="text-slate-400">|</span>
-                            <span>読了時間: {Math.ceil(editedContent.length / 400)}分</span>
+                            <span>読了時間: {Math.ceil((editedContent || '').length / 400)}分</span>
                           </div>
                         </div>
                       ) : (
                         <div className="prose prose-slate max-w-none">
                           <div className="text-slate-700 whitespace-pre-wrap leading-relaxed text-base">
-                            {draft.content.split('\n').map((line: string, idx: number) => {
+                            {(draft.content || '').split('\n').map((line: string, idx: number) => {
                               // Q&A形式の場合は、Q: と A: をスタイリング
                               if (draft.displayFormat === 'QA') {
                                 if (line.startsWith('Q:') || line.startsWith('Q：')) {
@@ -824,7 +833,7 @@ export default function InterviewProjectDetailPage() {
               <div className="text-center py-16">
                 <Sparkles className="w-16 h-16 text-slate-300 mx-auto mb-4" />
                 <p className="text-slate-600 text-lg font-medium">ドラフトがありません</p>
-                {project.transcriptions && project.transcriptions.length > 0 && (
+                {project.transcriptions && Array.isArray(project.transcriptions) && project.transcriptions.length > 0 && (
                   <motion.button
                     onClick={() => setShowArticleTypeSelector(true)}
                     whileHover={{ scale: 1.05 }}
@@ -843,24 +852,27 @@ export default function InterviewProjectDetailPage() {
         {activeTab === 'review' && (
           <div>
             <h3 className="text-lg font-black text-slate-900 mb-4">校閲結果</h3>
-            {project.reviews?.length > 0 ? (
+            {project.reviews && Array.isArray(project.reviews) && project.reviews.length > 0 ? (
               <div className="space-y-4">
-                {project.reviews.map((review: any) => (
-                  <div key={review.id} className="p-6 bg-slate-50 rounded-xl border border-slate-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <p className="font-bold text-slate-900">校閲レポート</p>
-                        <p className="text-sm text-slate-600">
-                          スコア: {review.score || 'N/A'} / 読みやすさ: {review.readabilityScore || 'N/A'}
-                        </p>
+                {project.reviews.map((review: any) => {
+                  if (!review || !review.id) return null
+                  return (
+                    <div key={review.id} className="p-6 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <p className="font-bold text-slate-900">校閲レポート</p>
+                          <p className="text-sm text-slate-600">
+                            スコア: {review.score || 'N/A'} / 読みやすさ: {review.readabilityScore || 'N/A'}
+                          </p>
+                        </div>
+                        <span className="text-xs text-slate-500">
+                          {review.createdAt ? new Date(review.createdAt).toLocaleDateString('ja-JP') : '日付不明'}
+                        </span>
                       </div>
-                      <span className="text-xs text-slate-500">
-                        {new Date(review.createdAt).toLocaleDateString('ja-JP')}
-                      </span>
+                      <div className="text-slate-700 whitespace-pre-wrap">{review.report || ''}</div>
                     </div>
-                    <div className="text-slate-700 whitespace-pre-wrap">{review.report}</div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="text-slate-600">校閲結果がありません</p>
