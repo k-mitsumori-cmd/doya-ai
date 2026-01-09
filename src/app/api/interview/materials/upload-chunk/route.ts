@@ -19,6 +19,15 @@ function getUploadBaseDir() {
   return join(process.cwd(), 'uploads', 'interview')
 }
 
+// ファイルサイズをフォーマット
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
 // チャンクアップロード（大きなファイル用）
 export async function POST(request: NextRequest) {
   try {
@@ -409,6 +418,9 @@ export async function POST(request: NextRequest) {
             } else if (blobError?.message?.includes('Size limit') || blobError?.message?.includes('413')) {
               errorMessage = 'ファイルサイズが大きすぎます'
               errorDetails = `ファイルサイズがBlob Storageの上限を超えています。最大ファイルサイズ: 4.75GB`
+            } else if (blobError?.message?.includes('Storage quota') || blobError?.message?.includes('quota exceeded') || blobError?.message?.includes('1GB maximum')) {
+              errorMessage = 'Blob Storageの容量制限に達しました'
+              errorDetails = `Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. Vercelのプランをアップグレードする（Proプラン以上では容量が増えます）\n3. 不要なファイルを削除する\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
             } else {
               errorDetails = `エラー詳細: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`
             }
@@ -420,7 +432,7 @@ export async function POST(request: NextRequest) {
                 uploadedChunks: uploadedChunks.length,
                 totalChunks,
               },
-              { status: 500 }
+              { status: 507 } // 507 Insufficient Storage
             )
           }
           
