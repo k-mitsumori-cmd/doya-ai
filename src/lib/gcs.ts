@@ -142,11 +142,13 @@ export async function uploadToGCS(
   const bufferData = buffer instanceof ArrayBuffer ? Buffer.from(buffer) : buffer
 
   try {
+    // 均一バケットレベルアクセスが有効な場合、publicオプションは使用できない
+    // 代わりに、バケットレベルで公開設定を行う必要がある
     await file.save(bufferData, {
       metadata: {
         contentType: options?.contentType || 'application/octet-stream',
       },
-      public: options?.public !== false, // デフォルトで公開
+      // publicオプションは削除（均一バケットレベルアクセスを使用）
     })
   } catch (saveError: any) {
     // エラーの詳細をログに記録
