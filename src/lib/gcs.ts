@@ -47,11 +47,32 @@ async function getStorage(): Promise<Storage> {
     }
     
     // 方法2: GOOGLE_APPLICATION_CREDENTIALS（JSON文字列またはファイルパス）
-    if (!credentials && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    // 環境変数名の確認（よくある間違いをチェック）
+    const credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS
+    if (!credsEnvVar) {
+      // 類似の環境変数名をチェック
+      const envVarNames = Object.keys(process.env)
+      const similarNames = envVarNames.filter(name => 
+        name.toUpperCase().includes('GOOGLE') && 
+        (name.toUpperCase().includes('APPLICATION') || name.toUpperCase().includes('CREDENTIAL'))
+      )
+      if (similarNames.length > 0) {
+        console.warn('[GCS] Similar environment variable names found (may be misspelled):', similarNames)
+        console.warn('[GCS] Expected: GOOGLE_APPLICATION_CREDENTIALS')
+        console.warn('[GCS] Please check if the environment variable name is correct in Vercel dashboard')
+      }
+    }
+    
+    if (!credentials && credsEnvVar) {
       try {
         // JSON文字列として設定されている場合
-        const credsStr = process.env.GOOGLE_APPLICATION_CREDENTIALS.trim()
+        const credsStr = credsEnvVar.trim()
         console.log('[GCS] Attempting to parse GOOGLE_APPLICATION_CREDENTIALS, length:', credsStr.length)
+        
+        // 空文字列のチェック
+        if (credsStr.length === 0) {
+          throw new Error('GOOGLE_APPLICATION_CREDENTIALSが空です。値を設定してください。')
+        }
         
         // JSONパースを試みる
         credentials = JSON.parse(credsStr)
@@ -59,12 +80,12 @@ async function getStorage(): Promise<Storage> {
         console.log('[GCS] Credentials type:', credentials.type)
         console.log('[GCS] Credentials project_id:', credentials.project_id)
         console.log('[GCS] Credentials client_email:', credentials.client_email ? credentials.client_email.substring(0, 30) + '...' : 'missing')
-        console.log('[GCS] Credentials private_key:', credentials.private_key ? (typeof credentials.private_key === 'string' ? credentials.private_key.substring(0, 30) + '...' : 'Present (non-string)') : 'missing')
+        console.log('[GCS] Credentials private_key:', credentials.private_key ? (typeof credentials.private_key === 'string' ? (credentials.private_key.startsWith('-----BEGIN') ? 'Present (PEM format)' : credentials.private_key.substring(0, 30) + '...') : 'Present (non-string)') : 'missing')
         
         // 認証情報の検証
         if (!credentials.type || credentials.type !== 'service_account') {
           console.error('[GCS] Invalid credentials type:', credentials.type)
-          throw new Error('GOOGLE_APPLICATION_CREDENTIALSの形式が正しくありません。サービスアカウントキーのJSONである必要があります。')
+          throw new Error('GOOGLE_APPLICATION_CREDENTIALSの形式が正しくありません。サービスアカウントキーのJSONである必要があります。typeが"service_account"である必要があります。')
         }
         if (!credentials.project_id) {
           console.error('[GCS] Missing project_id in credentials')
@@ -85,11 +106,18 @@ async function getStorage(): Promise<Storage> {
         if (parseError instanceof SyntaxError) {
           console.error('[GCS] JSON parse error details:', {
             message: parseError.message,
-            stack: parseError.stack,
-            inputLength: process.env.GOOGLE_APPLICATION_CREDENTIALS?.length,
-            inputPreview: process.env.GOOGLE_APPLICATION_CREDENTIALS?.substring(0, 100),
+            inputLength: credsEnvVar?.length,
+            inputPreview: credsEnvVar?.substring(0, 200),
+            inputEnd: credsEnvVar?.substring(Math.max(0, credsEnvVar.length - 100)),
           })
-          throw new Error('GOOGLE_APPLICATION_CREDENTIALSが有効なJSON形式ではありません。JSONファイルの内容をそのまま貼り付けてください。\nエラー詳細: ' + parseError.message)
+          throw new Error(
+            'GOOGLE_APPLICATION_CREDENTIALSが有効なJSON形式ではありません。\n\n' +
+            '確認事項:\n' +
+            '1. JSONファイルの内容をそのまま1行で貼り付けているか\n' +
+            '2. 改行が含まれていないか（含まれている場合は削除）\n' +
+            '3. JSONの構文が正しいか（カンマ、引用符など）\n\n' +
+            'エラー詳細: ' + parseError.message
+          )
         }
         throw parseError
       }
