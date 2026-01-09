@@ -347,6 +347,19 @@ export default function InterviewPage() {
 
           console.log(`[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} uploaded. Completed: ${result.completed}, Progress: ${result.uploadedChunks || uploadedChunks + 1}/${result.totalChunks || totalChunks}`)
 
+          // エラーが返されている場合は、すぐにエラーを投げる
+          if (result.error) {
+            const errorDetails = result.details || ''
+            const errorMsg = result.error || 'エラーが発生しました'
+            
+            // 容量制限エラーの場合は、すぐにエラーを投げる
+            if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || response.status === 507) {
+              throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+            }
+            
+            throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+          }
+
           // 進捗を更新
           uploadedChunks++
           const chunkProgress = Math.round((uploadedChunks / totalChunks) * 100)
@@ -386,9 +399,37 @@ export default function InterviewPage() {
                 })
                 if (checkRes.ok) {
                   const checkResult = await checkRes.json()
+                  
+                  // エラーが返されている場合は、すぐにエラーを投げる
+                  if (checkResult.error) {
+                    const errorDetails = checkResult.details || ''
+                    const errorMsg = checkResult.error || 'エラーが発生しました'
+                    
+                    // 容量制限エラーの場合は、すぐにエラーを投げる
+                    if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || checkRes.status === 507) {
+                      throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+                    }
+                    
+                    throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+                  }
+                  
                   if (checkResult.completed && checkResult.material) {
                     console.log(`[CHUNK] Merge completed after wait. Material ID: ${checkResult.material.id}`)
                     return checkResult
+                  }
+                } else {
+                  // エラーレスポンスを確認
+                  const errorData = await checkRes.json().catch(() => ({}))
+                  if (errorData.error) {
+                    const errorDetails = errorData.details || ''
+                    const errorMsg = errorData.error || 'エラーが発生しました'
+                    
+                    // 容量制限エラーの場合は、すぐにエラーを投げる
+                    if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || checkRes.status === 507) {
+                      throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+                    }
+                    
+                    throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
                   }
                 }
               } catch (checkError) {
