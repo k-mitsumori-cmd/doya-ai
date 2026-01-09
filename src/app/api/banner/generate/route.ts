@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, shouldResetDailyUsage, getTodayDateJST, isWithinFreeHour } from '@/lib/pricing'
+import { notifyApiError } from '@/lib/errorHandler'
 import crypto from 'crypto'
 
 // Vercel上で画像生成が長引くことがあるため、実行時間上限を引き上げる
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
 
     // レート制限チェック
     if (!disableLimits && !checkRateLimit(ip, isGuest)) {
+      await notifyApiError(new Error('リクエストが多すぎます'), request, 429, { ip, isGuest })
       return NextResponse.json(
         { error: 'リクエストが多すぎます。1分ほど待ってから再試行してください。' },
         { status: 429 }
@@ -97,6 +99,7 @@ export async function POST(request: NextRequest) {
 
     // バリデーション
     if (!category || typeof category !== 'string') {
+      await notifyApiError(new Error('カテゴリを選択してください'), request, 400, { category })
       return NextResponse.json(
         { error: 'カテゴリを選択してください' },
         { status: 400 }
@@ -104,6 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!keyword || typeof keyword !== 'string' || keyword.trim().length === 0) {
+      await notifyApiError(new Error('訴求内容を入力してください'), request, 400, { keyword: keyword?.slice(0, 50) })
       return NextResponse.json(
         { error: '訴求内容を入力してください' },
         { status: 400 }
@@ -111,6 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (keyword.length > 200) {
+      await notifyApiError(new Error('訴求内容は200文字以内で入力してください'), request, 400, { keywordLength: keyword.length })
       return NextResponse.json(
         { error: '訴求内容は200文字以内で入力してください' },
         { status: 400 }
@@ -124,6 +129,7 @@ export async function POST(request: NextRequest) {
     // API設定チェック
     if (!isNanobannerConfigured()) {
       console.warn('Nanobanner API is not configured')
+      await notifyApiError(new Error('バナー生成APIが設定されていません'), request, 503)
       return NextResponse.json(
         { error: 'バナー生成APIが設定されていません。管理者にお問い合わせください。' },
         { status: 503 }
@@ -422,6 +428,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Banner generation API error:', error)
+    
+    // エラー通知を送信
+    await notifyApiError(error, request, 500)
     
     return NextResponse.json(
       { error: 'バナー生成中にエラーが発生しました。しばらく待ってから再試行してください。' },

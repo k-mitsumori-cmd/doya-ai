@@ -30,6 +30,10 @@ interface ErrorNotificationData {
   errorDigest?: string
   userAgent?: string
   timestamp: string
+  httpStatus?: number
+  requestMethod?: string
+  requestUrl?: string
+  requestBody?: string
 }
 
 /**
@@ -345,7 +349,7 @@ async function sendSlackErrorNotification(webhookUrl: string, data: ErrorNotific
       return 'その他'
     }
 
-    const serviceName = getServiceName(data.pathname)
+    const serviceName = getServiceName(data.pathname || data.requestUrl)
 
     // エラーメッセージを短縮（長すぎる場合は切り詰め）
     const truncateMessage = (msg: string, maxLength: number = 500): string => {
@@ -356,14 +360,25 @@ async function sendSlackErrorNotification(webhookUrl: string, data: ErrorNotific
     const errorMessage = truncateMessage(data.errorMessage, 500)
     const errorStack = data.errorStack ? truncateMessage(data.errorStack, 1000) : undefined
 
+    // HTTPステータスコードに応じた絵文字と重要度を決定
+    const getStatusEmoji = (status?: number): string => {
+      if (!status) return '⚠️'
+      if (status >= 500) return '🔴'
+      if (status >= 400) return '🟠'
+      return '⚠️'
+    }
+
+    const statusEmoji = getStatusEmoji(data.httpStatus)
+    const statusText = data.httpStatus ? `HTTP ${data.httpStatus}` : 'クライアントエラー'
+
     const message = {
-      text: '⚠️ サービスでエラーが発生しました',
+      text: `${statusEmoji} サービスでエラーが発生しました`,
       blocks: [
         {
           type: 'header',
           text: {
             type: 'plain_text',
-            text: '⚠️ サービスエラー発生',
+            text: `${statusEmoji} サービスエラー発生`,
             emoji: true,
           },
         },
@@ -380,12 +395,29 @@ async function sendSlackErrorNotification(webhookUrl: string, data: ErrorNotific
             },
             {
               type: 'mrkdwn',
-              text: `*パス:*\n\`${data.pathname || '不明'}\``,
+              text: `*HTTPステータス:*\n${statusText}`,
             },
             {
               type: 'mrkdwn',
               text: `*エラーID:*\n${data.errorDigest ? `\`${data.errorDigest}\`` : 'なし'}`,
             },
+          ],
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*パス:*\n\`${data.pathname || data.requestUrl || '不明'}\``,
+            },
+            ...(data.requestMethod
+              ? [
+                  {
+                    type: 'mrkdwn',
+                    text: `*HTTPメソッド:*\n${data.requestMethod}`,
+                  },
+                ]
+              : []),
           ],
         },
         {
@@ -413,6 +445,17 @@ async function sendSlackErrorNotification(webhookUrl: string, data: ErrorNotific
                     text: `*メールアドレス:*\n${data.userEmail || '（未設定）'}`,
                   },
                 ],
+              },
+            ]
+          : []),
+        ...(data.requestBody
+          ? [
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `*リクエストボディ:*\n\`\`\`${truncateMessage(data.requestBody, 500)}\`\`\``,
+                },
               },
             ]
           : []),

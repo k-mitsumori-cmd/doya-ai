@@ -9,7 +9,17 @@ import { sendErrorNotification } from '@/lib/notifications'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { errorMessage, errorStack, pathname, errorDigest, userAgent } = body
+    const {
+      errorMessage,
+      errorStack,
+      pathname,
+      errorDigest,
+      userAgent,
+      httpStatus,
+      requestMethod,
+      requestUrl,
+      requestBody,
+    } = body
 
     // セッションからユーザー情報を取得
     const session = await getServerSession(authOptions)
@@ -27,6 +37,10 @@ export async function POST(request: NextRequest) {
       userName,
       errorDigest,
       userAgent,
+      httpStatus,
+      requestMethod,
+      requestUrl,
+      requestBody: requestBody ? (typeof requestBody === 'string' ? requestBody : JSON.stringify(requestBody)) : undefined,
       timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
     }).catch((e) => {
       console.error('Failed to send error notification:', e)
