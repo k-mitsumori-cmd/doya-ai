@@ -150,22 +150,24 @@ export async function POST(request: NextRequest) {
     try {
       console.log(`[INTERVIEW] Calling OpenAI Whisper API...`)
       
-      // OpenAI SDK v4では、File、Blob、Buffer、Streamを直接受け取れる
-      // Node.js環境では、Bufferを直接送信できる
-      // ファイル名とMIMEタイプを含むFile-likeオブジェクトを作成
-      const fileLike = {
-        name: material.fileName,
-        type: material.mimeType || 'audio/mpeg',
-        stream: () => {
-          const { Readable } = require('stream')
-          return Readable.from([fileBuffer])
-        },
-        arrayBuffer: async () => fileBuffer.buffer.slice(fileBuffer.byteOffset, fileBuffer.byteOffset + fileBuffer.byteLength),
-        size: fileBuffer.length,
-      } as any
+      // OpenAI SDK v4では、File、Blob、Buffer、ReadableStreamを直接受け取れる
+      // Node.js環境では、Bufferを直接渡すのが最も簡単
+      // ただし、Fileオブジェクトが必要な場合は、BlobからFileを作成する
+      // Node.js 18+ではFileオブジェクトが利用可能
+      let fileInput: File | Blob | Buffer
+      
+      // Node.js環境でFileオブジェクトが利用可能か確認
+      if (typeof File !== 'undefined') {
+        // Fileオブジェクトが利用可能な場合
+        const blob = new Blob([fileBuffer], { type: material.mimeType || 'audio/mpeg' })
+        fileInput = new File([blob], material.fileName, { type: material.mimeType || 'audio/mpeg' })
+      } else {
+        // Fileオブジェクトが利用できない場合、Blobを使用
+        fileInput = new Blob([fileBuffer], { type: material.mimeType || 'audio/mpeg' })
+      }
 
       const transcription = await openai.audio.transcriptions.create({
-        file: fileLike,
+        file: fileInput as any, // File、Blob、またはBufferを受け取れる
         model: 'whisper-1',
         language: 'ja', // 日本語を指定
         response_format: 'text',
