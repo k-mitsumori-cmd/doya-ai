@@ -73,18 +73,29 @@ export async function POST(request: NextRequest) {
     // ファイルを読み込む（Vercel Blob Storageから取得、またはローカルファイルシステムから）
     let fileBuffer: Buffer
     try {
-      // 優先順位: fileUrl (完全なURL) > filePath (ローカルファイルシステム)
+      // 優先順位: fileUrl (完全なURL) > filePath (Blob pathnameからURL構築 or ローカルファイルシステム)
       if (material.fileUrl) {
         // fileUrlが存在する場合は、直接fetchする（Vercel Blob StorageのURL）
-        console.log(`[INTERVIEW] Fetching file from URL: ${material.fileUrl}`)
+        console.log(`[INTERVIEW] Fetching file from Blob Storage URL: ${material.fileUrl}`)
         const response = await fetch(material.fileUrl)
         if (!response.ok) {
           throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
         }
         const arrayBuffer = await response.arrayBuffer()
         fileBuffer = Buffer.from(arrayBuffer)
-        console.log(`[INTERVIEW] File read from URL successfully: ${fileBuffer.length} bytes`)
+        console.log(`[INTERVIEW] File read from Blob Storage URL successfully: ${fileBuffer.length} bytes`)
       } else if (material.filePath) {
+        // filePathがBlob pathnameの場合（例: interview/projectId/filename）
+        // Vercel Blob StorageのURLを構築してfetchする
+        if (!material.filePath.startsWith('http://') && !material.filePath.startsWith('https://') && !material.filePath.startsWith('/')) {
+          // Blob pathnameの場合、Vercel Blob StorageのベースURLから構築
+          // ただし、fileUrlがない場合は直接fetchできないため、エラーを返す
+          console.error(`[INTERVIEW] filePath is a Blob pathname but fileUrl is missing: ${material.filePath}`)
+          return NextResponse.json(
+            { error: 'ファイルのURLが設定されていません', details: 'Blob Storageからファイルを取得するためのURLが必要です。' },
+            { status: 404 }
+          )
+        }
         // ローカルファイルシステムから読み込み（フォールバック）
         const baseDir = getUploadBaseDir()
         let filePath: string
