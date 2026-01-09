@@ -502,14 +502,23 @@ export default function InterviewPage() {
 
         if (checkResponse.ok) {
           const checkResult = await checkResponse.json()
+          
+          // エラーが返されている場合は、すぐにエラーを投げる（容量制限エラーの場合も含む）
+          if (checkResult.error) {
+            const errorDetails = checkResult.details || ''
+            const errorMsg = checkResult.error || 'エラーが発生しました'
+            
+            // 容量制限エラーの場合は、すぐにエラーを投げる
+            if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || checkResponse.status === 507) {
+              throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+            }
+            
+            throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+          }
+          
           if (checkResult.completed && checkResult.material) {
             console.log(`[CHUNK] Upload completed after wait (attempt ${waitAttempt + 1}). Material ID: ${checkResult.material.id}`)
             return checkResult
-          }
-          // エラーが返されている場合は、そのエラーを表示
-          if (checkResult.error) {
-            const errorDetails = checkResult.details || ''
-            throw new Error(`${checkResult.error}${errorDetails ? `\n${errorDetails}` : ''}`)
           }
         } else {
           // エラーレスポンスを確認
