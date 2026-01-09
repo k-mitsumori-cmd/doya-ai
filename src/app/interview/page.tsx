@@ -826,6 +826,7 @@ export default function InterviewPage() {
       // 2-1. 署名付きURLを取得
       let signedUrlData
       try {
+        console.log('[INTERVIEW] Requesting signed URL for:', file.name, file.size, 'bytes')
         const urlRes = await fetch('/api/interview/materials/upload-url', {
           method: 'POST',
           headers: {
@@ -841,7 +842,18 @@ export default function InterviewPage() {
         })
 
         if (!urlRes.ok) {
-          const errorData = await urlRes.json().catch(() => ({}))
+          let errorData: any = {}
+          try {
+            errorData = await urlRes.json()
+          } catch (jsonError) {
+            const errorText = await urlRes.text().catch(() => '')
+            console.error('[INTERVIEW] Failed to parse error response:', errorText)
+            errorData = {
+              error: `サーバーエラーが発生しました (HTTP ${urlRes.status})`,
+              details: errorText || 'エラーの詳細が取得できませんでした',
+            }
+          }
+          
           const errorMsg = errorData.error || '署名付きURLの取得に失敗しました'
           const errorDetails = errorData.details || 'サーバーエラーが発生しました。'
           
@@ -866,14 +878,35 @@ export default function InterviewPage() {
         if (!signedUrlData.signedUrl) {
           throw new Error('署名付きURLの取得に失敗しました。\nサーバーからの応答が不正です。')
         }
+        console.log('[INTERVIEW] Signed URL received successfully')
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+        
+        // ネットワークエラーの場合
+        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('fetch')) {
+          console.error('[INTERVIEW] Network error:', error)
+          throw new Error(
+            `ネットワークエラーが発生しました。\n\n` +
+            `考えられる原因:\n` +
+            `1. インターネット接続が切断されている\n` +
+            `2. サーバーが応答していない\n` +
+            `3. CORSエラーが発生している\n\n` +
+            `対処方法:\n` +
+            `1. インターネット接続を確認してください\n` +
+            `2. ページをリロードして再度お試しください\n` +
+            `3. しばらく待ってから再度お試しください`
+          )
+        }
+        
         throw new Error(`署名付きURLの取得に失敗しました。\n${errorMessage}`)
       }
 
       // 2-2. 署名付きURLを使用して直接GCSにアップロード
       let uploadProgress = 0
       try {
+        console.log('[INTERVIEW] Uploading file to GCS:', signedUrlData.filePath)
+        setProgress(40)
+        
         const uploadRes = await fetch(signedUrlData.signedUrl, {
           method: 'PUT',
           headers: {
@@ -885,7 +918,27 @@ export default function InterviewPage() {
         if (!uploadRes.ok) {
           const errorText = await uploadRes.text().catch(() => '')
           console.error('[INTERVIEW] GCS upload failed:', uploadRes.status, errorText)
-          throw new Error(`Google Cloud Storageへのアップロードに失敗しました。\nHTTPステータス: ${uploadRes.status} ${uploadRes.statusText}`)
+          
+          // 認証エラーの場合
+          if (uploadRes.status === 401 || uploadRes.status === 403) {
+            throw new Error(
+              `Google Cloud Storageへのアップロードが拒否されました。\n\n` +
+              `HTTPステータス: ${uploadRes.status} ${uploadRes.statusText}\n\n` +
+              `考えられる原因:\n` +
+              `1. 署名付きURLの有効期限が切れている\n` +
+              `2. サービスアカウントの権限が不足している\n` +
+              `3. バケットへのアクセス権限がない\n\n` +
+              `対処方法:\n` +
+              `1. ページをリロードして再度お試しください\n` +
+              `2. Vercelダッシュボードで環境変数を確認してください`
+            )
+          }
+          
+          throw new Error(
+            `Google Cloud Storageへのアップロードに失敗しました。\n\n` +
+            `HTTPステータス: ${uploadRes.status} ${uploadRes.statusText}\n` +
+            `エラー詳細: ${errorText || '不明'}`
+          )
         }
 
         console.log(`[INTERVIEW] File uploaded to GCS successfully: ${signedUrlData.filePath}`)
@@ -893,12 +946,30 @@ export default function InterviewPage() {
         setProgress(45)
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+        
+        // ネットワークエラーの場合
+        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('fetch')) {
+          console.error('[INTERVIEW] Network error during GCS upload:', error)
+          throw new Error(
+            `Google Cloud Storageへのアップロード中にネットワークエラーが発生しました。\n\n` +
+            `考えられる原因:\n` +
+            `1. インターネット接続が不安定\n` +
+            `2. ファイルサイズが大きすぎる\n` +
+            `3. タイムアウトが発生した\n\n` +
+            `対処方法:\n` +
+            `1. インターネット接続を確認してください\n` +
+            `2. ファイルサイズを確認してください（推奨: 200MB以下）\n` +
+            `3. しばらく待ってから再度お試しください`
+          )
+        }
+        
         throw new Error(`ファイルのアップロードに失敗しました。\n${errorMessage}`)
       }
 
       // 2-3. アップロード完了をサーバーに通知
       let uploadData
       try {
+        console.log('[INTERVIEW] Notifying server of upload completion')
         const completeRes = await fetch('/api/interview/materials/upload-complete', {
           method: 'POST',
           headers: {
@@ -916,7 +987,18 @@ export default function InterviewPage() {
         })
 
         if (!completeRes.ok) {
-          const errorData = await completeRes.json().catch(() => ({}))
+          let errorData: any = {}
+          try {
+            errorData = await completeRes.json()
+          } catch (jsonError) {
+            const errorText = await completeRes.text().catch(() => '')
+            console.error('[INTERVIEW] Failed to parse error response:', errorText)
+            errorData = {
+              error: `サーバーエラーが発生しました (HTTP ${completeRes.status})`,
+              details: errorText || 'エラーの詳細が取得できませんでした',
+            }
+          }
+          
           const errorMsg = errorData.error || 'アップロード完了の処理に失敗しました'
           const errorDetails = errorData.details || 'サーバーエラーが発生しました。'
           throw new Error(`${errorMsg}\n${errorDetails}`)
@@ -930,7 +1012,24 @@ export default function InterviewPage() {
         console.log(`[INTERVIEW] Upload completed. Material ID: ${uploadData.material.id}`)
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '不明なエラー'
-        throw new Error(`アップロード完了の処理に失敗しました。\nファイルはGoogle Cloud Storageに保存されましたが、データベースへの記録に失敗しました。\n${errorMessage}`)
+        
+        // ネットワークエラーの場合
+        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('fetch')) {
+          console.error('[INTERVIEW] Network error during completion:', error)
+          throw new Error(
+            `アップロード完了の通知中にネットワークエラーが発生しました。\n\n` +
+            `ファイルはGoogle Cloud Storageに保存されている可能性があります。\n` +
+            `プロジェクト一覧から確認してください。\n\n` +
+            `エラー詳細: ${errorMessage}`
+          )
+        }
+        
+        throw new Error(
+          `アップロード完了の処理に失敗しました。\n` +
+          `ファイルはGoogle Cloud Storageに保存されましたが、データベースへの記録に失敗しました。\n` +
+          `プロジェクト一覧から確認してください。\n\n` +
+          `エラー詳細: ${errorMessage}`
+        )
       }
 
       setProgress(50)
