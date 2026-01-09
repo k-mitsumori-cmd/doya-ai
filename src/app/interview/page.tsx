@@ -486,10 +486,15 @@ export default function InterviewPage() {
           }
         }
       } catch (checkError) {
+        // 容量制限エラーの場合は、すぐにエラーを投げる
+        const errorMessage = checkError instanceof Error ? checkError.message : '不明なエラー'
+        if (errorMessage.includes('容量制限') || errorMessage.includes('Storage quota') || errorMessage.includes('quota exceeded')) {
+          throw checkError
+        }
+        
         // エラーが発生した場合、それが最終的なエラーでない限り続行
         if (waitAttempt === 39) {
           // 最後の試行でエラーが発生した場合
-          const errorMessage = checkError instanceof Error ? checkError.message : '不明なエラー'
           throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\nエラー: ${errorMessage}\n\nサーバー側でファイルの結合が完了していない可能性があります。しばらく待ってから再度お試しください。`)
         }
         console.error(`[CHUNK] Wait attempt ${waitAttempt + 1} failed:`, checkError)
@@ -766,7 +771,16 @@ export default function InterviewPage() {
       // エラーメッセージを分割（改行で分割）
       const errorLines = errorMsg.split('\n')
       const mainError = errorLines[0] || 'エラーが発生しました'
-      const errorDetailsText = errorLines.slice(1).join('\n') || '詳細なエラー情報はコンソールを確認してください。問題が続く場合は、サポートにお問い合わせください。'
+      let errorDetailsText = errorLines.slice(1).join('\n')
+      
+      // 容量制限エラーの場合、詳細がない場合はデフォルトのメッセージを追加
+      if (mainError.includes('容量制限') || mainError.includes('Storage quota') || mainError.includes('quota exceeded')) {
+        if (!errorDetailsText || errorDetailsText.trim() === '') {
+          errorDetailsText = 'Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. Vercelのプランをアップグレードする（Proプラン以上では容量が増えます）\n3. 不要なファイルを削除する'
+        }
+      } else if (!errorDetailsText || errorDetailsText.trim() === '') {
+        errorDetailsText = '詳細なエラー情報はコンソールを確認してください。問題が続く場合は、サポートにお問い合わせください。'
+      }
       
       setErrorMessage(mainError)
       setErrorDetails(errorDetailsText)
