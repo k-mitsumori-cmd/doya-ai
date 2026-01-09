@@ -7,6 +7,7 @@
 | ファイル | 内容 |
 |----------|------|
 | [development-guide.md](./development-guide.md) | **開発ガイド（メイン）** - 新サービス追加手順・デプロイ手順・検索系API活用 |
+| [implementation-patterns.md](./implementation-patterns.md) | **実装パターン集** - API・ファイルアップロード・プラン管理などの実装例 |
 | [design-system.md](./design-system.md) | デザインシステム・UIガイドライン |
 | [sidebar-pattern.md](./sidebar-pattern.md) | サイドバー実装パターン |
 | [service-isolation.md](./service-isolation.md) | サービス分離ルール（他機能に影響を与えない） |
@@ -24,14 +25,21 @@
 
 # 3. サイドバーを作成（既存パターンをコピー）
 #    → src/components/<Service>Sidebar.tsx
+#    参考: InterviewSidebar.tsx（最新実装例）
 
 # 4. レイアウトを作成
 #    → src/components/<Service>AppLayout.tsx
+#    参考: InterviewAppLayout.tsx（最新実装例）
 
 # 5. APIを作成
 #    → src/app/api/<service-id>/...
+#    参考: src/app/api/interview/（ファイルアップロード例）
 
-# 6. デプロイ（変更を反映）
+# 6. プラン管理を実装
+#    → UserServiceSubscription で管理
+#    参考: development-guide.md の「プラン管理の実装パターン」
+
+# 7. デプロイ（変更を反映）
 #    → development-guide.md の「デプロイ手順」を参照
 ```
 

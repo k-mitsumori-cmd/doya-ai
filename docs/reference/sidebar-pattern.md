@@ -384,6 +384,136 @@ const handleToggle = React.useCallback((collapsed: boolean) => {
 - `src/components/DashboardSidebar.tsx` （ドヤバナーAI）
 - `src/components/SeoSidebar.tsx` （ドヤライティングAI）
 - `src/components/PersonaSidebar.tsx` （ドヤペルソナAI）
+- `src/components/InterviewSidebar.tsx` （ドヤインタビューAI - 最新実装例）
+
+---
+
+## よくある実装パターン
+
+### パターン1: プラン判定
+
+```typescript
+const planLabel = useMemo(() => {
+  const servicePlan = String((session?.user as any)?.myServicePlan || '').toUpperCase()
+  const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
+  const p = servicePlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
+  
+  if (p === 'ENTERPRISE') return 'ENTERPRISE'
+  if (p === 'PRO') return 'PRO'
+  if (p === 'FREE') return 'FREE'
+  return isLoggedIn ? 'FREE' : 'GUEST'
+}, [session, isLoggedIn])
+```
+
+### パターン2: 1時間生成し放題バナー
+
+```typescript
+const FreeHourBanner = () => {
+  const firstLoginAt = (session?.user as any)?.firstLoginAt
+  const [freeHourRemainingMs, setFreeHourRemainingMs] = useState(() => 
+    getFreeHourRemainingMs(firstLoginAt)
+  )
+  const isFreeHourActive = isLoggedIn && isWithinFreeHour(firstLoginAt)
+
+  useEffect(() => {
+    if (!isFreeHourActive) return
+    const interval = setInterval(() => {
+      setFreeHourRemainingMs(getFreeHourRemainingMs(firstLoginAt))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isFreeHourActive, firstLoginAt])
+
+  if (!isFreeHourActive || freeHourRemainingMs <= 0) return null
+  // ... バナー表示
+}
+```
+
+### パターン3: ログアウト処理
+
+```typescript
+const requestLogout = () => {
+  if (!isLoggedIn || isLoggingOut) return
+  setIsLogoutDialogOpen(true)
+}
+
+const confirmLogout = async () => {
+  if (isLoggingOut) return
+  setIsLoggingOut(true)
+  try {
+    markLogoutToastPending()
+    await signOut({ callbackUrl: '/myservice?loggedOut=1' })
+  } finally {
+    setIsLoggingOut(false)
+    setIsLogoutDialogOpen(false)
+  }
+}
+```
+
+---
+
+## トラブルシューティング
+
+### サイドバーが再レンダリングされすぎる
+
+**症状**: 入力中にサイドバーが「ぱちぱち」する
+
+**対策:**
+
+```typescript
+// ✅ 正しい実装: memo と useMemo を使用
+export const MyServiceSidebar = memo(MyServiceSidebarImpl)
+
+// 派生値は useMemo でメモ化
+const planLabel = useMemo(() => {
+  // ...
+}, [session, isLoggedIn])
+
+// ❌ 間違い: 毎回計算
+const planLabel = String((session?.user as any)?.plan || 'FREE')
+```
+
+### モバイルでサイドバーが閉じない
+
+**症状**: モバイルでサイドバーを開いた後、閉じられない
+
+**対策:**
+
+```typescript
+// ✅ 正しい実装: AnimatePresence で exit アニメーション
+<AnimatePresence>
+  {isSidebarOpen && (
+    <motion.div
+      initial={{ x: -280 }}
+      animate={{ x: 0 }}
+      exit={{ x: -280 }}  // exit を指定
+      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+    >
+      {/* ... */}
+    </motion.div>
+  )}
+</AnimatePresence>
+```
+
+### 折りたたみ状態が保存されない
+
+**症状**: ページリロードで折りたたみ状態がリセットされる
+
+**対策:**
+
+```typescript
+// ✅ 正しい実装: LocalStorage で永続化
+React.useEffect(() => {
+  const saved = localStorage.getItem('myservice-sidebar-collapsed')
+  if (saved !== null) {
+    setIsCollapsed(saved === 'true')
+  }
+}, [])
+
+const handleToggle = React.useCallback((collapsed: boolean) => {
+  setIsCollapsed(collapsed)
+  localStorage.setItem('myservice-sidebar-collapsed', String(collapsed))
+}, [])
+```
 
 ---
 
@@ -394,6 +524,8 @@ const handleToggle = React.useCallback((collapsed: boolean) => {
 `src/components/ToolSwitcherMenu.tsx`
 
 3つのツール間を切り替えるドロップダウンメニュー。
+
+**注意**: ベータ版サービスは他サービスのサイドバーには表示しない。
 
 ### LogoutToastListener
 

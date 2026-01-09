@@ -162,6 +162,8 @@ export const MyServiceSidebar = memo(MyServiceSidebarImpl)
 
 ### Step 4: レイアウトを作成
 
+実装例は `InterviewAppLayout.tsx` を参照。以下は基本パターン：
+
 ```typescript
 // src/components/MyServiceAppLayout.tsx
 'use client'
@@ -170,16 +172,41 @@ import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MyServiceSidebar } from './MyServiceSidebar'
 import { Menu, X } from 'lucide-react'
+import { useSession } from 'next-auth/react'
 
 export function MyServiceAppLayout({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession()
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false)
   const [isCollapsed, setIsCollapsed] = React.useState(false)
+  
+  // LocalStorageから折りたたみ状態を復元
+  React.useEffect(() => {
+    const saved = localStorage.getItem('myservice-sidebar-collapsed')
+    if (saved !== null) {
+      setIsCollapsed(saved === 'true')
+    }
+  }, [])
+
+  const handleToggle = React.useCallback((collapsed: boolean) => {
+    setIsCollapsed(collapsed)
+    localStorage.setItem('myservice-sidebar-collapsed', String(collapsed))
+  }, [])
+
+  // プラン判定（サービス専用プランまたはグローバルプラン）
+  const planLabel = React.useMemo(() => {
+    const servicePlan = String((session?.user as any)?.myServicePlan || '').toUpperCase()
+    const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
+    const p = servicePlan || globalPlan || (session?.user ? 'FREE' : 'GUEST')
+    if (p === 'PRO') return 'PRO'
+    if (p === 'FREE') return 'FREE'
+    return session?.user ? 'FREE' : 'GUEST'
+  }, [session])
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
-        <MyServiceSidebar isCollapsed={isCollapsed} onToggle={setIsCollapsed} />
+        <MyServiceSidebar isCollapsed={isCollapsed} onToggle={handleToggle} />
       </div>
 
       {/* Mobile Overlay */}
@@ -201,6 +228,12 @@ export function MyServiceAppLayout({ children }: { children: React.ReactNode }) 
               className="fixed inset-y-0 left-0 w-[240px] shadow-2xl"
             >
               <MyServiceSidebar forceExpanded isMobile />
+              <button 
+                className="absolute top-4 right-[-3.5rem] p-2 text-white bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md transition-colors"
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                <X className="w-6 h-6" />
+              </button>
             </motion.div>
           </div>
         )}
@@ -210,18 +243,43 @@ export function MyServiceAppLayout({ children }: { children: React.ReactNode }) 
       <div className={`flex flex-col min-h-screen transition-all duration-300 ${
         isCollapsed ? 'md:pl-[72px]' : 'md:pl-[240px]'
       }`}>
-        {/* Header + Content */}
-        <header className="sticky top-0 z-40 h-16 bg-white/80 backdrop-blur-md border-b">
-          {/* ... */}
+        {/* Header */}
+        <header className="sticky top-0 z-40 h-16 bg-white/80 backdrop-blur-md border-b border-gray-200">
+          <div className="h-full flex items-center justify-between px-4 md:px-8">
+            <div className="flex items-center gap-3">
+              <button 
+                className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <Menu className="w-6 h-6" />
+              </button>
+              <div>
+                <p className="text-sm font-black text-gray-900 leading-none">ドヤ○○AI</p>
+                <p className="text-[10px] font-bold text-gray-400 mt-1">サービス説明</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* プラン表示など */}
+            </div>
+          </div>
         </header>
+        
+        {/* Content */}
         <main className="flex-1 p-4 sm:p-6 md:p-8">
-          {children}
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>
   )
 }
 ```
+
+**実装例（参考）:**
+- `src/components/InterviewAppLayout.tsx` - より実践的な実装例（トライアルバナー、プラン表示など）
+- `src/components/SeoAppLayout.tsx` - SEOサービス用レイアウト
+- `src/components/LpSiteAppLayout.tsx` - LPサイト用レイアウト
 
 ### Step 5: ページを作成
 
@@ -245,24 +303,131 @@ export default function MyServicePage() {
 
 ### Step 6: APIを作成
 
+#### 基本パターン
+
 ```typescript
 // src/app/api/myservice/generate/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions)
-  
-  // 使用量チェック（サービス専用のロジック）
-  // ...
-  
-  // AI生成処理
-  // ...
-  
-  return NextResponse.json({ success: true, result: ... })
+  try {
+    // 1. 認証チェック
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+    const guestId = request.headers.get('x-guest-id')
+
+    if (!userId && !guestId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // 2. リクエストボディの取得
+    const body = await request.json()
+    const { input, options } = body
+
+    // 3. 使用量チェック（サービス専用のロジック）
+    if (userId) {
+      const subscription = await prisma.userServiceSubscription.findUnique({
+        where: {
+          userId_serviceId: {
+            userId,
+            serviceId: 'myservice',
+          },
+        },
+      })
+
+      const plan = subscription?.plan || 'FREE'
+      const dailyLimit = plan === 'PRO' ? 100 : plan === 'FREE' ? 3 : 0
+      const todayUsage = subscription?.dailyUsage || 0
+
+      // 日次リセットチェック
+      const lastReset = subscription?.lastUsageReset || new Date()
+      const now = new Date()
+      const isNewDay = now.toDateString() !== lastReset.toDateString()
+
+      if (isNewDay) {
+        await prisma.userServiceSubscription.update({
+          where: { id: subscription?.id },
+          data: { dailyUsage: 0, lastUsageReset: now },
+        })
+      } else if (todayUsage >= dailyLimit) {
+        return NextResponse.json(
+          { error: '使用上限に達しました', limit: dailyLimit },
+          { status: 429 }
+        )
+      }
+    }
+
+    // 4. AI生成処理
+    // ...
+
+    // 5. 使用量を更新
+    if (userId && subscription) {
+      await prisma.userServiceSubscription.update({
+        where: { id: subscription.id },
+        data: { dailyUsage: { increment: 1 } },
+      })
+    }
+
+    // 6. 結果を返す
+    return NextResponse.json({ success: true, result: ... })
+  } catch (error: any) {
+    console.error('[MYSERVICE] Generation error:', error)
+    return NextResponse.json(
+      { error: 'Generation failed', details: error.message },
+      { status: 500 }
+    )
+  }
 }
 ```
+
+#### ファイルアップロード（Vercel Blob Storage）
+
+```typescript
+// src/app/api/myservice/upload/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { put } from '@vercel/blob'
+import { prisma } from '@/lib/prisma'
+
+export async function POST(request: NextRequest) {
+  const formData = await request.formData()
+  const file = formData.get('file') as File
+
+  // ファイルサイズチェック（4.75GB制限 - Vercel Blob Storageの上限）
+  const MAX_FILE_SIZE = 4.75 * 1024 * 1024 * 1024 // 4.75GB
+  const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB（サーバーレス関数の制限）
+
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json(
+      { error: 'ファイルサイズが大きすぎます' },
+      { status: 400 }
+    )
+  }
+
+  // 4.5MBを超える場合はチャンクアップロードを使用
+  if (file.size > VERCEL_LIMIT) {
+    return NextResponse.json(
+      { error: 'チャンクアップロードを使用してください', useChunkUpload: true },
+      { status: 400 }
+    )
+  }
+
+  // Vercel Blob Storageにアップロード
+  const blob = await put(file.name, file, {
+    access: 'public',
+    addRandomSuffix: true,
+  })
+
+  return NextResponse.json({ url: blob.url })
+}
+```
+
+**実装例（参考）:**
+- `src/app/api/interview/materials/upload/route.ts` - ファイルアップロード実装例
+- `src/app/api/banner/generate/route.ts` - 画像生成API実装例
+- `src/app/api/seo/jobs/[id]/advance/route.ts` - ジョブ進行API実装例
 
 ---
 
@@ -300,18 +465,82 @@ Stripe Checkout への遷移ボタン。
 
 ### NextAuth設定
 
-`src/lib/auth.ts` で一元管理。サービス専用のプランは `session.user` に含める。
+`src/lib/auth.ts` で一元管理。サービス専用のプランは `UserServiceSubscription` テーブルで管理。
 
 ```typescript
 // セッションでプラン確認
 const session = await getServerSession(authOptions)
-const plan = (session?.user as any)?.myservicePlan || 'FREE'
+const userId = session?.user?.id
+
+// サービス専用プランを取得
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: {
+    userId_serviceId: {
+      userId: userId!,
+      serviceId: 'myservice',
+    },
+  },
+})
+
+const plan = subscription?.plan || 'FREE'
+```
+
+### プラン管理の実装パターン
+
+#### Prismaスキーマ
+
+```prisma
+// prisma/schema.prisma
+model UserServiceSubscription {
+  id                  String   @id @default(cuid())
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId              String
+  serviceId           String   // 'kantan' | 'banner' | 'myservice' など
+  
+  plan                String   @default("FREE")  // FREE | PRO | ENTERPRISE
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  
+  dailyUsage           Int       @default(0)
+  monthlyUsage         Int       @default(0)
+  lastUsageReset       DateTime  @default(now())
+  
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@unique([userId, serviceId])
+  @@index([serviceId])
+}
+```
+
+#### 使用量チェック
+
+```typescript
+// 日次リセットチェック
+const now = new Date()
+const lastReset = subscription?.lastUsageReset || now
+const isNewDay = now.toDateString() !== lastReset.toDateString()
+
+if (isNewDay) {
+  await prisma.userServiceSubscription.update({
+    where: { id: subscription.id },
+    data: { dailyUsage: 0, lastUsageReset: now },
+  })
+}
+
+// 使用量チェック
+const dailyLimit = plan === 'PRO' ? 100 : plan === 'FREE' ? 3 : 0
+if (subscription.dailyUsage >= dailyLimit) {
+  return NextResponse.json({ error: '使用上限に達しました' }, { status: 429 })
+}
 ```
 
 ### ⚠️ 注意
 
 1. **NextAuthハンドラーを改変しない**（標準形式を維持）
 2. **NEXTAUTH_URLは末尾スラッシュなし**
+3. **サービス専用プランは `UserServiceSubscription` で管理**（`User.plan` はグローバルプラン）
 
 ---
 
@@ -336,6 +565,39 @@ STRIPE_PRICE_IDS = {
 ### Webhook対応
 
 `src/app/api/stripe/webhook/route.ts` で `getPlanIdFromStripePriceId()` にマッピング追加。
+
+```typescript
+// src/app/api/stripe/webhook/route.ts
+async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  const userId = subscription.metadata?.userId
+  const serviceId = subscription.metadata?.serviceId // 'myservice'
+  const planId = subscription.metadata?.planId // 'myservice-pro'
+
+  // UserServiceSubscriptionを更新または作成
+  await prisma.userServiceSubscription.upsert({
+    where: {
+      userId_serviceId: {
+        userId: userId!,
+        serviceId: serviceId!,
+      },
+    },
+    create: {
+      userId: userId!,
+      serviceId: serviceId!,
+      plan: 'PRO',
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: subscription.items.data[0]?.price.id,
+      stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+    },
+    update: {
+      plan: 'PRO',
+      stripeSubscriptionId: subscription.id,
+      stripePriceId: subscription.items.data[0]?.price.id,
+      stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+    },
+  })
+}
+```
 
 ---
 
@@ -717,6 +979,334 @@ npm run lint
 git revert HEAD
 git push origin main
 ```
+
+---
+
+## 実装パターン集
+
+### パターン1: シンプルな生成サービス
+
+**例**: テキスト生成、画像生成など
+
+```typescript
+// API: POST /api/myservice/generate
+// 1. 認証チェック
+// 2. 使用量チェック
+// 3. AI生成
+// 4. 使用量更新
+// 5. 結果返却
+```
+
+**実装例:**
+- `src/app/api/banner/generate/route.ts`
+- `src/app/api/persona/generate/route.ts`
+
+### パターン2: ジョブ進行型サービス
+
+**例**: SEO記事生成（分割生成パイプライン）
+
+```typescript
+// API: POST /api/myservice/jobs/[id]/advance
+// 1. ジョブ状態を取得
+// 2. 次のステップを実行
+// 3. ジョブ状態を更新
+// 4. 完了判定
+```
+
+**実装例:**
+- `src/app/api/seo/jobs/[id]/advance/route.ts`
+
+### パターン3: ファイルアップロード型サービス
+
+**例**: インタビュー記事生成（音声/動画アップロード）
+
+```typescript
+// API: POST /api/myservice/upload
+// 1. ファイルサイズチェック
+// 2. Vercel Blob Storageにアップロード
+// 3. メタデータをDBに保存
+// 4. URLを返却
+```
+
+**実装例:**
+- `src/app/api/interview/materials/upload/route.ts`
+- `src/app/api/interview/materials/upload-chunk/route.ts`（チャンクアップロード）
+
+### パターン4: ストリーミング生成サービス
+
+**例**: リアルタイム生成結果の表示
+
+```typescript
+// API: POST /api/myservice/generate-stream
+// 1. StreamingResponseを返す
+// 2. 生成途中の結果を逐次送信
+// 3. 完了時に最終結果を送信
+```
+
+**実装例:**
+- `src/app/api/lp-site/generate-stream/route.ts`
+
+---
+
+## よくある実装パターン
+
+### 1. エラーハンドリング
+
+```typescript
+try {
+  // 処理
+} catch (error: any) {
+  console.error('[SERVICE_NAME] Error:', error)
+  
+  // Prismaエラーの判定
+  if (error && typeof error === 'object' && 'code' in error) {
+    const prismaError = error as { code: string }
+    if (prismaError.code === 'P2021') {
+      return NextResponse.json(
+        { error: 'データベースのテーブルが存在しません' },
+        { status: 503 }
+      )
+    }
+  }
+  
+  return NextResponse.json(
+    { error: '処理に失敗しました', details: error.message },
+    { status: 500 }
+  )
+}
+```
+
+### 2. ゲストユーザー対応
+
+```typescript
+const userId = session?.user?.id
+const guestId = request.headers.get('x-guest-id')
+
+if (!userId && !guestId) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+}
+
+// ゲストユーザーの場合は制限を厳しく
+const dailyLimit = userId 
+  ? (plan === 'PRO' ? 100 : 3)
+  : 1 // ゲストは1回まで
+```
+
+### 3. 日次リセット処理
+
+```typescript
+const now = new Date()
+const lastReset = subscription?.lastUsageReset || now
+const isNewDay = now.toDateString() !== lastReset.toDateString()
+
+if (isNewDay) {
+  await prisma.userServiceSubscription.update({
+    where: { id: subscription.id },
+    data: { 
+      dailyUsage: 0,
+      lastUsageReset: now,
+    },
+  })
+}
+```
+
+### 4. レート制限
+
+```typescript
+// 同じユーザーからの連続リクエストを制限
+const lastRequestTime = await redis.get(`rate:${userId}`)
+const now = Date.now()
+const RATE_LIMIT_MS = 2000 // 2秒間隔
+
+if (lastRequestTime && now - Number(lastRequestTime) < RATE_LIMIT_MS) {
+  return NextResponse.json(
+    { error: 'リクエストが頻繁すぎます' },
+    { status: 429 }
+  )
+}
+
+await redis.set(`rate:${userId}`, now.toString(), 'EX', 2)
+```
+
+---
+
+## トラブルシューティング
+
+### よくある問題と解決方法
+
+#### 1. プランが反映されない
+
+**症状**: 決済後もプランが更新されない
+
+**原因と対策:**
+
+```typescript
+// ✅ 正しい実装
+// Webhookで UserServiceSubscription を更新
+await prisma.userServiceSubscription.upsert({
+  where: {
+    userId_serviceId: {
+      userId: userId!,
+      serviceId: 'myservice',
+    },
+  },
+  update: { plan: 'PRO' },
+  create: { userId: userId!, serviceId: 'myservice', plan: 'PRO' },
+})
+
+// ❌ 間違い: User.plan を更新してもサービス専用プランには反映されない
+await prisma.user.update({
+  where: { id: userId },
+  data: { plan: 'PRO' }, // これはグローバルプラン
+})
+```
+
+#### 2. 使用量がリセットされない
+
+**症状**: 日次リセットが動作しない
+
+**原因と対策:**
+
+```typescript
+// ✅ 正しい実装: 日付文字列で比較
+const isNewDay = now.toDateString() !== lastReset.toDateString()
+
+// ❌ 間違い: 時刻で比較するとリセットされない
+const isNewDay = now.getTime() > lastReset.getTime() + 24 * 60 * 60 * 1000
+```
+
+#### 3. ファイルアップロードが失敗する
+
+**症状**: 大きなファイルのアップロードが失敗
+
+**原因と対策:**
+
+```typescript
+// ✅ 正しい実装: チャンクアップロードを使用
+if (file.size > 4.5 * 1024 * 1024) {
+  // チャンクアップロードAPIにリダイレクト
+  return NextResponse.json({ useChunkUpload: true }, { status: 400 })
+}
+
+// ❌ 間違い: 大きなファイルを直接アップロード
+// Vercelのサーバーレス関数は4.5MB制限がある
+```
+
+#### 4. セッションが取得できない
+
+**症状**: `getServerSession` が `null` を返す
+
+**原因と対策:**
+
+```typescript
+// ✅ 正しい実装: authOptionsを正しくインポート
+import { authOptions } from '@/lib/auth'
+const session = await getServerSession(authOptions)
+
+// ❌ 間違い: 動的にauthOptionsを生成するとセッションが壊れる
+const session = await getServerSession({
+  // ... 動的生成
+})
+```
+
+#### 5. TypeScriptエラー: `process is not defined`
+
+**症状**: ビルド時に `process` が見つからないエラー
+
+**原因と対策:**
+
+```typescript
+// ✅ 正しい実装: サーバーサイドでのみ使用
+// クライアントコンポーネントでは使用しない
+
+// ❌ 間違い: クライアントコンポーネントで process.env を使用
+'use client'
+const apiKey = process.env.NEXT_PUBLIC_API_KEY // OK
+const secret = process.env.SECRET_KEY // ❌ エラー
+```
+
+---
+
+## パフォーマンス最適化
+
+### 1. データベースクエリの最適化
+
+```typescript
+// ✅ 必要なフィールドのみ取得
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: { userId_serviceId: { userId, serviceId } },
+  select: { plan: true, dailyUsage: true, lastUsageReset: true },
+})
+
+// ❌ 全フィールドを取得（不要なデータ転送）
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: { userId_serviceId: { userId, serviceId } },
+})
+```
+
+### 2. キャッシュの活用
+
+```typescript
+// 頻繁にアクセスされるデータはキャッシュ
+const cacheKey = `plan:${userId}:${serviceId}`
+const cached = await redis.get(cacheKey)
+
+if (cached) {
+  return JSON.parse(cached)
+}
+
+const subscription = await prisma.userServiceSubscription.findUnique({...})
+await redis.set(cacheKey, JSON.stringify(subscription), 'EX', 300) // 5分
+```
+
+### 3. バッチ処理
+
+```typescript
+// 複数の更新を1回のトランザクションで実行
+await prisma.$transaction([
+  prisma.userServiceSubscription.update({...}),
+  prisma.generation.create({...}),
+])
+```
+
+---
+
+## 実装チェックリスト
+
+新サービス追加時に確認：
+
+### 基本実装
+
+- [ ] サービス定義を `src/lib/services.ts` に追加
+- [ ] サイドバーコンポーネントを作成
+- [ ] レイアウトコンポーネントを作成
+- [ ] メインページを作成
+- [ ] APIエンドポイントを作成
+
+### プラン管理
+
+- [ ] `UserServiceSubscription` でプラン管理
+- [ ] 使用量チェックを実装
+- [ ] 日次リセット処理を実装
+- [ ] Stripe Webhookでプラン更新
+
+### 認証・セッション
+
+- [ ] 認証チェックを実装
+- [ ] ゲストユーザー対応（必要に応じて）
+- [ ] セッション取得が正しく動作
+
+### エラーハンドリング
+
+- [ ] try-catch でエラーを捕捉
+- [ ] 適切なHTTPステータスコードを返す
+- [ ] エラーメッセージをユーザーに表示
+
+### デプロイ
+
+- [ ] 環境変数を設定
+- [ ] ビルドエラーがない
+- [ ] 本番環境で動作確認
 
 ---
 

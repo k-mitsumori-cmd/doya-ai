@@ -339,6 +339,96 @@ import {
 
 ---
 
+## 実装パターン集
+
+### パターン1: サービス別テーマカラーの適用
+
+```tsx
+// サイドバーの背景色
+<motion.aside
+  className={`h-screen bg-gradient-to-b from-teal-600 to-cyan-600`}
+  // または
+  className={`h-screen bg-[#2563EB]`}  // 単色の場合
+>
+```
+
+**サービス別カラー:**
+
+| サービス | 背景色クラス | テーマカラー |
+|----------|------------|------------|
+| ドヤバナーAI | `bg-[#2563EB]` | Blue 600 |
+| ドヤライティングAI | `bg-gradient-to-b from-emerald-600 via-green-600 to-teal-700` | Emerald/Teal |
+| ドヤインタビューAI | `bg-gradient-to-b from-orange-600 to-red-600` | Orange/Red |
+| ドヤペルソナAI | `bg-gradient-to-b from-purple-600 via-violet-600 to-purple-700` | Purple |
+
+### パターン2: レスポンシブ対応
+
+```tsx
+// モバイル/デスクトップで異なる表示
+<div className="hidden md:block">
+  {/* デスクトップのみ表示 */}
+</div>
+
+<div className="md:hidden">
+  {/* モバイルのみ表示 */}
+</div>
+
+// サイズ別のスタイリング
+<div className="text-sm md:text-base lg:text-lg">
+  {/* 画面サイズに応じてフォントサイズを変更 */}
+</div>
+```
+
+### パターン3: アニメーションの適用
+
+```tsx
+// Framer Motion を使用
+<motion.div
+  initial={{ opacity: 0, y: 12 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.3, ease: 'easeOut' }}
+>
+  {/* コンテンツ */}
+</motion.div>
+
+// スタガーアニメーション
+<motion.div
+  variants={containerVariants}
+  initial="hidden"
+  animate="visible"
+>
+  {items.map((item) => (
+    <motion.div key={item.id} variants={itemVariants}>
+      {item.content}
+    </motion.div>
+  ))}
+</motion.div>
+```
+
+---
+
+## ベストプラクティス
+
+### 1. 一貫性の維持
+
+- 同じ機能は同じデザインパターンを使用
+- ボタン、カード、入力フィールドは統一されたスタイル
+- アニメーションのタイミングを統一
+
+### 2. パフォーマンス
+
+- 不要なアニメーションは避ける
+- `memo` でコンポーネントを最適化
+- 画像は最適化（Next.js Image コンポーネントを使用）
+
+### 3. アクセシビリティ
+
+- キーボード操作に対応
+- フォーカス状態を明確に表示
+- コントラスト比を確保（WCAG AA準拠）
+
+---
+
 *最終更新: 2026年1月*
 
 

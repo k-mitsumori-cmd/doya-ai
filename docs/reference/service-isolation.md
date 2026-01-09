@@ -414,6 +414,127 @@ switch (serviceId) {
 
 ---
 
+## 実装パターン集
+
+### パターン1: サービス専用プラン管理
+
+```typescript
+// ✅ 正しい実装: UserServiceSubscription を使用
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: {
+    userId_serviceId: {
+      userId: userId!,
+      serviceId: 'myservice',  // サービスIDを明示
+    },
+  },
+})
+
+const plan = subscription?.plan || 'FREE'
+
+// ❌ 間違い: グローバルプランを使用
+const plan = (session?.user as any)?.plan || 'FREE'  // 他サービスに影響
+```
+
+### パターン2: サービス専用APIエンドポイント
+
+```typescript
+// ✅ 正しい実装: /api/myservice/... 配下にのみAPIを作成
+// src/app/api/myservice/generate/route.ts
+export async function POST(request: NextRequest) {
+  // 自サービスのロジックのみ
+}
+
+// ❌ 間違い: 他サービスのAPIを呼び出す
+import { bannerGenerate } from '@/app/api/banner/generate'  // 禁止
+```
+
+### パターン3: サービス専用DBテーブル
+
+```typescript
+// ✅ 正しい実装: サービス専用テーブルを使用
+const result = await prisma.myServiceGeneration.create({
+  data: { userId, input, result },
+})
+
+// ❌ 間違い: 他サービスのテーブルを使用
+const result = await prisma.bannerGeneration.create({  // 禁止
+  data: { userId, input, result },
+})
+```
+
+### パターン4: サービス専用コンポーネント
+
+```typescript
+// ✅ 正しい実装: サービス専用サイドバーを作成
+import { MyServiceSidebar } from '@/components/MyServiceSidebar'
+
+// ❌ 間違い: 他サービスのサイドバーを使用
+import { DashboardSidebar } from '@/components/DashboardSidebar'  // 禁止
+```
+
+---
+
+## よくある分離違反と対策
+
+### 違反1: グローバルプランで判定
+
+```typescript
+// ❌ 間違い
+const plan = (session?.user as any)?.plan || 'FREE'
+
+// ✅ 正しい
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: { userId_serviceId: { userId, serviceId: 'myservice' } },
+})
+const plan = subscription?.plan || 'FREE'
+```
+
+### 違反2: 他サービスのAPIを直接呼び出し
+
+```typescript
+// ❌ 間違い
+const response = await fetch('/api/banner/generate', { ... })
+
+// ✅ 正しい: 自サービスのAPIのみ使用
+const response = await fetch('/api/myservice/generate', { ... })
+```
+
+### 違反3: 共通コンポーネントへの破壊的変更
+
+```typescript
+// ❌ 間違い: ToolSwitcherMenu を改変
+export function ToolSwitcherMenu({ currentTool, ... }) {
+  // 自サービスのみのロジックを追加
+}
+
+// ✅ 正しい: サービス専用コンポーネントを作成
+export function MyServiceToolSwitcher({ ... }) {
+  // 自サービスのみのロジック
+}
+```
+
+---
+
+## 分離チェックツール
+
+### コードレビュー時のチェック項目
+
+```bash
+# 1. 他サービスのAPIを呼んでいないか
+grep -r "from '@/app/api/banner" src/app/myservice/
+grep -r "from '@/app/api/seo" src/app/myservice/
+
+# 2. 他サービスのコンポーネントを使用していないか
+grep -r "from '@/components/DashboardSidebar" src/app/myservice/
+grep -r "from '@/components/SeoSidebar" src/app/myservice/
+
+# 3. 他サービスのテーブルを直接参照していないか
+grep -r "prisma.banner" src/app/api/myservice/
+grep -r "prisma.seo" src/app/api/myservice/
+```
+
+---
+
 *最終更新: 2026年1月*
 
 

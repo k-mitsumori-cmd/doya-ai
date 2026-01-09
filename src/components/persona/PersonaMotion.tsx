@@ -120,6 +120,8 @@ export function PartyLoadingOverlay({
   steps,
   mascotSrc = '/persona/mascot.svg',
   title = 'ペルソナ生成中',
+  cards,
+  showSpec = false,
 }: {
   open: boolean
   mode: MotionMode
@@ -129,6 +131,8 @@ export function PartyLoadingOverlay({
   steps: { label: string; threshold: number }[]
   mascotSrc?: string
   title?: string
+  cards?: { title: string; subtitle: string }[]
+  showSpec?: boolean
 }) {
   const p = Math.max(0, Math.min(100, Number.isFinite(progress) ? progress : 0))
   const party = mode === 'party'
@@ -222,16 +226,20 @@ export function PartyLoadingOverlay({
 
               <div className="p-6">
                 <div className="grid sm:grid-cols-3 gap-3">
-                  {['候補を抽出', '履歴書を生成', '生活を描写'].map((t, i) => (
+                  {(cards || [
+                    { title: '候補を抽出', subtitle: '生成の"手触り"を出すための演出' },
+                    { title: '履歴書を生成', subtitle: '生成の"手触り"を出すための演出' },
+                    { title: '生活を描写', subtitle: '生成の"手触り"を出すための演出' },
+                  ]).map((card, i) => (
                     <motion.div
-                      key={t}
+                      key={`${card.title}-${i}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.05 * i, duration: 0.3, ease: 'easeOut' }}
                       className="rounded-2xl bg-white/10 border border-white/10 p-4"
                     >
-                      <div className="text-white font-black">{t}</div>
-                      <div className="mt-1 text-white/70 text-xs font-bold">生成の“手触り”を出すための演出</div>
+                      <div className="text-white font-black">{card.title}</div>
+                      <div className="mt-1 text-white/70 text-xs font-bold">{card.subtitle}</div>
                       {party && (
                         <motion.div
                           key={pulse}
@@ -245,12 +253,14 @@ export function PartyLoadingOverlay({
                   ))}
                 </div>
 
-                <div className="mt-5 text-white/70 text-xs font-bold">
-                  仕様：partyデフォルト / 機能非干渉（表示層のみ）
-                  <span className="ml-2 inline-flex items-center gap-1 text-white/80">
-                    docs <ChevronRight className="w-4 h-4" /> animation-spec.md
-                  </span>
-                </div>
+                {showSpec && (
+                  <div className="mt-5 text-white/70 text-xs font-bold">
+                    仕様：partyデフォルト / 機能非干渉（表示層のみ）
+                    <span className="ml-2 inline-flex items-center gap-1 text-white/80">
+                      docs <ChevronRight className="w-4 h-4" /> animation-spec.md
+                    </span>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>

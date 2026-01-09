@@ -743,6 +743,12 @@ export default function InterviewPage() {
         steps={uploadSteps}
         mascotSrc="/persona/mascot.svg"
         title="インタビュー処理中"
+        cards={[
+          { title: 'ファイル処理', subtitle: 'アップロードしたファイルを解析中' },
+          { title: '文字起こし', subtitle: '音声・動画からテキストを抽出中' },
+          { title: '記事生成', subtitle: 'AIが高品質な記事を作成中' },
+        ]}
+        showSpec={false}
       />
       {/* ヒーローセクション */}
       <motion.div
