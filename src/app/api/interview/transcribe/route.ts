@@ -6,7 +6,6 @@ import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import OpenAI from 'openai'
-import { get } from '@vercel/blob'
 
 // Vercel等のサーバーレス環境では /tmp を使用
 function getUploadBaseDir() {
@@ -74,35 +73,9 @@ export async function POST(request: NextRequest) {
     // ファイルを読み込む（Vercel Blob Storageから取得、またはローカルファイルシステムから）
     let fileBuffer: Buffer
     try {
-      // 優先順位: filePath (Blob pathname) > fileUrl (完全なURL) > ローカルファイルシステム
-      if (material.filePath && !material.filePath.startsWith('http://') && !material.filePath.startsWith('https://')) {
-        // Vercel Blob Storageから取得（filePathはBlob pathname、例: interview/projectId/filename）
-        console.log(`[INTERVIEW] Fetching file from Blob Storage: ${material.filePath}`)
-        try {
-          const blob = await get(material.filePath)
-          if (!blob || !blob.arrayBuffer) {
-            throw new Error('Blob Storageからファイルを正常に取得できませんでした')
-          }
-          const arrayBuffer = await blob.arrayBuffer()
-          fileBuffer = Buffer.from(arrayBuffer)
-          console.log(`[INTERVIEW] File read from Blob Storage successfully: ${fileBuffer.length} bytes`)
-        } catch (blobError: any) {
-          console.warn('[INTERVIEW] Failed to get from Blob Storage, trying fileUrl:', blobError.message)
-          // Blob Storageからの取得に失敗した場合は、fileUrlを試す
-          if (material.fileUrl) {
-            const response = await fetch(material.fileUrl)
-            if (!response.ok) {
-              throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
-            }
-            const arrayBuffer = await response.arrayBuffer()
-            fileBuffer = Buffer.from(arrayBuffer)
-            console.log(`[INTERVIEW] File read from URL successfully: ${fileBuffer.length} bytes`)
-          } else {
-            throw blobError
-          }
-        }
-      } else if (material.fileUrl) {
-        // fileUrlが存在する場合は、直接fetchする
+      // 優先順位: fileUrl (完全なURL) > filePath (ローカルファイルシステム)
+      if (material.fileUrl) {
+        // fileUrlが存在する場合は、直接fetchする（Vercel Blob StorageのURL）
         console.log(`[INTERVIEW] Fetching file from URL: ${material.fileUrl}`)
         const response = await fetch(material.fileUrl)
         if (!response.ok) {
@@ -111,7 +84,7 @@ export async function POST(request: NextRequest) {
         const arrayBuffer = await response.arrayBuffer()
         fileBuffer = Buffer.from(arrayBuffer)
         console.log(`[INTERVIEW] File read from URL successfully: ${fileBuffer.length} bytes`)
-      } else {
+      } else if (material.filePath) {
         // ローカルファイルシステムから読み込み（フォールバック）
         const baseDir = getUploadBaseDir()
         let filePath: string
