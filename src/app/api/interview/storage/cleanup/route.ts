@@ -61,8 +61,10 @@ export async function POST(request: NextRequest) {
       return sum + (material.fileSize || 0)
     }, 0)
 
-    const HOBBY_PLAN_LIMIT = 1024 * 1024 * 1024
-    const currentFreeBytes = HOBBY_PLAN_LIMIT - totalSize
+    // Proプランの制限（実際の制限値はVercelの設定によるが、一般的にProプランでは大幅に増加）
+    // 実際の制限値は動的に取得できないため、大きな値に設定（100GB）
+    const PRO_PLAN_LIMIT = 100 * 1024 * 1024 * 1024 // 100GB
+    const currentFreeBytes = PRO_PLAN_LIMIT - totalSize
 
     // 既に十分な容量がある場合
     if (currentFreeBytes >= targetFreeBytes) {

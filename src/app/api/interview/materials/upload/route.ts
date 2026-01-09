@@ -180,9 +180,9 @@ export async function POST(request: NextRequest) {
       } else if (blobError?.message?.includes('Size limit') || blobError?.message?.includes('413')) {
         errorMessage = 'ファイルサイズが大きすぎます'
         errorDetails = `ファイルサイズがBlob Storageの上限を超えています。\n現在のファイルサイズ: ${formatFileSize(file.size)}\n最大ファイルサイズ: 4.75GB`
-      } else if (blobError?.message?.includes('Storage quota') || blobError?.message?.includes('quota exceeded') || blobError?.message?.includes('1GB maximum')) {
+      } else if (blobError?.message?.includes('Storage quota') || blobError?.message?.includes('quota exceeded') || blobError?.message?.includes('maximum')) {
         errorMessage = 'Blob Storageの容量制限に達しました'
-        errorDetails = `Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. Vercelのプランをアップグレードする（Proプラン以上では容量が増えます）\n3. 不要なファイルを削除する\n\n現在のファイルサイズ: ${formatFileSize(file.size)}`
+        errorDetails = `Vercel Blob Storageの容量制限に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. 不要なファイルを削除する\n3. Vercelダッシュボードでストレージ使用状況を確認する\n\n現在のファイルサイズ: ${formatFileSize(file.size)}`
       } else {
         errorDetails = `エラー詳細: ${blobError instanceof Error ? blobError.message : '不明なエラー'}\nBlob Storageへの接続を確認してください。`
       }

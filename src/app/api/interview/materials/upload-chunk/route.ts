@@ -565,8 +565,10 @@ export async function POST(request: NextRequest) {
                   return sum + (material.fileSize || 0)
                 }, 0)
 
-                const HOBBY_PLAN_LIMIT = 1024 * 1024 * 1024
-                const currentFreeBytes = HOBBY_PLAN_LIMIT - totalSize
+                // Proプランの制限（実際の制限値はVercelの設定によるが、一般的にProプランでは大幅に増加）
+                // 実際の制限値は動的に取得できないため、大きな値に設定（100GB）
+                const PRO_PLAN_LIMIT = 100 * 1024 * 1024 * 1024 // 100GB
+                const currentFreeBytes = PRO_PLAN_LIMIT - totalSize
 
                 // 必要な容量を計算
                 if (currentFreeBytes < targetFreeBytes) {
@@ -634,11 +636,11 @@ export async function POST(request: NextRequest) {
               }
               
               if (cleanupAttempted && cleanupResult && cleanupResult.deletedCount > 0) {
-                errorDetails = `Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達していましたが、自動で古いプロジェクトを削除しました。\n\n削除されたプロジェクト数: ${cleanupResult.deletedCount}\n解放された容量: ${formatFileSize(cleanupResult.freedBytes || 0)}\n\n再度アップロードをお試しください。\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
+                errorDetails = `Vercel Blob Storageの容量制限に達していましたが、自動で古いプロジェクトを削除しました。\n\n削除されたプロジェクト数: ${cleanupResult.deletedCount}\n解放された容量: ${formatFileSize(cleanupResult.freedBytes || 0)}\n\n再度アップロードをお試しください。\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
                 // クリーンアップが成功した場合でも、一度エラーを返して再試行を促す
                 statusCode = 507
               } else {
-                errorDetails = `Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. Vercelのプランをアップグレードする（Proプラン以上では容量が増えます）\n3. 不要なファイルを削除する\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
+                errorDetails = `Vercel Blob Storageの容量制限に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. 不要なファイルを削除する\n3. Vercelダッシュボードでストレージ使用状況を確認する\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
                 statusCode = 507 // 507 Insufficient Storage
               }
             } else {
