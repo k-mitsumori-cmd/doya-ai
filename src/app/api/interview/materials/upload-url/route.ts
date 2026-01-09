@@ -80,12 +80,18 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[INTERVIEW] Error generating signed URL:', error)
     const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    
+    // 認証エラーの場合は401を返す
+    const isAuthError = errorMessage.includes('認証情報') || 
+                       errorMessage.includes('GOOGLE_APPLICATION_CREDENTIALS') ||
+                       errorMessage.includes('credentials')
+    
     return NextResponse.json(
       {
         error: '署名付きURLの生成に失敗しました',
-        details: `エラー詳細: ${errorMessage}`,
+        details: errorMessage,
       },
-      { status: 500 }
+      { status: isAuthError ? 401 : 500 }
     )
   }
 }

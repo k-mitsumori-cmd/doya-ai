@@ -301,25 +301,55 @@ export async function generateSignedUploadUrl(
   filePath: string
   publicUrl: string
 }> {
-  const storage = await getStorage()
-  const bucket = storage.bucket(getBucketName())
-  const file = bucket.file(filePath)
+  try {
+    const storage = await getStorage()
+    const bucket = storage.bucket(getBucketName())
+    const file = bucket.file(filePath)
 
-  // 署名付きURLを生成（PUTメソッドでアップロード可能）
-  const [signedUrl] = await file.getSignedUrl({
-    version: 'v4',
-    action: 'write',
-    expires: Date.now() + expiresIn * 1000,
-    contentType,
-  })
+    // 署名付きURLを生成（PUTメソッドでアップロード可能）
+    const [signedUrl] = await file.getSignedUrl({
+      version: 'v4',
+      action: 'write',
+      expires: Date.now() + expiresIn * 1000,
+      contentType,
+    })
 
-  // 公開URLも生成
-  const publicUrl = `https://storage.googleapis.com/${getBucketName()}/${filePath}`
+    // 公開URLも生成
+    const publicUrl = `https://storage.googleapis.com/${getBucketName()}/${filePath}`
 
-  return {
-    signedUrl,
-    filePath,
-    publicUrl,
+    return {
+      signedUrl,
+      filePath,
+      publicUrl,
+    }
+  } catch (error: any) {
+    // 認証エラーの場合は詳細なメッセージを返す
+    if (error?.message?.includes('認証情報') || 
+        error?.message?.includes('GOOGLE_APPLICATION_CREDENTIALS') ||
+        error?.message?.includes('credentials')) {
+      const missingVars = []
+      if (!process.env.GOOGLE_CLOUD_PROJECT_ID) missingVars.push('GOOGLE_CLOUD_PROJECT_ID')
+      if (!process.env.GCS_BUCKET_NAME) missingVars.push('GCS_BUCKET_NAME')
+      if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && 
+          !process.env.GCS_CLIENT_EMAIL && 
+          !process.env.GCS_PRIVATE_KEY) {
+        missingVars.push('GOOGLE_APPLICATION_CREDENTIALS または GCS_CLIENT_EMAIL + GCS_PRIVATE_KEY')
+      }
+      
+      throw new Error(
+        `Google Cloud Storageの認証情報が設定されていません。\n\n` +
+        `設定が必要な環境変数:\n${missingVars.map(v => `- ${v}`).join('\n')}\n\n` +
+        `Vercelダッシュボードで環境変数を設定してください。\n` +
+        `詳細: ${error?.message || '不明なエラー'}`
+      )
+    }
+    
+    // その他のエラー
+    console.error('[GCS] Error generating signed URL:', error)
+    throw new Error(
+      `署名付きURLの生成に失敗しました: ${error?.message || '不明なエラー'}\n` +
+      `エラーコード: ${error?.code || 'なし'}`
+    )
   }
 }
 

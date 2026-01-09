@@ -844,6 +844,21 @@ export default function InterviewPage() {
           const errorData = await urlRes.json().catch(() => ({}))
           const errorMsg = errorData.error || '署名付きURLの取得に失敗しました'
           const errorDetails = errorData.details || 'サーバーエラーが発生しました。'
+          
+          // 認証エラーの場合は、より詳細なメッセージを表示
+          if (urlRes.status === 401 || errorMsg.includes('認証情報') || errorDetails.includes('認証情報')) {
+            throw new Error(
+              `${errorMsg}\n\n${errorDetails}\n\n` +
+              `対処方法:\n` +
+              `1. Vercelダッシュボードにログイン\n` +
+              `2. プロジェクト設定 > Environment Variables を開く\n` +
+              `3. 以下の環境変数を設定:\n` +
+              `   - GOOGLE_CLOUD_PROJECT_ID\n` +
+              `   - GCS_BUCKET_NAME\n` +
+              `   - GOOGLE_APPLICATION_CREDENTIALS (JSON形式)`
+            )
+          }
+          
           throw new Error(`${errorMsg}\n${errorDetails}`)
         }
 
