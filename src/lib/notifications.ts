@@ -80,7 +80,7 @@ export async function sendNewUserNotification(data: NewUserNotificationData): Pr
 async function sendSlackNotification(webhookUrl: string, data: NewUserNotificationData): Promise<void> {
   try {
     const message = {
-      text: '🎉 新規ユーザーが登録されました',
+      text: '<!channel> 🎉 新規ユーザーが登録されました',
       blocks: [
         {
           type: 'header',
@@ -212,7 +212,7 @@ async function sendSlackPaymentNotification(webhookUrl: string, data: PaymentNot
     const emoji = celebrationEmojis[Math.floor(Math.random() * celebrationEmojis.length)]
 
     const message = {
-      text: `${emoji} 課金が完了しました！`,
+      text: `<!channel> ${emoji} 課金が完了しました！`,
       blocks: [
         {
           type: 'header',
