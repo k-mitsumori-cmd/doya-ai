@@ -150,7 +150,7 @@ export function PartyLoadingOverlay({
     return () => window.clearInterval(t)
   }, [open, party])
 
-  // カウントダウンの実装
+  // カウントダウンの実装（1秒ごとに更新、アニメーションなしで数字だけ減る）
   useEffect(() => {
     if (estimatedSeconds === null || estimatedSeconds === undefined) {
       setCountdownSeconds(null)
@@ -160,7 +160,7 @@ export function PartyLoadingOverlay({
     // 初期値を設定
     setCountdownSeconds(estimatedSeconds)
 
-    // 1秒ごとにカウントダウン
+    // 1秒ごとにカウントダウン（アニメーションなしで数字だけ減る）
     const interval = setInterval(() => {
       setCountdownSeconds((prev) => {
         if (prev === null || prev === undefined) return null
@@ -237,13 +237,7 @@ export function PartyLoadingOverlay({
                       <div className="text-white font-black text-lg leading-tight">{title}</div>
                       <div className="text-white/70 text-xs font-bold mt-1">{stageText}</div>
                       {countdownSeconds !== null && countdownSeconds !== undefined && (
-                        <motion.div
-                          key={countdownSeconds}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.2 }}
-                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500/30 to-pink-500/30 border border-purple-400/50 backdrop-blur-sm"
-                        >
+                        <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500/30 to-pink-500/30 border border-purple-400/50 backdrop-blur-sm">
                           <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
                           <div className="text-white font-black text-sm">
                             残り時間:{' '}
@@ -260,7 +254,7 @@ export function PartyLoadingOverlay({
                               )}
                             </span>
                           </div>
-                        </motion.div>
+                        </div>
                       )}
                       {allowTabSwitch && (
                         <div className="text-white/50 text-[10px] font-bold mt-1.5">
