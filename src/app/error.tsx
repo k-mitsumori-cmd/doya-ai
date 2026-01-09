@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 import { Home, RefreshCw, Sparkles, AlertTriangle } from 'lucide-react'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
@@ -12,10 +13,39 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const pathname = usePathname()
+  const router = useRouter()
+
+  // 現在のパスからサービスを特定して、リダイレクト先を決定
+  const redirectPath = useMemo(() => {
+    if (pathname?.startsWith('/banner')) {
+      return '/banner/dashboard'
+    }
+    if (pathname?.startsWith('/seo')) {
+      return '/seo'
+    }
+    if (pathname?.startsWith('/persona')) {
+      return '/persona'
+    }
+    if (pathname?.startsWith('/interview')) {
+      return '/interview'
+    }
+    if (pathname?.startsWith('/kantan')) {
+      return '/kantan/dashboard'
+    }
+    // サービスが特定できない場合はトップページへ
+    return '/'
+  }, [pathname])
+
   useEffect(() => {
     // 本番環境ではエラーを外部サービスに送信することも可能
     console.error('Application error:', error)
   }, [error])
+
+  // 再試行ボタンのハンドラー：エラーが発生したサービスのページにリダイレクト
+  const handleRetry = () => {
+    router.push(redirectPath)
+  }
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center px-4">
@@ -38,7 +68,7 @@ export default function Error({
         {/* アクション */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <button
-            onClick={() => reset()}
+            onClick={handleRetry}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all"
           >
             <RefreshCw className="w-5 h-5" />
