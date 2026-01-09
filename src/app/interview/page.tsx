@@ -563,11 +563,11 @@ export default function InterviewPage() {
     console.log(`[CHUNK] All chunks uploaded, waiting for server to complete file merge...`)
     
     // 最初に少し待機（結合処理が開始される時間を確保）
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    await new Promise(resolve => setTimeout(resolve, 5000)) // 5秒に延長
     
-    // 待機時間を延長（最大60秒）
-    for (let waitAttempt = 0; waitAttempt < 40; waitAttempt++) {
-      await new Promise(resolve => setTimeout(resolve, 1500)) // 1.5秒待機
+    // 待機時間を延長（最大120秒）
+    for (let waitAttempt = 0; waitAttempt < 60; waitAttempt++) {
+      await new Promise(resolve => setTimeout(resolve, 2000)) // 2秒待機
       
       try {
         const lastChunkIndex = totalChunks - 1
@@ -680,9 +680,9 @@ export default function InterviewPage() {
         }
         
         // エラーが発生した場合、それが最終的なエラーでない限り続行
-        if (waitAttempt === 39) {
+        if (waitAttempt === 59) {
           // 最後の試行でエラーが発生した場合
-          throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\nエラー: ${errorMessage}\n\nサーバー側でファイルの結合が完了していない可能性があります。しばらく待ってから再度お試しください。`)
+          throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\nエラー: ${errorMessage}\n\nサーバー側でファイルの結合が完了していない可能性があります。しばらく待ってから再度お試しください。\n\nもしまだエラーが続く場合は、プロジェクト一覧から該当プロジェクトを確認してください。`)
         }
         console.error(`[CHUNK] Wait attempt ${waitAttempt + 1} failed:`, checkError)
       }

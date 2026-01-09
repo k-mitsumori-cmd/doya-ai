@@ -264,9 +264,12 @@ export async function POST(request: NextRequest) {
 
       console.log(`[INTERVIEW] Uploaded chunks: ${uploadedChunks.length}/${totalChunks}`, uploadedChunks)
 
-        // すべてのチャンクが揃った場合、ファイルを結合
+      // すべてのチャンクが揃った場合、ファイルを結合
       if (uploadedChunks.length === totalChunks) {
         console.log(`[INTERVIEW] All chunks received. Starting file merge...`)
+        
+        // 結合処理を非同期で実行（クライアントに即座にレスポンスを返す）
+        // 結合処理は次のリクエストで完了を確認できる
         
         try {
           // 結合前に古いファイルをクリーンアップ
