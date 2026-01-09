@@ -59,7 +59,7 @@ async function getStorage(): Promise<Storage> {
         console.log('[GCS] Credentials type:', credentials.type)
         console.log('[GCS] Credentials project_id:', credentials.project_id)
         console.log('[GCS] Credentials client_email:', credentials.client_email ? credentials.client_email.substring(0, 30) + '...' : 'missing')
-        console.log('[GCS] Credentials private_key:', credentials.private_key ? credentials.private_key.substring(0, 30) + '...' : 'missing')
+        console.log('[GCS] Credentials private_key:', credentials.private_key ? (typeof credentials.private_key === 'string' ? credentials.private_key.substring(0, 30) + '...' : 'Present (non-string)') : 'missing')
         
         // 認証情報の検証
         if (!credentials.type || credentials.type !== 'service_account') {
@@ -123,14 +123,39 @@ async function getStorage(): Promise<Storage> {
 
     if (credentials) {
       config.credentials = credentials
+      console.log('[GCS] Storage client initialized successfully with credentials')
     } else {
       // 認証情報が設定されていない場合
       console.error('[GCS] No credentials provided')
       console.error('[GCS] Required environment variables:')
-      console.error('[GCS]   - GOOGLE_CLOUD_PROJECT_ID:', process.env.GOOGLE_CLOUD_PROJECT_ID ? '✓' : '✗')
-      console.error('[GCS]   - GCS_BUCKET_NAME:', process.env.GCS_BUCKET_NAME ? '✓' : '✗')
-      console.error('[GCS]   - GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS ? '✓' : '✗')
-      throw new Error('Google Cloud Storageの認証情報が設定されていません。GOOGLE_APPLICATION_CREDENTIALS環境変数を設定してください。')
+      console.error('[GCS]   - GOOGLE_CLOUD_PROJECT_ID:', process.env.GOOGLE_CLOUD_PROJECT_ID ? `✓ (${process.env.GOOGLE_CLOUD_PROJECT_ID})` : '✗')
+      console.error('[GCS]   - GCS_BUCKET_NAME:', process.env.GCS_BUCKET_NAME ? `✓ (${process.env.GCS_BUCKET_NAME})` : '✗')
+      console.error('[GCS]   - GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS ? `✓ (${process.env.GOOGLE_APPLICATION_CREDENTIALS.length} chars)` : '✗')
+      console.error('[GCS]   - GCS_CLIENT_EMAIL:', process.env.GCS_CLIENT_EMAIL ? `✓ (${process.env.GCS_CLIENT_EMAIL})` : '✗')
+      console.error('[GCS]   - GCS_PRIVATE_KEY:', process.env.GCS_PRIVATE_KEY ? `✓ (${process.env.GCS_PRIVATE_KEY.length} chars)` : '✗')
+      
+      // 環境変数名の確認（よくある間違いをチェック）
+      const envVarNames = Object.keys(process.env)
+      const similarNames = envVarNames.filter(name => 
+        name.includes('GOOGLE') || name.includes('APPLICATION') || name.includes('CREDENTIAL')
+      )
+      if (similarNames.length > 0) {
+        console.error('[GCS] Similar environment variable names found:', similarNames)
+      }
+      
+      const missingVars = []
+      if (!process.env.GOOGLE_CLOUD_PROJECT_ID) missingVars.push('GOOGLE_CLOUD_PROJECT_ID')
+      if (!process.env.GCS_BUCKET_NAME) missingVars.push('GCS_BUCKET_NAME')
+      if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GCS_CLIENT_EMAIL && !process.env.GCS_PRIVATE_KEY) {
+        missingVars.push('GOOGLE_APPLICATION_CREDENTIALS または (GCS_CLIENT_EMAIL + GCS_PRIVATE_KEY)')
+      }
+      
+      throw new Error(
+        `Google Cloud Storageの認証情報が設定されていません。\n\n` +
+        `設定が必要な環境変数:\n${missingVars.map(v => `- ${v}`).join('\n')}\n\n` +
+        `Vercelダッシュボードで環境変数を設定してください。\n` +
+        `環境変数名は完全に一致している必要があります（大文字小文字も含む）。`
+      )
     }
 
     storage = new Storage(config)
@@ -215,7 +240,7 @@ export async function uploadToGCS(
 
   // ファイルサイズを取得
   const [metadata] = await file.getMetadata()
-  const size = parseInt(metadata.size || '0', 10)
+  const size = typeof metadata.size === 'string' ? parseInt(metadata.size, 10) : (metadata.size || 0)
 
   return {
     url,
@@ -303,7 +328,7 @@ export async function getGCSUsage(): Promise<{
   let totalSize = 0
   for (const file of files) {
     const [metadata] = await file.getMetadata()
-    totalSize += parseInt(metadata.size || '0', 10)
+    totalSize += typeof metadata.size === 'string' ? parseInt(metadata.size, 10) : (metadata.size || 0)
   }
 
   return {
