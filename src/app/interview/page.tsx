@@ -707,7 +707,7 @@ export default function InterviewPage() {
     }
 
     // 120秒待機しても完了しなかった場合
-    throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\n\nサーバー側でファイルの結合またはGoogle Cloud Storageへのアップロードが完了していない可能性があります。\n\n対処方法:\n1. しばらく待ってから再度お試しください\n2. ファイルサイズを確認してください（推奨: 200MB以下）\n3. もしまだエラーが続く場合は、プロジェクト一覧から該当プロジェクトを確認してください\n4. 環境変数（GOOGLE_CLOUD_PROJECT_ID、GOOGLE_APPLICATION_CREDENTIALS、GCS_BUCKET_NAME）が正しく設定されているか確認してください`)
+    throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\n\nサーバー側でファイルの結合またはGoogle Cloud Storageへのアップロードが完了していない可能性があります。\n\n対処方法:\n1. しばらく待ってから再度お試しください\n2. 大きなファイル（500MB以上）の場合は、時間がかかる場合があります\n3. もしまだエラーが続く場合は、プロジェクト一覧から該当プロジェクトを確認してください\n4. 環境変数（GOOGLE_CLOUD_PROJECT_ID、GOOGLE_APPLICATION_CREDENTIALS、GCS_BUCKET_NAME）が正しく設定されているか確認してください`)
   }
 
   const handleFileSelect = async (file: File) => {
@@ -914,8 +914,13 @@ export default function InterviewPage() {
           setProgress(40)
           
           // タイムアウトを設定（ファイルサイズに応じて調整）
-          const timeoutMs = Math.max(300000, file.size / 1024 / 1024 * 10000) // 最低5分、1MBあたり10秒
-          console.log(`[INTERVIEW] Upload timeout: ${(timeoutMs / 1000).toFixed(0)} seconds`)
+          // 大きなファイルの場合、より長いタイムアウトを設定
+          // 1MBあたり15秒、最低5分、最大2時間
+          const timeoutMs = Math.min(
+            2 * 60 * 60 * 1000, // 最大2時間
+            Math.max(300000, file.size / 1024 / 1024 * 15000) // 最低5分、1MBあたり15秒
+          )
+          console.log(`[INTERVIEW] Upload timeout: ${(timeoutMs / 1000 / 60).toFixed(1)} minutes`)
           
           // AbortControllerを使用してタイムアウトを実装
           const controller = new AbortController()
@@ -989,11 +994,11 @@ export default function InterviewPage() {
               throw new Error(
                 `アップロードがタイムアウトしました。\n\n` +
                 `ファイルサイズ: ${(file.size / 1024 / 1024).toFixed(2)} MB\n` +
-                `タイムアウト時間: ${(timeoutMs / 1000).toFixed(0)} 秒\n\n` +
+                `タイムアウト時間: ${(timeoutMs / 1000 / 60).toFixed(1)} 分\n\n` +
                 `対処方法:\n` +
-                `1. ファイルサイズを小さくしてください（推奨: 200MB以下）\n` +
-                `2. インターネット接続を確認してください\n` +
-                `3. しばらく待ってから再度お試しください`
+                `1. インターネット接続を確認してください（安定した接続が必要です）\n` +
+                `2. しばらく待ってから再度お試しください\n` +
+                `3. 大きなファイル（500MB以上）の場合は、時間がかかる場合があります`
               )
             }
             
@@ -1015,14 +1020,15 @@ export default function InterviewPage() {
             console.error('[INTERVIEW] Network error during GCS upload (final attempt):', error)
             throw new Error(
               `Google Cloud Storageへのアップロード中にネットワークエラーが発生しました。\n\n` +
+              `ファイルサイズ: ${(file.size / 1024 / 1024).toFixed(2)} MB\n\n` +
               `考えられる原因:\n` +
               `1. インターネット接続が不安定\n` +
-              `2. ファイルサイズが大きすぎる（${(file.size / 1024 / 1024).toFixed(2)} MB）\n` +
-              `3. タイムアウトが発生した\n\n` +
+              `2. タイムアウトが発生した（大きなファイルの場合は時間がかかります）\n` +
+              `3. ネットワークの一時的な問題\n\n` +
               `対処方法:\n` +
-              `1. インターネット接続を確認してください\n` +
-              `2. ファイルサイズを確認してください（推奨: 200MB以下）\n` +
-              `3. しばらく待ってから再度お試しください`
+              `1. インターネット接続を確認してください（安定した接続が必要です）\n` +
+              `2. しばらく待ってから再度お試しください\n` +
+              `3. 大きなファイル（500MB以上）の場合は、時間がかかる場合があります`
             )
           }
           
@@ -1495,12 +1501,12 @@ export default function InterviewPage() {
                 またはクリックしてファイルを選択
               </p>
               <p className="text-sm text-slate-500 mb-6">
-                最大ファイルサイズ: <span className="font-black text-orange-600">4.75GB（MAX）</span>
+                最大ファイルサイズ: <span className="font-black text-orange-600">5TB（MAX）</span>
                 <br />
                 <span className="text-xs text-slate-400">
-                  ※ クライアントから直接Google Cloud Storageにアップロードします（サイズ制限なし）
+                  ※ クライアントから直接Google Cloud Storageにアップロードします
                   <br />
-                  ※ Google Cloud Storageを使用してアップロードされます
+                  ※ 大きなファイル（500MB以上）も対応可能です（時間がかかる場合があります）
                 </span>
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
