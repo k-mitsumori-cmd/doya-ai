@@ -180,8 +180,31 @@ export async function POST(req: NextRequest) {
     if (!userId && guestId) setGuestCookie(res, guestId)
     return res
   } catch (e: any) {
+    // バリデーションエラーの詳細を返す
+    if (e?.name === 'ZodError') {
+      const issues = e.issues?.map((issue: any) => ({
+        path: issue.path?.join('.') || 'unknown',
+        message: issue.message,
+        code: issue.code,
+      })) || []
+      console.error('Validation error:', JSON.stringify(issues, null, 2))
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'バリデーションエラー',
+          details: issues,
+          message: e?.message || '不明なエラー',
+        },
+        { status: 400 }
+      )
+    }
+    console.error('POST /api/seo/articles error:', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '不明なエラー' },
+      { 
+        success: false, 
+        error: e?.message || '不明なエラー',
+        stack: process.env.NODE_ENV === 'development' ? e?.stack : undefined,
+      },
       { status: 400 }
     )
   }
