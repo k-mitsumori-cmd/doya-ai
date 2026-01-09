@@ -149,8 +149,8 @@ export default function InterviewPage() {
     }
   }, [uploadStatus])
 
-  // 処理時間の推定（ファイルサイズとタイプから計算）
-  const estimatedTime = useMemo(() => {
+  // 処理時間の推定（ファイルサイズとタイプから計算）- 残り秒数を返す
+  const estimatedSeconds = useMemo(() => {
     if (!uploadedFile || !isUploading) return null
 
     const fileSizeMB = uploadedFile.size / (1024 * 1024)
@@ -207,17 +207,7 @@ export default function InterviewPage() {
     const currentProgress = progress / 100
     const remainingSeconds = Math.ceil(totalSeconds * (1 - currentProgress))
 
-    // 秒数を分・秒に変換
-    const remainingMinutes = Math.floor(remainingSeconds / 60)
-    const remainingSecs = remainingSeconds % 60
-
-    if (remainingMinutes > 0) {
-      return `残り約${remainingMinutes}分${remainingSecs}秒`
-    } else if (remainingSecs > 0) {
-      return `残り約${remainingSecs}秒`
-    } else {
-      return 'まもなく完了'
-    }
+    return remainingSeconds
   }, [uploadedFile, materialType, progress, isUploading])
 
   const validateFile = (file: File): { valid: boolean; error?: string; details?: string; useChunk?: boolean } => {
@@ -820,7 +810,7 @@ export default function InterviewPage() {
           { title: '記事生成', subtitle: 'AIが高品質な記事を作成中' },
         ]}
         showSpec={false}
-        estimatedTime={estimatedTime}
+        estimatedSeconds={estimatedSeconds}
         allowTabSwitch={true}
       />
       {/* ヒーローセクション */}

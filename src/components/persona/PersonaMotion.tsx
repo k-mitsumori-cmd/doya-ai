@@ -122,7 +122,7 @@ export function PartyLoadingOverlay({
   title = 'ペルソナ生成中',
   cards,
   showSpec = false,
-  estimatedTime,
+  estimatedSeconds,
   allowTabSwitch = false,
 }: {
   open: boolean
@@ -135,19 +135,56 @@ export function PartyLoadingOverlay({
   title?: string
   cards?: { title: string; subtitle: string }[]
   showSpec?: boolean
-  estimatedTime?: string | null
+  estimatedSeconds?: number | null
   allowTabSwitch?: boolean
 }) {
   const p = Math.max(0, Math.min(100, Number.isFinite(progress) ? progress : 0))
   const party = mode === 'party'
   const [pulse, setPulse] = useState(0)
+  const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null)
 
-  // progressが止まって見えないよう、微小な“動いてる感”を付与（partyのみ）
+  // progressが止まって見えないよう、微小な"動いてる感"を付与（partyのみ）
   useEffect(() => {
     if (!open || !party) return
     const t = window.setInterval(() => setPulse((v) => (v + 1) % 1000), 800)
     return () => window.clearInterval(t)
   }, [open, party])
+
+  // カウントダウンの実装
+  useEffect(() => {
+    if (estimatedSeconds === null || estimatedSeconds === undefined) {
+      setCountdownSeconds(null)
+      return
+    }
+
+    // 初期値を設定
+    setCountdownSeconds(estimatedSeconds)
+
+    // 1秒ごとにカウントダウン
+    const interval = setInterval(() => {
+      setCountdownSeconds((prev) => {
+        if (prev === null || prev === undefined) return null
+        if (prev <= 1) return 0
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [estimatedSeconds])
+
+  // estimatedSecondsが更新されたら、countdownSecondsも更新
+  useEffect(() => {
+    if (estimatedSeconds !== null && estimatedSeconds !== undefined) {
+      // 新しい推定時間が現在のカウントダウンより大きい場合のみ更新
+      // （進捗が早い場合、残り時間が増えることがあるため）
+      setCountdownSeconds((prev) => {
+        if (prev === null || prev === undefined) return estimatedSeconds
+        // 新しい推定時間が現在のカウントダウンより大きい場合のみ更新
+        if (estimatedSeconds > prev) return estimatedSeconds
+        return prev
+      })
+    }
+  }, [estimatedSeconds])
 
   const mascotAnim = useMemo(() => {
     if (!party) return { rotate: 0, y: 0 }
@@ -199,16 +236,29 @@ export function PartyLoadingOverlay({
                     <div className="flex-1">
                       <div className="text-white font-black text-lg leading-tight">{title}</div>
                       <div className="text-white/70 text-xs font-bold mt-1">{stageText}</div>
-                      {estimatedTime && (
+                      {countdownSeconds !== null && countdownSeconds !== undefined && (
                         <motion.div
+                          key={countdownSeconds}
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.3 }}
+                          transition={{ duration: 0.2 }}
                           className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500/30 to-pink-500/30 border border-purple-400/50 backdrop-blur-sm"
                         >
                           <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
                           <div className="text-white font-black text-sm">
-                            残り時間: <span className="text-purple-200">{estimatedTime}</span>
+                            残り時間:{' '}
+                            <span className="text-purple-200">
+                              {countdownSeconds > 0 ? (
+                                <>
+                                  {Math.floor(countdownSeconds / 60) > 0 && (
+                                    <>{Math.floor(countdownSeconds / 60)}分</>
+                                  )}
+                                  {countdownSeconds % 60}秒
+                                </>
+                              ) : (
+                                'まもなく完了'
+                              )}
+                            </span>
                           </div>
                         </motion.div>
                       )}
