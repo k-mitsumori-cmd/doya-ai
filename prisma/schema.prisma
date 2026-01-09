@@ -542,6 +542,7 @@ model InterviewProject {
   intervieweeBio      String?  @db.Text
   
   // 企画情報
+  genre         String?  // CASE_STUDY | PRODUCT_INTERVIEW | PERSONA_INTERVIEW | OTHER
   theme         String?  @db.Text  // 取材テーマ
   purpose       String?  @db.Text   // 目的
   targetAudience String? @db.Text   // 想定読者

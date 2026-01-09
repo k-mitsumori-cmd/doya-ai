@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     body = await request.json()
-    const { title, intervieweeName, intervieweeRole, intervieweeCompany, theme, purpose, targetAudience, tone, mediaType, status } = body
+    const { title, genre, intervieweeName, intervieweeRole, intervieweeCompany, theme, purpose, targetAudience, tone, mediaType, status } = body
 
     // タイトルの検証
     const projectTitle = title || '無題のプロジェクト'
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
         userId: userId || undefined,
         guestId: finalGuestId || undefined,
         title: projectTitle,
+        genre,
         intervieweeName,
         intervieweeRole,
         intervieweeCompany,

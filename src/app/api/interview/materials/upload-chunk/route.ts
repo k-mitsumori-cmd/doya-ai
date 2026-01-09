@@ -363,6 +363,12 @@ export async function POST(request: NextRequest) {
         const finalFileStats = await stat(finalFilePath)
         const finalFileBuffer = await readFile(finalFilePath)
         
+        // BLOB_READ_WRITE_TOKENの確認
+        if (!process.env.BLOB_READ_WRITE_TOKEN) {
+          console.error('[INTERVIEW] BLOB_READ_WRITE_TOKEN is not set')
+          throw new Error('ストレージの設定が完了していません。Vercel Blob Storageの環境変数（BLOB_READ_WRITE_TOKEN）が設定されていません。')
+        }
+        
         // Vercel Blob Storageにアップロード
         const blobPath = `interview/${projectId}/${savedFileName}`
         let blob: { url: string; pathname: string; size: number }
@@ -372,9 +378,26 @@ export async function POST(request: NextRequest) {
             contentType: mimeType || undefined,
           })
           console.log(`[INTERVIEW] File uploaded to Blob Storage: ${blob.url}`)
-        } catch (blobError) {
+        } catch (blobError: any) {
           console.error('[INTERVIEW] Failed to upload file to Blob Storage:', blobError)
-          throw new Error(`ファイルのBlob Storageへのアップロードに失敗しました: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`)
+          
+          let errorMessage = 'ファイルのBlob Storageへのアップロードに失敗しました'
+          let errorDetails = ''
+          
+          if (blobError?.message?.includes('Unauthorized') || blobError?.message?.includes('401')) {
+            errorMessage = 'Blob Storageの認証に失敗しました'
+            errorDetails = 'BLOB_READ_WRITE_TOKENが無効です。Vercelダッシュボードで環境変数を確認してください。'
+          } else if (blobError?.message?.includes('Forbidden') || blobError?.message?.includes('403')) {
+            errorMessage = 'Blob Storageへのアクセスが拒否されました'
+            errorDetails = 'Blobストアへのアクセス権限がありません。Vercelダッシュボードで設定を確認してください。'
+          } else if (blobError?.message?.includes('Size limit') || blobError?.message?.includes('413')) {
+            errorMessage = 'ファイルサイズが大きすぎます'
+            errorDetails = `ファイルサイズがBlob Storageの上限を超えています。最大ファイルサイズ: 4.75GB`
+          } else {
+            errorDetails = `エラー詳細: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`
+          }
+          
+          throw new Error(`${errorMessage}\n${errorDetails}`)
         }
         
         // 結合済みファイルを削除（Blob Storageに保存済みのため）

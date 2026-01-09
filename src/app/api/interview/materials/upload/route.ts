@@ -4,6 +4,15 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { put } from '@vercel/blob'
 
+// ファイルサイズフォーマット関数
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+}
+
 // 素材アップロード（音声・動画・テキスト・PDF等）
 export async function POST(request: NextRequest) {
   try {
@@ -136,6 +145,18 @@ export async function POST(request: NextRequest) {
     const savedFileName = `${projectId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
     const blobPath = `interview/${savedFileName}`
     
+    // BLOB_READ_WRITE_TOKENの確認
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.error('[INTERVIEW] BLOB_READ_WRITE_TOKEN is not set')
+      return NextResponse.json(
+        {
+          error: 'ストレージの設定が完了していません',
+          details: 'Vercel Blob Storageの環境変数（BLOB_READ_WRITE_TOKEN）が設定されていません。\nVercelダッシュボードで環境変数を設定してください。',
+        },
+        { status: 500 }
+      )
+    }
+    
     let blob: { url: string; pathname: string; size: number }
     try {
       const buffer = await file.arrayBuffer()
@@ -144,9 +165,32 @@ export async function POST(request: NextRequest) {
         contentType: mimeType || undefined,
       })
       console.log(`[INTERVIEW] File uploaded to Blob Storage: ${blob.url}`)
-    } catch (blobError) {
+    } catch (blobError: any) {
       console.error('[INTERVIEW] Failed to upload file to Blob Storage:', blobError)
-      throw new Error(`ファイルのアップロードに失敗しました: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`)
+      
+      let errorMessage = 'ファイルのアップロードに失敗しました'
+      let errorDetails = 'Vercel Blob Storageへのアップロード中にエラーが発生しました。'
+      
+      if (blobError?.message?.includes('Unauthorized') || blobError?.message?.includes('401')) {
+        errorMessage = 'Blob Storageの認証に失敗しました'
+        errorDetails = 'BLOB_READ_WRITE_TOKENが無効です。Vercelダッシュボードで環境変数を確認してください。'
+      } else if (blobError?.message?.includes('Forbidden') || blobError?.message?.includes('403')) {
+        errorMessage = 'Blob Storageへのアクセスが拒否されました'
+        errorDetails = 'Blobストアへのアクセス権限がありません。Vercelダッシュボードで設定を確認してください。'
+      } else if (blobError?.message?.includes('Size limit') || blobError?.message?.includes('413')) {
+        errorMessage = 'ファイルサイズが大きすぎます'
+        errorDetails = `ファイルサイズがBlob Storageの上限を超えています。\n現在のファイルサイズ: ${formatFileSize(file.size)}\n最大ファイルサイズ: 4.75GB`
+      } else {
+        errorDetails = `エラー詳細: ${blobError instanceof Error ? blobError.message : '不明なエラー'}\nBlob Storageへの接続を確認してください。`
+      }
+      
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          details: errorDetails,
+        },
+        { status: 500 }
+      )
     }
 
     // DBに記録

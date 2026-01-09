@@ -489,6 +489,18 @@ export default function InterviewProjectDetailPage() {
             <div>
               <h3 className="text-lg font-black text-slate-900 mb-2">基本情報</h3>
               <dl className="space-y-2">
+                {project.genre && (
+                  <div>
+                    <dt className="text-sm font-bold text-slate-600">インタビュージャンル</dt>
+                    <dd className="text-slate-900">
+                      {project.genre === 'CASE_STUDY' && '事例のインタビュー'}
+                      {project.genre === 'PRODUCT_INTERVIEW' && '商品インタビュー'}
+                      {project.genre === 'PERSONA_INTERVIEW' && 'ペルソナインタビュー'}
+                      {project.genre === 'OTHER' && 'その他'}
+                      {!['CASE_STUDY', 'PRODUCT_INTERVIEW', 'PERSONA_INTERVIEW', 'OTHER'].includes(project.genre) && project.genre}
+                    </dd>
+                  </div>
+                )}
                 <div>
                   <dt className="text-sm font-bold text-slate-600">インタビュー対象者</dt>
                   <dd className="text-slate-900">{project.intervieweeName || '未設定'}</dd>

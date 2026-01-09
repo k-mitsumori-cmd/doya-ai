@@ -10,6 +10,7 @@ export default function InterviewPlanningPage() {
   const [loading, setLoading] = useState(false)
   const [proposals, setProposals] = useState<any[]>([])
   const [formData, setFormData] = useState({
+    genre: '',
     intervieweeName: '',
     intervieweeRole: '',
     intervieweeCompany: '',
@@ -22,8 +23,8 @@ export default function InterviewPlanningPage() {
   })
 
   const handleGenerateProposals = async () => {
-    if (!formData.intervieweeName.trim() || !formData.theme.trim()) {
-      alert('インタビュー対象者と取材テーマを入力してください')
+    if (!formData.genre || !formData.intervieweeName.trim() || !formData.theme.trim()) {
+      alert('インタビュージャンル、インタビュー対象者、取材テーマを入力してください')
       return
     }
 
@@ -35,6 +36,7 @@ export default function InterviewPlanningPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: `${formData.intervieweeName} インタビュー企画`,
+          genre: formData.genre,
           intervieweeName: formData.intervieweeName,
           intervieweeRole: formData.intervieweeRole,
           intervieweeCompany: formData.intervieweeCompany,
@@ -117,6 +119,22 @@ export default function InterviewPlanningPage() {
       >
         <h2 className="text-2xl font-black text-slate-900 mb-6">インタビュー情報を入力</h2>
         <div className="grid md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-2">
+              インタビュージャンル <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.genre}
+              onChange={(e) => setFormData({ ...formData, genre: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all"
+            >
+              <option value="">選択してください</option>
+              <option value="CASE_STUDY">事例のインタビュー</option>
+              <option value="PRODUCT_INTERVIEW">商品インタビュー</option>
+              <option value="PERSONA_INTERVIEW">ペルソナインタビュー</option>
+              <option value="OTHER">その他</option>
+            </select>
+          </div>
           <div>
             <label className="block text-sm font-bold text-slate-700 mb-2">
               インタビュー対象者 <span className="text-red-500">*</span>

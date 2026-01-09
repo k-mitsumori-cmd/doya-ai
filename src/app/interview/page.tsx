@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Upload,
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { PartyLoadingOverlay, type OverlayMood } from '@/components/persona/PersonaMotion'
 
 type UploadStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'completed' | 'error'
 type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
@@ -28,9 +29,9 @@ type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
 // Vercel Blob Storageを使用したアップロード
 // - Vercel Blob Storageの上限: 4.75GB
 // - チャンクアップロードを使用することで、大きなファイルもアップロード可能
-// - 4.5MBを超えるファイルは自動的にチャンクアップロードを使用
+// - 4.5MBを超えるファイルは自動的にチャンクアップロードを使用（Vercelのサーバーレス関数制限）
 const MAX_FILE_SIZE = 4.75 * 1024 * 1024 * 1024 // 4.75GB（Vercel Blob Storageの上限）
-const CHUNK_THRESHOLD = 50 * 1024 * 1024 // 50MB（チャンクアップロードの閾値）
+const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB（Vercelのサーバーレス関数のリクエストボディサイズ制限）
 const CHUNK_SIZE = 4 * 1024 * 1024 // 4MB（チャンクサイズ - Vercelの制限より少し小さく）
 const SUPPORTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg']
 const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm']
@@ -48,6 +49,8 @@ export default function InterviewPage() {
   const [materialType, setMaterialType] = useState<MaterialType>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [errorDetails, setErrorDetails] = useState<string | null>(null)
+  const isUploading = uploadStatus !== 'idle' && uploadStatus !== 'completed' && uploadStatus !== 'error'
+  const [blockNavigation, setBlockNavigation] = useState(false)
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -70,7 +73,81 @@ export default function InterviewPage() {
     if (files.length > 0) {
       await handleFileSelect(files[0])
     }
-  }, [])
+  }, []) // handleFileSelectは安定しているので依存配列に含めない
+
+  // アップロード中のページ遷移防止
+  useEffect(() => {
+    if (!isUploading) {
+      setBlockNavigation(false)
+      return
+    }
+
+    setBlockNavigation(true)
+
+    // beforeunloadイベントでページ遷移を防止
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = 'アップロード中です。ページを離れるとアップロードが中断されます。'
+      return e.returnValue
+    }
+
+    // ルーター遷移を防止するためのカスタムイベント
+    const handleRouteChange = (e: PopStateEvent) => {
+      if (isUploading) {
+        e.preventDefault()
+        if (window.confirm('アップロード中です。ページを離れるとアップロードが中断されます。本当に離れますか？')) {
+          setBlockNavigation(false)
+          window.history.back()
+        } else {
+          window.history.pushState(null, '', window.location.href)
+        }
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('popstate', handleRouteChange)
+
+    // history.pushStateを監視して遷移を防止
+    const originalPushState = window.history.pushState
+    window.history.pushState = function(...args) {
+      if (isUploading && args[2] && args[2] !== window.location.pathname) {
+        if (!window.confirm('アップロード中です。ページを離れるとアップロードが中断されます。本当に離れますか？')) {
+          return
+        }
+        setBlockNavigation(false)
+      }
+      return originalPushState.apply(window.history, args)
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('popstate', handleRouteChange)
+      window.history.pushState = originalPushState
+    }
+  }, [isUploading])
+
+  // 進捗に応じたmoodの計算
+  const overlayMood = useMemo<OverlayMood>(() => {
+    if (progress < 35) return 'search'
+    if (progress < 70) return 'think'
+    return 'happy'
+  }, [progress])
+
+  // ステージテキストの設定
+  const stageText = useMemo(() => {
+    switch (uploadStatus) {
+      case 'uploading':
+        return 'ファイルをアップロード中...'
+      case 'transcribing':
+        return '文字起こしを実行中...'
+      case 'analyzing':
+        return '構成案を生成中...'
+      case 'generating':
+        return '記事を生成中...'
+      default:
+        return '処理中...'
+    }
+  }, [uploadStatus])
 
   const validateFile = (file: File): { valid: boolean; error?: string; details?: string; useChunk?: boolean } => {
     // ファイルサイズチェック（4.75GBまでVercel Blob Storageで対応可能）
@@ -84,8 +161,8 @@ export default function InterviewPage() {
       }
     }
     
-    // 50MBを超える場合はチャンクアップロードを使用
-    if (file.size > CHUNK_THRESHOLD) {
+    // 4.5MBを超える場合はチャンクアップロードを使用（Vercelのサーバーレス関数制限）
+    if (file.size > VERCEL_LIMIT) {
       return {
         valid: true,
         useChunk: true, // チャンクアップロードを使用するフラグ
@@ -440,11 +517,13 @@ export default function InterviewPage() {
 
       // 2. ファイルアップロード（チャンクアップロード or 通常アップロード）
       let uploadData
-      if (file.size > MAX_FILE_SIZE) {
-        // チャンクアップロード
+      // 4.5MBを超える場合はチャンクアップロードを使用（Vercelのサーバーレス関数制限）
+      if (file.size > VERCEL_LIMIT) {
+        console.log(`[INTERVIEW] Using chunk upload for file size: ${file.size} bytes (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
         uploadData = await uploadFileInChunks(file, newProjectId, guestId)
       } else {
-        // 通常アップロード
+        // 4.5MB以下の場合は通常アップロード
+        console.log(`[INTERVIEW] Using normal upload for file size: ${file.size} bytes (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
         const formData = new FormData()
         formData.append('projectId', newProjectId)
         formData.append('file', file)
@@ -466,12 +545,19 @@ export default function InterviewPage() {
           const errorData = await uploadRes.json().catch(() => ({}))
           const errorMsg = errorData.error || 'ファイルアップロードに失敗しました'
           const errorDetails = errorData.details || 'ファイル形式やサイズを確認してください。'
-          throw new Error(`${errorMsg}\n${errorDetails}`)
-        }
-
-        uploadData = await uploadRes.json()
-        if (!uploadData.material?.id) {
-          throw new Error('アップロードしたファイルの情報を取得できませんでした。\nサーバーからの応答が不正です。もう一度お試しください。')
+          
+          // チャンクアップロードが必要な場合は自動的にリダイレクト
+          if (errorData.useChunkUpload) {
+            console.log(`[INTERVIEW] Server requested chunk upload, switching to chunk upload...`)
+            uploadData = await uploadFileInChunks(file, newProjectId, guestId)
+          } else {
+            throw new Error(`${errorMsg}\n${errorDetails}`)
+          }
+        } else {
+          uploadData = await uploadRes.json()
+          if (!uploadData.material?.id) {
+            throw new Error('アップロードしたファイルの情報を取得できませんでした。\nサーバーからの応答が不正です。もう一度お試しください。')
+          }
         }
       }
 
@@ -566,11 +652,15 @@ export default function InterviewPage() {
       // 完了
       setUploadStatus('completed')
       setProgress(100)
-
-      // プロジェクト詳細ページに遷移
+      
+      // 遷移ブロックを解除（完了後すぐに解除）
       setTimeout(() => {
-        router.push(`/interview/projects/${newProjectId}`)
-      }, 1500)
+        setBlockNavigation(false)
+        // プロジェクト詳細ページに遷移
+        setTimeout(() => {
+          router.push(`/interview/projects/${newProjectId}`)
+        }, 500)
+      }, 1000)
     } catch (error) {
       console.error('Upload process error:', error)
       const errorMsg = error instanceof Error ? error.message : '不明なエラーが発生しました'
@@ -584,6 +674,7 @@ export default function InterviewPage() {
       setErrorDetails(errorDetailsText)
       setUploadStatus('error')
       setProgress(0)
+      setBlockNavigation(false) // エラー時は遷移ブロックを解除
     }
   }
 
@@ -628,8 +719,31 @@ export default function InterviewPage() {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
   }
 
+  // アップロード中の進捗ステップ
+  const uploadSteps = useMemo(() => {
+    const steps = [
+      { label: 'アップロード', threshold: 0 },
+      { label: '文字起こし', threshold: 30 },
+      { label: '構成案生成', threshold: 60 },
+      { label: '記事生成', threshold: 80 },
+      { label: '完了', threshold: 100 },
+    ]
+    return steps
+  }, [])
+
   return (
     <div className="max-w-6xl mx-auto">
+      {/* アップロード中のローディングオーバーレイ */}
+      <PartyLoadingOverlay
+        open={isUploading}
+        mode="party"
+        progress={progress}
+        stageText={stageText}
+        mood={overlayMood}
+        steps={uploadSteps}
+        mascotSrc="/persona/mascot.svg"
+        title="インタビュー処理中"
+      />
       {/* ヒーローセクション */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -757,7 +871,7 @@ export default function InterviewPage() {
                 最大ファイルサイズ: <span className="font-black text-orange-600">4.75GB（MAX）</span>
                 <br />
                 <span className="text-xs text-slate-400">
-                  ※ 50MB以上のファイルは自動的にチャンクアップロードで処理されます
+                  ※ 4.5MB以上のファイルは自動的にチャンクアップロードで処理されます
                   <br />
                   ※ Vercel Blob Storageを使用してアップロードされます
                 </span>
@@ -1024,7 +1138,7 @@ export default function InterviewPage() {
                 最大ファイルサイズ: <span className="font-black">4.75GB（MAX）</span>
                 <br />
                 <span className="text-[10px] text-orange-600">
-                  50MB以上はチャンクアップロードで自動処理（Vercel Blob Storage使用）
+                  4.5MB以上はチャンクアップロードで自動処理（Vercel Blob Storage使用）
                 </span>
               </p>
             </div>

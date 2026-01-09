@@ -119,6 +119,7 @@ export function PartyLoadingOverlay({
   mood,
   steps,
   mascotSrc = '/persona/mascot.svg',
+  title = 'ペルソナ生成中',
 }: {
   open: boolean
   mode: MotionMode
@@ -127,6 +128,7 @@ export function PartyLoadingOverlay({
   mood: OverlayMood
   steps: { label: string; threshold: number }[]
   mascotSrc?: string
+  title?: string
 }) {
   const p = Math.max(0, Math.min(100, Number.isFinite(progress) ? progress : 0))
   const party = mode === 'party'
@@ -187,7 +189,7 @@ export function PartyLoadingOverlay({
                       <ScanSearch className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <div className="text-white font-black text-lg leading-tight">ペルソナ生成中</div>
+                      <div className="text-white font-black text-lg leading-tight">{title}</div>
                       <div className="text-white/70 text-xs font-bold mt-1">{stageText}</div>
                     </div>
                   </div>
