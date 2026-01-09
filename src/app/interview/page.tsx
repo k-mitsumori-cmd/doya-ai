@@ -963,7 +963,7 @@ export default function InterviewPage() {
       // 容量制限エラーの場合、詳細がない場合はデフォルトのメッセージを追加
       if (mainError.includes('容量制限') || mainError.includes('Storage quota') || mainError.includes('quota exceeded')) {
         if (!errorDetailsText || errorDetailsText.trim() === '') {
-          errorDetailsText = 'Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. Vercelのプランをアップグレードする（Proプラン以上では容量が増えます）\n3. 不要なファイルを削除する'
+          errorDetailsText = 'Vercel Blob Storageの容量制限に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. 不要なファイルを削除する\n3. Vercelダッシュボードでストレージ使用状況を確認する'
         }
       } else if (!errorDetailsText || errorDetailsText.trim() === '') {
         errorDetailsText = '詳細なエラー情報はコンソールを確認してください。問題が続く場合は、サポートにお問い合わせください。'
