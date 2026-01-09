@@ -32,7 +32,12 @@ export default function InterviewProjectDetailPage() {
       // ゲストIDを取得
       let guestId = null
       if (typeof window !== 'undefined') {
-        guestId = localStorage.getItem('interview-guest-id')
+        try {
+          guestId = localStorage.getItem('interview-guest-id')
+        } catch (storageError) {
+          console.warn('Failed to get guest ID from localStorage:', storageError)
+          // localStorageエラーでも続行
+        }
       }
       
       const headers: HeadersInit = {
@@ -47,7 +52,12 @@ export default function InterviewProjectDetailPage() {
       })
       
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}))
+        let errorData: any = {}
+        try {
+          errorData = await res.json()
+        } catch {
+          // JSONパースエラーでも続行
+        }
         const errorMessage = errorData.error || `HTTP error! status: ${res.status}`
         
         if (res.status === 401) {
@@ -59,13 +69,30 @@ export default function InterviewProjectDetailPage() {
         }
       }
       
-      const data = await res.json()
+      let data: any = {}
+      try {
+        data = await res.json()
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError)
+        throw new Error('サーバーからの応答を解析できませんでした')
+      }
       
-      if (!data.project) {
+      if (!data || !data.project) {
         throw new Error('プロジェクトデータが取得できませんでした')
       }
       
-      setProject(data.project)
+      // プロジェクトデータの検証とデフォルト値の設定
+      const projectData = {
+        ...data.project,
+        title: data.project.title || '無題のプロジェクト',
+        status: data.project.status || 'UNKNOWN',
+        materials: Array.isArray(data.project.materials) ? data.project.materials : [],
+        transcriptions: Array.isArray(data.project.transcriptions) ? data.project.transcriptions : [],
+        drafts: Array.isArray(data.project.drafts) ? data.project.drafts : [],
+        reviews: Array.isArray(data.project.reviews) ? data.project.reviews : [],
+      }
+      
+      setProject(projectData)
     } catch (error) {
       console.error('Failed to fetch project:', error)
       const errorMessage = error instanceof Error ? error.message : 'プロジェクトの取得に失敗しました'
@@ -132,21 +159,53 @@ export default function InterviewProjectDetailPage() {
   }
 
   const handleExport = (draft: any, format: 'markdown' | 'html' | 'txt') => {
+    if (!draft) {
+      console.error('Draft is null or undefined')
+      return
+    }
+
     let content = ''
     let filename = ''
     let mimeType = ''
 
+    const draftTitle = draft.title || '無題'
+    const draftLead = draft.lead || ''
+    const draftContent = draft.content || ''
+    const draftWordCount = draft.wordCount || 0
+    const draftReadingTime = draft.readingTime || 0
+    const draftVersion = draft.version || 1
+
     if (format === 'markdown') {
-      content = `# ${draft.title || '無題'}\n\n${draft.lead ? `> ${draft.lead}\n\n` : ''}${draft.content}`
-      filename = `${draft.title || 'article'}-${Date.now()}.md`
+      content = `# ${draftTitle}\n\n${draftLead ? `> ${draftLead}\n\n` : ''}${draftContent}`
+      filename = `${draftTitle.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}.md`
       mimeType = 'text/markdown'
     } else if (format === 'html') {
+      // HTMLエスケープ関数
+      const escapeHtml = (text: string) => {
+        const div = document.createElement('div')
+        div.textContent = text
+        return div.innerHTML
+      }
+
+      const escapedTitle = escapeHtml(draftTitle)
+      const escapedLead = escapeHtml(draftLead)
+      const escapedContent = (draftContent || '').split('\n').map((line: string) => {
+        const escapedLine = escapeHtml(line)
+        if (line.startsWith('Q:') || line.startsWith('Q：')) {
+          return `<div style="background: #eff6ff; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border-left: 4px solid #3b82f6;"><strong style="color: #1e40af;">${escapedLine}</strong></div>`
+        }
+        if (line.startsWith('A:') || line.startsWith('A：')) {
+          return `<div style="background: #f8fafc; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border-left: 4px solid #64748b;">${escapedLine}</div>`
+        }
+        return `<p>${escapedLine || '&nbsp;'}</p>`
+      }).join('')
+
       content = `<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${draft.title || '無題'}</title>
+  <title>${escapedTitle}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.8; color: #333; }
     h1 { color: #f97316; border-bottom: 3px solid #f97316; padding-bottom: 0.5rem; }
@@ -157,29 +216,21 @@ export default function InterviewProjectDetailPage() {
   </style>
 </head>
 <body>
-  <h1>${draft.title || '無題'}</h1>
+  <h1>${escapedTitle}</h1>
   <div class="meta">
-    ${draft.wordCount ? `文字数: ${draft.wordCount.toLocaleString()}文字 | ` : ''}
-    ${draft.readingTime ? `読了時間: ${draft.readingTime}分 | ` : ''}
-    バージョン: ${draft.version}
+    ${draftWordCount > 0 ? `文字数: ${draftWordCount.toLocaleString()}文字 | ` : ''}
+    ${draftReadingTime > 0 ? `読了時間: ${draftReadingTime}分 | ` : ''}
+    バージョン: ${draftVersion}
   </div>
-  ${draft.lead ? `<blockquote>${draft.lead}</blockquote>` : ''}
-  <div>${draft.content.split('\n').map((line: string) => {
-    if (line.startsWith('Q:') || line.startsWith('Q：')) {
-      return `<div style="background: #eff6ff; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border-left: 4px solid #3b82f6;"><strong style="color: #1e40af;">${line}</strong></div>`
-    }
-    if (line.startsWith('A:') || line.startsWith('A：')) {
-      return `<div style="background: #f8fafc; padding: 1rem; border-radius: 0.5rem; margin: 1rem 0; border-left: 4px solid #64748b;">${line}</div>`
-    }
-    return `<p>${line || '&nbsp;'}</p>`
-  }).join('')}</div>
+  ${draftLead ? `<blockquote>${escapedLead}</blockquote>` : ''}
+  <div>${escapedContent}</div>
 </body>
 </html>`
-      filename = `${draft.title || 'article'}-${Date.now()}.html`
+      filename = `${draftTitle.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}.html`
       mimeType = 'text/html'
     } else {
-      content = `${draft.title || '無題'}\n\n${draft.lead ? `${draft.lead}\n\n` : ''}${draft.content}`
-      filename = `${draft.title || 'article'}-${Date.now()}.txt`
+      content = `${draftTitle}\n\n${draftLead ? `${draftLead}\n\n` : ''}${draftContent}`
+      filename = `${draftTitle.replace(/[^a-zA-Z0-9]/g, '_')}-${Date.now()}.txt`
       mimeType = 'text/plain'
     }
 
@@ -293,11 +344,11 @@ export default function InterviewProjectDetailPage() {
         <Link href="/interview/projects" className="text-sm text-slate-600 hover:text-orange-600 mb-4 inline-block">
           ← プロジェクト一覧に戻る
         </Link>
-        <h1 className="text-3xl font-black text-slate-900 mb-2">{project.title}</h1>
+        <h1 className="text-3xl font-black text-slate-900 mb-2">{project.title || '無題のプロジェクト'}</h1>
         <div className="flex items-center gap-4 text-sm text-slate-600">
-          <span className="px-3 py-1 bg-slate-100 rounded-lg font-bold">{project.status}</span>
+          <span className="px-3 py-1 bg-slate-100 rounded-lg font-bold">{project.status || '不明'}</span>
           {project.intervieweeName && <span>対象者: {project.intervieweeName}</span>}
-          <span>更新: {new Date(project.updatedAt).toLocaleDateString('ja-JP')}</span>
+          <span>更新: {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('ja-JP') : '日付不明'}</span>
         </div>
       </div>
 
@@ -678,10 +729,10 @@ export default function InterviewProjectDetailPage() {
                           <div className="flex items-center gap-4 text-sm">
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
                               <FileText className="w-4 h-4 text-slate-600" />
-                              <span className="font-black text-slate-700">バージョン {draft.version}</span>
+                              <span className="font-black text-slate-700">バージョン {draft.version || 1}</span>
                             </div>
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
-                              <span className="font-black text-blue-700">{draft.wordCount?.toLocaleString() || 0}</span>
+                              <span className="font-black text-blue-700">{(draft.wordCount || 0).toLocaleString()}</span>
                               <span className="text-blue-600">文字</span>
                             </div>
                             <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
@@ -689,7 +740,7 @@ export default function InterviewProjectDetailPage() {
                               <span className="font-black text-purple-700">{draft.readingTime || 0}</span>
                               <span className="text-purple-600">分</span>
                             </div>
-                            {draft.wordCount && (
+                            {draft.wordCount && typeof draft.wordCount === 'number' && (
                               <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200">
                                 <span className="text-emerald-600 text-xs">読みやすさ</span>
                                 <span className="font-black text-emerald-700">
@@ -802,26 +853,38 @@ export default function InterviewProjectDetailPage() {
                       ) : (
                         <div className="prose prose-slate max-w-none">
                           <div className="text-slate-700 whitespace-pre-wrap leading-relaxed text-base">
-                            {(draft.content || '').split('\n').map((line: string, idx: number) => {
-                              // Q&A形式の場合は、Q: と A: をスタイリング
-                              if (draft.displayFormat === 'QA') {
-                                if (line.startsWith('Q:') || line.startsWith('Q：')) {
-                                  return (
-                                    <div key={idx} className="mb-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
-                                      <p className="font-black text-blue-900 mb-2">{line}</p>
-                                    </div>
-                                  )
+                            {(() => {
+                              try {
+                                const content = draft.content || ''
+                                if (typeof content !== 'string') {
+                                  console.warn('Draft content is not a string:', typeof content)
+                                  return <p className="text-slate-500">コンテンツが読み込めませんでした</p>
                                 }
-                                if (line.startsWith('A:') || line.startsWith('A：')) {
-                                  return (
-                                    <div key={idx} className="mb-6 p-4 bg-slate-50 rounded-xl border-l-4 border-slate-400">
-                                      <p className="text-slate-800 leading-relaxed">{line}</p>
-                                    </div>
-                                  )
-                                }
+                                return content.split('\n').map((line: string, idx: number) => {
+                                  // Q&A形式の場合は、Q: と A: をスタイリング
+                                  if (draft.displayFormat === 'QA') {
+                                    if (line.startsWith('Q:') || line.startsWith('Q：')) {
+                                      return (
+                                        <div key={idx} className="mb-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
+                                          <p className="font-black text-blue-900 mb-2">{line}</p>
+                                        </div>
+                                      )
+                                    }
+                                    if (line.startsWith('A:') || line.startsWith('A：')) {
+                                      return (
+                                        <div key={idx} className="mb-6 p-4 bg-slate-50 rounded-xl border-l-4 border-slate-400">
+                                          <p className="text-slate-800 leading-relaxed">{line}</p>
+                                        </div>
+                                      )
+                                    }
+                                  }
+                                  return <p key={idx} className="mb-4 leading-relaxed">{line || '\u00A0'}</p>
+                                })
+                              } catch (e) {
+                                console.error('Error rendering draft content:', e)
+                                return <p className="text-red-500">コンテンツの表示中にエラーが発生しました</p>
                               }
-                              return <p key={idx} className="mb-4 leading-relaxed">{line || '\u00A0'}</p>
-                            })}
+                            })()}
                           </div>
                         </div>
                       )}
