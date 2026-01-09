@@ -201,17 +201,33 @@ export default function PersonaPage() {
   const [showFlash, setShowFlash] = useState(false)
   const [regenLoading, setRegenLoading] = useState(false)
 
-  // ローカルストレージから履歴読み込み
+  // ローカルストレージから履歴読み込み（当日分のみ）
   useEffect(() => {
     const stored = localStorage.getItem('doya_persona_last')
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
-        if (parsed.data) {
+        // タイムスタンプが今日かどうかを確認
+        const savedDate = parsed.timestamp ? new Date(parsed.timestamp) : null
+        const today = new Date()
+        const isToday =
+          savedDate &&
+          savedDate.getFullYear() === today.getFullYear() &&
+          savedDate.getMonth() === today.getMonth() &&
+          savedDate.getDate() === today.getDate()
+
+        // 当日分のみ表示（翌日以降は表示しない）
+        if (isToday && parsed.data) {
           setGeneratedData(parsed.data)
           setPortraitImage(parsed.portrait || null)
+        } else {
+          // 翌日以降のデータは削除してクリア
+          localStorage.removeItem('doya_persona_last')
         }
-      } catch {}
+      } catch {
+        // パースエラー時は削除
+        localStorage.removeItem('doya_persona_last')
+      }
     }
 
     // 既に肥大化している履歴を軽量化（画像が混ざっているケースを救済）
