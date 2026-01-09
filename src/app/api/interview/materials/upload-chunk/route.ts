@@ -408,31 +408,38 @@ export async function POST(request: NextRequest) {
             
             let errorMessage = 'ファイルのBlob Storageへのアップロードに失敗しました'
             let errorDetails = ''
+            let statusCode = 500
             
             if (blobError?.message?.includes('Unauthorized') || blobError?.message?.includes('401')) {
               errorMessage = 'Blob Storageの認証に失敗しました'
               errorDetails = 'BLOB_READ_WRITE_TOKENが無効です。Vercelダッシュボードで環境変数を確認してください。'
+              statusCode = 401
             } else if (blobError?.message?.includes('Forbidden') || blobError?.message?.includes('403')) {
               errorMessage = 'Blob Storageへのアクセスが拒否されました'
               errorDetails = 'Blobストアへのアクセス権限がありません。Vercelダッシュボードで設定を確認してください。'
+              statusCode = 403
             } else if (blobError?.message?.includes('Size limit') || blobError?.message?.includes('413')) {
               errorMessage = 'ファイルサイズが大きすぎます'
               errorDetails = `ファイルサイズがBlob Storageの上限を超えています。最大ファイルサイズ: 4.75GB`
-            } else if (blobError?.message?.includes('Storage quota') || blobError?.message?.includes('quota exceeded') || blobError?.message?.includes('1GB maximum')) {
+              statusCode = 413
+            } else if (blobError?.message?.includes('Storage quota') || blobError?.message?.includes('quota exceeded') || blobError?.message?.includes('1GB maximum') || blobError?.message?.includes('Hobby plan')) {
               errorMessage = 'Blob Storageの容量制限に達しました'
               errorDetails = `Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. Vercelのプランをアップグレードする（Proプラン以上では容量が増えます）\n3. 不要なファイルを削除する\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
+              statusCode = 507 // 507 Insufficient Storage
             } else {
               errorDetails = `エラー詳細: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`
             }
             
+            // エラーレスポンスを返す（必ずcompleted: falseとerrorを含める）
             return NextResponse.json(
               {
+                completed: false,
                 error: errorMessage,
                 details: errorDetails,
                 uploadedChunks: uploadedChunks.length,
                 totalChunks,
               },
-              { status: 507 } // 507 Insufficient Storage
+              { status: statusCode }
             )
           }
           

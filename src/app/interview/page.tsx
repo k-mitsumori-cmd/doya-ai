@@ -334,29 +334,47 @@ export default function InterviewPage() {
             const errorMsg = errorData.error || `チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました`
             const errorDetails = errorData.details || ''
             
-            // 容量制限エラーの場合は、すぐにエラーを投げる
-            if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || response.status === 507) {
-              throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
-            }
-            
+          // 容量制限エラーの場合は、すぐにエラーを投げる（リトライしない）
+          const isQuotaError = errorMsg.includes('容量制限') || 
+                              errorMsg.includes('Storage quota') || 
+                              errorMsg.includes('quota exceeded') || 
+                              errorMsg.includes('1GB maximum') ||
+                              errorMsg.includes('Hobby plan') ||
+                              response.status === 507
+          
+          if (isQuotaError) {
+            console.error(`[CHUNK] Quota error detected, stopping upload: ${errorMsg}`)
             throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+          }
+            
+          throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
           }
 
           const result = await response.json()
           lastResult = result
 
-          console.log(`[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} uploaded. Completed: ${result.completed}, Progress: ${result.uploadedChunks || uploadedChunks + 1}/${result.totalChunks || totalChunks}`)
+          console.log(`[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} uploaded. Completed: ${result.completed}, Progress: ${result.uploadedChunks || uploadedChunks + 1}/${result.totalChunks || totalChunks}, Error: ${result.error || 'none'}`)
 
-          // エラーが返されている場合は、すぐにエラーを投げる
+          // エラーが返されている場合は、すぐにエラーを投げる（容量制限エラーを含む）
           if (result.error) {
             const errorDetails = result.details || ''
             const errorMsg = result.error || 'エラーが発生しました'
             
-            // 容量制限エラーの場合は、すぐにエラーを投げる
-            if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || response.status === 507) {
+            // 容量制限エラーの場合は、すぐにエラーを投げる（リトライしない）
+            const isQuotaError = errorMsg.includes('容量制限') || 
+                                errorMsg.includes('Storage quota') || 
+                                errorMsg.includes('quota exceeded') || 
+                                errorMsg.includes('1GB maximum') ||
+                                errorMsg.includes('Hobby plan') ||
+                                response.status === 507
+            
+            if (isQuotaError) {
+              console.error(`[CHUNK] Quota error detected, stopping upload: ${errorMsg}`)
               throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
             }
             
+            // その他のエラーもすぐに投げる
+            console.error(`[CHUNK] Error in response: ${errorMsg}`)
             throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
           }
 
@@ -405,8 +423,16 @@ export default function InterviewPage() {
                     const errorDetails = checkResult.details || ''
                     const errorMsg = checkResult.error || 'エラーが発生しました'
                     
-                    // 容量制限エラーの場合は、すぐにエラーを投げる
-                    if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || checkRes.status === 507) {
+                    // 容量制限エラーの場合は、すぐにエラーを投げる（リトライしない）
+                    const isQuotaError = errorMsg.includes('容量制限') || 
+                                        errorMsg.includes('Storage quota') || 
+                                        errorMsg.includes('quota exceeded') || 
+                                        errorMsg.includes('1GB maximum') ||
+                                        errorMsg.includes('Hobby plan') ||
+                                        checkRes.status === 507
+                    
+                    if (isQuotaError) {
+                      console.error(`[CHUNK] Quota error detected in wait check (ok), stopping: ${errorMsg}`)
                       throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
                     }
                     
@@ -424,8 +450,16 @@ export default function InterviewPage() {
                     const errorDetails = errorData.details || ''
                     const errorMsg = errorData.error || 'エラーが発生しました'
                     
-                    // 容量制限エラーの場合は、すぐにエラーを投げる
-                    if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || checkRes.status === 507) {
+                    // 容量制限エラーの場合は、すぐにエラーを投げる（リトライしない）
+                    const isQuotaError = errorMsg.includes('容量制限') || 
+                                        errorMsg.includes('Storage quota') || 
+                                        errorMsg.includes('quota exceeded') || 
+                                        errorMsg.includes('1GB maximum') ||
+                                        errorMsg.includes('Hobby plan') ||
+                                        checkRes.status === 507
+                    
+                    if (isQuotaError) {
+                      console.error(`[CHUNK] Quota error detected in wait check (not ok), stopping: ${errorMsg}`)
                       throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
                     }
                     
@@ -441,11 +475,24 @@ export default function InterviewPage() {
           // チャンクのアップロード成功
           chunkUploaded = true
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+          
+          // 容量制限エラーの場合は、リトライせずにすぐにエラーを投げる
+          const isQuotaError = errorMessage.includes('容量制限') || 
+                              errorMessage.includes('Storage quota') || 
+                              errorMessage.includes('quota exceeded') || 
+                              errorMessage.includes('1GB maximum') ||
+                              errorMessage.includes('Hobby plan')
+          
+          if (isQuotaError) {
+            console.error(`[CHUNK] Quota error detected, stopping retry: ${errorMessage}`)
+            throw error
+          }
+          
           retryCount++
           console.error(`[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} upload failed (attempt ${retryCount}/${maxRetries}):`, error)
           
           if (retryCount >= maxRetries) {
-            const errorMessage = error instanceof Error ? error.message : '不明なエラー'
             throw new Error(`チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました（${maxRetries}回リトライしました）\n${errorMessage}`)
           }
           // リトライ前に少し待機
@@ -508,8 +555,16 @@ export default function InterviewPage() {
             const errorDetails = checkResult.details || ''
             const errorMsg = checkResult.error || 'エラーが発生しました'
             
-            // 容量制限エラーの場合は、すぐにエラーを投げる
-            if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || checkResponse.status === 507) {
+            // 容量制限エラーの場合は、すぐにエラーを投げる（リトライしない）
+            const isQuotaError = errorMsg.includes('容量制限') || 
+                                errorMsg.includes('Storage quota') || 
+                                errorMsg.includes('quota exceeded') || 
+                                errorMsg.includes('1GB maximum') ||
+                                errorMsg.includes('Hobby plan') ||
+                                checkResponse.status === 507
+            
+            if (isQuotaError) {
+              console.error(`[CHUNK] Quota error detected in wait loop (ok), stopping: ${errorMsg}`)
               throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
             }
             
@@ -527,8 +582,16 @@ export default function InterviewPage() {
             const errorDetails = errorData.details || ''
             const errorMsg = errorData.error || 'エラーが発生しました'
             
-            // 容量制限エラーの場合は、すぐにエラーを投げる
-            if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || checkResponse.status === 507) {
+            // 容量制限エラーの場合は、すぐにエラーを投げる（リトライしない）
+            const isQuotaError = errorMsg.includes('容量制限') || 
+                                errorMsg.includes('Storage quota') || 
+                                errorMsg.includes('quota exceeded') || 
+                                errorMsg.includes('1GB maximum') ||
+                                errorMsg.includes('Hobby plan') ||
+                                checkResponse.status === 507
+            
+            if (isQuotaError) {
+              console.error(`[CHUNK] Quota error detected in wait loop (not ok), stopping: ${errorMsg}`)
               throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
             }
             
@@ -536,9 +599,16 @@ export default function InterviewPage() {
           }
         }
       } catch (checkError) {
-        // 容量制限エラーの場合は、すぐにエラーを投げる
+        // 容量制限エラーの場合は、すぐにエラーを投げる（リトライしない）
         const errorMessage = checkError instanceof Error ? checkError.message : '不明なエラー'
-        if (errorMessage.includes('容量制限') || errorMessage.includes('Storage quota') || errorMessage.includes('quota exceeded')) {
+        const isQuotaError = errorMessage.includes('容量制限') || 
+                            errorMessage.includes('Storage quota') || 
+                            errorMessage.includes('quota exceeded') || 
+                            errorMessage.includes('1GB maximum') ||
+                            errorMessage.includes('Hobby plan')
+        
+        if (isQuotaError) {
+          console.error(`[CHUNK] Quota error in catch block, stopping: ${errorMessage}`)
           throw checkError
         }
         
