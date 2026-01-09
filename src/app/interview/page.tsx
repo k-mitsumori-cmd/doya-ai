@@ -966,7 +966,17 @@ export default function InterviewPage() {
                   
                   // ステータスコード0はネットワークエラーまたはCORSエラー
                   if (xhr.status === 0) {
-                    reject(new Error('Network error: Status 0 (possible CORS or network issue)'))
+                    const errorMsg = 'Network error: Status 0 (possible CORS or network issue)\n\n' +
+                      '考えられる原因:\n' +
+                      '1. Google Cloud StorageのCORS設定が不足している\n' +
+                      '2. ネットワーク接続の問題\n' +
+                      '3. 署名付きURLの有効期限切れ\n\n' +
+                      '対処方法:\n' +
+                      '1. Google Cloud ConsoleでバケットのCORS設定を確認してください\n' +
+                      '2. バケット名: doya-interview-storage\n' +
+                      '3. 設定方法: バケット詳細 > 構成タブ > CORS設定\n' +
+                      '4. 詳細は docs/gcs-cors-setup.md を参照してください'
+                    reject(new Error(errorMsg))
                     return
                   }
                   
