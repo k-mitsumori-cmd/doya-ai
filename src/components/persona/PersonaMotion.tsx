@@ -311,7 +311,7 @@ export function PartyLoadingOverlay({
                           key={pulse}
                           initial={{ x: '-40%' }}
                           animate={{ x: '140%' }}
-                          transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}
+                          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.5 }}
                           className="mt-3 h-1.5 w-1/2 rounded-full bg-gradient-to-r from-white/10 to-white/50"
                         />
                       )}
