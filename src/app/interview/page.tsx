@@ -1779,7 +1779,7 @@ export default function InterviewPage() {
                 音声: MP3, WAV, M4A, AAC, OGG / 動画: MP4, MOV, AVI, WebM / テキスト: TXT, DOCX, MD / PDF: PDF
               </p>
               <p className="text-xs text-orange-700 mt-1">
-                最大ファイルサイズ: <span className="font-black">4.75GB（MAX）</span>
+                最大ファイルサイズ: <span className="font-black">5TB（MAX）</span>
                 <br />
                 <span className="text-[10px] text-orange-600">
                   クライアントから直接Google Cloud Storageにアップロード（サイズ制限なし）
