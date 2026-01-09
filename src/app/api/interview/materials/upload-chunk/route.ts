@@ -710,6 +710,7 @@ export async function POST(request: NextRequest) {
           console.error('[INTERVIEW] Error during merge process:', mergeProcessError)
           return NextResponse.json(
             {
+              completed: false,
               error: 'ファイルの結合処理中にエラーが発生しました',
               details: `エラー詳細: ${mergeProcessError.message || '不明なエラー'}\nチャンク数: ${uploadedChunks.length}/${totalChunks}`,
               uploadedChunks: uploadedChunks.length,
