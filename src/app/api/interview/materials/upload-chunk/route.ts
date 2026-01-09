@@ -517,7 +517,6 @@ export async function POST(request: NextRequest) {
           try {
             uploadResult = await uploadToGCS(gcsPath, finalFileBuffer, {
               contentType: mimeType || undefined,
-              public: true,
             })
             console.log(`[INTERVIEW] File uploaded to Google Cloud Storage: ${uploadResult.url}`)
           } catch (gcsError: any) {
@@ -735,15 +734,47 @@ export async function POST(request: NextRequest) {
             )
           }
 
-          console.log(`[INTERVIEW] File merge and Blob upload completed. Material ID: ${material.id}`)
+          console.log(`[INTERVIEW] File merge and GCS upload completed. Material ID: ${material.id}, URL: ${material.fileUrl}`)
           
           return NextResponse.json({
             completed: true,
             material,
             message: 'ファイルのアップロードが完了しました',
+            uploadedChunks: uploadedChunks.length,
+            totalChunks,
           })
         } catch (mergeProcessError: any) {
           console.error('[INTERVIEW] Error during merge process:', mergeProcessError)
+          console.error('[INTERVIEW] Merge error details:', JSON.stringify({
+            message: mergeProcessError?.message,
+            code: mergeProcessError?.code,
+            name: mergeProcessError?.name,
+            stack: mergeProcessError?.stack?.split('\n').slice(0, 10),
+            uploadedChunks: uploadedChunks.length,
+            totalChunks,
+            tempFileName,
+          }, null, 2))
+          
+          // エラーメッセージを構築
+          let errorMessage = 'ファイルの結合処理中にエラーが発生しました'
+          let errorDetails = ''
+          
+          // GCS関連のエラーをチェック
+          if (mergeProcessError?.message?.includes('Google Cloud Storage') || 
+              mergeProcessError?.message?.includes('GCS') ||
+              mergeProcessError?.code === 401 ||
+              mergeProcessError?.code === 403 ||
+              mergeProcessError?.code === 404) {
+            errorMessage = 'Google Cloud Storageへのアップロードに失敗しました'
+            errorDetails = `エラー詳細: ${mergeProcessError?.message || '不明なエラー'}\nエラーコード: ${mergeProcessError?.code || 'なし'}\n\n確認事項:\n1. 環境変数（GOOGLE_CLOUD_PROJECT_ID、GOOGLE_APPLICATION_CREDENTIALS、GCS_BUCKET_NAME）が正しく設定されているか\n2. サービスアカウントの権限が適切か\n3. バケットが存在するか`
+          } else if (mergeProcessError?.message?.includes('ENOSPC') || 
+                     mergeProcessError?.code === 'ENOSPC') {
+            errorMessage = 'サーバーのディスク容量が不足しています'
+            errorDetails = `エラー詳細: ${mergeProcessError?.message || '不明なエラー'}\n\n対処方法:\n1. しばらく待ってから再度お試しください\n2. 古いプロジェクトを削除して容量を確保してください`
+          } else {
+            errorDetails = `エラー詳細: ${mergeProcessError?.message || '不明なエラー'}\nエラーコード: ${mergeProcessError?.code || 'なし'}`
+          }
+          
           return NextResponse.json(
             {
               completed: false,

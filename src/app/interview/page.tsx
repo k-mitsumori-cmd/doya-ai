@@ -694,13 +694,20 @@ export default function InterviewPage() {
         // エラーが発生した場合、それが最終的なエラーでない限り続行
         if (waitAttempt === 59) {
           // 最後の試行でエラーが発生した場合
-          throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\nエラー: ${errorMessage}\n\nサーバー側でファイルの結合が完了していない可能性があります。しばらく待ってから再度お試しください。\n\nもしまだエラーが続く場合は、プロジェクト一覧から該当プロジェクトを確認してください。`)
+          const finalErrorMsg = errorMessage.includes('Google Cloud Storage') || 
+                               errorMessage.includes('GCS') ||
+                               errorMessage.includes('認証') ||
+                               errorMessage.includes('権限')
+            ? errorMessage
+            : `ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\nエラー: ${errorMessage}\n\nサーバー側でファイルの結合またはGoogle Cloud Storageへのアップロードが完了していない可能性があります。\n\n対処方法:\n1. しばらく待ってから再度お試しください\n2. ファイルサイズを確認してください（推奨: 200MB以下）\n3. もしまだエラーが続く場合は、プロジェクト一覧から該当プロジェクトを確認してください\n4. 環境変数（GOOGLE_CLOUD_PROJECT_ID、GOOGLE_APPLICATION_CREDENTIALS、GCS_BUCKET_NAME）が正しく設定されているか確認してください`
+          throw new Error(finalErrorMsg)
         }
         console.error(`[CHUNK] Wait attempt ${waitAttempt + 1} failed:`, checkError)
       }
     }
 
-    throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\nサーバー側でファイルの結合が完了していない可能性があります。しばらく待ってから再度お試しください。`)
+    // 120秒待機しても完了しなかった場合
+    throw new Error(`ファイルのアップロードが完了しませんでした。\nアップロードしたチャンク数: ${uploadedChunks}/${totalChunks}\n\nサーバー側でファイルの結合またはGoogle Cloud Storageへのアップロードが完了していない可能性があります。\n\n対処方法:\n1. しばらく待ってから再度お試しください\n2. ファイルサイズを確認してください（推奨: 200MB以下）\n3. もしまだエラーが続く場合は、プロジェクト一覧から該当プロジェクトを確認してください\n4. 環境変数（GOOGLE_CLOUD_PROJECT_ID、GOOGLE_APPLICATION_CREDENTIALS、GCS_BUCKET_NAME）が正しく設定されているか確認してください`)
   }
 
   const handleFileSelect = async (file: File) => {
