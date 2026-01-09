@@ -83,6 +83,54 @@ export async function POST(request: NextRequest) {
     const totalChunks = parseInt(totalChunksStr)
     const fileSize = parseInt(fileSizeStr)
 
+    // チャンクインデックスの範囲チェック
+    if (chunkIndex < 0 || chunkIndex >= totalChunks) {
+      console.error(`[INTERVIEW] Invalid chunk index: ${chunkIndex}, totalChunks: ${totalChunks}`)
+      return NextResponse.json(
+        {
+          error: '無効なチャンクインデックスです',
+          details: `チャンクインデックスが範囲外です。chunkIndex: ${chunkIndex}, totalChunks: ${totalChunks}`,
+        },
+        { status: 400 }
+      )
+    }
+
+    // チャンクサイズの検証
+    if (!chunk || chunk.size === 0) {
+      console.error(`[INTERVIEW] Invalid chunk size: ${chunk?.size || 0}`)
+      return NextResponse.json(
+        {
+          error: '無効なチャンクサイズです',
+          details: `チャンクサイズが0または無効です。chunkSize: ${chunk?.size || 0}`,
+        },
+        { status: 400 }
+      )
+    }
+
+    // ファイルサイズの検証
+    if (isNaN(fileSize) || fileSize <= 0) {
+      console.error(`[INTERVIEW] Invalid file size: ${fileSize}`)
+      return NextResponse.json(
+        {
+          error: '無効なファイルサイズです',
+          details: `ファイルサイズが無効です。fileSize: ${fileSize}`,
+        },
+        { status: 400 }
+      )
+    }
+
+    // tempFileNameの検証
+    if (!tempFileName || tempFileName.trim() === '') {
+      console.error(`[INTERVIEW] Invalid tempFileName: ${tempFileName}`)
+      return NextResponse.json(
+        {
+          error: '無効なtempFileNameです',
+          details: `tempFileNameが空または無効です。tempFileName: ${tempFileName}`,
+        },
+        { status: 400 }
+      )
+    }
+
     // プロジェクトの所有権確認
     let project
     try {
@@ -128,14 +176,30 @@ export async function POST(request: NextRequest) {
         await mkdir(chunkDir, { recursive: true })
       }
 
+      // チャンクの重複チェック（既に存在する場合は上書き）
+      const chunkExists = existsSync(chunkFilePath)
+      if (chunkExists) {
+        console.warn(`[INTERVIEW] Chunk ${chunkIndex} already exists, overwriting: ${chunkFilePath}`)
+      }
+
       // チャンクを保存
       let writeSuccess = false
       try {
         const bytes = await chunk.arrayBuffer()
         const buffer = Buffer.from(bytes)
+        
+        // チャンクサイズの検証（期待されるサイズと実際のサイズを比較）
+        const expectedChunkSize = chunkIndex === totalChunks - 1 
+          ? fileSize - (chunkIndex * (4 * 1024 * 1024)) // 最後のチャンクは残りのサイズ
+          : 4 * 1024 * 1024 // 通常のチャンクは4MB
+        
+        if (buffer.length > expectedChunkSize * 1.1) { // 10%の許容誤差
+          console.warn(`[INTERVIEW] Chunk size mismatch: expected ~${expectedChunkSize}, got ${buffer.length}`)
+        }
+        
         await writeFile(chunkFilePath, buffer)
         writeSuccess = true
-        console.log(`[INTERVIEW] Chunk ${chunkIndex + 1}/${totalChunks} saved: ${chunkFilePath}`)
+        console.log(`[INTERVIEW] Chunk ${chunkIndex + 1}/${totalChunks} saved: ${chunkFilePath} (size: ${buffer.length} bytes)`)
       } catch (writeError: any) {
         console.error(`[INTERVIEW] Failed to write chunk file: ${chunkFilePath}`, writeError)
         
@@ -246,16 +310,39 @@ export async function POST(request: NextRequest) {
 
           // チャンクを順番に結合（結合と同時に削除して容量を確保）
           let mergeError: Error | null = null
+          let mergedChunks = 0
           try {
             for (let i = 0; i < totalChunks; i++) {
               const chunkFile = join(chunkDir, `${tempFileName}.chunk.${i}`)
+              
+              // チャンクファイルの存在確認
+              if (!existsSync(chunkFile)) {
+                const errorMsg = `チャンクファイルが見つかりません: ${chunkFile}`
+                console.error(`[INTERVIEW] ${errorMsg}`)
+                mergeError = new Error(errorMsg)
+                break
+              }
+              
               try {
                 const chunkData = await readFile(chunkFile)
+                
+                // チャンクデータのサイズ確認
+                if (chunkData.length === 0) {
+                  const errorMsg = `チャンク ${i} のデータが空です`
+                  console.error(`[INTERVIEW] ${errorMsg}`)
+                  mergeError = new Error(errorMsg)
+                  break
+                }
+                
                 if (i === 0) {
                   await writeFile(finalFilePath, chunkData)
                 } else {
                   await appendFile(finalFilePath, chunkData)
                 }
+                
+                mergedChunks++
+                console.log(`[INTERVIEW] Merged chunk ${i + 1}/${totalChunks} (${chunkData.length} bytes)`)
+                
                 // チャンクファイルを即座に削除（容量を確保）
                 await unlink(chunkFile)
               } catch (chunkError: any) {
@@ -337,10 +424,12 @@ export async function POST(request: NextRequest) {
             // エラーを返す
             return NextResponse.json(
               {
+                completed: false,
                 error: 'ファイルの結合に失敗しました',
-                details: `エラー詳細: ${mergeError.message || '不明なエラー'}\nチャンク数: ${uploadedChunks.length}/${totalChunks}`,
+                details: `エラー詳細: ${mergeError.message || '不明なエラー'}\n結合済みチャンク: ${mergedChunks}/${totalChunks}\nアップロード済みチャンク: ${uploadedChunks.length}/${totalChunks}`,
                 uploadedChunks: uploadedChunks.length,
                 totalChunks,
+                mergedChunks,
               },
               { status: 500 }
             )
@@ -380,6 +469,28 @@ export async function POST(request: NextRequest) {
           // ファイルサイズを確認してからVercel Blob Storageにアップロード
           const { stat } = await import('fs/promises')
           const finalFileStats = await stat(finalFilePath)
+          
+          // 結合後のファイルサイズが元のファイルサイズと一致するか確認
+          if (finalFileStats.size !== fileSize) {
+            console.error(`[INTERVIEW] File size mismatch: expected ${fileSize}, got ${finalFileStats.size}`)
+            // ファイルサイズが一致しない場合でも続行（ログのみ）
+            // ただし、大きな差がある場合はエラーを返す
+            const sizeDiff = Math.abs(finalFileStats.size - fileSize)
+            const sizeDiffPercent = (sizeDiff / fileSize) * 100
+            if (sizeDiffPercent > 1) { // 1%以上の差がある場合
+              return NextResponse.json(
+                {
+                  completed: false,
+                  error: 'ファイルサイズの不一致が検出されました',
+                  details: `結合後のファイルサイズが元のファイルサイズと一致しません。\n期待されるサイズ: ${formatFileSize(fileSize)}\n実際のサイズ: ${formatFileSize(finalFileStats.size)}\n差: ${formatFileSize(sizeDiff)} (${sizeDiffPercent.toFixed(2)}%)`,
+                  uploadedChunks: uploadedChunks.length,
+                  totalChunks,
+                },
+                { status: 500 }
+              )
+            }
+          }
+          
           const finalFileBuffer = await readFile(finalFilePath)
           
           // BLOB_READ_WRITE_TOKENの確認

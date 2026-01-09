@@ -330,27 +330,54 @@ export default function InterviewPage() {
           })
 
           if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
+            let errorData: any = {}
+            try {
+              errorData = await response.json()
+            } catch (jsonError) {
+              // JSONパースエラーの場合、レスポンステキストを取得
+              const responseText = await response.text().catch(() => '')
+              console.error(`[CHUNK] Failed to parse error response: ${responseText}`)
+              errorData = {
+                error: `チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました`,
+                details: `HTTPステータス: ${response.status} ${response.statusText}\n${responseText || 'エラーの詳細が取得できませんでした'}`,
+              }
+            }
+            
             const errorMsg = errorData.error || `チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました`
             const errorDetails = errorData.details || ''
             
-          // 容量制限エラーの場合は、すぐにエラーを投げる（リトライしない）
-          const isQuotaError = errorMsg.includes('容量制限') || 
-                              errorMsg.includes('Storage quota') || 
-                              errorMsg.includes('quota exceeded') || 
-                              errorMsg.includes('1GB maximum') ||
-                              errorMsg.includes('Hobby plan') ||
-                              response.status === 507
-          
-          if (isQuotaError) {
-            console.error(`[CHUNK] Quota error detected, stopping upload: ${errorMsg}`)
+            // 容量制限エラーの場合は、すぐにエラーを投げる（リトライしない）
+            const isQuotaError = errorMsg.includes('容量制限') || 
+                                errorMsg.includes('Storage quota') || 
+                                errorMsg.includes('quota exceeded') || 
+                                errorMsg.includes('1GB maximum') ||
+                                errorMsg.includes('Hobby plan') ||
+                                response.status === 507
+            
+            if (isQuotaError) {
+              console.error(`[CHUNK] Quota error detected, stopping upload: ${errorMsg}`)
+              throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+            }
+            
+            // 400系エラー（バリデーションエラー）の場合はリトライしない
+            if (response.status >= 400 && response.status < 500) {
+              console.error(`[CHUNK] Client error (${response.status}), stopping retry: ${errorMsg}`)
+              throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+            }
+            
             throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
           }
-            
-          throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
-          }
 
-          const result = await response.json()
+          let result: any = {}
+          try {
+            result = await response.json()
+          } catch (jsonError) {
+            // JSONパースエラーの場合
+            const responseText = await response.text().catch(() => '')
+            console.error(`[CHUNK] Failed to parse response JSON: ${responseText}`)
+            throw new Error(`サーバーからの応答を解析できませんでした。HTTPステータス: ${response.status}\n${responseText || '応答が空です'}`)
+          }
+          
           lastResult = result
 
           console.log(`[CHUNK] Chunk ${chunkIndex + 1}/${totalChunks} uploaded. Completed: ${result.completed}, Progress: ${result.uploadedChunks || uploadedChunks + 1}/${result.totalChunks || totalChunks}, Error: ${result.error || 'none'}`)
