@@ -196,16 +196,24 @@ export function PartyLoadingOverlay({
                     <div className="w-11 h-11 rounded-2xl bg-white/15 border border-white/10 flex items-center justify-center">
                       <ScanSearch className="w-6 h-6 text-white" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <div className="text-white font-black text-lg leading-tight">{title}</div>
                       <div className="text-white/70 text-xs font-bold mt-1">{stageText}</div>
                       {estimatedTime && (
-                        <div className="text-white/60 text-[10px] font-bold mt-1">
-                          推定処理時間: 約{estimatedTime}
-                        </div>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3 }}
+                          className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500/30 to-pink-500/30 border border-purple-400/50 backdrop-blur-sm"
+                        >
+                          <div className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                          <div className="text-white font-black text-sm">
+                            残り時間: <span className="text-purple-200">{estimatedTime}</span>
+                          </div>
+                        </motion.div>
                       )}
                       {allowTabSwitch && (
-                        <div className="text-white/50 text-[10px] font-bold mt-0.5">
+                        <div className="text-white/50 text-[10px] font-bold mt-1.5">
                           💡 別タブに切り替えても処理は続行されます
                         </div>
                       )}
