@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, XCircle, AlertCircle, Loader2, ArrowLeft } from 'lucide-react'
+import { CheckCircle2, XCircle, AlertCircle, Loader2, ArrowLeft, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 
 interface EnvCheck {
@@ -203,6 +203,116 @@ export default function CheckEnvPage() {
               </div>
             )}
 
+            {/* 修正手順（環境変数名が間違っている場合） */}
+            {result.summary.hasSimilarNames && (
+              <div className="bg-orange-50 border-2 border-orange-300 rounded-2xl p-6">
+                <h3 className="font-bold text-orange-900 mb-4 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5" />
+                  修正手順
+                </h3>
+                <div className="space-y-4">
+                  <div className="bg-white rounded-lg p-4 border border-orange-200">
+                    <h4 className="font-semibold text-orange-900 mb-2">1. Vercelダッシュボードにアクセス</h4>
+                    <p className="text-sm text-orange-800">
+                      <a
+                        href="https://vercel.com/dashboard"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-orange-600 hover:text-orange-700 underline"
+                      >
+                        https://vercel.com/dashboard
+                      </a>
+                      にログインしてください
+                    </p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-orange-200">
+                    <h4 className="font-semibold text-orange-900 mb-2">2. プロジェクトを選択</h4>
+                    <p className="text-sm text-orange-800">プロジェクト一覧から <code className="bg-orange-100 px-2 py-1 rounded">doya-ai</code> を選択</p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-orange-200">
+                    <h4 className="font-semibold text-orange-900 mb-2">3. 環境変数の設定画面を開く</h4>
+                    <p className="text-sm text-orange-800">
+                      <strong>Settings</strong> → <strong>Environment Variables</strong> をクリック
+                    </p>
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-orange-200">
+                    <h4 className="font-semibold text-orange-900 mb-2">4. 間違った環境変数を削除</h4>
+                    <p className="text-sm text-orange-800 mb-2">以下の間違った環境変数名を探して削除してください：</p>
+                    {Object.entries(result.checks).map(([varName, check]) => {
+                      if (check.similarNames.length > 0) {
+                        return (
+                          <div key={varName} className="mt-2 p-2 bg-red-50 rounded border border-red-200">
+                            <p className="text-xs font-medium text-red-900 mb-1">削除する環境変数:</p>
+                            {check.similarNames.map((name) => (
+                              <code key={name} className="text-xs font-mono text-red-700 bg-red-100 px-2 py-1 rounded">
+                                {name}
+                              </code>
+                            ))}
+                          </div>
+                        )
+                      }
+                      return null
+                    })}
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-orange-200">
+                    <h4 className="font-semibold text-orange-900 mb-2">5. 正しい環境変数を追加</h4>
+                    <p className="text-sm text-orange-800 mb-2">以下の正しい環境変数名で追加してください：</p>
+                    {Object.entries(result.checks).map(([varName, check]) => {
+                      if (check.similarNames.length > 0 || !check.exists) {
+                        return (
+                          <div key={varName} className="mt-2 p-2 bg-green-50 rounded border border-green-200">
+                            <p className="text-xs font-medium text-green-900 mb-1">追加する環境変数:</p>
+                            <div className="space-y-2">
+                              <div>
+                                <code className="text-xs font-mono text-green-700 bg-green-100 px-2 py-1 rounded">
+                                  {varName}
+                                </code>
+                                <p className="text-xs text-green-700 mt-1">
+                                  {varName === 'GOOGLE_APPLICATION_CREDENTIALS' && (
+                                    <>
+                                      <strong>値:</strong> サービスアカウントキーのJSONを1行で貼り付け
+                                      <br />
+                                      <span className="text-[10px] text-green-600">
+                                        （改行を含めず、JSONファイルの内容をそのまま貼り付けてください）
+                                      </span>
+                                    </>
+                                  )}
+                                  {varName === 'GOOGLE_CLOUD_PROJECT_ID' && (
+                                    <>
+                                      <strong>値:</strong> <code>gen-lang-client-0767544294</code>
+                                    </>
+                                  )}
+                                  {varName === 'GCS_BUCKET_NAME' && (
+                                    <>
+                                      <strong>値:</strong> <code>doya-interview-storage</code>
+                                    </>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      }
+                      return null
+                    })}
+                  </div>
+                  
+                  <div className="bg-white rounded-lg p-4 border border-orange-200">
+                    <h4 className="font-semibold text-orange-900 mb-2">6. 再デプロイ</h4>
+                    <p className="text-sm text-orange-800">
+                      環境変数を変更した後、<strong>必ず再デプロイ</strong>が必要です。
+                      <br />
+                      <strong>Deployments</strong> タブ → 最新のデプロイメントの <strong>...</strong> メニュー → <strong>Redeploy</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 詳細チェック結果 */}
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <h3 className="font-bold text-slate-900 mb-4">詳細チェック結果</h3>
@@ -251,19 +361,36 @@ export default function CheckEnvPage() {
                               </div>
                             )}
                             {check.similarNames.length > 0 && (
-                              <div className="mt-2 p-2 bg-orange-50 rounded border border-orange-200">
-                                <div className="text-xs font-medium text-orange-900 mb-1">
-                                  類似の環境変数名が見つかりました:
-                                </div>
-                                <ul className="space-y-1">
-                                  {check.similarNames.map((name) => (
-                                    <li key={name} className="text-xs text-orange-700 font-mono">
-                                      • {name}
-                                    </li>
-                                  ))}
-                                </ul>
-                                <div className="text-xs text-orange-800 mt-2">
-                                  正しい環境変数名: <code className="font-bold">{varName}</code>
+                              <div className="mt-2 p-3 bg-red-50 rounded-lg border-2 border-red-300">
+                                <div className="flex items-start gap-2 mb-2">
+                                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                                  <div className="flex-1">
+                                    <div className="text-xs font-bold text-red-900 mb-1">
+                                      間違った環境変数名が設定されています
+                                    </div>
+                                    <div className="text-xs text-red-800 mb-2">
+                                      以下の環境変数名を削除してください:
+                                    </div>
+                                    <ul className="space-y-1 mb-2">
+                                      {check.similarNames.map((name) => (
+                                        <li key={name} className="flex items-center gap-2">
+                                          <XCircle className="w-3 h-3 text-red-600" />
+                                          <code className="text-xs text-red-700 font-mono bg-red-100 px-2 py-0.5 rounded">
+                                            {name}
+                                          </code>
+                                          <span className="text-xs text-red-600">（削除）</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                    <div className="mt-2 pt-2 border-t border-red-200">
+                                      <div className="text-xs font-bold text-green-800 mb-1">
+                                        正しい環境変数名:
+                                      </div>
+                                      <code className="text-xs font-mono text-green-700 bg-green-100 px-2 py-1 rounded font-bold">
+                                        {varName}
+                                      </code>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             )}
