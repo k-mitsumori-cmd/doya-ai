@@ -931,103 +931,102 @@ export default function InterviewPage() {
             if (useXHR) {
               // XMLHttpRequestを使用（プログレス表示可能）
               console.log('[INTERVIEW] Using XMLHttpRequest for large file upload with progress tracking')
+              console.log('[INTERVIEW] Signed URL:', signedUrlData.signedUrl.substring(0, 100) + '...')
               uploadRes = await new Promise<Response>((resolve, reject) => {
                 const xhr = new XMLHttpRequest()
-                let timeoutId: NodeJS.Timeout | null = null
                 let isResolved = false
                 
-                // タイムアウト処理（xhr.timeoutと併用）
-                timeoutId = setTimeout(() => {
-                  if (!isResolved) {
-                    console.error('[INTERVIEW] Upload timeout reached, aborting...')
-                    xhr.abort()
-                    isResolved = true
-                    reject(new Error('Upload timeout'))
-                  }
-                }, timeoutMs)
+                const cleanup = () => {
+                  isResolved = true
+                }
                 
                 xhr.upload.addEventListener('progress', (e) => {
                   if (e.lengthComputable && !isResolved) {
                     const percentComplete = (e.loaded / e.total) * 100
                     const uploadProgressPercent = 40 + (percentComplete * 0.05) // 40-45%の範囲
                     setProgress(Math.min(45, uploadProgressPercent))
-                    if (percentComplete % 10 < 1 || percentComplete > 99) {
+                    if (Math.floor(percentComplete) % 10 === 0 || percentComplete > 99) {
                       // 10%ごと、または99%以上でログ出力
                       console.log(`[INTERVIEW] Upload progress: ${percentComplete.toFixed(1)}% (${(e.loaded / 1024 / 1024).toFixed(2)} MB / ${(e.total / 1024 / 1024).toFixed(2)} MB)`)
                     }
                   }
                 })
                 
-                xhr.addEventListener('load', () => {
+                xhr.addEventListener('loadend', () => {
                   if (isResolved) return
-                  if (timeoutId) clearTimeout(timeoutId)
+                  cleanup()
                   
-                  console.log(`[INTERVIEW] XHR load event - status: ${xhr.status}, statusText: ${xhr.statusText}`)
+                  console.log(`[INTERVIEW] XHR loadend - status: ${xhr.status}, statusText: ${xhr.statusText}, readyState: ${xhr.readyState}`)
                   
+                  // readyStateが4（完了）でない場合はエラー
+                  if (xhr.readyState !== 4) {
+                    reject(new Error(`Upload incomplete: readyState ${xhr.readyState}`))
+                    return
+                  }
+                  
+                  // ステータスコード0はネットワークエラーまたはCORSエラー
                   if (xhr.status === 0) {
-                    // ネットワークエラーまたはCORSエラーの可能性
-                    isResolved = true
                     reject(new Error('Network error: Status 0 (possible CORS or network issue)'))
                     return
                   }
                   
+                  // 成功ステータスコード
                   if (xhr.status >= 200 && xhr.status < 300) {
-                    // Responseオブジェクトを構築（okプロパティを正しく設定）
                     const response = new Response(null, {
                       status: xhr.status,
                       statusText: xhr.statusText,
                       headers: new Headers(),
                     })
-                    // Responseオブジェクトにokプロパティを追加（readonlyなのでObject.definePropertyを使用）
                     Object.defineProperty(response, 'ok', {
                       value: true,
                       writable: false,
                       enumerable: true,
                       configurable: false,
                     })
-                    isResolved = true
                     resolve(response)
                   } else {
                     // HTTPエラー
-                    const errorText = xhr.responseText || xhr.statusText
-                    isResolved = true
+                    const errorText = xhr.responseText || xhr.statusText || 'Unknown error'
                     reject(new Error(`HTTP ${xhr.status}: ${errorText}`))
                   }
                 })
                 
                 xhr.addEventListener('error', (e) => {
                   if (isResolved) return
-                  if (timeoutId) clearTimeout(timeoutId)
-                  console.error('[INTERVIEW] XHR error event:', e)
-                  isResolved = true
-                  reject(new Error(`Network error during upload: ${xhr.statusText || 'Unknown error'}`))
+                  cleanup()
+                  console.error('[INTERVIEW] XHR error event:', {
+                    status: xhr.status,
+                    statusText: xhr.statusText,
+                    readyState: xhr.readyState,
+                    event: e,
+                  })
+                  const errorMsg = xhr.statusText || 'Network error during upload'
+                  reject(new Error(`Network error: ${errorMsg}`))
                 })
                 
                 xhr.addEventListener('abort', () => {
                   if (isResolved) return
-                  if (timeoutId) clearTimeout(timeoutId)
+                  cleanup()
                   console.warn('[INTERVIEW] XHR abort event')
-                  isResolved = true
                   reject(new Error('Upload aborted'))
                 })
                 
                 xhr.addEventListener('timeout', () => {
                   if (isResolved) return
-                  if (timeoutId) clearTimeout(timeoutId)
+                  cleanup()
                   console.error('[INTERVIEW] XHR timeout event')
-                  isResolved = true
                   reject(new Error('Upload timeout'))
                 })
                 
                 try {
-                  xhr.open('PUT', signedUrlData.signedUrl)
+                  xhr.open('PUT', signedUrlData.signedUrl, true) // 非同期を明示
                   xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+                  // タイムアウトを設定（ミリ秒）
                   xhr.timeout = timeoutMs
-                  console.log('[INTERVIEW] Starting XHR upload...')
+                  console.log(`[INTERVIEW] Starting XHR upload (timeout: ${(timeoutMs / 1000 / 60).toFixed(1)} minutes)...`)
                   xhr.send(file)
                 } catch (openError) {
-                  if (timeoutId) clearTimeout(timeoutId)
-                  isResolved = true
+                  cleanup()
                   console.error('[INTERVIEW] XHR open/send error:', openError)
                   reject(new Error(`Failed to start upload: ${openError instanceof Error ? openError.message : 'Unknown error'}`))
                 }
