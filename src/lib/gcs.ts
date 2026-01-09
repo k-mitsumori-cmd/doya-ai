@@ -5,24 +5,121 @@ import { GoogleAuth } from 'google-auth-library'
 let storage: Storage | null = null
 let bucketName: string | null = null
 
+/**
+ * 環境変数名の完全一致を確認し、類似の環境変数名を検出
+ */
+function checkEnvironmentVariable(
+  expectedName: string,
+  value: string | undefined,
+  allEnvVars: string[]
+): { exists: boolean; similarNames: string[]; exactMatch: boolean } {
+  const exists = value !== undefined && value !== null && value.trim() !== ''
+  const exactMatch = exists
+  
+  // 類似の環境変数名を検出（大文字小文字を無視）
+  const similarNames = allEnvVars.filter(name => {
+    const nameUpper = name.toUpperCase()
+    const expectedUpper = expectedName.toUpperCase()
+    
+    // 完全一致（大文字小文字を無視）
+    if (nameUpper === expectedUpper && name !== expectedName) {
+      return true // 大文字小文字が違う
+    }
+    
+    // 部分一致（よくある間違いを検出）
+    if (nameUpper.includes(expectedUpper.substring(0, Math.min(20, expectedUpper.length))) ||
+        expectedUpper.includes(nameUpper.substring(0, Math.min(20, nameUpper.length)))) {
+      return name !== expectedName // 完全一致でない場合のみ
+    }
+    
+    return false
+  })
+  
+  return { exists, similarNames, exactMatch }
+}
+
 async function getStorage(): Promise<Storage> {
   if (!storage) {
+    // すべての環境変数名を取得
+    const allEnvVarNames = Object.keys(process.env)
+    
     // 必須環境変数の確認（デバッグ情報付き）
     console.log('[GCS] Checking environment variables...')
-    console.log('[GCS] GOOGLE_CLOUD_PROJECT_ID:', process.env.GOOGLE_CLOUD_PROJECT_ID ? `✓ (${process.env.GOOGLE_CLOUD_PROJECT_ID.substring(0, 20)}...)` : '✗')
-    console.log('[GCS] GCS_BUCKET_NAME:', process.env.GCS_BUCKET_NAME ? `✓ (${process.env.GCS_BUCKET_NAME})` : '✗')
-    console.log('[GCS] GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS ? `✓ (${process.env.GOOGLE_APPLICATION_CREDENTIALS.substring(0, 50)}...)` : '✗')
-    console.log('[GCS] GCS_CLIENT_EMAIL:', process.env.GCS_CLIENT_EMAIL ? `✓ (${process.env.GCS_CLIENT_EMAIL})` : '✗')
-    console.log('[GCS] GCS_PRIVATE_KEY:', process.env.GCS_PRIVATE_KEY ? `✓ (${process.env.GCS_PRIVATE_KEY.substring(0, 50)}...)` : '✗')
+    console.log('[GCS] Total environment variables:', allEnvVarNames.length)
     
-    if (!process.env.GOOGLE_CLOUD_PROJECT_ID) {
-      console.error('[GCS] GOOGLE_CLOUD_PROJECT_ID is not set')
-      throw new Error('GOOGLE_CLOUD_PROJECT_ID環境変数が設定されていません。Vercelダッシュボードで環境変数を設定してください。')
+    // 各環境変数の存在確認と類似チェック
+    const requiredVars = [
+      'GOOGLE_CLOUD_PROJECT_ID',
+      'GCS_BUCKET_NAME',
+      'GOOGLE_APPLICATION_CREDENTIALS',
+    ]
+    
+    const optionalVars = [
+      'GCS_CLIENT_EMAIL',
+      'GCS_PRIVATE_KEY',
+    ]
+    
+    const varChecks: Record<string, { exists: boolean; similarNames: string[]; exactMatch: boolean }> = {}
+    
+    // 必須環境変数のチェック
+    for (const varName of requiredVars) {
+      const check = checkEnvironmentVariable(varName, process.env[varName], allEnvVarNames)
+      varChecks[varName] = check
+      
+      if (check.exists) {
+        const value = process.env[varName]!
+        if (varName === 'GOOGLE_APPLICATION_CREDENTIALS') {
+          console.log(`[GCS] ${varName}: ✓ (${value.length} chars) - EXACT MATCH`)
+        } else {
+          console.log(`[GCS] ${varName}: ✓ (${value.substring(0, 30)}...) - EXACT MATCH`)
+        }
+      } else {
+        console.error(`[GCS] ${varName}: ✗ NOT FOUND`)
+        if (check.similarNames.length > 0) {
+          console.error(`[GCS]   Similar names found: ${check.similarNames.join(', ')}`)
+          console.error(`[GCS]   Expected exact name: ${varName}`)
+        }
+      }
+    }
+    
+    // オプション環境変数のチェック
+    for (const varName of optionalVars) {
+      const check = checkEnvironmentVariable(varName, process.env[varName], allEnvVarNames)
+      varChecks[varName] = check
+      
+      if (check.exists) {
+        const value = process.env[varName]!
+        if (varName === 'GCS_PRIVATE_KEY') {
+          console.log(`[GCS] ${varName}: ✓ (${value.length} chars) - EXACT MATCH`)
+        } else {
+          console.log(`[GCS] ${varName}: ✓ (${value}) - EXACT MATCH`)
+        }
+      } else {
+        console.log(`[GCS] ${varName}: - (optional, not set)`)
+      }
+    }
+    
+    // エラーチェック
+    if (!varChecks['GOOGLE_CLOUD_PROJECT_ID']?.exists) {
+      const similar = varChecks['GOOGLE_CLOUD_PROJECT_ID']?.similarNames || []
+      let errorMsg = 'GOOGLE_CLOUD_PROJECT_ID環境変数が設定されていません。\n\n'
+      if (similar.length > 0) {
+        errorMsg += `類似の環境変数名が見つかりました: ${similar.join(', ')}\n`
+        errorMsg += `正しい環境変数名: GOOGLE_CLOUD_PROJECT_ID\n\n`
+      }
+      errorMsg += 'Vercelダッシュボードで環境変数名が完全に一致しているか確認してください。'
+      throw new Error(errorMsg)
     }
 
-    if (!process.env.GCS_BUCKET_NAME) {
-      console.error('[GCS] GCS_BUCKET_NAME is not set')
-      throw new Error('GCS_BUCKET_NAME環境変数が設定されていません。Vercelダッシュボードで環境変数を設定してください。')
+    if (!varChecks['GCS_BUCKET_NAME']?.exists) {
+      const similar = varChecks['GCS_BUCKET_NAME']?.similarNames || []
+      let errorMsg = 'GCS_BUCKET_NAME環境変数が設定されていません。\n\n'
+      if (similar.length > 0) {
+        errorMsg += `類似の環境変数名が見つかりました: ${similar.join(', ')}\n`
+        errorMsg += `正しい環境変数名: GCS_BUCKET_NAME\n\n`
+      }
+      errorMsg += 'Vercelダッシュボードで環境変数名が完全に一致しているか確認してください。'
+      throw new Error(errorMsg)
     }
 
     // 環境変数から認証情報を取得
@@ -47,21 +144,40 @@ async function getStorage(): Promise<Storage> {
     }
     
     // 方法2: GOOGLE_APPLICATION_CREDENTIALS（JSON文字列またはファイルパス）
-    // 環境変数名の確認（よくある間違いをチェック）
+    // 環境変数名の完全一致を確認
     const credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS
+    const credsCheck = varChecks['GOOGLE_APPLICATION_CREDENTIALS']
+    
     if (!credsEnvVar) {
-      // 類似の環境変数名をチェック
-      const envVarNames = Object.keys(process.env)
-      const similarNames = envVarNames.filter(name => 
-        name.toUpperCase().includes('GOOGLE') && 
-        (name.toUpperCase().includes('APPLICATION') || name.toUpperCase().includes('CREDENTIAL'))
-      )
-      if (similarNames.length > 0) {
-        console.warn('[GCS] Similar environment variable names found (may be misspelled):', similarNames)
-        console.warn('[GCS] Expected: GOOGLE_APPLICATION_CREDENTIALS')
-        console.warn('[GCS] Please check if the environment variable name is correct in Vercel dashboard')
+      let errorMsg = 'GOOGLE_APPLICATION_CREDENTIALS環境変数が設定されていません。\n\n'
+      
+      if (credsCheck.similarNames.length > 0) {
+        errorMsg += `⚠️ 類似の環境変数名が見つかりました:\n`
+        credsCheck.similarNames.forEach(name => {
+          errorMsg += `   - ${name} (現在設定されている名前)\n`
+        })
+        errorMsg += `\n正しい環境変数名: GOOGLE_APPLICATION_CREDENTIALS\n\n`
+        errorMsg += `環境変数名が完全に一致していません。\n`
+        errorMsg += `Vercelダッシュボードで環境変数名を確認し、完全に一致するように修正してください。\n\n`
+        errorMsg += `よくある間違い:\n`
+        errorMsg += `- GOOGLE_APPLICATION_CREDENT (途中で切れている)\n`
+        errorMsg += `- google_application_credentials (小文字)\n`
+        errorMsg += `- GOOGLE_APPLICATION_CREDENTIAL (末尾のSがない)`
+      } else {
+        errorMsg += 'Vercelダッシュボードで環境変数を設定してください。\n'
+        errorMsg += '環境変数名: GOOGLE_APPLICATION_CREDENTIALS (完全に一致する必要があります)'
       }
+      
+      console.error('[GCS]', errorMsg)
+      throw new Error(errorMsg)
     }
+    
+    // 環境変数名の完全一致を確認
+    if (!credsCheck.exactMatch) {
+      console.warn('[GCS] GOOGLE_APPLICATION_CREDENTIALS may not be an exact match')
+    }
+    
+    console.log('[GCS] GOOGLE_APPLICATION_CREDENTIALS environment variable: EXACT MATCH ✓')
     
     if (!credentials && credsEnvVar) {
       try {
@@ -162,28 +278,50 @@ async function getStorage(): Promise<Storage> {
       console.error('[GCS]   - GCS_CLIENT_EMAIL:', process.env.GCS_CLIENT_EMAIL ? `✓ (${process.env.GCS_CLIENT_EMAIL})` : '✗')
       console.error('[GCS]   - GCS_PRIVATE_KEY:', process.env.GCS_PRIVATE_KEY ? `✓ (${process.env.GCS_PRIVATE_KEY.length} chars)` : '✗')
       
-      // 環境変数名の確認（よくある間違いをチェック）
-      const envVarNames = Object.keys(process.env)
-      const similarNames = envVarNames.filter(name => 
-        name.includes('GOOGLE') || name.includes('APPLICATION') || name.includes('CREDENTIAL')
-      )
-      if (similarNames.length > 0) {
-        console.error('[GCS] Similar environment variable names found:', similarNames)
-      }
-      
+      // 認証情報が設定されていない場合の詳細なエラーメッセージ
       const missingVars = []
-      if (!process.env.GOOGLE_CLOUD_PROJECT_ID) missingVars.push('GOOGLE_CLOUD_PROJECT_ID')
-      if (!process.env.GCS_BUCKET_NAME) missingVars.push('GCS_BUCKET_NAME')
-      if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GCS_CLIENT_EMAIL && !process.env.GCS_PRIVATE_KEY) {
-        missingVars.push('GOOGLE_APPLICATION_CREDENTIALS または (GCS_CLIENT_EMAIL + GCS_PRIVATE_KEY)')
+      const missingChecks: string[] = []
+      
+      if (!varChecks['GOOGLE_CLOUD_PROJECT_ID']?.exists) {
+        missingVars.push('GOOGLE_CLOUD_PROJECT_ID')
+        if (varChecks['GOOGLE_CLOUD_PROJECT_ID']?.similarNames.length > 0) {
+          missingChecks.push(`GOOGLE_CLOUD_PROJECT_ID: 類似名 ${varChecks['GOOGLE_CLOUD_PROJECT_ID'].similarNames.join(', ')} が見つかりました`)
+        }
       }
       
-      throw new Error(
-        `Google Cloud Storageの認証情報が設定されていません。\n\n` +
-        `設定が必要な環境変数:\n${missingVars.map(v => `- ${v}`).join('\n')}\n\n` +
-        `Vercelダッシュボードで環境変数を設定してください。\n` +
-        `環境変数名は完全に一致している必要があります（大文字小文字も含む）。`
-      )
+      if (!varChecks['GCS_BUCKET_NAME']?.exists) {
+        missingVars.push('GCS_BUCKET_NAME')
+        if (varChecks['GCS_BUCKET_NAME']?.similarNames.length > 0) {
+          missingChecks.push(`GCS_BUCKET_NAME: 類似名 ${varChecks['GCS_BUCKET_NAME'].similarNames.join(', ')} が見つかりました`)
+        }
+      }
+      
+      if (!varChecks['GOOGLE_APPLICATION_CREDENTIALS']?.exists && 
+          !varChecks['GCS_CLIENT_EMAIL']?.exists && 
+          !varChecks['GCS_PRIVATE_KEY']?.exists) {
+        missingVars.push('GOOGLE_APPLICATION_CREDENTIALS または (GCS_CLIENT_EMAIL + GCS_PRIVATE_KEY)')
+        if (varChecks['GOOGLE_APPLICATION_CREDENTIALS']?.similarNames.length > 0) {
+          missingChecks.push(`GOOGLE_APPLICATION_CREDENTIALS: 類似名 ${varChecks['GOOGLE_APPLICATION_CREDENTIALS'].similarNames.join(', ')} が見つかりました`)
+        }
+      }
+      
+      let errorMsg = `Google Cloud Storageの認証情報が設定されていません。\n\n`
+      errorMsg += `設定が必要な環境変数（完全一致が必要）:\n`
+      missingVars.forEach(v => {
+        errorMsg += `- ${v}\n`
+      })
+      
+      if (missingChecks.length > 0) {
+        errorMsg += `\n⚠️ 環境変数名の不一致が検出されました:\n`
+        missingChecks.forEach(check => {
+          errorMsg += `${check}\n`
+        })
+        errorMsg += `\n環境変数名は完全に一致している必要があります（大文字小文字も含む）。\n`
+      }
+      
+      errorMsg += `\nVercelダッシュボードで環境変数名を確認し、完全に一致するように設定してください。`
+      
+      throw new Error(errorMsg)
     }
 
     storage = new Storage(config)
