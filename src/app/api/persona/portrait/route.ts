@@ -213,6 +213,7 @@ Output a single high-quality portrait image.
     return NextResponse.json({ error: '画像の抽出に失敗しました' }, { status: 500 })
   } catch (error) {
     console.error('Portrait generation error:', error)
+    await notifyApiError(error, request, 500, { endpoint: 'POST /api/persona/portrait' })
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'ポートレート生成中にエラーが発生しました' },
       { status: 500 }

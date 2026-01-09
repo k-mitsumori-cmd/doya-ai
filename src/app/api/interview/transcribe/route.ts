@@ -220,7 +220,23 @@ export async function POST(request: NextRequest) {
     // OpenAI Whisper APIで文字起こし
     let transcriptionText: string
     try {
-      console.log(`[INTERVIEW] Calling OpenAI Whisper API...`)
+      // ファイルサイズをチェック（25MB制限）
+      const MAX_SINGLE_FILE_SIZE = 25 * 1024 * 1024 // 25MB
+      
+      if (fileBuffer.length > MAX_SINGLE_FILE_SIZE) {
+        const fileSizeMB = (fileBuffer.length / 1024 / 1024).toFixed(2)
+        const maxSizeMB = (MAX_SINGLE_FILE_SIZE / 1024 / 1024).toFixed(0)
+        console.warn(`[INTERVIEW] File size (${fileSizeMB} MB) exceeds limit (${maxSizeMB} MB)`)
+        return NextResponse.json(
+          { 
+            error: 'ファイルサイズが大きすぎます',
+            details: `文字起こし機能は最大${maxSizeMB}MBのファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください`
+          },
+          { status: 413 }
+        )
+      }
+      
+      console.log(`[INTERVIEW] Calling OpenAI Whisper API... (file size: ${(fileBuffer.length / 1024 / 1024).toFixed(2)} MB)`)
       
       // OpenAI SDK v4では、File、Blob、Buffer、ReadableStreamを直接受け取れる
       // Node.js環境では、Bufferを直接渡すのが最も簡単
@@ -298,6 +314,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[INTERVIEW] Transcription error:', error)
     console.error('[INTERVIEW] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    await notifyApiError(error, request, 500, { endpoint: 'POST /api/interview/transcribe', materialId, projectId })
     
     return NextResponse.json(
       {
