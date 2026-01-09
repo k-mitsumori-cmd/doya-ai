@@ -285,3 +285,41 @@ export async function getGCSUsage(): Promise<{
   }
 }
 
+/**
+ * 署名付きURLを生成（クライアントから直接アップロード用）
+ * @param filePath GCS内のファイルパス
+ * @param contentType ファイルのContent-Type
+ * @param expiresIn 有効期限（秒、デフォルト: 1時間）
+ * @returns 署名付きURLとアップロード用のメタデータ
+ */
+export async function generateSignedUploadUrl(
+  filePath: string,
+  contentType: string,
+  expiresIn: number = 3600
+): Promise<{
+  signedUrl: string
+  filePath: string
+  publicUrl: string
+}> {
+  const storage = await getStorage()
+  const bucket = storage.bucket(getBucketName())
+  const file = bucket.file(filePath)
+
+  // 署名付きURLを生成（PUTメソッドでアップロード可能）
+  const [signedUrl] = await file.getSignedUrl({
+    version: 'v4',
+    action: 'write',
+    expires: Date.now() + expiresIn * 1000,
+    contentType,
+  })
+
+  // 公開URLも生成
+  const publicUrl = `https://storage.googleapis.com/${getBucketName()}/${filePath}`
+
+  return {
+    signedUrl,
+    filePath,
+    publicUrl,
+  }
+}
+

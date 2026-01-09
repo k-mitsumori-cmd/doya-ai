@@ -819,55 +819,103 @@ export default function InterviewPage() {
         guestId = localStorage.getItem('interview-guest-id')
       }
 
-      // 2. ファイルアップロード（チャンクアップロード or 通常アップロード）
-      let uploadData
-      // チャンクアップロードが有効で、4.5MBを超える場合はチャンクアップロードを使用
-      if (USE_CHUNK_UPLOAD && file.size > VERCEL_LIMIT) {
-        console.log(`[INTERVIEW] Using chunk upload for file size: ${file.size} bytes (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
-        uploadData = await uploadFileInChunks(file, newProjectId, guestId)
-      } else {
-        // 通常アップロード
-        console.log(`[INTERVIEW] Using normal upload for file size: ${file.size} bytes (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
-        const formData = new FormData()
-        formData.append('projectId', newProjectId)
-        formData.append('file', file)
+      // 2. ファイルアップロード（署名付きURLを使用してクライアントから直接GCSにアップロード）
+      setUploadStatus('uploading')
+      console.log(`[INTERVIEW] Starting direct upload to GCS for file size: ${file.size} bytes (${(file.size / 1024 / 1024).toFixed(2)}MB)`)
+      
+      // 2-1. 署名付きURLを取得
+      let signedUrlData
+      try {
+        const urlRes = await fetch('/api/interview/materials/upload-url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(guestId ? { 'x-guest-id': guestId } : {}),
+          },
+          body: JSON.stringify({
+            projectId: newProjectId,
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type || '',
+          }),
+        })
 
-        let uploadRes
-        try {
-          uploadRes = await fetch('/api/interview/materials/upload', {
-            method: 'POST',
-            headers: {
-              ...(guestId ? { 'x-guest-id': guestId } : {}),
-            },
-            body: formData,
-          })
-        } catch (error) {
-          throw new Error('ファイルのアップロードに失敗しました。\nネットワークエラーが発生しました。インターネット接続を確認してください。')
+        if (!urlRes.ok) {
+          const errorData = await urlRes.json().catch(() => ({}))
+          const errorMsg = errorData.error || '署名付きURLの取得に失敗しました'
+          const errorDetails = errorData.details || 'サーバーエラーが発生しました。'
+          throw new Error(`${errorMsg}\n${errorDetails}`)
         }
+
+        signedUrlData = await urlRes.json()
+        if (!signedUrlData.signedUrl) {
+          throw new Error('署名付きURLの取得に失敗しました。\nサーバーからの応答が不正です。')
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+        throw new Error(`署名付きURLの取得に失敗しました。\n${errorMessage}`)
+      }
+
+      // 2-2. 署名付きURLを使用して直接GCSにアップロード
+      let uploadProgress = 0
+      try {
+        const uploadRes = await fetch(signedUrlData.signedUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': file.type || 'application/octet-stream',
+          },
+          body: file,
+        })
 
         if (!uploadRes.ok) {
-          const errorData = await uploadRes.json().catch(() => ({}))
-          const errorMsg = errorData.error || 'ファイルアップロードに失敗しました'
-          const errorDetails = errorData.details || 'ファイル形式やサイズを確認してください。'
-          
-          // 容量制限エラーの場合は、すぐにエラーを投げる（チャンクアップロードに切り替えない）
-          if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || uploadRes.status === 507) {
-            throw new Error(`${errorMsg}\n${errorDetails}`)
-          }
-          
-          // チャンクアップロードが有効で、サーバーがチャンクアップロードを要求した場合
-          if (USE_CHUNK_UPLOAD && errorData.useChunkUpload) {
-            console.log(`[INTERVIEW] Server requested chunk upload, switching to chunk upload...`)
-            uploadData = await uploadFileInChunks(file, newProjectId, guestId)
-          } else {
-            throw new Error(`${errorMsg}\n${errorDetails}`)
-          }
-        } else {
-          uploadData = await uploadRes.json()
-          if (!uploadData.material?.id) {
-            throw new Error('アップロードしたファイルの情報を取得できませんでした。\nサーバーからの応答が不正です。もう一度お試しください。')
-          }
+          const errorText = await uploadRes.text().catch(() => '')
+          console.error('[INTERVIEW] GCS upload failed:', uploadRes.status, errorText)
+          throw new Error(`Google Cloud Storageへのアップロードに失敗しました。\nHTTPステータス: ${uploadRes.status} ${uploadRes.statusText}`)
         }
+
+        console.log(`[INTERVIEW] File uploaded to GCS successfully: ${signedUrlData.filePath}`)
+        uploadProgress = 100
+        setProgress(45)
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+        throw new Error(`ファイルのアップロードに失敗しました。\n${errorMessage}`)
+      }
+
+      // 2-3. アップロード完了をサーバーに通知
+      let uploadData
+      try {
+        const completeRes = await fetch('/api/interview/materials/upload-complete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(guestId ? { 'x-guest-id': guestId } : {}),
+          },
+          body: JSON.stringify({
+            projectId: newProjectId,
+            filePath: signedUrlData.filePath,
+            fileName: file.name,
+            fileSize: file.size,
+            mimeType: file.type || '',
+            materialType: type,
+          }),
+        })
+
+        if (!completeRes.ok) {
+          const errorData = await completeRes.json().catch(() => ({}))
+          const errorMsg = errorData.error || 'アップロード完了の処理に失敗しました'
+          const errorDetails = errorData.details || 'サーバーエラーが発生しました。'
+          throw new Error(`${errorMsg}\n${errorDetails}`)
+        }
+
+        uploadData = await completeRes.json()
+        if (!uploadData.material?.id) {
+          throw new Error('アップロードしたファイルの情報を取得できませんでした。\nサーバーからの応答が不正です。')
+        }
+
+        console.log(`[INTERVIEW] Upload completed. Material ID: ${uploadData.material.id}`)
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+        throw new Error(`アップロード完了の処理に失敗しました。\nファイルはGoogle Cloud Storageに保存されましたが、データベースへの記録に失敗しました。\n${errorMessage}`)
       }
 
       setProgress(50)
@@ -1197,7 +1245,7 @@ export default function InterviewPage() {
                 最大ファイルサイズ: <span className="font-black text-orange-600">4.75GB（MAX）</span>
                 <br />
                 <span className="text-xs text-slate-400">
-                  ※ 4.5MB以上のファイルは自動的にチャンクアップロードで処理されます
+                  ※ クライアントから直接Google Cloud Storageにアップロードします（サイズ制限なし）
                   <br />
                   ※ Google Cloud Storageを使用してアップロードされます
                 </span>
@@ -1464,7 +1512,7 @@ export default function InterviewPage() {
                 最大ファイルサイズ: <span className="font-black">4.75GB（MAX）</span>
                 <br />
                 <span className="text-[10px] text-orange-600">
-                  4.5MB以上はチャンクアップロードで自動処理（Google Cloud Storage使用）
+                  クライアントから直接Google Cloud Storageにアップロード（サイズ制限なし）
                 </span>
               </p>
             </div>
