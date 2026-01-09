@@ -1506,6 +1506,17 @@ export default function InterviewPage() {
         </Link>
       </div>
 
+      {/* 環境変数確認リンク */}
+      <div className="mt-8 text-center">
+        <Link
+          href="/interview/check-env"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-orange-500 bg-white rounded-lg border border-slate-200 hover:border-orange-300 transition-all"
+        >
+          <AlertCircle className="w-4 h-4" />
+          環境変数の設定を確認
+        </Link>
+      </div>
+
       {/* ヘルプ */}
       <div className="mt-12 p-6 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl border border-orange-200">
         <div className="flex items-start gap-3">
