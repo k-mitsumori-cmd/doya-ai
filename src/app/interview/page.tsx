@@ -333,6 +333,12 @@ export default function InterviewPage() {
             const errorData = await response.json().catch(() => ({}))
             const errorMsg = errorData.error || `チャンク ${chunkIndex + 1}/${totalChunks} のアップロードに失敗しました`
             const errorDetails = errorData.details || ''
+            
+            // 容量制限エラーの場合は、すぐにエラーを投げる
+            if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || response.status === 507) {
+              throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+            }
+            
             throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
           }
 
@@ -469,7 +475,14 @@ export default function InterviewPage() {
           const errorData = await checkResponse.json().catch(() => ({}))
           if (errorData.error) {
             const errorDetails = errorData.details || ''
-            throw new Error(`${errorData.error}${errorDetails ? `\n${errorDetails}` : ''}`)
+            const errorMsg = errorData.error || 'エラーが発生しました'
+            
+            // 容量制限エラーの場合は、すぐにエラーを投げる
+            if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || checkResponse.status === 507) {
+              throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
+            }
+            
+            throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
           }
         }
       } catch (checkError) {
@@ -495,7 +508,7 @@ export default function InterviewPage() {
     const validation = validateFile(file)
     if (!validation.valid) {
       setErrorMessage(validation.error || 'ファイルの検証に失敗しました')
-      setErrorDetails(validation.details)
+      setErrorDetails(validation.details || null)
       setUploadStatus('error')
       return
     }
@@ -625,6 +638,11 @@ export default function InterviewPage() {
           const errorData = await uploadRes.json().catch(() => ({}))
           const errorMsg = errorData.error || 'ファイルアップロードに失敗しました'
           const errorDetails = errorData.details || 'ファイル形式やサイズを確認してください。'
+          
+          // 容量制限エラーの場合は、すぐにエラーを投げる（チャンクアップロードに切り替えない）
+          if (errorMsg.includes('容量制限') || errorMsg.includes('Storage quota') || errorMsg.includes('quota exceeded') || uploadRes.status === 507) {
+            throw new Error(`${errorMsg}\n${errorDetails}`)
+          }
           
           // チャンクアップロードが必要な場合は自動的にリダイレクト
           if (errorData.useChunkUpload) {
@@ -1060,7 +1078,7 @@ export default function InterviewPage() {
                       (step.status === 'uploading' || step.status === 'transcribing')) ||
                     (uploadStatus === 'generating' &&
                       ['uploading', 'transcribing', 'analyzing'].includes(step.status)) ||
-                    uploadStatus === 'completed'
+                    (uploadStatus === 'completed' as UploadStatus)
 
                   return (
                     <motion.div
