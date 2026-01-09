@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateDraft } from '@/lib/interview/prompts'
 
+export const dynamic = 'force-dynamic'
+
 // 記事ドラフト生成
 export async function POST(request: NextRequest) {
   try {
@@ -34,8 +36,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
+    console.log('[INTERVIEW] Draft generation request:', {
+      projectId,
+      hasOutline: !!project.outline,
+      outlineLength: project.outline?.length || 0,
+      transcriptionCount: project.transcriptions.length,
+    })
+
     if (!project.outline) {
-      return NextResponse.json({ error: 'Outline not found. Please generate outline first.' }, { status: 400 })
+      console.error('[INTERVIEW] Outline not found for project:', projectId)
+      return NextResponse.json(
+        { 
+          error: 'Outline not found',
+          details: '構成案が生成されていません。構成案を先に生成してください。'
+        },
+        { status: 400 }
+      )
     }
 
     // 文字起こしテキストを結合
@@ -43,8 +59,15 @@ export async function POST(request: NextRequest) {
       .map((t) => t.text)
       .join('\n\n')
 
-    if (!transcriptionText) {
-      return NextResponse.json({ error: 'No transcription found' }, { status: 400 })
+    if (!transcriptionText || transcriptionText.trim() === '') {
+      console.error('[INTERVIEW] No transcription found for project:', projectId)
+      return NextResponse.json(
+        { 
+          error: 'No transcription found',
+          details: '文字起こしが完了していません。文字起こしを先に実行してください。'
+        },
+        { status: 400 }
+      )
     }
 
     // 記事タイプと表示形式のデフォルト値
@@ -52,6 +75,13 @@ export async function POST(request: NextRequest) {
     const displayFormat = (requestedDisplayFormat as string) || 'QA'
 
     // 記事ドラフト生成
+    console.log('[INTERVIEW] Generating draft...', {
+      transcriptionLength: transcriptionText.length,
+      outlineLength: project.outline.length,
+      articleType,
+      displayFormat,
+    })
+    
     const draftContent = await generateDraft(
       transcriptionText,
       project.outline,
@@ -59,6 +89,8 @@ export async function POST(request: NextRequest) {
       articleType as any,
       displayFormat as any
     )
+
+    console.log('[INTERVIEW] Draft generated successfully, length:', draftContent?.length || 0)
 
     // 文字数カウント
     const wordCount = draftContent.length
@@ -78,10 +110,18 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    console.log('[INTERVIEW] Draft saved to database:', draft.id)
     return NextResponse.json({ draft })
   } catch (error) {
     console.error('[INTERVIEW] Draft generation error:', error)
-    return NextResponse.json({ error: 'Failed to generate draft' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json(
+      { 
+        error: 'Failed to generate draft',
+        details: errorMessage
+      },
+      { status: 500 }
+    )
   }
 }
 

@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateOutline } from '@/lib/interview/prompts'
 
+export const dynamic = 'force-dynamic'
+
 // 構成案生成
 export async function POST(request: NextRequest) {
   try {
@@ -40,8 +42,21 @@ export async function POST(request: NextRequest) {
       .map((t) => t.text)
       .join('\n\n')
 
-    if (!transcriptionText) {
-      return NextResponse.json({ error: 'No transcription found' }, { status: 400 })
+    console.log('[INTERVIEW] Outline generation request:', {
+      projectId,
+      transcriptionCount: project.transcriptions.length,
+      transcriptionTextLength: transcriptionText.length,
+    })
+
+    if (!transcriptionText || transcriptionText.trim() === '') {
+      console.error('[INTERVIEW] No transcription found for project:', projectId)
+      return NextResponse.json(
+        { 
+          error: 'No transcription found',
+          details: '文字起こしが完了していません。文字起こしを先に実行してください。'
+        },
+        { status: 400 }
+      )
     }
 
     // 企画案取得
@@ -50,6 +65,7 @@ export async function POST(request: NextRequest) {
       : null
 
     // 構成案生成
+    console.log('[INTERVIEW] Generating outline...')
     const outline = await generateOutline(transcriptionText, proposal || {
       title: project.title,
       summary: project.theme || '',
@@ -57,16 +73,26 @@ export async function POST(request: NextRequest) {
       value: '',
     })
 
+    console.log('[INTERVIEW] Outline generated successfully, length:', outline?.length || 0)
+
     // プロジェクトに保存
     await prisma.interviewProject.update({
       where: { id: projectId },
       data: { outline },
     })
 
+    console.log('[INTERVIEW] Outline saved to project:', projectId)
     return NextResponse.json({ outline })
   } catch (error) {
     console.error('[INTERVIEW] Outline generation error:', error)
-    return NextResponse.json({ error: 'Failed to generate outline' }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json(
+      { 
+        error: 'Failed to generate outline',
+        details: errorMessage
+      },
+      { status: 500 }
+    )
   }
 }
 

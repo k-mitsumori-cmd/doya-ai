@@ -1046,6 +1046,7 @@ export default function InterviewPage() {
         setProgress(60)
 
         try {
+          console.log('[INTERVIEW] Requesting transcription for material:', uploadData.material.id)
           const transcribeRes = await fetch('/api/interview/transcribe', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1056,19 +1057,58 @@ export default function InterviewPage() {
           })
 
           if (!transcribeRes.ok) {
-            console.warn('文字起こしに失敗しました（スキップ）')
-            setErrorDetails('文字起こし処理をスキップしました。後で手動で実行できます。')
+            const errorData = await transcribeRes.json().catch(() => ({}))
+            const errorMsg = errorData.error || '文字起こしに失敗しました'
+            const errorDetails = errorData.details || ''
+            console.error('[INTERVIEW] Transcription failed:', transcribeRes.status, errorMsg, errorDetails)
+            throw new Error(`${errorMsg}${errorDetails ? '\n' + errorDetails : ''}`)
+          }
+
+          const transcribeData = await transcribeRes.json()
+          transcriptionId = transcribeData.transcription?.id
+          console.log('[INTERVIEW] Transcription completed successfully:', transcriptionId ? `ID: ${transcriptionId}` : 'No ID returned')
+          
+          if (!transcriptionId) {
+            console.warn('[INTERVIEW] Transcription ID not returned, but continuing...')
           } else {
-            const transcribeData = await transcribeRes.json()
-            transcriptionId = transcribeData.transcription?.id
+            // 文字起こしが完了するまで少し待つ（データベースへの反映を待つ）
+            console.log('[INTERVIEW] Waiting for transcription to be saved to database...')
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            
+            // 文字起こしがデータベースに保存されているか確認
+            let retryCount = 0
+            const maxRetries = 5
+            while (retryCount < maxRetries) {
+              try {
+                const checkRes = await fetch(`/api/interview/projects/${newProjectId}`, {
+                  headers: { 'Content-Type': 'application/json' },
+                })
+                if (checkRes.ok) {
+                  const projectData = await checkRes.json()
+                  const transcriptions = projectData.project?.transcriptions || []
+                  if (transcriptions.length > 0 && transcriptions.some((t: any) => t.text && t.text.trim().length > 0)) {
+                    console.log('[INTERVIEW] Transcription confirmed in database')
+                    break
+                  }
+                }
+              } catch (checkError) {
+                console.warn('[INTERVIEW] Failed to check transcription status:', checkError)
+              }
+              retryCount++
+              if (retryCount < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, 1000))
+              }
+            }
           }
         } catch (error) {
-          console.warn('文字起こしエラー:', error)
-          setErrorDetails('文字起こし処理でエラーが発生しましたが、続行します。')
+          const errorMessage = error instanceof Error ? error.message : '文字起こしでエラーが発生しました'
+          console.error('[INTERVIEW] Transcription error:', error)
+          throw new Error(`文字起こしに失敗しました。\n${errorMessage}`)
         }
         setProgress(75)
       } else if (type === 'text' || type === 'pdf') {
         // テキスト・PDFの場合は抽出テキストを使用
+        console.log('[INTERVIEW] Text/PDF file, skipping transcription')
         setProgress(75)
       }
 
@@ -1077,6 +1117,7 @@ export default function InterviewPage() {
       setProgress(80)
 
       try {
+        console.log('[INTERVIEW] Requesting outline generation for project:', newProjectId)
         const outlineRes = await fetch('/api/interview/outline', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1086,14 +1127,20 @@ export default function InterviewPage() {
         })
 
         if (!outlineRes.ok) {
-          console.warn('構成案生成に失敗しました（スキップ）')
-          setErrorDetails((prev) => (prev ? prev + '\n構成案生成をスキップしました。' : '構成案生成をスキップしました。'))
-        } else {
-          setProgress(90)
+          const errorData = await outlineRes.json().catch(() => ({}))
+          const errorMsg = errorData.error || '構成案生成に失敗しました'
+          const errorDetails = errorData.details || ''
+          console.error('[INTERVIEW] Outline generation failed:', outlineRes.status, errorMsg, errorDetails)
+          throw new Error(`${errorMsg}${errorDetails ? '\n' + errorDetails : ''}`)
         }
+
+        const outlineData = await outlineRes.json()
+        console.log('[INTERVIEW] Outline generated successfully:', outlineData.outline ? 'Yes' : 'No')
+        setProgress(90)
       } catch (error) {
-        console.warn('構成案生成エラー:', error)
-        setErrorDetails((prev) => (prev ? prev + '\n構成案生成でエラーが発生しました。' : '構成案生成でエラーが発生しました。'))
+        const errorMessage = error instanceof Error ? error.message : '構成案生成でエラーが発生しました'
+        console.error('[INTERVIEW] Outline generation error:', error)
+        throw new Error(`構成案生成に失敗しました。\n${errorMessage}`)
       }
 
       // 5. 記事生成
@@ -1101,6 +1148,7 @@ export default function InterviewPage() {
       setProgress(92)
 
       try {
+        console.log('[INTERVIEW] Requesting draft generation for project:', newProjectId)
         const draftRes = await fetch('/api/interview/draft', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1110,14 +1158,20 @@ export default function InterviewPage() {
         })
 
         if (!draftRes.ok) {
-          console.warn('記事生成に失敗しました（後で手動で生成可能）')
-          setErrorDetails((prev) => (prev ? prev + '\n記事生成をスキップしました。後で手動で実行できます。' : '記事生成をスキップしました。後で手動で実行できます。'))
-        } else {
-          setProgress(98)
+          const errorData = await draftRes.json().catch(() => ({}))
+          const errorMsg = errorData.error || '記事生成に失敗しました'
+          const errorDetails = errorData.details || ''
+          console.error('[INTERVIEW] Draft generation failed:', draftRes.status, errorMsg, errorDetails)
+          throw new Error(`${errorMsg}${errorDetails ? '\n' + errorDetails : ''}`)
         }
+
+        const draftData = await draftRes.json()
+        console.log('[INTERVIEW] Draft generated successfully:', draftData.draft ? 'Yes' : 'No')
+        setProgress(98)
       } catch (error) {
-        console.warn('記事生成エラー:', error)
-        setErrorDetails((prev) => (prev ? prev + '\n記事生成でエラーが発生しました。' : '記事生成でエラーが発生しました。'))
+        const errorMessage = error instanceof Error ? error.message : '記事生成でエラーが発生しました'
+        console.error('[INTERVIEW] Draft generation error:', error)
+        throw new Error(`記事生成に失敗しました。\n${errorMessage}`)
       }
 
       // 完了
