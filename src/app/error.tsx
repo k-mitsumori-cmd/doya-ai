@@ -40,7 +40,34 @@ export default function Error({
   useEffect(() => {
     // 本番環境ではエラーを外部サービスに送信することも可能
     console.error('Application error:', error)
-  }, [error])
+
+    // エラー通知をSlackに送信（非同期、エラーはログに記録するだけ）
+    const sendNotification = async () => {
+      try {
+        await fetch('/api/error/notify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            errorMessage: error.message || 'Unknown error',
+            errorStack: error.stack,
+            pathname: pathname || undefined,
+            errorDigest: error.digest,
+            userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : undefined,
+          }),
+        }).catch((e) => {
+          // 通知エラーはログに記録するだけ（エラー通知の失敗でさらにエラーを発生させない）
+          console.error('Failed to send error notification:', e)
+        })
+      } catch (e) {
+        // 通知エラーはログに記録するだけ（エラー通知の失敗でさらにエラーを発生させない）
+        console.error('Failed to send error notification:', e)
+      }
+    }
+
+    sendNotification()
+  }, [error, pathname])
 
   // 再試行ボタンのハンドラー：エラーが発生したサービスのページにリダイレクト
   const handleRetry = () => {

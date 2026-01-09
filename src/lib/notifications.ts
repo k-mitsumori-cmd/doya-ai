@@ -20,6 +20,18 @@ interface PaymentNotificationData {
   isRecurring?: boolean
 }
 
+interface ErrorNotificationData {
+  errorMessage: string
+  errorStack?: string
+  pathname?: string
+  userId?: string
+  userEmail?: string | null
+  userName?: string | null
+  errorDigest?: string
+  userAgent?: string
+  timestamp: string
+}
+
 /**
  * 新規ユーザー登録通知を送信
  */
@@ -275,6 +287,174 @@ async function sendSlackPaymentNotification(webhookUrl: string, data: PaymentNot
     }
   } catch (e) {
     console.error('Failed to send Slack payment notification:', e)
+    throw e
+  }
+}
+
+/**
+ * エラー通知を送信
+ */
+export async function sendErrorNotification(data: ErrorNotificationData): Promise<void> {
+  try {
+    // 通知設定を取得
+    const emailSetting = await prisma.systemSetting.findUnique({
+      where: { key: 'email_notifications' },
+    })
+    const slackWebhook = await prisma.systemSetting.findUnique({
+      where: { key: 'slack_webhook' },
+    })
+
+    const emailEnabled = emailSetting?.value === 'true'
+    const webhookUrl = slackWebhook?.value || ''
+
+    // 通知を送信（非同期で実行、エラーはログに記録するだけ）
+    const promises: Promise<void>[] = []
+
+    // メール通知（将来実装）
+    if (emailEnabled) {
+      // TODO: メール送信機能を実装
+      console.log('[Notification] Email notification enabled (not implemented yet)')
+    }
+
+    // Slack通知
+    if (webhookUrl) {
+      promises.push(sendSlackErrorNotification(webhookUrl, data))
+    }
+
+    // すべての通知を並列実行（エラーは個別にキャッチ）
+    await Promise.allSettled(promises)
+  } catch (e) {
+    // 通知エラーはログに記録するだけ（エラー通知の失敗でさらにエラーを発生させない）
+    console.error('Failed to send error notification:', e)
+  }
+}
+
+/**
+ * Slack Webhookにエラー通知を送信
+ */
+async function sendSlackErrorNotification(webhookUrl: string, data: ErrorNotificationData): Promise<void> {
+  try {
+    // サービス名をパスから特定
+    const getServiceName = (pathname?: string): string => {
+      if (!pathname) return '不明'
+      if (pathname.startsWith('/banner')) return 'ドヤバナーAI'
+      if (pathname.startsWith('/seo')) return 'ドヤライティングAI'
+      if (pathname.startsWith('/persona')) return 'ドヤペルソナAI'
+      if (pathname.startsWith('/interview')) return 'インタビュー記事生成'
+      if (pathname.startsWith('/kantan')) return 'カンタンマーケAI'
+      return 'その他'
+    }
+
+    const serviceName = getServiceName(data.pathname)
+
+    // エラーメッセージを短縮（長すぎる場合は切り詰め）
+    const truncateMessage = (msg: string, maxLength: number = 500): string => {
+      if (msg.length <= maxLength) return msg
+      return msg.slice(0, maxLength) + '...'
+    }
+
+    const errorMessage = truncateMessage(data.errorMessage, 500)
+    const errorStack = data.errorStack ? truncateMessage(data.errorStack, 1000) : undefined
+
+    const message = {
+      text: '⚠️ サービスでエラーが発生しました',
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '⚠️ サービスエラー発生',
+            emoji: true,
+          },
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*サービス:*\n${serviceName}`,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*発生時刻:*\n${data.timestamp}`,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*パス:*\n\`${data.pathname || '不明'}\``,
+            },
+            {
+              type: 'mrkdwn',
+              text: `*エラーID:*\n${data.errorDigest ? `\`${data.errorDigest}\`` : 'なし'}`,
+            },
+          ],
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*エラーメッセージ:*\n\`\`\`${errorMessage}\`\`\``,
+          },
+        },
+        ...(data.userId
+          ? [
+              {
+                type: 'section',
+                fields: [
+                  {
+                    type: 'mrkdwn',
+                    text: `*ユーザーID:*\n\`${data.userId}\``,
+                  },
+                  {
+                    type: 'mrkdwn',
+                    text: `*ユーザー名:*\n${data.userName || '（未設定）'}`,
+                  },
+                  {
+                    type: 'mrkdwn',
+                    text: `*メールアドレス:*\n${data.userEmail || '（未設定）'}`,
+                  },
+                ],
+              },
+            ]
+          : []),
+        ...(errorStack
+          ? [
+              {
+                type: 'section',
+                text: {
+                  type: 'mrkdwn',
+                  text: `*スタックトレース:*\n\`\`\`${errorStack}\`\`\``,
+                },
+              },
+            ]
+          : []),
+        {
+          type: 'divider',
+        },
+        {
+          type: 'context',
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: `<https://doya-ai.surisuta.jp/admin/users|管理画面で確認する>`,
+            },
+          ],
+        },
+      ],
+    }
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Slack webhook returned ${response.status}`)
+    }
+  } catch (e) {
+    console.error('Failed to send Slack error notification:', e)
     throw e
   }
 }
