@@ -26,11 +26,11 @@ import { PartyLoadingOverlay, type OverlayMood } from '@/components/persona/Pers
 type UploadStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'completed' | 'error'
 type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
 
-// Vercel Blob Storageを使用したアップロード
-// - Vercel Blob Storageの上限: 4.75GB
+// Google Cloud Storageを使用したアップロード
+// - Google Cloud Storageの上限: 5TB（実質的な上限）
 // - チャンクアップロードを使用することで、大きなファイルもアップロード可能
 // - 4.5MBを超えるファイルは自動的にチャンクアップロードを使用（Vercelのサーバーレス関数制限）
-const MAX_FILE_SIZE = 4.75 * 1024 * 1024 * 1024 // 4.75GB（Vercel Blob Storageの上限）
+const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024 * 1024 // 5TB（Google Cloud Storageの実質的な上限）
 const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB（Vercelのサーバーレス関数のリクエストボディサイズ制限）
 const CHUNK_SIZE = 4 * 1024 * 1024 // 4MB（チャンクサイズ - Vercelの制限より少し小さく）
 const USE_CHUNK_UPLOAD = true // チャンクアップロードを有効化（4.5MB以上のファイルをアップロード可能）
@@ -212,7 +212,7 @@ export default function InterviewPage() {
   }, [uploadedFile, materialType, progress, isUploading])
 
   const validateFile = (file: File): { valid: boolean; error?: string; details?: string; useChunk?: boolean } => {
-    // ファイルサイズチェック（4.75GBまでVercel Blob Storageで対応可能）
+    // ファイルサイズチェック（5TBまでGoogle Cloud Storageで対応可能）
     if (file.size > MAX_FILE_SIZE) {
       const fileSizeGB = (file.size / 1024 / 1024 / 1024).toFixed(2)
       const maxSizeGB = (MAX_FILE_SIZE / 1024 / 1024 / 1024).toFixed(2)
@@ -975,7 +975,7 @@ export default function InterviewPage() {
       // 容量制限エラーの場合、詳細がない場合はデフォルトのメッセージを追加
       if (mainError.includes('容量制限') || mainError.includes('Storage quota') || mainError.includes('quota exceeded')) {
         if (!errorDetailsText || errorDetailsText.trim() === '') {
-          errorDetailsText = 'Vercel Blob Storageの容量制限に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. 不要なファイルを削除する\n3. Vercelダッシュボードでストレージ使用状況を確認する'
+          errorDetailsText = 'Google Cloud Storageの容量制限に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する（3ヶ月経過したプロジェクトは自動削除されます）\n2. 不要なファイルを削除する\n3. Google Cloud Consoleでストレージ使用状況を確認する\n4. ストレージ容量を増やす（必要に応じて）'
         }
       } else if (!errorDetailsText || errorDetailsText.trim() === '') {
         errorDetailsText = '詳細なエラー情報はコンソールを確認してください。問題が続く場合は、サポートにお問い合わせください。'
@@ -1192,7 +1192,7 @@ export default function InterviewPage() {
                 <span className="text-xs text-slate-400">
                   ※ 4.5MB以上のファイルは自動的にチャンクアップロードで処理されます
                   <br />
-                  ※ Vercel Blob Storageを使用してアップロードされます
+                  ※ Google Cloud Storageを使用してアップロードされます
                 </span>
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -1457,7 +1457,7 @@ export default function InterviewPage() {
                 最大ファイルサイズ: <span className="font-black">4.75GB（MAX）</span>
                 <br />
                 <span className="text-[10px] text-orange-600">
-                  4.5MB以上はチャンクアップロードで自動処理（Vercel Blob Storage使用）
+                  4.5MB以上はチャンクアップロードで自動処理（Google Cloud Storage使用）
                 </span>
               </p>
             </div>

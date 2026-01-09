@@ -6,6 +6,7 @@ import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import OpenAI from 'openai'
+import { getFileFromGCS } from '@/lib/gcs'
 
 // Vercel等のサーバーレス環境では /tmp を使用
 function getUploadBaseDir() {
@@ -18,6 +19,9 @@ function getUploadBaseDir() {
 }
 
 // 文字起こし実行（音声・動画ファイルから）
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -70,56 +74,90 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({ apiKey: openaiApiKey })
 
-    // ファイルを読み込む（Vercel Blob Storageから取得、またはローカルファイルシステムから）
+    // ファイルを読み込む（Google Cloud Storageから取得、またはローカルファイルシステムから）
     let fileBuffer: Buffer
     try {
-      // 優先順位: fileUrl (完全なURL) > filePath (Blob pathnameからURL構築 or ローカルファイルシステム)
+      // 優先順位: fileUrl (完全なURL) > filePath (GCS pathname or ローカルファイルシステム)
       if (material.fileUrl) {
-        // fileUrlが存在する場合は、直接fetchする（Vercel Blob StorageのURL）
-        console.log(`[INTERVIEW] Fetching file from Blob Storage URL: ${material.fileUrl}`)
-        const response = await fetch(material.fileUrl)
-        if (!response.ok) {
-          throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
-        }
-        const arrayBuffer = await response.arrayBuffer()
-        fileBuffer = Buffer.from(arrayBuffer)
-        console.log(`[INTERVIEW] File read from Blob Storage URL successfully: ${fileBuffer.length} bytes`)
-      } else if (material.filePath) {
-        // filePathがBlob pathnameの場合（例: interview/projectId/filename）
-        // Vercel Blob StorageのURLを構築してfetchする
-        if (!material.filePath.startsWith('http://') && !material.filePath.startsWith('https://') && !material.filePath.startsWith('/')) {
-          // Blob pathnameの場合、Vercel Blob StorageのベースURLから構築
-          // ただし、fileUrlがない場合は直接fetchできないため、エラーを返す
-          console.error(`[INTERVIEW] filePath is a Blob pathname but fileUrl is missing: ${material.filePath}`)
-          return NextResponse.json(
-            { error: 'ファイルのURLが設定されていません', details: 'Blob Storageからファイルを取得するためのURLが必要です。' },
-            { status: 404 }
-          )
-        }
-        // ローカルファイルシステムから読み込み（フォールバック）
-        const baseDir = getUploadBaseDir()
-        let filePath: string
-
-        if (material.filePath && material.filePath.startsWith('/')) {
-          // 絶対パスの場合（Vercel環境）
-          filePath = material.filePath
+        // fileUrlが存在する場合
+        if (material.fileUrl.includes('storage.googleapis.com')) {
+          // Google Cloud StorageのURLの場合
+          console.log(`[INTERVIEW] Fetching file from Google Cloud Storage: ${material.fileUrl}`)
+          try {
+            fileBuffer = await getFileFromGCS(material.fileUrl)
+            console.log(`[INTERVIEW] File read from Google Cloud Storage successfully: ${fileBuffer.length} bytes`)
+          } catch (gcsError) {
+            // GCSからの取得に失敗した場合、直接fetchを試行
+            console.warn(`[INTERVIEW] Failed to get file from GCS, trying direct fetch: ${gcsError}`)
+            const response = await fetch(material.fileUrl)
+            if (!response.ok) {
+              throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
+            }
+            const arrayBuffer = await response.arrayBuffer()
+            fileBuffer = Buffer.from(arrayBuffer)
+            console.log(`[INTERVIEW] File read from URL successfully: ${fileBuffer.length} bytes`)
+          }
         } else {
-          // 相対パスの場合
-          filePath = join(baseDir, material.filePath || '')
+          // その他のURL（直接fetch）
+          console.log(`[INTERVIEW] Fetching file from URL: ${material.fileUrl}`)
+          const response = await fetch(material.fileUrl)
+          if (!response.ok) {
+            throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
+          }
+          const arrayBuffer = await response.arrayBuffer()
+          fileBuffer = Buffer.from(arrayBuffer)
+          console.log(`[INTERVIEW] File read from URL successfully: ${fileBuffer.length} bytes`)
         }
+      } else if (material.filePath) {
+        // filePathがGCS pathnameの場合（例: interview/projectId/filename）
+        // fileUrlがない場合は、GCSから直接取得を試行
+        if (!material.filePath.startsWith('http://') && !material.filePath.startsWith('https://') && !material.filePath.startsWith('/')) {
+          // GCS pathnameの場合、fileUrlを構築して取得を試行
+          console.log(`[INTERVIEW] filePath is a GCS pathname, trying to construct URL: ${material.filePath}`)
+          // GCS URLを構築
+          const bucketName = process.env.GCS_BUCKET_NAME || 'doya-interview-storage'
+          const gcsUrl = `https://storage.googleapis.com/${bucketName}/${material.filePath}`
+          try {
+            fileBuffer = await getFileFromGCS(gcsUrl)
+            console.log(`[INTERVIEW] File read from Google Cloud Storage successfully: ${fileBuffer.length} bytes`)
+          } catch (gcsError) {
+            console.error(`[INTERVIEW] Failed to get file from GCS: ${gcsError}`)
+            return NextResponse.json(
+              { error: 'ファイルの取得に失敗しました', details: 'Google Cloud Storageからファイルを取得できませんでした。' },
+              { status: 404 }
+            )
+          }
+        } else {
+          // ローカルファイルシステムから読み込み（フォールバック）
+          const baseDir = getUploadBaseDir()
+          let filePath: string
 
-        // ファイルの存在確認
-        if (!existsSync(filePath)) {
-          console.error(`[INTERVIEW] File not found: ${filePath}`)
-          return NextResponse.json(
-            { error: 'ファイルが見つかりません', details: `ファイルパス: ${filePath}` },
-            { status: 404 }
-          )
+          if (material.filePath && material.filePath.startsWith('/')) {
+            // 絶対パスの場合（Vercel環境）
+            filePath = material.filePath
+          } else {
+            // 相対パスの場合
+            filePath = join(baseDir, material.filePath || '')
+          }
+
+          // ファイルの存在確認
+          if (!existsSync(filePath)) {
+            console.error(`[INTERVIEW] File not found: ${filePath}`)
+            return NextResponse.json(
+              { error: 'ファイルが見つかりません', details: `ファイルパス: ${filePath}` },
+              { status: 404 }
+            )
+          }
+
+          console.log(`[INTERVIEW] Starting transcription for file: ${filePath}`)
+          fileBuffer = await readFile(filePath)
+          console.log(`[INTERVIEW] File read from filesystem successfully: ${fileBuffer.length} bytes`)
         }
-
-        console.log(`[INTERVIEW] Starting transcription for file: ${filePath}`)
-        fileBuffer = await readFile(filePath)
-        console.log(`[INTERVIEW] File read from filesystem successfully: ${fileBuffer.length} bytes`)
+      } else {
+        return NextResponse.json(
+          { error: 'ファイルのURLまたはパスが設定されていません', details: 'ファイルを取得するための情報が不足しています。' },
+          { status: 404 }
+        )
       }
     } catch (fileError) {
       console.error('[INTERVIEW] Failed to read file:', fileError)

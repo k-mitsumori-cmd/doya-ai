@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { rm } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
-import { del } from '@vercel/blob'
+import { deleteFromGCS } from '@/lib/gcs'
 
 // Vercel等のサーバーレス環境では /tmp を使用
 function getUploadBaseDir() {
@@ -28,14 +28,14 @@ async function deleteProjectFiles(projectId: string) {
       },
     })
 
-    // Vercel Blob Storageからファイルを削除
+    // Google Cloud Storageからファイルを削除
     for (const material of materials) {
       if (material.fileUrl) {
         try {
-          await del(material.fileUrl)
-          console.log(`[INTERVIEW] Deleted file from Blob Storage: ${material.fileUrl}`)
-        } catch (blobError) {
-          console.error(`[INTERVIEW] Failed to delete file from Blob Storage: ${material.fileUrl}`, blobError)
+          await deleteFromGCS(material.fileUrl)
+          console.log(`[INTERVIEW] Deleted file from Google Cloud Storage: ${material.fileUrl}`)
+        } catch (gcsError) {
+          console.error(`[INTERVIEW] Failed to delete file from Google Cloud Storage: ${material.fileUrl}`, gcsError)
           // エラーが発生しても処理は続行
         }
       }
@@ -69,6 +69,9 @@ async function deleteProjectFiles(projectId: string) {
 }
 
 // 3ヶ月経過したプロジェクトを自動削除
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     // 認証: Vercel Cron Jobsからのリクエストか確認

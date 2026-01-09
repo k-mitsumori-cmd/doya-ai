@@ -424,6 +424,23 @@ export async function POST(request: NextRequest) {
 }
 ```
 
+#### ファイルアップロード（Google Cloud Storage）
+
+大きなファイル（4.5MB超）や音声・動画ファイルの場合は、Google Cloud Storageを使用します。
+
+**詳細**: [implementation-patterns.md](./implementation-patterns.md#google-cloud-storage-gcs-実装パターン) の「Google Cloud Storage (GCS) 実装パターン」セクションを参照してください。
+
+**主な特徴:**
+
+- **ファイルサイズ上限**: 5TB（Vercel Blob Storageは4.75GB）
+- **用途**: 音声・動画ファイル、大きなファイル
+- **認証**: サービスアカウントキーが必要
+
+**実装例:**
+- `src/lib/gcs.ts` - GCSライブラリ
+- `src/app/api/interview/materials/upload/route.ts` - 直接アップロード
+- `src/app/api/interview/materials/upload-chunk/route.ts` - チャンクアップロード
+
 **実装例（参考）:**
 - `src/app/api/interview/materials/upload/route.ts` - ファイルアップロード実装例
 - `src/app/api/banner/generate/route.ts` - 画像生成API実装例

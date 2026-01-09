@@ -7,7 +7,7 @@
 | ファイル | 内容 |
 |----------|------|
 | [development-guide.md](./development-guide.md) | **開発ガイド（メイン）** - 新サービス追加手順・デプロイ手順・検索系API活用 |
-| [implementation-patterns.md](./implementation-patterns.md) | **実装パターン集** - API・ファイルアップロード・プラン管理などの実装例 |
+| [implementation-patterns.md](./implementation-patterns.md) | **実装パターン集** - API・ファイルアップロード・GCS・プラン管理などの実装例 |
 | [design-system.md](./design-system.md) | デザインシステム・UIガイドライン |
 | [sidebar-pattern.md](./sidebar-pattern.md) | サイドバー実装パターン |
 | [service-isolation.md](./service-isolation.md) | サービス分離ルール（他機能に影響を与えない） |

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { del } from '@vercel/blob'
+import { deleteFromGCS } from '@/lib/gcs'
 
 // プロジェクトのファイルを削除する関数
 async function deleteProjectFiles(projectId: string) {
@@ -15,14 +15,14 @@ async function deleteProjectFiles(projectId: string) {
       },
     })
 
-    // Vercel Blob Storageからファイルを削除
+    // Google Cloud Storageからファイルを削除
     for (const material of materials) {
       if (material.fileUrl) {
         try {
-          await del(material.fileUrl)
-          console.log(`[INTERVIEW] Deleted file from Blob Storage: ${material.fileUrl}`)
-        } catch (blobError) {
-          console.error(`[INTERVIEW] Failed to delete file from Blob Storage: ${material.fileUrl}`, blobError)
+          await deleteFromGCS(material.fileUrl)
+          console.log(`[INTERVIEW] Deleted file from Google Cloud Storage: ${material.fileUrl}`)
+        } catch (gcsError) {
+          console.error(`[INTERVIEW] Failed to delete file from Google Cloud Storage: ${material.fileUrl}`, gcsError)
           // エラーが発生しても処理は続行
         }
       }
@@ -34,6 +34,9 @@ async function deleteProjectFiles(projectId: string) {
 }
 
 // 容量不足時に古いプロジェクトを自動削除
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}))
@@ -61,10 +64,9 @@ export async function POST(request: NextRequest) {
       return sum + (material.fileSize || 0)
     }, 0)
 
-    // Proプランの制限（実際の制限値はVercelの設定によるが、一般的にProプランでは大幅に増加）
-    // 実際の制限値は動的に取得できないため、大きな値に設定（100GB）
-    const PRO_PLAN_LIMIT = 100 * 1024 * 1024 * 1024 // 100GB
-    const currentFreeBytes = PRO_PLAN_LIMIT - totalSize
+    // Google Cloud Storageの制限（実質的に非常に大きい）
+    const GCS_LIMIT = 5 * 1024 * 1024 * 1024 * 1024 // 5TB
+    const currentFreeBytes = GCS_LIMIT - totalSize
 
     // 既に十分な容量がある場合
     if (currentFreeBytes >= targetFreeBytes) {

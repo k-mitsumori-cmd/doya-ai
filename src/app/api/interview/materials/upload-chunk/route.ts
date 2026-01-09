@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { writeFile, mkdir, appendFile, readFile, unlink } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
-import { put, del } from '@vercel/blob'
+import { uploadToGCS, deleteFromGCS } from '@/lib/gcs'
 
 // Vercel等のサーバーレス環境では /tmp を使用
 function getUploadBaseDir() {
@@ -29,6 +29,9 @@ function formatFileSize(bytes: number): string {
 }
 
 // チャンクアップロード（大きなファイル用）
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -469,7 +472,7 @@ export async function POST(request: NextRequest) {
             )
           }
 
-          // ファイルサイズを確認してからVercel Blob Storageにアップロード
+          // ファイルサイズを確認してからGoogle Cloud Storageにアップロード
           const { stat } = await import('fs/promises')
           const finalFileStats = await stat(finalFilePath)
           
@@ -496,48 +499,81 @@ export async function POST(request: NextRequest) {
           
           const finalFileBuffer = await readFile(finalFilePath)
           
-          // BLOB_READ_WRITE_TOKENの確認
-          if (!process.env.BLOB_READ_WRITE_TOKEN) {
-            console.error('[INTERVIEW] BLOB_READ_WRITE_TOKEN is not set')
+          // Google Cloud Storageの環境変数確認
+          if (!process.env.GOOGLE_CLOUD_PROJECT_ID || !process.env.GCS_BUCKET_NAME) {
+            console.error('[INTERVIEW] Google Cloud Storage configuration is missing')
             return NextResponse.json(
               {
                 error: 'ストレージの設定が完了していません',
-                details: 'Vercel Blob Storageの環境変数（BLOB_READ_WRITE_TOKEN）が設定されていません。Vercelダッシュボードで設定を確認してください。',
+                details: 'Google Cloud Storageの環境変数（GOOGLE_CLOUD_PROJECT_ID、GCS_BUCKET_NAME）が設定されていません。環境変数を設定してください。',
               },
               { status: 500 }
             )
           }
           
-          // Vercel Blob Storageにアップロード
-          const blobPath = `interview/${projectId}/${savedFileName}`
-          let blob: { url: string; pathname: string; size: number }
+          // Google Cloud Storageにアップロード
+          const gcsPath = `interview/${projectId}/${savedFileName}`
+          let uploadResult: { url: string; pathname: string; size: number }
           try {
-            blob = await put(blobPath, finalFileBuffer, {
-              access: 'public',
+            uploadResult = await uploadToGCS(gcsPath, finalFileBuffer, {
               contentType: mimeType || undefined,
+              public: true,
             })
-            console.log(`[INTERVIEW] File uploaded to Blob Storage: ${blob.url}`)
-          } catch (blobError: any) {
-            console.error('[INTERVIEW] Failed to upload file to Blob Storage:', blobError)
+            console.log(`[INTERVIEW] File uploaded to Google Cloud Storage: ${uploadResult.url}`)
+          } catch (gcsError: any) {
+            console.error('[INTERVIEW] Failed to upload file to Google Cloud Storage:', gcsError)
+            console.error('[INTERVIEW] GCS Error details:', JSON.stringify({
+              message: gcsError?.message,
+              code: gcsError?.code,
+              name: gcsError?.name,
+              stack: gcsError?.stack?.split('\n').slice(0, 5), // スタックトレースの最初の5行のみ
+              response: gcsError?.response ? {
+                status: gcsError.response.status,
+                statusText: gcsError.response.statusText,
+                data: gcsError.response.data,
+              } : undefined,
+              errors: gcsError?.errors,
+            }, null, 2))
             
-            let errorMessage = 'ファイルのBlob Storageへのアップロードに失敗しました'
+            let errorMessage = 'ファイルのGoogle Cloud Storageへのアップロードに失敗しました'
             let errorDetails = ''
             let statusCode = 500
             
-            if (blobError?.message?.includes('Unauthorized') || blobError?.message?.includes('401')) {
-              errorMessage = 'Blob Storageの認証に失敗しました'
-              errorDetails = 'BLOB_READ_WRITE_TOKENが無効です。Vercelダッシュボードで環境変数を確認してください。'
+            // 認証エラーのチェック
+            if (
+              gcsError?.message?.includes('Unauthorized') ||
+              gcsError?.message?.includes('401') ||
+              gcsError?.code === 401 ||
+              gcsError?.message?.includes('authentication') ||
+              gcsError?.message?.includes('credentials') ||
+              gcsError?.message?.includes('GOOGLE_APPLICATION_CREDENTIALS')
+            ) {
+              errorMessage = 'Google Cloud Storageの認証に失敗しました'
+              errorDetails = `認証エラーが発生しました。\n\n確認事項:\n1. GOOGLE_APPLICATION_CREDENTIALS環境変数が正しく設定されているか\n2. GOOGLE_CLOUD_PROJECT_ID環境変数が設定されているか\n3. GCS_BUCKET_NAME環境変数が設定されているか\n4. サービスアカウントに適切な権限があるか\n\nエラー詳細: ${gcsError?.message || '不明なエラー'}`
               statusCode = 401
-            } else if (blobError?.message?.includes('Forbidden') || blobError?.message?.includes('403')) {
-              errorMessage = 'Blob Storageへのアクセスが拒否されました'
-              errorDetails = 'Blobストアへのアクセス権限がありません。Vercelダッシュボードで設定を確認してください。'
+            } else if (
+              gcsError?.message?.includes('Forbidden') ||
+              gcsError?.message?.includes('403') ||
+              gcsError?.code === 403 ||
+              gcsError?.message?.includes('permission')
+            ) {
+              errorMessage = 'Google Cloud Storageへのアクセスが拒否されました'
+              errorDetails = `アクセス権限エラーが発生しました。\n\n確認事項:\n1. サービスアカウントに「Storage Object Admin」ロールが付与されているか\n2. バケットへのアクセス権限があるか\n\nエラー詳細: ${gcsError?.message || '不明なエラー'}`
               statusCode = 403
-            } else if (blobError?.message?.includes('Size limit') || blobError?.message?.includes('413')) {
+            } else if (
+              gcsError?.message?.includes('Size limit') ||
+              gcsError?.message?.includes('413') ||
+              gcsError?.code === 413
+            ) {
               errorMessage = 'ファイルサイズが大きすぎます'
-              errorDetails = `ファイルサイズがBlob Storageの上限を超えています。最大ファイルサイズ: 4.75GB`
+              errorDetails = `ファイルサイズが上限を超えています。最大ファイルサイズ: 5TB\n\nエラー詳細: ${gcsError?.message || '不明なエラー'}`
               statusCode = 413
-            } else if (blobError?.message?.includes('Storage quota') || blobError?.message?.includes('quota exceeded') || blobError?.message?.includes('1GB maximum') || blobError?.message?.includes('Hobby plan')) {
-              errorMessage = 'Blob Storageの容量制限に達しました'
+            } else if (
+              gcsError?.message?.includes('quota') ||
+              gcsError?.message?.includes('quota exceeded') ||
+              gcsError?.message?.includes('Storage quota')
+            ) {
+              errorMessage = 'Google Cloud Storageの容量制限に達しました'
               
               // 自動クリーンアップを試行
               let cleanupAttempted = false
@@ -568,10 +604,9 @@ export async function POST(request: NextRequest) {
                   return sum + (material.fileSize || 0)
                 }, 0)
 
-                // Proプランの制限（実際の制限値はVercelの設定によるが、一般的にProプランでは大幅に増加）
-                // 実際の制限値は動的に取得できないため、大きな値に設定（100GB）
-                const PRO_PLAN_LIMIT = 100 * 1024 * 1024 * 1024 // 100GB
-                const currentFreeBytes = PRO_PLAN_LIMIT - totalSize
+                // Google Cloud Storageの制限（実質的に非常に大きい）
+                const GCS_LIMIT = 5 * 1024 * 1024 * 1024 * 1024 // 5TB
+                const currentFreeBytes = GCS_LIMIT - totalSize
 
                 // 必要な容量を計算
                 if (currentFreeBytes < targetFreeBytes) {
@@ -605,7 +640,7 @@ export async function POST(request: NextRequest) {
                       for (const material of projectMaterials) {
                         if (material.fileUrl) {
                           try {
-                            await del(material.fileUrl)
+                            await deleteFromGCS(material.fileUrl)
                           } catch (e) {
                             // エラーは無視
                           }
@@ -639,15 +674,16 @@ export async function POST(request: NextRequest) {
               }
               
               if (cleanupAttempted && cleanupResult && cleanupResult.deletedCount > 0) {
-                errorDetails = `Vercel Blob Storageの容量制限に達していましたが、自動で古いプロジェクトを削除しました。\n\n削除されたプロジェクト数: ${cleanupResult.deletedCount}\n解放された容量: ${formatFileSize(cleanupResult.freedBytes || 0)}\n\n再度アップロードをお試しください。\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
+                errorDetails = `Google Cloud Storageの容量制限に達していましたが、自動で古いプロジェクトを削除しました。\n\n削除されたプロジェクト数: ${cleanupResult.deletedCount}\n解放された容量: ${formatFileSize(cleanupResult.freedBytes || 0)}\n\n再度アップロードをお試しください。\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
                 // クリーンアップが成功した場合でも、一度エラーを返して再試行を促す
                 statusCode = 507
               } else {
-                errorDetails = `Vercel Blob Storageの容量制限に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. 不要なファイルを削除する\n3. Vercelダッシュボードでストレージ使用状況を確認する\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
+                errorDetails = `Google Cloud Storageの容量制限に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. 不要なファイルを削除する\n3. Google Cloud Consoleでストレージ使用状況を確認する\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
                 statusCode = 507 // 507 Insufficient Storage
               }
             } else {
-              errorDetails = `エラー詳細: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`
+              // その他のエラー
+              errorDetails = `Google Cloud Storageへのアップロード中にエラーが発生しました。\n\nエラー詳細: ${gcsError instanceof Error ? gcsError.message : '不明なエラー'}\nエラーコード: ${gcsError?.code || 'なし'}\n\n確認事項:\n1. 環境変数（GOOGLE_CLOUD_PROJECT_ID、GOOGLE_APPLICATION_CREDENTIALS、GCS_BUCKET_NAME）が正しく設定されているか\n2. サービスアカウントの権限が適切か\n3. バケットが存在するか\n4. ネットワーク接続が正常か`
             }
             
             // エラーレスポンスを返す（必ずcompleted: falseとerrorを含める）
@@ -663,7 +699,7 @@ export async function POST(request: NextRequest) {
             )
           }
           
-          // 結合済みファイルを削除（Blob Storageに保存済みのため）
+          // 結合済みファイルを削除（Google Cloud Storageに保存済みのため）
           try {
             await unlink(finalFilePath)
             console.log(`[INTERVIEW] Deleted merged file from /tmp: ${finalFilePath}`)
@@ -679,9 +715,9 @@ export async function POST(request: NextRequest) {
                 projectId,
                 type: materialType,
                 fileName: fileName,
-                filePath: blob.pathname, // Blob pathnameを保存
-                fileUrl: blob.url, // Blob URLを保存
-                fileSize: blob.size || finalFileStats.size,
+                filePath: uploadResult.pathname, // GCS pathnameを保存
+                fileUrl: uploadResult.url, // GCS URLを保存
+                fileSize: uploadResult.size || finalFileStats.size,
                 mimeType,
                 status: 'UPLOADED',
               },
@@ -691,7 +727,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
               {
                 error: 'データベースへの保存に失敗しました',
-                details: `エラー詳細: ${dbError instanceof Error ? dbError.message : '不明なエラー'}\nファイルはBlob Storageに保存されましたが、データベースへの記録に失敗しました。`,
+                details: `エラー詳細: ${dbError instanceof Error ? dbError.message : '不明なエラー'}\nファイルはGoogle Cloud Storageに保存されましたが、データベースへの記録に失敗しました。`,
                 uploadedChunks: uploadedChunks.length,
                 totalChunks,
               },
