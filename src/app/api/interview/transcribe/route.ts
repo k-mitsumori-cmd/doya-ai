@@ -7,6 +7,7 @@ import { readFile } from 'fs/promises'
 import { join } from 'path'
 import OpenAI from 'openai'
 import { getFileFromGCS } from '@/lib/gcs'
+import { estimateAudioDuration, splitIntoChunks, type AudioChunk } from '@/lib/audio-splitter'
 
 // Vercel等のサーバーレス環境では /tmp を使用
 function getUploadBaseDir() {
@@ -74,22 +75,37 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({ apiKey: openaiApiKey })
 
-    // ファイルサイズをチェック（Vercelのサーバーレス関数のメモリ制限とOpenAI Whisper APIの制限を考慮）
+    // ファイルサイズをチェック
     // OpenAI Whisper APIの制限: 25MB
-    // Vercelのサーバーレス関数のメモリ制限: 約25MB（実際の制限は環境によって異なる）
-    const MAX_TRANSCRIBE_FILE_SIZE = 25 * 1024 * 1024 // 25MB
+    // 25MBを超える場合は、GCSのURLを直接使用して処理を試みる
+    const MAX_SINGLE_FILE_SIZE = 25 * 1024 * 1024 // 25MB
+    const USE_LARGE_FILE_MODE = material.fileSize && material.fileSize > MAX_SINGLE_FILE_SIZE
     
-    if (material.fileSize && material.fileSize > MAX_TRANSCRIBE_FILE_SIZE) {
-      const fileSizeMB = (material.fileSize / 1024 / 1024).toFixed(2)
-      const maxSizeMB = (MAX_TRANSCRIBE_FILE_SIZE / 1024 / 1024).toFixed(0)
-      console.warn(`[INTERVIEW] File size (${fileSizeMB} MB) exceeds limit (${maxSizeMB} MB)`)
-      return NextResponse.json(
-        { 
-          error: 'ファイルサイズが大きすぎます',
-          details: `文字起こし機能は最大${maxSizeMB}MBのファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください`
-        },
-        { status: 413 }
-      )
+    if (USE_LARGE_FILE_MODE) {
+      console.log(`[INTERVIEW] Large file detected (${(material.fileSize! / 1024 / 1024).toFixed(2)} MB), attempting direct URL transcription`)
+    }
+
+    // 大きなファイルの場合は、GCSのURLを直接使用して処理を試みる
+    if (USE_LARGE_FILE_MODE && material.fileUrl && material.fileUrl.includes('storage.googleapis.com')) {
+      console.log(`[INTERVIEW] Attempting to transcribe large file directly from GCS URL`)
+      try {
+        // OpenAI Whisper APIはURLをサポートしていないため、
+        // ファイルをストリーミングで取得して処理する必要があります
+        // ただし、Vercelのサーバーレス関数のメモリ制限により、大きなファイルは処理できません
+        
+        // 一時的な解決策: エラーメッセージを返す
+        const fileSizeMB = (material.fileSize! / 1024 / 1024).toFixed(2)
+        return NextResponse.json(
+          { 
+            error: 'ファイルサイズが大きすぎます',
+            details: `現在の実装では、25MBを超えるファイルの文字起こしには対応していません。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください\n\n将来的には、大きなファイルの自動分割機能を追加予定です。`
+          },
+          { status: 413 }
+        )
+      } catch (error) {
+        console.error('[INTERVIEW] Large file processing error:', error)
+        throw error
+      }
     }
 
     // ファイルを読み込む（Google Cloud Storageから取得、またはローカルファイルシステムから）

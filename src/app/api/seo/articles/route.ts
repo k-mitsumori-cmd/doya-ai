@@ -15,6 +15,7 @@ import {
   setGuestCookie,
 } from '@/lib/seoAccess'
 import { getSeoCharLimitByUserPlan } from '@/lib/pricing'
+import { notifyApiError } from '@/lib/errorHandler'
 
 export async function GET(req: NextRequest) {
   try {
@@ -65,6 +66,8 @@ export async function GET(req: NextRequest) {
     }
     return res
   } catch (e: any) {
+    // エラー通知を送信
+    await notifyApiError(e, req, 500, { endpoint: 'GET /api/seo/articles' })
     // DB未反映/接続不可でも画面側が404にならないよう、明示的にJSONエラーを返す
     return NextResponse.json(
       { success: false, error: e?.message || 'DBエラー（スキーマ未反映の可能性）', articles: [] },
@@ -180,6 +183,7 @@ export async function POST(req: NextRequest) {
     if (!userId && guestId) setGuestCookie(res, guestId)
     return res
   } catch (e: any) {
+    await notifyApiError(e, req, 400, { endpoint: 'POST /api/seo/articles' })
     return NextResponse.json(
       { success: false, error: e?.message || '不明なエラー' },
       { status: 400 }
@@ -292,6 +296,7 @@ export async function PATCH(req: NextRequest) {
     })
   } catch (e: any) {
     console.error('migrate-prompts error:', e)
+    await notifyApiError(e, req, 500, { endpoint: 'POST /api/seo/articles (migrate-prompts)' })
     return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
   }
 }

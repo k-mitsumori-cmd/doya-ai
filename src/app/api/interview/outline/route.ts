@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateOutline } from '@/lib/interview/prompts'
+import { notifyApiError } from '@/lib/errorHandler'
 
 export const dynamic = 'force-dynamic'
 

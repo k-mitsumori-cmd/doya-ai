@@ -31,9 +31,28 @@ export async function notifyApiError(
     const userEmail = session?.user?.email || null
     const userName = session?.user?.name || null
 
-    // エラー情報を抽出
+    // エラー情報を抽出（より詳細に）
     const errorMessage = error instanceof Error ? error.message : String(error)
     const errorStack = error instanceof Error ? error.stack : undefined
+    const errorName = error instanceof Error ? error.name : 'UnknownError'
+    const errorCause = error instanceof Error && (error as any).cause ? String((error as any).cause) : undefined
+    
+    // エラーオブジェクト全体を文字列化（可能な場合）
+    let errorDetails = ''
+    try {
+      if (error instanceof Error) {
+        errorDetails = JSON.stringify({
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          cause: (error as any).cause,
+        }, null, 2)
+      } else {
+        errorDetails = JSON.stringify(error, null, 2)
+      }
+    } catch {
+      errorDetails = String(error)
+    }
 
     // リクエスト情報を取得
     const url = new URL(request.url)
@@ -54,11 +73,13 @@ export async function notifyApiError(
     }
 
     // エラー通知を送信（非同期、エラーはログに記録するだけ）
+    const fullErrorMessage = additionalInfo
+      ? `${errorMessage}\n\n追加情報: ${JSON.stringify(additionalInfo, null, 2)}\n\nエラー詳細:\n${errorDetails}`
+      : `${errorMessage}\n\nエラー詳細:\n${errorDetails}`
+    
     const notificationPromise = sendErrorNotification({
-      errorMessage: additionalInfo
-        ? `${errorMessage} (${JSON.stringify(additionalInfo)})`
-        : errorMessage,
-      errorStack,
+      errorMessage: fullErrorMessage,
+      errorStack: errorStack || errorDetails,
       pathname,
       userId,
       userEmail,
