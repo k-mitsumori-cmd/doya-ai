@@ -300,6 +300,12 @@ async function sendSlackPaymentNotification(webhookUrl: string, data: PaymentNot
  */
 export async function sendErrorNotification(data: ErrorNotificationData): Promise<void> {
   try {
+    console.log('[Notification] sendErrorNotification called:', {
+      errorMessage: data.errorMessage,
+      pathname: data.pathname,
+      httpStatus: data.httpStatus,
+    })
+
     // 通知設定を取得
     const emailSetting = await prisma.systemSetting.findUnique({
       where: { key: 'email_notifications' },
@@ -310,6 +316,11 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
 
     const emailEnabled = emailSetting?.value === 'true'
     const webhookUrl = slackWebhook?.value || ''
+
+    console.log('[Notification] Webhook URL configured:', webhookUrl ? 'Yes' : 'No')
+    if (webhookUrl) {
+      console.log('[Notification] Webhook URL length:', webhookUrl.length)
+    }
 
     // 通知を送信（非同期で実行、エラーはログに記録するだけ）
     const promises: Promise<void>[] = []
@@ -322,14 +333,24 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
 
     // Slack通知
     if (webhookUrl) {
+      console.log('[Notification] Sending Slack notification...')
       promises.push(sendSlackErrorNotification(webhookUrl, data))
+    } else {
+      console.warn('[Notification] Slack webhook URL is not configured. Please set slack_webhook in SystemSetting.')
     }
 
     // すべての通知を並列実行（エラーは個別にキャッチ）
-    await Promise.allSettled(promises)
+    const results = await Promise.allSettled(promises)
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(`[Notification] Notification ${index} failed:`, result.reason)
+      } else {
+        console.log(`[Notification] Notification ${index} sent successfully`)
+      }
+    })
   } catch (e) {
     // 通知エラーはログに記録するだけ（エラー通知の失敗でさらにエラーを発生させない）
-    console.error('Failed to send error notification:', e)
+    console.error('[Notification] Failed to send error notification:', e)
   }
 }
 
@@ -338,6 +359,7 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
  */
 async function sendSlackErrorNotification(webhookUrl: string, data: ErrorNotificationData): Promise<void> {
   try {
+    console.log('[Notification] sendSlackErrorNotification called with webhook URL:', webhookUrl.substring(0, 50) + '...')
     // サービス名をパスから特定
     const getServiceName = (pathname?: string): string => {
       if (!pathname) return '不明'
@@ -485,6 +507,7 @@ async function sendSlackErrorNotification(webhookUrl: string, data: ErrorNotific
       ],
     }
 
+    console.log('[Notification] Sending request to Slack webhook...')
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
@@ -493,11 +516,17 @@ async function sendSlackErrorNotification(webhookUrl: string, data: ErrorNotific
       body: JSON.stringify(message),
     })
 
+    console.log('[Notification] Slack webhook response status:', response.status)
+    
     if (!response.ok) {
-      throw new Error(`Slack webhook returned ${response.status}`)
+      const responseText = await response.text()
+      console.error('[Notification] Slack webhook error response:', responseText)
+      throw new Error(`Slack webhook returned ${response.status}: ${responseText}`)
     }
+
+    console.log('[Notification] Slack notification sent successfully')
   } catch (e) {
-    console.error('Failed to send Slack error notification:', e)
+    console.error('[Notification] Failed to send Slack error notification:', e)
     throw e
   }
 }

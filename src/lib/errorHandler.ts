@@ -20,6 +20,11 @@ export async function notifyApiError(
   additionalInfo?: Record<string, any>
 ): Promise<void> {
   try {
+    console.log('[ErrorHandler] notifyApiError called:', {
+      errorMessage: error instanceof Error ? error.message : String(error),
+      statusCode,
+      pathname: new URL(request.url).pathname,
+    })
     // セッションからユーザー情報を取得
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id
@@ -49,7 +54,7 @@ export async function notifyApiError(
     }
 
     // エラー通知を送信（非同期、エラーはログに記録するだけ）
-    sendErrorNotification({
+    const notificationPromise = sendErrorNotification({
       errorMessage: additionalInfo
         ? `${errorMessage} (${JSON.stringify(additionalInfo)})`
         : errorMessage,
@@ -63,9 +68,15 @@ export async function notifyApiError(
       requestUrl: request.url,
       requestBody,
       timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
-    }).catch((e) => {
-      console.error('Failed to send error notification:', e)
     })
+    
+    // 通知の送信を待つ（ただし、エラーが発生しても続行）
+    notificationPromise.catch((e) => {
+      console.error('[ErrorHandler] Failed to send error notification:', e)
+    })
+    
+    // 非同期で実行するが、ログを出力
+    console.log('[ErrorHandler] Error notification initiated')
   } catch (e) {
     // 通知エラーはログに記録するだけ（エラー通知の失敗でさらにエラーを発生させない）
     console.error('Failed to notify API error:', e)
