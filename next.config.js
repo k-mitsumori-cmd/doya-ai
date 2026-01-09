@@ -5,6 +5,18 @@ const nextConfig = {
   // App Router の `page_client-reference-manifest.js` 等が欠落し、実行時に 500 になり得る。
   // そのため tracing は有効（デフォルト）で運用する。
   // （過去に collect-build-traces のスタックオーバーフローが出た場合は Next.js の更新で対応する）
+  
+  // Node.jsの非推奨警告を抑制（依存関係のパッケージで発生する警告のため）
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // サーバー側のビルド時に非推奨警告を抑制
+      config.infrastructureLogging = {
+        level: 'error',
+      }
+    }
+    return config
+  },
+  
   images: {
     remotePatterns: [
       {
