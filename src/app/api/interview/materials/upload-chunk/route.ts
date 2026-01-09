@@ -535,8 +535,38 @@ export async function POST(request: NextRequest) {
               statusCode = 413
             } else if (blobError?.message?.includes('Storage quota') || blobError?.message?.includes('quota exceeded') || blobError?.message?.includes('1GB maximum') || blobError?.message?.includes('Hobby plan')) {
               errorMessage = 'Blob Storageの容量制限に達しました'
-              errorDetails = `Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. Vercelのプランをアップグレードする（Proプラン以上では容量が増えます）\n3. 不要なファイルを削除する\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
-              statusCode = 507 // 507 Insufficient Storage
+              
+              // 自動クリーンアップを試行
+              let cleanupAttempted = false
+              let cleanupResult = null
+              try {
+                const cleanupRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/interview/storage/cleanup`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    targetFreeBytes: finalFileStats.size + (50 * 1024 * 1024), // ファイルサイズ + 50MBの余裕
+                  }),
+                })
+                
+                if (cleanupRes.ok) {
+                  cleanupResult = await cleanupRes.json()
+                  cleanupAttempted = true
+                  console.log(`[INTERVIEW] Cleanup attempted: ${cleanupResult.deletedCount} projects deleted, ${cleanupResult.freedBytes} bytes freed`)
+                }
+              } catch (cleanupError) {
+                console.error('[INTERVIEW] Cleanup attempt failed:', cleanupError)
+              }
+              
+              if (cleanupAttempted && cleanupResult && cleanupResult.deletedCount > 0) {
+                errorDetails = `Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達していましたが、自動で古いプロジェクトを削除しました。\n\n削除されたプロジェクト数: ${cleanupResult.deletedCount}\n解放された容量: ${formatFileSize(cleanupResult.freedBytes || 0)}\n\n再度アップロードをお試しください。\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
+                // クリーンアップが成功した場合、エラーではなく警告として扱う（リトライ可能）
+                statusCode = 507
+              } else {
+                errorDetails = `Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. Vercelのプランをアップグレードする（Proプラン以上では容量が増えます）\n3. 不要なファイルを削除する\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
+                statusCode = 507 // 507 Insufficient Storage
+              }
             } else {
               errorDetails = `エラー詳細: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`
             }
