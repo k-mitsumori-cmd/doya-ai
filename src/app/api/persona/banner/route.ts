@@ -2,6 +2,7 @@
 // ドヤペルソナAI - バナー画像生成API
 // ========================================
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyApiError } from '@/lib/errorHandler'
 import { generateBanners } from '@/lib/nanobanner'
 
 // バナーサイズプリセット
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('Banner generation error:', error)
+    await notifyApiError(error, request, 500, { endpoint: 'POST /api/persona/banner' })
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'バナー生成中にエラーが発生しました' },
       { status: 500 }

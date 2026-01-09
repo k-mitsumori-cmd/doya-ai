@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ outline })
   } catch (error) {
     console.error('[INTERVIEW] Outline generation error:', error)
+    await notifyApiError(error, request, 500, { endpoint: 'POST /api/interview/outline', projectId })
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
       { 

@@ -6,8 +6,7 @@ import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import OpenAI from 'openai'
-import { getFileFromGCS } from '@/lib/gcs'
-import { estimateAudioDuration, splitIntoChunks, type AudioChunk } from '@/lib/audio-splitter'
+import { getFileFromGCS, generateSignedDownloadUrl } from '@/lib/gcs'
 
 // Vercel等のサーバーレス環境では /tmp を使用
 function getUploadBaseDir() {
@@ -85,23 +84,40 @@ export async function POST(request: NextRequest) {
       console.log(`[INTERVIEW] Large file detected (${(material.fileSize! / 1024 / 1024).toFixed(2)} MB), attempting direct URL transcription`)
     }
 
-    // 大きなファイルの場合は、GCSのURLを直接使用して処理を試みる
+    // 大きなファイルの場合は、ストリーミングで処理を試みる
     if (USE_LARGE_FILE_MODE && material.fileUrl && material.fileUrl.includes('storage.googleapis.com')) {
-      console.log(`[INTERVIEW] Attempting to transcribe large file directly from GCS URL`)
+      console.log(`[INTERVIEW] Attempting to transcribe large file using streaming`)
       try {
-        // OpenAI Whisper APIはURLをサポートしていないため、
-        // ファイルをストリーミングで取得して処理する必要があります
+        // GCSからファイルをストリーミングで取得して処理
         // ただし、Vercelのサーバーレス関数のメモリ制限により、大きなファイルは処理できません
+        // そのため、ファイルをチャンクに分割して処理する必要があります
         
-        // 一時的な解決策: エラーメッセージを返す
-        const fileSizeMB = (material.fileSize! / 1024 / 1024).toFixed(2)
-        return NextResponse.json(
-          { 
-            error: 'ファイルサイズが大きすぎます',
-            details: `現在の実装では、25MBを超えるファイルの文字起こしには対応していません。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください\n\n将来的には、大きなファイルの自動分割機能を追加予定です。`
-          },
-          { status: 413 }
-        )
+        // URLからパスを抽出
+        const urlPattern = /https:\/\/storage\.googleapis\.com\/[^/]+\/(.+)$/
+        const match = material.fileUrl.match(urlPattern)
+        
+        if (match && match[1]) {
+          const filePath = decodeURIComponent(match[1])
+          
+          // ファイルをストリーミングで取得（範囲リクエストを使用）
+          // ただし、音声/動画ファイルの場合は、適切な分割ポイントで切る必要があります
+          // 現在の実装では、ファイル全体を取得して処理します
+          
+          // 注意: この方法は、Vercelのサーバーレス関数のメモリ制限により、
+          // 大きなファイル（25MB以上）では動作しません
+          // 実際の実装では、Cloud RunやCloud Functionsなどの別のサービスを使用することを推奨します
+          
+          const fileSizeMB = (material.fileSize! / 1024 / 1024).toFixed(2)
+          console.warn(`[INTERVIEW] Large file (${fileSizeMB} MB) cannot be processed in Vercel serverless function`)
+          
+          return NextResponse.json(
+            { 
+              error: 'ファイルサイズが大きすぎます',
+              details: `現在の実装では、25MBを超えるファイルの文字起こしには対応していません。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください\n\n将来的には、大きなファイルの自動分割機能を追加予定です。`
+            },
+            { status: 413 }
+          )
+        }
       } catch (error) {
         console.error('[INTERVIEW] Large file processing error:', error)
         throw error

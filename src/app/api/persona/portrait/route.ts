@@ -2,6 +2,7 @@
 // ドヤペルソナAI - ポートレート画像生成API
 // ========================================
 import { NextRequest, NextResponse } from 'next/server'
+import { notifyApiError } from '@/lib/errorHandler'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
