@@ -25,21 +25,12 @@ import Link from 'next/link'
 type UploadStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'completed' | 'error'
 type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
 
-// Vercelのサーバーレス関数の制限（4.5MB）を考慮
-// チャンクアップロードを使用することで、より大きなファイルもアップロード可能
-// Vercelの制限:
-// - /tmpディレクトリ: 512MB（サーバーレス関数の一時ストレージ）
-// - リクエストボディ: 4.5MB（サーバーレス関数のリクエストサイズ制限）
-// 
-// チャンクアップロード時の容量計算:
-// - すべてのチャンクファイル: ファイルサイズ分（例: 300MBファイル = 300MB）
-// - 結合後のファイル: ファイルサイズ分（例: 300MB）
-// - 合計: ファイルサイズ × 2（例: 600MB）
-// 
-// 安全な上限: 512MB ÷ 2 = 約250MB
-// 推奨上限: 200MB（安全マージンを含む）
-const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB（通常アップロード）
-const MAX_FILE_SIZE_WITH_CHUNK = 200 * 1024 * 1024 // 200MB（チャンクアップロード使用時 - Vercelの/tmp制限を考慮）
+// Vercel Blob Storageを使用したアップロード
+// - Vercel Blob Storageの上限: 4.75GB
+// - チャンクアップロードを使用することで、大きなファイルもアップロード可能
+// - 4.5MBを超えるファイルは自動的にチャンクアップロードを使用
+const MAX_FILE_SIZE = 4.75 * 1024 * 1024 * 1024 // 4.75GB（Vercel Blob Storageの上限）
+const CHUNK_THRESHOLD = 50 * 1024 * 1024 // 50MB（チャンクアップロードの閾値）
 const CHUNK_SIZE = 4 * 1024 * 1024 // 4MB（チャンクサイズ - Vercelの制限より少し小さく）
 const SUPPORTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg']
 const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm']
@@ -82,21 +73,19 @@ export default function InterviewPage() {
   }, [])
 
   const validateFile = (file: File): { valid: boolean; error?: string; details?: string; useChunk?: boolean } => {
-    // ファイルサイズチェック（200MBまでチャンクアップロードで対応可能）
-    // 注意: Vercelの/tmpディレクトリには512MBの制限があります
-    // チャンクファイルと結合後のファイルで容量を使用するため、200MBが安全な上限です
-    if (file.size > MAX_FILE_SIZE_WITH_CHUNK) {
-      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
-      const maxSizeMB = (MAX_FILE_SIZE_WITH_CHUNK / 1024 / 1024).toFixed(0)
+    // ファイルサイズチェック（4.75GBまでVercel Blob Storageで対応可能）
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeGB = (file.size / 1024 / 1024 / 1024).toFixed(2)
+      const maxSizeGB = (MAX_FILE_SIZE / 1024 / 1024 / 1024).toFixed(2)
       return {
         valid: false,
         error: 'ファイルサイズが大きすぎます',
-        details: `最大ファイルサイズ: 200MB（MAX）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB > ${maxSizeMB}MB）\n\n200MBを超えるファイルはアップロードできません。ファイルを分割するか、より小さなファイルサイズに圧縮してください。\n\n※ より大きなファイル（200MB以上）をアップロードする場合は、Vercel Blob Storageの使用を検討してください。`,
+        details: `最大ファイルサイズ: ${maxSizeGB}GB（MAX）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeGB}GB > ${maxSizeGB}GB）\n\n${maxSizeGB}GBを超えるファイルはアップロードできません。ファイルを分割するか、より小さなファイルサイズに圧縮してください。`,
       }
     }
     
     // 50MBを超える場合はチャンクアップロードを使用
-    if (file.size > MAX_FILE_SIZE) {
+    if (file.size > CHUNK_THRESHOLD) {
       return {
         valid: true,
         useChunk: true, // チャンクアップロードを使用するフラグ
@@ -765,12 +754,12 @@ export default function InterviewPage() {
                 またはクリックしてファイルを選択
               </p>
               <p className="text-sm text-slate-500 mb-6">
-                最大ファイルサイズ: <span className="font-black text-orange-600">200MB（MAX）</span>
+                最大ファイルサイズ: <span className="font-black text-orange-600">4.75GB（MAX）</span>
                 <br />
                 <span className="text-xs text-slate-400">
                   ※ 50MB以上のファイルは自動的にチャンクアップロードで処理されます
                   <br />
-                  ※ 200MBを超えるファイルはアップロードできません
+                  ※ Vercel Blob Storageを使用してアップロードされます
                 </span>
               </p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -1032,10 +1021,10 @@ export default function InterviewPage() {
                 音声: MP3, WAV, M4A, AAC, OGG / 動画: MP4, MOV, AVI, WebM / テキスト: TXT, DOCX, MD / PDF: PDF
               </p>
               <p className="text-xs text-orange-700 mt-1">
-                最大ファイルサイズ: <span className="font-black">200MB（MAX）</span>
+                最大ファイルサイズ: <span className="font-black">4.75GB（MAX）</span>
                 <br />
                 <span className="text-[10px] text-orange-600">
-                  50MB以上はチャンクアップロードで自動処理
+                  50MB以上はチャンクアップロードで自動処理（Vercel Blob Storage使用）
                 </span>
               </p>
             </div>

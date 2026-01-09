@@ -6,6 +6,7 @@ import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import OpenAI from 'openai'
+import { get } from '@vercel/blob'
 
 // Vercel等のサーバーレス環境では /tmp を使用
 function getUploadBaseDir() {
@@ -58,29 +59,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Only audio/video files can be transcribed' }, { status: 400 })
     }
 
-    // ファイルパスを解決
-    const baseDir = getUploadBaseDir()
-    let filePath: string
-
-    if (material.filePath.startsWith('/')) {
-      // 絶対パスの場合（Vercel環境）
-      filePath = material.filePath
-    } else {
-      // 相対パスの場合
-      filePath = join(baseDir, material.filePath)
-    }
-
-    // ファイルの存在確認
-    if (!existsSync(filePath)) {
-      console.error(`[INTERVIEW] File not found: ${filePath}`)
-      return NextResponse.json(
-        { error: 'ファイルが見つかりません', details: `ファイルパス: ${filePath}` },
-        { status: 404 }
-      )
-    }
-
-    console.log(`[INTERVIEW] Starting transcription for file: ${filePath}`)
-
     // OpenAI Whisper APIを使用して文字起こし
     const openaiApiKey = process.env.OPENAI_API_KEY
     if (!openaiApiKey) {
@@ -93,11 +71,47 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({ apiKey: openaiApiKey })
 
-    // ファイルを読み込む
+    // ファイルを読み込む（Vercel Blob Storageから取得、またはローカルファイルシステムから）
     let fileBuffer: Buffer
     try {
-      fileBuffer = await readFile(filePath)
-      console.log(`[INTERVIEW] File read successfully: ${fileBuffer.length} bytes`)
+      if (material.fileUrl) {
+        // Vercel Blob Storageから取得
+        console.log(`[INTERVIEW] Fetching file from Blob Storage: ${material.fileUrl}`)
+        const blob = await get(material.fileUrl)
+        const arrayBuffer = await blob.arrayBuffer()
+        fileBuffer = Buffer.from(arrayBuffer)
+        console.log(`[INTERVIEW] File read from Blob Storage successfully: ${fileBuffer.length} bytes`)
+      } else if (material.filePath) {
+        // ローカルファイルシステムから読み込み（フォールバック）
+        const baseDir = getUploadBaseDir()
+        let filePath: string
+
+        if (material.filePath.startsWith('/')) {
+          // 絶対パスの場合（Vercel環境）
+          filePath = material.filePath
+        } else {
+          // 相対パスの場合
+          filePath = join(baseDir, material.filePath)
+        }
+
+        // ファイルの存在確認
+        if (!existsSync(filePath)) {
+          console.error(`[INTERVIEW] File not found: ${filePath}`)
+          return NextResponse.json(
+            { error: 'ファイルが見つかりません', details: `ファイルパス: ${filePath}` },
+            { status: 404 }
+          )
+        }
+
+        console.log(`[INTERVIEW] Starting transcription for file: ${filePath}`)
+        fileBuffer = await readFile(filePath)
+        console.log(`[INTERVIEW] File read from filesystem successfully: ${fileBuffer.length} bytes`)
+      } else {
+        return NextResponse.json(
+          { error: 'ファイルが見つかりません', details: 'ファイルパスまたはURLが設定されていません' },
+          { status: 404 }
+        )
+      }
     } catch (fileError) {
       console.error('[INTERVIEW] Failed to read file:', fileError)
       return NextResponse.json(

@@ -23,6 +23,7 @@
     "@types/archiver": "^7.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.10",
+    "@vercel/blob": "^2.0.0",
     "archiver": "^7.0.1",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",

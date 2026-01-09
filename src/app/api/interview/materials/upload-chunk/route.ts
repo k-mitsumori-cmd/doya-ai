@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { writeFile, mkdir, appendFile, readFile, unlink } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
+import { put } from '@vercel/blob'
 
 // Vercel等のサーバーレス環境では /tmp を使用
 function getUploadBaseDir() {
@@ -357,12 +358,32 @@ export async function POST(request: NextRequest) {
           )
         }
 
-        // ファイルサイズを確認
+        // ファイルサイズを確認してからVercel Blob Storageにアップロード
         const { stat } = await import('fs/promises')
         const finalFileStats = await stat(finalFilePath)
-        const relativePath = process.env.VERCEL 
-          ? finalFilePath
-          : `/uploads/interview/${projectId}/${savedFileName}`
+        const finalFileBuffer = await readFile(finalFilePath)
+        
+        // Vercel Blob Storageにアップロード
+        const blobPath = `interview/${projectId}/${savedFileName}`
+        let blob: { url: string; pathname: string; size: number }
+        try {
+          blob = await put(blobPath, finalFileBuffer, {
+            access: 'public',
+            contentType: mimeType || undefined,
+          })
+          console.log(`[INTERVIEW] File uploaded to Blob Storage: ${blob.url}`)
+        } catch (blobError) {
+          console.error('[INTERVIEW] Failed to upload file to Blob Storage:', blobError)
+          throw new Error(`ファイルのBlob Storageへのアップロードに失敗しました: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`)
+        }
+        
+        // 結合済みファイルを削除（Blob Storageに保存済みのため）
+        try {
+          await unlink(finalFilePath)
+          console.log(`[INTERVIEW] Deleted merged file from /tmp: ${finalFilePath}`)
+        } catch (e) {
+          console.warn(`[INTERVIEW] Failed to delete merged file: ${finalFilePath}`, e)
+        }
 
         // DBに記録
         let material
@@ -372,8 +393,9 @@ export async function POST(request: NextRequest) {
               projectId,
               type: materialType,
               fileName: fileName,
-              filePath: relativePath,
-              fileSize: finalFileStats.size,
+              filePath: blob.pathname, // Blob pathnameを保存
+              fileUrl: blob.url, // Blob URLを保存
+              fileSize: blob.size || finalFileStats.size,
               mimeType,
               status: 'UPLOADED',
             },
@@ -383,7 +405,7 @@ export async function POST(request: NextRequest) {
           throw dbError
         }
 
-        console.log(`[INTERVIEW] File merge completed. Material ID: ${material.id}`)
+        console.log(`[INTERVIEW] File merge and Blob upload completed. Material ID: ${material.id}`)
         
         return NextResponse.json({
           completed: true,

@@ -2,24 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
-
-// Vercel等のサーバーレス環境では /tmp を使用
-function getUploadBaseDir() {
-  // 環境変数で指定されている場合はそれを使用
-  const envDir = process.env.INTERVIEW_STORAGE_DIR || process.env.NEXT_PUBLIC_INTERVIEW_STORAGE_DIR
-  if (envDir) return envDir
-
-  // Vercel/AWS Lambda では /tmp が書き込み可能
-  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
-    return '/tmp/interview'
-  }
-
-  // ローカル環境: プロジェクト直下に保存
-  return join(process.cwd(), 'uploads', 'interview')
-}
+import { put } from '@vercel/blob'
 
 // 素材アップロード（音声・動画・テキスト・PDF等）
 export async function POST(request: NextRequest) {
@@ -43,26 +26,36 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ファイルサイズチェック（50MB制限）
+    // ファイルサイズチェック（4.75GB制限 - Vercel Blob Storageの上限）
     // 注意: Vercelのサーバーレス関数には4.5MBのリクエストボディサイズ制限があります
-    // より大きなファイルが必要な場合は、Vercel Blobを使用することを推奨します
-    const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+    // 4.5MBを超えるファイルはチャンクアップロードを使用します
+    const MAX_FILE_SIZE = 4.75 * 1024 * 1024 * 1024 // 4.75GB（Vercel Blob Storageの上限）
+    const CHUNK_THRESHOLD = 50 * 1024 * 1024 // 50MB（チャンクアップロードの閾値）
+    
     if (file.size > MAX_FILE_SIZE) {
-      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
-      const maxSizeMB = (MAX_FILE_SIZE / 1024 / 1024).toFixed(0)
+      const fileSizeGB = (file.size / 1024 / 1024 / 1024).toFixed(2)
+      const maxSizeGB = (MAX_FILE_SIZE / 1024 / 1024 / 1024).toFixed(2)
       return NextResponse.json(
         {
           error: 'ファイルサイズが大きすぎます',
-          details: `最大ファイルサイズは${maxSizeMB}MBです。現在のファイルサイズ: ${fileSizeMB}MB\n\nより大きなファイルをアップロードする場合は、ファイルを分割するか、Vercel Blobの使用を検討してください。`,
+          details: `最大ファイルサイズ: ${maxSizeGB}GB（MAX）\n現在のファイルサイズ: ${fileSizeGB}GB\n\n${maxSizeGB}GBを超えるファイルはアップロードできません。`,
         },
         { status: 400 }
       )
     }
     
-    // Vercelのサーバーレス関数の制限（4.5MB）を警告
+    // Vercelのサーバーレス関数の制限（4.5MB）を超える場合はチャンクアップロードを使用
     const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB
     if (file.size > VERCEL_LIMIT) {
-      console.warn(`[INTERVIEW] File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds Vercel's serverless function limit (4.5MB). This may cause upload failures.`)
+      // 4.5MBを超える場合はチャンクアップロードにリダイレクト
+      return NextResponse.json(
+        {
+          error: 'チャンクアップロードを使用してください',
+          details: `ファイルサイズが${(VERCEL_LIMIT / 1024 / 1024).toFixed(0)}MBを超えているため、チャンクアップロードを使用してください。`,
+          useChunkUpload: true,
+        },
+        { status: 400 }
+      )
     }
 
     if (file.size === 0) {
@@ -139,52 +132,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // ファイル保存
-    const baseDir = getUploadBaseDir()
-    let uploadDir = join(baseDir, projectId)
+    // Vercel Blob Storageにアップロード
+    const savedFileName = `${projectId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const blobPath = `interview/${savedFileName}`
     
+    let blob: { url: string; pathname: string; size: number }
     try {
-      if (!existsSync(uploadDir)) {
-        await mkdir(uploadDir, { recursive: true })
-      }
-    } catch (mkdirError) {
-      console.error('[INTERVIEW] Failed to create upload directory:', mkdirError)
-      // /tmp へのフォールバック
-      const fallbackDir = `/tmp/interview/${projectId}`
-      try {
-        await mkdir(fallbackDir, { recursive: true })
-        uploadDir = fallbackDir
-      } catch (fallbackError) {
-        console.error('[INTERVIEW] Failed to create fallback directory:', fallbackError)
-        throw new Error('ファイル保存ディレクトリの作成に失敗しました')
-      }
+      const buffer = await file.arrayBuffer()
+      blob = await put(blobPath, buffer, {
+        access: 'public',
+        contentType: mimeType || undefined,
+      })
+      console.log(`[INTERVIEW] File uploaded to Blob Storage: ${blob.url}`)
+    } catch (blobError) {
+      console.error('[INTERVIEW] Failed to upload file to Blob Storage:', blobError)
+      throw new Error(`ファイルのアップロードに失敗しました: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`)
     }
-
-    const savedFileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-    const filePath = join(uploadDir, savedFileName)
-    
-    let buffer: Buffer
-    try {
-      const bytes = await file.arrayBuffer()
-      buffer = Buffer.from(bytes)
-    } catch (bufferError) {
-      console.error('[INTERVIEW] Failed to read file buffer:', bufferError)
-      throw new Error('ファイルの読み込みに失敗しました')
-    }
-
-    try {
-      await writeFile(filePath, buffer)
-    } catch (writeError) {
-      console.error('[INTERVIEW] Failed to write file:', writeError)
-      console.error('[INTERVIEW] File path:', filePath)
-      console.error('[INTERVIEW] File size:', buffer.length)
-      throw new Error(`ファイルの保存に失敗しました: ${writeError instanceof Error ? writeError.message : '不明なエラー'}`)
-    }
-
-    // 相対パスを保存（/tmp の場合は絶対パスも保存）
-    const relativePath = process.env.VERCEL 
-      ? filePath // Vercelでは絶対パスを保存
-      : `/uploads/interview/${projectId}/${savedFileName}`
 
     // DBに記録
     let material
@@ -194,8 +157,9 @@ export async function POST(request: NextRequest) {
           projectId,
           type: materialType,
           fileName: file.name,
-          filePath: relativePath,
-          fileSize: buffer.length,
+          filePath: blob.pathname, // Blob pathnameを保存
+          fileUrl: blob.url, // Blob URLを保存
+          fileSize: blob.size || file.size,
           mimeType,
           status: 'UPLOADED',
         },
