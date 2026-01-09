@@ -33,11 +33,11 @@
 
 # 5. APIを作成
 #    → src/app/api/<service-id>/...
-#    参考: src/app/api/interview/（ファイルアップロード例）
+#    参考: implementation-patterns.md の「API実装パターン」
 
 # 6. プラン管理を実装
 #    → UserServiceSubscription で管理
-#    参考: development-guide.md の「プラン管理の実装パターン」
+#    参考: implementation-patterns.md の「プラン管理パターン」
 
 # 7. デプロイ（変更を反映）
 #    → development-guide.md の「デプロイ手順」を参照

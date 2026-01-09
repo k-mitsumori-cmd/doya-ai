@@ -84,10 +84,10 @@ export default function InterviewPage() {
 
     setBlockNavigation(true)
 
-    // beforeunloadイベントでページ遷移を防止
+    // beforeunloadイベントでページ遷移を防止（タブ移動は可能）
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       e.preventDefault()
-      e.returnValue = 'アップロード中です。ページを離れるとアップロードが中断されます。'
+      e.returnValue = 'アップロード中です。ブラウザを閉じるとアップロードが中断されます。別タブに切り替えることは可能です。'
       return e.returnValue
     }
 
@@ -95,7 +95,7 @@ export default function InterviewPage() {
     const handleRouteChange = (e: PopStateEvent) => {
       if (isUploading) {
         e.preventDefault()
-        if (window.confirm('アップロード中です。ページを離れるとアップロードが中断されます。本当に離れますか？')) {
+        if (window.confirm('アップロード中です。ページを離れるとアップロードが中断されます。\n\n別タブに切り替えることは可能です。\n\n本当にページを離れますか？')) {
           setBlockNavigation(false)
           window.history.back()
         } else {
@@ -111,7 +111,7 @@ export default function InterviewPage() {
     const originalPushState = window.history.pushState
     window.history.pushState = function(...args) {
       if (isUploading && args[2] && args[2] !== window.location.pathname) {
-        if (!window.confirm('アップロード中です。ページを離れるとアップロードが中断されます。本当に離れますか？')) {
+        if (!window.confirm('アップロード中です。ページを離れるとアップロードが中断されます。\n\n別タブに切り替えることは可能です。\n\n本当にページを離れますか？')) {
           return
         }
         setBlockNavigation(false)
@@ -148,6 +148,77 @@ export default function InterviewPage() {
         return '処理中...'
     }
   }, [uploadStatus])
+
+  // 処理時間の推定（ファイルサイズとタイプから計算）
+  const estimatedTime = useMemo(() => {
+    if (!uploadedFile || !isUploading) return null
+
+    const fileSizeMB = uploadedFile.size / (1024 * 1024)
+    let totalSeconds = 0
+
+    // 1. アップロード時間の推定
+    if (uploadedFile.size > VERCEL_LIMIT) {
+      // チャンクアップロードの場合
+      const totalChunks = Math.ceil(uploadedFile.size / CHUNK_SIZE)
+      const chunkUploadTime = totalChunks * 0.5 // チャンクあたり0.5秒
+      const mergeTime = 2 // 結合時間2秒
+      totalSeconds += chunkUploadTime + mergeTime
+    } else {
+      // 通常アップロードの場合
+      const uploadSpeedMBps = 10 // 10MB/秒と仮定
+      totalSeconds += fileSizeMB / uploadSpeedMBps
+    }
+
+    // 2. 文字起こし時間の推定（音声・動画の場合）
+    if (materialType === 'audio' || materialType === 'video') {
+      // ファイルサイズから音声長を推定（1MB ≈ 1分の音声、動画は圧縮率を考慮）
+      const audioLengthMinutes = materialType === 'video' 
+        ? fileSizeMB * 0.3 // 動画は圧縮率が高いため0.3倍
+        : fileSizeMB * 1.0 // 音声は1倍
+      
+      // Whisper APIは通常、音声長の1/10〜1/5程度の時間
+      const transcriptionTime = audioLengthMinutes * 60 * 0.15 // 音声長の15%の時間
+      totalSeconds += transcriptionTime
+    }
+
+    // 3. 構成案生成時間の推定
+    // 文字起こしテキストの長さを推定（1分の音声 ≈ 1000文字）
+    let estimatedTextLength = 0
+    if (materialType === 'audio' || materialType === 'video') {
+      const audioLengthMinutes = materialType === 'video' 
+        ? fileSizeMB * 0.3 
+        : fileSizeMB * 1.0
+      estimatedTextLength = audioLengthMinutes * 1000
+    } else if (materialType === 'text' || materialType === 'pdf') {
+      // テキストファイルの場合はファイルサイズから推定（1KB ≈ 500文字）
+      estimatedTextLength = (uploadedFile.size / 1024) * 500
+    }
+
+    // 構成案生成: 1000文字あたり5秒
+    const outlineTime = (estimatedTextLength / 1000) * 5
+    totalSeconds += outlineTime
+
+    // 4. 記事生成時間の推定
+    // 記事生成: 1000文字あたり10秒
+    const articleTime = (estimatedTextLength / 1000) * 10
+    totalSeconds += articleTime
+
+    // 現在の進捗に応じて残り時間を計算
+    const currentProgress = progress / 100
+    const remainingSeconds = Math.ceil(totalSeconds * (1 - currentProgress))
+
+    // 秒数を分・秒に変換
+    const remainingMinutes = Math.floor(remainingSeconds / 60)
+    const remainingSecs = remainingSeconds % 60
+
+    if (remainingMinutes > 0) {
+      return `残り約${remainingMinutes}分${remainingSecs}秒`
+    } else if (remainingSecs > 0) {
+      return `残り約${remainingSecs}秒`
+    } else {
+      return 'まもなく完了'
+    }
+  }, [uploadedFile, materialType, progress, isUploading])
 
   const validateFile = (file: File): { valid: boolean; error?: string; details?: string; useChunk?: boolean } => {
     // ファイルサイズチェック（4.75GBまでVercel Blob Storageで対応可能）
@@ -749,6 +820,8 @@ export default function InterviewPage() {
           { title: '記事生成', subtitle: 'AIが高品質な記事を作成中' },
         ]}
         showSpec={false}
+        estimatedTime={estimatedTime}
+        allowTabSwitch={true}
       />
       {/* ヒーローセクション */}
       <motion.div

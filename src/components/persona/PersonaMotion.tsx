@@ -122,6 +122,8 @@ export function PartyLoadingOverlay({
   title = 'ペルソナ生成中',
   cards,
   showSpec = false,
+  estimatedTime,
+  allowTabSwitch = false,
 }: {
   open: boolean
   mode: MotionMode
@@ -133,6 +135,8 @@ export function PartyLoadingOverlay({
   title?: string
   cards?: { title: string; subtitle: string }[]
   showSpec?: boolean
+  estimatedTime?: string | null
+  allowTabSwitch?: boolean
 }) {
   const p = Math.max(0, Math.min(100, Number.isFinite(progress) ? progress : 0))
   const party = mode === 'party'
@@ -195,6 +199,16 @@ export function PartyLoadingOverlay({
                     <div>
                       <div className="text-white font-black text-lg leading-tight">{title}</div>
                       <div className="text-white/70 text-xs font-bold mt-1">{stageText}</div>
+                      {estimatedTime && (
+                        <div className="text-white/60 text-[10px] font-bold mt-1">
+                          推定処理時間: 約{estimatedTime}
+                        </div>
+                      )}
+                      {allowTabSwitch && (
+                        <div className="text-white/50 text-[10px] font-bold mt-0.5">
+                          💡 別タブに切り替えても処理は続行されます
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="w-8 h-8 rounded-full border-2 border-white/25 border-t-white animate-spin" />
