@@ -411,7 +411,7 @@ export default function InterviewPage() {
           setProgress(30 + Math.round((chunkProgress * 20) / 100)) // 30%から50%の間で進捗表示
 
           // すべてのチャンクがアップロード完了（最後のチャンクの場合）
-          if (result.completed && result.material) {
+          if (result.completed && result.material && result.material.id) {
             console.log(`[CHUNK] All chunks uploaded successfully. Material ID: ${result.material.id}`)
             return result
           }
@@ -443,7 +443,14 @@ export default function InterviewPage() {
                   body: checkFormData,
                 })
                 if (checkRes.ok) {
-                  const checkResult = await checkRes.json()
+                  let checkResult: any = {}
+                  try {
+                    checkResult = await checkRes.json()
+                  } catch (jsonError) {
+                    // JSONパースエラーの場合、続行
+                    console.warn(`[CHUNK] Failed to parse check response JSON, continuing...`)
+                    continue
+                  }
                   
                   // エラーが返されている場合は、すぐにエラーを投げる
                   if (checkResult.error) {
@@ -466,13 +473,25 @@ export default function InterviewPage() {
                     throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
                   }
                   
-                  if (checkResult.completed && checkResult.material) {
+                  if (checkResult.completed && checkResult.material && checkResult.material.id) {
                     console.log(`[CHUNK] Merge completed after wait. Material ID: ${checkResult.material.id}`)
                     return checkResult
                   }
                 } else {
                   // エラーレスポンスを確認
-                  const errorData = await checkRes.json().catch(() => ({}))
+                  let errorData: any = {}
+                  try {
+                    errorData = await checkRes.json()
+                  } catch (jsonError) {
+                    // JSONパースエラーの場合、レスポンステキストを取得
+                    const responseText = await checkRes.text().catch(() => '')
+                    console.error(`[CHUNK] Failed to parse error response: ${responseText}`)
+                    errorData = {
+                      error: `サーバーエラーが発生しました`,
+                      details: `HTTPステータス: ${checkRes.status} ${checkRes.statusText}\n${responseText || 'エラーの詳細が取得できませんでした'}`,
+                    }
+                  }
+                  
                   if (errorData.error) {
                     const errorDetails = errorData.details || ''
                     const errorMsg = errorData.error || 'エラーが発生しました'
@@ -534,7 +553,7 @@ export default function InterviewPage() {
 
     // すべてのチャンクをアップロードしたが、完了レスポンスが返ってこなかった場合
     // 最後のレスポンスを確認
-    if (lastResult && lastResult.completed && lastResult.material) {
+    if (lastResult && lastResult.completed && lastResult.material && lastResult.material.id) {
       console.log(`[CHUNK] Upload completed from last result. Material ID: ${lastResult.material.id}`)
       return lastResult
     }
@@ -575,7 +594,16 @@ export default function InterviewPage() {
         })
 
         if (checkResponse.ok) {
-          const checkResult = await checkResponse.json()
+          let checkResult: any = {}
+          try {
+            checkResult = await checkResponse.json()
+          } catch (jsonError) {
+            // JSONパースエラーの場合
+            const responseText = await checkResponse.text().catch(() => '')
+            console.error(`[CHUNK] Failed to parse check response JSON: ${responseText}`)
+            // JSONパースエラーは一時的な問題の可能性があるので、続行
+            continue
+          }
           
           // エラーが返されている場合は、すぐにエラーを投げる（容量制限エラーの場合も含む）
           if (checkResult.error) {
@@ -598,13 +626,25 @@ export default function InterviewPage() {
             throw new Error(`${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`)
           }
           
-          if (checkResult.completed && checkResult.material) {
+          if (checkResult.completed && checkResult.material && checkResult.material.id) {
             console.log(`[CHUNK] Upload completed after wait (attempt ${waitAttempt + 1}). Material ID: ${checkResult.material.id}`)
             return checkResult
           }
         } else {
           // エラーレスポンスを確認
-          const errorData = await checkResponse.json().catch(() => ({}))
+          let errorData: any = {}
+          try {
+            errorData = await checkResponse.json()
+          } catch (jsonError) {
+            // JSONパースエラーの場合、レスポンステキストを取得
+            const responseText = await checkResponse.text().catch(() => '')
+            console.error(`[CHUNK] Failed to parse error response: ${responseText}`)
+            errorData = {
+              error: `サーバーエラーが発生しました`,
+              details: `HTTPステータス: ${checkResponse.status} ${checkResponse.statusText}\n${responseText || 'エラーの詳細が取得できませんでした'}`,
+            }
+          }
+          
           if (errorData.error) {
             const errorDetails = errorData.details || ''
             const errorMsg = errorData.error || 'エラーが発生しました'
