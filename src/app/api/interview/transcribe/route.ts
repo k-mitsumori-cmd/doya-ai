@@ -130,94 +130,99 @@ export async function POST(request: NextRequest) {
     }
 
     // ファイルを読み込む（Google Cloud Storageから取得、またはローカルファイルシステムから）
+    // パフォーマンス最適化: タイムアウトを設定して長時間待機を防ぐ
+    const FILE_FETCH_TIMEOUT = 30000 // 30秒
     let fileBuffer: Buffer
+    
     try {
-      // 優先順位: fileUrl (完全なURL) > filePath (GCS pathname or ローカルファイルシステム)
-      if (material.fileUrl) {
-        // fileUrlが存在する場合
-        if (material.fileUrl.includes('storage.googleapis.com')) {
-          // Google Cloud StorageのURLの場合
-          console.log(`[INTERVIEW] Fetching file from Google Cloud Storage: ${material.fileUrl}`)
-          try {
-            fileBuffer = await getFileFromGCS(material.fileUrl)
-            console.log(`[INTERVIEW] File read from Google Cloud Storage successfully: ${fileBuffer.length} bytes`)
-          } catch (gcsError) {
-            // GCSからの取得に失敗した場合、直接fetchを試行
-            console.warn(`[INTERVIEW] Failed to get file from GCS, trying direct fetch: ${gcsError}`)
+      // ファイル取得処理をPromiseでラップしてタイムアウトを設定
+      const fetchFilePromise = (async () => {
+        // 優先順位: fileUrl (完全なURL) > filePath (GCS pathname or ローカルファイルシステム)
+        if (material.fileUrl) {
+          // fileUrlが存在する場合
+          if (material.fileUrl.includes('storage.googleapis.com')) {
+            // Google Cloud StorageのURLの場合
+            console.log(`[INTERVIEW] Fetching file from Google Cloud Storage: ${material.fileUrl}`)
+            try {
+              return await getFileFromGCS(material.fileUrl)
+            } catch (gcsError) {
+              // GCSからの取得に失敗した場合、直接fetchを試行
+              console.warn(`[INTERVIEW] Failed to get file from GCS, trying direct fetch: ${gcsError}`)
+              const response = await fetch(material.fileUrl)
+              if (!response.ok) {
+                throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
+              }
+              const arrayBuffer = await response.arrayBuffer()
+              return Buffer.from(arrayBuffer)
+            }
+          } else {
+            // その他のURL（直接fetch）
+            console.log(`[INTERVIEW] Fetching file from URL: ${material.fileUrl}`)
             const response = await fetch(material.fileUrl)
             if (!response.ok) {
               throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
             }
             const arrayBuffer = await response.arrayBuffer()
-            fileBuffer = Buffer.from(arrayBuffer)
-            console.log(`[INTERVIEW] File read from URL successfully: ${fileBuffer.length} bytes`)
+            return Buffer.from(arrayBuffer)
           }
-        } else {
-          // その他のURL（直接fetch）
-          console.log(`[INTERVIEW] Fetching file from URL: ${material.fileUrl}`)
-          const response = await fetch(material.fileUrl)
-          if (!response.ok) {
-            throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
-          }
-          const arrayBuffer = await response.arrayBuffer()
-          fileBuffer = Buffer.from(arrayBuffer)
-          console.log(`[INTERVIEW] File read from URL successfully: ${fileBuffer.length} bytes`)
-        }
-      } else if (material.filePath) {
-        // filePathがGCS pathnameの場合（例: interview/projectId/filename）
-        // fileUrlがない場合は、GCSから直接取得を試行
-        if (!material.filePath.startsWith('http://') && !material.filePath.startsWith('https://') && !material.filePath.startsWith('/')) {
-          // GCS pathnameの場合、fileUrlを構築して取得を試行
-          console.log(`[INTERVIEW] filePath is a GCS pathname, trying to construct URL: ${material.filePath}`)
-          // GCS URLを構築
-          const bucketName = process.env.GCS_BUCKET_NAME || 'doya-interview-storage'
-          const gcsUrl = `https://storage.googleapis.com/${bucketName}/${material.filePath}`
-          try {
-            fileBuffer = await getFileFromGCS(gcsUrl)
-            console.log(`[INTERVIEW] File read from Google Cloud Storage successfully: ${fileBuffer.length} bytes`)
-          } catch (gcsError) {
-            console.error(`[INTERVIEW] Failed to get file from GCS: ${gcsError}`)
-            return NextResponse.json(
-              { error: 'ファイルの取得に失敗しました', details: 'Google Cloud Storageからファイルを取得できませんでした。' },
-              { status: 404 }
-            )
-          }
-        } else {
-          // ローカルファイルシステムから読み込み（フォールバック）
-          const baseDir = getUploadBaseDir()
-          let filePath: string
-
-          if (material.filePath && material.filePath.startsWith('/')) {
-            // 絶対パスの場合（Vercel環境）
-            filePath = material.filePath
+        } else if (material.filePath) {
+          // filePathがGCS pathnameの場合（例: interview/projectId/filename）
+          // fileUrlがない場合は、GCSから直接取得を試行
+          if (!material.filePath.startsWith('http://') && !material.filePath.startsWith('https://') && !material.filePath.startsWith('/')) {
+            // GCS pathnameの場合、fileUrlを構築して取得を試行
+            console.log(`[INTERVIEW] filePath is a GCS pathname, trying to construct URL: ${material.filePath}`)
+            // GCS URLを構築
+            const bucketName = process.env.GCS_BUCKET_NAME || 'doya-interview-storage'
+            const gcsUrl = `https://storage.googleapis.com/${bucketName}/${material.filePath}`
+            try {
+              return await getFileFromGCS(gcsUrl)
+            } catch (gcsError) {
+              console.error(`[INTERVIEW] Failed to get file from GCS: ${gcsError}`)
+              throw new Error('Google Cloud Storageからファイルを取得できませんでした。')
+            }
           } else {
-            // 相対パスの場合
-            filePath = join(baseDir, material.filePath || '')
-          }
+            // ローカルファイルシステムから読み込み（フォールバック）
+            const baseDir = getUploadBaseDir()
+            let filePath: string
 
-          // ファイルの存在確認
-          if (!existsSync(filePath)) {
-            console.error(`[INTERVIEW] File not found: ${filePath}`)
-            return NextResponse.json(
-              { error: 'ファイルが見つかりません', details: `ファイルパス: ${filePath}` },
-              { status: 404 }
-            )
-          }
+            if (material.filePath && material.filePath.startsWith('/')) {
+              // 絶対パスの場合（Vercel環境）
+              filePath = material.filePath
+            } else {
+              // 相対パスの場合
+              filePath = join(baseDir, material.filePath || '')
+            }
 
-          console.log(`[INTERVIEW] Starting transcription for file: ${filePath}`)
-          fileBuffer = await readFile(filePath)
-          console.log(`[INTERVIEW] File read from filesystem successfully: ${fileBuffer.length} bytes`)
+            // ファイルの存在確認
+            if (!existsSync(filePath)) {
+              throw new Error(`ファイルが見つかりません: ${filePath}`)
+            }
+
+            console.log(`[INTERVIEW] Starting transcription for file: ${filePath}`)
+            return await readFile(filePath)
+          }
+        } else {
+          throw new Error('ファイルのURLまたはパスが設定されていません')
         }
-      } else {
-        return NextResponse.json(
-          { error: 'ファイルのURLまたはパスが設定されていません', details: 'ファイルを取得するための情報が不足しています。' },
-          { status: 404 }
-        )
-      }
+      })()
+
+      // タイムアウト処理
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`ファイルの取得がタイムアウトしました（${FILE_FETCH_TIMEOUT / 1000}秒）`))
+        }, FILE_FETCH_TIMEOUT)
+      })
+
+      fileBuffer = await Promise.race([fetchFilePromise, timeoutPromise])
+      console.log(`[INTERVIEW] File read successfully: ${fileBuffer.length} bytes`)
     } catch (fileError) {
       console.error('[INTERVIEW] Failed to read file:', fileError)
+      const errorMessage = fileError instanceof Error ? fileError.message : '不明なエラー'
       return NextResponse.json(
-        { error: 'ファイルの読み込みに失敗しました', details: fileError instanceof Error ? fileError.message : '不明なエラー' },
+        { 
+          error: 'ファイルの読み込みに失敗しました', 
+          details: errorMessage 
+        },
         { status: 500 }
       )
     }
@@ -243,29 +248,39 @@ export async function POST(request: NextRequest) {
       
       console.log(`[INTERVIEW] Calling OpenAI Whisper API... (file size: ${(fileBuffer.length / 1024 / 1024).toFixed(2)} MB)`)
       
+      // パフォーマンス最適化: Fileオブジェクトの作成を最適化
       // OpenAI SDK v4では、File、Blob、Buffer、ReadableStreamを直接受け取れる
-      // Node.js環境では、Bufferを直接渡すのが最も簡単
-      // ただし、Fileオブジェクトが必要な場合は、BlobからFileを作成する
-      // Node.js 18+ではFileオブジェクトが利用可能
+      // Node.js環境では、Bufferを直接渡すのが最も高速
       let fileInput: File | Blob | Buffer
       
       // Node.js環境でFileオブジェクトが利用可能か確認
       if (typeof File !== 'undefined') {
-        // Fileオブジェクトが利用可能な場合
-        const blob = new Blob([fileBuffer], { type: material.mimeType || 'audio/mpeg' })
-        fileInput = new File([blob], material.fileName, { type: material.mimeType || 'audio/mpeg' })
+        // Fileオブジェクトが利用可能な場合（Node.js 18+）
+        // パフォーマンス最適化: Blobを経由せずに直接Fileを作成
+        fileInput = new File([fileBuffer], material.fileName, { type: material.mimeType || 'audio/mpeg' })
       } else {
         // Fileオブジェクトが利用できない場合、Blobを使用
         fileInput = new Blob([fileBuffer], { type: material.mimeType || 'audio/mpeg' })
       }
 
-      const transcription = await openai.audio.transcriptions.create({
+      // パフォーマンス最適化: OpenAI API呼び出しにタイムアウトを設定
+      // 大きなファイルの場合、処理に時間がかかるため、適切なタイムアウトを設定
+      const OPENAI_API_TIMEOUT = Math.max(300000, fileBuffer.length / 1024 / 1024 * 10000) // 最低5分、1MBあたり10秒
+      
+      const transcriptionPromise = openai.audio.transcriptions.create({
         file: fileInput as any, // File、Blob、またはBufferを受け取れる
         model: 'whisper-1',
         language: 'ja', // 日本語を指定
         response_format: 'text',
       })
 
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`OpenAI API呼び出しがタイムアウトしました（${(OPENAI_API_TIMEOUT / 1000 / 60).toFixed(1)}分）`))
+        }, OPENAI_API_TIMEOUT)
+      })
+
+      const transcription = await Promise.race([transcriptionPromise, timeoutPromise])
       transcriptionText = transcription as unknown as string
       console.log(`[INTERVIEW] Transcription completed: ${transcriptionText.length} characters`)
     } catch (openaiError: any) {
@@ -297,25 +312,76 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 文字起こし結果を保存
-    const transcription = await prisma.interviewTranscription.create({
-      data: {
-        projectId,
-        materialId,
-        text: transcriptionText,
-        provider: 'openai-whisper',
-      },
-    })
+    // パフォーマンス最適化: データベース操作を並行実行（依存関係がないため）
+    // エラーハンドリングを強化: Promise.allSettledを使用して、一方が失敗しても他方を継続
+    try {
+      const results = await Promise.allSettled([
+        // 文字起こし結果を保存
+        prisma.interviewTranscription.create({
+          data: {
+            projectId,
+            materialId,
+            text: transcriptionText,
+            provider: 'openai-whisper',
+          },
+        }),
+        // 素材のステータスを更新
+        prisma.interviewMaterial.update({
+          where: { id: materialId },
+          data: { status: 'COMPLETED' },
+        }),
+      ])
 
-    // 素材のステータスを更新
-    await prisma.interviewMaterial.update({
-      where: { id: materialId },
-      data: { status: 'COMPLETED' },
-    })
+      // 結果をチェック
+      const transcriptionResult = results[0]
+      const materialUpdateResult = results[1]
 
-    console.log(`[INTERVIEW] Transcription saved: ${transcription.id}`)
+      // エラーチェック: 両方の操作が成功したか確認
+      if (transcriptionResult.status === 'rejected') {
+        console.error('[INTERVIEW] Failed to save transcription:', transcriptionResult.reason)
+        // 素材の更新は成功した可能性があるため、ロールバックを試みる
+        if (materialUpdateResult.status === 'fulfilled') {
+          try {
+            await prisma.interviewMaterial.update({
+              where: { id: materialId },
+              data: { status: 'PENDING' },
+            })
+            console.log('[INTERVIEW] Material status rolled back to PENDING')
+          } catch (rollbackError) {
+            console.error('[INTERVIEW] Failed to rollback material status:', rollbackError)
+          }
+        }
+        throw new Error(`文字起こし結果の保存に失敗しました: ${transcriptionResult.reason instanceof Error ? transcriptionResult.reason.message : '不明なエラー'}`)
+      }
 
-    return NextResponse.json({ transcription })
+      if (materialUpdateResult.status === 'rejected') {
+        console.error('[INTERVIEW] Failed to update material status:', materialUpdateResult.reason)
+        // 文字起こし結果は保存されているため、警告のみ
+        console.warn('[INTERVIEW] Transcription saved but material status update failed')
+      }
+
+      const transcription = transcriptionResult.status === 'fulfilled' ? transcriptionResult.value : null
+      if (!transcription) {
+        throw new Error('文字起こし結果の取得に失敗しました')
+      }
+
+      console.log(`[INTERVIEW] Transcription saved: ${transcription.id}, Material update: ${materialUpdateResult.status === 'fulfilled' ? 'success' : 'failed'}`)
+
+      return NextResponse.json({ transcription })
+    } catch (dbError) {
+      console.error('[INTERVIEW] Database operation failed:', dbError)
+      
+      // データベースエラーの詳細を返す
+      const errorMessage = dbError instanceof Error ? dbError.message : '不明なエラー'
+      return NextResponse.json(
+        { 
+          error: 'データベースへの保存に失敗しました', 
+          details: errorMessage,
+          note: '文字起こしは完了しましたが、保存に失敗しました。再度お試しください。'
+        },
+        { status: 500 }
+      )
+    }
   } catch (error) {
     console.error('[INTERVIEW] Transcription error:', error)
     console.error('[INTERVIEW] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
