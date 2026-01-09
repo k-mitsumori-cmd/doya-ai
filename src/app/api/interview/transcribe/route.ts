@@ -74,24 +74,54 @@ export async function POST(request: NextRequest) {
     // ファイルを読み込む（Vercel Blob Storageから取得、またはローカルファイルシステムから）
     let fileBuffer: Buffer
     try {
-      if (material.fileUrl) {
-        // Vercel Blob Storageから取得
-        console.log(`[INTERVIEW] Fetching file from Blob Storage: ${material.fileUrl}`)
-        const blob = await get(material.fileUrl)
-        const arrayBuffer = await blob.arrayBuffer()
+      // 優先順位: filePath (Blob pathname) > fileUrl (完全なURL) > ローカルファイルシステム
+      if (material.filePath && !material.filePath.startsWith('http://') && !material.filePath.startsWith('https://')) {
+        // Vercel Blob Storageから取得（filePathはBlob pathname、例: interview/projectId/filename）
+        console.log(`[INTERVIEW] Fetching file from Blob Storage: ${material.filePath}`)
+        try {
+          const blob = await get(material.filePath)
+          if (!blob || !blob.arrayBuffer) {
+            throw new Error('Blob Storageからファイルを正常に取得できませんでした')
+          }
+          const arrayBuffer = await blob.arrayBuffer()
+          fileBuffer = Buffer.from(arrayBuffer)
+          console.log(`[INTERVIEW] File read from Blob Storage successfully: ${fileBuffer.length} bytes`)
+        } catch (blobError: any) {
+          console.warn('[INTERVIEW] Failed to get from Blob Storage, trying fileUrl:', blobError.message)
+          // Blob Storageからの取得に失敗した場合は、fileUrlを試す
+          if (material.fileUrl) {
+            const response = await fetch(material.fileUrl)
+            if (!response.ok) {
+              throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
+            }
+            const arrayBuffer = await response.arrayBuffer()
+            fileBuffer = Buffer.from(arrayBuffer)
+            console.log(`[INTERVIEW] File read from URL successfully: ${fileBuffer.length} bytes`)
+          } else {
+            throw blobError
+          }
+        }
+      } else if (material.fileUrl) {
+        // fileUrlが存在する場合は、直接fetchする
+        console.log(`[INTERVIEW] Fetching file from URL: ${material.fileUrl}`)
+        const response = await fetch(material.fileUrl)
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
+        }
+        const arrayBuffer = await response.arrayBuffer()
         fileBuffer = Buffer.from(arrayBuffer)
-        console.log(`[INTERVIEW] File read from Blob Storage successfully: ${fileBuffer.length} bytes`)
-      } else if (material.filePath) {
+        console.log(`[INTERVIEW] File read from URL successfully: ${fileBuffer.length} bytes`)
+      } else {
         // ローカルファイルシステムから読み込み（フォールバック）
         const baseDir = getUploadBaseDir()
         let filePath: string
 
-        if (material.filePath.startsWith('/')) {
+        if (material.filePath && material.filePath.startsWith('/')) {
           // 絶対パスの場合（Vercel環境）
           filePath = material.filePath
         } else {
           // 相対パスの場合
-          filePath = join(baseDir, material.filePath)
+          filePath = join(baseDir, material.filePath || '')
         }
 
         // ファイルの存在確認
@@ -106,11 +136,6 @@ export async function POST(request: NextRequest) {
         console.log(`[INTERVIEW] Starting transcription for file: ${filePath}`)
         fileBuffer = await readFile(filePath)
         console.log(`[INTERVIEW] File read from filesystem successfully: ${fileBuffer.length} bytes`)
-      } else {
-        return NextResponse.json(
-          { error: 'ファイルが見つかりません', details: 'ファイルパスまたはURLが設定されていません' },
-          { status: 404 }
-        )
       }
     } catch (fileError) {
       console.error('[INTERVIEW] Failed to read file:', fileError)
