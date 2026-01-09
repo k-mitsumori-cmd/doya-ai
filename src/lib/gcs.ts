@@ -478,6 +478,50 @@ export async function getFileFromGCS(fileUrl: string | null): Promise<Buffer> {
 }
 
 /**
+ * Google Cloud Storageからファイルの一部を取得（範囲リクエスト）
+ * @param fileUrl GCSファイルのURL
+ * @param startByte 開始バイト位置
+ * @param endByte 終了バイト位置（含む）
+ */
+export async function getFileChunkFromGCS(
+  fileUrl: string | null,
+  startByte: number,
+  endByte: number
+): Promise<Buffer> {
+  if (!fileUrl) {
+    throw new Error('File URL is required')
+  }
+
+  const storage = await getStorage()
+  const bucket = storage.bucket(getBucketName())
+
+  // URLからパスを抽出
+  const urlPattern = /https:\/\/storage\.googleapis\.com\/[^/]+\/(.+)$/
+  const match = fileUrl.match(urlPattern)
+
+  if (match && match[1]) {
+    const filePath = decodeURIComponent(match[1])
+    const file = bucket.file(filePath)
+    
+    // 範囲リクエストでファイルの一部を取得
+    const [buffer] = await file.download({
+      start: startByte,
+      end: endByte,
+    })
+    
+    return buffer
+  } else {
+    // URL形式でない場合は、そのままパスとして使用
+    const file = bucket.file(fileUrl)
+    const [buffer] = await file.download({
+      start: startByte,
+      end: endByte,
+    })
+    return buffer
+  }
+}
+
+/**
  * Google Cloud Storageの使用状況を取得
  */
 export async function getGCSUsage(): Promise<{
