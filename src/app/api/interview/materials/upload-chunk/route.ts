@@ -191,141 +191,151 @@ export async function POST(request: NextRequest) {
 
       console.log(`[INTERVIEW] Uploaded chunks: ${uploadedChunks.length}/${totalChunks}`, uploadedChunks)
 
-      // すべてのチャンクが揃った場合、ファイルを結合
+        // すべてのチャンクが揃った場合、ファイルを結合
       if (uploadedChunks.length === totalChunks) {
         console.log(`[INTERVIEW] All chunks received. Starting file merge...`)
         
-        // 結合前に古いファイルをクリーンアップ
         try {
-          const finalDir = join(baseDir, projectId)
-          if (existsSync(finalDir)) {
-            const { readdir, unlink: unlinkFile } = await import('fs/promises')
-            const files = await readdir(finalDir)
-            // 古いファイルを削除（最新の5ファイル以外）
-            if (files.length > 5) {
-              const fileStats = await Promise.all(
-                files.map(async (f) => {
-                  const filePath = join(finalDir, f)
-                  const { stat } = await import('fs/promises')
-                  return { path: filePath, mtime: (await stat(filePath)).mtime }
-                })
-              )
-              fileStats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
-              const filesToDelete = fileStats.slice(5)
-              for (const file of filesToDelete) {
-                try {
-                  await unlinkFile(file.path)
-                  console.log(`[INTERVIEW] Deleted old file: ${file.path}`)
-                } catch (e) {
-                  console.warn(`[INTERVIEW] Failed to delete old file: ${file.path}`, e)
-                }
-              }
-            }
-          }
-        } catch (cleanupError) {
-          console.warn(`[INTERVIEW] Cleanup error (continuing):`, cleanupError)
-        }
-
-        const finalDir = join(baseDir, projectId)
-        if (!existsSync(finalDir)) {
-          await mkdir(finalDir, { recursive: true })
-        }
-
-        const savedFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-        const finalFilePath = join(finalDir, savedFileName)
-
-        // チャンクを順番に結合（結合と同時に削除して容量を確保）
-        let mergeError: Error | null = null
-        try {
-          for (let i = 0; i < totalChunks; i++) {
-            const chunkFile = join(chunkDir, `${tempFileName}.chunk.${i}`)
-            try {
-              const chunkData = await readFile(chunkFile)
-              if (i === 0) {
-                await writeFile(finalFilePath, chunkData)
-              } else {
-                await appendFile(finalFilePath, chunkData)
-              }
-              // チャンクファイルを即座に削除（容量を確保）
-              await unlink(chunkFile)
-            } catch (chunkError: any) {
-              console.error(`[INTERVIEW] Error processing chunk ${i}:`, chunkError)
-              
-              // ENOSPCエラーの場合、より積極的にクリーンアップ
-              if (chunkError.code === 'ENOSPC' || chunkError.message?.includes('no space left')) {
-                console.log(`[INTERVIEW] ENOSPC during merge. Cleaning up more aggressively...`)
-                // 他のプロジェクトのチャンクを削除
-                try {
-                  const chunksBaseDir = join(baseDir, 'chunks')
-                  if (existsSync(chunksBaseDir)) {
-                    const { readdir, rm } = await import('fs/promises')
-                    const projectDirs = await readdir(chunksBaseDir)
-                    for (const dir of projectDirs) {
-                      if (dir !== projectId) {
-                        try {
-                          const oldChunkDir = join(chunksBaseDir, dir)
-                          await rm(oldChunkDir, { recursive: true, force: true })
-                          console.log(`[INTERVIEW] Cleaned up chunk directory: ${oldChunkDir}`)
-                        } catch (cleanupError) {
-                          console.warn(`[INTERVIEW] Failed to cleanup ${dir}:`, cleanupError)
-                        }
-                      }
-                    }
-                  }
-                } catch (cleanupError) {
-                  console.warn(`[INTERVIEW] Aggressive cleanup failed:`, cleanupError)
-                }
-                
-                // 再試行
-                try {
-                  if (i === 0) {
-                    await writeFile(finalFilePath, await readFile(chunkFile))
-                  } else {
-                    await appendFile(finalFilePath, await readFile(chunkFile))
-                  }
-                  await unlink(chunkFile)
-                } catch (retryError) {
-                  mergeError = retryError as Error
-                  break
-                }
-              } else {
-                mergeError = chunkError as Error
-                break
-              }
-            }
-          }
-        } catch (mergeErr) {
-          mergeError = mergeErr as Error
-        }
-        
-        // エラーが発生した場合、作成したファイルを削除
-        if (mergeError) {
+          // 結合前に古いファイルをクリーンアップ
           try {
-            if (existsSync(finalFilePath)) {
-              await unlink(finalFilePath)
+            const finalDir = join(baseDir, projectId)
+            if (existsSync(finalDir)) {
+              const { readdir, unlink: unlinkFile } = await import('fs/promises')
+              const files = await readdir(finalDir)
+              // 古いファイルを削除（最新の5ファイル以外）
+              if (files.length > 5) {
+                const fileStats = await Promise.all(
+                  files.map(async (f) => {
+                    const filePath = join(finalDir, f)
+                    const { stat } = await import('fs/promises')
+                    return { path: filePath, mtime: (await stat(filePath)).mtime }
+                  })
+                )
+                fileStats.sort((a, b) => b.mtime.getTime() - a.mtime.getTime())
+                const filesToDelete = fileStats.slice(5)
+                for (const file of filesToDelete) {
+                  try {
+                    await unlinkFile(file.path)
+                    console.log(`[INTERVIEW] Deleted old file: ${file.path}`)
+                  } catch (e) {
+                    console.warn(`[INTERVIEW] Failed to delete old file: ${file.path}`, e)
+                  }
+                }
+              }
             }
-          } catch (e) {
-            console.warn(`[INTERVIEW] Failed to delete incomplete file: ${finalFilePath}`, e)
+          } catch (cleanupError) {
+            console.warn(`[INTERVIEW] Cleanup error (continuing):`, cleanupError)
           }
-          
-          // 残っているチャンクファイルを削除
+
+          const finalDir = join(baseDir, projectId)
+          if (!existsSync(finalDir)) {
+            await mkdir(finalDir, { recursive: true })
+          }
+
+          const savedFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+          const finalFilePath = join(finalDir, savedFileName)
+
+          // チャンクを順番に結合（結合と同時に削除して容量を確保）
+          let mergeError: Error | null = null
           try {
             for (let i = 0; i < totalChunks; i++) {
               const chunkFile = join(chunkDir, `${tempFileName}.chunk.${i}`)
-              if (existsSync(chunkFile)) {
-                try {
-                  await unlink(chunkFile)
-                } catch (e) {
-                  console.warn(`[INTERVIEW] Failed to delete chunk ${i}:`, e)
+              try {
+                const chunkData = await readFile(chunkFile)
+                if (i === 0) {
+                  await writeFile(finalFilePath, chunkData)
+                } else {
+                  await appendFile(finalFilePath, chunkData)
+                }
+                // チャンクファイルを即座に削除（容量を確保）
+                await unlink(chunkFile)
+              } catch (chunkError: any) {
+                console.error(`[INTERVIEW] Error processing chunk ${i}:`, chunkError)
+                
+                // ENOSPCエラーの場合、より積極的にクリーンアップ
+                if (chunkError.code === 'ENOSPC' || chunkError.message?.includes('no space left')) {
+                  console.log(`[INTERVIEW] ENOSPC during merge. Cleaning up more aggressively...`)
+                  // 他のプロジェクトのチャンクを削除
+                  try {
+                    const chunksBaseDir = join(baseDir, 'chunks')
+                    if (existsSync(chunksBaseDir)) {
+                      const { readdir, rm } = await import('fs/promises')
+                      const projectDirs = await readdir(chunksBaseDir)
+                      for (const dir of projectDirs) {
+                        if (dir !== projectId) {
+                          try {
+                            const oldChunkDir = join(chunksBaseDir, dir)
+                            await rm(oldChunkDir, { recursive: true, force: true })
+                            console.log(`[INTERVIEW] Cleaned up chunk directory: ${oldChunkDir}`)
+                          } catch (cleanupError) {
+                            console.warn(`[INTERVIEW] Failed to cleanup ${dir}:`, cleanupError)
+                          }
+                        }
+                      }
+                    }
+                  } catch (cleanupError) {
+                    console.warn(`[INTERVIEW] Aggressive cleanup failed:`, cleanupError)
+                  }
+                  
+                  // 再試行
+                  try {
+                    if (i === 0) {
+                      await writeFile(finalFilePath, await readFile(chunkFile))
+                    } else {
+                      await appendFile(finalFilePath, await readFile(chunkFile))
+                    }
+                    await unlink(chunkFile)
+                  } catch (retryError) {
+                    mergeError = retryError as Error
+                    break
+                  }
+                } else {
+                  mergeError = chunkError as Error
+                  break
                 }
               }
             }
-          } catch (e) {
-            console.warn(`[INTERVIEW] Failed to cleanup chunks:`, e)
+          } catch (mergeErr) {
+            mergeError = mergeErr as Error
           }
           
-          throw mergeError
-        }
+          // エラーが発生した場合、作成したファイルを削除
+          if (mergeError) {
+            try {
+              if (existsSync(finalFilePath)) {
+                await unlink(finalFilePath)
+              }
+            } catch (e) {
+              console.warn(`[INTERVIEW] Failed to delete incomplete file: ${finalFilePath}`, e)
+            }
+            
+            // 残っているチャンクファイルを削除
+            try {
+              for (let i = 0; i < totalChunks; i++) {
+                const chunkFile = join(chunkDir, `${tempFileName}.chunk.${i}`)
+                if (existsSync(chunkFile)) {
+                  try {
+                    await unlink(chunkFile)
+                  } catch (e) {
+                    console.warn(`[INTERVIEW] Failed to delete chunk ${i}:`, e)
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn(`[INTERVIEW] Failed to cleanup chunks:`, e)
+            }
+            
+            // エラーを返す
+            return NextResponse.json(
+              {
+                error: 'ファイルの結合に失敗しました',
+                details: `エラー詳細: ${mergeError.message || '不明なエラー'}\nチャンク数: ${uploadedChunks.length}/${totalChunks}`,
+                uploadedChunks: uploadedChunks.length,
+                totalChunks,
+              },
+              { status: 500 }
+            )
+          }
         
         // チャンクディレクトリを削除
         try {
@@ -335,106 +345,140 @@ export async function POST(request: NextRequest) {
           console.warn(`[INTERVIEW] Failed to delete chunk directory: ${chunkDir}`, e)
         }
 
-        // ファイルタイプ判定
-        const fileNameLower = fileName.toLowerCase()
-        const extension = fileNameLower.split('.').pop()
-        let materialType = 'text'
-        const isAudio = mimeType.startsWith('audio/') || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(extension || '')
-        const isVideo = mimeType.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(extension || '')
-        const isPdf = mimeType === 'application/pdf' || extension === 'pdf'
-        const isText = mimeType.startsWith('text/') || ['txt', 'md'].includes(extension || '') || extension === 'docx'
+          // ファイルタイプ判定
+          const fileNameLower = fileName.toLowerCase()
+          const extension = fileNameLower.split('.').pop()
+          let materialType = 'text'
+          const isAudio = mimeType.startsWith('audio/') || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(extension || '')
+          const isVideo = mimeType.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(extension || '')
+          const isPdf = mimeType === 'application/pdf' || extension === 'pdf'
+          const isText = mimeType.startsWith('text/') || ['txt', 'md'].includes(extension || '') || extension === 'docx'
 
-        if (isAudio) materialType = 'audio'
-        else if (isVideo) materialType = 'video'
-        else if (isPdf) materialType = 'pdf'
-        else if (isText) materialType = 'text'
-        else {
-          return NextResponse.json(
-            {
-              error: '対応していないファイル形式です',
-              details: `対応形式: 音声（MP3, WAV, M4A）、動画（MP4, MOV, AVI）、テキスト（TXT, DOCX）、PDF。\n検出された形式: ${mimeType || '不明'}（拡張子: ${extension || 'なし'}）`,
-            },
-            { status: 400 }
-          )
-        }
+          if (isAudio) materialType = 'audio'
+          else if (isVideo) materialType = 'video'
+          else if (isPdf) materialType = 'pdf'
+          else if (isText) materialType = 'text'
+          else {
+            return NextResponse.json(
+              {
+                error: '対応していないファイル形式です',
+                details: `対応形式: 音声（MP3, WAV, M4A）、動画（MP4, MOV, AVI）、テキスト（TXT, DOCX）、PDF。\n検出された形式: ${mimeType || '不明'}（拡張子: ${extension || 'なし'}）`,
+              },
+              { status: 400 }
+            )
+          }
 
-        // ファイルサイズを確認してからVercel Blob Storageにアップロード
-        const { stat } = await import('fs/promises')
-        const finalFileStats = await stat(finalFilePath)
-        const finalFileBuffer = await readFile(finalFilePath)
-        
-        // BLOB_READ_WRITE_TOKENの確認
-        if (!process.env.BLOB_READ_WRITE_TOKEN) {
-          console.error('[INTERVIEW] BLOB_READ_WRITE_TOKEN is not set')
-          throw new Error('ストレージの設定が完了していません。Vercel Blob Storageの環境変数（BLOB_READ_WRITE_TOKEN）が設定されていません。')
-        }
-        
-        // Vercel Blob Storageにアップロード
-        const blobPath = `interview/${projectId}/${savedFileName}`
-        let blob: { url: string; pathname: string; size: number }
-        try {
-          blob = await put(blobPath, finalFileBuffer, {
-            access: 'public',
-            contentType: mimeType || undefined,
-          })
-          console.log(`[INTERVIEW] File uploaded to Blob Storage: ${blob.url}`)
-        } catch (blobError: any) {
-          console.error('[INTERVIEW] Failed to upload file to Blob Storage:', blobError)
+          // ファイルサイズを確認してからVercel Blob Storageにアップロード
+          const { stat } = await import('fs/promises')
+          const finalFileStats = await stat(finalFilePath)
+          const finalFileBuffer = await readFile(finalFilePath)
           
-          let errorMessage = 'ファイルのBlob Storageへのアップロードに失敗しました'
-          let errorDetails = ''
-          
-          if (blobError?.message?.includes('Unauthorized') || blobError?.message?.includes('401')) {
-            errorMessage = 'Blob Storageの認証に失敗しました'
-            errorDetails = 'BLOB_READ_WRITE_TOKENが無効です。Vercelダッシュボードで環境変数を確認してください。'
-          } else if (blobError?.message?.includes('Forbidden') || blobError?.message?.includes('403')) {
-            errorMessage = 'Blob Storageへのアクセスが拒否されました'
-            errorDetails = 'Blobストアへのアクセス権限がありません。Vercelダッシュボードで設定を確認してください。'
-          } else if (blobError?.message?.includes('Size limit') || blobError?.message?.includes('413')) {
-            errorMessage = 'ファイルサイズが大きすぎます'
-            errorDetails = `ファイルサイズがBlob Storageの上限を超えています。最大ファイルサイズ: 4.75GB`
-          } else {
-            errorDetails = `エラー詳細: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`
+          // BLOB_READ_WRITE_TOKENの確認
+          if (!process.env.BLOB_READ_WRITE_TOKEN) {
+            console.error('[INTERVIEW] BLOB_READ_WRITE_TOKEN is not set')
+            return NextResponse.json(
+              {
+                error: 'ストレージの設定が完了していません',
+                details: 'Vercel Blob Storageの環境変数（BLOB_READ_WRITE_TOKEN）が設定されていません。Vercelダッシュボードで設定を確認してください。',
+              },
+              { status: 500 }
+            )
           }
           
-          throw new Error(`${errorMessage}\n${errorDetails}`)
-        }
-        
-        // 結合済みファイルを削除（Blob Storageに保存済みのため）
-        try {
-          await unlink(finalFilePath)
-          console.log(`[INTERVIEW] Deleted merged file from /tmp: ${finalFilePath}`)
-        } catch (e) {
-          console.warn(`[INTERVIEW] Failed to delete merged file: ${finalFilePath}`, e)
-        }
+          // Vercel Blob Storageにアップロード
+          const blobPath = `interview/${projectId}/${savedFileName}`
+          let blob: { url: string; pathname: string; size: number }
+          try {
+            blob = await put(blobPath, finalFileBuffer, {
+              access: 'public',
+              contentType: mimeType || undefined,
+            })
+            console.log(`[INTERVIEW] File uploaded to Blob Storage: ${blob.url}`)
+          } catch (blobError: any) {
+            console.error('[INTERVIEW] Failed to upload file to Blob Storage:', blobError)
+            
+            let errorMessage = 'ファイルのBlob Storageへのアップロードに失敗しました'
+            let errorDetails = ''
+            
+            if (blobError?.message?.includes('Unauthorized') || blobError?.message?.includes('401')) {
+              errorMessage = 'Blob Storageの認証に失敗しました'
+              errorDetails = 'BLOB_READ_WRITE_TOKENが無効です。Vercelダッシュボードで環境変数を確認してください。'
+            } else if (blobError?.message?.includes('Forbidden') || blobError?.message?.includes('403')) {
+              errorMessage = 'Blob Storageへのアクセスが拒否されました'
+              errorDetails = 'Blobストアへのアクセス権限がありません。Vercelダッシュボードで設定を確認してください。'
+            } else if (blobError?.message?.includes('Size limit') || blobError?.message?.includes('413')) {
+              errorMessage = 'ファイルサイズが大きすぎます'
+              errorDetails = `ファイルサイズがBlob Storageの上限を超えています。最大ファイルサイズ: 4.75GB`
+            } else {
+              errorDetails = `エラー詳細: ${blobError instanceof Error ? blobError.message : '不明なエラー'}`
+            }
+            
+            return NextResponse.json(
+              {
+                error: errorMessage,
+                details: errorDetails,
+                uploadedChunks: uploadedChunks.length,
+                totalChunks,
+              },
+              { status: 500 }
+            )
+          }
+          
+          // 結合済みファイルを削除（Blob Storageに保存済みのため）
+          try {
+            await unlink(finalFilePath)
+            console.log(`[INTERVIEW] Deleted merged file from /tmp: ${finalFilePath}`)
+          } catch (e) {
+            console.warn(`[INTERVIEW] Failed to delete merged file: ${finalFilePath}`, e)
+          }
 
-        // DBに記録
-        let material
-        try {
-          material = await prisma.interviewMaterial.create({
-            data: {
-              projectId,
-              type: materialType,
-              fileName: fileName,
-              filePath: blob.pathname, // Blob pathnameを保存
-              fileUrl: blob.url, // Blob URLを保存
-              fileSize: blob.size || finalFileStats.size,
-              mimeType,
-              status: 'UPLOADED',
-            },
+          // DBに記録
+          let material
+          try {
+            material = await prisma.interviewMaterial.create({
+              data: {
+                projectId,
+                type: materialType,
+                fileName: fileName,
+                filePath: blob.pathname, // Blob pathnameを保存
+                fileUrl: blob.url, // Blob URLを保存
+                fileSize: blob.size || finalFileStats.size,
+                mimeType,
+                status: 'UPLOADED',
+              },
+            })
+          } catch (dbError) {
+            console.error('[INTERVIEW] Database error when creating material:', dbError)
+            return NextResponse.json(
+              {
+                error: 'データベースへの保存に失敗しました',
+                details: `エラー詳細: ${dbError instanceof Error ? dbError.message : '不明なエラー'}\nファイルはBlob Storageに保存されましたが、データベースへの記録に失敗しました。`,
+                uploadedChunks: uploadedChunks.length,
+                totalChunks,
+              },
+              { status: 500 }
+            )
+          }
+
+          console.log(`[INTERVIEW] File merge and Blob upload completed. Material ID: ${material.id}`)
+          
+          return NextResponse.json({
+            completed: true,
+            material,
+            message: 'ファイルのアップロードが完了しました',
           })
-        } catch (dbError) {
-          console.error('[INTERVIEW] Database error when creating material:', dbError)
-          throw dbError
+        } catch (mergeProcessError: any) {
+          console.error('[INTERVIEW] Error during merge process:', mergeProcessError)
+          return NextResponse.json(
+            {
+              error: 'ファイルの結合処理中にエラーが発生しました',
+              details: `エラー詳細: ${mergeProcessError.message || '不明なエラー'}\nチャンク数: ${uploadedChunks.length}/${totalChunks}`,
+              uploadedChunks: uploadedChunks.length,
+              totalChunks,
+            },
+            { status: 500 }
+          )
         }
-
-        console.log(`[INTERVIEW] File merge and Blob upload completed. Material ID: ${material.id}`)
-        
-        return NextResponse.json({
-          completed: true,
-          material,
-          message: 'ファイルのアップロードが完了しました',
-        })
       }
 
       // チャンクがまだ揃っていない場合
