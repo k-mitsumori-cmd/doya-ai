@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "prisma generate && node ./scripts/db-push-if-db-url.mjs && next build",
+  "buildCommand": "NODE_OPTIONS='--no-deprecation' prisma generate && node ./scripts/db-push-if-db-url.mjs && NODE_OPTIONS='--no-deprecation' next build",
   "crons": [
     {
       "path": "/api/interview/projects/cleanup",

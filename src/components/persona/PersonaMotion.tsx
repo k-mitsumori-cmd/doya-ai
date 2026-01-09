@@ -308,12 +308,20 @@ export function PartyLoadingOverlay({
                       <div className="mt-1 text-white/70 text-xs font-bold">{card.subtitle}</div>
                       {party && (
                         <motion.div
-                          key={pulse}
-                          initial={{ x: '-40%' }}
-                          animate={{ x: '140%' }}
-                          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.5 }}
-                          className="mt-3 h-1.5 w-1/2 rounded-full bg-gradient-to-r from-white/10 to-white/50"
-                        />
+                          className="mt-3 h-1.5 w-full rounded-full bg-white/5 overflow-hidden"
+                        >
+                          <motion.div
+                            initial={{ width: '0%' }}
+                            animate={{ width: ['0%', '30%', '60%', '100%', '0%'] }}
+                            transition={{ 
+                              duration: 3, 
+                              repeat: Infinity, 
+                              ease: 'easeInOut',
+                              repeatDelay: 0.3
+                            }}
+                            className="h-full bg-gradient-to-r from-white/20 via-white/40 to-white/20 rounded-full"
+                          />
+                        </motion.div>
                       )}
                     </motion.div>
                   ))}
