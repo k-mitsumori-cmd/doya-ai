@@ -63,6 +63,11 @@ export async function POST(request: NextRequest) {
     const filePath = `interview/${projectId}/${timestamp}-${sanitizedFileName}`
 
     // 署名付きURLを生成（1時間有効）
+    console.log(`[INTERVIEW] Generating signed URL for: ${filePath}`)
+    console.log(`[INTERVIEW] Environment check - GOOGLE_CLOUD_PROJECT_ID: ${process.env.GOOGLE_CLOUD_PROJECT_ID ? 'set' : 'not set'}`)
+    console.log(`[INTERVIEW] Environment check - GCS_BUCKET_NAME: ${process.env.GCS_BUCKET_NAME ? 'set' : 'not set'}`)
+    console.log(`[INTERVIEW] Environment check - GOOGLE_APPLICATION_CREDENTIALS: ${process.env.GOOGLE_APPLICATION_CREDENTIALS ? 'set (' + process.env.GOOGLE_APPLICATION_CREDENTIALS.length + ' chars)' : 'not set'}`)
+    
     const { signedUrl, publicUrl } = await generateSignedUploadUrl(
       filePath,
       mimeType || 'application/octet-stream',

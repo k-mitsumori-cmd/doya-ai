@@ -7,7 +7,14 @@ let bucketName: string | null = null
 
 async function getStorage(): Promise<Storage> {
   if (!storage) {
-    // 必須環境変数の確認
+    // 必須環境変数の確認（デバッグ情報付き）
+    console.log('[GCS] Checking environment variables...')
+    console.log('[GCS] GOOGLE_CLOUD_PROJECT_ID:', process.env.GOOGLE_CLOUD_PROJECT_ID ? `✓ (${process.env.GOOGLE_CLOUD_PROJECT_ID.substring(0, 20)}...)` : '✗')
+    console.log('[GCS] GCS_BUCKET_NAME:', process.env.GCS_BUCKET_NAME ? `✓ (${process.env.GCS_BUCKET_NAME})` : '✗')
+    console.log('[GCS] GOOGLE_APPLICATION_CREDENTIALS:', process.env.GOOGLE_APPLICATION_CREDENTIALS ? `✓ (${process.env.GOOGLE_APPLICATION_CREDENTIALS.substring(0, 50)}...)` : '✗')
+    console.log('[GCS] GCS_CLIENT_EMAIL:', process.env.GCS_CLIENT_EMAIL ? `✓ (${process.env.GCS_CLIENT_EMAIL})` : '✗')
+    console.log('[GCS] GCS_PRIVATE_KEY:', process.env.GCS_PRIVATE_KEY ? `✓ (${process.env.GCS_PRIVATE_KEY.substring(0, 50)}...)` : '✗')
+    
     if (!process.env.GOOGLE_CLOUD_PROJECT_ID) {
       console.error('[GCS] GOOGLE_CLOUD_PROJECT_ID is not set')
       throw new Error('GOOGLE_CLOUD_PROJECT_ID環境変数が設定されていません。Vercelダッシュボードで環境変数を設定してください。')
@@ -43,26 +50,46 @@ async function getStorage(): Promise<Storage> {
     if (!credentials && process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       try {
         // JSON文字列として設定されている場合
-        credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS)
-        console.log('[GCS] Using GOOGLE_APPLICATION_CREDENTIALS')
+        const credsStr = process.env.GOOGLE_APPLICATION_CREDENTIALS.trim()
+        console.log('[GCS] Attempting to parse GOOGLE_APPLICATION_CREDENTIALS, length:', credsStr.length)
+        
+        // JSONパースを試みる
+        credentials = JSON.parse(credsStr)
+        console.log('[GCS] Successfully parsed GOOGLE_APPLICATION_CREDENTIALS')
+        console.log('[GCS] Credentials type:', credentials.type)
+        console.log('[GCS] Credentials project_id:', credentials.project_id)
+        console.log('[GCS] Credentials client_email:', credentials.client_email ? credentials.client_email.substring(0, 30) + '...' : 'missing')
+        console.log('[GCS] Credentials private_key:', credentials.private_key ? credentials.private_key.substring(0, 30) + '...' : 'missing')
         
         // 認証情報の検証
         if (!credentials.type || credentials.type !== 'service_account') {
+          console.error('[GCS] Invalid credentials type:', credentials.type)
           throw new Error('GOOGLE_APPLICATION_CREDENTIALSの形式が正しくありません。サービスアカウントキーのJSONである必要があります。')
         }
         if (!credentials.project_id) {
+          console.error('[GCS] Missing project_id in credentials')
           throw new Error('GOOGLE_APPLICATION_CREDENTIALSにproject_idが含まれていません。')
         }
         if (!credentials.private_key) {
+          console.error('[GCS] Missing private_key in credentials')
           throw new Error('GOOGLE_APPLICATION_CREDENTIALSにprivate_keyが含まれていません。')
         }
         if (!credentials.client_email) {
+          console.error('[GCS] Missing client_email in credentials')
           throw new Error('GOOGLE_APPLICATION_CREDENTIALSにclient_emailが含まれていません。')
         }
+        
+        console.log('[GCS] Using GOOGLE_APPLICATION_CREDENTIALS - validation passed')
       } catch (parseError: any) {
+        console.error('[GCS] Error parsing GOOGLE_APPLICATION_CREDENTIALS:', parseError)
         if (parseError instanceof SyntaxError) {
-          console.error('[GCS] Failed to parse GOOGLE_APPLICATION_CREDENTIALS as JSON:', parseError.message)
-          throw new Error('GOOGLE_APPLICATION_CREDENTIALSが有効なJSON形式ではありません。JSONファイルの内容をそのまま貼り付けてください。')
+          console.error('[GCS] JSON parse error details:', {
+            message: parseError.message,
+            stack: parseError.stack,
+            inputLength: process.env.GOOGLE_APPLICATION_CREDENTIALS?.length,
+            inputPreview: process.env.GOOGLE_APPLICATION_CREDENTIALS?.substring(0, 100),
+          })
+          throw new Error('GOOGLE_APPLICATION_CREDENTIALSが有効なJSON形式ではありません。JSONファイルの内容をそのまま貼り付けてください。\nエラー詳細: ' + parseError.message)
         }
         throw parseError
       }
