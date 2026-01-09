@@ -33,6 +33,7 @@ type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
 const MAX_FILE_SIZE = 4.75 * 1024 * 1024 * 1024 // 4.75GB（Vercel Blob Storageの上限）
 const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB（Vercelのサーバーレス関数のリクエストボディサイズ制限）
 const CHUNK_SIZE = 4 * 1024 * 1024 // 4MB（チャンクサイズ - Vercelの制限より少し小さく）
+const USE_CHUNK_UPLOAD = false // チャンクアップロードを無効化（trueにするとチャンクアップロードを使用）
 const SUPPORTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg']
 const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm']
 const SUPPORTED_TEXT_TYPES = ['text/plain', 'text/markdown']
@@ -157,7 +158,7 @@ export default function InterviewPage() {
     let totalSeconds = 0
 
     // 1. アップロード時間の推定
-    if (uploadedFile.size > VERCEL_LIMIT) {
+    if (USE_CHUNK_UPLOAD && uploadedFile.size > VERCEL_LIMIT) {
       // チャンクアップロードの場合
       const totalChunks = Math.ceil(uploadedFile.size / CHUNK_SIZE)
       const chunkUploadTime = totalChunks * 0.5 // チャンクあたり0.5秒
@@ -222,8 +223,19 @@ export default function InterviewPage() {
       }
     }
     
-    // 4.5MBを超える場合はチャンクアップロードを使用（Vercelのサーバーレス関数制限）
-    if (file.size > VERCEL_LIMIT) {
+    // チャンクアップロードが無効化されている場合、4.5MBを超えるファイルはエラー
+    if (!USE_CHUNK_UPLOAD && file.size > VERCEL_LIMIT) {
+      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
+      const limitMB = (VERCEL_LIMIT / 1024 / 1024).toFixed(2)
+      return {
+        valid: false,
+        error: 'ファイルサイズが大きすぎます',
+        details: `最大ファイルサイズ: ${limitMB}MB\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB > ${limitMB}MB）\n\n${limitMB}MBを超えるファイルはアップロードできません。ファイルを分割するか、より小さなファイルサイズに圧縮してください。`,
+      }
+    }
+    
+    // チャンクアップロードが有効な場合、4.5MBを超える場合はチャンクアップロードを使用
+    if (USE_CHUNK_UPLOAD && file.size > VERCEL_LIMIT) {
       return {
         valid: true,
         useChunk: true, // チャンクアップロードを使用するフラグ
@@ -836,8 +848,8 @@ export default function InterviewPage() {
             throw new Error(`${errorMsg}\n${errorDetails}`)
           }
           
-          // チャンクアップロードが必要な場合は自動的にリダイレクト
-          if (errorData.useChunkUpload) {
+          // チャンクアップロードが有効で、サーバーがチャンクアップロードを要求した場合
+          if (USE_CHUNK_UPLOAD && errorData.useChunkUpload) {
             console.log(`[INTERVIEW] Server requested chunk upload, switching to chunk upload...`)
             uploadData = await uploadFileInChunks(file, newProjectId, guestId)
           } else {
