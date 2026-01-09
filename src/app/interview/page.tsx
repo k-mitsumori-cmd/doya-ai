@@ -915,33 +915,152 @@ export default function InterviewPage() {
           
           // タイムアウトを設定（ファイルサイズに応じて調整）
           // 大きなファイルの場合、より長いタイムアウトを設定
-          // 1MBあたり15秒、最低5分、最大2時間
+          // 1MBあたり20秒、最低10分、最大3時間
           const timeoutMs = Math.min(
-            2 * 60 * 60 * 1000, // 最大2時間
-            Math.max(300000, file.size / 1024 / 1024 * 15000) // 最低5分、1MBあたり15秒
+            3 * 60 * 60 * 1000, // 最大3時間
+            Math.max(600000, file.size / 1024 / 1024 * 20000) // 最低10分、1MBあたり20秒
           )
           console.log(`[INTERVIEW] Upload timeout: ${(timeoutMs / 1000 / 60).toFixed(1)} minutes`)
           
-          // AbortControllerを使用してタイムアウトを実装
-          const controller = new AbortController()
-          const timeoutId = setTimeout(() => {
-            controller.abort()
-          }, timeoutMs)
+          // 大きなファイル（100MB以上）の場合はXMLHttpRequestを使用してプログレス表示
+          const useXHR = file.size > 100 * 1024 * 1024 // 100MB以上
           
           try {
-            const uploadRes = await fetch(signedUrlData.signedUrl, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': file.type || 'application/octet-stream',
-              },
-              body: file,
-              signal: controller.signal,
-            })
+            let uploadRes: Response
             
-            clearTimeout(timeoutId)
+            if (useXHR) {
+              // XMLHttpRequestを使用（プログレス表示可能）
+              console.log('[INTERVIEW] Using XMLHttpRequest for large file upload with progress tracking')
+              uploadRes = await new Promise<Response>((resolve, reject) => {
+                const xhr = new XMLHttpRequest()
+                let timeoutId: NodeJS.Timeout | null = null
+                let isResolved = false
+                
+                // タイムアウト処理（xhr.timeoutと併用）
+                timeoutId = setTimeout(() => {
+                  if (!isResolved) {
+                    console.error('[INTERVIEW] Upload timeout reached, aborting...')
+                    xhr.abort()
+                    isResolved = true
+                    reject(new Error('Upload timeout'))
+                  }
+                }, timeoutMs)
+                
+                xhr.upload.addEventListener('progress', (e) => {
+                  if (e.lengthComputable && !isResolved) {
+                    const percentComplete = (e.loaded / e.total) * 100
+                    const uploadProgressPercent = 40 + (percentComplete * 0.05) // 40-45%の範囲
+                    setProgress(Math.min(45, uploadProgressPercent))
+                    if (percentComplete % 10 < 1 || percentComplete > 99) {
+                      // 10%ごと、または99%以上でログ出力
+                      console.log(`[INTERVIEW] Upload progress: ${percentComplete.toFixed(1)}% (${(e.loaded / 1024 / 1024).toFixed(2)} MB / ${(e.total / 1024 / 1024).toFixed(2)} MB)`)
+                    }
+                  }
+                })
+                
+                xhr.addEventListener('load', () => {
+                  if (isResolved) return
+                  if (timeoutId) clearTimeout(timeoutId)
+                  
+                  console.log(`[INTERVIEW] XHR load event - status: ${xhr.status}, statusText: ${xhr.statusText}`)
+                  
+                  if (xhr.status === 0) {
+                    // ネットワークエラーまたはCORSエラーの可能性
+                    isResolved = true
+                    reject(new Error('Network error: Status 0 (possible CORS or network issue)'))
+                    return
+                  }
+                  
+                  if (xhr.status >= 200 && xhr.status < 300) {
+                    // Responseオブジェクトを構築（okプロパティを正しく設定）
+                    const response = new Response(null, {
+                      status: xhr.status,
+                      statusText: xhr.statusText,
+                      headers: new Headers(),
+                    })
+                    // Responseオブジェクトにokプロパティを追加（readonlyなのでObject.definePropertyを使用）
+                    Object.defineProperty(response, 'ok', {
+                      value: true,
+                      writable: false,
+                      enumerable: true,
+                      configurable: false,
+                    })
+                    isResolved = true
+                    resolve(response)
+                  } else {
+                    // HTTPエラー
+                    const errorText = xhr.responseText || xhr.statusText
+                    isResolved = true
+                    reject(new Error(`HTTP ${xhr.status}: ${errorText}`))
+                  }
+                })
+                
+                xhr.addEventListener('error', (e) => {
+                  if (isResolved) return
+                  if (timeoutId) clearTimeout(timeoutId)
+                  console.error('[INTERVIEW] XHR error event:', e)
+                  isResolved = true
+                  reject(new Error(`Network error during upload: ${xhr.statusText || 'Unknown error'}`))
+                })
+                
+                xhr.addEventListener('abort', () => {
+                  if (isResolved) return
+                  if (timeoutId) clearTimeout(timeoutId)
+                  console.warn('[INTERVIEW] XHR abort event')
+                  isResolved = true
+                  reject(new Error('Upload aborted'))
+                })
+                
+                xhr.addEventListener('timeout', () => {
+                  if (isResolved) return
+                  if (timeoutId) clearTimeout(timeoutId)
+                  console.error('[INTERVIEW] XHR timeout event')
+                  isResolved = true
+                  reject(new Error('Upload timeout'))
+                })
+                
+                try {
+                  xhr.open('PUT', signedUrlData.signedUrl)
+                  xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream')
+                  xhr.timeout = timeoutMs
+                  console.log('[INTERVIEW] Starting XHR upload...')
+                  xhr.send(file)
+                } catch (openError) {
+                  if (timeoutId) clearTimeout(timeoutId)
+                  isResolved = true
+                  console.error('[INTERVIEW] XHR open/send error:', openError)
+                  reject(new Error(`Failed to start upload: ${openError instanceof Error ? openError.message : 'Unknown error'}`))
+                }
+              })
+            } else {
+              // fetch APIを使用（小さなファイル）
+              const controller = new AbortController()
+              const timeoutId = setTimeout(() => {
+                controller.abort()
+              }, timeoutMs)
+              
+              uploadRes = await fetch(signedUrlData.signedUrl, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': file.type || 'application/octet-stream',
+                },
+                body: file,
+                signal: controller.signal,
+              })
+              
+              clearTimeout(timeoutId)
+            }
 
-            if (!uploadRes.ok) {
-              const errorText = await uploadRes.text().catch(() => '')
+            // レスポンスのチェック
+            // XMLHttpRequestの場合は、すでにエラーハンドリングされているため、ここに到達した場合は成功
+            if (!uploadRes) {
+              throw new Error('No response received from upload')
+            }
+            
+            // Responseオブジェクトのokプロパティをチェック
+            const isOk = uploadRes.status >= 200 && uploadRes.status < 300
+            if (!isOk) {
+              const errorText = await uploadRes.text().catch(() => uploadRes.statusText || 'Unknown error')
               console.error('[INTERVIEW] GCS upload failed:', uploadRes.status, errorText)
               
               // 認証エラーの場合
@@ -961,10 +1080,11 @@ export default function InterviewPage() {
               
               // 一時的なエラーの場合はリトライ
               if (uploadRes.status >= 500 && retryCount < maxRetries - 1) {
-                console.warn(`[INTERVIEW] Server error ${uploadRes.status}, will retry...`)
+                const retryDelay = Math.min(10000, 3000 * (retryCount + 1)) // 3秒、6秒、9秒（最大10秒）
+                console.warn(`[INTERVIEW] Server error ${uploadRes.status}, will retry after ${retryDelay}ms...`)
                 lastError = new Error(`HTTP ${uploadRes.status}: ${errorText || uploadRes.statusText}`)
                 retryCount++
-                await new Promise(resolve => setTimeout(resolve, 2000 * retryCount)) // 指数バックオフ
+                await new Promise(resolve => setTimeout(resolve, retryDelay))
                 continue
               }
               
@@ -980,15 +1100,20 @@ export default function InterviewPage() {
             setProgress(45)
             break // 成功したらループを抜ける
           } catch (fetchError: any) {
-            clearTimeout(timeoutId)
+            // タイムアウトIDのクリア（fetch APIの場合のみ）
+            if (!useXHR) {
+              // fetch APIの場合はtimeoutIdが定義されている
+              // XMLHttpRequestの場合はPromise内で処理されるため、ここでは不要
+            }
             
             // AbortError（タイムアウト）の場合
-            if (fetchError.name === 'AbortError' || controller.signal.aborted) {
+            if (fetchError.name === 'AbortError' || fetchError.message === 'Upload timeout' || fetchError.message === 'Upload aborted') {
               if (retryCount < maxRetries - 1) {
-                console.warn(`[INTERVIEW] Upload timeout, will retry...`)
+                const retryDelay = Math.min(10000, 3000 * (retryCount + 1)) // 3秒、6秒、9秒（最大10秒）
+                console.warn(`[INTERVIEW] Upload timeout, will retry after ${retryDelay}ms...`)
                 lastError = new Error('アップロードがタイムアウトしました')
                 retryCount++
-                await new Promise(resolve => setTimeout(resolve, 2000 * retryCount))
+                await new Promise(resolve => setTimeout(resolve, retryDelay))
                 continue
               }
               throw new Error(
@@ -1010,10 +1135,11 @@ export default function InterviewPage() {
           // ネットワークエラーの場合
           if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('fetch')) {
             if (retryCount < maxRetries - 1) {
-              console.warn(`[INTERVIEW] Network error, will retry (${retryCount + 1}/${maxRetries})...`)
+              const retryDelay = Math.min(10000, 3000 * (retryCount + 1)) // 3秒、6秒、9秒（最大10秒）
+              console.warn(`[INTERVIEW] Network error, will retry (${retryCount + 1}/${maxRetries}) after ${retryDelay}ms...`)
               lastError = error as Error
               retryCount++
-              await new Promise(resolve => setTimeout(resolve, 2000 * retryCount))
+              await new Promise(resolve => setTimeout(resolve, retryDelay))
               continue
             }
             
@@ -1034,10 +1160,11 @@ export default function InterviewPage() {
           
           // その他のエラーでリトライ可能な場合
           if (retryCount < maxRetries - 1 && !errorMessage.includes('拒否') && !errorMessage.includes('権限')) {
-            console.warn(`[INTERVIEW] Upload error, will retry (${retryCount + 1}/${maxRetries}):`, errorMessage)
+            const retryDelay = Math.min(10000, 3000 * (retryCount + 1)) // 3秒、6秒、9秒（最大10秒）
+            console.warn(`[INTERVIEW] Upload error, will retry (${retryCount + 1}/${maxRetries}) after ${retryDelay}ms:`, errorMessage)
             lastError = error as Error
             retryCount++
-            await new Promise(resolve => setTimeout(resolve, 2000 * retryCount))
+            await new Promise(resolve => setTimeout(resolve, retryDelay))
             continue
           }
           
