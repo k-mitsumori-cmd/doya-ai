@@ -1281,6 +1281,16 @@ export default function InterviewPage() {
             const errorMsg = errorData.error || '文字起こしに失敗しました'
             const errorDetails = errorData.details || ''
             console.error('[INTERVIEW] Transcription failed:', transcribeRes.status, errorMsg, errorDetails)
+            
+            // 413エラー（ファイルサイズ制限）の場合は、より詳細なメッセージを表示
+            if (transcribeRes.status === 413) {
+              throw new Error(
+                `${errorMsg}\n\n${errorDetails}\n\n` +
+                `注意: 大きなファイル（25MB以上）は文字起こしできません。\n` +
+                `ファイルを分割するか、音声のみを抽出してください。`
+              )
+            }
+            
             throw new Error(`${errorMsg}${errorDetails ? '\n' + errorDetails : ''}`)
           }
 

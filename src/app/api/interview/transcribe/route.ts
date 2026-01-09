@@ -74,6 +74,41 @@ export async function POST(request: NextRequest) {
 
     const openai = new OpenAI({ apiKey: openaiApiKey })
 
+    // OpenAI Whisper APIのファイルサイズ制限: 25MB
+    const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25MB
+    
+    // ファイルサイズをチェック
+    if (material.fileSize && material.fileSize > MAX_FILE_SIZE) {
+      const fileSizeMB = (material.fileSize / 1024 / 1024).toFixed(2)
+      const maxSizeMB = (MAX_FILE_SIZE / 1024 / 1024).toFixed(0)
+      console.warn(`[INTERVIEW] File size (${fileSizeMB} MB) exceeds OpenAI Whisper API limit (${maxSizeMB} MB)`)
+      return NextResponse.json(
+        { 
+          error: 'ファイルサイズが大きすぎます',
+          details: `OpenAI Whisper APIは最大${maxSizeMB}MBのファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください\n2. または、動画ファイルの場合は音声のみを抽出してください`
+        },
+        { status: 413 }
+      )
+    }
+
+    // ファイルサイズをチェック（Vercelのサーバーレス関数のメモリ制限とOpenAI Whisper APIの制限を考慮）
+    // OpenAI Whisper APIの制限: 25MB
+    // Vercelのサーバーレス関数のメモリ制限: 約25MB（実際の制限は環境によって異なる）
+    const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25MB
+    
+    if (material.fileSize && material.fileSize > MAX_FILE_SIZE) {
+      const fileSizeMB = (material.fileSize / 1024 / 1024).toFixed(2)
+      const maxSizeMB = (MAX_FILE_SIZE / 1024 / 1024).toFixed(0)
+      console.warn(`[INTERVIEW] File size (${fileSizeMB} MB) exceeds limit (${maxSizeMB} MB)`)
+      return NextResponse.json(
+        { 
+          error: 'ファイルサイズが大きすぎます',
+          details: `文字起こし機能は最大${maxSizeMB}MBのファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください`
+        },
+        { status: 413 }
+      )
+    }
+
     // ファイルを読み込む（Google Cloud Storageから取得、またはローカルファイルシステムから）
     let fileBuffer: Buffer
     try {
