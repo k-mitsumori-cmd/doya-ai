@@ -394,7 +394,7 @@ async function sendSlackErrorNotification(webhookUrl: string, data: ErrorNotific
     const statusText = data.httpStatus ? `HTTP ${data.httpStatus}` : 'クライアントエラー'
 
     const message = {
-      text: `${statusEmoji} サービスでエラーが発生しました`,
+      text: `<!channel> ${statusEmoji} サービスでエラーが発生しました`,
       blocks: [
         {
           type: 'header',
@@ -402,6 +402,13 @@ async function sendSlackErrorNotification(webhookUrl: string, data: ErrorNotific
             type: 'plain_text',
             text: `${statusEmoji} サービスエラー発生`,
             emoji: true,
+          },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: '<!channel> チャンネル全体に通知します',
           },
         },
         {
