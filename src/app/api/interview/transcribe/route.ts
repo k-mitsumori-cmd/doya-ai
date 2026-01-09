@@ -6,7 +6,8 @@ import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import OpenAI from 'openai'
-import { getFileFromGCS, generateSignedDownloadUrl } from '@/lib/gcs'
+import { getFileFromGCS } from '@/lib/gcs'
+import { notifyApiError } from '@/lib/errorHandler'
 
 // Vercel等のサーバーレス環境では /tmp を使用
 function getUploadBaseDir() {
@@ -23,6 +24,9 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export async function POST(request: NextRequest) {
+  let materialId: string | undefined
+  let projectId: string | undefined
+  
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id
@@ -33,7 +37,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { materialId, projectId } = body
+    materialId = body.materialId
+    projectId = body.projectId
 
     if (!materialId || !projectId) {
       return NextResponse.json({ error: 'Missing materialId or projectId' }, { status: 400 })
