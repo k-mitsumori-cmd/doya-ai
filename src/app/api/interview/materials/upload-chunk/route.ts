@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { writeFile, mkdir, appendFile, readFile, unlink } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
-import { put } from '@vercel/blob'
+import { put, del } from '@vercel/blob'
 
 // Vercel等のサーバーレス環境では /tmp を使用
 function getUploadBaseDir() {
@@ -538,30 +538,104 @@ export async function POST(request: NextRequest) {
               
               // 自動クリーンアップを試行
               let cleanupAttempted = false
-              let cleanupResult = null
+              let cleanupResult: any = null
               try {
-                const cleanupRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/interview/storage/cleanup`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    targetFreeBytes: finalFileStats.size + (50 * 1024 * 1024), // ファイルサイズ + 50MBの余裕
-                  }),
-                })
+                // クリーンアップ処理を直接実行
+                const targetFreeBytes = finalFileStats.size + (50 * 1024 * 1024) // ファイルサイズ + 50MBの余裕
                 
-                if (cleanupRes.ok) {
-                  cleanupResult = await cleanupRes.json()
-                  cleanupAttempted = true
-                  console.log(`[INTERVIEW] Cleanup attempted: ${cleanupResult.deletedCount} projects deleted, ${cleanupResult.freedBytes} bytes freed`)
+                // 現在の使用状況を取得
+                const materials = await prisma.interviewMaterial.findMany({
+                  include: {
+                    project: {
+                      select: {
+                        id: true,
+                        createdAt: true,
+                        title: true,
+                      },
+                    },
+                  },
+                  orderBy: {
+                    project: {
+                      createdAt: 'asc', // 古い順
+                    },
+                  },
+                })
+
+                const totalSize = materials.reduce((sum, material) => {
+                  return sum + (material.fileSize || 0)
+                }, 0)
+
+                const HOBBY_PLAN_LIMIT = 1024 * 1024 * 1024
+                const currentFreeBytes = HOBBY_PLAN_LIMIT - totalSize
+
+                // 必要な容量を計算
+                if (currentFreeBytes < targetFreeBytes) {
+                  const neededBytes = targetFreeBytes - currentFreeBytes
+                  const projectsToDelete = new Set<string>()
+                  let freedBytes = 0
+
+                  for (const material of materials) {
+                    if (freedBytes >= neededBytes) {
+                      break
+                    }
+
+                    const projectId = material.projectId
+                    if (!projectsToDelete.has(projectId)) {
+                      projectsToDelete.add(projectId)
+                      freedBytes += material.fileSize || 0
+                    }
+                  }
+
+                  let deletedCount = 0
+
+                  // プロジェクトを削除
+                  for (const projectId of projectsToDelete) {
+                    try {
+                      // ファイルを先に削除
+                      const projectMaterials = await prisma.interviewMaterial.findMany({
+                        where: { projectId },
+                        select: { fileUrl: true },
+                      })
+
+                      for (const material of projectMaterials) {
+                        if (material.fileUrl) {
+                          try {
+                            await del(material.fileUrl)
+                          } catch (e) {
+                            // エラーは無視
+                          }
+                        }
+                      }
+
+                      // データベースから削除
+                      await prisma.interviewProject.delete({
+                        where: { id: projectId },
+                      })
+
+                      deletedCount++
+                      console.log(`[INTERVIEW] Auto-deleted project for cleanup: ${projectId}`)
+                    } catch (error) {
+                      console.error(`[INTERVIEW] Failed to delete project ${projectId}:`, error)
+                    }
+                  }
+
+                  if (deletedCount > 0) {
+                    cleanupAttempted = true
+                    cleanupResult = {
+                      deletedCount,
+                      freedBytes,
+                    }
+                    console.log(`[INTERVIEW] Cleanup completed: ${deletedCount} projects deleted, ${freedBytes} bytes freed`)
+                  }
                 }
               } catch (cleanupError) {
                 console.error('[INTERVIEW] Cleanup attempt failed:', cleanupError)
+                // クリーンアップに失敗しても続行
               }
               
               if (cleanupAttempted && cleanupResult && cleanupResult.deletedCount > 0) {
                 errorDetails = `Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達していましたが、自動で古いプロジェクトを削除しました。\n\n削除されたプロジェクト数: ${cleanupResult.deletedCount}\n解放された容量: ${formatFileSize(cleanupResult.freedBytes || 0)}\n\n再度アップロードをお試しください。\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
-                // クリーンアップが成功した場合、エラーではなく警告として扱う（リトライ可能）
+                // クリーンアップが成功した場合でも、一度エラーを返して再試行を促す
                 statusCode = 507
               } else {
                 errorDetails = `Vercel Blob Storageの容量制限（Hobbyプラン: 1GB）に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. Vercelのプランをアップグレードする（Proプラン以上では容量が増えます）\n3. 不要なファイルを削除する\n\n現在のファイルサイズ: ${formatFileSize(finalFileStats.size)}`
