@@ -81,20 +81,19 @@ export async function POST(request: NextRequest) {
 
     // ファイルサイズをチェック
     // OpenAI Whisper APIの制限: 25MB
-    // 1GBまでのファイルを処理するため、チャンク分割処理を実装
+    // 注意: 音声/動画ファイルをバイトレベルで分割すると、ファイル構造が壊れてしまいます。
+    // 正しく分割するにはffmpegなどのツールが必要ですが、Vercelのサーバーレス環境では使用できません。
+    // そのため、25MBを超えるファイルの場合は、エラーメッセージを返します。
     const MAX_SINGLE_FILE_SIZE = 25 * 1024 * 1024 // 25MB
-    const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB
-    const CHUNK_SIZE = 20 * 1024 * 1024 // 20MB（安全マージンを含む）
-    const USE_CHUNK_MODE = material.fileSize && material.fileSize > MAX_SINGLE_FILE_SIZE && material.fileSize <= MAX_FILE_SIZE
     
-    if (USE_CHUNK_MODE) {
-      console.log(`[INTERVIEW] Large file detected (${(material.fileSize! / 1024 / 1024).toFixed(2)} MB), using chunk processing`)
-    } else if (material.fileSize && material.fileSize > MAX_FILE_SIZE) {
+    if (material.fileSize && material.fileSize > MAX_SINGLE_FILE_SIZE) {
       const fileSizeMB = (material.fileSize / 1024 / 1024).toFixed(2)
+      const maxSizeMB = (MAX_SINGLE_FILE_SIZE / 1024 / 1024).toFixed(0)
+      console.warn(`[INTERVIEW] File size (${fileSizeMB} MB) exceeds limit (${maxSizeMB} MB)`)
       return NextResponse.json(
         { 
           error: 'ファイルサイズが大きすぎます',
-          details: `最大1GBまでのファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください\n2. 動画ファイルの場合は、音声のみを抽出してください`
+          details: `文字起こし機能は最大${maxSizeMB}MBのファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください（ffmpeg等を使用）\n3. 音声ファイルの場合は、圧縮してからアップロードしてください\n4. オンラインツールを使用してファイルを分割してください`
         },
         { status: 413 }
       )
@@ -199,141 +198,52 @@ export async function POST(request: NextRequest) {
     }
 
     // OpenAI Whisper APIで文字起こし
+    // 注意: ファイルサイズチェックは上で既に行われているため、ここでは25MB以下のファイルのみが処理されます
     let transcriptionText: string
     try {
       const MAX_SINGLE_FILE_SIZE = 25 * 1024 * 1024 // 25MB
-      const CHUNK_SIZE = 20 * 1024 * 1024 // 20MB
       
-      // 大きなファイルの場合はチャンク分割処理
-      if (USE_CHUNK_MODE && material.fileUrl && material.fileUrl.includes('storage.googleapis.com')) {
-        console.log(`[INTERVIEW] Processing large file in chunks (${(material.fileSize! / 1024 / 1024).toFixed(2)} MB)`)
-        
-        const totalSize = material.fileSize!
-        const chunks: Buffer[] = []
-        const chunkCount = Math.ceil(totalSize / CHUNK_SIZE)
-        
-        console.log(`[INTERVIEW] Splitting file into ${chunkCount} chunks`)
-        
-        // 各チャンクを順次取得（メモリ使用量を抑えるため）
-        for (let i = 0; i < chunkCount; i++) {
-          const startByte = i * CHUNK_SIZE
-          const endByte = Math.min(startByte + CHUNK_SIZE - 1, totalSize - 1)
-          
-          console.log(`[INTERVIEW] Fetching chunk ${i + 1}/${chunkCount} (bytes ${startByte}-${endByte})`)
-          
-          try {
-            const chunk = await getFileChunkFromGCS(material.fileUrl, startByte, endByte)
-            chunks.push(chunk)
-            console.log(`[INTERVIEW] Chunk ${i + 1} fetched: ${(chunk.length / 1024 / 1024).toFixed(2)} MB`)
-          } catch (chunkError) {
-            console.error(`[INTERVIEW] Failed to fetch chunk ${i + 1}:`, chunkError)
-            throw new Error(`チャンク ${i + 1} の取得に失敗しました: ${chunkError instanceof Error ? chunkError.message : '不明なエラー'}`)
-          }
-        }
-        
-        // 各チャンクを順次処理して文字起こし
-        const transcriptionParts: string[] = []
-        
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i]
-          console.log(`[INTERVIEW] Processing chunk ${i + 1}/${chunks.length} (${(chunk.length / 1024 / 1024).toFixed(2)} MB)`)
-          
-          try {
-            // チャンクが25MBを超える場合はスキップ（通常は発生しない）
-            if (chunk.length > MAX_SINGLE_FILE_SIZE) {
-              console.warn(`[INTERVIEW] Chunk ${i + 1} is too large (${(chunk.length / 1024 / 1024).toFixed(2)} MB), skipping`)
-              transcriptionParts.push(`[チャンク ${i + 1}: サイズが大きすぎるためスキップしました]`)
-              continue
-            }
-            
-            let fileInput: File | Blob | Buffer
-            if (typeof File !== 'undefined') {
-              fileInput = new File([chunk], `${material.fileName}.chunk${i + 1}`, { type: material.mimeType || 'audio/mpeg' })
-            } else {
-              fileInput = new Blob([chunk], { type: material.mimeType || 'audio/mpeg' })
-            }
-            
-            const OPENAI_API_TIMEOUT = Math.max(300000, chunk.length / 1024 / 1024 * 10000)
-            
-            const transcriptionPromise = openai.audio.transcriptions.create({
-              file: fileInput as any,
-              model: 'whisper-1',
-              language: 'ja',
-              response_format: 'text',
-            })
-            
-            const timeoutPromise = new Promise<never>((_, reject) => {
-              setTimeout(() => {
-                reject(new Error(`チャンク ${i + 1} の処理がタイムアウトしました`))
-              }, OPENAI_API_TIMEOUT)
-            })
-            
-            const chunkTranscription = await Promise.race([transcriptionPromise, timeoutPromise])
-            const chunkText = chunkTranscription as unknown as string
-            
-            if (chunkText && chunkText.trim().length > 0) {
-              transcriptionParts.push(chunkText.trim())
-              console.log(`[INTERVIEW] Chunk ${i + 1} completed: ${chunkText.length} characters`)
-            } else {
-              console.warn(`[INTERVIEW] Chunk ${i + 1} produced empty transcription`)
-            }
-          } catch (chunkError: any) {
-            console.error(`[INTERVIEW] Failed to transcribe chunk ${i + 1}:`, chunkError)
-            // チャンクの処理に失敗した場合は、エラーメッセージを追加して続行
-            transcriptionParts.push(`[チャンク ${i + 1} の処理に失敗しました: ${chunkError?.message || '不明なエラー'}]`)
-          }
-        }
-        
-        // すべてのチャンクの結果を結合
-        transcriptionText = transcriptionParts.join('\n\n')
-        console.log(`[INTERVIEW] All chunks processed. Total length: ${transcriptionText.length} characters`)
-        
-        if (!transcriptionText || transcriptionText.trim().length === 0) {
-          throw new Error('すべてのチャンクの処理に失敗しました')
-        }
-      } else {
-        // 通常の処理（25MB以下のファイル）
-        if (fileBuffer.length > MAX_SINGLE_FILE_SIZE) {
-          const fileSizeMB = (fileBuffer.length / 1024 / 1024).toFixed(2)
-          const maxSizeMB = (MAX_SINGLE_FILE_SIZE / 1024 / 1024).toFixed(0)
-          console.warn(`[INTERVIEW] File size (${fileSizeMB} MB) exceeds limit (${maxSizeMB} MB)`)
-          return NextResponse.json(
-            { 
-              error: 'ファイルサイズが大きすぎます',
-              details: `文字起こし機能は最大${maxSizeMB}MBのファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください`
-            },
-            { status: 413 }
-          )
-        }
-        
-        console.log(`[INTERVIEW] Calling OpenAI Whisper API... (file size: ${(fileBuffer.length / 1024 / 1024).toFixed(2)} MB)`)
-        
-        let fileInput: File | Blob | Buffer
-        if (typeof File !== 'undefined') {
-          fileInput = new File([fileBuffer], material.fileName, { type: material.mimeType || 'audio/mpeg' })
-        } else {
-          fileInput = new Blob([fileBuffer], { type: material.mimeType || 'audio/mpeg' })
-        }
-
-        const OPENAI_API_TIMEOUT = Math.max(300000, fileBuffer.length / 1024 / 1024 * 10000)
-        
-        const transcriptionPromise = openai.audio.transcriptions.create({
-          file: fileInput as any,
-          model: 'whisper-1',
-          language: 'ja',
-          response_format: 'text',
-        })
-
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error(`OpenAI API呼び出しがタイムアウトしました（${(OPENAI_API_TIMEOUT / 1000 / 60).toFixed(1)}分）`))
-          }, OPENAI_API_TIMEOUT)
-        })
-
-        const transcription = await Promise.race([transcriptionPromise, timeoutPromise])
-        transcriptionText = transcription as unknown as string
-        console.log(`[INTERVIEW] Transcription completed: ${transcriptionText.length} characters`)
+      // ファイルサイズの再チェック（念のため）
+      if (fileBuffer.length > MAX_SINGLE_FILE_SIZE) {
+        const fileSizeMB = (fileBuffer.length / 1024 / 1024).toFixed(2)
+        const maxSizeMB = (MAX_SINGLE_FILE_SIZE / 1024 / 1024).toFixed(0)
+        console.warn(`[INTERVIEW] File size (${fileSizeMB} MB) exceeds limit (${maxSizeMB} MB)`)
+        return NextResponse.json(
+          { 
+            error: 'ファイルサイズが大きすぎます',
+            details: `文字起こし機能は最大${maxSizeMB}MBのファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください（ffmpeg等を使用）\n3. 音声ファイルの場合は、圧縮してからアップロードしてください\n4. オンラインツールを使用してファイルを分割してください`
+          },
+          { status: 413 }
+        )
       }
+      
+      console.log(`[INTERVIEW] Calling OpenAI Whisper API... (file size: ${(fileBuffer.length / 1024 / 1024).toFixed(2)} MB)`)
+      
+      let fileInput: File | Blob | Buffer
+      if (typeof File !== 'undefined') {
+        fileInput = new File([fileBuffer], material.fileName, { type: material.mimeType || 'audio/mpeg' })
+      } else {
+        fileInput = new Blob([fileBuffer], { type: material.mimeType || 'audio/mpeg' })
+      }
+
+      const OPENAI_API_TIMEOUT = Math.max(300000, fileBuffer.length / 1024 / 1024 * 10000)
+      
+      const transcriptionPromise = openai.audio.transcriptions.create({
+        file: fileInput as any,
+        model: 'whisper-1',
+        language: 'ja',
+        response_format: 'text',
+      })
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`OpenAI API呼び出しがタイムアウトしました（${(OPENAI_API_TIMEOUT / 1000 / 60).toFixed(1)}分）`))
+        }, OPENAI_API_TIMEOUT)
+      })
+
+      const transcription = await Promise.race([transcriptionPromise, timeoutPromise])
+      transcriptionText = transcription as unknown as string
+      console.log(`[INTERVIEW] Transcription completed: ${transcriptionText.length} characters`)
     } catch (openaiError: any) {
       console.error('[INTERVIEW] OpenAI Whisper API error:', openaiError)
       
