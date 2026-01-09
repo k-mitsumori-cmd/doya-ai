@@ -903,67 +903,145 @@ export default function InterviewPage() {
 
       // 2-2. 署名付きURLを使用して直接GCSにアップロード
       let uploadProgress = 0
-      try {
-        console.log('[INTERVIEW] Uploading file to GCS:', signedUrlData.filePath)
-        setProgress(40)
-        
-        const uploadRes = await fetch(signedUrlData.signedUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': file.type || 'application/octet-stream',
-          },
-          body: file,
-        })
-
-        if (!uploadRes.ok) {
-          const errorText = await uploadRes.text().catch(() => '')
-          console.error('[INTERVIEW] GCS upload failed:', uploadRes.status, errorText)
+      const maxRetries = 3
+      let retryCount = 0
+      let lastError: Error | null = null
+      
+      while (retryCount < maxRetries) {
+        try {
+          console.log(`[INTERVIEW] Uploading file to GCS (attempt ${retryCount + 1}/${maxRetries}):`, signedUrlData.filePath)
+          console.log(`[INTERVIEW] File size: ${(file.size / 1024 / 1024).toFixed(2)} MB`)
+          setProgress(40)
           
-          // 認証エラーの場合
-          if (uploadRes.status === 401 || uploadRes.status === 403) {
+          // タイムアウトを設定（ファイルサイズに応じて調整）
+          const timeoutMs = Math.max(300000, file.size / 1024 / 1024 * 10000) // 最低5分、1MBあたり10秒
+          console.log(`[INTERVIEW] Upload timeout: ${(timeoutMs / 1000).toFixed(0)} seconds`)
+          
+          // AbortControllerを使用してタイムアウトを実装
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => {
+            controller.abort()
+          }, timeoutMs)
+          
+          try {
+            const uploadRes = await fetch(signedUrlData.signedUrl, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': file.type || 'application/octet-stream',
+              },
+              body: file,
+              signal: controller.signal,
+            })
+            
+            clearTimeout(timeoutId)
+
+            if (!uploadRes.ok) {
+              const errorText = await uploadRes.text().catch(() => '')
+              console.error('[INTERVIEW] GCS upload failed:', uploadRes.status, errorText)
+              
+              // 認証エラーの場合
+              if (uploadRes.status === 401 || uploadRes.status === 403) {
+                throw new Error(
+                  `Google Cloud Storageへのアップロードが拒否されました。\n\n` +
+                  `HTTPステータス: ${uploadRes.status} ${uploadRes.statusText}\n\n` +
+                  `考えられる原因:\n` +
+                  `1. 署名付きURLの有効期限が切れている\n` +
+                  `2. サービスアカウントの権限が不足している\n` +
+                  `3. バケットへのアクセス権限がない\n\n` +
+                  `対処方法:\n` +
+                  `1. ページをリロードして再度お試しください\n` +
+                  `2. Vercelダッシュボードで環境変数を確認してください`
+                )
+              }
+              
+              // 一時的なエラーの場合はリトライ
+              if (uploadRes.status >= 500 && retryCount < maxRetries - 1) {
+                console.warn(`[INTERVIEW] Server error ${uploadRes.status}, will retry...`)
+                lastError = new Error(`HTTP ${uploadRes.status}: ${errorText || uploadRes.statusText}`)
+                retryCount++
+                await new Promise(resolve => setTimeout(resolve, 2000 * retryCount)) // 指数バックオフ
+                continue
+              }
+              
+              throw new Error(
+                `Google Cloud Storageへのアップロードに失敗しました。\n\n` +
+                `HTTPステータス: ${uploadRes.status} ${uploadRes.statusText}\n` +
+                `エラー詳細: ${errorText || '不明'}`
+              )
+            }
+
+            console.log(`[INTERVIEW] File uploaded to GCS successfully: ${signedUrlData.filePath}`)
+            uploadProgress = 100
+            setProgress(45)
+            break // 成功したらループを抜ける
+          } catch (fetchError: any) {
+            clearTimeout(timeoutId)
+            
+            // AbortError（タイムアウト）の場合
+            if (fetchError.name === 'AbortError' || controller.signal.aborted) {
+              if (retryCount < maxRetries - 1) {
+                console.warn(`[INTERVIEW] Upload timeout, will retry...`)
+                lastError = new Error('アップロードがタイムアウトしました')
+                retryCount++
+                await new Promise(resolve => setTimeout(resolve, 2000 * retryCount))
+                continue
+              }
+              throw new Error(
+                `アップロードがタイムアウトしました。\n\n` +
+                `ファイルサイズ: ${(file.size / 1024 / 1024).toFixed(2)} MB\n` +
+                `タイムアウト時間: ${(timeoutMs / 1000).toFixed(0)} 秒\n\n` +
+                `対処方法:\n` +
+                `1. ファイルサイズを小さくしてください（推奨: 200MB以下）\n` +
+                `2. インターネット接続を確認してください\n` +
+                `3. しばらく待ってから再度お試しください`
+              )
+            }
+            
+            throw fetchError
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+          
+          // ネットワークエラーの場合
+          if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('fetch')) {
+            if (retryCount < maxRetries - 1) {
+              console.warn(`[INTERVIEW] Network error, will retry (${retryCount + 1}/${maxRetries})...`)
+              lastError = error as Error
+              retryCount++
+              await new Promise(resolve => setTimeout(resolve, 2000 * retryCount))
+              continue
+            }
+            
+            console.error('[INTERVIEW] Network error during GCS upload (final attempt):', error)
             throw new Error(
-              `Google Cloud Storageへのアップロードが拒否されました。\n\n` +
-              `HTTPステータス: ${uploadRes.status} ${uploadRes.statusText}\n\n` +
+              `Google Cloud Storageへのアップロード中にネットワークエラーが発生しました。\n\n` +
               `考えられる原因:\n` +
-              `1. 署名付きURLの有効期限が切れている\n` +
-              `2. サービスアカウントの権限が不足している\n` +
-              `3. バケットへのアクセス権限がない\n\n` +
+              `1. インターネット接続が不安定\n` +
+              `2. ファイルサイズが大きすぎる（${(file.size / 1024 / 1024).toFixed(2)} MB）\n` +
+              `3. タイムアウトが発生した\n\n` +
               `対処方法:\n` +
-              `1. ページをリロードして再度お試しください\n` +
-              `2. Vercelダッシュボードで環境変数を確認してください`
+              `1. インターネット接続を確認してください\n` +
+              `2. ファイルサイズを確認してください（推奨: 200MB以下）\n` +
+              `3. しばらく待ってから再度お試しください`
             )
           }
           
-          throw new Error(
-            `Google Cloud Storageへのアップロードに失敗しました。\n\n` +
-            `HTTPステータス: ${uploadRes.status} ${uploadRes.statusText}\n` +
-            `エラー詳細: ${errorText || '不明'}`
-          )
+          // その他のエラーでリトライ可能な場合
+          if (retryCount < maxRetries - 1 && !errorMessage.includes('拒否') && !errorMessage.includes('権限')) {
+            console.warn(`[INTERVIEW] Upload error, will retry (${retryCount + 1}/${maxRetries}):`, errorMessage)
+            lastError = error as Error
+            retryCount++
+            await new Promise(resolve => setTimeout(resolve, 2000 * retryCount))
+            continue
+          }
+          
+          throw error
         }
-
-        console.log(`[INTERVIEW] File uploaded to GCS successfully: ${signedUrlData.filePath}`)
-        uploadProgress = 100
-        setProgress(45)
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '不明なエラー'
-        
-        // ネットワークエラーの場合
-        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError') || errorMessage.includes('fetch')) {
-          console.error('[INTERVIEW] Network error during GCS upload:', error)
-          throw new Error(
-            `Google Cloud Storageへのアップロード中にネットワークエラーが発生しました。\n\n` +
-            `考えられる原因:\n` +
-            `1. インターネット接続が不安定\n` +
-            `2. ファイルサイズが大きすぎる\n` +
-            `3. タイムアウトが発生した\n\n` +
-            `対処方法:\n` +
-            `1. インターネット接続を確認してください\n` +
-            `2. ファイルサイズを確認してください（推奨: 200MB以下）\n` +
-            `3. しばらく待ってから再度お試しください`
-          )
-        }
-        
-        throw new Error(`ファイルのアップロードに失敗しました。\n${errorMessage}`)
+      }
+      
+      // すべてのリトライが失敗した場合
+      if (uploadProgress < 100 && lastError) {
+        throw lastError
       }
 
       // 2-3. アップロード完了をサーバーに通知
