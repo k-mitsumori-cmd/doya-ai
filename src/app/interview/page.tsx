@@ -1137,8 +1137,15 @@ export default function InterviewPage() {
       const errorMsg = error instanceof Error ? error.message : '不明なエラーが発生しました'
       
       // エラーメッセージを分割（改行で分割）
+      // エラーメッセージを複数行に分割
       const errorLines = errorMsg.split('\n')
       const mainError = errorLines[0] || 'エラーが発生しました'
+      
+      // ネットワークエラーの場合は、より分かりやすいメッセージに変換
+      let displayError = mainError
+      if (mainError.includes('Failed to fetch') || mainError.includes('NetworkError')) {
+        displayError = 'ネットワークエラーが発生しました'
+      }
       let errorDetailsText = errorLines.slice(1).join('\n')
       
       // 容量制限エラーの場合、詳細がない場合はデフォルトのメッセージを追加
@@ -1150,7 +1157,7 @@ export default function InterviewPage() {
         errorDetailsText = '詳細なエラー情報はコンソールを確認してください。問題が続く場合は、サポートにお問い合わせください。'
       }
       
-      setErrorMessage(mainError)
+      setErrorMessage(displayError)
       setErrorDetails(errorDetailsText)
       setUploadStatus('error')
       setProgress(0)
