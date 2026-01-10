@@ -1286,8 +1286,8 @@ export default function InterviewPage() {
             if (transcribeRes.status === 413) {
               throw new Error(
                 `${errorMsg}\n\n${errorDetails}\n\n` +
-                `注意: 大きなファイル（25MB以上）は文字起こしできません。\n` +
-                `ファイルを分割するか、音声のみを抽出してください。`
+                `注意: 文字起こし機能は最大1GB（または60分の音声）のファイルに対応しています。\n` +
+                `それ以上のファイルの場合は、分割するか、音声のみを抽出してください。`
               )
             }
             
