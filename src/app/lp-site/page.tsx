@@ -899,43 +899,44 @@ function LpSitePageInner() {
             )}
 
             {/* インタラクティブエディタ（メイン表示） */}
-            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
-              <div className="mb-4">
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mb-6">
+              <div className="mb-6">
                 <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2 mb-2">
                   <Edit className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600" />
                   <span>セクションエディタ</span>
                 </h3>
                 <p className="text-sm text-slate-600">
-                  セクションをクリックして編集・再生成。ドラッグ&ドロップで並び替えができます。
+                  セクションをクリックして編集・再生成。ドラッグ&ドロップで並び替えができます。画像を自由に配置して、順番を入れ替えることができます。
                 </p>
               </div>
-              <LpInteractiveEditor
-                result={result}
-                selectedDevice={selectedDevice}
-                onSectionsReorder={(newSections) => {
-                  setResult({
-                    ...result,
-                    sections: newSections,
-                  })
-                  toast.success('セクションの順序を変更しました')
-                }}
-                onSectionRegenerate={async (sectionId) => {
-                  try {
-                    await handleRegenerateSection(sectionId, selectedDevice === 'pc' ? 'image_pc' : 'image_sp')
-                  } catch (error) {
-                    // エラーはhandleRegenerateSection内で処理済み
-                  }
-                }}
-                onDownload={handleDownload}
-                onSectionUpdate={(sectionId, field, value) => {
-                  setResult({
-                    ...result,
-                    sections: result.sections.map((s) =>
-                      s.section_id === sectionId ? { ...s, [field]: value } : s
-                    ),
-                  })
-                }}
-              />
+              <div className="min-h-[600px]">
+                <LpInteractiveEditor
+                  result={result}
+                  selectedDevice={selectedDevice}
+                  onSectionsReorder={(newSections) => {
+                    setResult({
+                      ...result,
+                      sections: newSections,
+                    })
+                    toast.success('セクションの順序を変更しました')
+                  }}
+                  onSectionRegenerate={async (sectionId) => {
+                    try {
+                      await handleRegenerateSection(sectionId, selectedDevice === 'pc' ? 'image_pc' : 'image_sp')
+                    } catch (error) {
+                      // エラーはhandleRegenerateSection内で処理済み
+                    }
+                  }}
+                  onDownload={handleDownload}
+                  onSectionUpdate={(sectionId, field, value) => {
+                    setResult({
+                      ...result,
+                      sections: result.sections.map((s) =>
+                        s.section_id === sectionId ? { ...s, [field]: value } : s
+                      ),
+                    })
+                  }}
+                />
               </div>
             </div>
 
