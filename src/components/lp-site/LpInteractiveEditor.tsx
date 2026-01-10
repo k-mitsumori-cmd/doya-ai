@@ -383,9 +383,9 @@ export function LpInteractiveEditor({
   const selectedImage = result.images.find((img) => img.section_id === selectedSectionId)
 
   return (
-    <div className="flex gap-4 min-h-[600px] relative">
+    <>
       {/* メインエディタエリア */}
-      <div className="flex-1 min-w-0 pb-4">
+      <div className="w-full">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sections.map((s) => s.section_id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-4">
@@ -441,7 +441,7 @@ export function LpInteractiveEditor({
           </>
         )}
       </AnimatePresence>
-    </div>
+    </>
   )
 }
 
