@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Download, RefreshCw, Monitor, Smartphone, Loader2, Search, Layout, Image as ImageIcon, Package, Globe, Eye, Globe2, Link2, Edit } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { LpGenerationOverlay } from '@/components/lp-site/LpGenerationOverlay'
-import { LpInteractiveEditor } from '@/components/lp-site/LpInteractiveEditor'
+import { FigmaStyleEditor } from '@/components/lp-site/FigmaStyleEditor'
 
 function LpSitePageInner() {
   const [inputType, setInputType] = useState<'url' | 'form'>('url')
@@ -442,6 +442,99 @@ function LpSitePageInner() {
     }
   }
 
+  // 結果がある場合はフルスクリーンのFigma風エディタを表示
+  if (result) {
+    return (
+      <>
+        {/* 生成中オーバーレイ */}
+        <LpGenerationOverlay
+          open={isGenerating}
+          progress={progress}
+          stageText={stageText}
+          mood={mood}
+          steps={steps}
+          allowBackgroundView={true}
+        />
+        <FigmaStyleEditor
+          result={result}
+          selectedDevice={selectedDevice}
+          onDeviceChange={setSelectedDevice}
+          onSectionsReorder={(newSections) => {
+            setResult({
+              ...result,
+              sections: newSections,
+            })
+          }}
+          onSectionRegenerate={async (sectionId) => {
+            try {
+              await handleRegenerateSection(sectionId, selectedDevice === 'pc' ? 'image_pc' : 'image_sp')
+            } catch (error) {
+              // エラーはhandleRegenerateSection内で処理済み
+            }
+          }}
+          onDownload={handleDownload}
+          onSectionUpdate={(sectionId, field, value) => {
+            setResult({
+              ...result,
+              sections: result.sections.map((s) =>
+                s.section_id === sectionId ? { ...s, [field]: value } : s
+              ),
+            })
+          }}
+          onPreview={async () => {
+            if (!result) return
+            try {
+              const previewId = Date.now().toString(36) + Math.random().toString(36).slice(2)
+              const response = await fetch(`/api/lp-site/preview/${previewId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(result),
+              })
+              if (!response.ok) throw new Error('プレビューの保存に失敗しました')
+              setPreviewId(previewId)
+              window.open(`/lp-site/preview/${previewId}`, '_blank')
+              toast.success('プレビューを開きました')
+            } catch (error: any) {
+              toast.error(error.message || 'プレビューの作成に失敗しました')
+            }
+          }}
+          onPublish={async () => {
+            if (!result) return
+            setIsPublishing(true)
+            try {
+              const response = await fetch('/api/lp-site/publish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lp_data: result }),
+              })
+              if (!response.ok) throw new Error('公開に失敗しました')
+              const data = await response.json()
+              setPublishedUrl(data.published_url)
+              setResult({
+                ...result,
+                published_url: data.published_url,
+              })
+              toast.success('LPを公開しました！')
+              window.open(data.published_url, '_blank')
+            } catch (error: any) {
+              toast.error(error.message || '公開に失敗しました')
+            } finally {
+              setIsPublishing(false)
+            }
+          }}
+        />
+        {/* 新しいLP生成ボタン（フローティング） */}
+        <button
+          onClick={() => setResult(null)}
+          className="fixed bottom-6 right-6 z-50 px-6 py-3 bg-gradient-to-r from-teal-500 to-cyan-500 text-white font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all flex items-center gap-2"
+        >
+          <Sparkles className="w-5 h-5" />
+          新しいLPを生成
+        </button>
+      </>
+    )
+  }
+
   return (
     <LpSiteAppLayout>
       {/* 生成中オーバーレイ */}
@@ -451,7 +544,7 @@ function LpSitePageInner() {
         stageText={stageText}
         mood={mood}
         steps={steps}
-        allowBackgroundView={!!result} // 結果がある場合は背景を表示可能に
+        allowBackgroundView={false}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -490,8 +583,7 @@ function LpSitePageInner() {
           </div>
         </motion.div>
 
-        {!result ? (
-          /* Input Form */
+        {/* Input Form */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -724,369 +816,6 @@ function LpSitePageInner() {
             </motion.div>
             </div>
           </motion.div>
-        ) : (
-          /* Result Preview */
-          <div className="space-y-6">
-            {/* 部分的な結果がある場合の警告 */}
-            {partialResult && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-4 h-4 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-amber-900 mb-1">
-                      一部の画像は生成中です
-                    </p>
-                    <p className="text-xs text-amber-700">
-                      構成とワイヤーフレームは表示できます。画像は生成完了次第、自動的に表示されます。
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-            {/* Device Toggle */}
-            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-                <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-                  <span className="text-xs sm:text-sm font-bold text-slate-700 whitespace-nowrap">表示:</span>
-                  <button
-                    onClick={() => setSelectedDevice('pc')}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                      selectedDevice === 'pc'
-                        ? 'bg-teal-500 text-white'
-                        : 'bg-slate-100 text-slate-700'
-                    }`}
-                  >
-                    <Monitor className="w-4 h-4" />
-                    PC
-                  </button>
-                  <button
-                    onClick={() => setSelectedDevice('sp')}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
-                      selectedDevice === 'sp'
-                        ? 'bg-teal-500 text-white'
-                        : 'bg-slate-100 text-slate-700'
-                    }`}
-                  >
-                    <Smartphone className="w-4 h-4" />
-                    スマホ
-                  </button>
-                </div>
-                <div className="flex-1 hidden sm:block" />
-                <button
-                  onClick={() => handleDownload(selectedDevice === 'pc' ? 'all_pc' : 'all_sp')}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-teal-600 transition-colors whitespace-nowrap"
-                >
-                  <Download className="w-4 h-4" />
-                  <span className="hidden sm:inline">全体ZIPダウンロード</span>
-                  <span className="sm:hidden">ZIPダウンロード</span>
-                </button>
-              </div>
-            </div>
-
-            {/* LP全体プレビュー（縦につなげた形） */}
-            {result.images.some(img => selectedDevice === 'pc' ? img.image_pc : img.image_sp) && (
-              <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mb-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4">
-                  <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2">
-                    <Layout className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600" />
-                    <span className="text-sm sm:text-base">LP全体画像（{selectedDevice === 'pc' ? 'PC' : 'スマホ'}版）</span>
-                  </h3>
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <button
-                      onClick={async () => {
-                        setIsCombining(true)
-                        try {
-                          const response = await fetch('/api/lp-site/combine', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              images: result.images,
-                              device: selectedDevice,
-                            }),
-                          })
-                          if (!response.ok) throw new Error('結合に失敗しました')
-                          const data = await response.json()
-                          if (selectedDevice === 'pc') {
-                            setCombinedLpImage({ ...combinedLpImage, pc: data.combined_image })
-                          } else {
-                            setCombinedLpImage({ ...combinedLpImage, sp: data.combined_image })
-                          }
-                          toast.success('LP全体画像を生成しました！')
-                        } catch (error: any) {
-                          toast.error(error.message || '結合に失敗しました')
-                        } finally {
-                          setIsCombining(false)
-                        }
-                      }}
-                      disabled={isCombining}
-                      className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg text-xs sm:text-sm font-bold hover:from-teal-600 hover:to-cyan-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-initial"
-                    >
-                      {isCombining ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="whitespace-nowrap">生成中...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4" />
-                          <span className="whitespace-nowrap">LP全体画像を生成</span>
-                        </>
-                      )}
-                    </button>
-                    {(selectedDevice === 'pc' ? combinedLpImage?.pc : combinedLpImage?.sp) && (
-                      <button
-                        onClick={() => {
-                          const image = selectedDevice === 'pc' ? combinedLpImage?.pc : combinedLpImage?.sp
-                          if (image) {
-                            handleDownload('single', 'lp-combined', image)
-                          }
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 bg-teal-500 text-white rounded-lg font-bold hover:bg-teal-600 transition-colors"
-                      >
-                        <Download className="w-4 h-4" />
-                        ダウンロード
-                      </button>
-                    )}
-                  </div>
-                </div>
-                
-                {/* 生成されたLP全体画像またはプレビュー */}
-                {(selectedDevice === 'pc' ? combinedLpImage?.pc : combinedLpImage?.sp) ? (
-                  <div className="border-4 border-teal-200 rounded-xl overflow-hidden bg-white shadow-xl">
-                    <img
-                      src={selectedDevice === 'pc' ? combinedLpImage?.pc : combinedLpImage?.sp}
-                      alt="LP全体画像"
-                      className="w-full block"
-                    />
-                  </div>
-                ) : (
-                  <div className="border-4 border-slate-200 rounded-xl overflow-hidden bg-slate-50">
-                    <div className="space-y-0">
-                      {result.sections.map((section, index) => {
-                        const image = result.images.find(img => img.section_id === section.section_id)
-                        const imageData = selectedDevice === 'pc' ? image?.image_pc : image?.image_sp
-                        if (!imageData) return null
-                        
-                        return (
-                          <div key={section.section_id} className="relative">
-                            <img
-                              src={imageData}
-                              alt={section.headline}
-                              className="w-full block"
-                            />
-                            {/* セクション区切り線 */}
-                            {index < result.sections.length - 1 && (
-                              <div className="h-1 bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
-                
-                <p className="text-sm text-slate-600 mt-4 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-teal-500" />
-                  <span>
-                    {combinedLpImage ? 
-                      '生成されたLP全体画像です。これをそのままLPとして使用できます。' :
-                      '「LP全体画像を生成」ボタンで全セクションを縦につなげた完全なLP画像を生成できます。'}
-                  </span>
-                </p>
-              </div>
-            )}
-
-            {/* インタラクティブエディタ（メイン表示） */}
-            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 mb-6">
-              <div className="mb-6">
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2 mb-2">
-                  <Edit className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600" />
-                  <span>セクションエディタ</span>
-                </h3>
-                <p className="text-sm text-slate-600">
-                  セクションをクリックして編集・再生成。ドラッグ&ドロップで並び替えができます。画像を自由に配置して、順番を入れ替えることができます。
-                </p>
-              </div>
-              <div className="min-h-[600px]">
-                <LpInteractiveEditor
-                  result={result}
-                  selectedDevice={selectedDevice}
-                  onSectionsReorder={(newSections) => {
-                    setResult({
-                      ...result,
-                      sections: newSections,
-                    })
-                    toast.success('セクションの順序を変更しました')
-                  }}
-                  onSectionRegenerate={async (sectionId) => {
-                    try {
-                      await handleRegenerateSection(sectionId, selectedDevice === 'pc' ? 'image_pc' : 'image_sp')
-                    } catch (error) {
-                      // エラーはhandleRegenerateSection内で処理済み
-                    }
-                  }}
-                  onDownload={handleDownload}
-                  onSectionUpdate={(sectionId, field, value) => {
-                    setResult({
-                      ...result,
-                      sections: result.sections.map((s) =>
-                        s.section_id === sectionId ? { ...s, [field]: value } : s
-                      ),
-                    })
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* アクションボタン */}
-            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-4">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
-                <Package className="w-5 h-5 text-teal-600" />
-                <span>アクション</span>
-              </h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* プレビュー */}
-                <button
-                  onClick={async () => {
-                    if (!result) return
-                    try {
-                      const previewId = Date.now().toString(36) + Math.random().toString(36).slice(2)
-                      const response = await fetch(`/api/lp-site/preview/${previewId}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(result),
-                      })
-                      if (!response.ok) throw new Error('プレビューの保存に失敗しました')
-                      const data = await response.json()
-                      setPreviewId(previewId)
-                      window.open(`/lp-site/preview/${previewId}`, '_blank')
-                      toast.success('プレビューを開きました')
-                    } catch (error: any) {
-                      toast.error(error.message || 'プレビューの作成に失敗しました')
-                    }
-                  }}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all"
-                >
-                  <Eye className="w-5 h-5" />
-                  <span>プレビュー</span>
-                </button>
-
-                {/* 公開 */}
-                <button
-                  onClick={async () => {
-                    if (!result) return
-                    setIsPublishing(true)
-                    try {
-                      const response = await fetch('/api/lp-site/publish', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ lp_data: result }),
-                      })
-                      if (!response.ok) throw new Error('公開に失敗しました')
-                      const data = await response.json()
-                      setPublishedUrl(data.published_url)
-                      setResult({
-                        ...result,
-                        published_url: data.published_url,
-                      })
-                      toast.success('LPを公開しました！')
-                      window.open(data.published_url, '_blank')
-                    } catch (error: any) {
-                      toast.error(error.message || '公開に失敗しました')
-                    } finally {
-                      setIsPublishing(false)
-                    }
-                  }}
-                  disabled={isPublishing}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isPublishing ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>公開中...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Globe2 className="w-5 h-5" />
-                      <span>サイト公開</span>
-                    </>
-                  )}
-                </button>
-
-                {/* 画像ダウンロード（全体） */}
-                <button
-                  onClick={() => {
-                    if (!combinedLpImage) {
-                      toast.error('まずLP全体画像を生成してください')
-                      return
-                    }
-                    const image = selectedDevice === 'pc' ? combinedLpImage.pc : combinedLpImage.sp
-                    if (image) {
-                      handleDownload('single', 'lp-combined', image)
-                    }
-                  }}
-                  disabled={!combinedLpImage}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Download className="w-5 h-5" />
-                  <span>全体画像ダウンロード</span>
-                </button>
-
-                {/* 全セクション画像ZIP */}
-                <button
-                  onClick={() => handleDownload(selectedDevice === 'pc' ? 'all_pc' : 'all_sp')}
-                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all"
-                >
-                  <Download className="w-5 h-5" />
-                  <span>全画像ZIP ({selectedDevice === 'pc' ? 'PC' : 'SP'}版)</span>
-                </button>
-              </div>
-
-              {/* 公開URL表示 */}
-              {publishedUrl && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-sm font-bold text-green-900 mb-2">公開URL:</p>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={publishedUrl}
-                      readOnly
-                      className="flex-1 px-3 py-2 bg-white border border-green-300 rounded-lg text-sm"
-                    />
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(publishedUrl)
-                        toast.success('URLをコピーしました')
-                      }}
-                      className="px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors"
-                    >
-                      コピー
-                    </button>
-                    <a
-                      href={publishedUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors"
-                    >
-                      開く
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Back Button */}
-            <button
-              onClick={() => setResult(null)}
-              className="w-full py-4 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors"
-            >
-              新しいLPを生成
-            </button>
-          </div>
-        )}
       </div>
     </LpSiteAppLayout>
   )
