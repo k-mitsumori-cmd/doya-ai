@@ -5,8 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
-import OpenAI from 'openai'
-import { getFileFromGCS, getFileChunkFromGCS } from '@/lib/gcs'
+import { SpeechClient } from '@google-cloud/speech'
+import { getFileFromGCS } from '@/lib/gcs'
 import { notifyApiError } from '@/lib/errorHandler'
 
 // Vercel等のサーバーレス環境では /tmp を使用
@@ -67,197 +67,235 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Only audio/video files can be transcribed' }, { status: 400 })
     }
 
-    // OpenAI Whisper APIを使用して文字起こし
-    const openaiApiKey = process.env.OPENAI_API_KEY
-    if (!openaiApiKey) {
-      console.error('[INTERVIEW] OPENAI_API_KEY is not set')
+    // Google Cloud Speech-to-Textを使用して文字起こし
+    // Speech-to-Textの制限: 最大60分の音声、または1GBのファイル
+    // 既存のGCS認証情報を使用可能
+    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      console.error('[INTERVIEW] GOOGLE_APPLICATION_CREDENTIALS is not set')
       return NextResponse.json(
-        { error: '文字起こし機能の設定が完了していません', details: 'OPENAI_API_KEYが設定されていません' },
+        { error: '文字起こし機能の設定が完了していません', details: 'Google Cloud Storageの認証情報が設定されていません。GOOGLE_APPLICATION_CREDENTIALS環境変数を設定してください。' },
         { status: 500 }
       )
     }
 
-    const openai = new OpenAI({ apiKey: openaiApiKey })
+    const speechClient = new SpeechClient()
 
     // ファイルサイズをチェック
-    // OpenAI Whisper APIの制限: 25MB
-    // 注意: 音声/動画ファイルをバイトレベルで分割すると、ファイル構造が壊れてしまいます。
-    // 正しく分割するにはffmpegなどのツールが必要ですが、Vercelのサーバーレス環境では使用できません。
-    // そのため、25MBを超えるファイルの場合は、エラーメッセージを返します。
-    const MAX_SINGLE_FILE_SIZE = 25 * 1024 * 1024 // 25MB
+    // Google Cloud Speech-to-Textの制限: 最大60分の音声、または1GBのファイル
+    const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB
+    const MAX_AUDIO_DURATION = 60 * 60 * 1000 // 60分（ミリ秒）
     
-    if (material.fileSize && material.fileSize > MAX_SINGLE_FILE_SIZE) {
+    if (material.fileSize && material.fileSize > MAX_FILE_SIZE) {
       const fileSizeMB = (material.fileSize / 1024 / 1024).toFixed(2)
-      const maxSizeMB = (MAX_SINGLE_FILE_SIZE / 1024 / 1024).toFixed(0)
-      console.warn(`[INTERVIEW] File size (${fileSizeMB} MB) exceeds limit (${maxSizeMB} MB)`)
+      const maxSizeGB = (MAX_FILE_SIZE / 1024 / 1024 / 1024).toFixed(0)
+      console.warn(`[INTERVIEW] File size (${fileSizeMB} MB) exceeds limit (${maxSizeGB} GB)`)
       return NextResponse.json(
         { 
           error: 'ファイルサイズが大きすぎます',
-          details: `文字起こし機能は最大${maxSizeMB}MBのファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください（ffmpeg等を使用）\n3. 音声ファイルの場合は、圧縮してからアップロードしてください\n4. オンラインツールを使用してファイルを分割してください`
+          details: `文字起こし機能は最大${maxSizeGB}GB（または60分の音声）のファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 60分以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください`
         },
         { status: 413 }
       )
     }
 
-    // ファイルを読み込む（Google Cloud Storageから取得、またはローカルファイルシステムから）
-    // パフォーマンス最適化: タイムアウトを設定して長時間待機を防ぐ
-    const FILE_FETCH_TIMEOUT = 30000 // 30秒
-    let fileBuffer: Buffer
+    // Google Cloud Speech-to-Textで文字起こし
+    // GCS上のファイルの場合は直接GCS URIを使用（効率的）
+    // ローカルファイルの場合はbase64エンコードして送信
+    let gcsUri: string | null = null
+    let audioContent: Buffer | null = null
+    let encoding: string | null = null
     
     try {
-      // ファイル取得処理をPromiseでラップしてタイムアウトを設定
-      const fetchFilePromise = (async () => {
-        // 優先順位: fileUrl (完全なURL) > filePath (GCS pathname or ローカルファイルシステム)
+      // ファイルがGCS上にある場合は直接URIを使用
+      if (material.fileUrl && material.fileUrl.includes('storage.googleapis.com')) {
+        // GCS URLからURIを抽出（gs://bucket/path 形式に変換）
+        const urlPattern = /https:\/\/storage\.googleapis\.com\/([^/]+)\/(.+)$/
+        const match = material.fileUrl.match(urlPattern)
+        if (match && match[1] && match[2]) {
+          gcsUri = `gs://${match[1]}/${decodeURIComponent(match[2])}`
+          console.log(`[INTERVIEW] Using GCS URI for transcription: ${gcsUri}`)
+        } else {
+          // GCS URLの解析に失敗した場合、ファイルをダウンロード
+          console.warn(`[INTERVIEW] Failed to parse GCS URL, downloading file: ${material.fileUrl}`)
+          audioContent = await getFileFromGCS(material.fileUrl)
+          console.log(`[INTERVIEW] File downloaded: ${audioContent.length} bytes`)
+        }
+      } else if (material.filePath && !material.filePath.startsWith('http://') && !material.filePath.startsWith('https://') && !material.filePath.startsWith('/')) {
+        // filePathがGCS pathnameの場合、URIを構築
+        const bucketName = process.env.GCS_BUCKET_NAME || 'doya-interview-storage'
+        gcsUri = `gs://${bucketName}/${material.filePath}`
+        console.log(`[INTERVIEW] Using GCS URI for transcription: ${gcsUri}`)
+      } else {
+        // ローカルファイルまたはその他のURLの場合は、ファイルをダウンロード
+        console.log(`[INTERVIEW] Downloading file for transcription`)
         if (material.fileUrl) {
-          // fileUrlが存在する場合
-          if (material.fileUrl.includes('storage.googleapis.com')) {
-            // Google Cloud StorageのURLの場合
-            console.log(`[INTERVIEW] Fetching file from Google Cloud Storage: ${material.fileUrl}`)
-            try {
-              return await getFileFromGCS(material.fileUrl)
-            } catch (gcsError) {
-              // GCSからの取得に失敗した場合、直接fetchを試行
-              console.warn(`[INTERVIEW] Failed to get file from GCS, trying direct fetch: ${gcsError}`)
-              const response = await fetch(material.fileUrl)
-              if (!response.ok) {
-                throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
-              }
-              const arrayBuffer = await response.arrayBuffer()
-              return Buffer.from(arrayBuffer)
-            }
-          } else {
-            // その他のURL（直接fetch）
-            console.log(`[INTERVIEW] Fetching file from URL: ${material.fileUrl}`)
-            const response = await fetch(material.fileUrl)
-            if (!response.ok) {
-              throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
-            }
-            const arrayBuffer = await response.arrayBuffer()
-            return Buffer.from(arrayBuffer)
+          const response = await fetch(material.fileUrl)
+          if (!response.ok) {
+            throw new Error(`Failed to fetch file from URL: ${response.status} ${response.statusText}`)
           }
+          const arrayBuffer = await response.arrayBuffer()
+          audioContent = Buffer.from(arrayBuffer)
         } else if (material.filePath) {
-          // filePathがGCS pathnameの場合（例: interview/projectId/filename）
-          // fileUrlがない場合は、GCSから直接取得を試行
-          if (!material.filePath.startsWith('http://') && !material.filePath.startsWith('https://') && !material.filePath.startsWith('/')) {
-            // GCS pathnameの場合、fileUrlを構築して取得を試行
-            console.log(`[INTERVIEW] filePath is a GCS pathname, trying to construct URL: ${material.filePath}`)
-            // GCS URLを構築
-            const bucketName = process.env.GCS_BUCKET_NAME || 'doya-interview-storage'
-            const gcsUrl = `https://storage.googleapis.com/${bucketName}/${material.filePath}`
-            try {
-              return await getFileFromGCS(gcsUrl)
-            } catch (gcsError) {
-              console.error(`[INTERVIEW] Failed to get file from GCS: ${gcsError}`)
-              throw new Error('Google Cloud Storageからファイルを取得できませんでした。')
-            }
-          } else {
-            // ローカルファイルシステムから読み込み（フォールバック）
-            const baseDir = getUploadBaseDir()
-            let filePath: string
-
-            if (material.filePath && material.filePath.startsWith('/')) {
-              // 絶対パスの場合（Vercel環境）
-              filePath = material.filePath
-            } else {
-              // 相対パスの場合
-              filePath = join(baseDir, material.filePath || '')
-            }
-
-            // ファイルの存在確認
-            if (!existsSync(filePath)) {
-              throw new Error(`ファイルが見つかりません: ${filePath}`)
-            }
-
-            console.log(`[INTERVIEW] Starting transcription for file: ${filePath}`)
-            return await readFile(filePath)
+          const baseDir = getUploadBaseDir()
+          const filePath = material.filePath.startsWith('/') 
+            ? material.filePath 
+            : join(baseDir, material.filePath)
+          
+          if (!existsSync(filePath)) {
+            throw new Error(`ファイルが見つかりません: ${filePath}`)
           }
+          
+          audioContent = await readFile(filePath)
         } else {
           throw new Error('ファイルのURLまたはパスが設定されていません')
         }
-      })()
+        console.log(`[INTERVIEW] File downloaded: ${audioContent.length} bytes`)
+      }
 
-      // タイムアウト処理
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`ファイルの取得がタイムアウトしました（${FILE_FETCH_TIMEOUT / 1000}秒）`))
-        }, FILE_FETCH_TIMEOUT)
-      })
-
-      fileBuffer = await Promise.race([fetchFilePromise, timeoutPromise])
-      console.log(`[INTERVIEW] File read successfully: ${fileBuffer.length} bytes`)
+      // エンコーディングをMIMEタイプから判定
+      if (material.mimeType) {
+        if (material.mimeType.includes('mp3') || material.mimeType.includes('mpeg')) {
+          encoding = 'MP3'
+        } else if (material.mimeType.includes('wav')) {
+          encoding = 'LINEAR16'
+        } else if (material.mimeType.includes('m4a') || material.mimeType.includes('aac')) {
+          encoding = 'AAC'
+        } else if (material.mimeType.includes('ogg')) {
+          encoding = 'OGG_OPUS'
+        } else if (material.mimeType.includes('flac')) {
+          encoding = 'FLAC'
+        } else if (material.mimeType.includes('webm')) {
+          encoding = 'WEBM_OPUS'
+        } else if (material.mimeType.includes('mp4') || material.mimeType.includes('video')) {
+          encoding = 'MP3' // 動画ファイルの場合はMP3として処理
+        }
+      }
+      
+      // エンコーディングが判定できない場合は、ファイル拡張子から判定
+      if (!encoding && material.fileName) {
+        const ext = material.fileName.toLowerCase().split('.').pop()
+        if (ext === 'mp3') encoding = 'MP3'
+        else if (ext === 'wav') encoding = 'LINEAR16'
+        else if (ext === 'm4a' || ext === 'aac') encoding = 'AAC'
+        else if (ext === 'ogg') encoding = 'OGG_OPUS'
+        else if (ext === 'flac') encoding = 'FLAC'
+        else if (ext === 'webm') encoding = 'WEBM_OPUS'
+        else if (ext === 'mp4') encoding = 'MP3'
+      }
+      
+      // デフォルトはMP3
+      if (!encoding) {
+        encoding = 'MP3'
+        console.warn(`[INTERVIEW] Encoding not detected, using MP3 as default`)
+      }
+      
+      console.log(`[INTERVIEW] Detected encoding: ${encoding}`)
     } catch (fileError) {
-      console.error('[INTERVIEW] Failed to read file:', fileError)
+      console.error('[INTERVIEW] Failed to prepare file for transcription:', fileError)
       const errorMessage = fileError instanceof Error ? fileError.message : '不明なエラー'
       return NextResponse.json(
         { 
-          error: 'ファイルの読み込みに失敗しました', 
+          error: 'ファイルの準備に失敗しました', 
           details: errorMessage 
         },
         { status: 500 }
       )
     }
 
-    // OpenAI Whisper APIで文字起こし
-    // 注意: ファイルサイズチェックは上で既に行われているため、ここでは25MB以下のファイルのみが処理されます
+    // Google Cloud Speech-to-Textで文字起こし
     let transcriptionText: string
     try {
-      const MAX_SINGLE_FILE_SIZE = 25 * 1024 * 1024 // 25MB
+      const fileSizeMB = audioContent ? (audioContent.length / 1024 / 1024).toFixed(2) : (material.fileSize ? (material.fileSize / 1024 / 1024).toFixed(2) : '0')
+      console.log(`[INTERVIEW] Calling Google Cloud Speech-to-Text API... (file size: ${fileSizeMB} MB, encoding: ${encoding})`)
       
-      // ファイルサイズの再チェック（念のため）
-      if (fileBuffer.length > MAX_SINGLE_FILE_SIZE) {
-        const fileSizeMB = (fileBuffer.length / 1024 / 1024).toFixed(2)
-        const maxSizeMB = (MAX_SINGLE_FILE_SIZE / 1024 / 1024).toFixed(0)
-        console.warn(`[INTERVIEW] File size (${fileSizeMB} MB) exceeds limit (${maxSizeMB} MB)`)
-        return NextResponse.json(
-          { 
-            error: 'ファイルサイズが大きすぎます',
-            details: `文字起こし機能は最大${maxSizeMB}MBのファイルに対応しています。\n現在のファイルサイズ: ${fileSizeMB} MB\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: 20MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください（ffmpeg等を使用）\n3. 音声ファイルの場合は、圧縮してからアップロードしてください\n4. オンラインツールを使用してファイルを分割してください`
-          },
-          { status: 413 }
-        )
+      // リクエスト設定
+      // 注意: MP3、AAC、OGG_OPUS、WEBM_OPUSはコンテナ形式で、encodingを指定しない（自動検出）
+      // LINEAR16、FLAC、MULAW、AMR、AMR_WBはsampleRateHertzが必要
+      const request: any = {
+        config: {
+          languageCode: 'ja-JP',
+          alternativeLanguageCodes: ['en-US'], // 日本語が認識できない場合のフォールバック
+          enableAutomaticPunctuation: true,
+          enableWordTimeOffsets: false, // 単語のタイムスタンプは不要
+          model: 'latest_long', // 長い音声に最適化されたモデル（60分まで対応）
+        },
       }
       
-      console.log(`[INTERVIEW] Calling OpenAI Whisper API... (file size: ${(fileBuffer.length / 1024 / 1024).toFixed(2)} MB)`)
+      // エンコーディング設定
+      // MP3、AAC、OGG_OPUS、WEBM_OPUSの場合はencodingを設定しない（自動検出）
+      if (encoding && !['MP3', 'AAC', 'OGG_OPUS', 'WEBM_OPUS'].includes(encoding)) {
+        request.config.encoding = encoding as any
+        // LINEAR16、FLAC、MULAW、AMR、AMR_WBの場合はsampleRateHertzが必要
+        if (['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB'].includes(encoding)) {
+          request.config.sampleRateHertz = 16000 // デフォルトサンプルレート
+        }
+      }
       
-      let fileInput: File | Blob | Buffer
-      if (typeof File !== 'undefined') {
-        fileInput = new File([fileBuffer], material.fileName, { type: material.mimeType || 'audio/mpeg' })
+      // GCS URIが利用可能な場合はそれを使用、そうでない場合はbase64エンコード
+      if (gcsUri) {
+        request.audio = { uri: gcsUri }
+        console.log(`[INTERVIEW] Using GCS URI: ${gcsUri}`)
+      } else if (audioContent) {
+        request.audio = { content: audioContent.toString('base64') }
+        console.log(`[INTERVIEW] Using base64 encoded audio content: ${audioContent.length} bytes`)
       } else {
-        fileInput = new Blob([fileBuffer], { type: material.mimeType || 'audio/mpeg' })
+        throw new Error('音声データが取得できませんでした')
       }
-
-      const OPENAI_API_TIMEOUT = Math.max(300000, fileBuffer.length / 1024 / 1024 * 10000)
       
-      const transcriptionPromise = openai.audio.transcriptions.create({
-        file: fileInput as any,
-        model: 'whisper-1',
-        language: 'ja',
-        response_format: 'text',
-      })
-
+      // タイムアウト設定（大きなファイルの場合、処理に時間がかかる）
+      const SPEECH_API_TIMEOUT = Math.max(600000, (audioContent?.length || material.fileSize || 0) / 1024 / 1024 * 20000) // 最低10分、1MBあたり20秒
+      
+      console.log(`[INTERVIEW] Starting transcription (timeout: ${(SPEECH_API_TIMEOUT / 1000 / 60).toFixed(1)} minutes)`)
+      
+      const transcriptionPromise = speechClient.recognize(request)
+      
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          reject(new Error(`OpenAI API呼び出しがタイムアウトしました（${(OPENAI_API_TIMEOUT / 1000 / 60).toFixed(1)}分）`))
-        }, OPENAI_API_TIMEOUT)
+          reject(new Error(`Google Cloud Speech-to-Text API呼び出しがタイムアウトしました（${(SPEECH_API_TIMEOUT / 1000 / 60).toFixed(1)}分）`))
+        }, SPEECH_API_TIMEOUT)
       })
-
-      const transcription = await Promise.race([transcriptionPromise, timeoutPromise])
-      transcriptionText = transcription as unknown as string
+      
+      const [response] = await Promise.race([
+        transcriptionPromise,
+        timeoutPromise,
+      ])
+      
+      // レスポンスからテキストを抽出
+      if (!response || !response.results || response.results.length === 0) {
+        throw new Error('文字起こし結果が空です')
+      }
+      
+      // 複数の結果がある場合は結合
+      transcriptionText = response.results
+        .map((result: any) => result.alternatives?.[0]?.transcript || '')
+        .filter((text: string) => text.trim().length > 0)
+        .join(' ')
+      
+      if (!transcriptionText || transcriptionText.trim().length === 0) {
+        throw new Error('文字起こし結果が空です')
+      }
+      
       console.log(`[INTERVIEW] Transcription completed: ${transcriptionText.length} characters`)
-    } catch (openaiError: any) {
-      console.error('[INTERVIEW] OpenAI Whisper API error:', openaiError)
+    } catch (speechError: any) {
+      console.error('[INTERVIEW] Google Cloud Speech-to-Text API error:', speechError)
       
       let errorMessage = '文字起こしに失敗しました'
       let errorDetails = ''
 
-      if (openaiError?.response?.status === 401) {
-        errorMessage = 'OpenAI APIキーが無効です'
-        errorDetails = 'OPENAI_API_KEYを確認してください'
-      } else if (openaiError?.response?.status === 429) {
-        errorMessage = 'APIの利用制限に達しました'
+      if (speechError?.code === 7) {
+        errorMessage = '認証エラーが発生しました'
+        errorDetails = 'Google Cloud Storageの認証情報を確認してください'
+      } else if (speechError?.code === 3) {
+        errorMessage = '無効なリクエストです'
+        errorDetails = 'ファイル形式がサポートされていない可能性があります'
+      } else if (speechError?.code === 8) {
+        errorMessage = 'リソースが不足しています'
         errorDetails = 'しばらく待ってから再度お試しください'
-      } else if (openaiError?.message) {
-        errorDetails = openaiError.message
+      } else if (speechError?.code === 13) {
+        errorMessage = '内部エラーが発生しました'
+        errorDetails = 'Google Cloud Speech-to-Textサービスでエラーが発生しました'
+      } else if (speechError?.message) {
+        errorDetails = speechError.message
       }
 
       return NextResponse.json(
@@ -283,7 +321,7 @@ export async function POST(request: NextRequest) {
             projectId,
             materialId,
             text: transcriptionText,
-            provider: 'openai-whisper',
+            provider: 'google-cloud-speech',
           },
         }),
         // 素材のステータスを更新
