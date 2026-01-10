@@ -6,6 +6,7 @@ import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { SpeechClient } from '@google-cloud/speech'
+import { getFileFromGCS } from '@/lib/gcs'
 import { notifyApiError } from '@/lib/errorHandler'
 
 // Vercel等のサーバーレス環境では /tmp を使用
@@ -331,28 +332,104 @@ export async function POST(request: NextRequest) {
       console.log(`[INTERVIEW] Transcription completed: ${transcriptionText.length} characters`)
     } catch (speechError: any) {
       console.error('[INTERVIEW] Google Cloud Speech-to-Text API error:', speechError)
+      console.error('[INTERVIEW] Error code:', speechError?.code)
+      console.error('[INTERVIEW] Error reason:', speechError?.reason)
+      console.error('[INTERVIEW] Error details:', speechError?.details)
+      console.error('[INTERVIEW] Error metadata:', speechError?.errorInfoMetadata)
       
       let errorMessage = '文字起こしに失敗しました'
       let errorDetails = ''
+      let activationUrl: string | null = null
 
       if (speechError?.code === 7) {
-        errorMessage = '認証エラーが発生しました'
-        errorDetails = 'Google Cloud Storageの認証情報を確認してください'
+        // エラーコード7はPERMISSION_DENIED、reasonがSERVICE_DISABLEDの場合はAPIが有効化されていない
+        if (speechError?.reason === 'SERVICE_DISABLED' || speechError?.statusDetails?.[0]?.reason === 'SERVICE_DISABLED') {
+          errorMessage = 'Google Cloud Speech-to-Text APIが有効化されていません'
+          errorDetails = 'Google Cloud Speech-to-Text APIを有効化する必要があります。\n\n'
+          errorDetails += '以下の手順でAPIを有効化してください:\n'
+          errorDetails += '1. Google Cloud Consoleにアクセスします\n'
+          errorDetails += '2. プロジェクトを選択します\n'
+          errorDetails += '3. "APIとサービス" > "ライブラリ"に移動します\n'
+          errorDetails += '4. "Cloud Speech-to-Text API"を検索します\n'
+          errorDetails += '5. "有効にする"ボタンをクリックします\n'
+          errorDetails += '6. 有効化後、数分待ってから再度お試しください\n\n'
+          
+          // エラーメッセージからアクティベーションURLを抽出
+          if (speechError?.errorInfoMetadata?.activationUrl) {
+            activationUrl = speechError.errorInfoMetadata.activationUrl
+            errorDetails += `直接リンク: ${activationUrl}\n\n`
+          } else if (speechError?.details?.includes('https://console.developers.google.com')) {
+            const urlMatch = speechError.details.match(/https:\/\/console\.developers\.google\.com[^\s]+/)
+            if (urlMatch) {
+              activationUrl = urlMatch[0]
+              errorDetails += `直接リンク: ${activationUrl}\n\n`
+            }
+          }
+          
+          const projectId = credentials?.project_id || process.env.GOOGLE_CLOUD_PROJECT_ID || 'プロジェクトID'
+          if (!activationUrl && projectId) {
+            activationUrl = `https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=${projectId}`
+            errorDetails += `直接リンク: ${activationUrl}\n\n`
+          }
+          
+          errorDetails += '注意: APIを有効化した後、数分待ってから再度お試しください。反映に時間がかかる場合があります。'
+        } else {
+          // その他のPERMISSION_DENIEDエラー（認証エラーなど）
+          errorMessage = '認証エラーが発生しました'
+          errorDetails = 'Google Cloud Speech-to-Text APIへのアクセス権限がありません。\n\n'
+          errorDetails += '確認事項:\n'
+          errorDetails += '1. サービスアカウントに適切な権限が設定されているか確認してください\n'
+          errorDetails += '2. GOOGLE_APPLICATION_CREDENTIALS環境変数が正しく設定されているか確認してください\n'
+          errorDetails += '3. サービスアカウントに"Cloud Speech-to-Text API User"ロールが付与されているか確認してください'
+        }
       } else if (speechError?.code === 3) {
         errorMessage = '無効なリクエストです'
-        errorDetails = 'ファイル形式がサポートされていない可能性があります'
+        errorDetails = 'ファイル形式がサポートされていない可能性があります。\n\n'
+        errorDetails += '確認事項:\n'
+        errorDetails += '1. ファイル形式がサポートされているか確認してください（MP3, WAV, FLAC, M4A, OGG_OPUS, WEBM_OPUSなど）\n'
+        errorDetails += '2. ファイルが破損していないか確認してください\n'
+        if (speechError?.message) {
+          errorDetails += `\nエラー詳細: ${speechError.message}`
+        }
       } else if (speechError?.code === 8) {
         errorMessage = 'リソースが不足しています'
-        errorDetails = 'しばらく待ってから再度お試しください'
+        errorDetails = 'Google Cloud Speech-to-Text APIのリソースが不足しています。\n\n'
+        errorDetails += '対処方法:\n'
+        errorDetails += '1. しばらく待ってから再度お試しください\n'
+        errorDetails += '2. ファイルサイズが大きすぎる場合は、分割してから処理してください\n'
+        if (speechError?.message) {
+          errorDetails += `\nエラー詳細: ${speechError.message}`
+        }
       } else if (speechError?.code === 13) {
         errorMessage = '内部エラーが発生しました'
-        errorDetails = 'Google Cloud Speech-to-Textサービスでエラーが発生しました'
+        errorDetails = 'Google Cloud Speech-to-Textサービスでエラーが発生しました。\n\n'
+        errorDetails += '対処方法:\n'
+        errorDetails += '1. しばらく待ってから再度お試しください\n'
+        errorDetails += '2. 問題が解決しない場合は、サポートにお問い合わせください\n'
+        if (speechError?.message) {
+          errorDetails += `\nエラー詳細: ${speechError.message}`
+        }
       } else if (speechError?.message) {
         errorDetails = speechError.message
+        // エラーメッセージにAPI有効化の情報が含まれている場合
+        if (speechError.message.includes('has not been used') || speechError.message.includes('is disabled')) {
+          errorMessage = 'Google Cloud Speech-to-Text APIが有効化されていません'
+          if (speechError.message.includes('https://console.developers.google.com')) {
+            const urlMatch = speechError.message.match(/https:\/\/console\.developers\.google\.com[^\s]+/)
+            if (urlMatch) {
+              activationUrl = urlMatch[0]
+              errorDetails = `Google Cloud Speech-to-Text APIを有効化する必要があります。\n\n${speechError.message}\n\n直接リンク: ${activationUrl}`
+            }
+          }
+        }
       }
 
       return NextResponse.json(
-        { error: errorMessage, details: errorDetails },
+        { 
+          error: errorMessage, 
+          details: errorDetails,
+          ...(activationUrl && { activationUrl }),
+        },
         { status: 500 }
       )
     }
