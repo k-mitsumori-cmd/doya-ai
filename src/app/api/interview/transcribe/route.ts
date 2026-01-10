@@ -79,7 +79,10 @@ export async function POST(request: NextRequest) {
     // Google Cloud Speech-to-Textを使用して文字起こし
     // Speech-to-Textの制限: 最大60分の音声、または1GBのファイル
     // 既存のGCS認証情報を使用可能
-    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    let credentials: any = undefined
+    const credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS
+    
+    if (!credsEnvVar) {
       console.error('[INTERVIEW] GOOGLE_APPLICATION_CREDENTIALS is not set')
       return NextResponse.json(
         { error: '文字起こし機能の設定が完了していません', details: 'Google Cloud Storageの認証情報が設定されていません。GOOGLE_APPLICATION_CREDENTIALS環境変数を設定してください。' },
@@ -87,7 +90,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const speechClient = new SpeechClient()
+    // GOOGLE_APPLICATION_CREDENTIALSがJSON文字列の場合、パースしてcredentialsオブジェクトを取得
+    try {
+      const credsStr = credsEnvVar.trim()
+      if (credsStr.startsWith('{')) {
+        // JSON文字列として設定されている場合
+        credentials = JSON.parse(credsStr)
+        console.log('[INTERVIEW] Successfully parsed GOOGLE_APPLICATION_CREDENTIALS as JSON')
+      } else {
+        // ファイルパスとして設定されている場合（通常はVercelでは使用しない）
+        console.log('[INTERVIEW] GOOGLE_APPLICATION_CREDENTIALS appears to be a file path (not supported in Vercel)')
+        return NextResponse.json(
+          { error: '文字起こし機能の設定が完了していません', details: 'GOOGLE_APPLICATION_CREDENTIALSはJSON文字列として設定する必要があります。ファイルパスはVercelでは使用できません。' },
+          { status: 500 }
+        )
+      }
+    } catch (parseError) {
+      console.error('[INTERVIEW] Failed to parse GOOGLE_APPLICATION_CREDENTIALS:', parseError)
+      return NextResponse.json(
+        { error: '文字起こし機能の設定が完了していません', details: `GOOGLE_APPLICATION_CREDENTIALSのパースに失敗しました: ${parseError instanceof Error ? parseError.message : '不明なエラー'}` },
+        { status: 500 }
+      )
+    }
+
+    // 認証情報の検証
+    if (!credentials || credentials.type !== 'service_account') {
+      console.error('[INTERVIEW] Invalid credentials type:', credentials?.type)
+      return NextResponse.json(
+        { error: '文字起こし機能の設定が完了していません', details: 'GOOGLE_APPLICATION_CREDENTIALSの形式が正しくありません。サービスアカウントキーのJSONである必要があります。' },
+        { status: 500 }
+      )
+    }
+
+    // SpeechClientを認証情報と共に初期化
+    const speechClientConfig: any = {
+      projectId: credentials.project_id || process.env.GOOGLE_CLOUD_PROJECT_ID,
+    }
+    
+    if (credentials) {
+      speechClientConfig.credentials = credentials
+    }
+    
+    const speechClient = new SpeechClient(speechClientConfig)
+    console.log('[INTERVIEW] SpeechClient initialized successfully with credentials')
 
     // ファイルサイズをチェック
     // Google Cloud Speech-to-Textの制限: 最大60分の音声、または1GBのファイル

@@ -5,10 +5,12 @@ const previewStore = new Map<string, any>()
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
-    const previewId = params.id
+    // Next.js 14/15互換性のため、Promiseの場合はawait
+    const resolvedParams = context.params instanceof Promise ? await context.params : context.params
+    const previewId = resolvedParams.id
     const lpData = previewStore.get(previewId)
 
     if (!lpData) {
@@ -34,10 +36,12 @@ export async function GET(
 // プレビューデータを保存（POST）
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
-    const previewId = params.id
+    // Next.js 14/15互換性のため、Promiseの場合はawait
+    const resolvedParams = context.params instanceof Promise ? await context.params : context.params
+    const previewId = resolvedParams.id
     const body = await request.json()
     
     previewStore.set(previewId, body)
