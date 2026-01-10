@@ -1,0 +1,291 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { uploadToGCS } from '@/lib/gcs'
+
+// ファイルサイズフォーマット関数
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+}
+
+// 素材アップロード（音声・動画・テキスト・PDF等）
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+    const guestId = request.headers.get('x-guest-id')
+
+    if (!userId && !guestId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const formData = await request.formData()
+    const projectId = formData.get('projectId') as string
+    const file = formData.get('file') as File
+
+    if (!projectId || !file) {
+      return NextResponse.json(
+        { error: 'プロジェクトIDまたはファイルが指定されていません', details: '必須パラメータが不足しています。' },
+        { status: 400 }
+      )
+    }
+
+    // ファイルサイズチェック（5TB制限 - Google Cloud Storageの実質的な上限）
+    // 注意: Vercelのサーバーレス関数には4.5MBのリクエストボディサイズ制限があります
+    // 4.5MBを超えるファイルはチャンクアップロードを使用します
+    const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024 * 1024 // 5TB（Google Cloud Storageの実質的な上限）
+    const CHUNK_THRESHOLD = 50 * 1024 * 1024 // 50MB（チャンクアップロードの閾値）
+    
+    if (file.size > MAX_FILE_SIZE) {
+      const fileSizeGB = (file.size / 1024 / 1024 / 1024).toFixed(2)
+      const maxSizeGB = (MAX_FILE_SIZE / 1024 / 1024 / 1024).toFixed(2)
+      return NextResponse.json(
+        {
+          error: 'ファイルサイズが大きすぎます',
+          details: `最大ファイルサイズ: ${maxSizeGB}GB（MAX）\n現在のファイルサイズ: ${fileSizeGB}GB\n\n${maxSizeGB}GBを超えるファイルはアップロードできません。`,
+        },
+        { status: 400 }
+      )
+    }
+    
+    // Vercelのサーバーレス関数の制限（4.5MB）を超える場合はチャンクアップロードを使用
+    const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB
+    if (file.size > VERCEL_LIMIT) {
+      // 4.5MBを超える場合はチャンクアップロードにリダイレクト
+      return NextResponse.json(
+        {
+          error: 'チャンクアップロードを使用してください',
+          details: `ファイルサイズが${(VERCEL_LIMIT / 1024 / 1024).toFixed(0)}MBを超えているため、チャンクアップロードを使用してください。`,
+          useChunkUpload: true,
+        },
+        { status: 400 }
+      )
+    }
+
+    if (file.size === 0) {
+      return NextResponse.json(
+        { error: '空のファイルです', details: 'ファイルが空のため、アップロードできません。' },
+        { status: 400 }
+      )
+    }
+
+    // プロジェクトの所有権確認
+    let project
+    try {
+      project = await prisma.interviewProject.findFirst({
+        where: {
+          id: projectId,
+          OR: [{ userId: userId || undefined }, { guestId: guestId || undefined }],
+        },
+      })
+    } catch (dbError) {
+      console.error('[INTERVIEW] Database query error:', dbError)
+      // Prismaエラーコードの判定
+      if (dbError && typeof dbError === 'object' && 'code' in dbError) {
+        const prismaError = dbError as { code: string }
+        if (prismaError.code === 'P2021') {
+          return NextResponse.json(
+            {
+              error: 'データベースのテーブルが存在しません',
+              details: 'データベースのマイグレーションが必要です。管理者にお問い合わせください。',
+            },
+            { status: 503 }
+          )
+        } else if (prismaError.code === 'P1001' || prismaError.code === 'P1017') {
+          return NextResponse.json(
+            {
+              error: 'データベースに接続できません',
+              details: 'データベースサーバーに接続できませんでした。しばらくしてから再度お試しください。',
+            },
+            { status: 503 }
+          )
+        }
+      }
+      throw dbError
+    }
+
+    if (!project) {
+      return NextResponse.json(
+        { error: 'プロジェクトが見つかりません', details: '指定されたプロジェクトIDが存在しないか、アクセス権限がありません。' },
+        { status: 404 }
+      )
+    }
+
+    // ファイルタイプ判定
+    const mimeType = file.type
+    const fileNameLower = file.name.toLowerCase()
+    const extension = fileNameLower.split('.').pop()
+
+    let materialType = 'text'
+    const isAudio = mimeType.startsWith('audio/') || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(extension || '')
+    const isVideo = mimeType.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(extension || '')
+    const isPdf = mimeType === 'application/pdf' || extension === 'pdf'
+    const isText = mimeType.startsWith('text/') || ['txt', 'md'].includes(extension || '') || extension === 'docx'
+
+    if (isAudio) materialType = 'audio'
+    else if (isVideo) materialType = 'video'
+    else if (isPdf) materialType = 'pdf'
+    else if (isText) materialType = 'text'
+    else {
+      return NextResponse.json(
+        {
+          error: '対応していないファイル形式です',
+          details: `対応形式: 音声（MP3, WAV, M4A）、動画（MP4, MOV, AVI）、テキスト（TXT, DOCX）、PDF。\n検出された形式: ${mimeType || '不明'}（拡張子: ${extension || 'なし'}）`,
+        },
+        { status: 400 }
+      )
+    }
+
+    // Google Cloud Storageにアップロード
+    const savedFileName = `${projectId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const gcsPath = `interview/${savedFileName}`
+    
+    // Google Cloud Storageの環境変数確認
+    if (!process.env.GOOGLE_CLOUD_PROJECT_ID || !process.env.GCS_BUCKET_NAME) {
+      console.error('[INTERVIEW] Google Cloud Storage configuration is missing')
+      return NextResponse.json(
+        {
+          error: 'ストレージの設定が完了していません',
+          details: 'Google Cloud Storageの環境変数（GOOGLE_CLOUD_PROJECT_ID、GCS_BUCKET_NAME）が設定されていません。\n環境変数を設定してください。',
+        },
+        { status: 500 }
+      )
+    }
+    
+    let uploadResult: { url: string; pathname: string; size: number }
+    try {
+      const buffer = await file.arrayBuffer()
+      uploadResult = await uploadToGCS(gcsPath, buffer, {
+        contentType: mimeType || undefined,
+        public: true,
+      })
+      console.log(`[INTERVIEW] File uploaded to Google Cloud Storage: ${uploadResult.url}`)
+    } catch (gcsError: any) {
+      console.error('[INTERVIEW] Failed to upload file to Google Cloud Storage:', gcsError)
+      
+      let errorMessage = 'ファイルのアップロードに失敗しました'
+      let errorDetails = 'Google Cloud Storageへのアップロード中にエラーが発生しました。'
+      
+      if (gcsError?.message?.includes('Unauthorized') || gcsError?.message?.includes('401') || gcsError?.code === 401) {
+        errorMessage = 'Google Cloud Storageの認証に失敗しました'
+        errorDetails = 'GOOGLE_APPLICATION_CREDENTIALSが無効です。環境変数を確認してください。'
+      } else if (gcsError?.message?.includes('Forbidden') || gcsError?.message?.includes('403') || gcsError?.code === 403) {
+        errorMessage = 'Google Cloud Storageへのアクセスが拒否されました'
+        errorDetails = 'Google Cloud Storageへのアクセス権限がありません。サービスアカウントの権限を確認してください。'
+      } else if (gcsError?.message?.includes('Size limit') || gcsError?.message?.includes('413') || gcsError?.code === 413) {
+        errorMessage = 'ファイルサイズが大きすぎます'
+        errorDetails = `ファイルサイズが上限を超えています。\n現在のファイルサイズ: ${formatFileSize(file.size)}\n最大ファイルサイズ: 5TB`
+      } else if (gcsError?.message?.includes('quota') || gcsError?.message?.includes('quota exceeded')) {
+        errorMessage = 'Google Cloud Storageの容量制限に達しました'
+        errorDetails = `Google Cloud Storageの容量制限に達しています。\n\n対処方法:\n1. 古いプロジェクトを削除して容量を確保する\n2. 不要なファイルを削除する\n3. Google Cloud Consoleでストレージ使用状況を確認する\n\n現在のファイルサイズ: ${formatFileSize(file.size)}`
+      } else {
+        errorDetails = `エラー詳細: ${gcsError instanceof Error ? gcsError.message : '不明なエラー'}\nGoogle Cloud Storageへの接続を確認してください。`
+      }
+      
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          details: errorDetails,
+        },
+        { status: gcsError?.message?.includes('quota') || gcsError?.message?.includes('quota exceeded') ? 507 : 500 } // 507 Insufficient Storage
+      )
+    }
+
+    // DBに記録
+    let material
+    try {
+      material = await prisma.interviewMaterial.create({
+        data: {
+          projectId,
+          type: materialType,
+          fileName: file.name,
+          filePath: uploadResult.pathname, // GCS pathnameを保存
+          fileUrl: uploadResult.url, // GCS URLを保存
+          fileSize: uploadResult.size || file.size,
+          mimeType,
+          status: 'UPLOADED',
+        },
+      })
+    } catch (dbError) {
+      console.error('[INTERVIEW] Database error when creating material:', dbError)
+      // Prismaエラーコードの判定
+      if (dbError && typeof dbError === 'object' && 'code' in dbError) {
+        const prismaError = dbError as { code: string; meta?: any }
+        if (prismaError.code === 'P2021') {
+          throw new Error('データベースのテーブルが存在しません。データベースのマイグレーションが必要です。')
+        } else if (prismaError.code === 'P2003') {
+          throw new Error('プロジェクトが見つかりません。プロジェクトIDが無効です。')
+        } else if (prismaError.code === 'P1001' || prismaError.code === 'P1017') {
+          throw new Error('データベースに接続できません。')
+        }
+      }
+      throw dbError
+    }
+
+    return NextResponse.json({ material })
+  } catch (error) {
+    console.error('[INTERVIEW] Material upload error:', error)
+    console.error('[INTERVIEW] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+    
+    // Prismaエラーコードの判定
+    let statusCode = 500
+    let errorMessage = error instanceof Error ? error.message : '不明なエラー'
+    
+    if (error && typeof error === 'object' && 'code' in error) {
+      const prismaError = error as { code: string }
+      if (prismaError.code === 'P2021') {
+        errorMessage = 'データベースのテーブルが存在しません。データベースのマイグレーションが必要です。'
+        statusCode = 503
+      } else if (prismaError.code === 'P1001' || prismaError.code === 'P1017') {
+        errorMessage = 'データベースに接続できません。'
+        statusCode = 503
+      }
+    }
+    
+    console.error('[INTERVIEW] File info:', {
+      name: file?.name,
+      size: file?.size,
+      type: file?.type,
+      projectId,
+    })
+    
+    // エラーの種類に応じた詳細メッセージ
+    let details = 'ファイルサイズや形式を確認してください。'
+    if (errorMessage.includes('テーブルが存在しません') || errorMessage.includes('does not exist')) {
+      details = 'データベースのテーブルが存在しません。\nデータベースのマイグレーションが必要です。Vercelのビルドログで「[db-push]」を確認してください。'
+    } else if (errorMessage.includes('プロジェクトが見つかりません') || errorMessage.includes('プロジェクトIDが無効')) {
+      details = 'プロジェクトが見つかりません。\nプロジェクトの作成に失敗している可能性があります。もう一度お試しください。'
+    } else if (errorMessage.includes('データベースに接続できません')) {
+      details = 'データベースに接続できません。\nデータベースサーバーに接続できませんでした。しばらくしてから再度お試しください。'
+    } else if (errorMessage.includes('ENOSPC') || errorMessage.includes('ENOENT')) {
+      details = 'ディスク容量が不足しているか、ファイルシステムへのアクセス権限がありません。'
+    } else if (errorMessage.includes('EACCES')) {
+      details = 'ファイルへの書き込み権限がありません。'
+    } else if (errorMessage.includes('ETIMEDOUT') || errorMessage.includes('timeout')) {
+      details = 'ファイルのアップロードがタイムアウトしました。ファイルサイズが大きすぎる可能性があります。'
+    } else if (errorMessage.includes('memory') || errorMessage.includes('Memory')) {
+      details = 'メモリ不足が発生しました。ファイルサイズが大きすぎる可能性があります。'
+    } else if (errorMessage.includes('ファイルの読み込みに失敗')) {
+      details = 'ファイルの読み込みに失敗しました。\nファイルが破損しているか、アクセス権限がありません。'
+    } else if (errorMessage.includes('ファイルの保存に失敗')) {
+      details = 'ファイルの保存に失敗しました。\nサーバーのストレージに問題がある可能性があります。'
+    }
+    
+    return NextResponse.json(
+      {
+        error: 'ファイルのアップロードに失敗しました',
+        details: `${details}\nエラー詳細: ${errorMessage}`,
+      },
+      { status: statusCode }
+    )
+  }
+}
+

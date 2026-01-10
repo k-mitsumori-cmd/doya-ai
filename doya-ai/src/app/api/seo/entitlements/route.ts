@@ -15,6 +15,7 @@ import {
 } from '@/lib/seoAccess'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
 export async function GET(_req: NextRequest) {
   try {
@@ -87,13 +88,27 @@ export async function GET(_req: NextRequest) {
       canUseChatEdit: imagesAllowed,
       canUseSeoImages: imagesAllowed,
     })
-  } catch {
+  } catch (e: any) {
+    console.error('[seo entitlements] failed', { error: e?.message || 'unknown error', stack: e?.stack })
+    // エラー時は安全なデフォルト値を返す
     return NextResponse.json({
       success: true,
       isLoggedIn: false,
       plan: 'FREE',
       canUseChatEdit: false,
       canUseSeoImages: false,
+      limits: {
+        articlesPerDay: 0,
+        articlesTotalGuest: 3,
+        imagesAllowed: false,
+      },
+      usage: {
+        articlesToday: 0,
+        articlesTotalGuest: 0,
+      },
+      remaining: {
+        articles: 3,
+      },
     })
   }
 }
