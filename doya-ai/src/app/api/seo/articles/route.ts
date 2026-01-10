@@ -16,6 +16,9 @@ import {
 } from '@/lib/seoAccess'
 import { getSeoCharLimitByUserPlan } from '@/lib/pricing'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     await ensureSeoSchema()
