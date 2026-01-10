@@ -207,43 +207,44 @@ export async function POST(request: NextRequest) {
       }
 
       // エンコーディングをMIMEタイプから判定
+      // 注意: コンテナ形式（MP3、AAC、OGG_OPUS、WEBM_OPUS、MP4、MOV、AVIなど）はencodingを設定しない（自動検出）
+      // 生オーディオ形式（LINEAR16、FLAC、MULAW、AMR、AMR_WB）のみencodingを設定する
+      const containerFormats = ['mp3', 'mpeg', 'm4a', 'aac', 'ogg', 'webm', 'mp4', 'mov', 'avi', 'quicktime', 'x-msvideo']
+      const rawAudioFormats = ['wav', 'flac']
+      
       if (material.mimeType) {
-        if (material.mimeType.includes('mp3') || material.mimeType.includes('mpeg')) {
-          encoding = 'MP3'
-        } else if (material.mimeType.includes('wav')) {
-          encoding = 'LINEAR16'
-        } else if (material.mimeType.includes('m4a') || material.mimeType.includes('aac')) {
-          encoding = 'AAC'
-        } else if (material.mimeType.includes('ogg')) {
-          encoding = 'OGG_OPUS'
-        } else if (material.mimeType.includes('flac')) {
-          encoding = 'FLAC'
-        } else if (material.mimeType.includes('webm')) {
-          encoding = 'WEBM_OPUS'
-        } else if (material.mimeType.includes('mp4') || material.mimeType.includes('video')) {
-          encoding = 'MP3' // 動画ファイルの場合はMP3として処理
+        const mimeTypeLower = material.mimeType.toLowerCase()
+        if (mimeTypeLower.includes('wav')) {
+          encoding = 'LINEAR16' // WAVは生オーディオ形式
+        } else if (mimeTypeLower.includes('flac')) {
+          encoding = 'FLAC' // FLACは生オーディオ形式
+        } else if (containerFormats.some(format => mimeTypeLower.includes(format))) {
+          // コンテナ形式の場合はencodingを設定しない（自動検出）
+          encoding = null
+          console.log(`[INTERVIEW] Container format detected from MIME type (${material.mimeType}), encoding will be auto-detected`)
         }
       }
       
       // エンコーディングが判定できない場合は、ファイル拡張子から判定
-      if (!encoding && material.fileName) {
+      if (encoding === null && material.fileName) {
         const ext = material.fileName.toLowerCase().split('.').pop()
-        if (ext === 'mp3') encoding = 'MP3'
-        else if (ext === 'wav') encoding = 'LINEAR16'
-        else if (ext === 'm4a' || ext === 'aac') encoding = 'AAC'
-        else if (ext === 'ogg') encoding = 'OGG_OPUS'
-        else if (ext === 'flac') encoding = 'FLAC'
-        else if (ext === 'webm') encoding = 'WEBM_OPUS'
-        else if (ext === 'mp4') encoding = 'MP3'
+        if (ext === 'wav') {
+          encoding = 'LINEAR16' // WAVは生オーディオ形式
+        } else if (ext === 'flac') {
+          encoding = 'FLAC' // FLACは生オーディオ形式
+        } else if (containerFormats.includes(ext || '')) {
+          // コンテナ形式の場合はencodingを設定しない（自動検出）
+          encoding = null
+          console.log(`[INTERVIEW] Container format detected from extension (${ext}), encoding will be auto-detected`)
+        }
       }
       
-      // デフォルトはMP3
-      if (!encoding) {
-        encoding = 'MP3'
-        console.warn(`[INTERVIEW] Encoding not detected, using MP3 as default`)
+      // encodingが未設定の場合は、APIに自動検出を任せる（コンテナ形式として扱う）
+      if (encoding === null || encoding === undefined) {
+        console.log(`[INTERVIEW] Encoding not specified, will be auto-detected by API (container format assumed)`)
+      } else {
+        console.log(`[INTERVIEW] Detected encoding: ${encoding} (raw audio format)`)
       }
-      
-      console.log(`[INTERVIEW] Detected encoding: ${encoding}`)
     } catch (fileError) {
       console.error('[INTERVIEW] Failed to prepare file for transcription:', fileError)
       const errorMessage = fileError instanceof Error ? fileError.message : '不明なエラー'
@@ -289,23 +290,18 @@ export async function POST(request: NextRequest) {
         
         // エンコーディング設定（base64コンテンツの場合のみ）
         // Google Cloud Speech-to-Text APIの仕様:
-        // - コンテナ形式（MP3、AAC、OGG_OPUS、WEBM_OPUS）はencodingを指定しない（自動検出）
+        // - コンテナ形式（MP3、AAC、OGG_OPUS、WEBM_OPUS、MP4、MOV、AVIなど）はencodingを指定しない（自動検出）
         // - 生オーディオ形式（LINEAR16、FLAC、MULAW、AMR、AMR_WB）のみencodingとsampleRateHertzを設定
-        const containerFormats = ['MP3', 'AAC', 'OGG_OPUS', 'WEBM_OPUS']
         const rawAudioFormats = ['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB']
         
-        if (encoding && containerFormats.includes(encoding)) {
-          // コンテナ形式の場合はencodingを設定しない（自動検出）
-          console.log(`[INTERVIEW] Container format detected (${encoding}), encoding will be auto-detected (not setting in config)`)
-          // configにencodingを追加しない
-        } else if (encoding && rawAudioFormats.includes(encoding)) {
+        if (encoding && rawAudioFormats.includes(encoding)) {
           // 生オーディオ形式の場合はencodingとsampleRateHertzを設定
           request.config.encoding = encoding as any
           request.config.sampleRateHertz = 16000 // デフォルトサンプルレート（実際の値はファイルから取得する必要があるが、デフォルト値を使用）
           console.log(`[INTERVIEW] Raw audio format detected (${encoding}), setting encoding: ${encoding}, sampleRateHertz: 16000`)
         } else {
-          // encodingが未設定、または未知の形式の場合、encodingを設定しない（自動検出に任せる）
-          console.log(`[INTERVIEW] Encoding: ${encoding || 'not specified'}, will be auto-detected by API (not setting in config)`)
+          // コンテナ形式、またはencodingが未設定の場合、encodingを設定しない（自動検出に任せる）
+          console.log(`[INTERVIEW] Container format or encoding not specified (${encoding || 'none'}), will be auto-detected by API (not setting in config)`)
           // configにencodingを追加しない
         }
       } else {
