@@ -4,7 +4,7 @@ import React, { useState, Suspense, useEffect } from 'react'
 import { LpSiteAppLayout } from '@/components/LpSiteAppLayout'
 import { LpGenerationRequest, LpGenerationResult, LpType, Tone } from '@/lib/lp-site/types'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Download, RefreshCw, Monitor, Smartphone, Loader2, Search, Layout, Image as ImageIcon, Package, Globe } from 'lucide-react'
+import { Sparkles, Download, RefreshCw, Monitor, Smartphone, Loader2, Search, Layout, Image as ImageIcon, Package, Globe, Eye, Globe2, Link2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { LpGenerationOverlay } from '@/components/lp-site/LpGenerationOverlay'
 import { LpInteractiveEditor } from '@/components/lp-site/LpInteractiveEditor'
@@ -37,6 +37,9 @@ function LpSitePageInner() {
   const [imageProgress, setImageProgress] = useState(0)
   const [combinedLpImage, setCombinedLpImage] = useState<{ pc?: string; sp?: string } | null>(null)
   const [isCombining, setIsCombining] = useState(false)
+  const [previewId, setPreviewId] = useState<string | null>(null)
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
+  const [isPublishing, setIsPublishing] = useState(false)
 
   // 進捗を安全に更新（後戻りしない）
   const updateProgress = (newProgress: number) => {
@@ -1001,6 +1004,144 @@ function LpSitePageInner() {
                   })
                 }}
               />
+            </div>
+
+            {/* アクションボタン */}
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 space-y-4">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2 mb-4">
+                <Package className="w-5 h-5 text-teal-600" />
+                <span>アクション</span>
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* プレビュー */}
+                <button
+                  onClick={async () => {
+                    if (!result) return
+                    try {
+                      const previewId = Date.now().toString(36) + Math.random().toString(36).substr(2)
+                      const response = await fetch(`/api/lp-site/preview/${previewId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(result),
+                      })
+                      if (!response.ok) throw new Error('プレビューの保存に失敗しました')
+                      const data = await response.json()
+                      setPreviewId(previewId)
+                      window.open(`/lp-site/preview/${previewId}`, '_blank')
+                      toast.success('プレビューを開きました')
+                    } catch (error: any) {
+                      toast.error(error.message || 'プレビューの作成に失敗しました')
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all"
+                >
+                  <Eye className="w-5 h-5" />
+                  <span>プレビュー</span>
+                </button>
+
+                {/* 公開 */}
+                <button
+                  onClick={async () => {
+                    if (!result) return
+                    setIsPublishing(true)
+                    try {
+                      const response = await fetch('/api/lp-site/publish', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ lp_data: result }),
+                      })
+                      if (!response.ok) throw new Error('公開に失敗しました')
+                      const data = await response.json()
+                      setPublishedUrl(data.published_url)
+                      setResult({
+                        ...result,
+                        published_url: data.published_url,
+                      })
+                      toast.success('LPを公開しました！')
+                      window.open(data.published_url, '_blank')
+                    } catch (error: any) {
+                      toast.error(error.message || '公開に失敗しました')
+                    } finally {
+                      setIsPublishing(false)
+                    }
+                  }}
+                  disabled={isPublishing}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isPublishing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>公開中...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Globe2 className="w-5 h-5" />
+                      <span>サイト公開</span>
+                    </>
+                  )}
+                </button>
+
+                {/* 画像ダウンロード（全体） */}
+                <button
+                  onClick={() => {
+                    if (!combinedLpImage) {
+                      toast.error('まずLP全体画像を生成してください')
+                      return
+                    }
+                    const image = selectedDevice === 'pc' ? combinedLpImage.pc : combinedLpImage.sp
+                    if (image) {
+                      handleDownload('single', 'lp-combined', image)
+                    }
+                  }}
+                  disabled={!combinedLpImage}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg font-semibold hover:from-purple-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-5 h-5" />
+                  <span>全体画像ダウンロード</span>
+                </button>
+
+                {/* 全セクション画像ZIP */}
+                <button
+                  onClick={() => handleDownload(selectedDevice === 'pc' ? 'all_pc' : 'all_sp')}
+                  className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 transition-all"
+                >
+                  <Download className="w-5 h-5" />
+                  <span>全画像ZIP ({selectedDevice === 'pc' ? 'PC' : 'SP'}版)</span>
+                </button>
+              </div>
+
+              {/* 公開URL表示 */}
+              {publishedUrl && (
+                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-sm font-bold text-green-900 mb-2">公開URL:</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={publishedUrl}
+                      readOnly
+                      className="flex-1 px-3 py-2 bg-white border border-green-300 rounded-lg text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(publishedUrl)
+                        toast.success('URLをコピーしました')
+                      }}
+                      className="px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors"
+                    >
+                      コピー
+                    </button>
+                    <a
+                      href={publishedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 bg-green-500 text-white rounded-lg text-sm font-semibold hover:bg-green-600 transition-colors"
+                    >
+                      開く
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Back Button */}

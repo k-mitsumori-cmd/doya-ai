@@ -27,10 +27,10 @@ type UploadStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'gener
 type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
 
 // Google Cloud Storageを使用したアップロード
-// - Google Cloud Storageの上限: 5TB（実質的な上限）
+// - 文字起こし機能を使用するため、1GBまでアップロード可能（文字起こし制限に合わせる）
 // - チャンクアップロードを使用することで、大きなファイルもアップロード可能
 // - 4.5MBを超えるファイルは自動的にチャンクアップロードを使用（Vercelのサーバーレス関数制限）
-const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024 * 1024 // 5TB（Google Cloud Storageの実質的な上限）
+const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB（文字起こし機能の制限に合わせる）
 const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB（Vercelのサーバーレス関数のリクエストボディサイズ制限）
 const CHUNK_SIZE = 4 * 1024 * 1024 // 4MB（チャンクサイズ - Vercelの制限より少し小さく）
 const USE_CHUNK_UPLOAD = true // チャンクアップロードを有効化（4.5MB以上のファイルをアップロード可能）
@@ -212,14 +212,16 @@ export default function InterviewPage() {
   }, [uploadedFile, materialType, progress, isUploading])
 
   const validateFile = (file: File): { valid: boolean; error?: string; details?: string; useChunk?: boolean } => {
-    // ファイルサイズチェック（5TBまでGoogle Cloud Storageで対応可能）
+    // ファイルサイズチェック（1GBまで：文字起こし機能の制限に合わせる）
     if (file.size > MAX_FILE_SIZE) {
+      const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
       const fileSizeGB = (file.size / 1024 / 1024 / 1024).toFixed(2)
-      const maxSizeGB = (MAX_FILE_SIZE / 1024 / 1024 / 1024).toFixed(2)
+      const maxSizeGB = (MAX_FILE_SIZE / 1024 / 1024 / 1024).toFixed(0)
+      const maxSizeMB = (MAX_FILE_SIZE / 1024 / 1024).toFixed(0)
       return {
         valid: false,
         error: 'ファイルサイズが大きすぎます',
-        details: `最大ファイルサイズ: ${maxSizeGB}GB（MAX）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeGB}GB > ${maxSizeGB}GB）\n\n${maxSizeGB}GBを超えるファイルはアップロードできません。ファイルを分割するか、より小さなファイルサイズに圧縮してください。`,
+        details: `最大ファイルサイズ: ${maxSizeGB}GB（${maxSizeMB}MB）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB = ${fileSizeGB}GB）\n\n${maxSizeGB}GB（${maxSizeMB}MB）を超えるファイルはアップロードできません。\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: ${maxSizeMB}MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください`,
       }
     }
     
@@ -1267,9 +1269,24 @@ export default function InterviewPage() {
 
         try {
           console.log('[INTERVIEW] Requesting transcription for material:', uploadData.material.id)
+          // ゲストIDを取得
+          let guestId: string | null = null
+          try {
+            guestId = localStorage.getItem('interview-guest-id')
+          } catch (e) {
+            console.warn('[INTERVIEW] Failed to get guest ID from localStorage:', e)
+          }
+          
+          const headers: HeadersInit = { 'Content-Type': 'application/json' }
+          if (guestId) {
+            headers['x-guest-id'] = guestId
+          }
+          
+          console.log('[INTERVIEW] Requesting transcription with headers:', { guestId: guestId || 'null' })
+          
           const transcribeRes = await fetch('/api/interview/transcribe', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
               projectId: newProjectId,
               materialId: uploadData.material.id,
@@ -1281,6 +1298,17 @@ export default function InterviewPage() {
             const errorMsg = errorData.error || '文字起こしに失敗しました'
             const errorDetails = errorData.details || ''
             console.error('[INTERVIEW] Transcription failed:', transcribeRes.status, errorMsg, errorDetails)
+            
+            // 401エラー（認証エラー）の場合は、より詳細なメッセージを表示
+            if (transcribeRes.status === 401) {
+              throw new Error(
+                `${errorMsg}\n\n${errorDetails || '認証情報が見つかりませんでした。'}\n\n` +
+                `解決方法:\n` +
+                `1. ページを再読み込みしてください\n` +
+                `2. ログインしている場合は、再度ログインしてください\n` +
+                `3. 問題が解決しない場合は、サポートにお問い合わせください`
+              )
+            }
             
             // 413エラー（ファイルサイズ制限）の場合は、より詳細なメッセージを表示
             if (transcribeRes.status === 413) {
@@ -1647,10 +1675,12 @@ export default function InterviewPage() {
                 またはクリックしてファイルを選択
               </p>
               <p className="text-sm text-slate-500 mb-6">
-                最大ファイルサイズ: <span className="font-black text-orange-600">5TB（MAX）</span>
+                最大ファイルサイズ: <span className="font-black text-orange-600">1GB（1,000MB）</span>
                 <br />
                 <span className="text-xs text-slate-400">
                   ※ クライアントから直接Google Cloud Storageにアップロードします
+                  <br />
+                  ※ 文字起こし機能を使用するため、1GBまでアップロード可能です
                   <br />
                   ※ 大きなファイル（500MB以上）も対応可能です（時間がかかる場合があります）
                 </span>
@@ -1925,9 +1955,11 @@ export default function InterviewPage() {
                 音声: MP3, WAV, M4A, AAC, OGG / 動画: MP4, MOV, AVI, WebM / テキスト: TXT, DOCX, MD / PDF: PDF
               </p>
               <p className="text-xs text-orange-700 mt-1">
-                最大ファイルサイズ: <span className="font-black">5TB（MAX）</span>
+                最大ファイルサイズ: <span className="font-black">1GB（1,000MB）</span>
                 <br />
                 <span className="text-[10px] text-orange-600">
+                  ※ 文字起こし機能を使用するため、1GBまでアップロード可能です
+                  <br />
                   クライアントから直接Google Cloud Storageにアップロード（サイズ制限なし）
                 </span>
               </p>

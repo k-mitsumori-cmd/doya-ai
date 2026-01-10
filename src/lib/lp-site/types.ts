@@ -25,6 +25,8 @@ export interface LpSection {
   sub_headline?: string
   text_volume: number
   image_required: boolean
+  cta_link?: string // CTAボタンのリンクURL
+  cta_text?: string // CTAボタンのテキスト
 }
 
 export interface WireframeData {
@@ -62,6 +64,8 @@ export interface LpGenerationResult {
   wireframes: SectionWireframe[]
   images: SectionImage[]
   structure_json: string
+  preview_id?: string // プレビュー用ID
+  published_url?: string // 公開されたURL
 }
 
 export interface LpGenerationRequest {

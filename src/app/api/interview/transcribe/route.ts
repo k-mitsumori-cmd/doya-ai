@@ -32,8 +32,17 @@ export async function POST(request: NextRequest) {
     const userId = session?.user?.id
     const guestId = request.headers.get('x-guest-id')
 
+    console.log('[INTERVIEW] Transcription request - userId:', userId || 'null', 'guestId:', guestId || 'null')
+
     if (!userId && !guestId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      console.error('[INTERVIEW] Unauthorized: both userId and guestId are missing')
+      return NextResponse.json(
+        { 
+          error: '認証が必要です',
+          details: 'ログインするか、ゲストセッションIDを設定してください。\n\n解決方法:\n1. ログインしてください\n2. ページを再読み込みしてください\n3. 問題が解決しない場合は、サポートにお問い合わせください'
+        },
+        { status: 401 }
+      )
     }
 
     const body = await request.json()
