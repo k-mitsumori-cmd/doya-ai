@@ -212,21 +212,27 @@ export async function POST(request: NextRequest) {
       // - base64コンテンツを使用する場合:
       //   - コンテナ形式（MP3、AAC、OGG_OPUS、WEBM_OPUS、MP4、MOV、AVIなど）: encodingを設定しない（自動検出）
       //   - 生オーディオ形式（LINEAR16、FLAC、MULAW、AMR、AMR_WB）のみ: encodingとsampleRateHertzを設定
-      // 重要: GCS URI使用時は、encoding判定を行っても、最終的にはencodingをnullにする
-      const containerFormatsMime = ['mp3', 'mpeg', 'm4a', 'aac', 'ogg', 'webm', 'mp4', 'mov', 'avi', 'quicktime', 'x-msvideo']
-      const containerFormatsExt = ['mp3', 'mpeg', 'm4a', 'aac', 'ogg', 'webm', 'mp4', 'mov', 'avi']
-      const rawAudioFormatsMime = ['wav', 'flac']
-      const rawAudioFormatsExt = ['wav', 'flac']
+      // 重要: GCS URI使用時は、エンコーディング判定をスキップし、常にencodingをnullにする
       
-      // まず、コンテナ形式かどうかを判定
-      let isContainerFormat = false
-      
-      // MIMEタイプから判定
-      if (material.mimeType) {
-        const mimeTypeLower = material.mimeType.toLowerCase()
-        if (rawAudioFormatsMime.some(format => mimeTypeLower.includes(format))) {
-          // 生オーディオ形式の判定（base64コンテンツの場合のみ有効）
-          if (!gcsUri) {
+      // GCS URI使用時は、エンコーディング判定をスキップ（常にnull）
+      if (gcsUri) {
+        encoding = null
+        console.log(`[INTERVIEW] GCS URI mode: skipping encoding detection, will always use auto-detect (not setting in config)`)
+      } else {
+        // base64コンテンツ使用時のみ、エンコーディング判定を行う
+        const containerFormatsMime = ['mp3', 'mpeg', 'm4a', 'aac', 'ogg', 'webm', 'mp4', 'mov', 'avi', 'quicktime', 'x-msvideo']
+        const containerFormatsExt = ['mp3', 'mpeg', 'm4a', 'aac', 'ogg', 'webm', 'mp4', 'mov', 'avi']
+        const rawAudioFormatsMime = ['wav', 'flac']
+        const rawAudioFormatsExt = ['wav', 'flac']
+        
+        // まず、コンテナ形式かどうかを判定
+        let isContainerFormat = false
+        
+        // MIMEタイプから判定
+        if (material.mimeType) {
+          const mimeTypeLower = material.mimeType.toLowerCase()
+          if (rawAudioFormatsMime.some(format => mimeTypeLower.includes(format))) {
+            // 生オーディオ形式の判定（base64コンテンツの場合のみ有効）
             if (mimeTypeLower.includes('wav')) {
               encoding = 'LINEAR16'
               console.log(`[INTERVIEW] WAV format detected from MIME type: ${material.mimeType} -> LINEAR16`)
@@ -234,25 +240,19 @@ export async function POST(request: NextRequest) {
               encoding = 'FLAC'
               console.log(`[INTERVIEW] FLAC format detected from MIME type: ${material.mimeType} -> FLAC`)
             }
-          } else {
-            // GCS URI使用時は、生オーディオ形式でもencodingを設定しない
+          } else if (containerFormatsMime.some(format => mimeTypeLower.includes(format))) {
+            // コンテナ形式の場合はencodingをnullに設定（自動検出）
+            isContainerFormat = true
             encoding = null
-            console.log(`[INTERVIEW] GCS URI mode: WAV/FLAC detected but encoding will be auto-detected`)
+            console.log(`[INTERVIEW] Container format detected from MIME type: ${material.mimeType} -> encoding will be auto-detected`)
           }
-        } else if (containerFormatsMime.some(format => mimeTypeLower.includes(format))) {
-          // コンテナ形式の場合はencodingをnullに設定（自動検出）
-          isContainerFormat = true
-          encoding = null
-          console.log(`[INTERVIEW] Container format detected from MIME type: ${material.mimeType} -> encoding will be auto-detected`)
         }
-      }
-      
-      // エンコーディングが判定できない場合は、ファイル拡張子から判定
-      if (encoding === null && !isContainerFormat && material.fileName) {
-        const ext = (material.fileName.toLowerCase().split('.').pop() || '').toLowerCase()
-        if (rawAudioFormatsExt.includes(ext)) {
-          // 生オーディオ形式の判定（base64コンテンツの場合のみ有効）
-          if (!gcsUri) {
+        
+        // エンコーディングが判定できない場合は、ファイル拡張子から判定
+        if (encoding === null && !isContainerFormat && material.fileName) {
+          const ext = (material.fileName.toLowerCase().split('.').pop() || '').toLowerCase()
+          if (rawAudioFormatsExt.includes(ext)) {
+            // 生オーディオ形式の判定（base64コンテンツの場合のみ有効）
             if (ext === 'wav') {
               encoding = 'LINEAR16'
               console.log(`[INTERVIEW] WAV format detected from extension: ${ext} -> LINEAR16`)
@@ -260,31 +260,20 @@ export async function POST(request: NextRequest) {
               encoding = 'FLAC'
               console.log(`[INTERVIEW] FLAC format detected from extension: ${ext} -> FLAC`)
             }
-          } else {
-            // GCS URI使用時は、生オーディオ形式でもencodingを設定しない
+          } else if (containerFormatsExt.includes(ext)) {
+            // コンテナ形式の場合はencodingをnullに設定（自動検出）
+            isContainerFormat = true
             encoding = null
-            console.log(`[INTERVIEW] GCS URI mode: WAV/FLAC detected from extension but encoding will be auto-detected`)
+            console.log(`[INTERVIEW] Container format detected from extension: ${ext} -> encoding will be auto-detected`)
           }
-        } else if (containerFormatsExt.includes(ext)) {
-          // コンテナ形式の場合はencodingをnullに設定（自動検出）
-          isContainerFormat = true
-          encoding = null
-          console.log(`[INTERVIEW] Container format detected from extension: ${ext} -> encoding will be auto-detected`)
         }
-      }
-      
-      // GCS URI使用時は、常にencodingをnullにする（APIが自動検出）
-      if (gcsUri) {
-        encoding = null
-        console.log(`[INTERVIEW] GCS URI mode: encoding will always be auto-detected by API (not setting in config)`)
-      }
-      
-      // encodingが未設定の場合は、APIに自動検出を任せる（コンテナ形式として扱う）
-      // 注意: GCS URIを使用する場合、encodingは絶対に設定しない
-      if (encoding === null || encoding === undefined) {
-        console.log(`[INTERVIEW] Encoding not specified or container format detected, will be auto-detected by API`)
-      } else {
-        console.log(`[INTERVIEW] Detected encoding: ${encoding} (raw audio format, base64 content only)`)
+        
+        // encodingが未設定の場合は、APIに自動検出を任せる（コンテナ形式として扱う）
+        if (encoding === null || encoding === undefined) {
+          console.log(`[INTERVIEW] Encoding not specified or container format detected, will be auto-detected by API`)
+        } else {
+          console.log(`[INTERVIEW] Detected encoding: ${encoding} (raw audio format, base64 content only)`)
+        }
       }
     } catch (fileError) {
       console.error('[INTERVIEW] Failed to prepare file for transcription:', fileError)
