@@ -6,7 +6,6 @@ import { existsSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { SpeechClient } from '@google-cloud/speech'
-import { getFileFromGCS } from '@/lib/gcs'
 import { notifyApiError } from '@/lib/errorHandler'
 
 // Vercel等のサーバーレス環境では /tmp を使用
