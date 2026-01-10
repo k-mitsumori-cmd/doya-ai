@@ -5,10 +5,15 @@ import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { getGuestIdFromRequest } from '@/lib/seoAccess'
 
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+  const id = params.id
+  
   try {
     await ensureSeoSchema()
-    const id = ctx.params.id
     const session = await getServerSession(authOptions)
     const user: any = session?.user || null
     const userId = String(user?.id || '').trim()
@@ -31,7 +36,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     if (userId) {
       if (String(article.userId || '') !== userId) {
         return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-  }
+      }
     } else {
       if (!guestId || String(article.guestId || '') !== guestId) {
         return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
@@ -53,7 +58,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     })
   } catch (e: any) {
     const msg = e?.message || '不明なエラー'
-    console.error('[seo article get] failed', { articleId: ctx.params.id, msg })
+    console.error('[seo article get] failed', { articleId: id, msg, error: e })
     return NextResponse.json(
       { success: false, error: msg },
       { status: 500 }

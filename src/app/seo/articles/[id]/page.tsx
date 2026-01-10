@@ -562,6 +562,8 @@ function SeoArticleInner() {
   const [completionPopupEnabled, setCompletionPopupEnabled] = useState(true)
   const prevArticleStatusRef = useRef<string | null>(null)
   const dontShowAgainRef = useRef(false)
+  const notFoundErrorCountRef = useRef(0)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const [entitlements, setEntitlements] = useState<null | { canUseSeoImages: boolean; plan: string; isLoggedIn: boolean }>(null)
   const [mediaBusy, setMediaBusy] = useState(false)
@@ -682,13 +684,33 @@ function SeoArticleInner() {
       const res = await fetch(`/api/seo/articles/${id}`, { cache: 'no-store' })
       const json = await res.json()
       if (!res.ok || json?.success === false) {
+        // 404エラーの場合、カウントを増やす
+        if (res.status === 404) {
+          notFoundErrorCountRef.current += 1
+          // 404エラーが3回連続で発生した場合、ポーリングを停止
+          if (notFoundErrorCountRef.current >= 3) {
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current)
+              pollingIntervalRef.current = null
+            }
+            setLoadError('記事が見つかりません。記事が削除されたか、アクセス権限がない可能性があります。')
+            if (showLoading) setArticle(null)
+            return
+          }
+          throw new Error(json?.error || '記事が見つかりません')
+        }
+        // 404以外のエラーはカウントをリセット
+        notFoundErrorCountRef.current = 0
         throw new Error(json?.error || `API Error: ${res.status}`)
       }
+      // 成功した場合、エラーカウントをリセット
+      notFoundErrorCountRef.current = 0
       setArticle(json.article || null)
       setMemo(json.article?.memo?.content || '')
       setMarkdownDraft(json.article?.finalMarkdown || '')
     } catch (e: any) {
-      setLoadError(e?.message || '読み込みに失敗しました')
+      const errorMessage = e?.message || '読み込みに失敗しました'
+      setLoadError(errorMessage)
       if (showLoading) setArticle(null)
     } finally {
       if (showLoading) setLoading(false)
@@ -759,10 +781,16 @@ function SeoArticleInner() {
 
   useEffect(() => {
     load({ showLoading: true })
-    const t = setInterval(() => {
+    // ポーリングインターバルをrefに保存
+    pollingIntervalRef.current = setInterval(() => {
       load({ showLoading: false })
     }, 3000)
-    return () => clearInterval(t)
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+    }
   }, [load])
 
   useEffect(() => {
@@ -1015,11 +1043,29 @@ function SeoArticleInner() {
   }
 
   if (!article) {
+    const isNotFound = loadError?.includes('記事が見つかりません') || loadError?.includes('not found')
     return (
       <div className="max-w-2xl mx-auto py-20 text-center">
         <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-6" />
         <h2 className="text-2xl font-black text-gray-900 mb-4">記事が見つかりません</h2>
-        <Button variant="primary" onClick={() => load({ showLoading: true })}>再試行</Button>
+        {loadError && <p className="text-gray-600 mb-6">{loadError}</p>}
+        <div className="flex gap-4 justify-center">
+          <Button variant="primary" onClick={() => {
+            notFoundErrorCountRef.current = 0
+            load({ showLoading: true })
+            // ポーリングを再開
+            if (!pollingIntervalRef.current) {
+              pollingIntervalRef.current = setInterval(() => {
+                load({ showLoading: false })
+              }, 3000)
+            }
+          }}>再試行</Button>
+          {isNotFound && (
+            <Link href="/seo/articles">
+              <Button variant="secondary">記事一覧に戻る</Button>
+            </Link>
+          )}
+        </div>
       </div>
     )
   }
