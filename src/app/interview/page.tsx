@@ -1960,7 +1960,7 @@ export default function InterviewPage() {
                 <span className="text-[10px] text-orange-600">
                   ※ 文字起こし機能を使用するため、1GBまでアップロード可能です
                   <br />
-                  クライアントから直接Google Cloud Storageにアップロード（サイズ制限なし）
+                  クライアントから直接Google Cloud Storageにアップロードします
                 </span>
               </p>
             </div>
