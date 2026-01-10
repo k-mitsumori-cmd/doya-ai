@@ -338,16 +338,28 @@ export async function POST(request: NextRequest) {
       console.log(`[INTERVIEW] ==========================================`)
       
       console.log(`[INTERVIEW] Calling Google Cloud Speech-to-Text API... (file size: ${fileSizeMB} MB, encoding: ${encodingLog})`)
+
+      // ビデオファイルかどうかを判定
+      const isVideoFile = material.type === 'video' || material.mimeType?.includes('video')
       
       // リクエスト設定のベース（encodingは含めない）
       // 重要: GCS URIを使用する場合、encodingは絶対に設定しない
       // base64コンテンツを使用する場合でも、コンテナ形式の場合はencodingを設定しない
+      // 重要: MP4ビデオファイルの場合、一部のパラメータ（model、enableWordTimeOffsetsなど）がサポートされていない可能性があるため、最小限の設定のみを使用
       const baseConfig: any = {
         languageCode: 'ja-JP',
         alternativeLanguageCodes: ['en-US'], // 日本語が認識できない場合のフォールバック
         enableAutomaticPunctuation: true,
-        enableWordTimeOffsets: false, // 単語のタイムスタンプは不要
-        model: 'latest_long', // 長い音声に最適化されたモデル（60分まで対応）
+      }
+      
+      // ビデオファイル以外の場合のみ、modelとenableWordTimeOffsetsを追加
+      // MP4ビデオファイルの場合、これらのパラメータが"bad encoding"エラーを引き起こす可能性がある
+      if (!isVideoFile) {
+        baseConfig.enableWordTimeOffsets = false // 単語のタイムスタンプは不要
+        baseConfig.model = 'latest_long' // 長い音声に最適化されたモデル（60分まで対応）
+        console.log(`[INTERVIEW] Audio file detected: adding model and enableWordTimeOffsets parameters`)
+      } else {
+        console.log(`[INTERVIEW] Video file detected: using minimal config (model and enableWordTimeOffsets omitted)`)
       }
       
       // リクエストオブジェクトを初期化（encodingプロパティは含めない）
@@ -506,10 +518,10 @@ export async function POST(request: NextRequest) {
       console.log(`[INTERVIEW] ================================================`)
       
       console.log(`[INTERVIEW] Sending request to Google Cloud Speech-to-Text API...`)
-      
+
       // MP4ビデオファイルの場合はlongRunningRecognizeを使用（Google Cloud Speech-to-Text APIの推奨方法）
       // recognizeメソッドは短い音声ファイル（最大1分）用であり、ビデオファイルや大きなファイルには適していない
-      const isVideoFile = material.type === 'video' || material.mimeType?.includes('video')
+      // 注意: isVideoFileは上で既に定義済み
       const isLargeFile = (material.fileSize || 0) > 10 * 1024 * 1024 // 10MB以上
       
       let response: any
