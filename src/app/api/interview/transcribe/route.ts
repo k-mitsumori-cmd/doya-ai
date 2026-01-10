@@ -206,42 +206,59 @@ export async function POST(request: NextRequest) {
         console.log(`[INTERVIEW] File downloaded: ${audioContent.length} bytes`)
       }
 
-      // エンコーディングをMIMEタイプから判定
-      // 注意: コンテナ形式（MP3、AAC、OGG_OPUS、WEBM_OPUS、MP4、MOV、AVIなど）はencodingを設定しない（自動検出）
-      // 生オーディオ形式（LINEAR16、FLAC、MULAW、AMR、AMR_WB）のみencodingを設定する
-      const containerFormats = ['mp3', 'mpeg', 'm4a', 'aac', 'ogg', 'webm', 'mp4', 'mov', 'avi', 'quicktime', 'x-msvideo']
-      const rawAudioFormats = ['wav', 'flac']
+      // エンコーディングをMIMEタイプとファイル拡張子から判定
+      // 重要: Google Cloud Speech-to-Text APIの仕様:
+      // - GCS URIを使用する場合: encodingは絶対に設定しない（APIが自動検出）
+      // - base64コンテンツを使用する場合:
+      //   - コンテナ形式（MP3、AAC、OGG_OPUS、WEBM_OPUS、MP4、MOV、AVIなど）: encodingを設定しない（自動検出）
+      //   - 生オーディオ形式（LINEAR16、FLAC、MULAW、AMR、AMR_WB）のみ: encodingとsampleRateHertzを設定
+      const containerFormatsMime = ['mp3', 'mpeg', 'm4a', 'aac', 'ogg', 'webm', 'mp4', 'mov', 'avi', 'quicktime', 'x-msvideo']
+      const containerFormatsExt = ['mp3', 'mpeg', 'm4a', 'aac', 'ogg', 'webm', 'mp4', 'mov', 'avi']
+      const rawAudioFormatsMime = ['wav', 'flac']
+      const rawAudioFormatsExt = ['wav', 'flac']
       
+      // MIMEタイプから判定
       if (material.mimeType) {
         const mimeTypeLower = material.mimeType.toLowerCase()
-        if (mimeTypeLower.includes('wav')) {
-          encoding = 'LINEAR16' // WAVは生オーディオ形式
-        } else if (mimeTypeLower.includes('flac')) {
-          encoding = 'FLAC' // FLACは生オーディオ形式
-        } else if (containerFormats.some(format => mimeTypeLower.includes(format))) {
-          // コンテナ形式の場合はencodingを設定しない（自動検出）
+        if (rawAudioFormatsMime.some(format => mimeTypeLower.includes(format))) {
+          // 生オーディオ形式の判定
+          if (mimeTypeLower.includes('wav')) {
+            encoding = 'LINEAR16'
+            console.log(`[INTERVIEW] WAV format detected from MIME type: ${material.mimeType} -> LINEAR16`)
+          } else if (mimeTypeLower.includes('flac')) {
+            encoding = 'FLAC'
+            console.log(`[INTERVIEW] FLAC format detected from MIME type: ${material.mimeType} -> FLAC`)
+          }
+        } else if (containerFormatsMime.some(format => mimeTypeLower.includes(format))) {
+          // コンテナ形式の場合はencodingをnullに設定（自動検出）
           encoding = null
-          console.log(`[INTERVIEW] Container format detected from MIME type (${material.mimeType}), encoding will be auto-detected`)
+          console.log(`[INTERVIEW] Container format detected from MIME type: ${material.mimeType} -> encoding will be auto-detected`)
         }
       }
       
       // エンコーディングが判定できない場合は、ファイル拡張子から判定
       if (encoding === null && material.fileName) {
-        const ext = material.fileName.toLowerCase().split('.').pop()
-        if (ext === 'wav') {
-          encoding = 'LINEAR16' // WAVは生オーディオ形式
-        } else if (ext === 'flac') {
-          encoding = 'FLAC' // FLACは生オーディオ形式
-        } else if (containerFormats.includes(ext || '')) {
-          // コンテナ形式の場合はencodingを設定しない（自動検出）
+        const ext = (material.fileName.toLowerCase().split('.').pop() || '').toLowerCase()
+        if (rawAudioFormatsExt.includes(ext)) {
+          // 生オーディオ形式の判定
+          if (ext === 'wav') {
+            encoding = 'LINEAR16'
+            console.log(`[INTERVIEW] WAV format detected from extension: ${ext} -> LINEAR16`)
+          } else if (ext === 'flac') {
+            encoding = 'FLAC'
+            console.log(`[INTERVIEW] FLAC format detected from extension: ${ext} -> FLAC`)
+          }
+        } else if (containerFormatsExt.includes(ext)) {
+          // コンテナ形式の場合はencodingをnullに設定（自動検出）
           encoding = null
-          console.log(`[INTERVIEW] Container format detected from extension (${ext}), encoding will be auto-detected`)
+          console.log(`[INTERVIEW] Container format detected from extension: ${ext} -> encoding will be auto-detected`)
         }
       }
       
       // encodingが未設定の場合は、APIに自動検出を任せる（コンテナ形式として扱う）
+      // 注意: GCS URIを使用する場合、encodingは絶対に設定しない
       if (encoding === null || encoding === undefined) {
-        console.log(`[INTERVIEW] Encoding not specified, will be auto-detected by API (container format assumed)`)
+        console.log(`[INTERVIEW] Encoding not specified or container format detected, will be auto-detected by API`)
       } else {
         console.log(`[INTERVIEW] Detected encoding: ${encoding} (raw audio format)`)
       }
@@ -263,7 +280,9 @@ export async function POST(request: NextRequest) {
       const fileSizeMB = audioContent ? (audioContent.length / 1024 / 1024).toFixed(2) : (material.fileSize ? (material.fileSize / 1024 / 1024).toFixed(2) : '0')
       console.log(`[INTERVIEW] Calling Google Cloud Speech-to-Text API... (file size: ${fileSizeMB} MB, detected encoding: ${encoding || 'none'})`)
       
-      // リクエスト設定のベース
+      // リクエスト設定のベース（encodingは含めない）
+      // 重要: GCS URIを使用する場合、encodingは絶対に設定しない
+      // base64コンテンツを使用する場合でも、コンテナ形式の場合はencodingを設定しない
       const baseConfig: any = {
         languageCode: 'ja-JP',
         alternativeLanguageCodes: ['en-US'], // 日本語が認識できない場合のフォールバック
@@ -272,6 +291,7 @@ export async function POST(request: NextRequest) {
         model: 'latest_long', // 長い音声に最適化されたモデル（60分まで対応）
       }
       
+      // リクエストオブジェクトを初期化（encodingプロパティは含めない）
       const request: any = {
         config: { ...baseConfig },
       }
@@ -279,10 +299,10 @@ export async function POST(request: NextRequest) {
       // GCS URIが利用可能な場合はそれを使用（encodingは自動検出、絶対に設定しない）
       if (gcsUri) {
         request.audio = { uri: gcsUri }
-        // GCS URIを使用する場合、encodingは絶対に設定しない（APIが自動検出）
-        // configにencodingプロパティを一切追加しない
+        // GCS URIを使用する場合、encodingは絶対に設定しない（Google Cloud Speech-to-Text APIの仕様）
+        // APIが自動的に音声トラックを抽出し、エンコーディングを検出します
         console.log(`[INTERVIEW] Using GCS URI: ${gcsUri}`)
-        console.log(`[INTERVIEW] GCS URI mode: encoding will be auto-detected by API (not setting in config)`)
+        console.log(`[INTERVIEW] GCS URI mode: encoding will be auto-detected by API (encoding not set in config)`)
       } else if (audioContent) {
         // base64エンコードされたコンテンツを使用する場合
         request.audio = { content: audioContent.toString('base64') }
@@ -290,8 +310,8 @@ export async function POST(request: NextRequest) {
         
         // エンコーディング設定（base64コンテンツの場合のみ）
         // Google Cloud Speech-to-Text APIの仕様:
-        // - コンテナ形式（MP3、AAC、OGG_OPUS、WEBM_OPUS、MP4、MOV、AVIなど）はencodingを指定しない（自動検出）
-        // - 生オーディオ形式（LINEAR16、FLAC、MULAW、AMR、AMR_WB）のみencodingとsampleRateHertzを設定
+        // - コンテナ形式（MP3、AAC、OGG_OPUS、WEBM_OPUS、MP4、MOV、AVIなど）: encodingを設定しない（APIが自動検出）
+        // - 生オーディオ形式（LINEAR16、FLAC、MULAW、AMR、AMR_WB）のみ: encodingとsampleRateHertzを設定
         const rawAudioFormats = ['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB']
         
         if (encoding && rawAudioFormats.includes(encoding)) {
@@ -301,88 +321,76 @@ export async function POST(request: NextRequest) {
           console.log(`[INTERVIEW] Raw audio format detected (${encoding}), setting encoding: ${encoding}, sampleRateHertz: 16000`)
         } else {
           // コンテナ形式、またはencodingが未設定の場合、encodingを設定しない（自動検出に任せる）
-          console.log(`[INTERVIEW] Container format or encoding not specified (${encoding || 'none'}), will be auto-detected by API (not setting in config)`)
-          // configにencodingを追加しない
+          // 注意: request.configにはencodingプロパティを追加しない
+          console.log(`[INTERVIEW] Container format or encoding not specified (${encoding || 'none'}), will be auto-detected by API (encoding not set in config)`)
         }
       } else {
         throw new Error('音声データが取得できませんでした')
       }
       
-      // リクエスト設定の最終確認（デバッグ用）- encodingプロパティが含まれていないことを確認
-      // GCS URIを使用する場合、encodingは絶対に設定しない
+      // リクエスト設定の最終確認とクリーンアップ
+      // 重要: GCS URIを使用する場合、encodingは絶対に設定しない
       // base64コンテンツを使用する場合でも、コンテナ形式の場合はencodingを設定しない
-      const configKeysBefore = Object.keys(request.config)
-      if (configKeysBefore.includes('encoding')) {
-        console.error(`[INTERVIEW] WARNING: encoding property found in config before final check: ${request.config.encoding}`)
-        
-        // GCS URI使用時は、encodingを絶対に削除
-        if (gcsUri) {
+      const rawAudioFormats = ['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB']
+      const shouldHaveEncoding = !gcsUri && encoding && rawAudioFormats.includes(encoding)
+      
+      // encodingが設定されている場合、適切な場合のみ残し、それ以外は削除
+      if ('encoding' in request.config) {
+        if (shouldHaveEncoding) {
+          // 生オーディオ形式でbase64コンテンツの場合、encodingは正しく設定されている
+          console.log(`[INTERVIEW] Encoding correctly set for raw audio format: ${request.config.encoding}`)
+        } else {
+          // GCS URI使用時、またはコンテナ形式の場合、encodingを削除
+          console.error(`[INTERVIEW] WARNING: encoding property found but should not be set. Removing...`)
           delete request.config.encoding
           if ('sampleRateHertz' in request.config) {
             delete request.config.sampleRateHertz
           }
-          console.log(`[INTERVIEW] Removed encoding from config (GCS URI mode)`)
-        } else {
-          // base64コンテンツ使用時でも、コンテナ形式の場合はencodingを削除
-          const rawAudioFormats = ['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB']
-          if (!encoding || !rawAudioFormats.includes(encoding)) {
-            delete request.config.encoding
-            if ('sampleRateHertz' in request.config) {
-              delete request.config.sampleRateHertz
-            }
-            console.log(`[INTERVIEW] Removed encoding from config (container format or unknown format)`)
-          }
+          console.log(`[INTERVIEW] Removed encoding from config (${gcsUri ? 'GCS URI mode' : 'container format or unknown format'})`)
         }
       }
       
-      // 最終確認: encodingプロパティが含まれていないことを確認
-      // GCS URI使用時は、encodingを絶対に削除
-      // base64コンテンツ使用時でも、コンテナ形式の場合はencodingを削除
+      // 最終確認: encodingプロパティが適切に設定されていることを確認
       const finalConfigKeys = Object.keys(request.config)
-      if (finalConfigKeys.includes('encoding')) {
-        console.error(`[INTERVIEW] ERROR: encoding property still exists in config before final check: ${request.config.encoding}`)
-        
-        // GCS URI使用時は、encodingを絶対に削除
-        if (gcsUri) {
-          delete request.config.encoding
-          if ('sampleRateHertz' in request.config) {
-            delete request.config.sampleRateHertz
-          }
-          console.log(`[INTERVIEW] Force removed encoding from config (GCS URI mode)`)
-        } else {
-          // base64コンテンツ使用時でも、コンテナ形式の場合はencodingを削除
-          const rawAudioFormats = ['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB']
-          if (!encoding || !rawAudioFormats.includes(encoding)) {
-            delete request.config.encoding
-            if ('sampleRateHertz' in request.config) {
-              delete request.config.sampleRateHertz
-            }
-            console.log(`[INTERVIEW] Force removed encoding from config (container format or unknown format)`)
-          } else {
-            // 生オーディオ形式の場合は、encodingが正しく設定されていることを確認
-            console.log(`[INTERVIEW] Encoding is correctly set for raw audio format: ${encoding}`)
-          }
+      const hasEncoding = finalConfigKeys.includes('encoding')
+      
+      if (hasEncoding && !shouldHaveEncoding) {
+        // encodingが設定されているが、設定すべきでない場合、削除
+        console.error(`[INTERVIEW] CRITICAL: encoding property still exists after cleanup. Force removing...`)
+        delete request.config.encoding
+        if ('sampleRateHertz' in request.config) {
+          delete request.config.sampleRateHertz
         }
+        console.log(`[INTERVIEW] Force removed encoding from config`)
+      } else if (!hasEncoding && shouldHaveEncoding) {
+        // encodingが設定されていないが、設定すべき場合、設定
+        console.error(`[INTERVIEW] CRITICAL: encoding should be set but is missing. Setting...`)
+        request.config.encoding = encoding as any
+        request.config.sampleRateHertz = 16000
+        console.log(`[INTERVIEW] Set encoding: ${encoding}, sampleRateHertz: 16000`)
       }
       
-      // 最終確認: encodingプロパティが含まれていないことを再確認
+      // デバッグログ: 最終的なリクエスト設定を出力（再確認）
       const finalConfigKeysAfterCheck = Object.keys(request.config)
-      if (finalConfigKeysAfterCheck.includes('encoding')) {
-        // 最後の手段として、GCS URI使用時、またはコンテナ形式の場合はencodingを削除
-        if (gcsUri || (!encoding || !['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB'].includes(encoding))) {
-          console.error(`[INTERVIEW] CRITICAL ERROR: encoding property still exists after all checks: ${request.config.encoding}`)
-          delete request.config.encoding
-          if ('sampleRateHertz' in request.config) {
-            delete request.config.sampleRateHertz
-          }
-          console.log(`[INTERVIEW] Final force removed encoding from config`)
-        }
-      }
-      
+      const finalHasEncoding = finalConfigKeysAfterCheck.includes('encoding')
       console.log(`[INTERVIEW] Final request config keys:`, finalConfigKeysAfterCheck.join(', '))
       console.log(`[INTERVIEW] Request config (without audio):`, JSON.stringify(request.config, null, 2))
       console.log(`[INTERVIEW] Audio source:`, gcsUri ? `GCS URI: ${gcsUri}` : audioContent ? `base64 content: ${audioContent.length} bytes` : 'none')
-      console.log(`[INTERVIEW] Encoding setting:`, encoding || 'none (auto-detect)')
+      console.log(`[INTERVIEW] Encoding detection:`, encoding || 'none (auto-detect)')
+      console.log(`[INTERVIEW] Encoding in config:`, finalHasEncoding ? request.config.encoding : 'none (auto-detect)')
+      console.log(`[INTERVIEW] Should have encoding:`, shouldHaveEncoding)
+      
+      // 最終的なバリデーション: encodingが適切に設定されていることを確認
+      // このチェックで、bad encodingエラーを防ぐ
+      if (finalHasEncoding && !shouldHaveEncoding) {
+        console.error(`[INTERVIEW] FATAL ERROR: encoding is still in config but should not be! This will cause bad encoding error.`)
+        console.error(`[INTERVIEW] Config keys:`, finalConfigKeysAfterCheck.join(', '))
+        console.error(`[INTERVIEW] Config JSON:`, JSON.stringify(request.config, null, 2))
+        throw new Error(`Internal error: encoding property should not be in config for ${gcsUri ? 'GCS URI' : 'container format'}. This will cause bad encoding error.`)
+      } else if (!finalHasEncoding && shouldHaveEncoding) {
+        console.error(`[INTERVIEW] FATAL ERROR: encoding should be in config but is missing!`)
+        throw new Error(`Internal error: encoding property should be in config for raw audio format: ${encoding}`)
+      }
       
       // タイムアウト設定（大きなファイルの場合、処理に時間がかかる）
       const SPEECH_API_TIMEOUT = Math.max(600000, (audioContent?.length || material.fileSize || 0) / 1024 / 1024 * 20000) // 最低10分、1MBあたり20秒
