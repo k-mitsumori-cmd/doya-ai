@@ -487,13 +487,9 @@ export async function POST(request: NextRequest) {
       
       // APIに送信する直前のリクエストオブジェクト全体をログに出力（エラー原因特定用）
       // base64コンテンツはサイズのみ出力（セキュリティのため）
+      // 重要: speechRequestForApiLogには追加プロパティを含めない（実際のAPIリクエストと異なる可能性があるため）
       const speechRequestForApiLog = {
-        config: {
-          ...speechRequest.config,
-          // encodingプロパティが存在するか明示的にチェック
-          hasEncoding: 'encoding' in speechRequest.config,
-          encodingValue: speechRequest.config.encoding || null,
-        },
+        config: speechRequest.config,
         audio: speechRequest.audio?.uri 
           ? { uri: speechRequest.audio.uri, type: 'GCS_URI' }
           : speechRequest.audio?.content
@@ -511,21 +507,71 @@ export async function POST(request: NextRequest) {
       
       console.log(`[INTERVIEW] Sending request to Google Cloud Speech-to-Text API...`)
       
-      const transcriptionPromise = speechClient.recognize(speechRequest)
+      // MP4ビデオファイルの場合はlongRunningRecognizeを使用（Google Cloud Speech-to-Text APIの推奨方法）
+      // recognizeメソッドは短い音声ファイル（最大1分）用であり、ビデオファイルや大きなファイルには適していない
+      const isVideoFile = material.type === 'video' || material.mimeType?.includes('video')
+      const isLargeFile = (material.fileSize || 0) > 10 * 1024 * 1024 // 10MB以上
       
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`Google Cloud Speech-to-Text API呼び出しがタイムアウトしました（${(SPEECH_API_TIMEOUT / 1000 / 60).toFixed(1)}分）`))
-        }, SPEECH_API_TIMEOUT)
-      })
+      let response: any
       
-      const [response] = await Promise.race([
-        transcriptionPromise,
-        timeoutPromise,
-      ])
+      if (isVideoFile || isLargeFile) {
+        // ビデオファイルや大きなファイルの場合はlongRunningRecognizeを使用
+        // 重要: MP4ビデオファイルはrecognizeメソッドでは処理できない可能性があるため、longRunningRecognizeを使用
+        const fileSizeMB = ((material.fileSize || 0) / 1024 / 1024).toFixed(2)
+        console.log(`[INTERVIEW] Using longRunningRecognize for ${isVideoFile ? 'video' : 'large'} file (${fileSizeMB} MB)`)
+        
+        const [operation] = await speechClient.longRunningRecognize(speechRequest)
+        console.log(`[INTERVIEW] Long-running operation started: ${operation.name}`)
+        
+        // タイムアウトを考慮してoperationの完了を待つ
+        const operationPromise = operation.promise()
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Google Cloud Speech-to-Text API呼び出しがタイムアウトしました（${(SPEECH_API_TIMEOUT / 1000 / 60).toFixed(1)}分）`))
+          }, SPEECH_API_TIMEOUT)
+        })
+        
+        const operationResult = await Promise.race([
+          operationPromise,
+          timeoutPromise,
+        ])
+        
+        // longRunningRecognizeのレスポンスは[LongRunningRecognizeResponse, ...]の形式
+        // operationResult[0]に結果が含まれている
+        const longRunningResponse = Array.isArray(operationResult) ? operationResult[0] : operationResult
+        response = longRunningResponse
+        console.log(`[INTERVIEW] Long-running operation completed`)
+        console.log(`[INTERVIEW] Response type:`, response?.constructor?.name || typeof response)
+        console.log(`[INTERVIEW] Response has results:`, !!response?.results)
+        console.log(`[INTERVIEW] Response results length:`, response?.results?.length || 0)
+      } else {
+        // 短い音声ファイルの場合はrecognizeを使用
+        console.log(`[INTERVIEW] Using recognize for short audio file`)
+        const transcriptionPromise = speechClient.recognize(speechRequest)
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`Google Cloud Speech-to-Text API呼び出しがタイムアウトしました（${(SPEECH_API_TIMEOUT / 1000 / 60).toFixed(1)}分）`))
+          }, SPEECH_API_TIMEOUT)
+        })
+        
+        const recognizeResult = await Promise.race([
+          transcriptionPromise,
+          timeoutPromise,
+        ])
+        
+        // recognizeのレスポンスは[RecognizeResponse, ...]の形式
+        // recognizeResult[0]に結果が含まれている
+        response = Array.isArray(recognizeResult) ? recognizeResult[0] : recognizeResult
+        console.log(`[INTERVIEW] Recognize API response received`)
+        console.log(`[INTERVIEW] Response type:`, response?.constructor?.name || typeof response)
+        console.log(`[INTERVIEW] Response has results:`, !!response?.results)
+        console.log(`[INTERVIEW] Response results length:`, response?.results?.length || 0)
+      }
       
       // レスポンスからテキストを抽出
       if (!response || !response.results || response.results.length === 0) {
+        console.error(`[INTERVIEW] Empty transcription response`)
+        console.error(`[INTERVIEW] Response:`, JSON.stringify(response, null, 2))
         throw new Error('文字起こし結果が空です')
       }
       
@@ -536,6 +582,8 @@ export async function POST(request: NextRequest) {
         .join(' ')
       
       if (!transcriptionText || transcriptionText.trim().length === 0) {
+        console.error(`[INTERVIEW] Transcription text is empty after processing`)
+        console.error(`[INTERVIEW] Raw results:`, JSON.stringify(response.results, null, 2))
         throw new Error('文字起こし結果が空です')
       }
       
