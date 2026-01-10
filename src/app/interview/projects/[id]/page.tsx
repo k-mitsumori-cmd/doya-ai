@@ -277,6 +277,19 @@ export default function InterviewProjectDetailPage() {
     setEditedContent('')
   }
 
+  // エクスポートメニュー外クリックで閉じる
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showExportMenu && !(e.target as Element).closest('.export-menu-container')) {
+        setShowExportMenu(null)
+      }
+    }
+    if (showExportMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showExportMenu])
+
   if (loading) {
     return (
       <div className="text-center py-16">
@@ -323,19 +336,6 @@ export default function InterviewProjectDetailPage() {
       </div>
     )
   }
-
-  // エクスポートメニュー外クリックで閉じる
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (showExportMenu && !(e.target as Element).closest('.export-menu-container')) {
-        setShowExportMenu(null)
-      }
-    }
-    if (showExportMenu) {
-      document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
-  }, [showExportMenu])
 
   return (
     <div className="max-w-7xl mx-auto">

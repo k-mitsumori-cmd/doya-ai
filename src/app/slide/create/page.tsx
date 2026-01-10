@@ -36,7 +36,7 @@ const COLOR_PRESETS = [
 
 type Phase = 'input' | 'generating' | 'preview' | 'publishing' | 'done'
 
-export default function ドヤスライドCreate() {
+export default function DoyaSlideCreate() {
   const [phase, setPhase] = useState<Phase>('input')
   const [topic, setTopic] = useState('')
   const [purpose, setPurpose] = useState('proposal')
