@@ -1019,7 +1019,7 @@ function LpSitePageInner() {
                   onClick={async () => {
                     if (!result) return
                     try {
-                      const previewId = Date.now().toString(36) + Math.random().toString(36).substr(2)
+                      const previewId = Date.now().toString(36) + Math.random().toString(36).slice(2)
                       const response = await fetch(`/api/lp-site/preview/${previewId}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
