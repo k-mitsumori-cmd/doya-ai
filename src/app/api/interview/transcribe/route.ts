@@ -741,6 +741,25 @@ export async function POST(request: NextRequest) {
           errorDetails += `- GCS URI使用: ${gcsUri ? 'Yes' : 'No'}\n`
           errorDetails += `- エンコーディング変数: ${encoding || 'null (auto-detect)'}\n`
           errorDetails += `- Configにencodingプロパティ: ${speechRequest && speechRequest.config && 'encoding' in speechRequest.config ? '存在する（問題）' : '存在しない（正常）'}\n\n`
+        } else if (speechError?.details?.includes('Invalid file format') || speechError?.message?.includes('Invalid file format')) {
+          // Invalid file formatエラーの場合の詳細な情報を追加
+          errorDetails += '⚠️ ファイル形式エラーの可能性があります。\n\n'
+          errorDetails += '考えられる原因:\n'
+          errorDetails += '1. ファイルがサポートされている形式ではない\n'
+          errorDetails += '2. ファイルが破損している\n'
+          errorDetails += '3. ファイルのコンテナ形式は正しいが、内部の音声コーデックがサポートされていない\n\n'
+          errorDetails += 'デバッグ情報:\n'
+          errorDetails += `- ファイル名: ${material?.fileName || 'N/A'}\n`
+          errorDetails += `- MIMEタイプ: ${material?.mimeType || 'N/A'}\n`
+          errorDetails += `- ファイルタイプ: ${material?.type || 'N/A'}\n`
+          errorDetails += `- ファイルサイズ: ${material?.fileSize ? `${(material.fileSize / 1024 / 1024).toFixed(2)} MB` : 'N/A'}\n\n`
+          errorDetails += 'サポートされている形式:\n'
+          errorDetails += '- 音声: MP3, WAV, FLAC, M4A, OGG, OGA, WEBM\n'
+          errorDetails += '- 動画: MP4, MOV, AVI（音声トラックが抽出されます）\n\n'
+          errorDetails += '対処方法:\n'
+          errorDetails += '1. ファイルが上記の形式であることを確認してください\n'
+          errorDetails += '2. ファイルが破損していないか確認してください（別のプレイヤーで再生できるか確認）\n'
+          errorDetails += '3. MP4ファイルの場合、音声コーデック（AAC、MP3など）がサポートされているか確認してください\n'
         } else {
           errorDetails += '確認事項:\n'
           errorDetails += '1. ファイル形式がサポートされているか確認してください（MP3, WAV, FLAC, M4A, OGG_OPUS, WEBM_OPUSなど）\n'
