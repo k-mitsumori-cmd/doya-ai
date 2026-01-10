@@ -345,21 +345,27 @@ export async function POST(request: NextRequest) {
       // リクエスト設定のベース（encodingは含めない）
       // 重要: GCS URIを使用する場合、encodingは絶対に設定しない
       // base64コンテンツを使用する場合でも、コンテナ形式の場合はencodingを設定しない
-      // 重要: MP4ビデオファイルの場合、一部のパラメータ（model、enableWordTimeOffsetsなど）がサポートされていない可能性があるため、最小限の設定のみを使用
-      const baseConfig: any = {
-        languageCode: 'ja-JP',
-        alternativeLanguageCodes: ['en-US'], // 日本語が認識できない場合のフォールバック
-        enableAutomaticPunctuation: true,
-      }
+      // 重要: MP4ビデオファイルの場合、最小限の設定（languageCodeのみ）を使用することで"bad encoding"エラーを回避
+      let baseConfig: any
       
-      // ビデオファイル以外の場合のみ、modelとenableWordTimeOffsetsを追加
-      // MP4ビデオファイルの場合、これらのパラメータが"bad encoding"エラーを引き起こす可能性がある
-      if (!isVideoFile) {
-        baseConfig.enableWordTimeOffsets = false // 単語のタイムスタンプは不要
-        baseConfig.model = 'latest_long' // 長い音声に最適化されたモデル（60分まで対応）
-        console.log(`[INTERVIEW] Audio file detected: adding model and enableWordTimeOffsets parameters`)
+      if (isVideoFile) {
+        // MP4ビデオファイルの場合、最小限の設定のみを使用（languageCodeのみ）
+        // 他のパラメータ（model、enableWordTimeOffsets、alternativeLanguageCodes、enableAutomaticPunctuation）が
+        // "bad encoding"エラーを引き起こす可能性があるため、除外
+        baseConfig = {
+          languageCode: 'ja-JP',
+        }
+        console.log(`[INTERVIEW] Video file detected: using minimal config (languageCode only)`)
       } else {
-        console.log(`[INTERVIEW] Video file detected: using minimal config (model and enableWordTimeOffsets omitted)`)
+        // 音声ファイルの場合、通常の設定を使用
+        baseConfig = {
+          languageCode: 'ja-JP',
+          alternativeLanguageCodes: ['en-US'], // 日本語が認識できない場合のフォールバック
+          enableAutomaticPunctuation: true,
+          enableWordTimeOffsets: false, // 単語のタイムスタンプは不要
+          model: 'latest_long', // 長い音声に最適化されたモデル（60分まで対応）
+        }
+        console.log(`[INTERVIEW] Audio file detected: using full config with model and additional parameters`)
       }
       
       // リクエストオブジェクトを初期化（encodingプロパティは含めない）
