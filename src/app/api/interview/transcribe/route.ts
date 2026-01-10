@@ -275,26 +275,46 @@ export async function POST(request: NextRequest) {
         },
       }
       
-      // エンコーディング設定
-      // MP3、AAC、OGG_OPUS、WEBM_OPUSの場合はencodingを設定しない（自動検出）
-      if (encoding && !['MP3', 'AAC', 'OGG_OPUS', 'WEBM_OPUS'].includes(encoding)) {
-        request.config.encoding = encoding as any
-        // LINEAR16、FLAC、MULAW、AMR、AMR_WBの場合はsampleRateHertzが必要
-        if (['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB'].includes(encoding)) {
-          request.config.sampleRateHertz = 16000 // デフォルトサンプルレート
-        }
-      }
-      
-      // GCS URIが利用可能な場合はそれを使用、そうでない場合はbase64エンコード
+      // GCS URIが利用可能な場合はそれを使用（encodingは自動検出、設定しない）
       if (gcsUri) {
         request.audio = { uri: gcsUri }
-        console.log(`[INTERVIEW] Using GCS URI: ${gcsUri}`)
+        console.log(`[INTERVIEW] Using GCS URI: ${gcsUri} (encoding: auto-detect, not setting in config)`)
+        // GCS URIを使用する場合、encodingは指定しない（APIが自動検出）
+        // configにencodingを追加しない
       } else if (audioContent) {
+        // base64エンコードされたコンテンツを使用する場合
         request.audio = { content: audioContent.toString('base64') }
         console.log(`[INTERVIEW] Using base64 encoded audio content: ${audioContent.length} bytes`)
+        
+        // エンコーディング設定（base64コンテンツの場合のみ）
+        // コンテナ形式（MP3、AAC、OGG_OPUS、WEBM_OPUS）はencodingを指定しない（自動検出）
+        const containerFormats = ['MP3', 'AAC', 'OGG_OPUS', 'WEBM_OPUS']
+        const rawAudioFormats = ['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB']
+        
+        if (encoding && containerFormats.includes(encoding)) {
+          // コンテナ形式の場合はencodingを設定しない（自動検出）
+          console.log(`[INTERVIEW] Container format detected (${encoding}), encoding will be auto-detected (not setting in config)`)
+          // configにencodingを追加しない
+        } else if (encoding && rawAudioFormats.includes(encoding)) {
+          // 生オーディオ形式の場合はencodingとsampleRateHertzを設定
+          request.config.encoding = encoding as any
+          request.config.sampleRateHertz = 16000 // デフォルトサンプルレート
+          console.log(`[INTERVIEW] Raw audio format detected (${encoding}), setting encoding: ${encoding}, sampleRateHertz: 16000`)
+        } else if (encoding) {
+          // その他の形式（未知の形式）の場合、encodingを設定しない方が安全
+          console.warn(`[INTERVIEW] Unknown encoding format (${encoding}), will attempt auto-detection (not setting in config)`)
+          // configにencodingを追加しない（自動検出に任せる）
+        } else {
+          // encodingが未設定の場合は、APIに自動検出を任せる
+          console.log(`[INTERVIEW] Encoding not specified, will be auto-detected by API (not setting in config)`)
+          // configにencodingを追加しない
+        }
       } else {
         throw new Error('音声データが取得できませんでした')
       }
+      
+      // リクエスト設定の最終確認（デバッグ用）
+      console.log(`[INTERVIEW] Request config (without audio):`, JSON.stringify(request.config, null, 2))
       
       // タイムアウト設定（大きなファイルの場合、処理に時間がかかる）
       const SPEECH_API_TIMEOUT = Math.max(600000, (audioContent?.length || material.fileSize || 0) / 1024 / 1024 * 20000) // 最低10分、1MBあたり20秒
