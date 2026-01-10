@@ -336,20 +336,53 @@ export async function POST(request: NextRequest) {
       }
       
       // 最終確認: encodingプロパティが含まれていないことを確認
+      // GCS URI使用時は、encodingを絶対に削除
+      // base64コンテンツ使用時でも、コンテナ形式の場合はencodingを削除
       const finalConfigKeys = Object.keys(request.config)
       if (finalConfigKeys.includes('encoding')) {
-        console.error(`[INTERVIEW] ERROR: encoding property still exists in config: ${request.config.encoding}`)
-        // 最後の手段として、encodingを削除
-        delete request.config.encoding
-        if ('sampleRateHertz' in request.config) {
-          delete request.config.sampleRateHertz
+        console.error(`[INTERVIEW] ERROR: encoding property still exists in config before final check: ${request.config.encoding}`)
+        
+        // GCS URI使用時は、encodingを絶対に削除
+        if (gcsUri) {
+          delete request.config.encoding
+          if ('sampleRateHertz' in request.config) {
+            delete request.config.sampleRateHertz
+          }
+          console.log(`[INTERVIEW] Force removed encoding from config (GCS URI mode)`)
+        } else {
+          // base64コンテンツ使用時でも、コンテナ形式の場合はencodingを削除
+          const rawAudioFormats = ['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB']
+          if (!encoding || !rawAudioFormats.includes(encoding)) {
+            delete request.config.encoding
+            if ('sampleRateHertz' in request.config) {
+              delete request.config.sampleRateHertz
+            }
+            console.log(`[INTERVIEW] Force removed encoding from config (container format or unknown format)`)
+          } else {
+            // 生オーディオ形式の場合は、encodingが正しく設定されていることを確認
+            console.log(`[INTERVIEW] Encoding is correctly set for raw audio format: ${encoding}`)
+          }
         }
-        console.log(`[INTERVIEW] Force removed encoding from config`)
       }
       
-      console.log(`[INTERVIEW] Final request config keys:`, finalConfigKeys.join(', '))
+      // 最終確認: encodingプロパティが含まれていないことを再確認
+      const finalConfigKeysAfterCheck = Object.keys(request.config)
+      if (finalConfigKeysAfterCheck.includes('encoding')) {
+        // 最後の手段として、GCS URI使用時、またはコンテナ形式の場合はencodingを削除
+        if (gcsUri || (!encoding || !['LINEAR16', 'FLAC', 'MULAW', 'AMR', 'AMR_WB'].includes(encoding))) {
+          console.error(`[INTERVIEW] CRITICAL ERROR: encoding property still exists after all checks: ${request.config.encoding}`)
+          delete request.config.encoding
+          if ('sampleRateHertz' in request.config) {
+            delete request.config.sampleRateHertz
+          }
+          console.log(`[INTERVIEW] Final force removed encoding from config`)
+        }
+      }
+      
+      console.log(`[INTERVIEW] Final request config keys:`, finalConfigKeysAfterCheck.join(', '))
       console.log(`[INTERVIEW] Request config (without audio):`, JSON.stringify(request.config, null, 2))
       console.log(`[INTERVIEW] Audio source:`, gcsUri ? `GCS URI: ${gcsUri}` : audioContent ? `base64 content: ${audioContent.length} bytes` : 'none')
+      console.log(`[INTERVIEW] Encoding setting:`, encoding || 'none (auto-detect)')
       
       // タイムアウト設定（大きなファイルの場合、処理に時間がかかる）
       const SPEECH_API_TIMEOUT = Math.max(600000, (audioContent?.length || material.fileSize || 0) / 1024 / 1024 * 20000) // 最低10分、1MBあたり20秒
