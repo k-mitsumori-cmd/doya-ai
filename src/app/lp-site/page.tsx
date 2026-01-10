@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Download, RefreshCw, Monitor, Smartphone, Loader2, Search, Layout, Image as ImageIcon, Package, Globe } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { LpGenerationOverlay } from '@/components/lp-site/LpGenerationOverlay'
+import { LpInteractiveEditor } from '@/components/lp-site/LpInteractiveEditor'
 
 function LpSitePageInner() {
   const [inputType, setInputType] = useState<'url' | 'form'>('url')
@@ -371,9 +372,22 @@ function LpSitePageInner() {
         return img
       })
 
+      // 画像がまだない場合は新規追加
+      const hasExistingImage = result.images.some(img => img.section_id === sectionId)
+      const finalImages = hasExistingImage
+        ? updatedImages
+        : [
+            ...result.images,
+            {
+              section_id: sectionId,
+              image_pc: data.result.image_pc,
+              image_sp: data.result.image_sp,
+            },
+          ]
+
       setResult({
         ...result,
-        images: updatedImages,
+        images: finalImages,
       })
 
       toast.success('再生成が完了しました', { id: `regenerate-${sectionId}` })
@@ -949,107 +963,44 @@ function LpSitePageInner() {
               </div>
             </div>
 
-            {/* セクション詳細 */}
-            <div className="space-y-6">
-              {result.sections.map((section, index) => {
-                const image = result.images.find(img => img.section_id === section.section_id)
-                const imageData = selectedDevice === 'pc' ? image?.image_pc : image?.image_sp
-                const hasImage = !!imageData
-
-                return (
-                  <motion.div
-                    key={section.section_id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-white rounded-2xl shadow-lg p-4 sm:p-6 border-2 border-slate-200"
-                  >
-                    <div className="mb-4">
-                      <div className="flex items-start gap-2 sm:gap-3 mb-2">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white font-black text-base sm:text-lg flex-shrink-0">
-                          {index + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-base sm:text-lg md:text-xl font-bold text-slate-900 mb-1 break-words">
-                            {section.headline}
-                          </h3>
-                          {section.sub_headline && (
-                            <p className="text-xs sm:text-sm text-slate-600 break-words">{section.sub_headline}</p>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-xs sm:text-sm text-slate-500 mt-2 pl-0 sm:pl-13">
-                        {section.purpose}
-                      </p>
-                    </div>
-
-                    {hasImage ? (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3 }}
-                        className="mb-4"
-                      >
-                        <img
-                          src={imageData}
-                          alt={section.headline}
-                          className="w-full rounded-xl border border-slate-200 shadow-md"
-                        />
-                      </motion.div>
-                    ) : section.image_required && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="mb-4 p-8 bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl border-2 border-dashed border-teal-300 flex items-center justify-center"
-                      >
-                        <div className="text-center">
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                            className="inline-block mb-2"
-                          >
-                            <ImageIcon className="w-12 h-12 text-teal-400" />
-                          </motion.div>
-                          <p className="text-sm font-bold text-teal-700">画像生成中...</p>
-                          <p className="text-xs text-teal-500 mt-1">
-                            {isGeneratingImages ? `${imageProgress}% 完了` : 'まもなく表示されます'}
-                          </p>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                      {section.image_required && (
-                        <>
-                          <button
-                            onClick={() => handleRegenerateSection(section.section_id, selectedDevice === 'pc' ? 'image_pc' : 'image_sp')}
-                            className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-slate-200 transition-colors"
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                            <span className="whitespace-nowrap">画像を再生成</span>
-                          </button>
-                          {imageData && (
-                            <button
-                              onClick={() => handleDownload('single', section.section_id, imageData)}
-                              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-teal-500 text-white rounded-lg text-xs sm:text-sm font-semibold hover:bg-teal-600 transition-colors"
-                            >
-                              <Download className="w-4 h-4" />
-                              <span className="whitespace-nowrap">画像をダウンロード</span>
-                            </button>
-                          )}
-                        </>
-                      )}
-                      <button
-                        onClick={() => handleDownload('section', section.section_id)}
-                        className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs sm:text-sm font-semibold hover:bg-slate-200 transition-colors"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span className="whitespace-nowrap">セクションZIP</span>
-                      </button>
-                    </div>
-                  </motion.div>
-                )
-              })}
+            {/* インタラクティブエディタ */}
+            <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-6">
+              <div className="mb-4">
+                <h3 className="text-lg sm:text-xl font-bold text-slate-900 flex items-center gap-2 mb-2">
+                  <Edit className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600" />
+                  <span>セクションエディタ</span>
+                </h3>
+                <p className="text-sm text-slate-600">
+                  セクションをクリックして編集・再生成。ドラッグ&ドロップで並び替えができます。
+                </p>
+              </div>
+              <LpInteractiveEditor
+                result={result}
+                selectedDevice={selectedDevice}
+                onSectionsReorder={(newSections) => {
+                  setResult({
+                    ...result,
+                    sections: newSections,
+                  })
+                  toast.success('セクションの順序を変更しました')
+                }}
+                onSectionRegenerate={async (sectionId) => {
+                  try {
+                    await handleRegenerateSection(sectionId, selectedDevice === 'pc' ? 'image_pc' : 'image_sp')
+                  } catch (error) {
+                    // エラーはhandleRegenerateSection内で処理済み
+                  }
+                }}
+                onDownload={handleDownload}
+                onSectionUpdate={(sectionId, field, value) => {
+                  setResult({
+                    ...result,
+                    sections: result.sections.map((s) =>
+                      s.section_id === sectionId ? { ...s, [field]: value } : s
+                    ),
+                  })
+                }}
+              />
             </div>
 
             {/* Back Button */}

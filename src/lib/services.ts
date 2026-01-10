@@ -2,7 +2,7 @@
 // サービス定義（統一管理）
 // ========================================
 
-export type ServiceStatus = 'active' | 'coming_soon' | 'beta'
+export type ServiceStatus = 'active' | 'coming_soon' | 'beta' | 'stopped'
 
 export interface Service {
   id: string
@@ -161,6 +161,34 @@ export const SERVICES: Service[] = [
     badge: 'ベータ版',
     category: 'text',
     order: 10,
+    requiresAuth: false,
+  },
+  {
+    id: 'lp-site',
+    name: 'ドヤサイト',
+    shortName: 'サイト',
+    description: 'AIでLPを自動生成・編集するデザインツール',
+    icon: '🎨',
+    color: 'teal',
+    gradient: 'from-teal-500 to-cyan-600',
+    href: '/lp-site',
+    dashboardHref: '/lp-site',
+    pricingHref: '/lp-site/pricing',
+    features: [
+      'セクション単位の画像生成',
+      'ドラッグ&ドロップで並び替え',
+      'セクションごとの編集・再生成',
+      'PC版・SP版対応',
+      'ワイヤーフレームから完成まで',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: '1日3回まで', dailyLimit: 3, price: 0 },
+      pro: { name: 'プロプラン', limit: '1日100回まで', dailyLimit: 100, price: 4980 },
+    },
+    status: 'beta',
+    badge: 'ベータ版',
+    category: 'image',
+    order: 11,
     requiresAuth: false,
   },
 ]
