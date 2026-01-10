@@ -127,3 +127,4 @@ export function paletteMarkdown(palettes: Record<LogoPatternId, BrandPalette>): 
 
 
 
+
