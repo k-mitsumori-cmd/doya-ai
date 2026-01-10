@@ -674,7 +674,7 @@ export async function POST(request: NextRequest) {
           errorDetails += `- MIMEタイプ: ${material?.mimeType || 'N/A'}\n`
           errorDetails += `- GCS URI使用: ${gcsUri ? 'Yes' : 'No'}\n`
           errorDetails += `- エンコーディング変数: ${encoding || 'null (auto-detect)'}\n`
-          errorDetails += `- Configにencodingプロパティ: ${request && speechRequest.config && 'encoding' in speechRequest.config ? '存在する（問題）' : '存在しない（正常）'}\n\n`
+          errorDetails += `- Configにencodingプロパティ: ${speechRequest && speechRequest.config && 'encoding' in speechRequest.config ? '存在する（問題）' : '存在しない（正常）'}\n\n`
         } else {
           errorDetails += '確認事項:\n'
           errorDetails += '1. ファイル形式がサポートされているか確認してください（MP3, WAV, FLAC, M4A, OGG_OPUS, WEBM_OPUSなど）\n'
