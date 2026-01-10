@@ -341,15 +341,9 @@ export function LpInteractiveEditor({
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [regeneratingSectionId, setRegeneratingSectionId] = useState<string | null>(null)
 
-  // resultが更新されたらsectionsも更新
+  // resultが更新されたらsectionsとcurrentResultも更新
   useEffect(() => {
     setSections(result.sections)
-  }, [result])
-
-  // result.imagesが更新されたら選択中のセクションの画像も更新
-  const [currentResult, setCurrentResult] = useState(result)
-  useEffect(() => {
-    setCurrentResult(result)
   }, [result])
 
   const sensors = useSensors(
@@ -386,7 +380,7 @@ export function LpInteractiveEditor({
   }
 
   const selectedSection = sections.find((s) => s.section_id === selectedSectionId) || null
-  const selectedImage = currentResult.images.find((img) => img.section_id === selectedSectionId)
+  const selectedImage = result.images.find((img) => img.section_id === selectedSectionId)
 
   return (
     <div className="flex gap-4 h-full">
@@ -396,7 +390,7 @@ export function LpInteractiveEditor({
           <SortableContext items={sections.map((s) => s.section_id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-4">
               {sections.map((section, index) => {
-                const image = currentResult.images.find((img) => img.section_id === section.section_id)
+                const image = result.images.find((img) => img.section_id === section.section_id)
                 return (
                   <SortableSectionItem
                     key={section.section_id}

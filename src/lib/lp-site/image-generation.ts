@@ -145,7 +145,7 @@ SEAMLESS CONNECTION REQUIREMENTS (CRITICAL FOR NATURAL TRANSITIONS):
 /**
  * セクションタイプ別の詳細プロンプトを生成
  */
-function generateImagePrompt(
+export function generateImagePrompt(
   section: LpSection,
   productInfo: ProductInfo,
   device: 'pc' | 'sp',
