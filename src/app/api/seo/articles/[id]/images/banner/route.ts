@@ -6,12 +6,15 @@ import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPl
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+  const articleId = params.id
+  
   try {
     await ensureSeoSchema()
-    const articleId = ctx.params.id
     const article = await (prisma as any).seoArticle.findUnique({ where: { id: articleId } })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
 
@@ -70,7 +73,7 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
 
     return NextResponse.json({ success: true, image: rec })
   } catch (e: any) {
-    console.error('Banner generation error:', e)
+    console.error('[seo banner] failed', { articleId, error: e?.message || 'unknown error', stack: e?.stack })
     return NextResponse.json(
       { success: false, error: e?.message || '不明なエラー' },
       { status: 500 }
