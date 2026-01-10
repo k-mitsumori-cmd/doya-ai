@@ -20,9 +20,6 @@ import {
   EyeOff,
   Layers,
   MousePointer2,
-  Frame,
-  Type,
-  Hand,
   ZoomIn,
   ExternalLink,
   Globe,
@@ -333,22 +330,6 @@ export function FigmaStyleEditor({
       {/* 上部ツールバー */}
       <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center gap-4">
-          {/* ツール */}
-          <div className="flex items-center gap-1 border-r border-slate-200 pr-4">
-            <button className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600">
-              <MousePointer2 className="w-4 h-4" />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600">
-              <Frame className="w-4 h-4" />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600">
-              <Type className="w-4 h-4" />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded hover:bg-slate-100 text-slate-600">
-              <Hand className="w-4 h-4" />
-            </button>
-          </div>
-
           {/* デバイス切り替え */}
           <div className="flex items-center gap-1 border-r border-slate-200 pr-4">
             <button
@@ -477,24 +458,76 @@ export function FigmaStyleEditor({
                     <div className="w-32 h-6 bg-slate-900 rounded-full"></div>
                   </div>
                   <div className="overflow-y-auto" style={{ maxHeight: '896px' }}>
-                    {visibleSectionsList.map((section) => {
+                    {visibleSectionsList.map((section, index) => {
                       const image = result.images.find(img => img.section_id === section.section_id)
                       const imageData = image?.image_sp
-                      if (!imageData) return null
+                      const isSelected = selectedSectionId === section.section_id
+                      const isRegenerating = regeneratingSectionId === section.section_id
+                      
                       return (
                         <div
                           key={section.section_id}
-                          className={`cursor-pointer transition-all ${
-                            selectedSectionId === section.section_id
+                          className={`cursor-pointer transition-all border-b border-slate-200 ${
+                            isSelected
                               ? 'ring-4 ring-blue-500 ring-offset-2'
                               : 'hover:opacity-90'
                           }`}
                           onClick={() => setSelectedSectionId(section.section_id)}
                         >
-                          <img src={imageData} alt={section.headline} className="w-full block" />
+                      {imageData ? (
+                        <img src={imageData} alt={section.headline} className="w-full block" />
+                      ) : (
+                        <div className="w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 border-4 border-dashed border-slate-400 min-h-[700px] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+                          {/* 背景パターン */}
+                          <div className="absolute inset-0 opacity-5">
+                            <div className="absolute inset-0" style={{
+                              backgroundImage: 'repeating-linear-gradient(45deg, #64748b 0, #64748b 20px, transparent 20px, transparent 40px)',
+                            }} />
+                          </div>
+                          <div className="relative z-10 text-center max-w-sm w-full">
+                            <div className="w-28 h-28 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-teal-100 via-cyan-100 to-blue-100 flex items-center justify-center border-4 border-teal-300 shadow-xl">
+                              {isRegenerating ? (
+                                <Loader2 className="w-14 h-14 text-teal-600 animate-spin" />
+                              ) : (
+                                <ImageIcon className="w-14 h-14 text-teal-600" />
+                              )}
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 mb-3 leading-tight">{section.headline}</h3>
+                            {section.sub_headline && (
+                              <p className="text-base text-slate-700 mb-5 leading-relaxed">{section.sub_headline}</p>
+                            )}
+                            <div className="inline-block px-4 py-2 bg-gradient-to-r from-teal-100 to-cyan-100 text-teal-800 text-sm font-bold rounded-xl mb-5 border-2 border-teal-300">
+                              {section.section_type}
+                            </div>
+                            <p className="text-sm text-slate-600 mb-8 leading-relaxed bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-slate-300">
+                              {section.purpose}
+                            </p>
+                            <div className="bg-white/95 backdrop-blur-md rounded-2xl p-5 border-2 border-teal-300 shadow-xl">
+                              <div className="flex items-center justify-center gap-2 mb-2">
+                                {isRegenerating ? (
+                                  <>
+                                    <Loader2 className="w-5 h-5 text-teal-600 animate-spin" />
+                                    <p className="text-sm font-bold text-slate-800">画像生成中...</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ImageIcon className="w-5 h-5 text-teal-600" />
+                                    <p className="text-sm font-bold text-slate-800">画像生成予定</p>
+                                  </>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-600 leading-relaxed">
+                                この場所に{section.section_type}セクションの画像が表示されます。
+                                <br />
+                                生成完了次第、自動的に表示されます。
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                      )
-                    })}
+                      )}
+                    </div>
+                  )
+                })}
                   </div>
                 </div>
               </div>
@@ -503,21 +536,73 @@ export function FigmaStyleEditor({
             {/* PC表示 */}
             {selectedDevice === 'pc' && (
               <div className="overflow-y-auto" style={{ maxHeight: '80vh' }}>
-                {visibleSectionsList.map((section) => {
+                {visibleSectionsList.map((section, index) => {
                   const image = result.images.find(img => img.section_id === section.section_id)
                   const imageData = image?.image_pc
-                  if (!imageData) return null
+                  const isSelected = selectedSectionId === section.section_id
+                  const isRegenerating = regeneratingSectionId === section.section_id
+                  
                   return (
                     <div
                       key={section.section_id}
-                      className={`cursor-pointer transition-all ${
-                        selectedSectionId === section.section_id
+                      className={`cursor-pointer transition-all border-b-4 border-slate-200 ${
+                        isSelected
                           ? 'ring-4 ring-blue-500 ring-offset-2'
                           : 'hover:opacity-90'
                       }`}
                       onClick={() => setSelectedSectionId(section.section_id)}
                     >
-                      <img src={imageData} alt={section.headline} className="w-full block" />
+                      {imageData ? (
+                        <img src={imageData} alt={section.headline} className="w-full block" />
+                      ) : (
+                        <div className="w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 border-4 border-dashed border-slate-400 min-h-[900px] flex flex-col items-center justify-center p-16 relative overflow-hidden">
+                          {/* 背景パターン */}
+                          <div className="absolute inset-0 opacity-5">
+                            <div className="absolute inset-0" style={{
+                              backgroundImage: 'repeating-linear-gradient(45deg, #64748b 0, #64748b 30px, transparent 30px, transparent 60px)',
+                            }} />
+                          </div>
+                          <div className="relative z-10 text-center max-w-3xl w-full">
+                            <div className="w-40 h-40 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-teal-100 via-cyan-100 to-blue-100 flex items-center justify-center border-4 border-teal-300 shadow-2xl">
+                              {isRegenerating ? (
+                                <Loader2 className="w-20 h-20 text-teal-600 animate-spin" />
+                              ) : (
+                                <ImageIcon className="w-20 h-20 text-teal-600" />
+                              )}
+                            </div>
+                            <h3 className="text-4xl font-black text-slate-900 mb-4 leading-tight">{section.headline}</h3>
+                            {section.sub_headline && (
+                              <p className="text-xl text-slate-700 mb-6 leading-relaxed">{section.sub_headline}</p>
+                            )}
+                            <div className="inline-block px-6 py-3 bg-gradient-to-r from-teal-100 to-cyan-100 text-teal-800 text-base font-bold rounded-xl mb-6 border-2 border-teal-300">
+                              {section.section_type}
+                            </div>
+                            <p className="text-lg text-slate-600 mb-10 leading-relaxed bg-white/70 backdrop-blur-sm rounded-2xl p-6 border-2 border-slate-300">
+                              {section.purpose}
+                            </p>
+                            <div className="bg-white/95 backdrop-blur-md rounded-3xl p-8 border-4 border-teal-300 shadow-2xl">
+                              <div className="flex items-center justify-center gap-3 mb-3">
+                                {isRegenerating ? (
+                                  <>
+                                    <Loader2 className="w-6 h-6 text-teal-600 animate-spin" />
+                                    <p className="text-lg font-black text-slate-900">画像生成中...</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ImageIcon className="w-6 h-6 text-teal-600" />
+                                    <p className="text-lg font-black text-slate-900">画像生成予定</p>
+                                  </>
+                                )}
+                              </div>
+                              <p className="text-sm text-slate-700 leading-relaxed">
+                                この場所に<span className="font-bold text-teal-700">{section.section_type}</span>セクションの画像が表示されます。
+                                <br />
+                                生成完了次第、自動的に表示されます。
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
