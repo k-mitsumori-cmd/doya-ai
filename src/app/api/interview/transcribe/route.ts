@@ -388,22 +388,51 @@ export async function POST(request: NextRequest) {
       // デバッグログ: 最終的なリクエスト設定を出力（再確認）
       const finalConfigKeysAfterCheck = Object.keys(request.config)
       const finalHasEncoding = finalConfigKeysAfterCheck.includes('encoding')
-      console.log(`[INTERVIEW] Final request config keys:`, finalConfigKeysAfterCheck.join(', '))
-      console.log(`[INTERVIEW] Request config (without audio):`, JSON.stringify(request.config, null, 2))
-      console.log(`[INTERVIEW] Audio source:`, gcsUri ? `GCS URI: ${gcsUri}` : audioContent ? `base64 content: ${audioContent.length} bytes` : 'none')
-      console.log(`[INTERVIEW] Encoding detection:`, encoding || 'none (auto-detect)')
-      console.log(`[INTERVIEW] Encoding in config:`, finalHasEncoding ? request.config.encoding : 'none (auto-detect)')
-      console.log(`[INTERVIEW] Should have encoding:`, shouldHaveEncoding)
+      
+      // 詳細なデバッグ情報を出力（エラー原因特定用）
+      console.log(`[INTERVIEW] ========== REQUEST DEBUG INFO ==========`)
+      console.log(`[INTERVIEW] Material ID: ${materialId}`)
+      console.log(`[INTERVIEW] File Name: ${material.fileName || 'N/A'}`)
+      console.log(`[INTERVIEW] MIME Type: ${material.mimeType || 'N/A'}`)
+      console.log(`[INTERVIEW] File Size: ${material.fileSize ? `${(material.fileSize / 1024 / 1024).toFixed(2)} MB` : 'N/A'}`)
+      console.log(`[INTERVIEW] File URL: ${material.fileUrl || 'N/A'}`)
+      console.log(`[INTERVIEW] File Path: ${material.filePath || 'N/A'}`)
+      console.log(`[INTERVIEW] GCS URI: ${gcsUri || 'N/A'}`)
+      console.log(`[INTERVIEW] Has Audio Content: ${audioContent ? `Yes (${audioContent.length} bytes)` : 'No'}`)
+      console.log(`[INTERVIEW] Encoding Variable: ${encoding || 'null (auto-detect)'}`)
+      console.log(`[INTERVIEW] Should Have Encoding: ${shouldHaveEncoding}`)
+      console.log(`[INTERVIEW] Final Config Keys:`, finalConfigKeysAfterCheck.join(', '))
+      console.log(`[INTERVIEW] Has Encoding in Config: ${finalHasEncoding}`)
+      if (finalHasEncoding) {
+        console.error(`[INTERVIEW] ⚠️  WARNING: encoding found in config: ${request.config.encoding}`)
+        console.error(`[INTERVIEW] ⚠️  sampleRateHertz: ${request.config.sampleRateHertz || 'N/A'}`)
+      }
+      console.log(`[INTERVIEW] Request Config (full):`, JSON.stringify(request.config, null, 2))
+      
+      // リクエストオブジェクト全体をログに出力（audio URI/contentも含む、ただしbase64コンテンツはサイズのみ）
+      const requestForLog = {
+        config: request.config,
+        audio: request.audio?.uri 
+          ? { uri: request.audio.uri }
+          : request.audio?.content
+          ? { content: `[base64: ${request.audio.content.length} characters]` }
+          : 'N/A'
+      }
+      console.log(`[INTERVIEW] Full Request Object (for debugging):`, JSON.stringify(requestForLog, null, 2))
+      console.log(`[INTERVIEW] ========================================`)
       
       // 最終的なバリデーション: encodingが適切に設定されていることを確認
       // このチェックで、bad encodingエラーを防ぐ
       if (finalHasEncoding && !shouldHaveEncoding) {
-        console.error(`[INTERVIEW] FATAL ERROR: encoding is still in config but should not be! This will cause bad encoding error.`)
+        console.error(`[INTERVIEW] ❌ FATAL ERROR: encoding is still in config but should not be! This will cause bad encoding error.`)
         console.error(`[INTERVIEW] Config keys:`, finalConfigKeysAfterCheck.join(', '))
         console.error(`[INTERVIEW] Config JSON:`, JSON.stringify(request.config, null, 2))
+        console.error(`[INTERVIEW] Full Request:`, JSON.stringify(requestForLog, null, 2))
         throw new Error(`Internal error: encoding property should not be in config for ${gcsUri ? 'GCS URI' : 'container format'}. This will cause bad encoding error.`)
       } else if (!finalHasEncoding && shouldHaveEncoding) {
-        console.error(`[INTERVIEW] FATAL ERROR: encoding should be in config but is missing!`)
+        console.error(`[INTERVIEW] ❌ FATAL ERROR: encoding should be in config but is missing!`)
+        console.error(`[INTERVIEW] Expected encoding: ${encoding}`)
+        console.error(`[INTERVIEW] Config JSON:`, JSON.stringify(request.config, null, 2))
         throw new Error(`Internal error: encoding property should be in config for raw audio format: ${encoding}`)
       }
       
@@ -411,6 +440,32 @@ export async function POST(request: NextRequest) {
       const SPEECH_API_TIMEOUT = Math.max(600000, (audioContent?.length || material.fileSize || 0) / 1024 / 1024 * 20000) // 最低10分、1MBあたり20秒
       
       console.log(`[INTERVIEW] Starting transcription (timeout: ${(SPEECH_API_TIMEOUT / 1000 / 60).toFixed(1)} minutes)`)
+      
+      // APIに送信する直前のリクエストオブジェクト全体をログに出力（エラー原因特定用）
+      // base64コンテンツはサイズのみ出力（セキュリティのため）
+      const requestForApiLog = {
+        config: {
+          ...request.config,
+          // encodingプロパティが存在するか明示的にチェック
+          hasEncoding: 'encoding' in request.config,
+          encodingValue: request.config.encoding || null,
+        },
+        audio: request.audio?.uri 
+          ? { uri: request.audio.uri, type: 'GCS_URI' }
+          : request.audio?.content
+          ? { content: `[base64: ${request.audio.content.length} characters]`, type: 'BASE64_CONTENT' }
+          : { type: 'NONE' }
+      }
+      console.log(`[INTERVIEW] ========== API REQUEST (BEFORE SEND) ==========`)
+      console.log(`[INTERVIEW] Request Object (full structure):`, JSON.stringify(requestForApiLog, null, 2))
+      console.log(`[INTERVIEW] Config has encoding property:`, 'encoding' in request.config)
+      if ('encoding' in request.config) {
+        console.error(`[INTERVIEW] ⚠️  CRITICAL: encoding property exists in config:`, request.config.encoding)
+      }
+      console.log(`[INTERVIEW] Config keys (final check):`, Object.keys(request.config))
+      console.log(`[INTERVIEW] ================================================`)
+      
+      console.log(`[INTERVIEW] Sending request to Google Cloud Speech-to-Text API...`)
       
       const transcriptionPromise = speechClient.recognize(request)
       
@@ -442,11 +497,72 @@ export async function POST(request: NextRequest) {
       
       console.log(`[INTERVIEW] Transcription completed: ${transcriptionText.length} characters`)
     } catch (speechError: any) {
-      console.error('[INTERVIEW] Google Cloud Speech-to-Text API error:', speechError)
-      console.error('[INTERVIEW] Error code:', speechError?.code)
-      console.error('[INTERVIEW] Error reason:', speechError?.reason)
-      console.error('[INTERVIEW] Error details:', speechError?.details)
-      console.error('[INTERVIEW] Error metadata:', speechError?.errorInfoMetadata)
+      // エラー原因特定のための詳細なログ出力
+      console.error(`[INTERVIEW] ========== ERROR DEBUG INFO ==========`)
+      console.error('[INTERVIEW] ❌ Google Cloud Speech-to-Text API error occurred')
+      console.error('[INTERVIEW] Error Type:', speechError?.constructor?.name || typeof speechError)
+      console.error('[INTERVIEW] Error Code:', speechError?.code || 'N/A')
+      console.error('[INTERVIEW] Error Message:', speechError?.message || 'N/A')
+      console.error('[INTERVIEW] Error Details:', speechError?.details || 'N/A')
+      console.error('[INTERVIEW] Error Reason:', speechError?.reason || 'N/A')
+      console.error('[INTERVIEW] Error Status:', speechError?.status || 'N/A')
+      console.error('[INTERVIEW] Error Metadata:', speechError?.errorInfoMetadata ? JSON.stringify(speechError.errorInfoMetadata, null, 2) : 'N/A')
+      
+      // エラー発生時のリクエスト情報を再出力（詳細版）
+      console.error('[INTERVIEW] Error occurred with the following request context:')
+      console.error('[INTERVIEW] - Material ID:', materialId || 'N/A')
+      console.error('[INTERVIEW] - Material File Name:', material?.fileName || 'N/A')
+      console.error('[INTERVIEW] - Material MIME Type:', material?.mimeType || 'N/A')
+      console.error('[INTERVIEW] - Material File Size:', material?.fileSize ? `${(material.fileSize / 1024 / 1024).toFixed(2)} MB` : 'N/A')
+      console.error('[INTERVIEW] - Material File URL:', material?.fileUrl || 'N/A')
+      console.error('[INTERVIEW] - Material File Path:', material?.filePath || 'N/A')
+      console.error('[INTERVIEW] - Material Type:', material?.type || 'N/A')
+      console.error('[INTERVIEW] - GCS URI:', gcsUri || 'N/A')
+      console.error('[INTERVIEW] - Has Audio Content:', audioContent ? `Yes (${audioContent.length} bytes)` : 'No')
+      console.error('[INTERVIEW] - Encoding Variable Value:', encoding || 'null')
+      console.error('[INTERVIEW] - Should Have Encoding:', shouldHaveEncoding)
+      
+      // エラー発生時に送信されたリクエストオブジェクトを再構築して出力
+      try {
+        const errorRequestInfo = {
+          config: {
+            ...request.config,
+            hasEncodingProperty: 'encoding' in request.config,
+            encodingValue: request.config.encoding || null,
+            sampleRateHertzValue: request.config.sampleRateHertz || null,
+            allKeys: Object.keys(request.config),
+          },
+          audio: request.audio?.uri 
+            ? { uri: request.audio.uri, type: 'GCS_URI' }
+            : request.audio?.content
+            ? { content: `[base64: ${request.audio.content.length} chars]`, type: 'BASE64_CONTENT' }
+            : { type: 'NONE' }
+        }
+        console.error('[INTERVIEW] Request Object (at error time):', JSON.stringify(errorRequestInfo, null, 2))
+      } catch (e) {
+        console.error('[INTERVIEW] Failed to serialize request object for logging:', e)
+      }
+      
+      // エラーの詳細なスタックトレース
+      if (speechError?.stack) {
+        console.error('[INTERVIEW] Error Stack Trace:', speechError.stack)
+      }
+      
+      // エラーコード別の原因分析
+      if (speechError?.code === 3) {
+        console.error('[INTERVIEW] 🔍 Error Code 3 (INVALID_ARGUMENT) Analysis:')
+        console.error('[INTERVIEW] - This usually indicates a problem with the request configuration')
+        console.error('[INTERVIEW] - Common causes:')
+        console.error('[INTERVIEW]   1. Invalid encoding parameter')
+        console.error('[INTERVIEW]   2. Mismatch between audio format and encoding')
+        console.error('[INTERVIEW]   3. Missing or incorrect required parameters')
+        console.error('[INTERVIEW] - Current config.encoding:', request.config.encoding || 'NOT SET (correct for GCS URI/container formats)')
+        console.error('[INTERVIEW] - Current config has encoding property:', 'encoding' in request.config)
+        if ('encoding' in request.config) {
+          console.error('[INTERVIEW] ⚠️  PROBLEM DETECTED: encoding property should NOT exist in config for GCS URI/container formats!')
+        }
+      }
+      console.error(`[INTERVIEW] ========================================`)
       
       let errorMessage = '文字起こしに失敗しました'
       let errorDetails = ''
@@ -494,13 +610,34 @@ export async function POST(request: NextRequest) {
           errorDetails += '3. サービスアカウントに"Cloud Speech-to-Text API User"ロールが付与されているか確認してください'
         }
       } else if (speechError?.code === 3) {
+        // エラーコード3 (INVALID_ARGUMENT) - bad encoding エラーの可能性が高い
         errorMessage = '無効なリクエストです'
-        errorDetails = 'ファイル形式がサポートされていない可能性があります。\n\n'
-        errorDetails += '確認事項:\n'
-        errorDetails += '1. ファイル形式がサポートされているか確認してください（MP3, WAV, FLAC, M4A, OGG_OPUS, WEBM_OPUSなど）\n'
-        errorDetails += '2. ファイルが破損していないか確認してください\n'
+        errorDetails = 'リクエストの形式が正しくありません。\n\n'
+        
+        // bad encodingエラーの場合の詳細な情報を追加
+        if (speechError?.details?.includes('bad encoding') || speechError?.details?.includes('encoding')) {
+          errorDetails += '⚠️ エンコーディング設定エラーの可能性があります。\n\n'
+          errorDetails += '考えられる原因:\n'
+          errorDetails += '1. ファイル形式とエンコーディング設定の不一致\n'
+          errorDetails += '2. GCS URI使用時にencodingが設定されている\n'
+          errorDetails += '3. コンテナ形式（MP4、MP3など）でencodingが設定されている\n\n'
+          errorDetails += 'デバッグ情報:\n'
+          errorDetails += `- ファイル名: ${material?.fileName || 'N/A'}\n`
+          errorDetails += `- MIMEタイプ: ${material?.mimeType || 'N/A'}\n`
+          errorDetails += `- GCS URI使用: ${gcsUri ? 'Yes' : 'No'}\n`
+          errorDetails += `- エンコーディング変数: ${encoding || 'null (auto-detect)'}\n`
+          errorDetails += `- Configにencodingプロパティ: ${'encoding' in request.config ? '存在する（問題）' : '存在しない（正常）'}\n\n`
+        } else {
+          errorDetails += '確認事項:\n'
+          errorDetails += '1. ファイル形式がサポートされているか確認してください（MP3, WAV, FLAC, M4A, OGG_OPUS, WEBM_OPUSなど）\n'
+          errorDetails += '2. ファイルが破損していないか確認してください\n'
+        }
+        
         if (speechError?.message) {
-          errorDetails += `\nエラー詳細: ${speechError.message}`
+          errorDetails += `\nエラー詳細: ${speechError.message}\n`
+        }
+        if (speechError?.details) {
+          errorDetails += `\n詳細情報: ${speechError.details}`
         }
       } else if (speechError?.code === 8) {
         errorMessage = 'リソースが不足しています'
@@ -535,12 +672,41 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      // エラーレスポンスにデバッグ情報を含める（開発環境のみ、または詳細モードが有効な場合）
+      const debugMode = process.env.DEBUG_TRANSCRIBE_ERRORS === 'true' || process.env.NODE_ENV === 'development'
+      const errorResponse: any = {
+        error: errorMessage,
+        details: errorDetails,
+        ...(activationUrl && { activationUrl }),
+      }
+      
+      // デバッグモードが有効な場合、詳細な情報を含める
+      if (debugMode) {
+        errorResponse.debug = {
+          errorCode: speechError?.code || 'N/A',
+          errorType: speechError?.constructor?.name || typeof speechError,
+          errorMessage: speechError?.message || 'N/A',
+          errorDetails: speechError?.details || 'N/A',
+          errorReason: speechError?.reason || 'N/A',
+          material: {
+            fileName: material?.fileName || 'N/A',
+            mimeType: material?.mimeType || 'N/A',
+            fileSize: material?.fileSize ? `${(material.fileSize / 1024 / 1024).toFixed(2)} MB` : 'N/A',
+            type: material?.type || 'N/A',
+          },
+          request: {
+            gcsUri: gcsUri || null,
+            hasAudioContent: !!audioContent,
+            encodingVariable: encoding || null,
+            configHasEncoding: 'encoding' in request.config,
+            configKeys: Object.keys(request.config),
+            configEncoding: request.config.encoding || null,
+          },
+        }
+      }
+      
       return NextResponse.json(
-        { 
-          error: errorMessage, 
-          details: errorDetails,
-          ...(activationUrl && { activationUrl }),
-        },
+        errorResponse,
         { status: 500 }
       )
     }
