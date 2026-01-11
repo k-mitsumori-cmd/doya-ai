@@ -477,21 +477,83 @@ export function FigmaStyleEditor({
                       {imageData ? (
                         <img src={imageData} alt={section.headline} className="w-full block" />
                       ) : (
-                        <div className="w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 border-4 border-dashed border-slate-400 min-h-[700px] flex flex-col items-center justify-center p-6 relative overflow-hidden">
-                          {/* 背景パターン */}
-                          <div className="absolute inset-0 opacity-5">
-                            <div className="absolute inset-0" style={{
-                              backgroundImage: 'repeating-linear-gradient(45deg, #64748b 0, #64748b 20px, transparent 20px, transparent 40px)',
-                            }} />
+                        <div className={`w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 border-4 border-dashed min-h-[700px] flex flex-col items-center justify-center p-6 relative overflow-hidden ${
+                          isRegenerating 
+                            ? 'border-teal-500 animate-pulse' 
+                            : 'border-slate-400'
+                        }`}>
+                          {/* 背景パターン（生成中はアニメーション） */}
+                          <div className={`absolute inset-0 ${isRegenerating ? 'opacity-10' : 'opacity-5'}`}>
+                            <motion.div 
+                              className="absolute inset-0"
+                              animate={isRegenerating ? {
+                                backgroundPosition: ['0% 0%', '100% 100%'],
+                              } : {}}
+                              transition={isRegenerating ? {
+                                duration: 3,
+                                repeat: Infinity,
+                                ease: 'linear',
+                              } : {}}
+                              style={{
+                                backgroundImage: 'repeating-linear-gradient(45deg, #64748b 0, #64748b 20px, transparent 20px, transparent 40px)',
+                                backgroundSize: '40px 40px',
+                              }}
+                            />
                           </div>
+                          {/* 生成中の波紋エフェクト */}
+                          {isRegenerating && (
+                            <div className="absolute inset-0 overflow-hidden">
+                              {[0, 1, 2].map((i) => (
+                                <motion.div
+                                  key={i}
+                                  className="absolute inset-0 rounded-full border-4 border-teal-400/30"
+                                  animate={{
+                                    scale: [1, 1.5, 2],
+                                    opacity: [0.5, 0.2, 0],
+                                  }}
+                                  transition={{
+                                    duration: 2,
+                                    repeat: Infinity,
+                                    delay: i * 0.7,
+                                    ease: 'easeOut',
+                                  }}
+                                  style={{
+                                    left: '50%',
+                                    top: '50%',
+                                    width: '200px',
+                                    height: '200px',
+                                    marginLeft: '-100px',
+                                    marginTop: '-100px',
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
                           <div className="relative z-10 text-center max-w-sm w-full">
-                            <div className="w-28 h-28 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-teal-100 via-cyan-100 to-blue-100 flex items-center justify-center border-4 border-teal-300 shadow-xl">
+                            <motion.div 
+                              className={`w-28 h-28 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-teal-100 via-cyan-100 to-blue-100 flex items-center justify-center border-4 shadow-xl ${
+                                isRegenerating ? 'border-teal-500 shadow-teal-500/50' : 'border-teal-300'
+                              }`}
+                              animate={isRegenerating ? {
+                                scale: [1, 1.05, 1],
+                                boxShadow: [
+                                  '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                                  '0 20px 25px -5px rgb(20 184 166 / 0.5)',
+                                  '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                                ],
+                              } : {}}
+                              transition={isRegenerating ? {
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: 'easeInOut',
+                              } : {}}
+                            >
                               {isRegenerating ? (
                                 <Loader2 className="w-14 h-14 text-teal-600 animate-spin" />
                               ) : (
                                 <ImageIcon className="w-14 h-14 text-teal-600" />
                               )}
-                            </div>
+                            </motion.div>
                             <h3 className="text-2xl font-black text-slate-900 mb-3 leading-tight">{section.headline}</h3>
                             {section.sub_headline && (
                               <p className="text-base text-slate-700 mb-5 leading-relaxed">{section.sub_headline}</p>
@@ -502,12 +564,14 @@ export function FigmaStyleEditor({
                             <p className="text-sm text-slate-600 mb-8 leading-relaxed bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-slate-300">
                               {section.purpose}
                             </p>
-                            <div className="bg-white/95 backdrop-blur-md rounded-2xl p-5 border-2 border-teal-300 shadow-xl">
-                              <div className="flex items-center justify-center gap-2 mb-2">
+                            <div className={`bg-white/95 backdrop-blur-md rounded-2xl p-5 border-2 shadow-xl ${
+                              isRegenerating ? 'border-teal-400 shadow-teal-500/30' : 'border-teal-300'
+                            }`}>
+                              <div className="flex items-center justify-center gap-2 mb-3">
                                 {isRegenerating ? (
                                   <>
                                     <Loader2 className="w-5 h-5 text-teal-600 animate-spin" />
-                                    <p className="text-sm font-bold text-slate-800">画像生成中...</p>
+                                    <p className="text-sm font-bold text-teal-700">画像生成中...</p>
                                   </>
                                 ) : (
                                   <>
@@ -516,10 +580,40 @@ export function FigmaStyleEditor({
                                   </>
                                 )}
                               </div>
+                              {isRegenerating && (
+                                <div className="w-full bg-slate-200 rounded-full h-2 mb-3 overflow-hidden">
+                                  <motion.div
+                                    className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full"
+                                    animate={{
+                                      x: ['-100%', '100%'],
+                                    }}
+                                    transition={{
+                                      duration: 1.5,
+                                      repeat: Infinity,
+                                      ease: 'linear',
+                                    }}
+                                    style={{
+                                      width: '40%',
+                                    }}
+                                  />
+                                </div>
+                              )}
                               <p className="text-xs text-slate-600 leading-relaxed">
-                                この場所に{section.section_type}セクションの画像が表示されます。
-                                <br />
-                                生成完了次第、自動的に表示されます。
+                                {isRegenerating ? (
+                                  <>
+                                    <span className="font-bold text-teal-700">AIが画像を生成しています...</span>
+                                    <br />
+                                    この処理には30秒〜2分程度かかる場合があります。
+                                    <br />
+                                    完了次第、自動的に表示されます。
+                                  </>
+                                ) : (
+                                  <>
+                                    この場所に{section.section_type}セクションの画像が表示されます。
+                                    <br />
+                                    生成完了次第、自動的に表示されます。
+                                  </>
+                                )}
                               </p>
                             </div>
                           </div>
@@ -555,21 +649,83 @@ export function FigmaStyleEditor({
                       {imageData ? (
                         <img src={imageData} alt={section.headline} className="w-full block" />
                       ) : (
-                        <div className="w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 border-4 border-dashed border-slate-400 min-h-[900px] flex flex-col items-center justify-center p-16 relative overflow-hidden">
-                          {/* 背景パターン */}
-                          <div className="absolute inset-0 opacity-5">
-                            <div className="absolute inset-0" style={{
-                              backgroundImage: 'repeating-linear-gradient(45deg, #64748b 0, #64748b 30px, transparent 30px, transparent 60px)',
-                            }} />
+                        <div className={`w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 border-4 border-dashed min-h-[900px] flex flex-col items-center justify-center p-16 relative overflow-hidden ${
+                          isRegenerating 
+                            ? 'border-teal-500 animate-pulse' 
+                            : 'border-slate-400'
+                        }`}>
+                          {/* 背景パターン（生成中はアニメーション） */}
+                          <div className={`absolute inset-0 ${isRegenerating ? 'opacity-10' : 'opacity-5'}`}>
+                            <motion.div 
+                              className="absolute inset-0"
+                              animate={isRegenerating ? {
+                                backgroundPosition: ['0% 0%', '100% 100%'],
+                              } : {}}
+                              transition={isRegenerating ? {
+                                duration: 3,
+                                repeat: Infinity,
+                                ease: 'linear',
+                              } : {}}
+                              style={{
+                                backgroundImage: 'repeating-linear-gradient(45deg, #64748b 0, #64748b 30px, transparent 30px, transparent 60px)',
+                                backgroundSize: '60px 60px',
+                              }}
+                            />
                           </div>
+                          {/* 生成中の波紋エフェクト */}
+                          {isRegenerating && (
+                            <div className="absolute inset-0 overflow-hidden">
+                              {[0, 1, 2].map((i) => (
+                                <motion.div
+                                  key={i}
+                                  className="absolute inset-0 rounded-full border-4 border-teal-400/30"
+                                  animate={{
+                                    scale: [1, 1.8, 2.5],
+                                    opacity: [0.5, 0.2, 0],
+                                  }}
+                                  transition={{
+                                    duration: 2.5,
+                                    repeat: Infinity,
+                                    delay: i * 0.8,
+                                    ease: 'easeOut',
+                                  }}
+                                  style={{
+                                    left: '50%',
+                                    top: '50%',
+                                    width: '300px',
+                                    height: '300px',
+                                    marginLeft: '-150px',
+                                    marginTop: '-150px',
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
                           <div className="relative z-10 text-center max-w-3xl w-full">
-                            <div className="w-40 h-40 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-teal-100 via-cyan-100 to-blue-100 flex items-center justify-center border-4 border-teal-300 shadow-2xl">
+                            <motion.div 
+                              className={`w-40 h-40 mx-auto mb-8 rounded-3xl bg-gradient-to-br from-teal-100 via-cyan-100 to-blue-100 flex items-center justify-center border-4 shadow-2xl ${
+                                isRegenerating ? 'border-teal-500 shadow-teal-500/50' : 'border-teal-300'
+                              }`}
+                              animate={isRegenerating ? {
+                                scale: [1, 1.05, 1],
+                                boxShadow: [
+                                  '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+                                  '0 25px 50px -12px rgb(20 184 166 / 0.5)',
+                                  '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+                                ],
+                              } : {}}
+                              transition={isRegenerating ? {
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: 'easeInOut',
+                              } : {}}
+                            >
                               {isRegenerating ? (
                                 <Loader2 className="w-20 h-20 text-teal-600 animate-spin" />
                               ) : (
                                 <ImageIcon className="w-20 h-20 text-teal-600" />
                               )}
-                            </div>
+                            </motion.div>
                             <h3 className="text-4xl font-black text-slate-900 mb-4 leading-tight">{section.headline}</h3>
                             {section.sub_headline && (
                               <p className="text-xl text-slate-700 mb-6 leading-relaxed">{section.sub_headline}</p>
@@ -580,12 +736,14 @@ export function FigmaStyleEditor({
                             <p className="text-lg text-slate-600 mb-10 leading-relaxed bg-white/70 backdrop-blur-sm rounded-2xl p-6 border-2 border-slate-300">
                               {section.purpose}
                             </p>
-                            <div className="bg-white/95 backdrop-blur-md rounded-3xl p-8 border-4 border-teal-300 shadow-2xl">
-                              <div className="flex items-center justify-center gap-3 mb-3">
+                            <div className={`bg-white/95 backdrop-blur-md rounded-3xl p-8 border-4 shadow-2xl ${
+                              isRegenerating ? 'border-teal-400 shadow-teal-500/30' : 'border-teal-300'
+                            }`}>
+                              <div className="flex items-center justify-center gap-3 mb-4">
                                 {isRegenerating ? (
                                   <>
                                     <Loader2 className="w-6 h-6 text-teal-600 animate-spin" />
-                                    <p className="text-lg font-black text-slate-900">画像生成中...</p>
+                                    <p className="text-lg font-black text-teal-700">画像生成中...</p>
                                   </>
                                 ) : (
                                   <>
@@ -594,10 +752,40 @@ export function FigmaStyleEditor({
                                   </>
                                 )}
                               </div>
+                              {isRegenerating && (
+                                <div className="w-full bg-slate-200 rounded-full h-3 mb-4 overflow-hidden">
+                                  <motion.div
+                                    className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full"
+                                    animate={{
+                                      x: ['-100%', '100%'],
+                                    }}
+                                    transition={{
+                                      duration: 1.5,
+                                      repeat: Infinity,
+                                      ease: 'linear',
+                                    }}
+                                    style={{
+                                      width: '40%',
+                                    }}
+                                  />
+                                </div>
+                              )}
                               <p className="text-sm text-slate-700 leading-relaxed">
-                                この場所に<span className="font-bold text-teal-700">{section.section_type}</span>セクションの画像が表示されます。
-                                <br />
-                                生成完了次第、自動的に表示されます。
+                                {isRegenerating ? (
+                                  <>
+                                    <span className="font-bold text-teal-700">AIが画像を生成しています...</span>
+                                    <br />
+                                    この処理には30秒〜2分程度かかる場合があります。
+                                    <br />
+                                    完了次第、自動的に表示されます。
+                                  </>
+                                ) : (
+                                  <>
+                                    この場所に<span className="font-bold text-teal-700">{section.section_type}</span>セクションの画像が表示されます。
+                                    <br />
+                                    生成完了次第、自動的に表示されます。
+                                  </>
+                                )}
                               </p>
                             </div>
                           </div>
