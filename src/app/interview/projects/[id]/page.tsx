@@ -16,7 +16,7 @@ export default function InterviewProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState(false)
   const [processingStep, setProcessingStep] = useState<string>('')
-  const [activeTab, setActiveTab] = useState<'overview' | 'materials' | 'transcription' | 'draft' | 'review'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'materials' | 'transcription' | 'draft' | 'review'>('draft')
   const [showArticleTypeSelector, setShowArticleTypeSelector] = useState(false)
   const [selectedArticleType, setSelectedArticleType] = useState<ArticleType>('INTERVIEW')
   const [selectedDisplayFormat, setSelectedDisplayFormat] = useState<DisplayFormat>('QA')
