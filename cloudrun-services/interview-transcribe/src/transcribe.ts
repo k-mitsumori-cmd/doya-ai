@@ -1,4 +1,5 @@
 import { SpeechClient } from '@google-cloud/speech'
+import { extractAudioFromMP4 } from './audio-extractor'
 
 interface TranscribeOptions {
   gcsUri: string
@@ -57,17 +58,34 @@ export async function transcribeAudio(options: TranscribeOptions): Promise<strin
   const isMP4File = fileName?.toLowerCase().endsWith('.mp4') || mimeType?.includes('mp4')
   const isLargeFile = fileSize > 10 * 1024 * 1024 // 10MB以上
 
+  // MP4ファイルの場合は音声を抽出してFLACに変換
+  let audioGcsUri = gcsUri
+  if (isVideoFile && isMP4File) {
+    console.log('[TRANSCRIBE] MP4 file detected: extracting audio and converting to FLAC...')
+    try {
+      audioGcsUri = await extractAudioFromMP4(gcsUri)
+      console.log('[TRANSCRIBE] ✓ Audio extracted and converted to FLAC')
+      console.log('[TRANSCRIBE] FLAC GCS URI:', audioGcsUri)
+    } catch (extractError: any) {
+      console.error('[TRANSCRIBE] Failed to extract audio from MP4:', extractError)
+      throw new Error(`Failed to extract audio from MP4 file: ${extractError.message}`)
+    }
+  }
+
   // 設定パターンの準備
   const configPatterns: any[] = []
 
   if (isVideoFile && isMP4File) {
-    // MP4ファイルの場合、複数の設定パターンを準備
-    configPatterns.push(
-      { languageCode: 'ja-JP' }, // パターン1: 最小限
-      { languageCode: 'ja-JP', enableAutomaticPunctuation: true }, // パターン2
-      { languageCode: 'ja-JP', model: 'video' }, // パターン3: 公式ドキュメント推奨
-    )
-    console.log('[TRANSCRIBE] MP4 video file: will try multiple config patterns')
+    // MP4ファイルから抽出したFLACファイルの場合、音声ファイルとして処理
+    configPatterns.push({
+      languageCode: 'ja-JP',
+      encoding: 'FLAC',
+      sampleRateHertz: 16000,
+      audioChannelCount: 1,
+      model: 'latest_long',
+      enableAutomaticPunctuation: true,
+    })
+    console.log('[TRANSCRIBE] Extracted FLAC audio: using FLAC encoding configuration')
   } else if (isVideoFile) {
     // MP4以外のビデオファイルの場合
     configPatterns.push({ languageCode: 'ja-JP', model: 'video' })
@@ -91,7 +109,7 @@ export async function transcribeAudio(options: TranscribeOptions): Promise<strin
     const speechRequest = {
       config: currentConfig,
       audio: {
-        uri: gcsUri,
+        uri: audioGcsUri,
       },
     }
 
@@ -155,14 +173,8 @@ export async function transcribeAudio(options: TranscribeOptions): Promise<strin
           }
         }
 
-        // 最後のパターンでも失敗した場合、MP4ファイルの場合は特別なエラーメッセージを返す
+        // 最後のパターンでも失敗した場合、エラーをスロー
         if (patternIndex === configPatterns.length - 1) {
-          if (isMP4File) {
-            console.error('[TRANSCRIBE] All config patterns failed for MP4 file')
-            throw new Error(
-              'MP4 video files cannot be processed directly. Please extract audio from the MP4 file first.'
-            )
-          }
           throw apiError
         }
       }
@@ -216,14 +228,8 @@ export async function transcribeAudio(options: TranscribeOptions): Promise<strin
           }
         }
 
-        // 最後のパターンでも失敗した場合、MP4ファイルの場合は特別なエラーメッセージを返す
+        // 最後のパターンでも失敗した場合、エラーをスロー
         if (patternIndex === configPatterns.length - 1) {
-          if (isMP4File) {
-            console.error('[TRANSCRIBE] All config patterns failed for MP4 file')
-            throw new Error(
-              'MP4 video files cannot be processed directly. Please extract audio from the MP4 file first.'
-            )
-          }
           throw apiError
         }
       }
@@ -241,4 +247,5 @@ export async function transcribeAudio(options: TranscribeOptions): Promise<strin
 
   return transcriptionText
 }
+
 
