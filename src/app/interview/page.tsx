@@ -1707,16 +1707,72 @@ export default function InterviewPage() {
                 またはクリックしてファイルを選択
               </p>
               <p className="text-sm text-slate-500 mb-6">
-                最大ファイルサイズ: <span className="font-black text-orange-600">1GB（1,000MB）</span>
+                最大ファイルサイズ: <span className="font-black text-orange-600">10GB（10,000MB）</span>
                 <br />
                 <span className="text-xs text-slate-400">
                   ※ クライアントから直接Google Cloud Storageにアップロードします
                   <br />
-                  ※ 文字起こし機能を使用するため、1GBまでアップロード可能です
+                  ※ 文字起こし機能を使用するため、10GBまでアップロード可能です
                   <br />
-                  ※ 大きなファイル（500MB以上）も対応可能です（時間がかかる場合があります）
+                  ※ 大きなファイルも対応可能です（時間がかかる場合があります）
                 </span>
               </p>
+
+              {/* 処理時間の目安表 */}
+              <div className="mb-8 p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border-2 border-blue-200 shadow-lg">
+                <div className="flex items-center gap-3 mb-4">
+                  <Clock className="w-6 h-6 text-blue-600" />
+                  <h3 className="text-lg font-black text-slate-900">処理時間の目安</h3>
+                </div>
+                <div className="overflow-x-auto mb-4">
+                  <table className="w-full border-collapse bg-white rounded-xl shadow-md border border-slate-200">
+                    <thead>
+                      <tr className="bg-gradient-to-r from-blue-500 to-indigo-600">
+                        <th className="px-4 py-3 text-left text-white font-black text-sm border-b-2 border-blue-600">ファイルサイズ</th>
+                        <th className="px-4 py-3 text-left text-white font-black text-sm border-b-2 border-blue-600">動画ファイル</th>
+                        <th className="px-4 py-3 text-left text-white font-black text-sm border-b-2 border-blue-600">音声ファイル（MP3推奨）</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="bg-white hover:bg-slate-50">
+                        <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">1GB</td>
+                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約30-60分</td>
+                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約15-30分</td>
+                      </tr>
+                      <tr className="bg-slate-50 hover:bg-slate-100">
+                        <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">2GB</td>
+                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約1-2時間</td>
+                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約30-60分</td>
+                      </tr>
+                      <tr className="bg-white hover:bg-slate-50">
+                        <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">5GB</td>
+                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約2-4時間</td>
+                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約1-2時間</td>
+                      </tr>
+                      <tr className="bg-slate-50 hover:bg-slate-100">
+                        <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">10GB</td>
+                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約4-8時間</td>
+                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約2-4時間</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border-l-4 border-emerald-500">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-black text-lg">💡</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-900 mb-1">おすすめ: MP3（音声）に変換してからアップロード</p>
+                      <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                        動画ファイルをMP3などの音声ファイルに変換してからアップロードすると、処理時間が大幅に短縮されます。
+                        <br />
+                        動画ファイルは音声抽出に時間がかかりますが、音声ファイル（MP3）なら直接処理できるため、より早く完了します。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 {[
                   { icon: Music, label: '音声ファイル', formats: 'MP3, WAV, M4A', color: 'from-purple-500 to-pink-500' },
