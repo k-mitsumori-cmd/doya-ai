@@ -5,6 +5,7 @@
 
 import { generateSingleBanner } from '@/lib/nanobanner'
 import { LpSection, SectionImage, ProductInfo } from './types'
+import { enhanceImagePromptWithArchive } from './prompt-templates'
 
 /**
  * セクション画像を生成
