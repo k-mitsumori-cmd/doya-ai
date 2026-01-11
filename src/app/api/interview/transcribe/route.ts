@@ -351,15 +351,7 @@ export async function POST(request: NextRequest) {
           
           lastError = apiError
           
-          // bad encodingエラーの場合、次のパターンを試す
-          if (apiError?.code === 3 && apiError?.details?.includes('bad encoding')) {
-            if (patternIndex < configPatterns.length - 1) {
-              console.log(`[INTERVIEW] Bad encoding error - trying next config pattern...`)
-              continue
-            }
-          }
-          
-          // 最後のパターンでも失敗した場合、MP4ファイルの場合は特別なエラーメッセージを返す
+          // MP4ファイルで最後のパターンの場合、特別なエラーメッセージを返す
           if (patternIndex === configPatterns.length - 1) {
             if (isMP4File) {
               // MP4ファイルの場合、すべてのパターンで失敗した場合は特別なエラーメッセージを返す
@@ -374,6 +366,14 @@ export async function POST(request: NextRequest) {
               )
             }
             throw apiError
+          }
+          
+          // bad encodingエラーの場合、次のパターンを試す（最後のパターンでない場合のみ）
+          if (apiError?.code === 3 && apiError?.details?.includes('bad encoding')) {
+            if (patternIndex < configPatterns.length - 1) {
+              console.log(`[INTERVIEW] Bad encoding error - trying next config pattern...`)
+              continue
+            }
           }
         }
       } else {
@@ -419,15 +419,7 @@ export async function POST(request: NextRequest) {
           
           lastError = apiError
           
-          // bad encodingエラーの場合、次のパターンを試す
-          if (apiError?.code === 3 && apiError?.details?.includes('bad encoding')) {
-            if (patternIndex < configPatterns.length - 1) {
-              console.log(`[INTERVIEW] Bad encoding error - trying next config pattern...`)
-              continue
-            }
-          }
-          
-          // 最後のパターンでも失敗した場合、MP4ファイルの場合は特別なエラーメッセージを返す
+          // MP4ファイルで最後のパターンの場合、特別なエラーメッセージを返す
           if (patternIndex === configPatterns.length - 1) {
             if (isMP4File) {
               // MP4ファイルの場合、すべてのパターンで失敗した場合は特別なエラーメッセージを返す
@@ -443,14 +435,35 @@ export async function POST(request: NextRequest) {
             }
             throw apiError
           }
+          
+          // bad encodingエラーの場合、次のパターンを試す（最後のパターンでない場合のみ）
+          if (apiError?.code === 3 && apiError?.details?.includes('bad encoding')) {
+            if (patternIndex < configPatterns.length - 1) {
+              console.log(`[INTERVIEW] Bad encoding error - trying next config pattern...`)
+              continue
+            }
+          }
         }
       }
     }
     console.log('[INTERVIEW] ================================================')
 
+    // MP4ファイルの場合、すべてのパターンが失敗した時に特別なエラーメッセージを返す
     if (!transcriptionText || transcriptionText.trim().length === 0) {
+      if (isMP4File && lastError) {
+        console.error('[INTERVIEW] All config patterns failed for MP4 file')
+        return NextResponse.json(
+          {
+            error: 'MP4ビデオファイルは直接処理できません',
+            details: 'Google Cloud Speech-to-Text APIはMP4ファイルを直接処理できません。\n\n対処方法:\n1. MP4ファイルから音声を抽出してください（FFmpegなどのツールを使用）\n2. 抽出した音声ファイル（MP3、WAV、FLACなど）をアップロードしてください\n\n参考: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja',
+            errorCode: 'MP4_NOT_SUPPORTED',
+          },
+          { status: 400 }
+        )
+      }
+      
       return NextResponse.json(
-        { error: '文字起こし結果が空です' },
+        { error: '文字起こし結果が空です', details: lastError?.message || 'すべての設定パターンで失敗しました' },
         { status: 400 }
       )
     }
