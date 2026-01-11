@@ -308,11 +308,7 @@ export default function InterviewPage() {
       }
     }
 
-    // ファイルタイプチェック
-    const mimeType = file.type
-    const fileName = file.name.toLowerCase()
-    const extension = fileName.split('.').pop()
-
+    // ファイルタイプチェック（既に定義済みのmimeType, fileName, extensionを使用）
     let isSupported = false
     let detectedType: MaterialType = null
 
