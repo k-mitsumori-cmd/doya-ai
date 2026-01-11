@@ -10,8 +10,12 @@ export const dynamic = 'force-dynamic'
 // 構成案生成
 export async function POST(request: NextRequest) {
   try {
+    // 認証チェック（ユーザーまたはゲスト）
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const userId = session?.user?.id
+    const guestId = request.headers.get('x-guest-id')
+
+    if (!userId && !guestId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
@@ -22,11 +26,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing projectId' }, { status: 400 })
     }
 
-    // プロジェクト取得
+    // プロジェクト取得（ユーザーまたはゲスト）
     const project = await prisma.interviewProject.findFirst({
       where: {
         id: projectId,
-        userId: session.user.id,
+        OR: [
+          { userId: userId || undefined },
+          { guestId: guestId || undefined },
+        ],
       },
       include: {
         transcriptions: true,
