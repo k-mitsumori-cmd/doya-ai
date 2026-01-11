@@ -285,6 +285,131 @@ export function LpGenerationOverlay({
 
               {/* コンテンツエリア */}
               <div className="p-6">
+                {/* 検索UI（searchモード時のみ表示） */}
+                {mood === 'search' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="mb-6 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl border-2 border-blue-200/50 p-6 relative overflow-hidden"
+                  >
+                    {/* 背景パターン */}
+                    <div className="absolute inset-0 opacity-10">
+                      <div className="absolute inset-0" style={{
+                        backgroundImage: 'repeating-linear-gradient(45deg, #3b82f6 0, #3b82f6 1px, transparent 1px, transparent 10px)',
+                      }} />
+                    </div>
+                    
+                    <div className="relative z-10">
+                      {/* 検索バー */}
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mb-4 flex items-center gap-3 bg-white rounded-xl border-2 border-blue-200 p-4 shadow-lg"
+                      >
+                        <motion.div
+                          animate={{
+                            scale: [1, 1.1, 1],
+                            rotate: [0, 5, -5, 0],
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: 'easeInOut',
+                          }}
+                          className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-md"
+                        >
+                          <Search className="w-5 h-5 text-white" />
+                        </motion.div>
+                        <div className="flex-1 relative">
+                          <motion.div
+                            animate={{
+                              width: ['0%', '100%', '0%'],
+                            }}
+                            transition={{
+                              duration: 2,
+                              repeat: Infinity,
+                              ease: 'easeInOut',
+                            }}
+                            className="h-2 bg-gradient-to-r from-transparent via-blue-400 to-transparent rounded-full"
+                          />
+                          <div className="mt-2 text-sm text-gray-500 font-medium">
+                            <motion.span
+                              key={tipIndex}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              className="inline-block"
+                            >
+                              {loadingTips[0]?.replace('…', '') || '商品情報を分析中'}
+                            </motion.span>
+                            <motion.span
+                              animate={{ opacity: [1, 0.3, 1] }}
+                              transition={{ duration: 1, repeat: Infinity }}
+                              className="ml-1"
+                            >
+                              ...
+                            </motion.span>
+                          </div>
+                        </div>
+                      </motion.div>
+
+                      {/* 検索結果風のカード */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[0, 1, 2].map((i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.2, duration: 0.4 }}
+                            className="bg-white/80 backdrop-blur-sm rounded-xl border border-blue-100 p-4 shadow-sm"
+                          >
+                            <div className="flex items-start gap-3">
+                              <motion.div
+                                animate={{
+                                  scale: [1, 1.05, 1],
+                                }}
+                                transition={{
+                                  duration: 1.5 + i * 0.3,
+                                  repeat: Infinity,
+                                  ease: 'easeInOut',
+                                  delay: i * 0.2,
+                                }}
+                                className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-100 to-cyan-100 flex items-center justify-center flex-shrink-0 mt-0.5"
+                              >
+                                <FileText className="w-4 h-4 text-blue-600" />
+                              </motion.div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div className="h-3 bg-blue-200 rounded w-32 animate-pulse" />
+                                  <ExternalLink className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                                </div>
+                                <div className="h-2 bg-gray-200 rounded w-full mb-2 animate-pulse" />
+                                <div className="h-2 bg-gray-200 rounded w-3/4 animate-pulse" />
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+
+                      {/* 検索中メッセージ */}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="mt-4 flex items-center gap-2 text-xs text-blue-600 font-bold"
+                      >
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                        >
+                          <Loader2 className="w-4 h-4" />
+                        </motion.div>
+                        <span>関連情報を検索中...</span>
+                      </motion.div>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* ステップカード */}
                 <div className="grid sm:grid-cols-3 gap-4 mb-6">
                   {steps.slice(0, 3).map((s, i) => {
