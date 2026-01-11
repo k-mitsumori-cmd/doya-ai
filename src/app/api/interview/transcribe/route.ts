@@ -398,15 +398,37 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ transcription })
       } catch (cloudRunError: any) {
         console.error('[INTERVIEW] ✗ Cloud Run service call failed')
-        console.error('[INTERVIEW]   Error:', cloudRunError?.message || cloudRunError)
+        console.error('[INTERVIEW]   Error Type:', cloudRunError?.constructor?.name || typeof cloudRunError)
+        console.error('[INTERVIEW]   Error Message:', cloudRunError?.message || cloudRunError)
+        console.error('[INTERVIEW]   Error Code:', cloudRunError?.code || 'N/A')
+        console.error('[INTERVIEW]   Error Response:', cloudRunError?.response?.data || cloudRunError?.response || 'N/A')
+        console.error('[INTERVIEW]   Error Status:', cloudRunError?.response?.status || 'N/A')
+        console.error('[INTERVIEW]   Error Status Text:', cloudRunError?.response?.statusText || 'N/A')
         console.error('[INTERVIEW]   Stack:', cloudRunError?.stack || 'N/A')
+
+        // エラーレスポンスから詳細を取得
+        let errorDetails = cloudRunError?.message || '不明なエラー'
+        let errorCode = cloudRunError?.code || 'UNKNOWN_ERROR'
+        let statusCode = 500
+
+        if (cloudRunError?.response) {
+          const responseData = cloudRunError.response.data || cloudRunError.response
+          if (typeof responseData === 'string') {
+            errorDetails = responseData
+          } else if (responseData && typeof responseData === 'object') {
+            errorDetails = responseData.error || responseData.details || JSON.stringify(responseData)
+            errorCode = responseData.errorCode || errorCode
+          }
+          statusCode = cloudRunError.response.status || statusCode
+        }
 
         return NextResponse.json(
           {
             error: 'Cloud Runサービスの呼び出しに失敗しました',
-            details: cloudRunError?.message || '不明なエラー',
+            details: errorDetails,
+            errorCode: errorCode,
           },
-          { status: 500 }
+          { status: statusCode }
         )
       }
     }
