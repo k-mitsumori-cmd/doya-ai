@@ -459,6 +459,7 @@ function LpSitePageInner() {
           result={result}
           selectedDevice={selectedDevice}
           onDeviceChange={setSelectedDevice}
+          isGeneratingImages={isGeneratingImages}
           onSectionsReorder={(newSections) => {
             setResult({
               ...result,
