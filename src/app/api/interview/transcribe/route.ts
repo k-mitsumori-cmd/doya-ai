@@ -239,17 +239,21 @@ export async function POST(request: NextRequest) {
 
     // リクエスト設定
     // 重要: GCS URIを使用する場合、encodingは設定しない（APIが自動検出）
+    // 公式ドキュメント: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja
+    // 動画ファイルの場合は model: "video" を設定する必要がある
     const isVideoFile = material.type === 'video' || material.mimeType?.includes('video')
     const isLargeFile = (material.fileSize || 0) > 10 * 1024 * 1024 // 10MB以上
 
-    // MP4ビデオファイルの場合、languageCodeのみを使用（最小限の設定）
-    // alternativeLanguageCodesやenableAutomaticPunctuationが"bad encoding"エラーを引き起こす可能性がある
     const requestConfig: any = {
       languageCode: 'ja-JP',
     }
 
-    // 音声ファイルの場合のみ、追加のパラメータを設定
-    if (!isVideoFile) {
+    // ビデオファイルの場合、公式ドキュメントに従って model: "video" を設定
+    if (isVideoFile) {
+      requestConfig.model = 'video'
+      console.log('[INTERVIEW] Video file detected: using model "video" as per official documentation')
+    } else {
+      // 音声ファイルの場合、追加のパラメータを設定
       requestConfig.alternativeLanguageCodes = ['en-US']
       requestConfig.enableAutomaticPunctuation = true
       requestConfig.model = 'latest_long'
