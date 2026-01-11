@@ -1,18 +1,35 @@
 # 📚 ドヤAI 開発リファレンス
 
-新しいサービスを追加する際に参照するドキュメント集です。
+新しいサービスを追加する際に参照するドキュメントです。
 
-## ドキュメント一覧
+## 📖 メインドキュメント
 
-| ファイル | 内容 |
-|----------|------|
-| [development-guide.md](./development-guide.md) | **開発ガイド（メイン）** - 新サービス追加手順・デプロイ手順・検索系API活用 |
-| [implementation-patterns.md](./implementation-patterns.md) | **実装パターン集** - API・ファイルアップロード・GCS・プラン管理などの実装例 |
-| [design-system.md](./design-system.md) | デザインシステム・UIガイドライン |
-| [sidebar-pattern.md](./sidebar-pattern.md) | サイドバー実装パターン |
-| [service-isolation.md](./service-isolation.md) | サービス分離ルール（他機能に影響を与えない） |
-| [animation-spec.md](./animation-spec.md) | アニメーション仕様（Party Mode / Minimal） |
-| [beta-services.md](./beta-services.md) | 製作中サービス（ベータ版）管理ガイド |
+**👉 [DEVELOPMENT_REFERENCE.md](./DEVELOPMENT_REFERENCE.md)** - **完全開発ガイド（統合版）**
+
+全ての開発情報を1つのドキュメントにまとめた統合版です。以下の内容が含まれています：
+
+- ✅ 新サービス追加手順
+- ✅ 実装パターン集（API、ファイルアップロード、GCS、プラン管理など）
+- ✅ デザインシステム・UIガイドライン
+- ✅ サイドバー実装パターン
+- ✅ サービス分離ルール
+- ✅ アニメーション仕様
+- ✅ ベータ版サービス管理
+- ✅ デプロイ手順・トラブルシューティング
+
+## 📁 個別ドキュメント（参考用）
+
+以下のドキュメントは参考用として残していますが、メインの情報は上記の統合ドキュメントを参照してください。
+
+| ファイル | 内容 | 状態 |
+|----------|------|------|
+| [development-guide.md](./development-guide.md) | 開発ガイド（個別版） | 統合済み |
+| [implementation-patterns.md](./implementation-patterns.md) | 実装パターン集（個別版） | 統合済み |
+| [design-system.md](./design-system.md) | デザインシステム（個別版） | 統合済み |
+| [sidebar-pattern.md](./sidebar-pattern.md) | サイドバー実装パターン（個別版） | 統合済み |
+| [service-isolation.md](./service-isolation.md) | サービス分離ルール（個別版） | 統合済み |
+| [animation-spec.md](./animation-spec.md) | アニメーション仕様（個別版） | 統合済み |
+| [beta-services.md](./beta-services.md) | ベータ版サービス管理（個別版） | 統合済み |
 
 ## クイックスタート（新サービス追加）
 
@@ -41,6 +58,7 @@
 
 # 7. デプロイ（変更を反映）
 #    → development-guide.md の「デプロイ手順」を参照
+
 ```
 
 ## 原則
