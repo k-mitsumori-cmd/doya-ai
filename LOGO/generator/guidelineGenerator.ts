@@ -67,3 +67,4 @@ export function generateGuidelineMarkdown(input: DoyaLogoInput, patterns: Genera
 
 
 
+
