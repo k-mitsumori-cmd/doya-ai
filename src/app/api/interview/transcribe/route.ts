@@ -130,14 +130,16 @@ export async function POST(request: NextRequest) {
     const isVideoFile = material.type === 'video' || material.mimeType?.includes('video')
     const isLargeFile = (material.fileSize || 0) > 10 * 1024 * 1024 // 10MB以上
 
+    // MP4ビデオファイルの場合、languageCodeのみを使用（最小限の設定）
+    // alternativeLanguageCodesやenableAutomaticPunctuationが"bad encoding"エラーを引き起こす可能性がある
     const requestConfig: any = {
       languageCode: 'ja-JP',
-      alternativeLanguageCodes: ['en-US'],
-      enableAutomaticPunctuation: true,
     }
 
-    // 音声ファイルの場合のみmodelを追加
+    // 音声ファイルの場合のみ、追加のパラメータを設定
     if (!isVideoFile) {
+      requestConfig.alternativeLanguageCodes = ['en-US']
+      requestConfig.enableAutomaticPunctuation = true
       requestConfig.model = 'latest_long'
     }
 
