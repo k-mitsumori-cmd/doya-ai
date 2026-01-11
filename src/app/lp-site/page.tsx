@@ -755,7 +755,7 @@ function LpSitePageInner() {
                 LPタイプ
               </label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {(['saas', 'ec', 'service', 'recruit'] as LpType[]).map((type, index) => (
+                {(['saas', 'ec', 'service', 'recruit', 'education', 'beauty', 'healthcare', 'finance'] as LpType[]).map((type, index) => (
                   <motion.button
                     key={type}
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -774,6 +774,10 @@ function LpSitePageInner() {
                     {type === 'ec' && 'EC'}
                     {type === 'service' && '無形サービス'}
                     {type === 'recruit' && '採用/広報'}
+                    {type === 'education' && '教育'}
+                    {type === 'beauty' && '美容'}
+                    {type === 'healthcare' && '医療'}
+                    {type === 'finance' && '金融'}
                   </motion.button>
                 ))}
               </div>

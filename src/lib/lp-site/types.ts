@@ -2,7 +2,7 @@
 // ドヤサイト 型定義
 // ============================================
 
-export type LpType = 'saas' | 'ec' | 'service' | 'recruit'
+export type LpType = 'saas' | 'ec' | 'service' | 'recruit' | 'education' | 'beauty' | 'healthcare' | 'finance'
 export type Tone = 'trust' | 'pop' | 'luxury' | 'simple'
 
 export interface ProductInfo {
