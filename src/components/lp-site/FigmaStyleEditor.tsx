@@ -823,17 +823,26 @@ export function FigmaStyleEditor({
                               <p className="text-sm text-slate-700 leading-relaxed">
                                 {isRegenerating ? (
                                   <>
-                                    <span className="font-bold text-teal-700">AIが画像を生成しています...</span>
+                                    <span className="font-bold text-teal-700">✨ AIが画像を生成しています...</span>
                                     <br />
-                                    この処理には30秒〜2分程度かかる場合があります。
+                                    <span className="text-slate-600">
+                                      通常30秒〜2分程度かかります
+                                      {sectionGenProgress > 0 && `（進捗: ${sectionGenProgress}%）`}
+                                    </span>
                                     <br />
-                                    完了次第、自動的に表示されます。
+                                    <span className="text-slate-400 text-xs">
+                                      完了次第、自動的に表示されます
+                                    </span>
                                   </>
                                 ) : (
                                   <>
-                                    この場所に<span className="font-bold text-teal-700">{section.section_type}</span>セクションの画像が表示されます。
+                                    <span className="font-medium text-slate-700">
+                                      {section.section_type}セクションの画像を生成中です
+                                    </span>
                                     <br />
-                                    生成完了次第、自動的に表示されます。
+                                    <span className="text-slate-500 text-xs">
+                                      生成完了次第、自動的に表示されます
+                                    </span>
                                   </>
                                 )}
                               </p>
