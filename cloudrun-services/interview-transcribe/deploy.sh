@@ -97,7 +97,7 @@ gcloud run deploy interview-transcribe-service \
   --platform managed \
   --region asia-northeast1 \
   --allow-unauthenticated \
-  --memory 2Gi \
+  --memory 4Gi \
   --cpu 2 \
   --timeout 3600 \
   --max-instances 10 \

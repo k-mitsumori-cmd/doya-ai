@@ -230,11 +230,11 @@ export async function POST(request: NextRequest) {
     }
     console.log('[INTERVIEW] ================================================')
 
-    // ファイルサイズチェック（1GB制限）
-    const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB
+    // ファイルサイズチェック（10GB制限）
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024 // 10GB
     if (material.fileSize && material.fileSize > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: 'ファイルサイズが大きすぎます（最大1GB）' },
+        { error: 'ファイルサイズが大きすぎます（最大10GB）' },
         { status: 413 }
       )
     }

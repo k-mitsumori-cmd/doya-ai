@@ -58,8 +58,8 @@ export async function transcribeAudio(options: TranscribeOptions): Promise<strin
 
   const speechClient = getSpeechClient()
 
-  // ファイルサイズチェック（1GB制限）
-  const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB
+  // ファイルサイズチェック（10GB制限）
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024 // 10GB
   if (fileSize > MAX_FILE_SIZE) {
     throw new Error(`File size exceeds limit (max ${MAX_FILE_SIZE / 1024 / 1024 / 1024}GB)`)
   }

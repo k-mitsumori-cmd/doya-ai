@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight, Settings, RefreshCw, MessageSquare, FileEdit, Users, Briefcase, Edit, Save, X, FileDown, FileCode, FileType, AlertCircle } from 'lucide-react'
+import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight, Settings, RefreshCw, MessageSquare, FileEdit, Users, Briefcase, Edit, Save, X, FileDown, FileCode, FileType, AlertCircle, Table2, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
+import { InterviewCompletionModal } from '@/components/InterviewCompletionModal'
 
 type ArticleType = 'INTERVIEW' | 'BUSINESS_REPORT' | 'INTERNAL_INTERVIEW' | 'CASE_STUDY'
 type DisplayFormat = 'QA' | 'MONOLOGUE'
@@ -24,6 +25,9 @@ export default function InterviewProjectDetailPage() {
   const [editedContent, setEditedContent] = useState<string>('')
   const [showExportMenu, setShowExportMenu] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
+  const [showTableInsertModal, setShowTableInsertModal] = useState(false)
+  const [showImageInsertModal, setShowImageInsertModal] = useState(false)
 
   const fetchProject = async () => {
     try {
@@ -181,6 +185,7 @@ export default function InterviewProjectDetailPage() {
       await fetchProject() // 再取得
       setActiveTab('draft')
       setShowArticleTypeSelector(false)
+      setShowCompletionModal(true) // 完了モーダルを表示
     } catch (error) {
       console.error('Failed to generate article:', error)
       alert(`エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`)
@@ -979,6 +984,19 @@ export default function InterviewProjectDetailPage() {
           </div>
         )}
       </div>
+
+      {/* 完了モーダル */}
+      <InterviewCompletionModal
+        open={showCompletionModal}
+        title={project?.title || '記事'}
+        subtitle="丁寧なビジネス記事が完成しました。内容をご確認いただけます。"
+        primaryLabel="記事を確認する"
+        onPrimary={() => {
+          setShowCompletionModal(false)
+          setActiveTab('draft')
+        }}
+        onClose={() => setShowCompletionModal(false)}
+      />
     </div>
   )
 }

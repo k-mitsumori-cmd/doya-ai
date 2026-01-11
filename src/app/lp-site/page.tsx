@@ -201,11 +201,13 @@ function LpSitePageInner() {
         setMood('idle')
         toast.success('ワイヤーフレームが生成されました！画像を自動生成中...')
 
-        // Step 4: 画像生成（バックグラウンドで実行）
+        // Step 4: 画像生成（バックグラウンドで実行、セクションごとに個別生成）
         setIsGeneratingImages(true)
         setImageProgress(0)
+        setSectionProgress({})
+        setGeneratingSections(new Set(sections.filter(s => s.image_required).map(s => s.section_id)))
         
-        // 画像生成を非同期で実行
+        // 画像生成を非同期で実行（セクションごとに個別生成）
         ;(async () => {
           try {
             setCurrentStep('image')
@@ -214,50 +216,121 @@ function LpSitePageInner() {
             setStageText('セクション画像を生成中...')
             setMood('think')
             
-            // 画像生成の進捗を段階的に更新（60-100%）
-            const progressSteps = [70, 75, 80, 85, 90, 95]
-            let progressIndex = 0
-            const progressInterval = setInterval(() => {
-              if (progressIndex < progressSteps.length) {
-                const progressValue = progressSteps[progressIndex]
-                updateProgress(progressValue) // 後戻りしないように安全に更新
-                setImageProgress(Math.round(((progressValue - 60) / 40) * 100)) // 60-100%を0-100%に変換
-                progressIndex++
-              } else {
-                clearInterval(progressInterval)
+            const imageRequiredSections = sections.filter(s => s.image_required)
+            const totalSections = imageRequiredSections.length
+            let completedSections = 0
+            const generatedImages: SectionImage[] = []
+            
+            // 各セクションごとに画像を生成
+            for (let index = 0; index < imageRequiredSections.length; index++) {
+              const section = imageRequiredSections[index]
+              const sectionId = section.section_id
+              
+              try {
+                // セクション生成開始
+                setSectionProgress(prev => ({ ...prev, [sectionId]: 0 }))
+                setStageText(`${section.headline || section.section_id} の画像を生成中... (${index + 1}/${totalSections})`)
+                
+                // セクション画像生成APIを呼び出し
+                const sectionResponse = await fetch('/api/lp-site/regenerate-section', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    section,
+                    product_info: productInfo,
+                    regenerate_type: 'both', // PC/SP両方生成
+                  }),
+                })
+                
+                if (!sectionResponse.ok) {
+                  const errorData = await sectionResponse.json().catch(() => ({}))
+                  console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, errorData)
+                  throw new Error(errorData.error || errorData.details || `セクション ${sectionId} の画像生成に失敗しました`)
+                }
+                
+                const sectionData = await sectionResponse.json()
+                const sectionImage: SectionImage = {
+                  section_id: sectionId,
+                  image_pc: sectionData.result?.image_pc,
+                  image_sp: sectionData.result?.image_sp,
+                }
+                
+                generatedImages.push(sectionImage)
+                completedSections++
+                
+                // 進捗を更新
+                const overallProgress = 65 + Math.round((completedSections / totalSections) * 30) // 65-95%
+                updateProgress(overallProgress)
+                setImageProgress(Math.round((completedSections / totalSections) * 100))
+                setSectionProgress(prev => ({ ...prev, [sectionId]: 100 }))
+                
+                // 結果をリアルタイムで更新
+                const currentImages = [...generatedImages]
+                // 画像不要のセクションも追加
+                sections.filter(s => !s.image_required).forEach(s => {
+                  if (!currentImages.find(img => img.section_id === s.section_id)) {
+                    currentImages.push({ section_id: s.section_id })
+                  }
+                })
+                
+                const partialResult: LpGenerationResult = {
+                  product_info: productInfo,
+                  sections,
+                  wireframes,
+                  images: currentImages,
+                  structure_json: JSON.stringify({
+                    product_info: productInfo,
+                    sections,
+                    wireframes,
+                    images: currentImages.map(img => ({
+                      section_id: img.section_id,
+                      has_pc: !!img.image_pc,
+                      has_sp: !!img.image_sp,
+                    })),
+                  }, null, 2),
+                }
+                
+                setResult(partialResult) // リアルタイムで結果を更新
+                setGeneratingSections(prev => {
+                  const next = new Set(prev)
+                  next.delete(sectionId)
+                  return next
+                })
+                
+                console.log(`[LP-SITE] セクション画像生成完了: ${sectionId} (${completedSections}/${totalSections})`)
+              } catch (error: any) {
+                console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, error)
+                // エラーが発生しても続行
+                generatedImages.push({
+                  section_id: sectionId,
+                  image_pc: undefined,
+                  image_sp: undefined,
+                })
+                setGeneratingSections(prev => {
+                  const next = new Set(prev)
+                  next.delete(sectionId)
+                  return next
+                })
               }
-            }, 2000) // 2秒ごとに進捗を更新
-
-            const step4Response = await fetch('/api/lp-site/generate-step', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ step: 'image-generation', product_info: productInfo, sections }),
+            }
+            
+            // 画像不要のセクションも追加
+            sections.filter(s => !s.image_required).forEach(s => {
+              if (!generatedImages.find(img => img.section_id === s.section_id)) {
+                generatedImages.push({ section_id: s.section_id })
+              }
             })
             
-            clearInterval(progressInterval)
-            updateProgress(100) // 画像生成完了（後戻りしない）
+            images = generatedImages
+            
+            updateProgress(100) // 画像生成完了
             setImageProgress(100)
             setStageText('完了！')
             setMood('happy')
-            
-            if (!step4Response.ok) {
-              const errorData = await step4Response.json().catch(() => ({}))
-              console.error('[LP-SITE] 画像生成APIエラー:', errorData)
-              throw new Error(errorData.error || errorData.details || '画像生成に失敗しました')
-            }
-            
-            const step4Data = await step4Response.json()
-            console.log('[LP-SITE] 画像生成レスポンス:', {
-              imagesCount: step4Data.images?.length,
-              images: step4Data.images?.map((img: any) => ({
-                section_id: img.section_id,
-                has_pc: !!img.image_pc,
-                has_sp: !!img.image_sp,
-              })),
-            })
-            images = step4Data.images
+            setSectionProgress({})
+            setGeneratingSections(new Set())
 
-            // 画像を追加して結果を更新
+            // 最終結果を更新
             const finalResult: LpGenerationResult = {
               product_info: productInfo,
               sections,
@@ -276,7 +349,6 @@ function LpSitePageInner() {
             }
             
             setResult(finalResult) // 結果を更新（画像を追加）
-            setImageProgress(100)
             setIsGeneratingImages(false)
             toast.success('すべての画像が生成されました！')
           } catch (error: any) {

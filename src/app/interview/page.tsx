@@ -30,7 +30,7 @@ type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
 // - 文字起こし機能を使用するため、1GBまでアップロード可能（文字起こし制限に合わせる）
 // - チャンクアップロードを使用することで、大きなファイルもアップロード可能
 // - 4.5MBを超えるファイルは自動的にチャンクアップロードを使用（Vercelのサーバーレス関数制限）
-const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB（文字起こし機能の制限に合わせる）
+const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024 // 10GB（大容量動画ファイル対応）
 const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB（Vercelのサーバーレス関数のリクエストボディサイズ制限）
 const CHUNK_SIZE = 4 * 1024 * 1024 // 4MB（チャンクサイズ - Vercelの制限より少し小さく）
 const USE_CHUNK_UPLOAD = true // チャンクアップロードを有効化（4.5MB以上のファイルをアップロード可能）
