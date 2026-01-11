@@ -39,6 +39,7 @@ interface FigmaStyleEditorProps {
   onSectionUpdate?: (sectionId: string, field: string, value: string) => void
   onPreview?: () => void
   onPublish?: () => void
+  isGeneratingImages?: boolean
 }
 
 interface LayerItemProps {
@@ -272,6 +273,7 @@ export function FigmaStyleEditor({
   onSectionUpdate,
   onPreview,
   onPublish,
+  isGeneratingImages = false,
 }: FigmaStyleEditorProps) {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [regeneratingSectionId, setRegeneratingSectionId] = useState<string | null>(null)
@@ -462,7 +464,7 @@ export function FigmaStyleEditor({
                       const image = result.images.find(img => img.section_id === section.section_id)
                       const imageData = image?.image_sp
                       const isSelected = selectedSectionId === section.section_id
-                      const isRegenerating = regeneratingSectionId === section.section_id
+                      const isRegenerating = regeneratingSectionId === section.section_id || (isGeneratingImages && !imageData)
                       
                       return (
                         <div
@@ -631,10 +633,10 @@ export function FigmaStyleEditor({
             {selectedDevice === 'pc' && (
               <div className="overflow-y-auto" style={{ maxHeight: '80vh' }}>
                 {visibleSectionsList.map((section, index) => {
-                  const image = result.images.find(img => img.section_id === section.section_id)
-                  const imageData = image?.image_pc
-                  const isSelected = selectedSectionId === section.section_id
-                  const isRegenerating = regeneratingSectionId === section.section_id
+                      const image = result.images.find(img => img.section_id === section.section_id)
+                      const imageData = image?.image_pc
+                      const isSelected = selectedSectionId === section.section_id
+                      const isRegenerating = regeneratingSectionId === section.section_id || (isGeneratingImages && !imageData)
                   
                   return (
                     <div
