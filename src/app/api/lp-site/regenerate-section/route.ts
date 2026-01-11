@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { geminiGenerateImagePng } from '@seo/lib/gemini'
+import { generateSingleBanner } from '@/lib/nanobanner'
 import { LpSection, ProductInfo } from '@/lib/lp-site/types'
 import { generateSectionImagePair, generateImagePrompt } from '@/lib/lp-site/image-generation'
 
@@ -45,12 +45,9 @@ export async function POST(request: NextRequest) {
       // PC画像のみ再生成
       const imagePrompt = generateImagePrompt(sectionData, productInfo, 'pc')
       try {
-        const pcResult = await geminiGenerateImagePng({
-          prompt: imagePrompt,
-          aspectRatio: '16:9',
-          imageSize: '2K',
-        })
-        imagePc = `data:${pcResult.mimeType};base64,${pcResult.dataBase64}`
+        const pcResult = await generateSingleBanner(imagePrompt, '1920x1080', {})
+        imagePc = pcResult.image
+        console.log(`[LP-SITE] PC画像再生成成功: モデル ${pcResult.model}`)
       } catch (error) {
         console.error(`[LP-SITE] PC画像再生成エラー:`, error)
         throw error
@@ -59,12 +56,9 @@ export async function POST(request: NextRequest) {
       // SP画像のみ再生成
       const imagePrompt = generateImagePrompt(sectionData, productInfo, 'sp')
       try {
-        const spResult = await geminiGenerateImagePng({
-          prompt: imagePrompt,
-          aspectRatio: '9:16',
-          imageSize: '2K',
-        })
-        imageSp = `data:${spResult.mimeType};base64,${spResult.dataBase64}`
+        const spResult = await generateSingleBanner(imagePrompt, '1080x1920', {})
+        imageSp = spResult.image
+        console.log(`[LP-SITE] SP画像再生成成功: モデル ${spResult.model}`)
       } catch (error) {
         console.error(`[LP-SITE] SP画像再生成エラー:`, error)
         throw error
