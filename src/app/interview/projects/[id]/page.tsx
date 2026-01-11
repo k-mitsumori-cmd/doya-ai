@@ -391,10 +391,10 @@ export default function InterviewProjectDetailPage() {
       {/* タブ */}
       <div className="flex gap-2 mb-6 border-b border-slate-200">
         {[
+          { id: 'draft', label: '記事', icon: Sparkles },
           { id: 'overview', label: '概要', icon: FileText },
           { id: 'materials', label: '素材', icon: Upload },
           { id: 'transcription', label: '文字起こし', icon: FileText },
-          { id: 'draft', label: 'ドラフト', icon: Sparkles },
           { id: 'review', label: '校閲', icon: CheckCircle },
         ].map((tab) => (
           <button
@@ -710,7 +710,7 @@ export default function InterviewProjectDetailPage() {
         {activeTab === 'draft' && (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-black text-slate-900">記事ドラフト</h3>
+              <h3 className="text-2xl font-black text-slate-900">記事</h3>
               {project.drafts && Array.isArray(project.drafts) && project.drafts.length > 0 && 
                project.transcriptions && Array.isArray(project.transcriptions) && project.transcriptions.length > 0 && (
                 <motion.button
@@ -931,7 +931,7 @@ export default function InterviewProjectDetailPage() {
             ) : (
               <div className="text-center py-16">
                 <Sparkles className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-600 text-lg font-medium">ドラフトがありません</p>
+                <p className="text-slate-600 text-lg font-medium">記事がありません</p>
                 {project.transcriptions && Array.isArray(project.transcriptions) && project.transcriptions.length > 0 && (
                   <motion.button
                     onClick={() => setShowArticleTypeSelector(true)}
