@@ -462,7 +462,7 @@ export function FigmaStyleEditor({
                           selectedDevice={selectedDevice}
                           isSelected={selectedSectionId === section.section_id}
                           isVisible={visibleSections.has(section.section_id)}
-                          isRegenerating={regeneratingSectionId === section.section_id}
+                          isRegenerating={regeneratingSections.has(section.section_id)}
                           onSelect={() => setSelectedSectionId(section.section_id)}
                           onToggleVisibility={() => handleToggleVisibility(section.section_id)}
                           onRegenerate={() => handleSectionRegenerate(section.section_id)}
@@ -884,7 +884,7 @@ export function FigmaStyleEditor({
               section={selectedSection}
               image={selectedImage}
               selectedDevice={selectedDevice}
-              isRegenerating={regeneratingSectionId === selectedSectionId}
+              isRegenerating={selectedSectionId ? regeneratingSections.has(selectedSectionId) : false}
               onRegenerate={() => handleSectionRegenerate(selectedSectionId!)}
               onDownload={() => {
                 const imageData = selectedDevice === 'pc' ? selectedImage?.image_pc : selectedImage?.image_sp
