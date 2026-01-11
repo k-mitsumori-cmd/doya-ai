@@ -91,6 +91,8 @@ export async function POST(request: NextRequest) {
       credentials,
     })
 
+    console.log('[INTERVIEW] SpeechClient initialized')
+
     // GCS URIを構築
     let gcsUri: string
     if (material.fileUrl && material.fileUrl.includes('storage.googleapis.com')) {
@@ -146,6 +148,8 @@ export async function POST(request: NextRequest) {
       },
     }
 
+    console.log(`[INTERVIEW] Starting transcription - File: ${material.fileName}, Type: ${isVideoFile ? 'video' : 'audio'}, Size: ${((material.fileSize || 0) / 1024 / 1024).toFixed(2)} MB, GCS URI: ${gcsUri}`)
+
     // 文字起こしを実行
     let transcriptionText: string
     if (isVideoFile || isLargeFile) {
@@ -164,6 +168,8 @@ export async function POST(request: NextRequest) {
         .map((result: any) => result.alternatives?.[0]?.transcript || '')
         .filter((text: string) => text.trim().length > 0)
         .join(' ')
+      
+      console.log(`[INTERVIEW] Transcription completed (longRunningRecognize) - ${transcriptionText.length} characters`)
     } else {
       // 短い音声ファイルの場合はrecognizeを使用
       const [response] = await speechClient.recognize(speechRequest)
@@ -179,6 +185,8 @@ export async function POST(request: NextRequest) {
         .map((result: any) => result.alternatives?.[0]?.transcript || '')
         .filter((text: string) => text.trim().length > 0)
         .join(' ')
+      
+      console.log(`[INTERVIEW] Transcription completed (recognize) - ${transcriptionText.length} characters`)
     }
 
     if (!transcriptionText || transcriptionText.trim().length === 0) {
@@ -203,6 +211,8 @@ export async function POST(request: NextRequest) {
       where: { id: materialId },
       data: { status: 'COMPLETED' },
     })
+
+    console.log(`[INTERVIEW] Transcription saved - ID: ${transcription.id}`)
 
     return NextResponse.json({ transcription })
   } catch (error: any) {
