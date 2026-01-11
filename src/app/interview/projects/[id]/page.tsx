@@ -123,33 +123,92 @@ export default function InterviewProjectDetailPage() {
 
     setProcessing(true)
     try {
+      // ゲストIDを取得
+      let guestId = null
+      if (typeof window !== 'undefined') {
+        try {
+          guestId = localStorage.getItem('interview-guest-id')
+        } catch (storageError) {
+          console.warn('Failed to get guest ID from localStorage:', storageError)
+        }
+      }
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+      if (guestId) {
+        headers['x-guest-id'] = guestId
+      }
+
+      // 文字起こしが完了しているか確認（非同期ジョブ方式のため）
+      const transcriptions = project.transcriptions || []
+      const processingTranscriptions = transcriptions.filter((t: any) => t.status === 'PROCESSING')
+      
+      if (processingTranscriptions.length > 0) {
+        // 文字起こしが処理中の場合は完了を待機
+        setProcessingStep('文字起こしが完了するのを待機中...')
+        
+        for (const transcription of processingTranscriptions) {
+          let retryCount = 0
+          const maxRetries = 300 // 最大5分（1秒間隔）
+          let completed = false
+          
+          while (retryCount < maxRetries && !completed) {
+            await new Promise(resolve => setTimeout(resolve, 1000)) // 1秒待機
+            
+            try {
+              const statusRes = await fetch(`/api/interview/transcribe/status/${transcription.id}`, {
+                headers: guestId ? { 'x-guest-id': guestId } : {},
+              })
+              
+              if (statusRes.ok) {
+                const statusData = await statusRes.json()
+                const status = statusData.status
+                
+                if (status === 'COMPLETED' && statusData.text && statusData.text.trim().length > 0) {
+                  completed = true
+                  // プロジェクトを再取得
+                  await fetchProject()
+                  break
+                } else if (status === 'ERROR') {
+                  throw new Error(`文字起こし処理でエラーが発生しました: ${statusData.text || 'Unknown error'}`)
+                }
+                // PROCESSINGの場合は継続
+              }
+            } catch (checkError) {
+              console.warn('Failed to check transcription status:', checkError)
+            }
+            
+            retryCount++
+          }
+          
+          if (!completed) {
+            throw new Error('文字起こし処理がタイムアウトしました。しばらく待ってから再度お試しください。')
+          }
+        }
+      }
+      
+      // 文字起こしが完了しているか確認
+      const completedTranscriptions = transcriptions.filter((t: any) => t.status === 'COMPLETED' && t.text && t.text.trim().length > 0)
+      if (completedTranscriptions.length === 0) {
+        throw new Error('文字起こしが完了していません。文字起こしを先に実行してください。')
+      }
+
       // 1. 構成案生成
       if (!project.outline) {
         setProcessingStep('構成案を生成中...')
-        
-        // ゲストIDを取得
-        let guestId = null
-        if (typeof window !== 'undefined') {
-          try {
-            guestId = localStorage.getItem('interview-guest-id')
-          } catch (storageError) {
-            console.warn('Failed to get guest ID from localStorage:', storageError)
-          }
-        }
-        
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-        }
-        if (guestId) {
-          headers['x-guest-id'] = guestId
-        }
         
         const outlineRes = await fetch('/api/interview/outline', {
           method: 'POST',
           headers,
           body: JSON.stringify({ projectId }),
         })
-        if (!outlineRes.ok) throw new Error('構成案生成に失敗しました')
+        
+        if (!outlineRes.ok) {
+          const errorData = await outlineRes.json().catch(() => ({}))
+          const errorMessage = errorData.details || errorData.error || '構成案生成に失敗しました'
+          throw new Error(errorMessage)
+        }
         await fetchProject() // 再取得
       }
 

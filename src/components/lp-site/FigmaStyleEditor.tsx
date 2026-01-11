@@ -310,6 +310,15 @@ export function FigmaStyleEditor({
   const selectedSection = sections.find(s => s.section_id === selectedSectionId) || null
   const selectedImage = result.images.find(img => img.section_id === selectedSectionId)
 
+  // 画像生成完了チェック
+  const imageRequiredSections = sections.filter(s => s.image_required)
+  const allImagesGenerated = imageRequiredSections.every(section => {
+    const image = result.images.find(img => img.section_id === section.section_id)
+    const hasImage = selectedDevice === 'pc' ? !!image?.image_pc : !!image?.image_sp
+    return hasImage
+  })
+  const isGenerationComplete = !isGeneratingImages && generatingSections.size === 0 && allImagesGenerated
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (over && active.id !== over.id) {
@@ -413,7 +422,13 @@ export function FigmaStyleEditor({
           {onPreview && (
             <button
               onClick={onPreview}
-              className="px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors flex items-center gap-1.5"
+              disabled={!isGenerationComplete}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors flex items-center gap-1.5 ${
+                isGenerationComplete
+                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
+              title={!isGenerationComplete ? '画像生成中はロックされています' : 'プレビューを表示'}
             >
               <ExternalLink className="w-3.5 h-3.5" />
               プレビュー
@@ -422,7 +437,13 @@ export function FigmaStyleEditor({
           {onPublish && (
             <button
               onClick={onPublish}
-              className="px-3 py-1.5 text-xs font-medium bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-1.5"
+              disabled={!isGenerationComplete}
+              className={`px-3 py-1.5 text-xs font-medium rounded transition-colors flex items-center gap-1.5 ${
+                isGenerationComplete
+                  ? 'bg-blue-500 text-white hover:bg-blue-600'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              }`}
+              title={!isGenerationComplete ? '画像生成中はロックされています' : 'サイトを公開'}
             >
               <Globe className="w-3.5 h-3.5" />
               公開
@@ -430,7 +451,13 @@ export function FigmaStyleEditor({
           )}
           <button
             onClick={() => onDownload(selectedDevice === 'pc' ? 'all_pc' : 'all_sp')}
-            className="px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors flex items-center gap-1.5"
+            disabled={!isGenerationComplete}
+            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors flex items-center gap-1.5 ${
+              isGenerationComplete
+                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+            }`}
+            title={!isGenerationComplete ? '画像生成中はロックされています' : '画像をダウンロード'}
           >
             <FileDown className="w-3.5 h-3.5" />
             ダウンロード
@@ -444,7 +471,7 @@ export function FigmaStyleEditor({
         <div className="w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
           <div className="h-12 border-b border-slate-200 flex items-center px-4">
             <Layers className="w-4 h-4 text-slate-600 mr-2" />
-            <span className="text-sm font-semibold text-slate-900">レイヤー</span>
+            <span className="text-sm font-semibold text-slate-900">セクション</span>
             <span className="ml-auto text-xs text-slate-500">{sections.length}</span>
           </div>
           <div className="flex-1 overflow-y-auto p-2">

@@ -24,7 +24,7 @@ function LpSitePageInner() {
   const [tone, setTone] = useState<Tone>('trust')
   const [isGenerating, setIsGenerating] = useState(false)
   const [result, setResult] = useState<LpGenerationResult | null>(null)
-  const [selectedDevice, setSelectedDevice] = useState<'pc' | 'sp'>('pc')
+  const [selectedDevice, setSelectedDevice] = useState<'pc' | 'sp'>('sp')
   const [selectedSection, setSelectedSection] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [stageText, setStageText] = useState('準備中...')
