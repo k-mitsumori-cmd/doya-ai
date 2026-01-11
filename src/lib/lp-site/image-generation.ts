@@ -160,7 +160,7 @@ export function generateImagePrompt(
     }
   }
 
-  return `${commonBase}
+  let prompt = `${commonBase}
 
 ${sectionSpecific}
 
@@ -203,6 +203,11 @@ SEAMLESS BOUNDARY TREATMENT:
 - Maintain consistent color palette with adjacent sections for smooth transitions
 - Use soft shadows or gentle gradients at boundaries instead of hard lines
 - The section should appear as a natural part of a continuous scrollable page`
+
+  // LPアーカイブの学習データを基にプロンプトを強化
+  prompt = enhanceImagePromptWithArchive(prompt, productInfo)
+
+  return prompt
 }
 
 /**
