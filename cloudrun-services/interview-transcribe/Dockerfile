@@ -13,17 +13,17 @@ WORKDIR /app
 # package.jsonとpackage-lock.jsonをコピー
 COPY package*.json ./
 
-# 依存関係をインストール
-RUN npm ci --only=production
-
-# TypeScriptをインストール（ビルド用）
-RUN npm install -g typescript
+# すべての依存関係をインストール（ビルドにdevDependenciesが必要）
+RUN npm ci
 
 # ソースコードをコピー
 COPY . .
 
 # TypeScriptをビルド
 RUN npm run build
+
+# 本番環境用の依存関係のみを再インストール（サイズを削減）
+RUN rm -rf node_modules && npm ci --only=production
 
 # ポート8080を公開（Cloud Runのデフォルト）
 EXPOSE 8080
