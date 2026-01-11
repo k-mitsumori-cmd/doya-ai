@@ -322,14 +322,29 @@ export function FigmaStyleEditor({
   }
 
   const handleSectionRegenerate = async (sectionId: string) => {
-    setRegeneratingSectionId(sectionId)
+    // 既に再生成中の場合は何もしない
+    if (regeneratingSections.has(sectionId)) {
+      return
+    }
+
     try {
+      // 再生成中の状態を追加
+      setRegeneratingSections(prev => {
+        const next = new Set(prev)
+        next.add(sectionId)
+        return next
+      })
+      
       await onSectionRegenerate(sectionId)
-      toast.success('画像を再生成しました')
     } catch (error) {
-      toast.error('画像の再生成に失敗しました')
+      // エラーはonSectionRegenerate内で処理済み
     } finally {
-      setRegeneratingSectionId(null)
+      // 再生成中の状態を削除
+      setRegeneratingSections(prev => {
+        const next = new Set(prev)
+        next.delete(sectionId)
+        return next
+      })
     }
   }
 
