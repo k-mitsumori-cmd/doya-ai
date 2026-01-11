@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Crown, Zap, CheckCircle2, X, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Crown, Zap, CheckCircle2, X, AlertCircle, Clock } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { InterviewPlan, PLAN_LIMITS, getEffectivePlan } from '@/lib/interview/planLimits'
 
 type Plan = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE'
 
@@ -168,12 +169,21 @@ export default function InterviewPlanPage() {
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
             <Crown className="w-6 h-6 text-white" />
           </div>
-          <div>
+          <div className="flex-1">
             <h2 className="text-lg font-black text-gray-900">現在のプラン</h2>
             <p className="text-sm text-gray-600">
-              {PLANS.find(p => p.id === currentPlan)?.name || 'ゲスト'}
+              {(() => {
+                if (effectivePlan === 'ENTERPRISE' && currentPlan === 'GUEST') return 'ゲスト (Enterprise試用中)'
+                return PLANS.find(p => p.id === currentPlan)?.name || 'ゲスト'
+              })()}
             </p>
           </div>
+          {currentPlan === 'GUEST' && effectivePlan === 'ENTERPRISE' && remainingTrialTime && (
+            <div className="px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-black flex items-center gap-2">
+              <Clock className="w-3 h-3" />
+              残り {remainingTrialTime}
+            </div>
+          )}
         </div>
         <p className="text-sm text-gray-600">
           {PLANS.find(p => p.id === currentPlan)?.description || ''}
@@ -184,8 +194,10 @@ export default function InterviewPlanPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {PLANS.map((plan, idx) => {
           const isCurrentPlan = plan.id === currentPlan
-          const isHigherPlan = ['PRO', 'ENTERPRISE'].includes(plan.id) && !['PRO', 'ENTERPRISE'].includes(currentPlan)
-          const isLowerPlan = plan.id === 'FREE' && ['PRO', 'ENTERPRISE'].includes(currentPlan)
+          const isEffectiveCurrent = plan.id === effectivePlan
+          const isHigherPlan = ['PRO', 'ENTERPRISE'].includes(plan.id) && !['PRO', 'ENTERPRISE'].includes(effectivePlan)
+          const isLowerPlan = plan.id === 'FREE' && ['PRO', 'ENTERPRISE'].includes(effectivePlan)
+          const isGuestTrialing = currentPlan === 'GUEST' && effectivePlan === 'ENTERPRISE'
 
           return (
             <motion.div
@@ -194,7 +206,7 @@ export default function InterviewPlanPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1 }}
               className={`bg-white rounded-2xl border-2 ${
-                isCurrentPlan
+                isEffectiveCurrent
                   ? 'border-orange-300 shadow-xl shadow-orange-500/10'
                   : 'border-gray-200 shadow-lg'
               } overflow-hidden`}
@@ -203,19 +215,23 @@ export default function InterviewPlanPage() {
               <div className={`bg-gradient-to-r ${plan.gradient} p-6 text-white`}>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xl font-black">{plan.name}</h3>
-                  {isCurrentPlan && (
+                  {isEffectiveCurrent && (
                     <span className="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-black">
                       現在のプラン
                     </span>
                   )}
                 </div>
                 <p className="text-sm text-white/90">{plan.description}</p>
-                {plan.price > 0 && (
-                  <div className="mt-4">
-                    <span className="text-3xl font-black">¥{plan.price.toLocaleString()}</span>
-                    <span className="text-sm text-white/80">/月</span>
-                  </div>
-                )}
+                <div className="mt-4">
+                  {plan.price > 0 ? (
+                    <>
+                      <span className="text-3xl font-black">¥{plan.price.toLocaleString()}</span>
+                      <span className="text-sm text-white/80">/月</span>
+                    </>
+                  ) : (
+                    <span className="text-2xl font-black">無料</span>
+                  )}
+                </div>
               </div>
 
               {/* コンテンツ */}
