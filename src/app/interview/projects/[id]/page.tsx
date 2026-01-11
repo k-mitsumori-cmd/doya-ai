@@ -120,9 +120,27 @@ export default function InterviewProjectDetailPage() {
       // 1. 構成案生成
       if (!project.outline) {
         setProcessingStep('構成案を生成中...')
+        
+        // ゲストIDを取得
+        let guestId = null
+        if (typeof window !== 'undefined') {
+          try {
+            guestId = localStorage.getItem('interview-guest-id')
+          } catch (storageError) {
+            console.warn('Failed to get guest ID from localStorage:', storageError)
+          }
+        }
+        
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        }
+        if (guestId) {
+          headers['x-guest-id'] = guestId
+        }
+        
         const outlineRes = await fetch('/api/interview/outline', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ projectId }),
         })
         if (!outlineRes.ok) throw new Error('構成案生成に失敗しました')
@@ -131,9 +149,27 @@ export default function InterviewProjectDetailPage() {
 
       // 2. 記事生成
       setProcessingStep('記事を生成中...')
+      
+      // ゲストIDを取得
+      let guestId = null
+      if (typeof window !== 'undefined') {
+        try {
+          guestId = localStorage.getItem('interview-guest-id')
+        } catch (storageError) {
+          console.warn('Failed to get guest ID from localStorage:', storageError)
+        }
+      }
+      
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      }
+      if (guestId) {
+        headers['x-guest-id'] = guestId
+      }
+      
       const draftRes = await fetch('/api/interview/draft', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           projectId,
           articleType: finalArticleType,

@@ -1376,9 +1376,25 @@ export default function InterviewPage() {
 
       try {
         console.log('[INTERVIEW] Requesting outline generation for project:', newProjectId)
+        
+        // ゲストIDを取得
+        let guestId: string | null = null
+        try {
+          guestId = localStorage.getItem('interview-guest-id')
+        } catch (e) {
+          console.warn('[INTERVIEW] Failed to get guest ID from localStorage:', e)
+        }
+        
+        const headers: HeadersInit = { 'Content-Type': 'application/json' }
+        if (guestId) {
+          headers['x-guest-id'] = guestId
+        }
+        
+        console.log('[INTERVIEW] Requesting outline with headers:', { guestId: guestId || 'null' })
+        
         const outlineRes = await fetch('/api/interview/outline', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             projectId: newProjectId,
           }),
@@ -1407,9 +1423,25 @@ export default function InterviewPage() {
 
       try {
         console.log('[INTERVIEW] Requesting draft generation for project:', newProjectId)
+        
+        // ゲストIDを取得
+        let guestId: string | null = null
+        try {
+          guestId = localStorage.getItem('interview-guest-id')
+        } catch (e) {
+          console.warn('[INTERVIEW] Failed to get guest ID from localStorage:', e)
+        }
+        
+        const headers: HeadersInit = { 'Content-Type': 'application/json' }
+        if (guestId) {
+          headers['x-guest-id'] = guestId
+        }
+        
+        console.log('[INTERVIEW] Requesting draft with headers:', { guestId: guestId || 'null' })
+        
         const draftRes = await fetch('/api/interview/draft', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             projectId: newProjectId,
           }),
