@@ -1,57 +1,47 @@
+
+!LOGO/outputs/.gitkeep
+# Google Cloud Service Account Keys (機密情報)
+# IDE
+# debug
 # dependencies
-node_modules
+# doya-logo outputs (generated artifacts)
+# local env files
+# misc
+# next.js
+# prisma
+# production
+# testing
+# typescript
+# vercel
+*-key*.json
+*.pem
+*.tsbuildinfo
+*credentials*.json
+*gen-lang-client*.json
+*service-account*.json
+.DS_Store
+.env
+.env.development.local
+.env.local
+.env.production.local
+.env.test.local
+.idea
+.next/
 .pnp
 .pnp.js
-
-# testing
-coverage
-
-# next.js
-.next/
-out/
-
-# production
+.vercel
+.vscode
+LOGO/outputs/**
 build
-
-# misc
-.DS_Store
-*.pem
-
-# Google Cloud Service Account Keys (機密情報)
-*service-account*.json
-*gen-lang-client*.json
-*credentials*.json
-*-key*.json
-
-# debug
+cloudrun-services/interview-transcribe/key.json
+coverage
+env-vars-temp.yaml
+env-vars.yaml
+key.json
+next-env.d.ts
+node_modules
 npm-debug.log*
+out/
+prisma/migrations
 yarn-debug.log*
 yarn-error.log*
-
-# local env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# prisma
-prisma/migrations
-
-# doya-logo outputs (generated artifacts)
-LOGO/outputs/**
-!LOGO/outputs/.gitkeep
-
-# IDE
-.idea
-.vscode
-
-
-cloudrun-services/interview-transcribe/key.json
