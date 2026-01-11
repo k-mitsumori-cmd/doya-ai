@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
     const fileUrl = `https://storage.googleapis.com/${bucketName}/${filePath}`
 
     // データベースに記録
+    // fileSizeをBigIntに変換（10GBまで対応）
+    const fileSizeBigInt = typeof fileSize === 'string' ? BigInt(fileSize) : BigInt(fileSize)
     const material = await prisma.interviewMaterial.create({
       data: {
         projectId,
@@ -54,7 +56,7 @@ export async function POST(request: NextRequest) {
         fileName: fileName,
         filePath: filePath,
         fileUrl: fileUrl,
-        fileSize: fileSize,
+        fileSize: fileSizeBigInt,
         mimeType: mimeType || null,
         status: 'UPLOADED',
       },

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     })
 
     const totalSize = materials.reduce((sum, material) => {
-      return sum + (material.fileSize || 0)
+      return sum + (material.fileSize ? Number(material.fileSize) : 0)
     }, 0)
 
     // Google Cloud Storageの制限（実質的に非常に大きい）
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       const projectId = material.projectId
       if (!projectsToDelete.has(projectId)) {
         projectsToDelete.add(projectId)
-        freedBytes += material.fileSize || 0
+                      freedBytes += material.fileSize ? Number(material.fileSize) : 0
       }
     }
 

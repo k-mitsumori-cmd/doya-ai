@@ -630,7 +630,7 @@ model InterviewMaterial {
   fileName String
   filePath String? // サーバー上のパス
   fileUrl  String? // 外部URL
-  fileSize Int? // バイト数
+  fileSize BigInt? // バイト数（10GBまで対応）
   mimeType String?
   duration Int? // 秒数（音声・動画の場合）
 

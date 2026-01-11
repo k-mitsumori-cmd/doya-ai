@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
           fileName: file.name,
           filePath: uploadResult.pathname, // GCS pathnameを保存
           fileUrl: uploadResult.url, // GCS URLを保存
-          fileSize: uploadResult.size || file.size,
+          fileSize: BigInt(uploadResult.size || file.size), // BigIntに変換（10GBまで対応）
           mimeType,
           status: 'UPLOADED',
         },

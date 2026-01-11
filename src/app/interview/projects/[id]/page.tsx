@@ -681,7 +681,7 @@ export default function InterviewProjectDetailPage() {
                       <div>
                         <p className="font-bold text-slate-900">{material?.fileName || 'ファイル名不明'}</p>
                         <p className="text-sm text-slate-600">
-                          {material?.type || 'タイプ不明'} • {material?.fileSize ? `${(material.fileSize / 1024 / 1024).toFixed(2)} MB` : 'サイズ不明'}
+                          {material?.type || 'タイプ不明'} • {material?.fileSize ? `${(Number(material.fileSize) / 1024 / 1024).toFixed(2)} MB` : 'サイズ不明'}
                         </p>
                       </div>
                       <span className="px-2 py-1 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg">

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     })
 
     const dbTotalSize = materials.reduce((sum, material) => {
-      return sum + (material.fileSize || 0)
+      return sum + (material.fileSize ? Number(material.fileSize) : 0)
     }, 0)
 
     // GCSから実際の使用状況を取得（オプション）

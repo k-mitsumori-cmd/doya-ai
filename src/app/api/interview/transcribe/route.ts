@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     console.log('[INTERVIEW] Material Type:', material.type)
     console.log('[INTERVIEW] Material File Name:', material.fileName)
     console.log('[INTERVIEW] Material MIME Type:', material.mimeType)
-    console.log('[INTERVIEW] Material File Size:', material.fileSize ? `${(material.fileSize / 1024 / 1024).toFixed(2)} MB` : 'N/A')
+    console.log('[INTERVIEW] Material File Size:', material.fileSize ? `${(Number(material.fileSize) / 1024 / 1024).toFixed(2)} MB` : 'N/A')
     console.log('[INTERVIEW] Material File URL:', material.fileUrl || 'N/A')
     console.log('[INTERVIEW] Material File Path:', material.filePath || 'N/A')
     console.log('[INTERVIEW] Material Status:', material.status)
@@ -280,7 +280,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ファイルサイズチェック（プラン別の制限）
-    if (material.fileSize && !isFileSizeWithinLimit(material.fileSize, effectivePlan, isVideoFileCheck)) {
+    if (material.fileSize && !isFileSizeWithinLimit(Number(material.fileSize), effectivePlan, isVideoFileCheck)) {
       const maxSizeMB = (maxFileSize / 1024 / 1024).toFixed(0)
       const maxSizeGB = (maxFileSize / 1024 / 1024 / 1024).toFixed(2)
       const planName = effectivePlan === 'GUEST' ? 'ゲスト' : effectivePlan === 'FREE' ? '無料' : effectivePlan
@@ -299,7 +299,7 @@ export async function POST(request: NextRequest) {
     // GCS URIを使用する場合、encodingは設定しない（APIが自動検出）
     const isVideoFile = material.type === 'video' || material.mimeType?.includes('video')
     const isMP4File = material.fileName?.toLowerCase().endsWith('.mp4') || material.mimeType?.includes('mp4')
-    const isLargeFile = (material.fileSize || 0) > 10 * 1024 * 1024 // 10MB以上
+    const isLargeFile = (material.fileSize ? Number(material.fileSize) : 0) > 10 * 1024 * 1024 // 10MB以上
 
     // Cloud RunサービスURLをチェック（複数の環境変数名を試す）
     const cloudRunServiceUrl = 
@@ -343,7 +343,7 @@ export async function POST(request: NextRequest) {
       console.log('[INTERVIEW]   URI:', gcsUri)
       console.log('[INTERVIEW]   Type:', isVideoFile ? 'video' : 'audio')
       console.log('[INTERVIEW]   File Name:', material.fileName)
-      console.log('[INTERVIEW]   File Size:', `${((material.fileSize || 0) / 1024 / 1024).toFixed(2)} MB`)
+      console.log('[INTERVIEW]   File Size:', `${((material.fileSize ? Number(material.fileSize) : 0) / 1024 / 1024).toFixed(2)} MB`)
       console.log('[INTERVIEW]   MIME Type:', material.mimeType || 'N/A')
       console.log('[INTERVIEW] ================================================')
 
@@ -395,7 +395,7 @@ export async function POST(request: NextRequest) {
           mimeType: material.mimeType,
           fileName: material.fileName,
           isVideoFile: isVideoFile || false,
-          fileSize: material.fileSize || 0,
+          fileSize: material.fileSize ? Number(material.fileSize) : 0,
           credentials,
           cloudRunServiceUrl,
         }).catch((error: any) => {

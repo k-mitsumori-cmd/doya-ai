@@ -400,6 +400,89 @@ export function getPersonaDailyLimitByUserPlan(plan: string | null | undefined):
 }
 
 // ========================================
+// ドヤサイト（LP生成）料金設定
+// ========================================
+// LP生成は画像生成が含まれるため、バナーサービスと同様の料金設定
+export const LP_SITE_PRICING: ServicePricing = {
+  serviceId: 'lp-site',
+  serviceName: 'ドヤサイト（LP生成）',
+  serviceIcon: '🎨',
+  guestLimit: 1,      // ゲスト: 1日1回まで
+  freeLimit: 3,       // 無料会員: 1日3回まで
+  proLimit: 20,       // PRO: 1日20回まで
+  enterpriseLimit: 100, // ENTERPRISE: 1日100回まで
+  historyDays: {
+    free: 7,          // 無料/ゲスト: 7日間保存
+    pro: 90,          // 有料: 3ヶ月（90日）保存
+  },
+  plans: [
+    {
+      id: 'lp-site-free',
+      name: 'おためしプラン',
+      price: 0,
+      priceLabel: '無料',
+      period: '',
+      description: '1日3回までLP生成できます',
+      features: [
+        { text: 'ゲスト: 1日1回まで', included: true },
+        { text: 'ログイン: 1日3回まで', included: true },
+        { text: 'URL/フォームからLP生成', included: true },
+        { text: 'PC/SP両方の画像生成', included: true },
+        { text: 'プレビュー・公開機能', included: true },
+        { text: '履歴保存（7日間）', included: true },
+      ],
+      cta: '無料で試す',
+    },
+    {
+      id: 'lp-site-pro',
+      name: 'プロプラン',
+      price: 9980,
+      priceLabel: '月額 ¥9,980',
+      period: '/月（税込）',
+      description: '1日20回までLP生成（PRO）',
+      popular: true,
+      color: 'teal',
+      features: [
+        { text: '1日20回までLP生成', included: true },
+        { text: 'すべての機能利用可能', included: true },
+        { text: '画像の個別再生成', included: true },
+        { text: 'プレビュー・公開機能', included: true },
+        { text: '履歴保存（3ヶ月）', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+    {
+      id: 'lp-site-enterprise',
+      name: 'エンタープライズ',
+      price: 49800,
+      priceLabel: '月額 ¥49,800',
+      period: '/月（税込）',
+      description: '1日100回までLP生成（Enterprise）',
+      color: 'teal',
+      features: [
+        { text: '1日100回までLP生成', included: true },
+        { text: 'すべての機能利用可能', included: true },
+        { text: 'チーム運用向け（大量生成）', included: true },
+        { text: '履歴保存（3ヶ月）', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'エンタープライズを始める',
+    },
+  ],
+}
+
+// LP Site: user.plan から日次上限を決定
+export function getLpSiteDailyLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.LP_SITE_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'BUNDLE') return LP_SITE_PRICING.proLimit
+  if (p === 'ENTERPRISE') return LP_SITE_PRICING.enterpriseLimit || 100
+  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return LP_SITE_PRICING.proLimit
+  return LP_SITE_PRICING.freeLimit
+}
+
+// ========================================
 // ポータル全体のセット割引
 // ========================================
 // セット割引（表示文言は価格改定の影響を受けやすいので、金額の直書きは避ける）
@@ -446,6 +529,8 @@ export function getPricingByService(serviceId: string): ServicePricing | null {
       return BANNER_PRICING
     case 'persona':
       return PERSONA_PRICING
+    case 'lp-site':
+      return LP_SITE_PRICING
     default:
       return null
   }
@@ -473,7 +558,7 @@ export function getDailyLimit(serviceId: string, userType: 'guest' | 'free' | 'p
 
 // プランを取得（無料版/有料版など）
 export function getPlanById(planId: string): Plan | null {
-  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...PERSONA_PRICING.plans]
+  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...PERSONA_PRICING.plans, ...LP_SITE_PRICING.plans]
   return allPlans.find(p => p.id === planId) || null
 }
 
