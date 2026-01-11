@@ -9,6 +9,7 @@ import { getUserPlan, getMaxFileSize, getEffectivePlan, isFileSizeWithinLimit, t
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+export const maxDuration = 300 // Vercelの最大タイムアウト（Proプラン: 300秒、Enterprise: 900秒）
 
 export async function POST(request: NextRequest) {
   try {
