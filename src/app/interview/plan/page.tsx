@@ -83,19 +83,30 @@ const PLANS: PlanInfo[] = [
 ]
 
 export default function InterviewPlanPage() {
-  const { data: session } = useSession()
-  const isLoggedIn = !!session?.user?.email
-  const [currentPlan, setCurrentPlan] = useState<Plan>('GUEST')
+  const { data: session, status } = useSession()
+  const isLoggedIn = status === 'authenticated'
+  const [currentPlan, setCurrentPlan] = useState<InterviewPlan>('GUEST')
+  const [guestFirstAccessAt, setGuestFirstAccessAt] = useState<Date | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // 現在のプランを取得
     const fetchCurrentPlan = async () => {
       try {
-        const res = await fetch('/api/interview/plan/current')
+        const headers: HeadersInit = {}
+        if (!isLoggedIn && typeof window !== 'undefined') {
+          const guestId = localStorage.getItem('interview-guest-id')
+          if (guestId) {
+            headers['x-guest-id'] = guestId
+          }
+        }
+        const res = await fetch('/api/interview/plan/current', { headers })
         if (res.ok) {
           const data = await res.json()
           setCurrentPlan(data.plan || 'GUEST')
+          if (data.guestFirstAccessAt) {
+            setGuestFirstAccessAt(new Date(data.guestFirstAccessAt))
+          }
         }
       } catch (error) {
         console.error('Failed to fetch current plan:', error)
@@ -105,7 +116,21 @@ export default function InterviewPlanPage() {
     }
 
     fetchCurrentPlan()
-  }, [])
+  }, [isLoggedIn])
+
+  const effectivePlan = useMemo(() => getEffectivePlan(currentPlan, guestFirstAccessAt), [currentPlan, guestFirstAccessAt])
+
+  const remainingTrialTime = useMemo(() => {
+    if (currentPlan === 'GUEST' && guestFirstAccessAt) {
+      const trialEndTime = new Date(guestFirstAccessAt.getTime() + PLAN_LIMITS.GUEST.trialDurationHours * 60 * 60 * 1000)
+      const remainingMs = trialEndTime.getTime() - new Date().getTime()
+      if (remainingMs > 0) {
+        const minutes = Math.ceil(remainingMs / (1000 * 60))
+        return `${minutes}分`
+      }
+    }
+    return null
+  }, [currentPlan, guestFirstAccessAt])
 
   const handleDowngrade = async (targetPlan: Plan) => {
     if (!confirm(`本当に${PLANS.find(p => p.id === targetPlan)?.name}プランに変更しますか？`)) {
@@ -258,18 +283,26 @@ export default function InterviewPlanPage() {
 
                 {/* アクションボタン */}
                 <div className="space-y-2">
-                  {isCurrentPlan ? (
+                  {isEffectiveCurrent ? (
                     <div className="p-3 rounded-xl bg-gray-50 text-center text-sm font-black text-gray-600">
                       現在のプランです
                     </div>
-                  ) : isHigherPlan ? (
+                  ) : isHigherPlan && isLoggedIn ? (
                     <CheckoutButton
                       planId={`interview-${plan.id.toLowerCase()}`}
                       billingPeriod="monthly"
-                      className="w-full"
+                      loginCallbackUrl="/interview/plan"
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white font-black text-sm shadow-lg shadow-purple-500/20 hover:opacity-95 transition-all"
                     >
                       {plan.name}プランにアップグレード
                     </CheckoutButton>
+                  ) : isHigherPlan && !isLoggedIn ? (
+                    <Link
+                      href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/interview/plan')}`}
+                      className="block w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 text-white font-black text-sm text-center shadow-lg shadow-purple-500/20 hover:opacity-95 transition-all"
+                    >
+                      ログインして{plan.name}プランにアップグレード
+                    </Link>
                   ) : isLowerPlan ? (
                     <button
                       onClick={() => handleDowngrade(plan.id)}
