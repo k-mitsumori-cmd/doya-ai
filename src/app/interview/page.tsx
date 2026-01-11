@@ -22,15 +22,16 @@ import {
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PartyLoadingOverlay, type OverlayMood } from '@/components/persona/PersonaMotion'
+import { getMaxFileSize, getEffectivePlan, isFileSizeWithinLimit, type InterviewPlan } from '@/lib/interview/planLimits'
 
 type UploadStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'completed' | 'error'
 type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
 
 // Google Cloud Storageを使用したアップロード
-// - 文字起こし機能を使用するため、1GBまでアップロード可能（文字起こし制限に合わせる）
+// - 文字起こし機能を使用するため、プラン別に制限が設定されています
 // - チャンクアップロードを使用することで、大きなファイルもアップロード可能
 // - 4.5MBを超えるファイルは自動的にチャンクアップロードを使用（Vercelのサーバーレス関数制限）
-const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024 // 10GB（大容量動画ファイル対応）
+const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024 // 10GB（最大値、プラン別に制限されます）
 const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB（Vercelのサーバーレス関数のリクエストボディサイズ制限）
 const CHUNK_SIZE = 4 * 1024 * 1024 // 4MB（チャンクサイズ - Vercelの制限より少し小さく）
 const USE_CHUNK_UPLOAD = true // チャンクアップロードを有効化（4.5MB以上のファイルをアップロード可能）
@@ -52,6 +53,8 @@ export default function InterviewPage() {
   const [errorDetails, setErrorDetails] = useState<string | null>(null)
   const isUploading = uploadStatus !== 'idle' && uploadStatus !== 'completed' && uploadStatus !== 'error'
   const [blockNavigation, setBlockNavigation] = useState(false)
+  const [currentPlan, setCurrentPlan] = useState<InterviewPlan>('GUEST')
+  const [guestFirstAccessAt, setGuestFirstAccessAt] = useState<Date | null>(null)
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -126,6 +129,34 @@ export default function InterviewPage() {
       window.history.pushState = originalPushState
     }
   }, [isUploading])
+
+  // 現在のプランを取得
+  useEffect(() => {
+    const fetchCurrentPlan = async () => {
+      try {
+        // ゲストIDを取得
+        let guestId = null
+        if (typeof window !== 'undefined') {
+          guestId = localStorage.getItem('interview-guest-id')
+        }
+
+        const res = await fetch('/api/interview/plan/current', {
+          headers: guestId ? { 'x-guest-id': guestId } : {},
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setCurrentPlan(data.plan || 'GUEST')
+          if (data.guestFirstAccessAt) {
+            setGuestFirstAccessAt(new Date(data.guestFirstAccessAt))
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch current plan:', error)
+      }
+    }
+
+    fetchCurrentPlan()
+  }, [])
 
   // 進捗に応じたmoodの計算
   const overlayMood = useMemo<OverlayMood>(() => {
@@ -212,16 +243,38 @@ export default function InterviewPage() {
   }, [uploadedFile, materialType, progress, isUploading])
 
   const validateFile = (file: File): { valid: boolean; error?: string; details?: string; useChunk?: boolean } => {
-    // ファイルサイズチェック（1GBまで：文字起こし機能の制限に合わせる）
-    if (file.size > MAX_FILE_SIZE) {
+    // ファイルタイプを判定
+    const mimeType = file.type
+    const fileName = file.name.toLowerCase()
+    const extension = fileName.split('.').pop()
+    const isVideoFile = SUPPORTED_VIDEO_TYPES.includes(mimeType) || ['mp4', 'mov', 'avi', 'webm'].includes(extension || '')
+    const isAudioFile = SUPPORTED_AUDIO_TYPES.includes(mimeType) || ['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(extension || '')
+
+    // プラン別のファイルサイズ制限を取得
+    const effectivePlan = getEffectivePlan(currentPlan, guestFirstAccessAt)
+    const maxFileSize = getMaxFileSize(effectivePlan, isVideoFile)
+
+    // 動画ファイルが許可されていないプランの場合
+    if (isVideoFile && maxFileSize === 0) {
+      return {
+        valid: false,
+        error: '動画ファイルはアップロードできません',
+        details: `現在のプラン（${effectivePlan === 'GUEST' ? 'ゲスト' : effectivePlan === 'FREE' ? '無料' : effectivePlan}）では動画ファイルのアップロードはできません。\n\n動画ファイルをアップロードするには、PROプランまたはEnterpriseプランにアップグレードしてください。\n\nまたは、動画から音声を抽出してMP3形式でアップロードすることをおすすめします。`,
+      }
+    }
+
+    // ファイルサイズチェック（プラン別の制限に合わせる）
+    if (!isFileSizeWithinLimit(file.size, effectivePlan, isVideoFile)) {
       const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
       const fileSizeGB = (file.size / 1024 / 1024 / 1024).toFixed(2)
-      const maxSizeGB = (MAX_FILE_SIZE / 1024 / 1024 / 1024).toFixed(0)
-      const maxSizeMB = (MAX_FILE_SIZE / 1024 / 1024).toFixed(0)
+      const maxSizeMB = (maxFileSize / 1024 / 1024).toFixed(0)
+      const maxSizeGB = (maxFileSize / 1024 / 1024 / 1024).toFixed(2)
+      const planName = effectivePlan === 'GUEST' ? 'ゲスト' : effectivePlan === 'FREE' ? '無料' : effectivePlan
+      
       return {
         valid: false,
         error: 'ファイルサイズが大きすぎます',
-        details: `最大ファイルサイズ: ${maxSizeGB}GB（${maxSizeMB}MB）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB = ${fileSizeGB}GB）\n\n${maxSizeGB}GB（${maxSizeMB}MB）を超えるファイルはアップロードできません。\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: ${maxSizeMB}MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください`,
+        details: `現在のプラン（${planName}）の最大ファイルサイズ: ${maxSizeGB}GB（${maxSizeMB}MB）\n現在のファイルサイズ: ${formatFileSize(file.size)}（${fileSizeMB}MB = ${fileSizeGB}GB）\n\n${maxSizeGB}GB（${maxSizeMB}MB）を超えるファイルはアップロードできません。\n\n対処方法:\n1. ファイルを分割してアップロードしてください（推奨: ${maxSizeMB}MB以下）\n2. 動画ファイルの場合は、音声のみを抽出してください\n3. 音声ファイルの場合は、圧縮してからアップロードしてください\n4. より大きなファイルをアップロードするには、プランをアップグレードしてください`,
       }
     }
     

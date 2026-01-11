@@ -1155,6 +1155,493 @@ await sendPaymentNotification({
 
 ---
 
+## アカウント共通機能・プラン管理の詳細マニュアル
+
+新サービス開発時に活用できるアカウント管理・プラン管理の共通機能です。
+
+### 1. 認証・セッション管理システム
+
+#### 概要
+
+NextAuth.jsを使用した統一された認証システムです。Google OAuthでログインし、セッション情報にはプラン情報も含まれます。
+
+#### 実装
+
+```typescript
+// src/lib/auth.ts
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+// サーバー側でのセッション取得
+const session = await getServerSession(authOptions)
+const userId = session?.user?.id
+const userPlan = (session?.user as any)?.plan // 'FREE' | 'PRO' | 'ENTERPRISE'
+```
+
+#### セッション情報
+
+セッションには以下の情報が含まれます：
+
+```typescript
+{
+  user: {
+    id: string                    // ユーザーID
+    email: string                 // メールアドレス
+    name: string                  // ユーザー名
+    image: string                 // プロフィール画像URL
+    role: 'USER' | 'ADMIN'        // ロール
+    plan: 'FREE' | 'PRO' | 'ENTERPRISE'  // 統一プラン（Complete Pack）
+    bannerPlan: string            // バナーサービスのプラン
+    seoPlan: string               // SEOサービスのプラン
+    personaPlan: string           // ペルソナサービスのプラン
+    kantanPlan?: string           // カンタンマーケのプラン（個別）
+    firstLoginAt: string | null   // 初回ログイン時刻
+  }
+}
+```
+
+#### クライアント側での使用
+
+```typescript
+'use client'
+import { useSession } from 'next-auth/react'
+
+function MyComponent() {
+  const { data: session, status } = useSession()
+  
+  if (status === 'loading') return <div>読み込み中...</div>
+  if (status === 'unauthenticated') return <div>ログインが必要です</div>
+  
+  const userPlan = (session?.user as any)?.plan
+  const userId = session?.user?.id
+}
+```
+
+#### 初回ログイン処理
+
+新規ユーザーの初回ログイン時には、`firstLoginAt`が記録され、新規ユーザー通知が送信されます。
+
+```typescript
+// src/lib/auth.ts の signIn コールバックで自動処理
+// firstLoginAt が null の場合、現在時刻を記録
+// sendNewUserNotification が呼び出される
+```
+
+#### セッション更新
+
+- **セッション有効期限**: 24時間
+- **更新間隔**: 1分ごとに更新（プラン変更を素早く反映）
+
+---
+
+### 2. プラン管理システム
+
+#### プランの種類
+
+**統一プラン（Complete Pack）:**
+- `FREE`: 無料プラン
+- `PRO`: プロプラン
+- `ENTERPRISE`: エンタープライズプラン
+
+**サービス別プラン:**
+各サービスは `UserServiceSubscription` テーブルで個別にプランを管理できますが、Complete Packでは統一プランが優先されます。
+
+#### プラン管理の実装
+
+```typescript
+// src/lib/planSync.ts
+import { normalizeUnifiedPlan, syncUserPlanAcrossServices, maxPlan } from '@/lib/planSync'
+
+// プランを正規化（旧プラン名も互換）
+const unified = normalizeUnifiedPlan(user.plan) // 'FREE' | 'PRO' | 'ENTERPRISE'
+
+// 複数プランから最大値を取得
+const max = maxPlan('FREE', 'PRO') // 'PRO'
+
+// 全サービスにプランを同期（Complete Pack）
+await syncUserPlanAcrossServices({
+  userId: user.id,
+  plan: 'PRO',
+  stripeSubscriptionId: subscription.id,
+  stripePriceId: price.id,
+  stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+})
+```
+
+#### プランの取得
+
+```typescript
+// サービス別プランを取得
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: {
+    userId_serviceId: {
+      userId: userId!,
+      serviceId: 'myservice',
+    },
+  },
+})
+
+const plan = subscription?.plan || 'FREE'
+
+// 統一プランとサービス別プランの両方を考慮
+const effectivePlan = subscription?.plan || userPlan || 'FREE'
+```
+
+#### Complete Pack（統一プラン）
+
+主要サービス（`banner`, `writing`, `persona`）は統一プランで管理されます：
+
+- ユーザーの `User.plan` が真実のソース
+- `syncUserPlanAcrossServices` で全サービスに同期
+- セッションでは統一プランが優先表示
+
+---
+
+### 3. プランのアップグレード・決済フロー
+
+#### CheckoutButtonコンポーネント
+
+```typescript
+// src/components/CheckoutButton.tsx
+import { CheckoutButton } from '@/components/CheckoutButton'
+
+<CheckoutButton
+  planId="myservice-pro"
+  billingPeriod="monthly"
+  loginCallbackUrl="/myservice/pricing"
+  variant="primary"
+>
+  PROを始める
+</CheckoutButton>
+```
+
+**パラメータ:**
+- `planId`: プランID（例: `myservice-pro`, `banner-pro-monthly`）
+- `billingPeriod`: `'monthly'` | `'yearly'`
+- `loginCallbackUrl`: ログイン後のリダイレクト先
+- `variant`: `'primary'` | `'secondary'`
+
+#### 決済セッション作成API
+
+```typescript
+// POST /api/stripe/checkout
+const response = await fetch('/api/stripe/checkout', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    planId: 'myservice-pro',
+    billingPeriod: 'monthly',
+  }),
+})
+
+const { url } = await response.json() // Stripe Checkout URL
+```
+
+#### 決済フロー
+
+1. **ユーザーがCheckoutButtonをクリック**
+2. **未ログインの場合**: ログインページへリダイレクト
+3. **ログイン済みの場合**: `/api/stripe/checkout` を呼び出し
+4. **Stripe Checkoutセッション作成**
+5. **Stripeの決済ページへリダイレクト**
+6. **決済完了後**: Webhookでプランを更新
+
+---
+
+### 4. Stripe Webhook処理
+
+#### 対応イベント
+
+StripeからのWebhookイベントを処理します：
+
+| イベント | 処理内容 |
+|---------|---------|
+| `checkout.session.completed` | チェックアウト完了時の処理 |
+| `customer.subscription.created` | サブスクリプション作成時の処理 |
+| `customer.subscription.updated` | サブスクリプション更新時の処理（アップグレード・ダウングレード） |
+| `customer.subscription.deleted` | サブスクリプション削除時の処理（解約） |
+| `invoice.payment_succeeded` | 支払い成功時の処理 |
+| `invoice.payment_failed` | 支払い失敗時の処理 |
+
+#### 実装例
+
+```typescript
+// src/app/api/stripe/webhook/route.ts
+export async function POST(request: NextRequest) {
+  const body = await request.text()
+  const signature = headers().get('stripe-signature')
+  
+  // Webhook署名を検証
+  const event = constructWebhookEvent(body, signature, webhookSecret)
+  
+  switch (event.type) {
+    case 'customer.subscription.updated':
+      const subscription = event.data.object as Stripe.Subscription
+      await handleSubscriptionUpdated(subscription)
+      break
+    // ...
+  }
+}
+```
+
+#### サブスクリプション更新時の処理
+
+```typescript
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  const userId = subscription.metadata?.userId
+  const serviceId = subscription.metadata?.serviceId
+  
+  // プランを同期（Complete Pack）
+  await syncUserPlanAcrossServices({
+    userId: userId!,
+    plan: 'PRO', // サブスクリプションの状態から判定
+    stripeSubscriptionId: subscription.id,
+    stripePriceId: subscription.items.data[0]?.price.id,
+    stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+  })
+}
+```
+
+#### 環境変数
+
+```env
+STRIPE_SECRET_KEY=sk_live_...  # または sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+---
+
+### 5. サブスクリプション解約・再開
+
+#### 解約（期間末解約）
+
+```typescript
+// POST /api/stripe/subscription/cancel
+const response = await fetch('/api/stripe/subscription/cancel', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    serviceId: 'myservice',
+    mode: 'period_end', // 期間末に解約（デフォルト）
+  }),
+})
+
+const { ok, cancelAtPeriodEnd, currentPeriodEnd } = await response.json()
+```
+
+**モード:**
+- `period_end`: 期間末に解約（デフォルト、推奨）
+- `immediate`: 即座に解約（返金なし）
+
+#### 再開（解約取り消し）
+
+```typescript
+// POST /api/stripe/subscription/resume
+const response = await fetch('/api/stripe/subscription/resume', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    serviceId: 'myservice',
+  }),
+})
+
+const { ok, cancelAtPeriodEnd } = await response.json()
+```
+
+#### 実装のポイント
+
+- サービスIDでサブスクリプションを特定
+- DBにない場合はStripeから検索
+- `cancel_at_period_end` フラグで解約予約状態を管理
+
+---
+
+### 6. カスタマーポータル
+
+#### 概要
+
+Stripeのカスタマーポータルにリダイレクトして、ユーザー自身でサブスクリプションを管理できるようにします。
+
+#### 実装
+
+```typescript
+// POST /api/stripe/portal
+const response = await fetch('/api/stripe/portal', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    returnTo: '/myservice/pricing', // ポータル終了後のリダイレクト先
+  }),
+})
+
+const { url } = await response.json() // ポータルURL
+window.location.href = url
+```
+
+#### GET エンドポイント（リンク遷移用）
+
+```typescript
+// GET /api/stripe/portal?returnTo=/myservice/pricing
+// ブラウザで直接アクセスできる形式
+```
+
+#### ポータルでできること
+
+- プランの変更（アップグレード・ダウングレード）
+- 支払い方法の変更
+- 請求履歴の確認
+- サブスクリプションの解約
+
+---
+
+### 7. 使用量管理システム
+
+#### 日次使用量の管理
+
+```typescript
+// src/lib/usage.ts はクライアント側のローカルストレージ管理用
+// サーバー側では UserServiceSubscription テーブルを使用
+
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: { userId_serviceId: { userId, serviceId: 'myservice' } },
+})
+
+// 日次リセットチェック
+const now = new Date()
+const lastReset = subscription?.lastUsageReset || now
+const isNewDay = now.toDateString() !== lastReset.toDateString()
+
+if (isNewDay) {
+  await prisma.userServiceSubscription.update({
+    where: { id: subscription.id },
+    data: { dailyUsage: 0, lastUsageReset: now },
+  })
+}
+
+// 使用量チェック
+const dailyLimit = plan === 'PRO' ? 100 : plan === 'FREE' ? 3 : 0
+if (subscription.dailyUsage >= dailyLimit) {
+  return NextResponse.json(
+    { error: '使用上限に達しました', limit: dailyLimit },
+    { status: 429 }
+  )
+}
+
+// 使用量を増やす
+await prisma.userServiceSubscription.update({
+  where: { id: subscription.id },
+  data: { dailyUsage: { increment: 1 } },
+})
+```
+
+#### プランごとの使用制限
+
+```typescript
+const PLAN_LIMITS = {
+  FREE: { dailyLimit: 3 },
+  PRO: { dailyLimit: 100 },
+  ENTERPRISE: { dailyLimit: -1 }, // 無制限
+}
+```
+
+---
+
+### 8. プラン同期機能（Complete Pack）
+
+#### 概要
+
+主要サービス（`banner`, `writing`, `persona`）のプランを統一する機能です。
+
+#### 実装
+
+```typescript
+// src/lib/planSync.ts
+import { syncUserPlanAcrossServices } from '@/lib/planSync'
+
+// 全サービスにプランを同期
+await syncUserPlanAcrossServices({
+  userId: user.id,
+  plan: 'PRO',
+  stripeSubscriptionId: subscription.id,
+  stripePriceId: price.id,
+  stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+})
+```
+
+#### 処理内容
+
+1. **ユーザーレコードの更新**: `User.plan` を更新
+2. **主要サービスの同期**: `banner`, `writing`, `persona` のプランを更新または作成
+3. **旧サービスの更新**: `seo` が存在する場合のみ更新（作成はしない）
+
+#### セッションでの反映
+
+```typescript
+// src/lib/auth.ts の session コールバック
+// 統一プランが優先される
+const unified = maxPlan(
+  normalizeUnifiedPlan(dbUser.plan || 'FREE'),
+  serviceMax
+)
+;(session.user as any).plan = unified
+;(session.user as any).bannerPlan = unified
+;(session.user as any).seoPlan = unified
+;(session.user as any).personaPlan = unified
+```
+
+---
+
+### 9. 通知機能
+
+#### 決済通知
+
+```typescript
+// src/lib/notifications.ts
+import { sendPaymentNotification } from '@/lib/notifications'
+
+await sendPaymentNotification({
+  userId,
+  email: user.email,
+  name: user.name,
+  plan: 'PRO',
+  amount: 4980,
+  currency: 'jpy',
+  subscriptionId: subscription.id,
+  isRecurring: false, // 初回: false, 更新: true
+})
+```
+
+#### 新規ユーザー通知
+
+```typescript
+import { sendNewUserNotification } from '@/lib/notifications'
+
+await sendNewUserNotification({
+  userId: user.id,
+  email: user.email,
+  name: user.name,
+  image: user.image,
+  provider: 'google',
+})
+```
+
+---
+
+### 10. 実装チェックリスト
+
+新サービスでプラン管理を実装する際のチェックリスト：
+
+- [ ] `UserServiceSubscription` でプラン管理
+- [ ] 使用量チェックを実装（日次リセット含む）
+- [ ] Stripe価格IDを `src/lib/stripe.ts` に追加
+- [ ] Webhook処理でプラン更新（`syncUserPlanAcrossServices` 使用）
+- [ ] CheckoutButtonコンポーネントを配置
+- [ ] カスタマーポータルへのリンクを配置
+- [ ] 解約・再開機能を実装（必要に応じて）
+- [ ] プラン表示を実装（セッションから取得）
+
+---
+
 ## デプロイ手順
 
 本番環境へのデプロイ手順です。
