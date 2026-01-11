@@ -216,10 +216,16 @@ function LpSitePageInner() {
             setStageText('セクション画像を生成中...')
             setMood('think')
             
+            // すべてのセクションのエントリを最初に作成（確実に全セクションを含めるため）
+            const generatedImages: SectionImage[] = sections.map(s => ({
+              section_id: s.section_id,
+              image_pc: undefined,
+              image_sp: undefined,
+            }))
+            
             const imageRequiredSections = sections.filter(s => s.image_required)
             const totalSections = imageRequiredSections.length
             let completedSections = 0
-            const generatedImages: SectionImage[] = []
             
             // 各セクションごとに画像を生成
             for (let index = 0; index < imageRequiredSections.length; index++) {
@@ -261,7 +267,13 @@ function LpSitePageInner() {
                   image_sp: sectionData.result?.image_sp,
                 }
                 
-                generatedImages.push(sectionImage)
+                // 既存のエントリを更新
+                const existingIndex = generatedImages.findIndex(img => img.section_id === sectionId)
+                if (existingIndex >= 0) {
+                  generatedImages[existingIndex] = sectionImage
+                } else {
+                  generatedImages.push(sectionImage)
+                }
                 completedSections++
                 
                 // 進捗を更新
@@ -315,11 +327,15 @@ function LpSitePageInner() {
               } catch (error: any) {
                 console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, error)
                 // エラーが発生しても続行（部分的な成功を許容）
-                generatedImages.push({
-                  section_id: sectionId,
-                  image_pc: undefined,
-                  image_sp: undefined,
-                })
+                // エントリは既に作成されているので、更新のみ
+                const existingIndex = generatedImages.findIndex(img => img.section_id === sectionId)
+                if (existingIndex >= 0) {
+                  generatedImages[existingIndex] = {
+                    section_id: sectionId,
+                    image_pc: undefined,
+                    image_sp: undefined,
+                  }
+                }
                 setGeneratingSections(prev => {
                   const next = new Set(prev)
                   next.delete(sectionId)
@@ -333,14 +349,24 @@ function LpSitePageInner() {
               }
             }
             
-            // 画像不要のセクションも追加
-            sections.filter(s => !s.image_required).forEach(s => {
+            // すべてのセクションが確実に含まれることを確認（念のため）
+            sections.forEach(s => {
               if (!generatedImages.find(img => img.section_id === s.section_id)) {
-                generatedImages.push({ section_id: s.section_id })
+                generatedImages.push({
+                  section_id: s.section_id,
+                  image_pc: undefined,
+                  image_sp: undefined,
+                })
               }
             })
             
-            images = generatedImages
+            // セクションの順序を維持
+            const orderedImages: SectionImage[] = sections.map(s => {
+              const img = generatedImages.find(i => i.section_id === s.section_id)
+              return img || { section_id: s.section_id, image_pc: undefined, image_sp: undefined }
+            })
+            
+            images = orderedImages
             
             updateProgress(100) // 画像生成完了
             setImageProgress(100)
