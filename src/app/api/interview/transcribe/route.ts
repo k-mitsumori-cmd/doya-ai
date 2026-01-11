@@ -297,10 +297,17 @@ export async function POST(request: NextRequest) {
           credentials,
         })
         
+        console.log('[INTERVIEW] Getting ID token for Cloud Run service...')
+        console.log('[INTERVIEW]   Target URL:', cloudRunServiceUrl)
+        
         // IDトークンを取得（Cloud Runサービス用）
+        // getIdTokenClientは自動的にIDトークンを取得してリクエストに含める
         const client = await auth.getIdTokenClient(cloudRunServiceUrl)
         
+        console.log('[INTERVIEW] ✓ ID token client obtained')
+        
         // requestメソッドを使用して自動的にIDトークンを取得してリクエストを送信
+        // この方法は、IDトークンを自動的に取得してAuthorizationヘッダーに追加します
         const response = await client.request({
           url: `${cloudRunServiceUrl}/transcribe`,
           method: 'POST',
@@ -316,14 +323,28 @@ export async function POST(request: NextRequest) {
           },
         })
 
-        console.log('[INTERVIEW] ✓ Identity token obtained and request sent')
+        console.log('[INTERVIEW] ✓ Request sent to Cloud Run service')
         console.log('[INTERVIEW]   Status:', response.status)
+        console.log('[INTERVIEW]   Status Text:', response.statusText || 'N/A')
 
         if (response.status < 200 || response.status >= 300) {
           const errorData = (response.data as any) || { error: 'Unknown error' }
           console.error('[INTERVIEW] ✗ Cloud Run service error')
           console.error('[INTERVIEW]   Status:', response.status)
           console.error('[INTERVIEW]   Error:', errorData)
+          console.error('[INTERVIEW]   Response headers:', response.headers)
+
+          // 403エラーの場合、認証の問題である可能性が高い
+          if (response.status === 403) {
+            return NextResponse.json(
+              {
+                error: 'Cloud Runサービスへのアクセスが拒否されました',
+                details: '認証に失敗しました。サービスアカウントの権限を確認してください。\n\nエラー詳細: ' + (errorData.error || JSON.stringify(errorData)),
+                errorCode: 'AUTHENTICATION_FAILED',
+              },
+              { status: 403 }
+            )
+          }
 
           return NextResponse.json(
             {
