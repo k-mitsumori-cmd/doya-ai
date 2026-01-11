@@ -151,6 +151,8 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[INTERVIEW] Starting transcription - File: ${material.fileName}, Type: ${isVideoFile ? 'video' : 'audio'}, Size: ${((material.fileSize || 0) / 1024 / 1024).toFixed(2)} MB, GCS URI: ${gcsUri}`)
+    console.log(`[INTERVIEW] Request config:`, JSON.stringify(requestConfig, null, 2))
+    console.log(`[INTERVIEW] Request audio URI:`, gcsUri)
 
     // 文字起こしを実行
     let transcriptionText: string
@@ -219,6 +221,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ transcription })
   } catch (error: any) {
     console.error('[INTERVIEW] Transcription error:', error)
+    console.error('[INTERVIEW] Error code:', error?.code)
+    console.error('[INTERVIEW] Error details:', error?.details)
+    console.error('[INTERVIEW] Error message:', error?.message)
     
     let errorMessage = '文字起こしに失敗しました'
     let errorDetails = error?.message || '不明なエラー'
