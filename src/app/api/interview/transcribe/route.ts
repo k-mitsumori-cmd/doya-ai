@@ -245,17 +245,41 @@ export async function POST(request: NextRequest) {
     const isMP4File = material.fileName?.toLowerCase().endsWith('.mp4') || material.mimeType?.includes('mp4')
     const isLargeFile = (material.fileSize || 0) > 10 * 1024 * 1024 // 10MB以上
 
-    // Cloud RunサービスURLをチェック
-    const cloudRunServiceUrl = process.env.CLOUDRUN_TRANSCRIBE_SERVICE_URL
+    // Cloud RunサービスURLをチェック（複数の環境変数名を試す）
+    const cloudRunServiceUrl = 
+      process.env.CLOUDRUN_TRANSCRIBE_SERVICE_URL ||
+      process.env.NEXT_PUBLIC_CLOUDRUN_TRANSCRIBE_SERVICE_URL ||
+      process.env.CLOUDRUN_SERVICE_URL
     
     console.log('[INTERVIEW] ========== Cloud Run Service Check ==========')
     console.log('[INTERVIEW] CLOUDRUN_TRANSCRIBE_SERVICE_URL:', cloudRunServiceUrl ? 'SET' : 'NOT SET')
+    console.log('[INTERVIEW] Raw env check:', {
+      CLOUDRUN_TRANSCRIBE_SERVICE_URL: process.env.CLOUDRUN_TRANSCRIBE_SERVICE_URL ? 'SET' : 'NOT SET',
+      NEXT_PUBLIC_CLOUDRUN_TRANSCRIBE_SERVICE_URL: process.env.NEXT_PUBLIC_CLOUDRUN_TRANSCRIBE_SERVICE_URL ? 'SET' : 'NOT SET',
+      CLOUDRUN_SERVICE_URL: process.env.CLOUDRUN_SERVICE_URL ? 'SET' : 'NOT SET',
+    })
     if (cloudRunServiceUrl) {
       console.log('[INTERVIEW] Service URL:', cloudRunServiceUrl)
+    } else {
+      console.error('[INTERVIEW] ⚠️ Cloud Run Service URL is NOT SET!')
+      console.error('[INTERVIEW] This will cause MP4 files to fail with bad encoding errors.')
     }
     console.log('[INTERVIEW] ================================================')
 
-    // Cloud Runサービスが設定されている場合、それを使用する（MP4ファイルまたはすべてのファイル）
+    // MP4ファイルの場合は、Cloud Runサービスが必須
+    if (isVideoFile && isMP4File && !cloudRunServiceUrl) {
+      console.error('[INTERVIEW] ✗ MP4 file requires Cloud Run service, but CLOUDRUN_TRANSCRIBE_SERVICE_URL is not set')
+      return NextResponse.json(
+        {
+          error: 'MP4ビデオファイルの処理にはCloud Runサービスが必要です',
+          details: 'CLOUDRUN_TRANSCRIBE_SERVICE_URL環境変数が設定されていません。\n\n対処方法:\n1. Vercelダッシュボードで環境変数を設定してください\n2. 環境変数名: CLOUDRUN_TRANSCRIBE_SERVICE_URL\n3. 値: https://interview-transcribe-service-ww5nkbimya-an.a.run.app\n4. 環境変数を設定後、デプロイを実行してください',
+          errorCode: 'CLOUDRUN_SERVICE_NOT_CONFIGURED',
+        },
+        { status: 500 }
+      )
+    }
+
+    // Cloud Runサービスが設定されている場合、それを使用する（すべてのファイル）
     if (cloudRunServiceUrl) {
       console.log('[INTERVIEW] ========== STEP 4: Calling Cloud Run Service ==========')
       console.log('[INTERVIEW] Cloud Run Service URL:', cloudRunServiceUrl)
@@ -365,21 +389,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Cloud Runサービスが設定されていない場合の処理
-    // MP4ファイルの場合は、Cloud Runサービスが必須
-    if (isVideoFile && isMP4File && !cloudRunServiceUrl) {
-      console.error('[INTERVIEW] ✗ MP4 file requires Cloud Run service, but CLOUDRUN_TRANSCRIBE_SERVICE_URL is not set')
-      return NextResponse.json(
-        {
-          error: 'MP4ビデオファイルの処理にはCloud Runサービスが必要です',
-          details: 'CLOUDRUN_TRANSCRIBE_SERVICE_URL環境変数が設定されていません。\n\n対処方法:\n1. Vercelダッシュボードで環境変数を設定してください\n2. 環境変数名: CLOUDRUN_TRANSCRIBE_SERVICE_URL\n3. 値: https://interview-transcribe-service-ww5nkbimya-an.a.run.app\n4. 環境変数を設定後、デプロイを実行してください',
-          errorCode: 'CLOUDRUN_SERVICE_NOT_CONFIGURED',
-        },
-        { status: 500 }
-      )
-    }
-
     // Cloud Runサービスが設定されていない場合、直接APIを呼び出す（既存の処理）
+    // 注意: MP4ファイルの場合は上記でエラーを返すため、ここには到達しません
     // MP4ファイルの場合は上記でエラーを返すため、ここには到達しません
     // MP4以外のビデオファイルまたは音声ファイルの場合のみ実行
     const configPatterns: any[] = []
