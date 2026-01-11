@@ -35,6 +35,8 @@ function LpSitePageInner() {
   const [currentStep, setCurrentStep] = useState<'product' | 'structure' | 'wireframe' | 'image' | 'complete'>('product')
   const [isGeneratingImages, setIsGeneratingImages] = useState(false)
   const [imageProgress, setImageProgress] = useState(0)
+  const [sectionProgress, setSectionProgress] = useState<Record<string, number>>({})
+  const [generatingSections, setGeneratingSections] = useState<Set<string>>(new Set())
   const [combinedLpImage, setCombinedLpImage] = useState<{ pc?: string; sp?: string } | null>(null)
   const [isCombining, setIsCombining] = useState(false)
   const [previewId, setPreviewId] = useState<string | null>(null)
@@ -460,6 +462,8 @@ function LpSitePageInner() {
           selectedDevice={selectedDevice}
           onDeviceChange={setSelectedDevice}
           isGeneratingImages={isGeneratingImages}
+          sectionProgress={sectionProgress}
+          generatingSections={generatingSections}
           onSectionsReorder={(newSections) => {
             setResult({
               ...result,

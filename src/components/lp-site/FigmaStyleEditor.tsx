@@ -40,6 +40,8 @@ interface FigmaStyleEditorProps {
   onPreview?: () => void
   onPublish?: () => void
   isGeneratingImages?: boolean
+  sectionProgress?: Record<string, number>
+  generatingSections?: Set<string>
 }
 
 interface LayerItemProps {
@@ -481,7 +483,8 @@ export function FigmaStyleEditor({
                       const image = result.images.find(img => img.section_id === section.section_id)
                       const imageData = image?.image_sp
                       const isSelected = selectedSectionId === section.section_id
-                      const isRegenerating = regeneratingSectionId === section.section_id || (isGeneratingImages && !imageData)
+                      const isRegenerating = regeneratingSectionId === section.section_id || generatingSections.has(section.section_id) || (isGeneratingImages && !imageData)
+                      const sectionGenProgress = sectionProgress[section.section_id] ?? 0
                       
                       return (
                         <div
@@ -603,18 +606,26 @@ export function FigmaStyleEditor({
                                 <div className="w-full bg-slate-200 rounded-full h-2 mb-3 overflow-hidden">
                                   <motion.div
                                     className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full"
+                                    initial={{ width: '0%' }}
                                     animate={{
-                                      x: ['-100%', '100%'],
+                                      width: sectionGenProgress > 0 ? `${sectionGenProgress}%` : ['0%', '40%', '0%'],
+                                      x: sectionGenProgress > 0 ? 0 : ['-100%', '100%'],
                                     }}
-                                    transition={{
-                                      duration: 1.5,
-                                      repeat: Infinity,
-                                      ease: 'linear',
-                                    }}
-                                    style={{
-                                      width: '40%',
-                                    }}
+                                    transition={
+                                      sectionGenProgress > 0
+                                        ? { duration: 0.3, ease: 'easeOut' }
+                                        : {
+                                            duration: 1.5,
+                                            repeat: Infinity,
+                                            ease: 'linear',
+                                          }
+                                    }
                                   />
+                                  {sectionGenProgress > 0 && (
+                                    <div className="text-center mt-1 text-xs font-bold text-teal-700">
+                                      {sectionGenProgress}%
+                                    </div>
+                                  )}
                                 </div>
                               )}
                               <p className="text-xs text-slate-600 leading-relaxed">
