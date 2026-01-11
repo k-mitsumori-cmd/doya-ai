@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Globe, Layout, Image as ImageIcon, Package, CheckCircle2, Loader2, Zap, Clock } from 'lucide-react'
+import { Sparkles, Globe, Layout, Image as ImageIcon, Package, CheckCircle2, Loader2, Zap, Clock, Search, FileText, ExternalLink } from 'lucide-react'
 import confetti from 'canvas-confetti'
 
 type OverlayMood = 'idle' | 'search' | 'think' | 'happy'
