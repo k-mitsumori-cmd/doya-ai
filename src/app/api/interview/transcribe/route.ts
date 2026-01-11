@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { SpeechClient } from '@google-cloud/speech'
+import { Storage } from '@google-cloud/storage'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -94,28 +95,138 @@ export async function POST(request: NextRequest) {
 
     console.log('[INTERVIEW] SpeechClient initialized')
 
-    // GCS URIを構築
+    // ========== ステップ1: データベースから素材情報を取得 ==========
+    console.log('[INTERVIEW] ========== STEP 1: Material from Database ==========')
+    console.log('[INTERVIEW] Material ID:', material.id)
+    console.log('[INTERVIEW] Material Type:', material.type)
+    console.log('[INTERVIEW] Material File Name:', material.fileName)
+    console.log('[INTERVIEW] Material MIME Type:', material.mimeType)
+    console.log('[INTERVIEW] Material File Size:', material.fileSize ? `${(material.fileSize / 1024 / 1024).toFixed(2)} MB` : 'N/A')
+    console.log('[INTERVIEW] Material File URL:', material.fileUrl || 'N/A')
+    console.log('[INTERVIEW] Material File Path:', material.filePath || 'N/A')
+    console.log('[INTERVIEW] Material Status:', material.status)
+    console.log('[INTERVIEW] ====================================================')
+
+    // ========== ステップ2: GCS URIを構築 ==========
+    console.log('[INTERVIEW] ========== STEP 2: Building GCS URI ==========')
     let gcsUri: string
+    let bucketName: string
+    let filePath: string
+    
     if (material.fileUrl && material.fileUrl.includes('storage.googleapis.com')) {
       const urlPattern = /https:\/\/storage\.googleapis\.com\/([^/]+)\/(.+)$/
       const match = material.fileUrl.match(urlPattern)
       if (match && match[1] && match[2]) {
-        gcsUri = `gs://${match[1]}/${decodeURIComponent(match[2])}`
+        bucketName = match[1]
+        filePath = decodeURIComponent(match[2])
+        gcsUri = `gs://${bucketName}/${filePath}`
+        console.log('[INTERVIEW] ✓ GCS URI built from fileUrl')
+        console.log('[INTERVIEW]   Bucket:', bucketName)
+        console.log('[INTERVIEW]   File Path:', filePath)
+        console.log('[INTERVIEW]   GCS URI:', gcsUri)
       } else {
+        console.error('[INTERVIEW] ✗ Failed to parse fileUrl:', material.fileUrl)
         return NextResponse.json(
-          { error: 'GCS URIの構築に失敗しました' },
+          { error: 'GCS URIの構築に失敗しました', details: `fileUrlの解析に失敗しました: ${material.fileUrl}` },
           { status: 500 }
         )
       }
     } else if (material.filePath) {
-      const bucketName = process.env.GCS_BUCKET_NAME || 'doya-interview-storage'
-      gcsUri = `gs://${bucketName}/${material.filePath}`
+      bucketName = process.env.GCS_BUCKET_NAME || 'doya-interview-storage'
+      filePath = material.filePath
+      gcsUri = `gs://${bucketName}/${filePath}`
+      console.log('[INTERVIEW] ✓ GCS URI built from filePath')
+      console.log('[INTERVIEW]   Bucket:', bucketName)
+      console.log('[INTERVIEW]   File Path:', filePath)
+      console.log('[INTERVIEW]   GCS URI:', gcsUri)
     } else {
+      console.error('[INTERVIEW] ✗ No fileUrl or filePath found')
       return NextResponse.json(
-        { error: 'ファイルのURLまたはパスが見つかりません' },
+        { error: 'ファイルのURLまたはパスが見つかりません', details: 'material.fileUrlとmaterial.filePathの両方が設定されていません' },
         { status: 400 }
       )
     }
+    console.log('[INTERVIEW] ================================================')
+
+    // ========== ステップ3: Google Cloud Storageでファイルの存在確認 ==========
+    console.log('[INTERVIEW] ========== STEP 3: Verifying File in GCS ==========')
+    try {
+      const storage = new Storage({
+        projectId: credentials.project_id || process.env.GOOGLE_CLOUD_PROJECT_ID,
+        credentials,
+      })
+      const bucket = storage.bucket(bucketName)
+      const file = bucket.file(filePath)
+      
+      // ファイルの存在確認
+      const [exists] = await file.exists()
+      console.log('[INTERVIEW] File exists check:', exists ? '✓ YES' : '✗ NO')
+      
+      if (!exists) {
+        console.error('[INTERVIEW] ✗ File does not exist in GCS')
+        console.error('[INTERVIEW]   Bucket:', bucketName)
+        console.error('[INTERVIEW]   File Path:', filePath)
+        console.error('[INTERVIEW]   GCS URI:', gcsUri)
+        return NextResponse.json(
+          {
+            error: 'ファイルがGoogle Cloud Storageに見つかりません',
+            details: `ファイルがGCSに存在しません。\nバケット: ${bucketName}\nファイルパス: ${filePath}\n\n確認事項:\n1. ファイルが正しくアップロードされているか確認してください\n2. ファイルパスが正しいか確認してください`,
+          },
+          { status: 404 }
+        )
+      }
+      
+      // ファイルのメタデータを取得
+      const [metadata] = await file.getMetadata()
+      console.log('[INTERVIEW] ✓ File metadata retrieved')
+      console.log('[INTERVIEW]   Content Type:', metadata.contentType || 'N/A')
+      console.log('[INTERVIEW]   Size:', metadata.size ? `${(Number(metadata.size) / 1024 / 1024).toFixed(2)} MB` : 'N/A')
+      console.log('[INTERVIEW]   Created:', metadata.timeCreated || 'N/A')
+      console.log('[INTERVIEW]   Updated:', metadata.updated || 'N/A')
+      
+      // ファイルサイズの確認
+      const fileSize = metadata.size ? Number(metadata.size) : 0
+      if (fileSize === 0) {
+        console.error('[INTERVIEW] ✗ File size is 0')
+        return NextResponse.json(
+          { error: 'ファイルサイズが0です', details: 'GCS上のファイルサイズが0バイトです。ファイルが正しくアップロードされていない可能性があります。' },
+          { status: 400 }
+        )
+      }
+      
+      console.log('[INTERVIEW] ✓ File verification completed successfully')
+    } catch (gcsError: any) {
+      console.error('[INTERVIEW] ✗ GCS file verification failed')
+      console.error('[INTERVIEW] Error:', gcsError?.message || 'Unknown error')
+      console.error('[INTERVIEW] Error code:', gcsError?.code || 'N/A')
+      
+      if (gcsError?.code === 404 || gcsError?.message?.includes('Not found')) {
+        return NextResponse.json(
+          {
+            error: 'ファイルがGoogle Cloud Storageに見つかりません',
+            details: `ファイルがGCSに存在しません。\nバケット: ${bucketName}\nファイルパス: ${filePath}\n\n確認事項:\n1. ファイルが正しくアップロードされているか確認してください\n2. ファイルパスが正しいか確認してください`,
+          },
+          { status: 404 }
+        )
+      } else if (gcsError?.code === 403 || gcsError?.message?.includes('Forbidden')) {
+        return NextResponse.json(
+          {
+            error: 'Google Cloud Storageへのアクセスが拒否されました',
+            details: 'サービスアカウントにGoogle Cloud Storageへのアクセス権限がありません。',
+          },
+          { status: 403 }
+        )
+      } else {
+        return NextResponse.json(
+          {
+            error: 'Google Cloud Storageの確認中にエラーが発生しました',
+            details: gcsError?.message || '不明なエラー',
+          },
+          { status: 500 }
+        )
+      }
+    }
+    console.log('[INTERVIEW] ================================================')
 
     // ファイルサイズチェック（1GB制限）
     const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB
@@ -144,55 +255,133 @@ export async function POST(request: NextRequest) {
       requestConfig.model = 'latest_long'
     }
 
+    // ========== ステップ4: APIリクエストの準備 ==========
+    console.log('[INTERVIEW] ========== STEP 4: Preparing API Request ==========')
     const speechRequest = {
       config: requestConfig,
       audio: {
         uri: gcsUri,
       },
     }
+    
+    console.log('[INTERVIEW] Request Configuration:')
+    console.log('[INTERVIEW]   Language Code:', requestConfig.languageCode)
+    console.log('[INTERVIEW]   Alternative Language Codes:', requestConfig.alternativeLanguageCodes || 'N/A')
+    console.log('[INTERVIEW]   Enable Automatic Punctuation:', requestConfig.enableAutomaticPunctuation || 'N/A')
+    console.log('[INTERVIEW]   Model:', requestConfig.model || 'N/A')
+    console.log('[INTERVIEW]   Encoding:', requestConfig.encoding || 'N/A (auto-detect)')
+    console.log('[INTERVIEW]   Sample Rate Hertz:', requestConfig.sampleRateHertz || 'N/A (auto-detect)')
+    
+    console.log('[INTERVIEW] Request Audio:')
+    console.log('[INTERVIEW]   URI:', gcsUri)
+    console.log('[INTERVIEW]   Type:', isVideoFile ? 'video' : 'audio')
+    console.log('[INTERVIEW]   File Name:', material.fileName)
+    console.log('[INTERVIEW]   File Size:', `${((material.fileSize || 0) / 1024 / 1024).toFixed(2)} MB`)
+    console.log('[INTERVIEW]   MIME Type:', material.mimeType || 'N/A')
+    
+    // リクエストオブジェクトの完全な構造をログに出力
+    const requestForLog = {
+      config: requestConfig,
+      audio: {
+        uri: gcsUri,
+      },
+    }
+    console.log('[INTERVIEW] Full Request Object:', JSON.stringify(requestForLog, null, 2))
+    console.log('[INTERVIEW] ================================================')
 
-    console.log(`[INTERVIEW] Starting transcription - File: ${material.fileName}, Type: ${isVideoFile ? 'video' : 'audio'}, Size: ${((material.fileSize || 0) / 1024 / 1024).toFixed(2)} MB, GCS URI: ${gcsUri}`)
-    console.log(`[INTERVIEW] Request config:`, JSON.stringify(requestConfig, null, 2))
-    console.log(`[INTERVIEW] Request audio URI:`, gcsUri)
-
-    // 文字起こしを実行
+    // ========== ステップ5: Google Cloud Speech-to-Text API呼び出し ==========
+    console.log('[INTERVIEW] ========== STEP 5: Calling Speech-to-Text API ==========')
+    console.log('[INTERVIEW] Method:', isVideoFile || isLargeFile ? 'longRunningRecognize' : 'recognize')
+    console.log('[INTERVIEW] Reason:', isVideoFile ? 'Video file' : isLargeFile ? 'Large file (>10MB)' : 'Short audio file')
+    
     let transcriptionText: string
     if (isVideoFile || isLargeFile) {
       // ビデオファイルや大きなファイルの場合はlongRunningRecognizeを使用
-      const [operation] = await speechClient.longRunningRecognize(speechRequest)
-      const [operationResult] = await operation.promise()
+      console.log('[INTERVIEW] Calling longRunningRecognize...')
+      const startTime = Date.now()
       
-      if (!operationResult.results || operationResult.results.length === 0) {
-        return NextResponse.json(
-          { error: '文字起こし結果が空です' },
-          { status: 400 }
-        )
-      }
+      try {
+        const [operation] = await speechClient.longRunningRecognize(speechRequest)
+        console.log('[INTERVIEW] ✓ Long-running operation started')
+        console.log('[INTERVIEW]   Operation Name:', operation.name)
+        console.log('[INTERVIEW]   Waiting for operation to complete...')
+        
+        const [operationResult] = await operation.promise()
+        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
+        console.log('[INTERVIEW] ✓ Operation completed')
+        console.log('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
+        
+        if (!operationResult.results || operationResult.results.length === 0) {
+          console.error('[INTERVIEW] ✗ Empty transcription results')
+          console.error('[INTERVIEW]   Operation Result:', JSON.stringify(operationResult, null, 2))
+          return NextResponse.json(
+            { error: '文字起こし結果が空です', details: 'APIは成功しましたが、文字起こし結果が空でした。音声が検出されなかった可能性があります。' },
+            { status: 400 }
+          )
+        }
 
-      transcriptionText = operationResult.results
-        .map((result: any) => result.alternatives?.[0]?.transcript || '')
-        .filter((text: string) => text.trim().length > 0)
-        .join(' ')
-      
-      console.log(`[INTERVIEW] Transcription completed (longRunningRecognize) - ${transcriptionText.length} characters`)
+        console.log('[INTERVIEW] ✓ Transcription results received')
+        console.log('[INTERVIEW]   Results Count:', operationResult.results.length)
+        
+        transcriptionText = operationResult.results
+          .map((result: any) => result.alternatives?.[0]?.transcript || '')
+          .filter((text: string) => text.trim().length > 0)
+          .join(' ')
+        
+        console.log('[INTERVIEW] ✓ Transcription text extracted')
+        console.log('[INTERVIEW]   Text Length:', `${transcriptionText.length} characters`)
+        console.log('[INTERVIEW]   Preview:', transcriptionText.substring(0, 100) + (transcriptionText.length > 100 ? '...' : ''))
+      } catch (apiError: any) {
+        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
+        console.error('[INTERVIEW] ✗ API call failed')
+        console.error('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
+        console.error('[INTERVIEW]   Error Code:', apiError?.code || 'N/A')
+        console.error('[INTERVIEW]   Error Message:', apiError?.message || 'N/A')
+        console.error('[INTERVIEW]   Error Details:', apiError?.details || 'N/A')
+        throw apiError
+      }
     } else {
       // 短い音声ファイルの場合はrecognizeを使用
-      const [response] = await speechClient.recognize(speechRequest)
+      console.log('[INTERVIEW] Calling recognize...')
+      const startTime = Date.now()
       
-      if (!response.results || response.results.length === 0) {
-        return NextResponse.json(
-          { error: '文字起こし結果が空です' },
-          { status: 400 }
-        )
-      }
+      try {
+        const [response] = await speechClient.recognize(speechRequest)
+        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
+        console.log('[INTERVIEW] ✓ Recognize completed')
+        console.log('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
+      
+        if (!response.results || response.results.length === 0) {
+          console.error('[INTERVIEW] ✗ Empty transcription results')
+          console.error('[INTERVIEW]   Response:', JSON.stringify(response, null, 2))
+          return NextResponse.json(
+            { error: '文字起こし結果が空です', details: 'APIは成功しましたが、文字起こし結果が空でした。音声が検出されなかった可能性があります。' },
+            { status: 400 }
+          )
+        }
 
-      transcriptionText = response.results
-        .map((result: any) => result.alternatives?.[0]?.transcript || '')
-        .filter((text: string) => text.trim().length > 0)
-        .join(' ')
-      
-      console.log(`[INTERVIEW] Transcription completed (recognize) - ${transcriptionText.length} characters`)
+        console.log('[INTERVIEW] ✓ Transcription results received')
+        console.log('[INTERVIEW]   Results Count:', response.results.length)
+        
+        transcriptionText = response.results
+          .map((result: any) => result.alternatives?.[0]?.transcript || '')
+          .filter((text: string) => text.trim().length > 0)
+          .join(' ')
+        
+        console.log('[INTERVIEW] ✓ Transcription text extracted')
+        console.log('[INTERVIEW]   Text Length:', `${transcriptionText.length} characters`)
+        console.log('[INTERVIEW]   Preview:', transcriptionText.substring(0, 100) + (transcriptionText.length > 100 ? '...' : ''))
+      } catch (apiError: any) {
+        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
+        console.error('[INTERVIEW] ✗ API call failed')
+        console.error('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
+        console.error('[INTERVIEW]   Error Code:', apiError?.code || 'N/A')
+        console.error('[INTERVIEW]   Error Message:', apiError?.message || 'N/A')
+        console.error('[INTERVIEW]   Error Details:', apiError?.details || 'N/A')
+        throw apiError
+      }
     }
+    console.log('[INTERVIEW] ================================================')
 
     if (!transcriptionText || transcriptionText.trim().length === 0) {
       return NextResponse.json(
@@ -221,10 +410,26 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ transcription })
   } catch (error: any) {
-    console.error('[INTERVIEW] Transcription error:', error)
-    console.error('[INTERVIEW] Error code:', error?.code)
-    console.error('[INTERVIEW] Error details:', error?.details)
-    console.error('[INTERVIEW] Error message:', error?.message)
+    console.error('[INTERVIEW] ========== ERROR OCCURRED ==========')
+    console.error('[INTERVIEW] Error Type:', error?.constructor?.name || typeof error)
+    console.error('[INTERVIEW] Error Code:', error?.code || 'N/A')
+    console.error('[INTERVIEW] Error Message:', error?.message || 'N/A')
+    console.error('[INTERVIEW] Error Details:', error?.details || 'N/A')
+    console.error('[INTERVIEW] Error Stack:', error?.stack || 'N/A')
+    
+    // エラーが発生した段階を特定
+    if (error?.message?.includes('GCS') || error?.message?.includes('Storage') || error?.code === 404) {
+      console.error('[INTERVIEW] Error Location: STEP 3 (GCS File Verification)')
+    } else if (error?.code === 3 || error?.details?.includes('bad encoding')) {
+      console.error('[INTERVIEW] Error Location: STEP 5 (Speech-to-Text API Call)')
+      console.error('[INTERVIEW] Error Type: Invalid Request / Bad Encoding')
+    } else if (error?.code === 7) {
+      console.error('[INTERVIEW] Error Location: STEP 5 (Speech-to-Text API Call)')
+      console.error('[INTERVIEW] Error Type: Authentication / Permission')
+    } else {
+      console.error('[INTERVIEW] Error Location: Unknown (check logs above)')
+    }
+    console.error('[INTERVIEW] ===================================')
     
     let errorMessage = '文字起こしに失敗しました'
     let errorDetails = error?.message || '不明なエラー'
