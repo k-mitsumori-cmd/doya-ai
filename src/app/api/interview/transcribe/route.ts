@@ -59,22 +59,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // MP4ビデオファイルの直接処理は現在サポートされていません
-    // 公式ドキュメントによると、MP4ファイルから音声を抽出してFLAC形式に変換する必要があります
-    // 参考: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja
-    const isMP4Video = (material.type === 'video' || material.mimeType?.includes('video')) &&
-                       (material.fileName?.toLowerCase().endsWith('.mp4') || material.mimeType?.includes('mp4'))
-    
-    if (isMP4Video) {
-      console.log('[INTERVIEW] MP4 video file detected - direct processing not supported')
-      return NextResponse.json(
-        {
-          error: 'MP4ビデオファイルは現在サポートされていません',
-          details: 'MP4ファイルから音声を抽出してFLAC形式に変換する必要があります。\n\n対処方法:\n1. MP4ファイルから音声を抽出してください（FFmpegなどのツールを使用）\n2. 抽出した音声ファイル（MP3、WAV、FLACなど）をアップロードしてください\n\n参考: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja',
-        },
-        { status: 400 }
-      )
-    }
 
 
     // Google Cloud Speech-to-Text認証情報の取得
@@ -254,25 +238,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // リクエスト設定 - 最小限の設定で動作を優先
+    // リクエスト設定 - MP4ファイルを処理できるように様々な設定を試す
     // GCS URIを使用する場合、encodingは設定しない（APIが自動検出）
     const isVideoFile = material.type === 'video' || material.mimeType?.includes('video')
+    const isMP4File = material.fileName?.toLowerCase().endsWith('.mp4') || material.mimeType?.includes('mp4')
     const isLargeFile = (material.fileSize || 0) > 10 * 1024 * 1024 // 10MB以上
 
-    // 最小限の設定: languageCodeのみ
-    // MP4ファイルの場合、modelを設定すると"bad encoding"エラーが発生する可能性があるため、設定しない
-    const requestConfig: any = {
-      languageCode: 'ja-JP',
+    // MP4ファイルの場合、複数の設定パターンを試す
+    // パターン1: languageCodeのみ（最小限）- 最初に試す
+    // パターン2: languageCode + enableAutomaticPunctuation
+    // パターン3: languageCode + model: "video"（公式ドキュメント推奨）
+    const configPatterns: any[] = []
+
+    if (isVideoFile && isMP4File) {
+      // MP4ファイルの場合、複数の設定パターンを準備
+      configPatterns.push(
+        { languageCode: 'ja-JP' }, // パターン1: 最小限
+        { languageCode: 'ja-JP', enableAutomaticPunctuation: true }, // パターン2
+        { languageCode: 'ja-JP', model: 'video' }, // パターン3: 公式ドキュメント推奨
+      )
+      console.log('[INTERVIEW] MP4 video file: will try multiple config patterns')
+    } else if (isVideoFile) {
+      // MP4以外のビデオファイルの場合
+      configPatterns.push({ languageCode: 'ja-JP', model: 'video' })
+      console.log('[INTERVIEW] Video file (non-MP4): using model "video"')
+    } else {
+      // 音声ファイルの場合
+      configPatterns.push({
+        languageCode: 'ja-JP',
+        model: 'latest_long',
+        enableAutomaticPunctuation: true,
+      })
+      console.log('[INTERVIEW] Audio file: using model "latest_long"')
     }
 
-    // 音声ファイルの場合のみ model を設定
-    // MP4ビデオファイルの場合は model を設定しない（APIが自動検出）
-    if (!isVideoFile) {
-      requestConfig.model = 'latest_long'
-      console.log('[INTERVIEW] Audio file: using model "latest_long"')
-    } else {
-      console.log('[INTERVIEW] Video file: using minimal config (languageCode only, no model)')
-    }
+    // 最初の設定パターンを使用
+    let requestConfig = configPatterns[0]
 
     // ========== ステップ4: APIリクエストの準備 ==========
     console.log('[INTERVIEW] ========== STEP 4: Preparing API Request ==========')
@@ -313,91 +314,138 @@ export async function POST(request: NextRequest) {
     console.log('[INTERVIEW] Method:', isVideoFile || isLargeFile ? 'longRunningRecognize' : 'recognize')
     console.log('[INTERVIEW] Reason:', isVideoFile ? 'Video file' : isLargeFile ? 'Large file (>10MB)' : 'Short audio file')
     
-    let transcriptionText: string
-    if (isVideoFile || isLargeFile) {
-      // ビデオファイルや大きなファイルの場合はlongRunningRecognizeを使用
-      console.log('[INTERVIEW] Calling longRunningRecognize...')
-      const startTime = Date.now()
-      
-      try {
-        const [operation] = await speechClient.longRunningRecognize(speechRequest)
-        console.log('[INTERVIEW] ✓ Long-running operation started')
-        console.log('[INTERVIEW]   Operation Name:', operation.name)
-        console.log('[INTERVIEW]   Waiting for operation to complete...')
-        
-        const [operationResult] = await operation.promise()
-        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
-        console.log('[INTERVIEW] ✓ Operation completed')
-        console.log('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
-        
-        if (!operationResult.results || operationResult.results.length === 0) {
-          console.error('[INTERVIEW] ✗ Empty transcription results')
-          console.error('[INTERVIEW]   Operation Result:', JSON.stringify(operationResult, null, 2))
-          return NextResponse.json(
-            { error: '文字起こし結果が空です', details: 'APIは成功しましたが、文字起こし結果が空でした。音声が検出されなかった可能性があります。' },
-            { status: 400 }
-          )
-        }
-
-        console.log('[INTERVIEW] ✓ Transcription results received')
-        console.log('[INTERVIEW]   Results Count:', operationResult.results.length)
-        
-        transcriptionText = operationResult.results
-          .map((result: any) => result.alternatives?.[0]?.transcript || '')
-          .filter((text: string) => text.trim().length > 0)
-          .join(' ')
-        
-        console.log('[INTERVIEW] ✓ Transcription text extracted')
-        console.log('[INTERVIEW]   Text Length:', `${transcriptionText.length} characters`)
-        console.log('[INTERVIEW]   Preview:', transcriptionText.substring(0, 100) + (transcriptionText.length > 100 ? '...' : ''))
-      } catch (apiError: any) {
-        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
-        console.error('[INTERVIEW] ✗ API call failed')
-        console.error('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
-        console.error('[INTERVIEW]   Error Code:', apiError?.code || 'N/A')
-        console.error('[INTERVIEW]   Error Message:', apiError?.message || 'N/A')
-        console.error('[INTERVIEW]   Error Details:', apiError?.details || 'N/A')
-        throw apiError
+    // MP4ファイルの場合、複数の設定パターンを試す
+    let transcriptionText: string = ''
+    let lastError: any = null
+    
+    for (let patternIndex = 0; patternIndex < configPatterns.length; patternIndex++) {
+      const currentConfig = configPatterns[patternIndex]
+      const speechRequest = {
+        config: currentConfig,
+        audio: {
+          uri: gcsUri,
+        },
       }
-    } else {
-      // 短い音声ファイルの場合はrecognizeを使用
-      console.log('[INTERVIEW] Calling recognize...')
-      const startTime = Date.now()
       
-      try {
-        const [response] = await speechClient.recognize(speechRequest)
-        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
-        console.log('[INTERVIEW] ✓ Recognize completed')
-        console.log('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
+      console.log(`[INTERVIEW] Trying config pattern ${patternIndex + 1}/${configPatterns.length}:`, JSON.stringify(currentConfig, null, 2))
       
-        if (!response.results || response.results.length === 0) {
-          console.error('[INTERVIEW] ✗ Empty transcription results')
-          console.error('[INTERVIEW]   Response:', JSON.stringify(response, null, 2))
-          return NextResponse.json(
-            { error: '文字起こし結果が空です', details: 'APIは成功しましたが、文字起こし結果が空でした。音声が検出されなかった可能性があります。' },
-            { status: 400 }
-          )
-        }
+      if (isVideoFile || isLargeFile) {
+        // ビデオファイルや大きなファイルの場合はlongRunningRecognizeを使用
+        console.log('[INTERVIEW] Calling longRunningRecognize...')
+        const startTime = Date.now()
+        
+        try {
+          const [operation] = await speechClient.longRunningRecognize(speechRequest)
+          console.log('[INTERVIEW] ✓ Long-running operation started')
+          console.log('[INTERVIEW]   Operation Name:', operation.name)
+          console.log('[INTERVIEW]   Waiting for operation to complete...')
+          
+          const [operationResult] = await operation.promise()
+          const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
+          console.log('[INTERVIEW] ✓ Operation completed')
+          console.log('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
+          
+          if (!operationResult.results || operationResult.results.length === 0) {
+            console.error('[INTERVIEW] ✗ Empty transcription results')
+            console.error('[INTERVIEW]   Operation Result:', JSON.stringify(operationResult, null, 2))
+            return NextResponse.json(
+              { error: '文字起こし結果が空です', details: 'APIは成功しましたが、文字起こし結果が空でした。音声が検出されなかった可能性があります。' },
+              { status: 400 }
+            )
+          }
 
-        console.log('[INTERVIEW] ✓ Transcription results received')
-        console.log('[INTERVIEW]   Results Count:', response.results.length)
+          console.log('[INTERVIEW] ✓ Transcription results received')
+          console.log('[INTERVIEW]   Results Count:', operationResult.results.length)
+          
+          transcriptionText = operationResult.results
+            .map((result: any) => result.alternatives?.[0]?.transcript || '')
+            .filter((text: string) => text.trim().length > 0)
+            .join(' ')
+          
+          console.log('[INTERVIEW] ✓ Transcription text extracted')
+          console.log('[INTERVIEW]   Text Length:', `${transcriptionText.length} characters`)
+          console.log('[INTERVIEW]   Preview:', transcriptionText.substring(0, 100) + (transcriptionText.length > 100 ? '...' : ''))
+          console.log(`[INTERVIEW] ✓ Success with config pattern ${patternIndex + 1}`)
+          break // 成功したらループを抜ける
+        } catch (apiError: any) {
+          const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
+          console.error(`[INTERVIEW] ✗ Config pattern ${patternIndex + 1} failed`)
+          console.error('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
+          console.error('[INTERVIEW]   Error Code:', apiError?.code || 'N/A')
+          console.error('[INTERVIEW]   Error Message:', apiError?.message || 'N/A')
+          console.error('[INTERVIEW]   Error Details:', apiError?.details || 'N/A')
+          
+          lastError = apiError
+          
+          // bad encodingエラーの場合、次のパターンを試す
+          if (apiError?.code === 3 && apiError?.details?.includes('bad encoding')) {
+            if (patternIndex < configPatterns.length - 1) {
+              console.log(`[INTERVIEW] Bad encoding error - trying next config pattern...`)
+              continue
+            }
+          }
+          
+          // 最後のパターンでも失敗した場合、エラーをスロー
+          if (patternIndex === configPatterns.length - 1) {
+            throw apiError
+          }
+        }
+      } else {
+        // 短い音声ファイルの場合はrecognizeを使用
+        console.log('[INTERVIEW] Calling recognize...')
+        const startTime = Date.now()
         
-        transcriptionText = response.results
-          .map((result: any) => result.alternatives?.[0]?.transcript || '')
-          .filter((text: string) => text.trim().length > 0)
-          .join(' ')
+        try {
+          const [response] = await speechClient.recognize(speechRequest)
+          const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
+          console.log('[INTERVIEW] ✓ Recognize completed')
+          console.log('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
         
-        console.log('[INTERVIEW] ✓ Transcription text extracted')
-        console.log('[INTERVIEW]   Text Length:', `${transcriptionText.length} characters`)
-        console.log('[INTERVIEW]   Preview:', transcriptionText.substring(0, 100) + (transcriptionText.length > 100 ? '...' : ''))
-      } catch (apiError: any) {
-        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
-        console.error('[INTERVIEW] ✗ API call failed')
-        console.error('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
-        console.error('[INTERVIEW]   Error Code:', apiError?.code || 'N/A')
-        console.error('[INTERVIEW]   Error Message:', apiError?.message || 'N/A')
-        console.error('[INTERVIEW]   Error Details:', apiError?.details || 'N/A')
-        throw apiError
+          if (!response.results || response.results.length === 0) {
+            console.error('[INTERVIEW] ✗ Empty transcription results')
+            console.error('[INTERVIEW]   Response:', JSON.stringify(response, null, 2))
+            return NextResponse.json(
+              { error: '文字起こし結果が空です', details: 'APIは成功しましたが、文字起こし結果が空でした。音声が検出されなかった可能性があります。' },
+              { status: 400 }
+            )
+          }
+
+          console.log('[INTERVIEW] ✓ Transcription results received')
+          console.log('[INTERVIEW]   Results Count:', response.results.length)
+          
+          transcriptionText = response.results
+            .map((result: any) => result.alternatives?.[0]?.transcript || '')
+            .filter((text: string) => text.trim().length > 0)
+            .join(' ')
+          
+          console.log('[INTERVIEW] ✓ Transcription text extracted')
+          console.log('[INTERVIEW]   Text Length:', `${transcriptionText.length} characters`)
+          console.log('[INTERVIEW]   Preview:', transcriptionText.substring(0, 100) + (transcriptionText.length > 100 ? '...' : ''))
+          console.log(`[INTERVIEW] ✓ Success with config pattern ${patternIndex + 1}`)
+          break // 成功したらループを抜ける
+        } catch (apiError: any) {
+          const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
+          console.error(`[INTERVIEW] ✗ Config pattern ${patternIndex + 1} failed`)
+          console.error('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
+          console.error('[INTERVIEW]   Error Code:', apiError?.code || 'N/A')
+          console.error('[INTERVIEW]   Error Message:', apiError?.message || 'N/A')
+          console.error('[INTERVIEW]   Error Details:', apiError?.details || 'N/A')
+          
+          lastError = apiError
+          
+          // bad encodingエラーの場合、次のパターンを試す
+          if (apiError?.code === 3 && apiError?.details?.includes('bad encoding')) {
+            if (patternIndex < configPatterns.length - 1) {
+              console.log(`[INTERVIEW] Bad encoding error - trying next config pattern...`)
+              continue
+            }
+          }
+          
+          // 最後のパターンでも失敗した場合、エラーをスロー
+          if (patternIndex === configPatterns.length - 1) {
+            throw apiError
+          }
+        }
       }
     }
     console.log('[INTERVIEW] ================================================')
