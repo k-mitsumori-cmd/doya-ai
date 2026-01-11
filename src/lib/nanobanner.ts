@@ -926,7 +926,7 @@ Return ONE high-quality ad banner image WITH the Japanese text rendered correctl
 // Nano Banana Pro で画像生成
 // 公式ドキュメント: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
 // ========================================
-async function generateSingleBanner(
+export async function generateSingleBanner(
   prompt: string,
   size: string = '1080x1080',
   options: GenerateOptions = {}

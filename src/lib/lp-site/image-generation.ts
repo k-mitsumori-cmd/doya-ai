@@ -1,9 +1,9 @@
 // ============================================
-// Step 4: 画像生成フェーズ（Gemini Pro 3）
+// Step 4: 画像生成フェーズ（Nano Banana Pro）
 // セクション単位で個別生成（PC/SP別）
 // ============================================
 
-import { geminiGenerateImagePng } from '@seo/lib/gemini'
+import { generateSingleBanner } from '@/lib/nanobanner'
 import { LpSection, SectionImage, ProductInfo } from './types'
 
 /**
@@ -61,38 +61,30 @@ export async function generateSectionImagePair(
   sectionIndex?: number,
   totalSections?: number
 ): Promise<SectionImage> {
-  // PC用画像生成（横長）
+  // PC用画像生成（横長）- 1920x1080 (16:9)
   let imagePc: string | undefined
   try {
     console.log(`[LP-SITE] PC画像生成開始: ${section.section_id}`)
     const pcPrompt = generateImagePrompt(section, productInfo, 'pc', sectionIndex, totalSections)
     console.log(`[LP-SITE] PCプロンプト長: ${pcPrompt.length}文字`)
-    const pcResult = await geminiGenerateImagePng({
-      prompt: pcPrompt,
-      aspectRatio: '16:9', // PC用は横長
-      imageSize: '2K',
-    })
-    imagePc = `data:${pcResult.mimeType};base64,${pcResult.dataBase64}`
-    console.log(`[LP-SITE] PC画像生成成功: ${section.section_id}, サイズ: ${pcResult.dataBase64.length}文字`)
+    const pcResult = await generateSingleBanner(pcPrompt, '1920x1080', {})
+    imagePc = pcResult.image
+    console.log(`[LP-SITE] PC画像生成成功: ${section.section_id}, モデル: ${pcResult.model}`)
   } catch (error: any) {
     console.error(`[LP-SITE] PC画像生成エラー (${section.section_id}):`, error)
     console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
     // エラーが発生しても続行（空の画像として扱う）
   }
 
-  // SP用画像生成（縦長）- 必ず別プロンプトで再生成
+  // SP用画像生成（縦長）- 1080x1920 (9:16)
   let imageSp: string | undefined
   try {
     console.log(`[LP-SITE] SP画像生成開始: ${section.section_id}`)
     const spPrompt = generateImagePrompt(section, productInfo, 'sp', sectionIndex, totalSections)
     console.log(`[LP-SITE] SPプロンプト長: ${spPrompt.length}文字`)
-    const spResult = await geminiGenerateImagePng({
-      prompt: spPrompt,
-      aspectRatio: '9:16', // SP用は縦長
-      imageSize: '2K',
-    })
-    imageSp = `data:${spResult.mimeType};base64,${spResult.dataBase64}`
-    console.log(`[LP-SITE] SP画像生成成功: ${section.section_id}, サイズ: ${spResult.dataBase64.length}文字`)
+    const spResult = await generateSingleBanner(spPrompt, '1080x1920', {})
+    imageSp = spResult.image
+    console.log(`[LP-SITE] SP画像生成成功: ${section.section_id}, モデル: ${spResult.model}`)
   } catch (error: any) {
     console.error(`[LP-SITE] SP画像生成エラー (${section.section_id}):`, error)
     console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
