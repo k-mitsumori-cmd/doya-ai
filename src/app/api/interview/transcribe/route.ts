@@ -299,6 +299,7 @@ export async function POST(request: NextRequest) {
         
         console.log('[INTERVIEW] Getting ID token for Cloud Run service...')
         console.log('[INTERVIEW]   Target URL:', cloudRunServiceUrl)
+        console.log('[INTERVIEW]   Service Account:', credentials.client_email || 'N/A')
         
         // IDトークンを取得（Cloud Runサービス用）
         // getIdTokenClientは自動的にIDトークンを取得してリクエストに含める
