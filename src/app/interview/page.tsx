@@ -1374,39 +1374,63 @@ export default function InterviewPage() {
 
           const transcribeData = await transcribeRes.json()
           transcriptionId = transcribeData.transcription?.id
-          console.log('[INTERVIEW] Transcription completed successfully:', transcriptionId ? `ID: ${transcriptionId}` : 'No ID returned')
+          const pollingRequired = transcribeData.pollingRequired || false
+          const transcriptionStatus = transcribeData.transcription?.status || 'PROCESSING'
+          
+          console.log('[INTERVIEW] Transcription response:', {
+            transcriptionId,
+            status: transcriptionStatus,
+            pollingRequired,
+          })
           
           if (!transcriptionId) {
             console.warn('[INTERVIEW] Transcription ID not returned, but continuing...')
-          } else {
-            // 文字起こしが完了するまで少し待つ（データベースへの反映を待つ）
-            console.log('[INTERVIEW] Waiting for transcription to be saved to database...')
-            await new Promise(resolve => setTimeout(resolve, 2000))
-            
-            // 文字起こしがデータベースに保存されているか確認
+          } else if (pollingRequired || transcriptionStatus === 'PROCESSING') {
+            // 非同期ジョブ方式: 文字起こしが完了するまでポーリング
+            console.log('[INTERVIEW] Polling for transcription completion...')
             let retryCount = 0
-            const maxRetries = 5
-            while (retryCount < maxRetries) {
+            const maxRetries = 300 // 最大5分（1秒間隔）
+            let completed = false
+            
+            while (retryCount < maxRetries && !completed) {
               try {
-                const checkRes = await fetch(`/api/interview/projects/${newProjectId}`, {
-                  headers: { 'Content-Type': 'application/json' },
+                await new Promise(resolve => setTimeout(resolve, 1000)) // 1秒待機
+                
+                const statusRes = await fetch(`/api/interview/transcribe/status/${transcriptionId}`, {
+                  headers: guestId ? { 'x-guest-id': guestId } : {},
                 })
-                if (checkRes.ok) {
-                  const projectData = await checkRes.json()
-                  const transcriptions = projectData.project?.transcriptions || []
-                  if (transcriptions.length > 0 && transcriptions.some((t: any) => t.text && t.text.trim().length > 0)) {
-                    console.log('[INTERVIEW] Transcription confirmed in database')
+                
+                if (statusRes.ok) {
+                  const statusData = await statusRes.json()
+                  const status = statusData.status
+                  
+                  console.log('[INTERVIEW] Transcription status:', status, `(attempt ${retryCount + 1}/${maxRetries})`)
+                  
+                  if (status === 'COMPLETED' && statusData.text && statusData.text.trim().length > 0) {
+                    console.log('[INTERVIEW] Transcription completed successfully')
+                    completed = true
                     break
+                  } else if (status === 'ERROR') {
+                    throw new Error(`文字起こし処理でエラーが発生しました: ${statusData.text || 'Unknown error'}`)
                   }
+                  // PROCESSINGの場合は継続
+                } else {
+                  console.warn('[INTERVIEW] Failed to check transcription status:', statusRes.status)
                 }
               } catch (checkError) {
                 console.warn('[INTERVIEW] Failed to check transcription status:', checkError)
+                // エラーが続く場合は、最大試行回数に達するまで継続
               }
               retryCount++
-              if (retryCount < maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 1000))
-              }
             }
+            
+            if (!completed) {
+              console.warn('[INTERVIEW] Transcription polling timeout, but continuing...')
+              // タイムアウトしても処理を継続（バックグラウンドで完了する可能性がある）
+            }
+          } else {
+            // 同期処理の場合（既存の動作）
+            console.log('[INTERVIEW] Transcription completed synchronously')
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : '文字起こしでエラーが発生しました'

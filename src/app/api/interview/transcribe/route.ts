@@ -9,7 +9,7 @@ import { getUserPlan, getMaxFileSize, getEffectivePlan, isFileSizeWithinLimit, t
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-export const maxDuration = 300 // Vercelの最大タイムアウト（Proプラン: 300秒、Enterprise: 900秒）
+export const maxDuration = 60 // ジョブ開始のみなので短時間で完了
 
 export async function POST(request: NextRequest) {
   try {
@@ -363,95 +363,67 @@ export async function POST(request: NextRequest) {
         
         console.log('[INTERVIEW] ✓ ID token client obtained')
         
-        // requestメソッドを使用して自動的にIDトークンを取得してリクエストを送信
-        // この方法は、IDトークンを自動的に取得してAuthorizationヘッダーに追加します
-        const response = await client.request({
-          url: `${cloudRunServiceUrl}/transcribe`,
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          data: {
-            gcsUri,
-            mimeType: material.mimeType,
-            fileName: material.fileName,
-            isVideoFile,
-            fileSize: material.fileSize || 0,
-          },
-        })
-
-        console.log('[INTERVIEW] ✓ Request sent to Cloud Run service')
-        console.log('[INTERVIEW]   Status:', response.status)
-        console.log('[INTERVIEW]   Status Text:', response.statusText || 'N/A')
-
-        if (response.status < 200 || response.status >= 300) {
-          const errorData = (response.data as any) || { error: 'Unknown error' }
-          console.error('[INTERVIEW] ✗ Cloud Run service error')
-          console.error('[INTERVIEW]   Status:', response.status)
-          console.error('[INTERVIEW]   Error:', errorData)
-          console.error('[INTERVIEW]   Response headers:', response.headers)
-
-          // 403エラーの場合、認証の問題である可能性が高い
-          if (response.status === 403) {
-            return NextResponse.json(
-              {
-                error: 'Cloud Runサービスへのアクセスが拒否されました',
-                details: '認証に失敗しました。サービスアカウントの権限を確認してください。\n\nエラー詳細: ' + (errorData.error || JSON.stringify(errorData)),
-                errorCode: 'AUTHENTICATION_FAILED',
-              },
-              { status: 403 }
-            )
-          }
-
-          return NextResponse.json(
-            {
-              error: errorData.error || 'Cloud Runサービスの呼び出しに失敗しました',
-              details: errorData.details || `HTTP ${response.status}`,
-            },
-            { status: response.status }
-          )
-        }
-
-        const cloudRunResult = response.data as any
-        console.log('[INTERVIEW] ✓ Cloud Run service response received')
-        console.log('[INTERVIEW]   Success:', cloudRunResult.success)
-
-        if (!cloudRunResult.success || !cloudRunResult.transcription) {
-          console.error('[INTERVIEW] ✗ Invalid response from Cloud Run service')
-          return NextResponse.json(
-            {
-              error: 'Cloud Runサービスからの応答が無効です',
-              details: '文字起こし結果が含まれていません',
-            },
-            { status: 500 }
-          )
-        }
-
-        const transcriptionText = cloudRunResult.transcription
-        console.log('[INTERVIEW] ✓ Transcription text extracted')
-        console.log('[INTERVIEW]   Text Length:', `${transcriptionText.length} characters`)
-        console.log('[INTERVIEW]   Preview:', transcriptionText.substring(0, 100) + (transcriptionText.length > 100 ? '...' : ''))
-        console.log('[INTERVIEW] ================================================')
-
-        // データベースに保存
+        // 非同期ジョブ方式: 文字起こし処理を開始して即座にレスポンスを返す
+        // これにより、Vercelのタイムアウト（300秒）を回避できる
+        
+        // 文字起こしレコードを作成（処理中ステータス）
         const transcription = await prisma.interviewTranscription.create({
           data: {
             projectId,
             materialId,
-            text: transcriptionText,
-            provider: 'google-cloud-speech',
+            text: '', // 空文字列で初期化
+            provider: 'google-cloud-speech-cloudrun',
+            status: 'PROCESSING', // 処理中
           },
         })
 
         // 素材のステータスを更新
         await prisma.interviewMaterial.update({
           where: { id: materialId },
-          data: { status: 'COMPLETED' },
+          data: { status: 'PROCESSING' },
         })
 
-        console.log(`[INTERVIEW] Transcription saved - ID: ${transcription.id}`)
+        console.log('[INTERVIEW] ✓ Transcription job created:', transcription.id)
 
-        return NextResponse.json({ transcription })
+        // バックグラウンドで処理を開始（非同期）
+        // 注意: この処理は即座に完了し、実際の文字起こしはバックグラウンドで実行される
+        processTranscriptionInBackground({
+          transcriptionId: transcription.id,
+          materialId,
+          projectId,
+          gcsUri,
+          mimeType: material.mimeType,
+          fileName: material.fileName,
+          isVideoFile: isVideoFile || false,
+          fileSize: material.fileSize || 0,
+          credentials,
+          cloudRunServiceUrl,
+        }).catch((error: any) => {
+          console.error('[INTERVIEW] Background transcription error:', error)
+          // エラー時はステータスを更新
+          prisma.interviewTranscription.update({
+            where: { id: transcription.id },
+            data: {
+              status: 'ERROR',
+              text: `エラー: ${error.message || 'Unknown error'}`,
+            },
+          }).catch(console.error)
+          prisma.interviewMaterial.update({
+            where: { id: materialId },
+            data: { status: 'ERROR', error: error.message || 'Unknown error' },
+          }).catch(console.error)
+        })
+
+        // 即座にレスポンスを返す（処理はバックグラウンドで継続）
+        return NextResponse.json({
+          transcription: {
+            id: transcription.id,
+            status: 'PROCESSING',
+            text: '',
+          },
+          message: '文字起こし処理を開始しました。バックグラウンドで処理が続行されます。',
+          pollingRequired: true,
+        })
       } catch (cloudRunError: any) {
         console.error('[INTERVIEW] ✗ Cloud Run service call failed')
         console.error('[INTERVIEW]   Error Type:', cloudRunError?.constructor?.name || typeof cloudRunError)
@@ -787,5 +759,104 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     )
+  }
+}
+
+// バックグラウンドで文字起こし処理を実行
+async function processTranscriptionInBackground({
+  transcriptionId,
+  materialId,
+  projectId,
+  gcsUri,
+  mimeType,
+  fileName,
+  isVideoFile,
+  fileSize,
+  credentials,
+  cloudRunServiceUrl,
+}: {
+  transcriptionId: string
+  materialId: string
+  projectId: string
+  gcsUri: string
+  mimeType: string | null
+  fileName: string
+  isVideoFile: boolean
+  fileSize: number
+  credentials: any
+  cloudRunServiceUrl: string
+}) {
+  try {
+    console.log('[INTERVIEW] Starting background transcription:', transcriptionId)
+
+    // Google Identity Tokenを取得
+    const auth = new GoogleAuth({ credentials })
+    const client = await auth.getIdTokenClient(cloudRunServiceUrl)
+
+    // Cloud Runサービスを呼び出し
+    const response = await client.request({
+      url: `${cloudRunServiceUrl}/transcribe`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      data: {
+        gcsUri,
+        mimeType,
+        fileName,
+        isVideoFile,
+        fileSize,
+      },
+    })
+
+    if (response.status < 200 || response.status >= 300) {
+      const errorData = (response.data as any) || { error: 'Unknown error' }
+      throw new Error(errorData.error || `HTTP ${response.status}`)
+    }
+
+    const cloudRunResult = response.data as any
+    if (!cloudRunResult.success || !cloudRunResult.transcription) {
+      throw new Error('Cloud Runサービスからの応答が無効です')
+    }
+
+    const transcriptionText = cloudRunResult.transcription
+
+    // データベースに保存
+    await prisma.interviewTranscription.update({
+      where: { id: transcriptionId },
+      data: {
+        text: transcriptionText,
+        status: 'COMPLETED',
+      },
+    })
+
+    // 素材のステータスを更新
+    await prisma.interviewMaterial.update({
+      where: { id: materialId },
+      data: { status: 'COMPLETED' },
+    })
+
+    console.log('[INTERVIEW] Background transcription completed:', transcriptionId)
+  } catch (error: any) {
+    console.error('[INTERVIEW] Background transcription error:', error)
+    
+    // エラーをデータベースに記録
+    await prisma.interviewTranscription.update({
+      where: { id: transcriptionId },
+      data: {
+        status: 'ERROR',
+        text: `エラー: ${error.message || 'Unknown error'}`,
+      },
+    }).catch(console.error)
+
+    await prisma.interviewMaterial.update({
+      where: { id: materialId },
+      data: {
+        status: 'ERROR',
+        error: error.message || 'Unknown error',
+      },
+    }).catch(console.error)
+
+    throw error
   }
 }
