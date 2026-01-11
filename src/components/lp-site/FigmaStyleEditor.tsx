@@ -49,11 +49,13 @@ interface LayerItemProps {
   selectedDevice: 'pc' | 'sp'
   isSelected: boolean
   isVisible: boolean
+  isRegenerating: boolean
   onSelect: () => void
   onToggleVisibility: () => void
+  onRegenerate: () => void
 }
 
-function LayerItem({ section, index, image, selectedDevice, isSelected, isVisible, onSelect, onToggleVisibility }: LayerItemProps) {
+function LayerItem({ section, index, image, selectedDevice, isSelected, isVisible, isRegenerating, onSelect, onToggleVisibility, onRegenerate }: LayerItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: section.section_id,
   })
@@ -70,7 +72,7 @@ function LayerItem({ section, index, image, selectedDevice, isSelected, isVisibl
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
+      className={`group flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
         isSelected
           ? 'bg-blue-100 text-blue-900'
           : 'hover:bg-slate-100 text-slate-700'
@@ -80,27 +82,42 @@ function LayerItem({ section, index, image, selectedDevice, isSelected, isVisibl
       <div
         {...attributes}
         {...listeners}
-        className="w-4 h-4 flex items-center justify-center cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600"
+        className="w-3.5 h-3.5 flex items-center justify-center cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600"
         onClick={(e) => e.stopPropagation()}
       >
-        <GripVertical className="w-3.5 h-3.5" />
+        <GripVertical className="w-3 h-3" />
       </div>
       <button
         onClick={(e) => {
           e.stopPropagation()
           onToggleVisibility()
         }}
-        className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-slate-600"
+        className="w-3.5 h-3.5 flex items-center justify-center text-slate-400 hover:text-slate-600"
       >
-        {isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+        {isVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
       </button>
       <div className="flex-1 min-w-0">
         <div className="text-xs font-medium truncate">{section.headline || `セクション ${index + 1}`}</div>
         <div className="text-[10px] text-slate-500 truncate">{section.section_type}</div>
       </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onRegenerate()
+        }}
+        disabled={isRegenerating}
+        className="w-6 h-6 flex items-center justify-center rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        title="画像を再生成"
+      >
+        {isRegenerating ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <RefreshCw className="w-3 h-3" />
+        )}
+      </button>
       {hasImage && (
-        <div className="w-4 h-4 rounded border border-slate-300 bg-white flex-shrink-0">
-          <ImageIcon className="w-3 h-3 text-slate-400" />
+        <div className="w-3.5 h-3.5 rounded border border-slate-300 bg-white flex-shrink-0">
+          <ImageIcon className="w-2.5 h-2.5 text-slate-400" />
         </div>
       )}
     </div>
@@ -229,33 +246,31 @@ function PropertyPanel({
 
         {/* アクション */}
         <div className="pt-2 border-t border-slate-200 space-y-2">
+          <button
+            onClick={onRegenerate}
+            disabled={isRegenerating}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isRegenerating ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>生成中...</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                <span>画像を再生成</span>
+              </>
+            )}
+          </button>
           {hasImage && (
-            <>
-              <button
-                onClick={onRegenerate}
-                disabled={isRegenerating}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isRegenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>生成中...</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4" />
-                    <span>画像を再生成</span>
-                  </>
-                )}
-              </button>
-              <button
-                onClick={onDownload}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                <span>画像をダウンロード</span>
-              </button>
-            </>
+            <button
+              onClick={onDownload}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              <span>画像をダウンロード</span>
+            </button>
           )}
         </div>
       </div>
@@ -428,8 +443,10 @@ export function FigmaStyleEditor({
                           selectedDevice={selectedDevice}
                           isSelected={selectedSectionId === section.section_id}
                           isVisible={visibleSections.has(section.section_id)}
+                          isRegenerating={regeneratingSectionId === section.section_id}
                           onSelect={() => setSelectedSectionId(section.section_id)}
                           onToggleVisibility={() => handleToggleVisibility(section.section_id)}
+                          onRegenerate={() => handleSectionRegenerate(section.section_id)}
                         />
                       )
                     })}

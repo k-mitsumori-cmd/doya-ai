@@ -41,26 +41,29 @@ export async function POST(request: NextRequest) {
       const result = await generateSectionImagePair(sectionData, productInfo)
       imagePc = result.image_pc
       imageSp = result.image_sp
+      console.log(`[LP-SITE] 両方の画像再生成成功: ${sectionData.section_id}`)
     } else if (regenerate_type === 'image_pc') {
       // PC画像のみ再生成
       const imagePrompt = generateImagePrompt(sectionData, productInfo, 'pc')
+      console.log(`[LP-SITE] PC画像再生成開始: ${sectionData.section_id}`)
       try {
         const pcResult = await generateSingleBanner(imagePrompt, '1920x1080', {})
         imagePc = pcResult.image
-        console.log(`[LP-SITE] PC画像再生成成功: モデル ${pcResult.model}`)
+        console.log(`[LP-SITE] PC画像再生成成功: ${sectionData.section_id}, モデル ${pcResult.model}`)
       } catch (error) {
-        console.error(`[LP-SITE] PC画像再生成エラー:`, error)
+        console.error(`[LP-SITE] PC画像再生成エラー (${sectionData.section_id}):`, error)
         throw error
       }
     } else if (regenerate_type === 'image_sp') {
       // SP画像のみ再生成
       const imagePrompt = generateImagePrompt(sectionData, productInfo, 'sp')
+      console.log(`[LP-SITE] SP画像再生成開始: ${sectionData.section_id}`)
       try {
         const spResult = await generateSingleBanner(imagePrompt, '1080x1920', {})
         imageSp = spResult.image
-        console.log(`[LP-SITE] SP画像再生成成功: モデル ${spResult.model}`)
+        console.log(`[LP-SITE] SP画像再生成成功: ${sectionData.section_id}, モデル ${spResult.model}`)
       } catch (error) {
-        console.error(`[LP-SITE] SP画像再生成エラー:`, error)
+        console.error(`[LP-SITE] SP画像再生成エラー (${sectionData.section_id}):`, error)
         throw error
       }
     }

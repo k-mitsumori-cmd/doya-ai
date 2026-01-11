@@ -7,10 +7,20 @@ const audio_extractor_1 = require("./audio-extractor");
 let speechClient = null;
 function getSpeechClient() {
     if (!speechClient) {
-        // 認証情報の取得
-        const credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+        // 認証情報の取得（Base64エンコードされたJSON文字列もサポート）
+        let credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+        if (!credsEnvVar && process.env.GOOGLE_APPLICATION_CREDENTIALS_B64) {
+            // Base64エンコードされたJSON文字列をデコード
+            try {
+                credsEnvVar = Buffer.from(process.env.GOOGLE_APPLICATION_CREDENTIALS_B64, 'base64').toString('utf-8');
+                console.log('[TRANSCRIBE] Decoded credentials from Base64');
+            }
+            catch (decodeError) {
+                throw new Error(`Failed to decode Base64 credentials: ${decodeError.message}`);
+            }
+        }
         if (!credsEnvVar) {
-            throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable is not set');
+            throw new Error('GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_APPLICATION_CREDENTIALS_B64 environment variable is not set');
         }
         let credentials;
         try {
