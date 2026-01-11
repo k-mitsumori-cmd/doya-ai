@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { FileText, Upload, Sparkles, CheckCircle, Clock, Download, Zap, Loader2, ArrowRight, Settings, RefreshCw, MessageSquare, FileEdit, Users, Briefcase, Edit, Save, X, FileDown, FileCode, FileType, AlertCircle, Table2, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
 import { InterviewCompletionModal } from '@/components/InterviewCompletionModal'
+import { TableInsertModal } from '@/components/TableInsertModal'
+import { ImageInsertModal } from '@/components/ImageInsertModal'
 
 type ArticleType = 'INTERVIEW' | 'BUSINESS_REPORT' | 'INTERNAL_INTERVIEW' | 'CASE_STUDY'
 type DisplayFormat = 'QA' | 'MONOLOGUE'
@@ -316,6 +318,46 @@ export default function InterviewProjectDetailPage() {
   const handleCancelEdit = () => {
     setEditingDraftId(null)
     setEditedContent('')
+  }
+
+  const handleInsertTable = (tableMarkdown: string) => {
+    if (!editingDraftId) return
+    const textarea = document.querySelector('textarea') as HTMLTextAreaElement
+    if (!textarea) return
+    
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const before = editedContent.substring(0, start)
+    const after = editedContent.substring(end)
+    const newContent = before + '\n\n' + tableMarkdown + '\n\n' + after
+    setEditedContent(newContent)
+    
+    // カーソル位置を調整
+    setTimeout(() => {
+      textarea.focus()
+      const newPos = start + tableMarkdown.length + 4
+      textarea.setSelectionRange(newPos, newPos)
+    }, 0)
+  }
+
+  const handleInsertImage = (imageMarkdown: string) => {
+    if (!editingDraftId) return
+    const textarea = document.querySelector('textarea') as HTMLTextAreaElement
+    if (!textarea) return
+    
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const before = editedContent.substring(0, start)
+    const after = editedContent.substring(end)
+    const newContent = before + '\n\n' + imageMarkdown + '\n\n' + after
+    setEditedContent(newContent)
+    
+    // カーソル位置を調整
+    setTimeout(() => {
+      textarea.focus()
+      const newPos = start + imageMarkdown.length + 4
+      textarea.setSelectionRange(newPos, newPos)
+    }, 0)
   }
 
   // エクスポートメニュー外クリックで閉じる
@@ -879,10 +921,33 @@ export default function InterviewProjectDetailPage() {
                       )}
                       {editingDraftId === draft.id ? (
                         <div className="space-y-4">
+                          {/* 編集ツールバー */}
+                          <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                            <motion.button
+                              onClick={() => setShowTableInsertModal(true)}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-all inline-flex items-center gap-2 text-sm font-bold text-slate-700"
+                              title="表を挿入"
+                            >
+                              <Table2 className="w-4 h-4" />
+                              表を挿入
+                            </motion.button>
+                            <motion.button
+                              onClick={() => setShowImageInsertModal(true)}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-all inline-flex items-center gap-2 text-sm font-bold text-slate-700"
+                              title="図を挿入"
+                            >
+                              <ImageIcon className="w-4 h-4" />
+                              図を挿入
+                            </motion.button>
+                          </div>
                           <textarea
                             value={editedContent}
                             onChange={(e) => setEditedContent(e.target.value)}
-                            className="w-full min-h-[400px] p-6 border-2 border-blue-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-slate-700 leading-relaxed text-base font-medium resize-y"
+                            className="w-full min-h-[400px] p-6 border-2 border-blue-300 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-slate-700 leading-relaxed text-base font-medium resize-y font-sans"
                             placeholder="記事の内容を編集..."
                           />
                           <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -892,8 +957,16 @@ export default function InterviewProjectDetailPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="prose prose-slate max-w-none">
-                          <div className="text-slate-700 whitespace-pre-wrap leading-relaxed text-base">
+                        <div className="prose prose-slate max-w-none" style={{ fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif' }}>
+                          <div 
+                            className="text-slate-700 leading-relaxed text-base"
+                            style={{ 
+                              fontSize: '16.5px',
+                              lineHeight: '2.05',
+                              letterSpacing: '0.015em',
+                              fontFamily: 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif'
+                            }}
+                          >
                             {(() => {
                               try {
                                 const content = draft.content || ''
@@ -901,26 +974,146 @@ export default function InterviewProjectDetailPage() {
                                   console.warn('Draft content is not a string:', typeof content)
                                   return <p className="text-slate-500">コンテンツが読み込めませんでした</p>
                                 }
-                                return content.split('\n').map((line: string, idx: number) => {
-                                  // Q&A形式の場合は、Q: と A: をスタイリング
-                                  if (draft.displayFormat === 'QA') {
-                                    if (line.startsWith('Q:') || line.startsWith('Q：')) {
-                                      return (
-                                        <div key={idx} className="mb-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
-                                          <p className="font-black text-blue-900 mb-2">{line}</p>
-                                        </div>
-                                      )
+                                
+                                // 表の処理
+                                const lines = content.split('\n')
+                                const result: JSX.Element[] = []
+                                let inTable = false
+                                let tableLines: string[] = []
+                                
+                                const renderTable = (tableLines: string[]) => {
+                                  const rows = tableLines
+                                    .filter((l) => l.trim().startsWith('|') && l.trim().endsWith('|'))
+                                    .map((l) => l.trim().slice(1, -1).split('|').map((c) => c.trim()))
+                                  if (rows.length >= 2) {
+                                    const head = rows[0]
+                                    const body = rows.slice(2) // 2行目は区切り想定
+                                    return (
+                                      <div key={`table-${result.length}`} className="my-8 overflow-x-auto">
+                                        <table className="w-full border-collapse bg-white rounded-xl shadow-lg border-2 border-slate-200">
+                                          <thead>
+                                            <tr className="bg-gradient-to-r from-blue-500 to-indigo-600">
+                                              {head.map((cell, idx) => (
+                                                <th key={idx} className="px-6 py-4 text-left text-white font-black text-sm border-b-2 border-blue-600">
+                                                  {cell}
+                                                </th>
+                                              ))}
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {body.map((row, rowIdx) => (
+                                              <tr key={rowIdx} className={rowIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                                                {row.map((cell, cellIdx) => (
+                                                  <td key={cellIdx} className="px-6 py-4 text-slate-700 font-medium text-sm border-b border-slate-200">
+                                                    {cell}
+                                                  </td>
+                                                ))}
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    )
+                                  }
+                                  return null
+                                }
+                                
+                                lines.forEach((line, idx) => {
+                                  // 表の処理
+                                  if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+                                    if (!inTable) {
+                                      inTable = true
+                                      tableLines = []
                                     }
-                                    if (line.startsWith('A:') || line.startsWith('A：')) {
-                                      return (
-                                        <div key={idx} className="mb-6 p-4 bg-slate-50 rounded-xl border-l-4 border-slate-400">
-                                          <p className="text-slate-800 leading-relaxed">{line}</p>
-                                        </div>
-                                      )
+                                    tableLines.push(line)
+                                    return
+                                  } else {
+                                    if (inTable) {
+                                      result.push(renderTable(tableLines)!)
+                                      inTable = false
+                                      tableLines = []
                                     }
                                   }
-                                  return <p key={idx} className="mb-4 leading-relaxed">{line || '\u00A0'}</p>
+                                  
+                                  // 画像の処理
+                                  const imageMatch = line.match(/!\[([^\]]*)\]\(([^)]+)(?:\s+"([^"]+)")?\)/)
+                                  if (imageMatch) {
+                                    const [, alt, url, title] = imageMatch
+                                    result.push(
+                                      <div key={idx} className="my-8">
+                                        <img
+                                          src={url}
+                                          alt={alt || '画像'}
+                                          title={title}
+                                          className="w-full h-auto rounded-2xl shadow-xl border-2 border-slate-200"
+                                        />
+                                        {alt && (
+                                          <p className="mt-3 text-center text-sm text-slate-600 font-bold italic">
+                                            {alt}
+                                          </p>
+                                        )}
+                                      </div>
+                                    )
+                                    return
+                                  }
+                                  
+                                  // Q&A形式の処理
+                                  if (draft.displayFormat === 'QA') {
+                                    if (line.startsWith('Q:') || line.startsWith('Q：')) {
+                                      result.push(
+                                        <div key={idx} className="mb-6 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border-l-4 border-blue-500 shadow-sm">
+                                          <p className="font-black text-blue-900 text-lg leading-relaxed">{line}</p>
+                                        </div>
+                                      )
+                                      return
+                                    }
+                                    if (line.startsWith('A:') || line.startsWith('A：')) {
+                                      result.push(
+                                        <div key={idx} className="mb-8 p-6 bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl border-l-4 border-slate-400 shadow-sm">
+                                          <p className="text-slate-800 leading-relaxed text-base font-medium">{line}</p>
+                                        </div>
+                                      )
+                                      return
+                                    }
+                                  }
+                                  
+                                  // 見出しの処理
+                                  const headingMatch = line.match(/^(#{1,4})\s+(.+)$/)
+                                  if (headingMatch) {
+                                    const level = headingMatch[1].length
+                                    const text = headingMatch[2]
+                                    const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements
+                                    const className = level === 1 
+                                      ? 'text-3xl font-black text-slate-900 mt-10 mb-6 pb-3 border-b-2 border-slate-300'
+                                      : level === 2
+                                      ? 'text-2xl font-black text-slate-900 mt-8 mb-4 pl-3 border-l-4 border-blue-500'
+                                      : 'text-xl font-black text-slate-900 mt-6 mb-3'
+                                    result.push(
+                                      <HeadingTag key={idx} className={className}>
+                                        {text}
+                                      </HeadingTag>
+                                    )
+                                    return
+                                  }
+                                  
+                                  // 通常のテキスト
+                                  if (line.trim()) {
+                                    result.push(
+                                      <p key={idx} className="mb-5 leading-relaxed text-slate-700 font-medium">
+                                        {line}
+                                      </p>
+                                    )
+                                  } else {
+                                    result.push(<br key={idx} />)
+                                  }
                                 })
+                                
+                                // 最後の表を処理
+                                if (inTable) {
+                                  result.push(renderTable(tableLines)!)
+                                }
+                                
+                                return result
                               } catch (e) {
                                 console.error('Error rendering draft content:', e)
                                 return <p className="text-red-500">コンテンツの表示中にエラーが発生しました</p>
@@ -996,6 +1189,20 @@ export default function InterviewProjectDetailPage() {
           setActiveTab('draft')
         }}
         onClose={() => setShowCompletionModal(false)}
+      />
+
+      {/* 表挿入モーダル */}
+      <TableInsertModal
+        open={showTableInsertModal}
+        onClose={() => setShowTableInsertModal(false)}
+        onInsert={handleInsertTable}
+      />
+
+      {/* 図挿入モーダル */}
+      <ImageInsertModal
+        open={showImageInsertModal}
+        onClose={() => setShowImageInsertModal(false)}
+        onInsert={handleInsertImage}
       />
     </div>
   )

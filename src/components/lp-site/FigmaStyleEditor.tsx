@@ -291,6 +291,8 @@ export function FigmaStyleEditor({
   onPreview,
   onPublish,
   isGeneratingImages = false,
+  sectionProgress = {},
+  generatingSections = new Set(),
 }: FigmaStyleEditorProps) {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [regeneratingSectionId, setRegeneratingSectionId] = useState<string | null>(null)
