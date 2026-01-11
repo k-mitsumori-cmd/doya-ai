@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { SpeechClient } from '@google-cloud/speech'
 import { Storage } from '@google-cloud/storage'
+import { GoogleAuth } from 'google-auth-library'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -244,13 +245,147 @@ export async function POST(request: NextRequest) {
     const isMP4File = material.fileName?.toLowerCase().endsWith('.mp4') || material.mimeType?.includes('mp4')
     const isLargeFile = (material.fileSize || 0) > 10 * 1024 * 1024 // 10MB以上
 
-    // MP4ファイルの場合、複数の設定パターンを試す
-    // パターン1: languageCodeのみ（最小限）- 最初に試す
-    // パターン2: languageCode + enableAutomaticPunctuation
-    // パターン3: languageCode + model: "video"（公式ドキュメント推奨）
+    // Cloud RunサービスURLをチェック
+    const cloudRunServiceUrl = process.env.CLOUDRUN_TRANSCRIBE_SERVICE_URL
+    
+    console.log('[INTERVIEW] ========== Cloud Run Service Check ==========')
+    console.log('[INTERVIEW] CLOUDRUN_TRANSCRIBE_SERVICE_URL:', cloudRunServiceUrl ? 'SET' : 'NOT SET')
+    if (cloudRunServiceUrl) {
+      console.log('[INTERVIEW] Service URL:', cloudRunServiceUrl)
+    }
+    console.log('[INTERVIEW] ================================================')
+
+    // Cloud Runサービスが設定されている場合、それを使用する（MP4ファイルまたはすべてのファイル）
+    if (cloudRunServiceUrl) {
+      console.log('[INTERVIEW] ========== STEP 4: Calling Cloud Run Service ==========')
+      console.log('[INTERVIEW] Cloud Run Service URL:', cloudRunServiceUrl)
+      console.log('[INTERVIEW] Request Audio:')
+      console.log('[INTERVIEW]   URI:', gcsUri)
+      console.log('[INTERVIEW]   Type:', isVideoFile ? 'video' : 'audio')
+      console.log('[INTERVIEW]   File Name:', material.fileName)
+      console.log('[INTERVIEW]   File Size:', `${((material.fileSize || 0) / 1024 / 1024).toFixed(2)} MB`)
+      console.log('[INTERVIEW]   MIME Type:', material.mimeType || 'N/A')
+      console.log('[INTERVIEW] ================================================')
+
+      try {
+        // Google Identity Tokenを取得
+        const auth = new GoogleAuth({
+          credentials,
+        })
+        
+        // IDトークンを取得（Cloud Runサービス用）
+        const client = await auth.getIdTokenClient(cloudRunServiceUrl)
+        
+        // requestメソッドを使用して自動的にIDトークンを取得してリクエストを送信
+        const response = await client.request({
+          url: `${cloudRunServiceUrl}/transcribe`,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          data: {
+            gcsUri,
+            mimeType: material.mimeType,
+            fileName: material.fileName,
+            isVideoFile,
+            fileSize: material.fileSize || 0,
+          },
+        })
+
+        console.log('[INTERVIEW] ✓ Identity token obtained and request sent')
+        console.log('[INTERVIEW]   Status:', response.status)
+
+        if (response.status < 200 || response.status >= 300) {
+          const errorData = (response.data as any) || { error: 'Unknown error' }
+          console.error('[INTERVIEW] ✗ Cloud Run service error')
+          console.error('[INTERVIEW]   Status:', response.status)
+          console.error('[INTERVIEW]   Error:', errorData)
+
+          return NextResponse.json(
+            {
+              error: errorData.error || 'Cloud Runサービスの呼び出しに失敗しました',
+              details: errorData.details || `HTTP ${response.status}`,
+            },
+            { status: response.status }
+          )
+        }
+
+        const cloudRunResult = response.data as any
+        console.log('[INTERVIEW] ✓ Cloud Run service response received')
+        console.log('[INTERVIEW]   Success:', cloudRunResult.success)
+
+        if (!cloudRunResult.success || !cloudRunResult.transcription) {
+          console.error('[INTERVIEW] ✗ Invalid response from Cloud Run service')
+          return NextResponse.json(
+            {
+              error: 'Cloud Runサービスからの応答が無効です',
+              details: '文字起こし結果が含まれていません',
+            },
+            { status: 500 }
+          )
+        }
+
+        const transcriptionText = cloudRunResult.transcription
+        console.log('[INTERVIEW] ✓ Transcription text extracted')
+        console.log('[INTERVIEW]   Text Length:', `${transcriptionText.length} characters`)
+        console.log('[INTERVIEW]   Preview:', transcriptionText.substring(0, 100) + (transcriptionText.length > 100 ? '...' : ''))
+        console.log('[INTERVIEW] ================================================')
+
+        // データベースに保存
+        const transcription = await prisma.interviewTranscription.create({
+          data: {
+            projectId,
+            materialId,
+            text: transcriptionText,
+            provider: 'google-cloud-speech',
+          },
+        })
+
+        // 素材のステータスを更新
+        await prisma.interviewMaterial.update({
+          where: { id: materialId },
+          data: { status: 'COMPLETED' },
+        })
+
+        console.log(`[INTERVIEW] Transcription saved - ID: ${transcription.id}`)
+
+        return NextResponse.json({ transcription })
+      } catch (cloudRunError: any) {
+        console.error('[INTERVIEW] ✗ Cloud Run service call failed')
+        console.error('[INTERVIEW]   Error:', cloudRunError?.message || cloudRunError)
+        console.error('[INTERVIEW]   Stack:', cloudRunError?.stack || 'N/A')
+
+        return NextResponse.json(
+          {
+            error: 'Cloud Runサービスの呼び出しに失敗しました',
+            details: cloudRunError?.message || '不明なエラー',
+          },
+          { status: 500 }
+        )
+      }
+    }
+
+    // Cloud Runサービスが設定されていない場合の処理
+    // MP4ファイルの場合は、Cloud Runサービスが必須
+    if (isVideoFile && isMP4File && !cloudRunServiceUrl) {
+      console.error('[INTERVIEW] ✗ MP4 file requires Cloud Run service, but CLOUDRUN_TRANSCRIBE_SERVICE_URL is not set')
+      return NextResponse.json(
+        {
+          error: 'MP4ビデオファイルの処理にはCloud Runサービスが必要です',
+          details: 'CLOUDRUN_TRANSCRIBE_SERVICE_URL環境変数が設定されていません。\n\n対処方法:\n1. Vercelダッシュボードで環境変数を設定してください\n2. 環境変数名: CLOUDRUN_TRANSCRIBE_SERVICE_URL\n3. 値: https://interview-transcribe-service-ww5nkbimya-an.a.run.app\n4. 環境変数を設定後、デプロイを実行してください',
+          errorCode: 'CLOUDRUN_SERVICE_NOT_CONFIGURED',
+        },
+        { status: 500 }
+      )
+    }
+
+    // Cloud Runサービスが設定されていない場合、直接APIを呼び出す（既存の処理）
+    // MP4ファイルの場合は上記でエラーを返すため、ここには到達しません
+    // MP4以外のビデオファイルまたは音声ファイルの場合のみ実行
     const configPatterns: any[] = []
 
     if (isVideoFile && isMP4File) {
+      // このコードには到達しないはずですが、念のため残しておきます
       // MP4ファイルの場合、複数の設定パターンを準備
       configPatterns.push(
         { languageCode: 'ja-JP' }, // パターン1: 最小限

@@ -4,12 +4,13 @@
 
 import { generateTextWithGemini } from '@/lib/gemini-text'
 import { ProductInfo, LpSection } from './types'
+import { enhancePromptWithArchive } from './prompt-templates'
 
 /**
  * LP構成を生成
  */
 export async function generateLpStructure(productInfo: ProductInfo): Promise<LpSection[]> {
-  const prompt = `以下の商品情報を基に、効果的なLP構成を生成してください。
+  let prompt = `以下の商品情報を基に、効果的なLP構成を生成してください。
 
 商品情報:
 - 商品名: ${productInfo.product_name}
@@ -81,6 +82,9 @@ LPタイプ別の推奨構成（8-12セクションで構成）:
 セクションは8-12個で構成してください。長めのLPで、詳しい情報を伝える構成にしてください。
 各セクションに適切なsection_id、section_type、purpose、headline、sub_headline、text_volume、image_requiredを設定してください。
 特に、実績数値、導入事例、お客様の声、FAQなどのセクションを含めることで、信頼性が高まります。`
+
+  // LPアーカイブの学習データを基にプロンプトを強化
+  prompt = enhancePromptWithArchive(prompt, productInfo)
 
   const result = await generateTextWithGemini(prompt, {})
   

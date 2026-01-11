@@ -1,0 +1,102 @@
+=========================================
+Cloud Run音声変換サービス デプロイ
+=========================================
+プロジェクトID: doya-ai
+Updated property [core/project].
+
+必要なAPIを有効化中...
+Operation "operations/acf.p2-662542540582-db3cc4d2-17e4-475c-8227-153c05ac699b" finished successfully.
+Operation "operations/acf.p2-662542540582-51309d04-de06-47ea-ae97-f5f46a6d0084" finished successfully.
+Operation "operations/acat.p2-662542540582-3df13684-1b2c-4977-99d0-7a21ec5e72f1" finished successfully.
+
+サービスアカウントを確認中...
+サービスアカウントを作成中...
+Created service account [interview-transcribe-sa].
+権限を付与中...
+Updated IAM policy for project [doya-ai].
+bindings:
+- members:
+  - serviceAccount:662542540582@cloudbuild.gserviceaccount.com
+  role: roles/cloudbuild.builds.builder
+- members:
+  - serviceAccount:service-662542540582@gcp-sa-cloudbuild.iam.gserviceaccount.com
+  role: roles/cloudbuild.serviceAgent
+- members:
+  - serviceAccount:service-662542540582@containerregistry.iam.gserviceaccount.com
+  role: roles/containerregistry.ServiceAgent
+- members:
+  - user:k-mitsumori@surisuta.jp
+  role: roles/owner
+- members:
+  - serviceAccount:service-662542540582@gcp-sa-pubsub.iam.gserviceaccount.com
+  role: roles/pubsub.serviceAgent
+- members:
+  - serviceAccount:service-662542540582@serverless-robot-prod.iam.gserviceaccount.com
+  role: roles/run.serviceAgent
+- members:
+  - serviceAccount:interview-transcribe-sa@doya-ai.iam.gserviceaccount.com
+  role: roles/speech.admin
+etag: BwZIHRRM8JM=
+version: 1
+Updated IAM policy for project [doya-ai].
+bindings:
+- members:
+  - serviceAccount:662542540582@cloudbuild.gserviceaccount.com
+  role: roles/cloudbuild.builds.builder
+- members:
+  - serviceAccount:service-662542540582@gcp-sa-cloudbuild.iam.gserviceaccount.com
+  role: roles/cloudbuild.serviceAgent
+- members:
+  - serviceAccount:service-662542540582@containerregistry.iam.gserviceaccount.com
+  role: roles/containerregistry.ServiceAgent
+- members:
+  - user:k-mitsumori@surisuta.jp
+  role: roles/owner
+- members:
+  - serviceAccount:service-662542540582@gcp-sa-pubsub.iam.gserviceaccount.com
+  role: roles/pubsub.serviceAgent
+- members:
+  - serviceAccount:service-662542540582@serverless-robot-prod.iam.gserviceaccount.com
+  role: roles/run.serviceAgent
+- members:
+  - serviceAccount:interview-transcribe-sa@doya-ai.iam.gserviceaccount.com
+  role: roles/speech.admin
+- members:
+  - serviceAccount:interview-transcribe-sa@doya-ai.iam.gserviceaccount.com
+  role: roles/storage.objectViewer
+etag: BwZIHRRtfu4=
+version: 1
+Updated IAM policy for project [doya-ai].
+bindings:
+- members:
+  - serviceAccount:662542540582@cloudbuild.gserviceaccount.com
+  role: roles/cloudbuild.builds.builder
+- members:
+  - serviceAccount:service-662542540582@gcp-sa-cloudbuild.iam.gserviceaccount.com
+  role: roles/cloudbuild.serviceAgent
+- members:
+  - serviceAccount:service-662542540582@containerregistry.iam.gserviceaccount.com
+  role: roles/containerregistry.ServiceAgent
+- members:
+  - user:k-mitsumori@surisuta.jp
+  role: roles/owner
+- members:
+  - serviceAccount:service-662542540582@gcp-sa-pubsub.iam.gserviceaccount.com
+  role: roles/pubsub.serviceAgent
+- members:
+  - serviceAccount:service-662542540582@serverless-robot-prod.iam.gserviceaccount.com
+  role: roles/run.serviceAgent
+- members:
+  - serviceAccount:interview-transcribe-sa@doya-ai.iam.gserviceaccount.com
+  role: roles/speech.admin
+- members:
+  - serviceAccount:interview-transcribe-sa@doya-ai.iam.gserviceaccount.com
+  role: roles/storage.objectAdmin
+- members:
+  - serviceAccount:interview-transcribe-sa@doya-ai.iam.gserviceaccount.com
+  role: roles/storage.objectViewer
+etag: BwZIHRSQjDg=
+version: 1
+
+警告: GOOGLE_APPLICATION_CREDENTIALS 環境変数が設定されていません
+サービスアカウントキーを作成しますか？ (y/n)

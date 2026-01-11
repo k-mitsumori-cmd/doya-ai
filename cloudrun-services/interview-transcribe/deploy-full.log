@@ -1,0 +1,13 @@
+Deploying from source requires an Artifact Registry Docker repository to store 
+built containers. A repository named [cloud-run-source-deploy] in region 
+[asia-northeast1] will be created.
+
+Do you want to continue (Y/n)?  
+Building using Dockerfile and deploying container to Cloud Run service [interview-transcribe-service] in project [doya-ai] region [asia-northeast1]
+Building and deploying new service...
+Validating Service..........done
+Creating Container Repository.......................................................................................................................................done
+Uploading sources.......................................................................done
+failed
+Deployment failed
+ERROR: (gcloud.run.deploy) INVALID_ARGUMENT: Invalid build request. could not resolve source: googleapi: Error 403: 662542540582-compute@developer.gserviceaccount.com does not have storage.objects.get access to the Google Cloud Storage object. Permission 'storage.objects.get' denied on resource (or it may not exist)., forbidden

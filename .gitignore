@@ -54,3 +54,4 @@ LOGO/outputs/**
 .vscode
 
 
+cloudrun-services/interview-transcribe/key.json
