@@ -1,45 +1,3 @@
-# 📚 ドヤAI 完全開発ガイド
-
-新しいサービスを開発する際に必要な全ての情報をまとめた統合ドキュメントです。
-
----
-
-## 📑 目次
-
-### 基礎編
-1. [前提条件・技術スタック](#前提条件)
-2. [ディレクトリ構成](#ディレクトリ構成)
-3. [新サービス追加手順](#新サービス追加手順)
-
-### 実装編
-4. [実装パターン集](#実装パターン集)
-5. [デザインシステム](#デザインシステム)
-6. [サイドバー実装パターン](#サイドバー実装パターン)
-7. [アニメーション仕様](#アニメーション仕様)
-
-### 重要ルール編
-8. [サービス分離ルール](#サービス分離ルール)
-9. [ベータ版サービス管理](#ベータ版サービスの定義)
-
-### 運用編
-10. [デプロイ手順](#デプロイ手順)
-11. [トラブルシューティング](#トラブルシューティング)
-
----
-
-**注意**: このドキュメントは、以下のドキュメントを統合したものです：
-- development-guide.md
-- implementation-patterns.md
-- design-system.md
-- sidebar-pattern.md
-- service-isolation.md
-- animation-spec.md
-- beta-services.md
-
-*最終更新: 2026年1月*
-
----
-
 # 🚀 ドヤAI 開発ガイド（新サービス追加手順）
 
 新しいサービスを追加する際の完全ガイドです。
@@ -79,10 +37,13 @@
 | 認証 | NextAuth.js (Google OAuth) |
 | データベース | PostgreSQL + Prisma |
 | 決済 | Stripe |
-| AI (テキスト) | Google Gemini API |
+| AI (テキスト) | Google Gemini API (Gemini 3 Pro Preview, Gemini 2.0 Flash) |
 | AI (画像) | Nano Banana Pro |
+| 音声処理 | Google Cloud Speech-to-Text API |
+| ストレージ | Vercel Blob Storage / Google Cloud Storage (GCS) |
 | ホスティング | Vercel |
 | アニメーション | Framer Motion |
+| その他 | OpenAI API, SerpAPI, Google Slides API |
 
 ---
 
@@ -115,6 +76,94 @@ src/
 │   └── <service-id>/           # サービス専用ロジック
 └── types/
 ```
+
+---
+
+## 現状のサービス一覧
+
+現在実装されているサービスとその特徴です。
+
+### アクティブサービス
+
+#### 1. カンタンマーケAI (`kantan`)
+- **ID**: `kantan`
+- **ステータス**: `active`
+- **カテゴリ**: テキスト生成
+- **主な機能**:
+  - 15種類のマーケAIエージェント
+  - チャット形式でマーケ相談
+  - ブランド設定対応
+  - 広告データ分析
+- **プラン**: 無料（1日10回） / プロ（1日100回）
+
+#### 2. ドヤバナーAI (`banner`)
+- **ID**: `banner`
+- **ステータス**: `active`
+- **カテゴリ**: 画像生成
+- **主な機能**:
+  - 3案同時生成
+  - カテゴリ別テンプレート
+  - サイズ自動調整
+  - 履歴保存
+  - URLからの画像生成
+  - バナーコピー機能
+  - チャット機能
+- **プラン**: 無料（1日9枚） / プロ（1日50枚）
+
+#### 3. ドヤライティングAI (`seo`)
+- **ID**: `seo`
+- **ステータス**: `active`
+- **カテゴリ**: テキスト生成
+- **主な機能**:
+  - アウトライン/セクション生成
+  - 画像生成（図解/サムネ）
+  - 監査（二重チェック）
+  - 履歴保存
+  - ジョブ進行型パイプライン
+  - SerpAPIによる検索結果取得
+- **プラン**: 無料（1日1回） / プロ（1日3回）
+
+#### 4. ドヤペルソナAI (`persona`)
+- **ID**: `persona`
+- **ステータス**: `active`
+- **カテゴリ**: テキスト生成
+- **主な機能**:
+  - ペルソナ自動生成
+  - 詳細な属性設定
+  - 画像生成（ポートレート、バナー、日記画像）
+  - 履歴保存
+- **プラン**: 無料（1日3回） / プロ（1日100回）
+
+### ベータ版サービス
+
+#### 5. ドヤインタビューAI (`interview`)
+- **ID**: `interview`
+- **ステータス**: `beta`
+- **カテゴリ**: テキスト生成
+- **主な機能**:
+  - **音声・動画の自動文字起こし**（Google Cloud Speech-to-Text）
+  - 企画提案と質問リスト生成
+  - 構成案の自動作成
+  - 記事ドラフト生成
+  - 校閲・品質チェック
+  - レシピ機能（テンプレート保存）
+  - ファイルアップロード（GCS使用）
+  - チャンクアップロード対応
+- **プラン**: 無料（1日3回） / プロ（1日100回）
+- **特徴**: 音声入力機能を実装した最初のサービス
+
+#### 6. ドヤサイト (`lp-site`)
+- **ID**: `lp-site`
+- **ステータス**: `beta`
+- **カテゴリ**: 画像生成
+- **主な機能**:
+  - セクション単位の画像生成
+  - ドラッグ&ドロップで並び替え
+  - セクションごとの編集・再生成
+  - PC版・SP版対応
+  - ワイヤーフレームから完成まで
+  - ストリーミング生成対応
+- **プラン**: 無料（1日3回） / プロ（1日100回）
 
 ---
 
@@ -805,7 +854,11 @@ SORA_API_KEY=your-sora-api-key
 
 | API | 用途 | 実装状況 |
 |-----|------|----------|
-| **SerpAPI** | Google検索結果取得 | ✅ 実装済み |
+| **SerpAPI** | Google検索結果取得 | ✅ 実装済み（SEOサービス） |
+| **Google Cloud Speech-to-Text** | 音声・動画文字起こし | ✅ 実装済み（インタビューサービス） |
+| **Google Cloud Storage** | ファイルストレージ | ✅ 実装済み（インタビューサービス） |
+| **Google Slides API** | スライド生成・公開 | ✅ 実装済み（スライドサービス） |
+| **OpenAI API** | テキスト・画像生成 | ✅ 実装済み（共通ライブラリ） |
 | **Sora API** | 動画生成 | 🔜 将来実装可能 |
 | **Perplexity API** | AI検索・リサーチ | 🔜 実装可能 |
 | **Tavily API** | リアルタイム検索 | 🔜 実装可能 |
@@ -884,6 +937,221 @@ async function cachedSearch(query: string) {
   return results
 }
 ```
+
+---
+
+## 共通で使える開発項目
+
+新サービス開発時に活用できる共通機能やパターンです。
+
+### 1. プラン管理システム
+
+全てのサービスで統一されたプラン管理システムを使用します。
+
+```typescript
+// UserServiceSubscription を使用
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: {
+    userId_serviceId: {
+      userId: userId!,
+      serviceId: 'myservice',
+    },
+  },
+})
+
+const plan = subscription?.plan || 'FREE'
+const dailyLimit = plan === 'PRO' ? 100 : plan === 'FREE' ? 3 : 0
+```
+
+**詳細**: [implementation-patterns.md](./implementation-patterns.md#プラン管理パターン) を参照
+
+### 2. 使用量チェック
+
+日次リセット機能付きの使用量チェックパターン。
+
+```typescript
+// 日次リセットチェック
+const now = new Date()
+const lastReset = subscription?.lastUsageReset || now
+const isNewDay = now.toDateString() !== lastReset.toDateString()
+
+if (isNewDay) {
+  await prisma.userServiceSubscription.update({
+    where: { id: subscription.id },
+    data: { dailyUsage: 0, lastUsageReset: now },
+  })
+}
+
+// 使用量チェック
+if (subscription.dailyUsage >= dailyLimit) {
+  return NextResponse.json(
+    { error: '使用上限に達しました', limit: dailyLimit },
+    { status: 429 }
+  )
+}
+```
+
+### 3. ゲストユーザー対応
+
+ログインしていないユーザーも利用できるようにするパターン。
+
+```typescript
+const userId = session?.user?.id
+const guestId = request.headers.get('x-guest-id')
+
+if (!userId && !guestId) {
+  return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+}
+
+// ゲストユーザーの場合は制限を厳しく
+const dailyLimit = userId 
+  ? (plan === 'PRO' ? 100 : 3)
+  : 1 // ゲストは1回まで
+```
+
+### 4. エラーハンドリングパターン
+
+統一されたエラーハンドリングパターン。
+
+```typescript
+try {
+  // 処理
+} catch (error: any) {
+  console.error('[SERVICE_NAME] Error:', error)
+  
+  // Prismaエラーの判定
+  if (error && typeof error === 'object' && 'code' in error) {
+    const prismaError = error as { code: string }
+    if (prismaError.code === 'P2021') {
+      return NextResponse.json(
+        { error: 'データベースのテーブルが存在しません' },
+        { status: 503 }
+      )
+    }
+  }
+  
+  return NextResponse.json(
+    { error: '処理に失敗しました', details: error.message },
+    { status: 500 }
+  )
+}
+```
+
+### 5. ストリーミング生成
+
+リアルタイムで生成結果を送信するパターン。
+
+```typescript
+// Server-Sent Events (SSE) を使用
+export async function POST(request: NextRequest) {
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    async start(controller) {
+      // 生成途中の結果を送信
+      for await (const chunk of generateStream()) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: 'chunk', data: chunk })}\n\n`)
+        )
+      }
+      controller.close()
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+    },
+  })
+}
+```
+
+**実装例:**
+- `src/app/api/lp-site/generate-stream/route.ts` - ストリーミング生成実装
+
+### 6. ジョブ進行型処理
+
+複数ステップで完了する処理のパターン（SEO記事生成など）。
+
+```typescript
+// API: POST /api/myservice/jobs/[id]/advance
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+  const job = await prisma.myServiceJob.findUnique({
+    where: { id: params.id },
+  })
+
+  const currentStep = job.currentStep
+  const nextStep = getNextStep(currentStep)
+
+  // 次のステップを実行
+  const result = await executeStep(nextStep, job)
+
+  // ジョブ状態を更新
+  await prisma.myServiceJob.update({
+    where: { id: params.id },
+    data: {
+      currentStep: nextStep,
+      [`${nextStep}Result`]: result,
+    },
+  })
+
+  return NextResponse.json({ status: 'in_progress', currentStep: nextStep })
+}
+```
+
+**実装例:**
+- `src/app/api/seo/jobs/[id]/advance/route.ts` - ジョブ進行実装
+
+### 7. ファイルアップロード
+
+小さいファイルと大きいファイルの両方に対応。
+
+- **小さいファイル（<4.5MB）**: Vercel Blob Storage
+- **大きいファイル（>=4.5MB）**: Google Cloud Storage + チャンクアップロード
+
+**詳細**: [implementation-patterns.md](./implementation-patterns.md#ファイルアップロードパターン) を参照
+
+### 8. 認証・セッション管理
+
+NextAuth.jsを使用した統一された認証システム。
+
+```typescript
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+
+const session = await getServerSession(authOptions)
+const userId = session?.user?.id
+```
+
+### 9. 決済連携（Stripe）
+
+統一されたStripe決済システム。
+
+```typescript
+import { stripe, STRIPE_PRICE_IDS } from '@/lib/stripe'
+import { CheckoutButton } from '@/components/CheckoutButton'
+
+// クライアント側
+<CheckoutButton planId="myservice-pro" billingPeriod="monthly">
+  PROを始める
+</CheckoutButton>
+```
+
+### 10. 通知機能
+
+```typescript
+import { sendPaymentNotification } from '@/lib/notifications'
+
+await sendPaymentNotification({
+  userId,
+  email: user.email,
+  plan: 'PRO',
+  amount: 4980,
+})
+```
+
+**共通ライブラリ:**
+- `src/lib/notifications.ts` - 通知機能
 
 ---
 

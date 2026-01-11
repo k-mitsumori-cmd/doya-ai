@@ -789,18 +789,26 @@ export function FigmaStyleEditor({
                                 <div className="w-full bg-slate-200 rounded-full h-3 mb-4 overflow-hidden">
                                   <motion.div
                                     className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full"
+                                    initial={{ width: '0%' }}
                                     animate={{
-                                      x: ['-100%', '100%'],
+                                      width: sectionGenProgress > 0 ? `${sectionGenProgress}%` : ['0%', '40%', '0%'],
+                                      x: sectionGenProgress > 0 ? 0 : ['-100%', '100%'],
                                     }}
-                                    transition={{
-                                      duration: 1.5,
-                                      repeat: Infinity,
-                                      ease: 'linear',
-                                    }}
-                                    style={{
-                                      width: '40%',
-                                    }}
+                                    transition={
+                                      sectionGenProgress > 0
+                                        ? { duration: 0.3, ease: 'easeOut' }
+                                        : {
+                                            duration: 1.5,
+                                            repeat: Infinity,
+                                            ease: 'linear',
+                                          }
+                                    }
                                   />
+                                  {sectionGenProgress > 0 && (
+                                    <div className="text-center mt-2 text-sm font-black text-teal-700">
+                                      {sectionGenProgress}%
+                                    </div>
+                                  )}
                                 </div>
                               )}
                               <p className="text-sm text-slate-700 leading-relaxed">
