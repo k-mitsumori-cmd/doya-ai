@@ -230,6 +230,11 @@ export async function transcribeAudio(options: TranscribeOptions): Promise<strin
     }
   }
 
+  // 全てのパターンが失敗した場合
+  if (!transcriptionText && lastError) {
+    throw lastError
+  }
+
   if (!transcriptionText || transcriptionText.trim().length === 0) {
     throw new Error('Transcription result is empty')
   }
