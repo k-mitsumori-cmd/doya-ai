@@ -447,14 +447,20 @@ function LpSitePageInner() {
   const handleRegenerateSection = async (sectionId: string, type: 'image_pc' | 'image_sp' | 'both') => {
     if (!result) return
 
-    try {
-      const section = result.sections.find(s => s.section_id === sectionId)
-      if (!section) return
+    // セクションを取得
+    const section = result.sections.find(s => s.section_id === sectionId)
+    if (!section) {
+      toast.error('セクションが見つかりません', { icon: '❌' })
+      return
+    }
 
-      const sectionName = section.headline || section.section_type || 'このセクション'
-      const deviceName = type === 'both' ? 'PC/SP両方' : type === 'image_pc' ? 'PC' : 'SP'
+    const sectionName = section.headline || section.section_type || 'このセクション'
+    const deviceName = type === 'both' ? 'PC/SP両方' : type === 'image_pc' ? 'PC' : 'SP'
+    const toastId = `regenerate-${sectionId}-${type}`
+
+    try {
       toast.loading(`${sectionName} の画像を再生成中... (${deviceName})`, {
-        id: `regenerate-${sectionId}`,
+        id: toastId,
         duration: Infinity,
       })
 
@@ -476,13 +482,13 @@ function LpSitePageInner() {
 
       const data = await response.json()
       
-      // 結果を更新
+      // 結果を更新（現在のresultをベースに更新）
       const updatedImages = result.images.map(img => {
         if (img.section_id === sectionId) {
           return {
             ...img,
-            image_pc: data.result.image_pc || img.image_pc,
-            image_sp: data.result.image_sp || img.image_sp,
+            image_pc: type === 'both' || type === 'image_pc' ? (data.result?.image_pc || img.image_pc) : img.image_pc,
+            image_sp: type === 'both' || type === 'image_sp' ? (data.result?.image_sp || img.image_sp) : img.image_sp,
           }
         }
         return img
@@ -496,8 +502,8 @@ function LpSitePageInner() {
             ...result.images,
             {
               section_id: sectionId,
-              image_pc: data.result.image_pc,
-              image_sp: data.result.image_sp,
+              image_pc: data.result?.image_pc,
+              image_sp: data.result?.image_sp,
             },
           ]
 
@@ -507,16 +513,18 @@ function LpSitePageInner() {
       })
 
       toast.success(`${sectionName} の画像再生成が完了しました (${deviceName})`, {
-        id: `regenerate-${sectionId}`,
+        id: toastId,
         duration: 4000,
         icon: '✅',
       })
     } catch (error: any) {
-      toast.error(`${section.headline || 'セクション'} の再生成に失敗しました: ${error.message || 'エラーが発生しました'}`, {
-        id: `regenerate-${sectionId}`,
+      console.error(`[LP-SITE] 再生成エラー (${sectionId}):`, error)
+      toast.error(`${sectionName} の再生成に失敗しました: ${error.message || 'エラーが発生しました'}`, {
+        id: toastId,
         duration: 5000,
         icon: '❌',
       })
+      throw error // エラーを再スローして、呼び出し側で状態リセットを確実に実行
     }
   }
 

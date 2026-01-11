@@ -295,7 +295,7 @@ export function FigmaStyleEditor({
   generatingSections = new Set(),
 }: FigmaStyleEditorProps) {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
-  const [regeneratingSectionId, setRegeneratingSectionId] = useState<string | null>(null)
+  const [regeneratingSections, setRegeneratingSections] = useState<Set<string>>(new Set())
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set(result.sections.map(s => s.section_id)))
   const [zoom, setZoom] = useState(100)
 
@@ -485,7 +485,7 @@ export function FigmaStyleEditor({
                       const image = result.images.find(img => img.section_id === section.section_id)
                       const imageData = image?.image_sp
                       const isSelected = selectedSectionId === section.section_id
-                      const isRegenerating = regeneratingSectionId === section.section_id || generatingSections.has(section.section_id) || (isGeneratingImages && !imageData)
+                      const isRegenerating = regeneratingSections.has(section.section_id) || generatingSections.has(section.section_id) || (isGeneratingImages && !imageData)
                       const sectionGenProgress = sectionProgress[section.section_id] ?? 0
                       
                       return (
@@ -675,7 +675,7 @@ export function FigmaStyleEditor({
                       const image = result.images.find(img => img.section_id === section.section_id)
                       const imageData = image?.image_pc
                       const isSelected = selectedSectionId === section.section_id
-                      const isRegenerating = regeneratingSectionId === section.section_id || generatingSections.has(section.section_id) || (isGeneratingImages && !imageData)
+                      const isRegenerating = regeneratingSections.has(section.section_id) || generatingSections.has(section.section_id) || (isGeneratingImages && !imageData)
                       const sectionGenProgress = sectionProgress[section.section_id] ?? 0
                   
                   return (

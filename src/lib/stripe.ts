@@ -90,6 +90,19 @@ export const STRIPE_PRICE_IDS = {
     monthly: process.env.STRIPE_PRICE_BUNDLE_MONTHLY || 'price_bundle_monthly',
     yearly: process.env.STRIPE_PRICE_BUNDLE_YEARLY || 'price_bundle_yearly',
   },
+  // ドヤインタビューAI
+  interview: {
+    // PRO: 月額¥4,980
+    pro: {
+      monthly: process.env.STRIPE_PRICE_INTERVIEW_PRO_MONTHLY || 'price_interview_pro_monthly',
+      yearly: process.env.STRIPE_PRICE_INTERVIEW_PRO_YEARLY || 'price_interview_pro_yearly',
+    },
+    // ENTERPRISE: 月額¥49,800
+    enterprise: {
+      monthly: process.env.STRIPE_PRICE_INTERVIEW_ENTERPRISE_MONTHLY || 'price_interview_enterprise_monthly',
+      yearly: process.env.STRIPE_PRICE_INTERVIEW_ENTERPRISE_YEARLY || 'price_interview_enterprise_yearly',
+    },
+  },
 }
 
 // ========================================
@@ -103,8 +116,10 @@ export type PlanId =
   | 'banner-enterprise'
   | 'persona-pro'
   | 'persona-enterprise'
+  | 'interview-pro'
+  | 'interview-enterprise'
   | 'bundle'
-export type ServiceId = 'seo' | 'banner' | 'persona' | 'bundle'
+export type ServiceId = 'seo' | 'banner' | 'persona' | 'interview' | 'bundle'
 
 export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
   return (planId.split('-')[0] as ServiceId) || 'bundle'
@@ -120,6 +135,8 @@ export function getPlanIdFromStripePriceId(priceId: string | null | undefined): 
     ['banner-enterprise', STRIPE_PRICE_IDS.banner.enterprise],
     ['persona-pro', STRIPE_PRICE_IDS.persona.pro],
     ['persona-enterprise', STRIPE_PRICE_IDS.persona.enterprise],
+    ['interview-pro', STRIPE_PRICE_IDS.interview.pro],
+    ['interview-enterprise', STRIPE_PRICE_IDS.interview.enterprise],
     ['bundle', STRIPE_PRICE_IDS.bundle],
   ]
   for (const [planId, prices] of entries) {

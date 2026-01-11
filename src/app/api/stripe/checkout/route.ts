@@ -72,13 +72,21 @@ export async function POST(request: NextRequest) {
           ? '/banner?payment=cancelled'
           : service === 'persona'
             ? '/persona/pricing?payment=cancelled'
-            : '/pricing?payment=cancelled'
+            : service === 'interview'
+              ? '/interview/plan?payment=cancelled'
+              : '/pricing?payment=cancelled'
 
     // 成功URL：専用サンクスページへリダイレクト
     // NOTE: {CHECKOUT_SESSION_ID} はStripeが自動で実IDに置換する
     const planLabel = planId.includes('enterprise') ? 'enterprise' : 'pro'
-    const thankyouPath = planLabel === 'enterprise' ? '/thankyou-enterprise' : '/thankyou-pro'
-    const successUrl = `${baseUrl}${thankyouPath}?session_id={CHECKOUT_SESSION_ID}&service=${service}`
+    const thankyouPath = service === 'interview'
+      ? `/interview/thankyou?session_id={CHECKOUT_SESSION_ID}&plan=${planLabel}`
+      : planLabel === 'enterprise'
+        ? '/thankyou-enterprise'
+        : '/thankyou-pro'
+    const successUrl = service === 'interview'
+      ? `${baseUrl}${thankyouPath}`
+      : `${baseUrl}${thankyouPath}?session_id={CHECKOUT_SESSION_ID}&service=${service}`
     const cancelUrl = `${baseUrl}${cancelPath}`
 
     // Checkout Session作成
@@ -139,6 +147,9 @@ function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string
     // ドヤペルソナAI
     'persona-pro': STRIPE_PRICE_IDS.persona.pro,
     'persona-enterprise': STRIPE_PRICE_IDS.persona.enterprise,
+    // ドヤインタビューAI
+    'interview-pro': STRIPE_PRICE_IDS.interview.pro,
+    'interview-enterprise': STRIPE_PRICE_IDS.interview.enterprise,
     // セットプラン
     'bundle': STRIPE_PRICE_IDS.bundle,
   }
