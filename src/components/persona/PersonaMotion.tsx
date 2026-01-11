@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { ChevronRight, ScanSearch } from 'lucide-react'
+import { ChevronRight, ScanSearch, ExternalLink, CheckCircle2 } from 'lucide-react'
 
 export type MotionMode = 'party' | 'minimal'
 export type OverlayMood = 'idle' | 'search' | 'think' | 'happy'
@@ -257,9 +257,27 @@ export function PartyLoadingOverlay({
                         </div>
                       )}
                       {allowTabSwitch && (
-                        <div className="text-white/50 text-[10px] font-bold mt-1.5">
-                          💡 別タブに切り替えても処理は続行されます
-                        </div>
+                        <motion.div
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.5, duration: 0.3 }}
+                          className="mt-3 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/90 to-teal-500/90 border-2 border-emerald-400/80 backdrop-blur-sm shadow-lg shadow-emerald-500/20"
+                        >
+                          <motion.div
+                            animate={{ scale: [1, 1.1, 1] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                            className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                          </motion.div>
+                          <div className="flex items-center gap-2">
+                            <ExternalLink className="w-4 h-4 text-white" />
+                            <div className="text-white font-black text-sm leading-tight">
+                              別タブに切り替えても<br className="sm:hidden" />
+                              <span className="text-emerald-100">処理は続行されます</span>
+                            </div>
+                          </div>
+                        </motion.div>
                       )}
                     </div>
                   </div>
