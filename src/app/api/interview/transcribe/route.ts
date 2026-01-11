@@ -237,24 +237,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // リクエスト設定 - シンプルで確実に動作する設定
+    // リクエスト設定 - 最小限の設定で動作を優先
     // GCS URIを使用する場合、encodingは設定しない（APIが自動検出）
     const isVideoFile = material.type === 'video' || material.mimeType?.includes('video')
     const isLargeFile = (material.fileSize || 0) > 10 * 1024 * 1024 // 10MB以上
 
-    // 最小限の設定で動作を優先
+    // 最小限の設定: languageCodeのみ
+    // MP4ファイルの場合、modelを設定すると"bad encoding"エラーが発生する可能性があるため、設定しない
     const requestConfig: any = {
       languageCode: 'ja-JP',
     }
 
-    // ビデオファイルの場合のみ model: "video" を追加
-    // それ以外のパラメータは最小限に抑える
-    if (isVideoFile) {
-      requestConfig.model = 'video'
-      console.log('[INTERVIEW] Video file: using model "video"')
-    } else {
-      // 音声ファイルの場合も最小限の設定
+    // 音声ファイルの場合のみ model を設定
+    // MP4ビデオファイルの場合は model を設定しない（APIが自動検出）
+    if (!isVideoFile) {
       requestConfig.model = 'latest_long'
+      console.log('[INTERVIEW] Audio file: using model "latest_long"')
+    } else {
+      console.log('[INTERVIEW] Video file: using minimal config (languageCode only, no model)')
     }
 
     // ========== ステップ4: APIリクエストの準備 ==========
