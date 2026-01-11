@@ -229,7 +229,8 @@ function LpSitePageInner() {
               try {
                 // セクション生成開始
                 setSectionProgress(prev => ({ ...prev, [sectionId]: 0 }))
-                setStageText(`${section.headline || section.section_id} の画像を生成中... (${index + 1}/${totalSections})`)
+                const sectionName = section.headline || section.section_type || `セクション ${index + 1}`
+                setStageText(`${sectionName} の画像を生成中... (${index + 1}/${totalSections})`)
                 
                 // セクション画像生成APIを呼び出し
                 const sectionResponse = await fetch('/api/lp-site/regenerate-section', {
@@ -245,7 +246,12 @@ function LpSitePageInner() {
                 if (!sectionResponse.ok) {
                   const errorData = await sectionResponse.json().catch(() => ({}))
                   console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, errorData)
-                  throw new Error(errorData.error || errorData.details || `セクション ${sectionId} の画像生成に失敗しました`)
+                  const errorMsg = errorData.error || errorData.details || '画像生成に失敗しました'
+                  toast.error(`${sectionName} の画像生成に失敗しました: ${errorMsg}`, {
+                    duration: 5000,
+                    icon: '❌',
+                  })
+                  throw new Error(errorMsg)
                 }
                 
                 const sectionData = await sectionResponse.json()
@@ -263,6 +269,14 @@ function LpSitePageInner() {
                 updateProgress(overallProgress)
                 setImageProgress(Math.round((completedSections / totalSections) * 100))
                 setSectionProgress(prev => ({ ...prev, [sectionId]: 100 }))
+                
+                // 個別セクション完了の通知（最初と最後のセクションのみ）
+                if (completedSections === 1 || completedSections === totalSections) {
+                  toast.success(`${sectionName} の画像生成が完了しました (${completedSections}/${totalSections})`, {
+                    duration: 3000,
+                    icon: '✅',
+                  })
+                }
                 
                 // 結果をリアルタイムで更新
                 const currentImages = [...generatedImages]
@@ -300,7 +314,7 @@ function LpSitePageInner() {
                 console.log(`[LP-SITE] セクション画像生成完了: ${sectionId} (${completedSections}/${totalSections})`)
               } catch (error: any) {
                 console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, error)
-                // エラーが発生しても続行
+                // エラーが発生しても続行（部分的な成功を許容）
                 generatedImages.push({
                   section_id: sectionId,
                   image_pc: undefined,
@@ -311,6 +325,11 @@ function LpSitePageInner() {
                   next.delete(sectionId)
                   return next
                 })
+                // 進捗は更新（エラーでもカウント）
+                completedSections++
+                const overallProgress = 65 + Math.round((completedSections / totalSections) * 30)
+                updateProgress(overallProgress)
+                setImageProgress(Math.round((completedSections / totalSections) * 100))
               }
             }
             
@@ -350,7 +369,20 @@ function LpSitePageInner() {
             
             setResult(finalResult) // 結果を更新（画像を追加）
             setIsGeneratingImages(false)
-            toast.success('すべての画像が生成されました！')
+            
+            // 成功した画像数を確認
+            const successCount = generatedImages.filter(img => img.image_pc || img.image_sp).length
+            if (successCount === totalSections) {
+              toast.success(`すべての画像が生成されました！ (${successCount}/${totalSections})`, {
+                duration: 4000,
+                icon: '🎉',
+              })
+            } else {
+              toast.success(`${successCount}/${totalSections} セクションの画像生成が完了しました`, {
+                duration: 4000,
+                icon: '✅',
+              })
+            }
           } catch (error: any) {
             console.error('[LP-SITE] 画像生成エラー:', error)
             console.error('[LP-SITE] エラー詳細:', error.message, error.stack)
@@ -419,7 +451,12 @@ function LpSitePageInner() {
       const section = result.sections.find(s => s.section_id === sectionId)
       if (!section) return
 
-      toast.loading('再生成中...', { id: `regenerate-${sectionId}` })
+      const sectionName = section.headline || section.section_type || 'このセクション'
+      const deviceName = type === 'both' ? 'PC/SP両方' : type === 'image_pc' ? 'PC' : 'SP'
+      toast.loading(`${sectionName} の画像を再生成中... (${deviceName})`, {
+        id: `regenerate-${sectionId}`,
+        duration: Infinity,
+      })
 
       const response = await fetch('/api/lp-site/regenerate-section', {
         method: 'POST',
@@ -432,7 +469,9 @@ function LpSitePageInner() {
       })
 
       if (!response.ok) {
-        throw new Error('再生成に失敗しました')
+        const errorData = await response.json().catch(() => ({}))
+        const errorMsg = errorData.error || errorData.details || '再生成に失敗しました'
+        throw new Error(errorMsg)
       }
 
       const data = await response.json()
@@ -467,9 +506,17 @@ function LpSitePageInner() {
         images: finalImages,
       })
 
-      toast.success('再生成が完了しました', { id: `regenerate-${sectionId}` })
+      toast.success(`${sectionName} の画像再生成が完了しました (${deviceName})`, {
+        id: `regenerate-${sectionId}`,
+        duration: 4000,
+        icon: '✅',
+      })
     } catch (error: any) {
-      toast.error(error.message || '再生成に失敗しました', { id: `regenerate-${sectionId}` })
+      toast.error(`${section.headline || 'セクション'} の再生成に失敗しました: ${error.message || 'エラーが発生しました'}`, {
+        id: `regenerate-${sectionId}`,
+        duration: 5000,
+        icon: '❌',
+      })
     }
   }
 

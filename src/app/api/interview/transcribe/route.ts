@@ -231,11 +231,65 @@ export async function POST(request: NextRequest) {
     }
     console.log('[INTERVIEW] ================================================')
 
-    // ファイルサイズチェック（10GB制限）
-    const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024 // 10GB
-    if (material.fileSize && material.fileSize > MAX_FILE_SIZE) {
+    // プラン別のファイルサイズ制限を取得
+    let plan: InterviewPlan = 'GUEST'
+    let guestFirstAccessAt: Date | null = null
+
+    if (userId) {
+      // ログインユーザーの場合、サービス別サブスクリプションを取得
+      const subscription = await prisma.userServiceSubscription.findUnique({
+        where: {
+          userId_serviceId: {
+            userId,
+            serviceId: 'interview',
+          },
+        },
+      })
+
+      plan = await getUserPlan(userId, null, subscription?.plan || null)
+    } else if (guestId) {
+      // ゲストユーザーの場合、ゲストセッションを取得
+      const guestSession = await prisma.guestSession.findUnique({
+        where: { guestId },
+      })
+
+      if (guestSession) {
+        guestFirstAccessAt = guestSession.firstAccessAt
+      }
+      plan = 'GUEST'
+    }
+
+    // 有効なプランを取得（1時間使い放題機能を考慮）
+    const effectivePlan = getEffectivePlan(plan, guestFirstAccessAt)
+
+    // ファイルタイプを判定（後で使用するため、ここで定義）
+    const isVideoFileCheck = material.type === 'video' || material.mimeType?.includes('video')
+    const maxFileSize = getMaxFileSize(effectivePlan, isVideoFileCheck)
+
+    // 動画ファイルが許可されていないプランの場合
+    if (isVideoFileCheck && maxFileSize === 0) {
       return NextResponse.json(
-        { error: 'ファイルサイズが大きすぎます（最大10GB）' },
+        {
+          error: '動画ファイルはアップロードできません',
+          details: `現在のプラン（${effectivePlan === 'GUEST' ? 'ゲスト' : effectivePlan === 'FREE' ? '無料' : effectivePlan}）では動画ファイルのアップロードはできません。PROプランまたはEnterpriseプランにアップグレードしてください。`,
+          errorCode: 'VIDEO_NOT_ALLOWED',
+        },
+        { status: 403 }
+      )
+    }
+
+    // ファイルサイズチェック（プラン別の制限）
+    if (material.fileSize && !isFileSizeWithinLimit(material.fileSize, effectivePlan, isVideoFileCheck)) {
+      const maxSizeMB = (maxFileSize / 1024 / 1024).toFixed(0)
+      const maxSizeGB = (maxFileSize / 1024 / 1024 / 1024).toFixed(2)
+      const planName = effectivePlan === 'GUEST' ? 'ゲスト' : effectivePlan === 'FREE' ? '無料' : effectivePlan
+      
+      return NextResponse.json(
+        {
+          error: 'ファイルサイズが大きすぎます',
+          details: `現在のプラン（${planName}）の最大ファイルサイズ: ${maxSizeGB}GB（${maxSizeMB}MB）を超えています。より大きなファイルをアップロードするには、プランをアップグレードしてください。`,
+          errorCode: 'FILE_SIZE_EXCEEDED',
+        },
         { status: 413 }
       )
     }
