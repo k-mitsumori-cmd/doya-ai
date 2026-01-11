@@ -59,6 +59,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // MP4ビデオファイルの直接処理は現在サポートされていません
+    // 公式ドキュメントによると、MP4ファイルから音声を抽出してFLAC形式に変換する必要があります
+    // 参考: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja
+    const isMP4Video = (material.type === 'video' || material.mimeType?.includes('video')) &&
+                       (material.fileName?.toLowerCase().endsWith('.mp4') || material.mimeType?.includes('mp4'))
+    
+    if (isMP4Video) {
+      console.log('[INTERVIEW] MP4 video file detected - direct processing not supported')
+      return NextResponse.json(
+        {
+          error: 'MP4ビデオファイルは現在サポートされていません',
+          details: 'MP4ファイルから音声を抽出してFLAC形式に変換する必要があります。\n\n対処方法:\n1. MP4ファイルから音声を抽出してください（FFmpegなどのツールを使用）\n2. 抽出した音声ファイル（MP3、WAV、FLACなど）をアップロードしてください\n\n参考: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja',
+        },
+        { status: 400 }
+      )
+    }
+
 
     // Google Cloud Speech-to-Text認証情報の取得
     const credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS
