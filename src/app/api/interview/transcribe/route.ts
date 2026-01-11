@@ -359,8 +359,20 @@ export async function POST(request: NextRequest) {
             }
           }
           
-          // 最後のパターンでも失敗した場合、エラーをスロー
+          // 最後のパターンでも失敗した場合、MP4ファイルの場合は特別なエラーメッセージを返す
           if (patternIndex === configPatterns.length - 1) {
+            if (isMP4File) {
+              // MP4ファイルの場合、すべてのパターンで失敗した場合は特別なエラーメッセージを返す
+              console.error('[INTERVIEW] All config patterns failed for MP4 file')
+              return NextResponse.json(
+                {
+                  error: 'MP4ビデオファイルは直接処理できません',
+                  details: 'Google Cloud Speech-to-Text APIはMP4ファイルを直接処理できません。\n\n対処方法:\n1. MP4ファイルから音声を抽出してください（FFmpegなどのツールを使用）\n2. 抽出した音声ファイル（MP3、WAV、FLACなど）をアップロードしてください\n\n参考: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja',
+                  errorCode: 'MP4_NOT_SUPPORTED',
+                },
+                { status: 400 }
+              )
+            }
             throw apiError
           }
         }
