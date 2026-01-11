@@ -238,9 +238,14 @@ export async function POST(request: NextRequest) {
     }
 
     // リクエスト設定
-    // 重要: GCS URIを使用する場合、encodingは設定しない（APIが自動検出）
-    // 公式ドキュメント: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja
-    // 動画ファイルの場合は model: "video" を設定する必要がある
+    // 公式ドキュメント参照:
+    // - 概要: https://docs.cloud.google.com/speech-to-text/docs/overview?hl=ja
+    // - 動画ファイル: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja
+    // 
+    // 重要ポイント:
+    // 1. GCS URIを使用する場合、encodingは設定しない（APIが自動検出）
+    // 2. 動画ファイルの場合は model: "video" を設定する必要がある
+    // 3. 非同期認識（longRunningRecognize）は長さ480分までの音声データに使用可能
     const isVideoFile = material.type === 'video' || material.mimeType?.includes('video')
     const isLargeFile = (material.fileSize || 0) > 10 * 1024 * 1024 // 10MB以上
 
@@ -249,9 +254,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ビデオファイルの場合、公式ドキュメントに従って model: "video" を設定
+    // 公式ドキュメント: 動画ファイルの音声を文字に変換するチュートリアル
     if (isVideoFile) {
       requestConfig.model = 'video'
       console.log('[INTERVIEW] Video file detected: using model "video" as per official documentation')
+      console.log('[INTERVIEW] Reference: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja')
     } else {
       // 音声ファイルの場合、追加のパラメータを設定
       requestConfig.alternativeLanguageCodes = ['en-US']
