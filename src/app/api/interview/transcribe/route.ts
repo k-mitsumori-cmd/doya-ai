@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
       plan = await getUserPlan(userId, null, subscription?.plan || null)
     } else if (guestId) {
       // ゲストユーザーの場合、ゲストセッションを取得
-      const guestSession = await prisma.guestSession.findUnique({
+      const guestSession = await (prisma as any).guestSession.findUnique({
         where: { guestId },
       })
 

@@ -33,13 +33,13 @@ export async function GET(request: NextRequest) {
       plan = await getUserPlan(userId, null, subscription?.plan || null)
     } else if (guestId) {
       // ゲストユーザーの場合、ゲストセッションを取得または作成
-      let guestSession = await prisma.guestSession.findUnique({
+      let guestSession = await (prisma as any).guestSession.findUnique({
         where: { guestId },
       })
 
       if (!guestSession) {
         // 初回アクセスの場合、ゲストセッションを作成
-        guestSession = await prisma.guestSession.create({
+        guestSession = await (prisma as any).guestSession.create({
           data: {
             guestId,
             firstAccessAt: new Date(),
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         })
       } else {
         // 既存セッションの場合、最終アクセス時刻を更新
-        guestSession = await prisma.guestSession.update({
+        guestSession = await (prisma as any).guestSession.update({
           where: { guestId },
           data: { lastAccessAt: new Date() },
         })

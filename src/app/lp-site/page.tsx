@@ -104,11 +104,11 @@ function LpSitePageInner() {
 
   const handleGenerate = async () => {
     if (inputType === 'url' && !url) {
-      toast.error('URLを入力してください')
+      toast.error('URLを入力してください', { icon: '⚠️' })
       return
     }
     if (inputType === 'form' && !formData.product_name) {
-      toast.error('商品名を入力してください')
+      toast.error('商品名を入力してください', { icon: '⚠️' })
       return
     }
 
