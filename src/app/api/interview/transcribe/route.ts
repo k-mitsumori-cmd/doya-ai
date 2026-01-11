@@ -272,41 +272,15 @@ export async function POST(request: NextRequest) {
       console.log('[INTERVIEW] Audio file: using model "latest_long"')
     }
 
-    // 最初の設定パターンを使用
-    let requestConfig = configPatterns[0]
-
     // ========== ステップ4: APIリクエストの準備 ==========
     console.log('[INTERVIEW] ========== STEP 4: Preparing API Request ==========')
-    const speechRequest = {
-      config: requestConfig,
-      audio: {
-        uri: gcsUri,
-      },
-    }
-    
-    console.log('[INTERVIEW] Request Configuration:')
-    console.log('[INTERVIEW]   Language Code:', requestConfig.languageCode)
-    console.log('[INTERVIEW]   Alternative Language Codes:', requestConfig.alternativeLanguageCodes || 'N/A')
-    console.log('[INTERVIEW]   Enable Automatic Punctuation:', requestConfig.enableAutomaticPunctuation || 'N/A')
-    console.log('[INTERVIEW]   Model:', requestConfig.model || 'N/A')
-    console.log('[INTERVIEW]   Encoding:', requestConfig.encoding || 'N/A (auto-detect)')
-    console.log('[INTERVIEW]   Sample Rate Hertz:', requestConfig.sampleRateHertz || 'N/A (auto-detect)')
-    
+    console.log(`[INTERVIEW] Config patterns prepared: ${configPatterns.length} pattern(s)`)
     console.log('[INTERVIEW] Request Audio:')
     console.log('[INTERVIEW]   URI:', gcsUri)
     console.log('[INTERVIEW]   Type:', isVideoFile ? 'video' : 'audio')
     console.log('[INTERVIEW]   File Name:', material.fileName)
     console.log('[INTERVIEW]   File Size:', `${((material.fileSize || 0) / 1024 / 1024).toFixed(2)} MB`)
     console.log('[INTERVIEW]   MIME Type:', material.mimeType || 'N/A')
-    
-    // リクエストオブジェクトの完全な構造をログに出力
-    const requestForLog = {
-      config: requestConfig,
-      audio: {
-        uri: gcsUri,
-      },
-    }
-    console.log('[INTERVIEW] Full Request Object:', JSON.stringify(requestForLog, null, 2))
     console.log('[INTERVIEW] ================================================')
 
     // ========== ステップ5: Google Cloud Speech-to-Text API呼び出し ==========
