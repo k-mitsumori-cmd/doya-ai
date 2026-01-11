@@ -61,7 +61,9 @@ export async function transcribeAudio(options: TranscribeOptions): Promise<strin
   // ファイルサイズチェック（10GB制限）
   const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024 // 10GB
   if (fileSize > MAX_FILE_SIZE) {
-    throw new Error(`File size exceeds limit (max ${MAX_FILE_SIZE / 1024 / 1024 / 1024}GB)`)
+    const maxSizeGB = (MAX_FILE_SIZE / 1024 / 1024 / 1024).toFixed(2)
+    const fileSizeGB = (fileSize / 1024 / 1024 / 1024).toFixed(2)
+    throw new Error(`File size exceeds limit (max ${maxSizeGB}GB, file size: ${fileSizeGB}GB)`)
   }
 
   // リクエスト設定の準備
