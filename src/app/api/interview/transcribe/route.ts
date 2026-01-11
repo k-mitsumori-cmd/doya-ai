@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+
     // Google Cloud Speech-to-Text認証情報の取得
     const credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS
     if (!credsEnvVar) {
