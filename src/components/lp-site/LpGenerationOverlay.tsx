@@ -186,12 +186,48 @@ export function LpGenerationOverlay({
               transition={{ duration: 0.3, ease: 'easeOut' }}
               className="w-full max-w-4xl rounded-3xl border-2 border-white/20 bg-white/98 backdrop-blur-xl shadow-2xl overflow-hidden relative"
             >
-              {/* グローエフェクト */}
+              {/* グローエフェクト - 派手なアニメーション */}
               <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-teal-500/10 via-cyan-500/10 to-blue-500/10 pointer-events-none rounded-3xl"
-                animate={{ opacity: [0.3, 0.6, 0.3] }}
-                transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-              />
+                className="absolute inset-0 pointer-events-none rounded-3xl overflow-hidden"
+              >
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-teal-500/20 via-cyan-500/20 to-blue-500/20"
+                  animate={{ opacity: [0.3, 0.8, 0.3] }}
+                  transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+                />
+                {/* 回転する光の帯 */}
+                <motion.div
+                  className="absolute inset-0"
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 20, ease: 'linear' }}
+                >
+                  <div className="absolute top-0 left-1/2 w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                </motion.div>
+                {/* パルスする光の点 */}
+                {[0, 1, 2, 3].map((i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute rounded-full"
+                    style={{
+                      width: '100px',
+                      height: '100px',
+                      left: `${20 + i * 25}%`,
+                      top: `${30 + (i % 2) * 40}%`,
+                      background: `radial-gradient(circle, rgba(20, 184, 166, ${0.3 + i * 0.1}) 0%, transparent 70%)`,
+                    }}
+                    animate={{
+                      scale: [1, 1.5, 1],
+                      opacity: [0.3, 0.8, 0.3],
+                    }}
+                    transition={{
+                      duration: 2 + i * 0.5,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                      delay: i * 0.3,
+                    }}
+                  />
+                ))}
+              </motion.div>
               <div className="relative z-10">
               {/* ヘッダー */}
               <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-cyan-50">
@@ -208,6 +244,23 @@ export function LpGenerationOverlay({
                         animate={{ x: ['-100%', '100%'] }}
                         transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
                       />
+                      {/* パルスするリング */}
+                      {[0, 1, 2].map((i) => (
+                        <motion.div
+                          key={i}
+                          className="absolute inset-0 rounded-2xl border-2 border-white/30"
+                          animate={{
+                            scale: [1, 1.5, 1],
+                            opacity: [0.5, 0, 0.5],
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: 'easeOut',
+                            delay: i * 0.7,
+                          }}
+                        />
+                      ))}
                       <Globe className="w-7 h-7 text-white relative z-10" />
                     </motion.div>
                     <div className="w-11 h-11 rounded-2xl bg-white/80 border border-teal-200 flex items-center justify-center">

@@ -88,7 +88,27 @@ export const authOptions: NextAuthOptions = {
             const byService = Object.fromEntries(dbUser.serviceSubscriptions.map((s) => [s.serviceId, s.plan]))
             ;(session.user as any).kantanPlan = byService['kantan'] || undefined
             // interview プランをセッションに載せる
-            ;(session.user as any).interviewPlan = byService['interview'] || unified
+            // プラン解決ロジック：
+            // 1. 統一プランがENTERPRISEの場合、ENTERPRISEを優先（UserServiceSubscriptionのプランより優先）
+            // 2. 統一プランがPROの場合、UserServiceSubscriptionのプランと統一プランの最大値を取る
+            // 3. それ以外の場合、UserServiceSubscriptionのプランがあればそれを使用、なければ統一プランを使用
+            const interviewSubscriptionPlan = byService['interview']
+            let interviewPlanToUse: string | undefined = undefined
+            if (unified === 'ENTERPRISE') {
+              // 統一プランがENTERPRISEの場合、常にENTERPRISEを優先
+              interviewPlanToUse = 'ENTERPRISE'
+            } else if (unified === 'PRO') {
+              // 統一プランがPROの場合、UserServiceSubscriptionのプランと統一プランの最大値を取る
+              if (interviewSubscriptionPlan && interviewSubscriptionPlan.toUpperCase() === 'ENTERPRISE') {
+                interviewPlanToUse = 'ENTERPRISE'
+              } else {
+                interviewPlanToUse = 'PRO'
+              }
+            } else {
+              // それ以外の場合、UserServiceSubscriptionのプランがあればそれを使用、なければ統一プランを使用
+              interviewPlanToUse = interviewSubscriptionPlan || unified
+            }
+            ;(session.user as any).interviewPlan = interviewPlanToUse
             // 初回ログイン時刻（1時間生成し放題の判定用）
             ;(session.user as any).firstLoginAt = dbUser.firstLoginAt?.toISOString() || null
           }

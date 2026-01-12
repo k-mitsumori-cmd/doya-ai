@@ -531,7 +531,15 @@ export function FigmaStyleEditor({
                   <div className="h-8 bg-slate-900 rounded-t-[2rem] flex items-center justify-center">
                     <div className="w-32 h-6 bg-slate-900 rounded-full"></div>
                   </div>
-                  <div className="overflow-y-auto" style={{ maxHeight: '896px' }}>
+                  {/* スワイプ可能なLPプレビュー */}
+                  <div 
+                    className="overflow-y-auto snap-y snap-mandatory" 
+                    style={{ 
+                      maxHeight: '896px',
+                      scrollSnapType: 'y mandatory',
+                      WebkitOverflowScrolling: 'touch',
+                    }}
+                  >
                     {visibleSectionsList.map((section, index) => {
                       const image = result.images.find(img => img.section_id === section.section_id)
                       const imageData = image?.image_sp
@@ -542,12 +550,16 @@ export function FigmaStyleEditor({
                       return (
                         <div
                           key={section.section_id}
-                          className={`relative cursor-pointer transition-all border-b border-slate-200 ${
+                          className={`relative cursor-pointer transition-all border-b border-slate-200 snap-start snap-always min-h-[896px] flex flex-col ${
                             isSelected
                               ? 'ring-4 ring-blue-500 ring-offset-2'
                               : 'hover:opacity-90'
                           }`}
                           onClick={() => setSelectedSectionId(section.section_id)}
+                          style={{
+                            scrollSnapAlign: 'start',
+                            scrollSnapStop: 'always',
+                          }}
                         >
                       {imageData ? (
                         <div className="relative group">

@@ -8,6 +8,7 @@ import { Sparkles, Download, RefreshCw, Monitor, Smartphone, Loader2, Search, La
 import toast from 'react-hot-toast'
 import { LpGenerationOverlay } from '@/components/lp-site/LpGenerationOverlay'
 import { FigmaStyleEditor } from '@/components/lp-site/FigmaStyleEditor'
+import { CompletionModal } from '@/components/lp-site/CompletionModal'
 
 function LpSitePageInner() {
   const [inputType, setInputType] = useState<'url' | 'form'>('url')
@@ -42,6 +43,7 @@ function LpSitePageInner() {
   const [previewId, setPreviewId] = useState<string | null>(null)
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
 
   // 進捗を安全に更新（後戻りしない）
   const updateProgress = (newProgress: number) => {
@@ -199,6 +201,7 @@ function LpSitePageInner() {
           wireframes,
           images: [],
           structure_json: JSON.stringify({ product_info: productInfo, sections, wireframes }, null, 2),
+          competitor_research: competitorResearch, // 競合調査データを含める
         }
         setPartialResult(wireframeResult)
         setResult(wireframeResult)
@@ -407,10 +410,10 @@ function LpSitePageInner() {
             // 成功した画像数を確認
             const successCount = generatedImages.filter(img => img.image_pc || img.image_sp).length
             if (successCount === totalSections) {
-              toast.success(`すべての画像が生成されました！ (${successCount}/${totalSections})`, {
-                duration: 4000,
-                icon: '🎉',
-              })
+              // 完了モーダルを表示
+              setTimeout(() => {
+                setShowCompletionModal(true)
+              }, 500)
             } else {
               toast.success(`${successCount}/${totalSections} セクションの画像生成が完了しました`, {
                 duration: 4000,
@@ -621,6 +624,13 @@ function LpSitePageInner() {
           sections={partialResult?.sections}
           currentStep={currentStep}
         />
+        {result && (
+          <CompletionModal
+            open={showCompletionModal}
+            onClose={() => setShowCompletionModal(false)}
+            result={result}
+          />
+        )}
         <FigmaStyleEditor
           result={result}
           selectedDevice={selectedDevice}
