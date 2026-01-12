@@ -9,6 +9,7 @@ import { extractProductInfoFromUrl, structureProductInfo } from '@/lib/lp-site/p
 import { generateLpStructure } from '@/lib/lp-site/structure-generation'
 import { generateWireframes } from '@/lib/lp-site/wireframe-generation'
 import { generateSectionImages } from '@/lib/lp-site/image-generation'
+import { researchCompetitors } from '@/lib/lp-site/competitor-research'
 import { LpGenerationRequest, ProductInfo } from '@/lib/lp-site/types'
 
 export const maxDuration = 300 // 5分
@@ -41,10 +42,30 @@ export async function POST(request: NextRequest) {
         throw new Error('無効なリクエストです')
       }
 
+      // 競合調査を並行実行（非同期で実行し、結果は後で取得可能にする）
+      const competitorResearch = researchCompetitors(productInfo).catch((error) => {
+        console.error('[LP-SITE] 競合調査エラー:', error)
+        return { competitors: [], summary: '競合調査を完了できませんでした' }
+      })
+
       return NextResponse.json({
         success: true,
         step: 'product-understanding',
         product_info: productInfo,
+        competitor_research: await competitorResearch,
+      })
+    }
+
+    // Step 1.5: 競合調査フェーズ（独立して実行可能）
+    if (step === 'competitor-research') {
+      if (!product_info) {
+        return NextResponse.json({ error: 'product_infoが必要です' }, { status: 400 })
+      }
+      const competitorResearch = await researchCompetitors(product_info as ProductInfo)
+      return NextResponse.json({
+        success: true,
+        step: 'competitor-research',
+        competitor_research: competitorResearch,
       })
     }
 

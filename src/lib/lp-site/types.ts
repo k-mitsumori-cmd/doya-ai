@@ -66,6 +66,18 @@ export interface LpGenerationResult {
   structure_json: string
   preview_id?: string // プレビュー用ID
   published_url?: string // 公開されたURL
+  competitor_research?: {
+    competitors: Array<{
+      service_name: string
+      service_url?: string
+      features: string[]
+      lp_content?: string
+      strengths?: string[]
+      differentiation_points?: string[]
+    }>
+    summary?: string
+    differentiation_strategy?: string
+  }
 }
 
 export interface LpGenerationRequest {

@@ -23,7 +23,7 @@ import {
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PartyLoadingOverlay, type OverlayMood } from '@/components/persona/PersonaMotion'
-import { getMaxFileSize, getEffectivePlan, isFileSizeWithinLimit, type InterviewPlan } from '@/lib/interview/planLimits'
+import { getMaxFileSize, getEffectivePlan, isFileSizeWithinLimit, PLAN_LIMITS, type InterviewPlan } from '@/lib/interview/planLimits'
 
 type UploadStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'generating' | 'completed' | 'error'
 type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | null
@@ -164,6 +164,27 @@ export default function InterviewPage() {
     }
 
     fetchCurrentPlan()
+  }, [])
+
+  // 有効なプランを取得（1時間使い放題機能を考慮）
+  const effectivePlan = useMemo(() => getEffectivePlan(currentPlan, guestFirstAccessAt), [currentPlan, guestFirstAccessAt])
+  
+  // プラン制限情報を取得
+  const planLimits = useMemo(() => PLAN_LIMITS[effectivePlan], [effectivePlan])
+  
+  // 最大ファイルサイズ（音声・動画別）
+  const maxAudioFileSize = useMemo(() => getMaxFileSize(effectivePlan, false), [effectivePlan])
+  const maxVideoFileSize = useMemo(() => getMaxFileSize(effectivePlan, true), [effectivePlan])
+  
+  // ファイルサイズの表示用フォーマット
+  const formatFileSizeDisplay = useCallback((bytes: number) => {
+    if (bytes >= 1024 * 1024 * 1024) {
+      return `${(bytes / 1024 / 1024 / 1024).toFixed(2)}GB`
+    } else if (bytes >= 1024 * 1024) {
+      return `${(bytes / 1024 / 1024).toFixed(0)}MB`
+    } else {
+      return `${(bytes / 1024).toFixed(0)}KB`
+    }
   }, [])
 
   // 進捗に応じたmoodの計算
@@ -1802,17 +1823,37 @@ export default function InterviewPage() {
               <p className="text-slate-600 mb-2 text-lg">
                 またはクリックしてファイルを選択
               </p>
-              <p className="text-sm text-slate-500 mb-6">
-                最大ファイルサイズ: <span className="font-black text-orange-600">10GB（10,000MB）</span>
-                <br />
-                <span className="text-xs text-slate-400">
-                  ※ クライアントから直接Google Cloud Storageにアップロードします
-                  <br />
-                  ※ 文字起こし機能を使用するため、10GBまでアップロード可能です
-                  <br />
-                  ※ 大きなファイルも対応可能です（時間がかかる場合があります）
-                </span>
-              </p>
+              <div className="text-sm text-slate-500 mb-6 p-4 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200">
+                <div className="mb-2">
+                  <p className="font-black text-slate-900 mb-1">現在のプラン: <span className="text-orange-600">{planLimits.planName}</span></p>
+                  <p className="text-xs text-slate-600 mb-2">{planLimits.description}</p>
+                </div>
+                <div className="space-y-1 text-xs">
+                  <p>
+                    <span className="font-black text-slate-700">音声ファイル:</span>{' '}
+                    <span className="font-black text-orange-600">最大{formatFileSizeDisplay(maxAudioFileSize)}</span>
+                  </p>
+                  {maxVideoFileSize > 0 ? (
+                    <p>
+                      <span className="font-black text-slate-700">動画ファイル:</span>{' '}
+                      <span className="font-black text-orange-600">最大{formatFileSizeDisplay(maxVideoFileSize)}</span>
+                    </p>
+                  ) : (
+                    <p className="text-red-600 font-black">
+                      <span className="font-black">動画ファイル:</span> アップロード不可（PROプラン以上で利用可能）
+                    </p>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-slate-200">
+                  <p className="text-xs text-slate-400">
+                    ※ クライアントから直接Google Cloud Storageにアップロードします
+                    <br />
+                    ※ 文字起こし機能を使用するため、プラン別の制限が適用されます
+                    <br />
+                    ※ 大きなファイルも対応可能です（時間がかかる場合があります）
+                  </p>
+                </div>
+              </div>
 
               {/* 処理時間の目安表 */}
               <div className="mb-8 p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border-2 border-blue-200 shadow-lg">
@@ -1830,66 +1871,156 @@ export default function InterviewPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="bg-white hover:bg-slate-50">
-                        <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">1GB</td>
-                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約30-60分</td>
-                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約15-30分</td>
-                      </tr>
-                      <tr className="bg-slate-50 hover:bg-slate-100">
-                        <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">2GB</td>
-                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約1-2時間</td>
-                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約30-60分</td>
-                      </tr>
-                      <tr className="bg-white hover:bg-slate-50">
-                        <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">5GB</td>
-                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約2-4時間</td>
-                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約1-2時間</td>
-                      </tr>
-                      <tr className="bg-slate-50 hover:bg-slate-100">
-                        <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">10GB</td>
-                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約4-8時間</td>
-                        <td className="px-4 py-3 text-slate-700 font-medium text-sm border-b border-slate-200">約2-4時間</td>
-                      </tr>
+                      {(() => {
+                        // プランに応じた処理時間表を生成
+                        const rows = []
+                        const sizes = [
+                          { size: 1, label: '1GB' },
+                          { size: 2, label: '2GB' },
+                          { size: 5, label: '5GB' },
+                          { size: 10, label: '10GB' },
+                        ]
+                        
+                        for (const sizeInfo of sizes) {
+                          // プランの最大サイズを超える場合は表示しない
+                          if (sizeInfo.size * 1024 * 1024 * 1024 > Math.max(maxAudioFileSize, maxVideoFileSize)) {
+                            continue
+                          }
+                          
+                          const isEven = rows.length % 2 === 0
+                          rows.push(
+                            <tr key={sizeInfo.size} className={isEven ? 'bg-white hover:bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'}>
+                              <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">{sizeInfo.label}</td>
+                              <td className={`px-4 py-3 text-sm border-b border-slate-200 ${
+                                maxVideoFileSize > 0 && sizeInfo.size * 1024 * 1024 * 1024 <= maxVideoFileSize
+                                  ? 'text-slate-700 font-medium'
+                                  : 'text-slate-400 line-through'
+                              }`}>
+                                {maxVideoFileSize > 0 && sizeInfo.size * 1024 * 1024 * 1024 <= maxVideoFileSize
+                                  ? `約${sizeInfo.size * 30}-${sizeInfo.size * 60}分`
+                                  : '利用不可'}
+                              </td>
+                              <td className={`px-4 py-3 text-sm border-b border-slate-200 ${
+                                sizeInfo.size * 1024 * 1024 * 1024 <= maxAudioFileSize
+                                  ? 'text-slate-700 font-medium'
+                                  : 'text-slate-400 line-through'
+                              }`}>
+                                {sizeInfo.size * 1024 * 1024 * 1024 <= maxAudioFileSize
+                                  ? `約${sizeInfo.size * 15}-${sizeInfo.size * 30}分`
+                                  : '利用不可'}
+                              </td>
+                            </tr>
+                          )
+                        }
+                        
+                        return rows.length > 0 ? rows : (
+                          <tr>
+                            <td colSpan={3} className="px-4 py-3 text-center text-slate-500 text-sm">
+                              現在のプランでは利用可能なサイズがありません
+                            </td>
+                          </tr>
+                        )
+                      })()}
                     </tbody>
                   </table>
                 </div>
-                <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border-l-4 border-emerald-500">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-black text-lg">💡</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-black text-slate-900 mb-1">おすすめ: MP3（音声）に変換してからアップロード</p>
-                      <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                        動画ファイルをMP3などの音声ファイルに変換してからアップロードすると、処理時間が大幅に短縮されます。
-                        <br />
-                        動画ファイルは音声抽出に時間がかかりますが、音声ファイル（MP3）なら直接処理できるため、より早く完了します。
-                      </p>
+                {maxVideoFileSize > 0 ? (
+                  <div className="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border-l-4 border-emerald-500">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-black text-lg">💡</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-slate-900 mb-1">おすすめ: MP3（音声）に変換してからアップロード</p>
+                        <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                          動画ファイルをMP3などの音声ファイルに変換してからアップロードすると、処理時間が大幅に短縮されます。
+                          <br />
+                          動画ファイルは音声抽出に時間がかかりますが、音声ファイル（MP3）なら直接処理できるため、より早く完了します。
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border-l-4 border-orange-500">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-black text-lg">ℹ️</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-slate-900 mb-1">動画ファイルのアップロードについて</p>
+                        <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                          現在のプラン（{planLimits.planName}）では動画ファイルのアップロードはできません。
+                          <br />
+                          動画ファイルをアップロードするには、PROプランまたはEnterpriseプランにアップグレードしてください。
+                          <br />
+                          または、動画から音声を抽出してMP3形式でアップロードすることをおすすめします。
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                 {[
-                  { icon: Music, label: '音声ファイル', formats: 'MP3, WAV, M4A', color: 'from-purple-500 to-pink-500' },
-                  { icon: Video, label: '動画ファイル', formats: 'MP4, MOV, AVI', color: 'from-blue-500 to-cyan-500' },
-                  { icon: FileText, label: 'テキスト', formats: 'TXT, DOCX', color: 'from-emerald-500 to-teal-500' },
-                  { icon: File, label: 'PDF', formats: 'PDF', color: 'from-red-500 to-orange-500' },
+                  { 
+                    icon: Music, 
+                    label: '音声ファイル', 
+                    formats: 'MP3, WAV, M4A', 
+                    color: 'from-purple-500 to-pink-500',
+                    enabled: true,
+                    maxSize: formatFileSizeDisplay(maxAudioFileSize),
+                  },
+                  { 
+                    icon: Video, 
+                    label: '動画ファイル', 
+                    formats: 'MP4, MOV, AVI', 
+                    color: maxVideoFileSize > 0 ? 'from-blue-500 to-cyan-500' : 'from-gray-400 to-gray-500',
+                    enabled: maxVideoFileSize > 0,
+                    maxSize: maxVideoFileSize > 0 ? formatFileSizeDisplay(maxVideoFileSize) : '不可',
+                  },
+                  { 
+                    icon: FileText, 
+                    label: 'テキスト', 
+                    formats: 'TXT, DOCX', 
+                    color: 'from-emerald-500 to-teal-500',
+                    enabled: true,
+                    maxSize: '無制限',
+                  },
+                  { 
+                    icon: File, 
+                    label: 'PDF', 
+                    formats: 'PDF', 
+                    color: 'from-red-500 to-orange-500',
+                    enabled: true,
+                    maxSize: '無制限',
+                  },
                 ].map((item, idx) => (
                   <motion.div
                     key={idx}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: idx * 0.1 }}
-                    className="p-4 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all"
+                    className={`p-4 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all ${
+                      !item.enabled ? 'opacity-60' : ''
+                    }`}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-md`}>
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-md ${
+                        !item.enabled ? 'grayscale' : ''
+                      }`}>
                         <item.icon className="w-6 h-6 text-white" />
                       </div>
                       <div className="text-center">
                         <p className="text-sm font-black text-slate-900 mb-1">{item.label}</p>
-                        <p className="text-xs text-slate-600">{item.formats}</p>
+                        <p className="text-xs text-slate-600 mb-1">{item.formats}</p>
+                        <p className={`text-xs font-black ${
+                          !item.enabled ? 'text-red-600' : 'text-orange-600'
+                        }`}>
+                          最大: {item.maxSize}
+                        </p>
+                        {!item.enabled && (
+                          <p className="text-xs text-red-600 mt-1">※ このプランでは利用不可</p>
+                        )}
                       </div>
                     </div>
                   </motion.div>

@@ -25,8 +25,13 @@ import {
   Globe,
   FileDown,
   Settings,
+  MessageSquare,
+  Info,
+  Search,
+  BarChart3,
 } from 'lucide-react'
 import { LpGenerationResult, LpSection, SectionImage } from '@/lib/lp-site/types'
+import { CompetitorResearchPanel } from './CompetitorResearchPanel'
 import toast from 'react-hot-toast'
 
 interface FigmaStyleEditorProps {
@@ -533,7 +538,7 @@ export function FigmaStyleEditor({
                       return (
                         <div
                           key={section.section_id}
-                          className={`cursor-pointer transition-all border-b border-slate-200 ${
+                          className={`relative cursor-pointer transition-all border-b border-slate-200 ${
                             isSelected
                               ? 'ring-4 ring-blue-500 ring-offset-2'
                               : 'hover:opacity-90'
@@ -541,7 +546,37 @@ export function FigmaStyleEditor({
                           onClick={() => setSelectedSectionId(section.section_id)}
                         >
                       {imageData ? (
-                        <img src={imageData} alt={section.headline} className="w-full block" />
+                        <div className="relative group">
+                          <img src={imageData} alt={section.headline} className="w-full block" />
+                          {/* セクション意図説明コメント（外側に表示） */}
+                          <div className="absolute -left-2 top-1/2 -translate-y-1/2 -translate-x-full opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                            <div className="relative">
+                              {/* 繋ぎ線 */}
+                              <div className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-0.5 bg-teal-400"></div>
+                              {/* コメントバルーン */}
+                              <div className="bg-white/95 backdrop-blur-md rounded-xl p-3 shadow-xl border-2 border-teal-400 min-w-[200px] max-w-[250px] mr-8">
+                                <div className="flex items-start gap-2">
+                                  <Info className="w-4 h-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-bold text-slate-900 mb-1">
+                                      このセクションの意図
+                                    </div>
+                                    <div className="text-[11px] text-slate-700 leading-relaxed">
+                                      {section.purpose}
+                                    </div>
+                                    {section.section_type && (
+                                      <div className="mt-2 pt-2 border-t border-slate-200">
+                                        <div className="text-[10px] text-slate-500">
+                                          タイプ: {section.section_type}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       ) : (
                         <div className={`w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 border-4 border-dashed min-h-[700px] flex flex-col items-center justify-center p-6 relative overflow-hidden ${
                           isRegenerating 

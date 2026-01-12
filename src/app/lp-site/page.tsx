@@ -135,6 +135,7 @@ function LpSitePageInner() {
       let sections: any[] = []
       let wireframes: any[] = []
       let images: any[] = []
+      let competitorResearch: any = null
 
       try {
         // Step 1: 商品理解 (0-20%)
