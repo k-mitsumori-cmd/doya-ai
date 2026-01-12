@@ -247,7 +247,19 @@ export async function POST(request: NextRequest) {
         },
       })
 
+      console.log('[INTERVIEW] Transcribe API - User subscription:', {
+        userId,
+        serviceId: 'interview',
+        subscriptionPlan: subscription?.plan || null,
+        subscriptionExists: !!subscription,
+      })
+
       plan = await getUserPlan(userId, null, subscription?.plan || null)
+      
+      console.log('[INTERVIEW] Transcribe API - Resolved plan:', {
+        userId,
+        resolvedPlan: plan,
+      })
     } else if (guestId) {
       // ゲストユーザーの場合、ゲストセッションを取得
       const guestSession = await (prisma as any).guestSession.findUnique({
@@ -263,12 +275,33 @@ export async function POST(request: NextRequest) {
     // 有効なプランを取得（1時間使い放題機能を考慮）
     const effectivePlan = getEffectivePlan(plan, guestFirstAccessAt)
 
+    console.log('[INTERVIEW] Transcribe API - Plan check:', {
+      userId,
+      guestId,
+      plan,
+      effectivePlan,
+      guestFirstAccessAt,
+    })
+
     // ファイルタイプを判定（後で使用するため、ここで定義）
     const isVideoFileCheck = material.type === 'video' || material.mimeType?.includes('video')
     const maxFileSize = getMaxFileSize(effectivePlan, isVideoFileCheck)
 
+    console.log('[INTERVIEW] Transcribe API - File type check:', {
+      materialType: material.type,
+      mimeType: material.mimeType,
+      isVideoFile: isVideoFileCheck,
+      maxFileSize: `${(maxFileSize / 1024 / 1024 / 1024).toFixed(2)}GB`,
+      effectivePlan,
+    })
+
     // 動画ファイルが許可されていないプランの場合
     if (isVideoFileCheck && maxFileSize === 0) {
+      console.error('[INTERVIEW] Transcribe API - Video file not allowed:', {
+        effectivePlan,
+        maxFileSize,
+        isVideoFile: isVideoFileCheck,
+      })
       return NextResponse.json(
         {
           error: '動画ファイルはアップロードできません',

@@ -1642,6 +1642,558 @@ await sendNewUserNotification({
 
 ---
 
+## 📋 新サービス開発 完全チェックリスト
+
+新サービスを開発する際に、**必ずこのチェックリストを確認**して、漏れやミスがないようにしてください。
+
+**使い方:**
+1. 新サービス開発開始時に、このチェックリストをコピー
+2. 各項目を順番に実装・確認
+3. チェックボックスに✓を入れて進捗を管理
+4. 全て完了してからデプロイ
+
+---
+
+### 📌 Phase 1: サービス定義・基本設定
+
+#### 1.1 サービス定義（`src/lib/services.ts`）
+
+- [ ] `SERVICES` 配列にサービスを追加
+- [ ] 必須フィールドが全て設定されている：
+  - [ ] `id`: サービスID（英数字、ハイフン使用可）
+  - [ ] `name`: サービス名（例: 'ドヤ○○AI'）
+  - [ ] `shortName`: 短縮名（サイドバー表示用）
+  - [ ] `description`: 説明文
+  - [ ] `icon`: アイコン（絵文字）
+  - [ ] `color`: カラー（Tailwindカラー名）
+  - [ ] `gradient`: グラデーション（例: 'from-blue-500 to-cyan-500'）
+  - [ ] `href`: メインページのURL
+  - [ ] `dashboardHref`: ダッシュボードのURL
+  - [ ] `pricingHref`: 料金ページのURL（必要に応じて）
+  - [ ] `guideHref`: ガイドページのURL（必要に応じて）
+  - [ ] `features`: 機能一覧（配列）
+  - [ ] `pricing`: 料金設定（free/pro の dailyLimit, price を設定）
+  - [ ] `status`: 'active' | 'beta' | 'coming_soon' | 'stopped'
+  - [ ] `badge`: バッジ表示（ベータ版の場合: 'ベータ版'）
+  - [ ] `category`: 'text' | 'image' | 'video' | 'other'
+  - [ ] `order`: 表示順序（数値）
+  - [ ] `requiresAuth`: 認証必須かどうか（通常は false）
+  - [ ] `isNew`: 新サービスマーク（必要に応じて）
+- [ ] サービスIDが他のサービスと重複していない
+- [ ] プランの dailyLimit が適切に設定されている（FREE/PRO）
+
+**参考実装:**
+```typescript
+{
+  id: 'myservice',
+  name: 'ドヤ○○AI',
+  shortName: '○○',
+  description: '説明文',
+  icon: '🎯',
+  color: 'blue',
+  gradient: 'from-blue-500 to-cyan-500',
+  href: '/myservice',
+  dashboardHref: '/myservice/dashboard',
+  pricingHref: '/myservice/pricing',
+  features: ['機能1', '機能2', '機能3'],
+  pricing: {
+    free: { name: '無料プラン', limit: '1日3回まで', dailyLimit: 3, price: 0 },
+    pro: { name: 'プロプラン', limit: '1日100回まで', dailyLimit: 100, price: 4980 },
+  },
+  status: 'active', // または 'beta'
+  badge: status === 'beta' ? 'ベータ版' : undefined,
+  category: 'text',
+  order: 10,
+  requiresAuth: false,
+}
+```
+
+---
+
+#### 1.2 ベータ版サービス対応
+
+サービスがベータ版の場合：
+
+- [ ] `status: 'beta'` を設定
+- [ ] `badge: 'ベータ版'` を設定
+- [ ] サービス自身のサイドバーにのみ表示（他サービスのサイドバーには表示しない）
+- [ ] ベータ版バッジが表示されることを確認
+- [ ] 他サービスの ToolSwitcherMenu に表示されないことを確認
+
+**注意:** ベータ版サービスは、`ToolSwitcherMenu.tsx` の `TOOLS` 配列には追加しない。
+
+---
+
+### 📌 Phase 2: ナビゲーション・UI統合
+
+#### 2.1 ToolSwitcherMenu（アクティブサービスのみ）
+
+サービスが `status: 'active'` の場合：
+
+- [ ] `src/components/ToolSwitcherMenu.tsx` の `TOOLS` 配列に追加
+- [ ] 必須フィールドが設定されている：
+  - [ ] `id`: サービスID（ToolId型に追加が必要な場合）
+  - [ ] `href`: リンク先URL
+  - [ ] `title`: サービス名
+  - [ ] `description`: 説明文
+  - [ ] `icon`: lucide-react のアイコンコンポーネント
+  - [ ] `iconBgClassName`: アイコンの背景グラデーション
+- [ ] ベータ版サービスは追加しない（自身のサイドバーでのみ表示）
+- [ ] アイコンとグラデーションがサービス定義と一致している
+
+**参考実装:**
+```typescript
+{
+  id: 'myservice',
+  href: '/myservice',
+  title: 'ドヤ○○AI',
+  description: '○○生成',
+  icon: Target,  // lucide-react
+  iconBgClassName: 'bg-gradient-to-br from-blue-500 to-cyan-600',
+}
+```
+
+---
+
+#### 2.2 サイドバー実装
+
+- [ ] サービス専用サイドバーコンポーネントを作成（例: `MyServiceSidebar.tsx`）
+- [ ] サイドバーの必須要素が実装されている：
+  - [ ] ロゴ＋サービス名（上部）
+  - [ ] ナビゲーションリンク（メイン）
+  - [ ] 1時間生成し放題バナー（キャンペーン中のみ、必要に応じて）
+  - [ ] プラン案内バナー（通常時）
+  - [ ] ToolSwitcherMenu（他ツール切替）
+  - [ ] お問い合わせリンク
+  - [ ] ユーザープロフィール＋ログアウト（下部）
+  - [ ] 折りたたみボタン（デスクトップ）
+- [ ] 既存のサイドバーパターンに従っている（`DashboardSidebar.tsx` や `InterviewSidebar.tsx` を参考）
+- [ ] モバイル対応（オーバーレイ表示）
+- [ ] デスクトップ対応（折りたたみ機能）
+- [ ] LocalStorage で折りたたみ状態を保存
+- [ ] アニメーションが実装されている（Framer Motion）
+
+**参考実装:**
+- `src/components/DashboardSidebar.tsx` - バナーサービスのサイドバー
+- `src/components/InterviewSidebar.tsx` - インタビューサービスのサイドバー（最新実装例）
+
+---
+
+#### 2.3 レイアウト実装
+
+- [ ] サービス専用レイアウトコンポーネントを作成（例: `MyServiceAppLayout.tsx`）
+- [ ] レイアウトの必須要素が実装されている：
+  - [ ] サイドバー（デスクトップ）
+  - [ ] モバイルオーバーレイ（モバイル）
+  - [ ] ヘッダー（サービス名、プラン表示）
+  - [ ] メインコンテンツエリア
+  - [ ] プラン判定ロジック（サービス専用プランまたはグローバルプラン）
+- [ ] 既存のレイアウトパターンに従っている（`InterviewAppLayout.tsx` を参考）
+- [ ] プラン表示が正しく動作している
+- [ ] レスポンシブデザインが実装されている
+
+**参考実装:**
+- `src/components/InterviewAppLayout.tsx` - より実践的な実装例
+- `src/components/SeoAppLayout.tsx` - SEOサービス用レイアウト
+
+---
+
+#### 2.4 ページ実装
+
+- [ ] メインページ（`src/app/myservice/page.tsx`）を作成
+- [ ] ダッシュボードページ（必要に応じて）を作成
+- [ ] 料金ページ（`src/app/myservice/pricing/page.tsx`）を作成
+- [ ] レイアウトコンポーネントを使用している
+- [ ] サービス定義の `href`, `dashboardHref`, `pricingHref` と一致している
+
+---
+
+### 📌 Phase 3: プラン管理・課金連携
+
+#### 3.1 Stripe設定
+
+- [ ] `src/lib/stripe.ts` の `STRIPE_PRICE_IDS` に価格IDを追加
+- [ ] 月額・年額の両方の価格IDを設定（必要に応じて）
+- [ ] `getPlanIdFromStripePriceId()` 関数にマッピングを追加
+- [ ] 環境変数に価格IDを設定（Vercelダッシュボード）
+- [ ] Stripeダッシュボードで価格を作成
+- [ ] テスト環境と本番環境で価格IDを分ける
+
+**参考実装:**
+```typescript
+// src/lib/stripe.ts
+myservice: {
+  pro: {
+    monthly: process.env.STRIPE_PRICE_MYSERVICE_PRO_MONTHLY,
+    yearly: process.env.STRIPE_PRICE_MYSERVICE_PRO_YEARLY,
+  },
+}
+```
+
+---
+
+#### 3.2 Webhook処理
+
+- [ ] `src/app/api/stripe/webhook/route.ts` でサービスIDを処理できることを確認
+- [ ] `updateUserSubscription()` 関数がサービス別プランを正しく更新することを確認
+- [ ] Complete Pack の場合は `syncUserPlanAcrossServices()` を使用
+- [ ] プラン更新が正しく反映されることを確認
+
+---
+
+#### 3.3 プラン管理実装
+
+- [ ] APIエンドポイントで `UserServiceSubscription` を使用
+- [ ] 使用量チェックを実装
+- [ ] 日次リセット処理を実装
+- [ ] プラン判定ロジックを実装（サービス専用プラン or グローバルプラン）
+- [ ] 使用制限（dailyLimit）を実装
+- [ ] エラーハンドリング（429エラー）を実装
+
+**実装パターン:**
+```typescript
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: { userId_serviceId: { userId, serviceId: 'myservice' } },
+})
+
+const plan = subscription?.plan || 'FREE'
+const dailyLimit = plan === 'PRO' ? 100 : plan === 'FREE' ? 3 : 0
+
+// 日次リセットチェック
+const now = new Date()
+const isNewDay = now.toDateString() !== subscription?.lastUsageReset.toDateString()
+if (isNewDay) {
+  await prisma.userServiceSubscription.update({
+    where: { id: subscription.id },
+    data: { dailyUsage: 0, lastUsageReset: now },
+  })
+}
+
+// 使用量チェック
+if (subscription.dailyUsage >= dailyLimit) {
+  return NextResponse.json({ error: '使用上限に達しました' }, { status: 429 })
+}
+```
+
+---
+
+#### 3.4 決済UI
+
+- [ ] CheckoutButtonコンポーネントを配置（料金ページなど）
+- [ ] `planId` が正しく設定されている（例: 'myservice-pro'）
+- [ ] `billingPeriod` が設定されている（'monthly' | 'yearly'）
+- [ ] カスタマーポータルへのリンクを配置（必要に応じて）
+- [ ] 解約・再開機能を実装（必要に応じて）
+- [ ] プラン表示が正しく動作している
+
+**参考実装:**
+```typescript
+<CheckoutButton planId="myservice-pro" billingPeriod="monthly">
+  PROを始める
+</CheckoutButton>
+```
+
+---
+
+### 📌 Phase 4: API実装
+
+#### 4.1 APIエンドポイント
+
+- [ ] サービス専用のAPIディレクトリを作成（`src/app/api/myservice/`）
+- [ ] 認証チェックを実装
+- [ ] ゲストユーザー対応（必要に応じて）
+- [ ] 使用量チェックを実装
+- [ ] エラーハンドリングを実装
+- [ ] 適切なHTTPステータスコードを返す
+
+**実装パターン:**
+```typescript
+export async function POST(request: NextRequest) {
+  try {
+    // 1. 認証チェック
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+    const guestId = request.headers.get('x-guest-id')
+
+    if (!userId && !guestId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // 2. 使用量チェック
+    // ...
+
+    // 3. 処理実行
+    // ...
+
+    // 4. 使用量更新
+    // ...
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error('[MYSERVICE] Error:', error)
+    return NextResponse.json({ error: '処理に失敗しました' }, { status: 500 })
+  }
+}
+```
+
+---
+
+#### 4.2 ファイルアップロード（必要に応じて）
+
+- [ ] ファイルサイズチェックを実装
+- [ ] 小さいファイル（<4.5MB）は Vercel Blob Storage を使用
+- [ ] 大きいファイル（>=4.5MB）は Google Cloud Storage を使用
+- [ ] チャンクアップロードを実装（必要に応じて）
+- [ ] ファイルタイプのバリデーション
+
+---
+
+### 📌 Phase 5: デザイン統一
+
+#### 5.1 デザインシステム準拠
+
+- [ ] CSS変数を使用（`var(--color-primary)` など）
+- [ ] Tailwindテーマを使用
+- [ ] タイポグラフィが統一されている
+- [ ] カラーパレットが統一されている
+- [ ] スペーシングが統一されている
+- [ ] ボタンスタイルが統一されている
+
+**参考:**
+- `docs/reference/design-system.md` - デザインシステム詳細
+
+---
+
+#### 5.2 アニメーション
+
+- [ ] Framer Motion を使用
+- [ ] Party Mode 対応（必要に応じて）
+- [ ] 既存のアニメーションパターンに従っている
+- [ ] パフォーマンスを考慮した実装
+
+**参考:**
+- `docs/reference/animation-spec.md` - アニメーション仕様
+
+---
+
+#### 5.3 レスポンシブデザイン
+
+- [ ] モバイル対応（< 768px）
+- [ ] タブレット対応（768px - 1024px）
+- [ ] デスクトップ対応（> 1024px）
+- [ ] 各ブレークポイントで表示を確認
+
+---
+
+### 📌 Phase 6: サービス分離・品質保証
+
+#### 6.1 サービス分離ルール
+
+- [ ] 他サービスのAPIエンドポイントを変更していない
+- [ ] 他サービスのDBテーブルを変更していない
+- [ ] 他サービスのコンポーネントを変更していない
+- [ ] 共通コンポーネントへの破壊的変更をしていない
+- [ ] 自サービス専用のディレクトリ・ファイルを使用している
+
+**参考:**
+- `docs/reference/service-isolation.md` - サービス分離ルール詳細
+
+---
+
+#### 6.2 エラーハンドリング
+
+- [ ] try-catch でエラーを捕捉
+- [ ] 適切なHTTPステータスコードを返す
+- [ ] エラーメッセージがユーザーフレンドリー
+- [ ] ログ出力が適切（`[SERVICE_NAME]` プレフィックス付き）
+- [ ] Prismaエラーの適切な処理
+
+---
+
+#### 6.3 パフォーマンス
+
+- [ ] データベースクエリが最適化されている（必要なフィールドのみ取得）
+- [ ] キャッシュを活用（必要に応じて）
+- [ ] バッチ処理を使用（必要に応じて）
+- [ ] ファイルサイズを考慮（アップロードの場合）
+
+---
+
+### 📌 Phase 7: 環境変数・設定
+
+#### 7.1 環境変数
+
+- [ ] 必要な環境変数を特定
+- [ ] 環境変数を `.env.example` に追加（ローカル開発用）
+- [ ] Vercelダッシュボードに環境変数を設定
+- [ ] 環境変数の命名規則が統一されている
+- [ ] 機密情報がハードコードされていない
+
+**主要な環境変数:**
+- `DATABASE_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
+- サービス専用の環境変数（APIキーなど）
+
+---
+
+#### 7.2 型定義
+
+- [ ] TypeScriptの型定義が適切
+- [ ] 型エラーがない
+- [ ] `any` 型の使用を最小限に
+
+---
+
+### 📌 Phase 8: テスト・デプロイ前確認
+
+#### 8.1 ローカルテスト
+
+- [ ] ローカル環境で動作確認
+- [ ] 認証が動作する
+- [ ] プラン管理が動作する
+- [ ] 決済フローが動作する（テストモード）
+- [ ] APIエンドポイントが動作する
+- [ ] エラーハンドリングが動作する
+
+---
+
+#### 8.2 ビルド確認
+
+- [ ] `npm run build` が成功する
+- [ ] TypeScriptエラーがない
+- [ ] Lintエラーがない（`npm run lint`）
+- [ ] 型チェックが通る
+
+---
+
+#### 8.3 デプロイ前確認
+
+- [ ] 環境変数が全て設定されている
+- [ ] Stripeの価格IDが設定されている
+- [ ] ベータ版サービスの場合は表示ルールを確認
+- [ ] サービス分離ルールを遵守している
+- [ ] チェックリストの全項目が完了している
+
+---
+
+### 📌 Phase 9: デプロイ後確認
+
+#### 9.1 基本動作確認
+
+- [ ] サービスページが正常に表示される
+- [ ] 認証が動作する
+- [ ] サイドバーが正常に表示される
+- [ ] ナビゲーションが動作する
+
+---
+
+#### 9.2 プラン・決済確認
+
+- [ ] プラン表示が正しく動作する
+- [ ] CheckoutButtonが動作する
+- [ ] Stripe決済ページに遷移できる
+- [ ] 決済後にプランが反映される（Webhook確認）
+- [ ] 使用量チェックが動作する
+- [ ] 使用上限エラーが正しく表示される
+
+---
+
+#### 9.3 統合確認
+
+- [ ] ToolSwitcherMenuに表示される（アクティブサービスの場合）
+- [ ] 他サービスのサイドバーからアクセスできる（アクティブサービスの場合）
+- [ ] ベータ版サービスの場合は、他サービスのサイドバーに表示されない
+- [ ] サービス定義が正しく反映されている
+
+---
+
+### 📌 Phase 10: ドキュメント・メンテナンス
+
+#### 10.1 ドキュメント
+
+- [ ] READMEにサービス情報を追加（必要に応じて）
+- [ ] APIドキュメントを追加（必要に応じて）
+- [ ] 変更履歴を記録
+
+---
+
+#### 10.2 メンテナンス
+
+- [ ] エラーログを確認
+- [ ] パフォーマンスを監視
+- [ ] ユーザーフィードバックを収集
+
+---
+
+## ⚠️ よくあるミス・注意点
+
+### プラン管理
+
+- ❌ **ミス**: `User.plan` を直接更新する（サービス別プランは `UserServiceSubscription` を使用）
+- ✅ **正解**: `UserServiceSubscription` でプラン管理、Complete Pack の場合は `syncUserPlanAcrossServices` を使用
+
+- ❌ **ミス**: 日次リセット処理を実装していない
+- ✅ **正解**: `lastUsageReset` をチェックして日次リセット処理を実装
+
+- ❌ **ミス**: Stripe価格IDを `stripe.ts` に追加していない
+- ✅ **正解**: `STRIPE_PRICE_IDS` に追加し、`getPlanIdFromStripePriceId` にもマッピングを追加
+
+### ベータ版サービス
+
+- ❌ **ミス**: ベータ版サービスを `ToolSwitcherMenu.tsx` の `TOOLS` に追加する
+- ✅ **正解**: ベータ版サービスは自身のサイドバーのみに表示、`TOOLS` には追加しない
+
+- ❌ **ミス**: ベータ版バッジを表示していない
+- ✅ **正解**: `status: 'beta'`, `badge: 'ベータ版'` を設定
+
+### デザイン統一
+
+- ❌ **ミス**: カラーをハードコードする
+- ✅ **正解**: CSS変数やTailwindテーマを使用
+
+- ❌ **ミス**: 既存のコンポーネントを改変する
+- ✅ **正解**: 新しいコンポーネントを作成する
+
+### サービス分離
+
+- ❌ **ミス**: 他サービスのAPIを変更する
+- ✅ **正解**: 自サービス専用のAPIエンドポイントを作成
+
+- ❌ **ミス**: 共通コンポーネントを破壊的に変更する
+- ✅ **正解**: 新機能は後方互換性を保つ、または新しいコンポーネントを作成
+
+### 環境変数
+
+- ❌ **ミス**: 環境変数をハードコードする
+- ✅ **正解**: 環境変数を使用し、`.env.example` に追加
+
+- ❌ **ミス**: Vercelに環境変数を設定していない
+- ✅ **正解**: デプロイ前にVercelダッシュボードで環境変数を設定
+
+---
+
+## 📝 チェックリストの使い方
+
+1. **開発開始時**: このチェックリストをコピーして、プロジェクト管理ツール（GitHub Issues、Notion等）に保存
+2. **実装中**: 各項目を順番に実装し、チェックボックスに✓を入れる
+3. **デプロイ前**: 全項目が完了していることを確認
+4. **デプロイ後**: Phase 9の確認項目を実行
+
+---
+
+## 🔗 関連ドキュメント
+
+- [新サービス追加手順](#新サービス追加手順) - 詳細な実装手順
+- [プラン管理システム](#2-プラン管理システム) - プラン管理の詳細
+- [サービス分離ルール](./service-isolation.md) - サービス分離の詳細
+- [デザインシステム](./design-system.md) - デザインシステムの詳細
+- [ベータ版サービス管理](./beta-services.md) - ベータ版サービスの詳細
+
+---
+
 ## デプロイ手順
 
 本番環境へのデプロイ手順です。

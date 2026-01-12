@@ -30,7 +30,19 @@ export async function GET(request: NextRequest) {
         },
       })
 
+      console.log('[INTERVIEW] Current plan API - User subscription:', {
+        userId,
+        serviceId: 'interview',
+        subscriptionPlan: subscription?.plan || null,
+        subscriptionExists: !!subscription,
+      })
+
       plan = await getUserPlan(userId, null, subscription?.plan || null)
+      
+      console.log('[INTERVIEW] Current plan API - Resolved plan:', {
+        userId,
+        resolvedPlan: plan,
+      })
     } else if (guestId) {
       // ゲストユーザーの場合、ゲストセッションを取得または作成
       let guestSession = await (prisma as any).guestSession.findUnique({

@@ -69,8 +69,20 @@ export async function getUserPlan(
 ): Promise<InterviewPlan> {
   // ログインユーザーの場合
   if (userId) {
-    if (userPlan === 'ENTERPRISE') return 'ENTERPRISE'
-    if (userPlan === 'PRO') return 'PRO'
+    // プラン名を大文字に正規化して比較（大文字小文字を無視）
+    const normalizedPlan = userPlan ? userPlan.toUpperCase().trim() : null
+    
+    if (normalizedPlan === 'ENTERPRISE') {
+      console.log('[INTERVIEW] User plan detected: ENTERPRISE', { userId, userPlan, normalizedPlan })
+      return 'ENTERPRISE'
+    }
+    if (normalizedPlan === 'PRO') {
+      console.log('[INTERVIEW] User plan detected: PRO', { userId, userPlan, normalizedPlan })
+      return 'PRO'
+    }
+    
+    // プランが設定されていない、または無効な値の場合はFREE
+    console.log('[INTERVIEW] User plan defaulting to FREE', { userId, userPlan, normalizedPlan })
     return 'FREE'
   }
 
