@@ -1742,25 +1742,25 @@ export default function InterviewPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="text-center mb-12"
+        className="text-center mb-8 sm:mb-10 md:mb-12"
       >
         <motion.div
           initial={{ scale: 0.9 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 mb-6 shadow-2xl shadow-orange-500/30"
+          className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-orange-500 via-amber-500 to-orange-600 mb-4 sm:mb-6 shadow-2xl shadow-orange-500/30"
         >
-          <Rocket className="w-12 h-12 text-white" />
+          <Rocket className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white" />
         </motion.div>
-        <h1 className="text-4xl md:text-5xl font-black text-slate-900 mb-4">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-3 sm:mb-4">
           <span className="bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
             ファイルをアップロードするだけ
           </span>
           <br />
           <span className="text-slate-900">AIが自動で記事を生成</span>
         </h1>
-        <p className="text-lg text-slate-600 mb-4 max-w-2xl mx-auto">
-          音声・動画・テキストをアップロードするだけで、<br />
+        <p className="text-sm sm:text-base md:text-lg text-slate-600 mb-4 max-w-2xl mx-auto px-4">
+          音声・動画・テキストをアップロードするだけで、<br className="hidden sm:block" />
           <span className="font-black text-orange-600">自動で文字起こし → 構成案作成 → 記事生成</span>まで一気通貫で完了します
         </p>
         <div className="flex flex-wrap justify-center gap-3 mt-6">
@@ -1790,18 +1790,18 @@ export default function InterviewPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="mb-6 p-6 bg-gradient-to-br from-red-50 via-red-50 to-orange-50 border-2 border-red-300 rounded-2xl shadow-xl"
+            className="mb-4 sm:mb-6 p-4 sm:p-6 bg-gradient-to-br from-red-50 via-red-50 to-orange-50 border-2 border-red-300 rounded-xl sm:rounded-2xl shadow-xl"
           >
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-3 sm:gap-4">
               <div className="flex-shrink-0">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md">
-                  <AlertCircle className="w-7 h-7 text-white" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md">
+                  <AlertCircle className="w-5 h-5 sm:w-6 sm:h-7 text-white" />
                 </div>
               </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-black text-red-900 mb-3">{errorMessage}</h3>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg md:text-xl font-black text-red-900 mb-2 sm:mb-3 break-words">{errorMessage}</h3>
                 {errorDetails && (
-                  <div className="text-sm text-red-800 whitespace-pre-wrap bg-white/80 p-4 rounded-xl border-2 border-red-200 mb-4 shadow-sm">
+                  <div className="text-xs sm:text-sm text-red-800 whitespace-pre-wrap bg-white/80 p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 border-red-200 mb-3 sm:mb-4 shadow-sm">
                     <div className="flex items-start gap-2 mb-2">
                       <HelpCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                       <p className="font-black text-red-900">詳細情報</p>
@@ -1809,20 +1809,20 @@ export default function InterviewPage() {
                     <p className="text-red-700 leading-relaxed">{errorDetails}</p>
                   </div>
                 )}
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
                   <button
                     onClick={resetUpload}
-                    className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-black rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm sm:text-base font-black rounded-lg sm:rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center gap-2"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
                     やり直す
                   </button>
                   {(errorMessage.includes('プラン') || errorMessage.includes('アップグレード') || errorMessage.includes('動画ファイル')) ? (
                     <Link
                       href="/interview/plan"
-                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-xl hover:from-orange-600 hover:to-amber-700 transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2"
+                      className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white text-sm sm:text-base font-black rounded-lg sm:rounded-xl hover:from-orange-600 hover:to-amber-700 transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center gap-2"
                     >
-                      <Crown className="w-5 h-5" />
+                      <Crown className="w-4 h-4 sm:w-5 sm:h-5" />
                       プランを確認
                     </Link>
                   ) : null}
@@ -1842,9 +1842,9 @@ export default function InterviewPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
-            className={`bg-white rounded-3xl border-2 ${
+            className={`bg-white rounded-2xl sm:rounded-3xl border-2 ${
               isDragging ? 'border-orange-500 bg-orange-50' : 'border-dashed border-slate-300'
-            } shadow-xl p-12 transition-all`}
+            } shadow-xl p-4 sm:p-6 md:p-8 lg:p-12 transition-all`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -1859,11 +1859,11 @@ export default function InterviewPage() {
                 transition={{ duration: 0.2 }}
                 className="mb-6"
               >
-                <div className="inline-flex items-center justify-center w-32 h-32 rounded-3xl bg-gradient-to-br from-orange-100 to-amber-100 mb-6 shadow-lg">
-                  <Upload className="w-16 h-16 text-orange-500" />
+                <div className="inline-flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-orange-100 to-amber-100 mb-4 sm:mb-6 shadow-lg">
+                  <Upload className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-orange-500" />
                 </div>
               </motion.div>
-              <h2 className="text-3xl font-black text-slate-900 mb-2">
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 mb-2">
                 {isDragging ? (
                   <>
                     <span className="text-orange-600">ここにドロップ！</span>
@@ -1874,28 +1874,28 @@ export default function InterviewPage() {
                   </>
                 )}
               </h2>
-              <p className="text-slate-600 mb-2 text-lg">
+              <p className="text-slate-600 mb-2 text-sm sm:text-base md:text-lg">
                 またはクリックしてファイルを選択
               </p>
               {/* プラン情報カード - より目立つデザイン */}
-              <div className="mb-6 p-5 bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 rounded-2xl border-2 border-orange-300 shadow-lg">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
+              <div className="mb-4 sm:mb-6 p-4 sm:p-5 bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 rounded-xl sm:rounded-2xl border-2 border-orange-300 shadow-lg">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-3">
+                  <div className="flex-1 w-full sm:w-auto">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
-                        <Crown className="w-5 h-5 text-white" />
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center flex-shrink-0">
+                        <Crown className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                       </div>
                       <div>
-                        <p className="text-base font-black text-slate-900">現在のプラン</p>
-                        <p className="text-2xl font-black text-orange-600">{planLimits.planName}</p>
+                        <p className="text-xs sm:text-sm md:text-base font-black text-slate-900">現在のプラン</p>
+                        <p className="text-lg sm:text-xl md:text-2xl font-black text-orange-600">{planLimits.planName}</p>
                       </div>
                     </div>
-                    <p className="text-sm text-slate-700 font-medium mb-3">{planLimits.description}</p>
+                    <p className="text-xs sm:text-sm text-slate-700 font-medium mb-2 sm:mb-3">{planLimits.description}</p>
                   </div>
                   {maxVideoFileSize === 0 && (
                     <Link
                       href="/interview/plan"
-                      className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white text-sm font-black rounded-xl shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                      className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white text-xs sm:text-sm font-black rounded-lg sm:rounded-xl shadow-md hover:shadow-lg transition-all whitespace-nowrap text-center"
                     >
                       プランを見る
                     </Link>
@@ -1903,7 +1903,7 @@ export default function InterviewPage() {
                 </div>
                 
                 {/* ファイルサイズ制限を視覚的に表示 */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   <div className="p-3 bg-white rounded-xl border border-orange-200">
                     <div className="flex items-center gap-2 mb-1">
                       <Music className="w-4 h-4 text-purple-600" />
@@ -1959,10 +1959,10 @@ export default function InterviewPage() {
               </div>
 
               {/* 処理時間の目安表 */}
-              <div className="mb-8 p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-2xl border-2 border-blue-200 shadow-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <Clock className="w-6 h-6 text-blue-600" />
-                  <h3 className="text-lg font-black text-slate-900">処理時間の目安</h3>
+              <div className="mb-6 sm:mb-8 p-4 sm:p-6 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-xl sm:rounded-2xl border-2 border-blue-200 shadow-lg">
+                <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                  <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 flex-shrink-0" />
+                  <h3 className="text-base sm:text-lg font-black text-slate-900">処理時間の目安</h3>
                 </div>
                 <div className="overflow-x-auto mb-4">
                   <table className="w-full border-collapse bg-white rounded-xl shadow-md border border-slate-200">
@@ -1994,8 +1994,8 @@ export default function InterviewPage() {
                           const isEven = rows.length % 2 === 0
                           rows.push(
                             <tr key={sizeInfo.size} className={isEven ? 'bg-white hover:bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'}>
-                              <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">{sizeInfo.label}</td>
-                              <td className={`px-4 py-3 text-sm border-b border-slate-200 ${
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-700 font-bold text-xs sm:text-sm border-b border-slate-200">{sizeInfo.label}</td>
+                              <td className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm border-b border-slate-200 ${
                                 maxVideoFileSize > 0 && sizeInfo.size * 1024 * 1024 * 1024 <= maxVideoFileSize
                                   ? 'text-slate-700 font-medium bg-emerald-50'
                                   : 'text-slate-400 bg-slate-100'
@@ -2012,7 +2012,7 @@ export default function InterviewPage() {
                                   </span>
                                 )}
                               </td>
-                              <td className={`px-4 py-3 text-sm border-b border-slate-200 ${
+                              <td className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm border-b border-slate-200 ${
                                 sizeInfo.size * 1024 * 1024 * 1024 <= maxAudioFileSize
                                   ? 'text-slate-700 font-medium bg-emerald-50'
                                   : 'text-slate-400 bg-slate-100'
@@ -2090,7 +2090,7 @@ export default function InterviewPage() {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
                 {[
                   { 
                     icon: Music, 
@@ -2130,17 +2130,17 @@ export default function InterviewPage() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: idx * 0.1 }}
-                    className={`p-4 rounded-xl border-2 shadow-sm hover:shadow-md transition-all ${
+                    className={`p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 shadow-sm hover:shadow-md transition-all ${
                       !item.enabled 
                         ? 'bg-slate-100 border-slate-300 opacity-75' 
                         : 'bg-gradient-to-br from-slate-50 to-white border-slate-200 hover:border-orange-300'
                     }`}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-md relative ${
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-md relative ${
                         !item.enabled ? 'grayscale opacity-50' : ''
                       }`}>
-                        <item.icon className="w-7 h-7 text-white" />
+                        <item.icon className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
                         {!item.enabled && (
                           <div className="absolute inset-0 flex items-center justify-center">
                             <X className="w-8 h-8 text-red-500 opacity-75" strokeWidth={3} />

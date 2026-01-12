@@ -169,6 +169,11 @@ function LpSitePageInner() {
         if (!step2Response.ok) throw new Error('LP構成生成に失敗しました')
         const step2Data = await step2Response.json()
         sections = step2Data.sections
+        // LP構成生成完了後に詳細情報を表示
+        setPartialResult({
+          product_info: productInfo,
+          sections,
+        })
         updateProgress(40) // Step 2完了
 
         // Step 3: ワイヤーフレーム生成 (40-60%)
@@ -612,6 +617,9 @@ function LpSitePageInner() {
           mood={mood}
           steps={steps}
           allowBackgroundView={true}
+          productInfo={partialResult?.product_info}
+          sections={partialResult?.sections}
+          currentStep={currentStep}
         />
         <FigmaStyleEditor
           result={result}

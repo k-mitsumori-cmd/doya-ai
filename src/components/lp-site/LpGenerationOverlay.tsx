@@ -35,6 +35,9 @@ export function LpGenerationOverlay({
   mood,
   steps,
   allowBackgroundView = false,
+  productInfo,
+  sections,
+  currentStep,
 }: LpGenerationOverlayProps) {
   const p = Math.max(0, Math.min(100, Number.isFinite(progress) ? progress : 0))
   const [tipIndex, setTipIndex] = useState(0)
@@ -225,23 +228,23 @@ export function LpGenerationOverlay({
                 
                 {/* 時間がかかる旨のメッセージ */}
                 <div className="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-amber-600" />
-                    <p className="text-xs font-bold text-amber-700">
+                  <div className="flex items-start sm:items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5 sm:mt-0" />
+                    <p className="text-xs font-bold text-amber-700 leading-relaxed">
                       画像生成のため 2〜5分 ほどかかります。しばらくお待ちください。
                     </p>
                   </div>
                 </div>
 
                 {/* ステップインジケーター */}
-                <div className="mt-4 flex items-center gap-2 flex-wrap">
+                <div className="mt-4 flex items-center gap-1 sm:gap-2 flex-wrap">
                   {steps.map((s, i) => {
                     const active = p >= s.threshold
                     const isCurrent = i === currentStepIndex
                     const Icon = s.icon
                     return (
-                      <div key={`${s.label}-${i}`} className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                      <div key={`${s.label}-${i}`} className="flex items-center gap-1 sm:gap-2">
+                        <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center transition-all ${
                           isCurrent
                             ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 scale-110'
                             : active
@@ -249,16 +252,16 @@ export function LpGenerationOverlay({
                               : 'bg-gray-100 text-gray-300'
                         }`}>
                           {isCurrent ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                           ) : (
-                            <Icon className="w-4 h-4" />
+                            <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
                           )}
                         </div>
-                        <div className={`text-[11px] font-black ${active ? 'text-slate-900' : 'text-gray-400'}`}>
+                        <div className={`text-[10px] sm:text-[11px] font-black ${active ? 'text-slate-900' : 'text-gray-400'} hidden sm:block`}>
                           {s.label}
                         </div>
                         {i < steps.length - 1 && (
-                          <div className={`w-6 h-px ${active ? 'bg-teal-300' : 'bg-gray-200'}`} />
+                          <div className={`w-4 sm:w-6 h-px ${active ? 'bg-teal-300' : 'bg-gray-200'}`} />
                         )}
                       </div>
                     )
@@ -287,9 +290,120 @@ export function LpGenerationOverlay({
               </div>
 
               {/* コンテンツエリア */}
-              <div className="p-6">
-                {/* 検索UI（searchモード時のみ表示） */}
-                {mood === 'search' && (
+              <div className="p-4 sm:p-6">
+                {/* 商品理解の詳細表示 */}
+                {currentStep === 'product' && productInfo && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="mb-4 sm:mb-6 bg-gradient-to-br from-teal-50 to-cyan-50 rounded-2xl border-2 border-teal-200/50 p-4 sm:p-6 relative overflow-hidden"
+                  >
+                    <div className="absolute inset-0 opacity-10">
+                      <div className="absolute inset-0" style={{
+                        backgroundImage: 'repeating-linear-gradient(45deg, #14b8a6 0, #14b8a6 1px, transparent 1px, transparent 10px)',
+                      }} />
+                    </div>
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Search className="w-5 h-5 text-teal-600" />
+                        <h3 className="text-sm sm:text-base font-black text-slate-900">商品理解が完了しました</h3>
+                      </div>
+                      <div className="space-y-2 sm:space-y-3">
+                        {productInfo.product_name && (
+                          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200">
+                            <div className="text-xs font-bold text-teal-700 mb-1">商品名</div>
+                            <div className="text-sm sm:text-base font-bold text-slate-900">{productInfo.product_name}</div>
+                          </div>
+                        )}
+                        {productInfo.target && (
+                          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200">
+                            <div className="text-xs font-bold text-teal-700 mb-1">ターゲット</div>
+                            <div className="text-xs sm:text-sm text-slate-700">{productInfo.target}</div>
+                          </div>
+                        )}
+                        {productInfo.problem && (
+                          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200">
+                            <div className="text-xs font-bold text-teal-700 mb-1">解決する課題</div>
+                            <div className="text-xs sm:text-sm text-slate-700">{productInfo.problem}</div>
+                          </div>
+                        )}
+                        {productInfo.solution && (
+                          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200">
+                            <div className="text-xs font-bold text-teal-700 mb-1">提供価値</div>
+                            <div className="text-xs sm:text-sm text-slate-700">{productInfo.solution}</div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 sm:mt-4 p-3 bg-teal-100 rounded-xl border border-teal-300">
+                        <div className="text-xs font-bold text-teal-900 mb-1">✨ これらを基に、最適なLPを生成しています...</div>
+                        <div className="text-xs text-teal-700">この商品情報を分析し、ターゲットに響くLP構成を作成します</div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* LP構成案生成の詳細表示 */}
+                {currentStep === 'structure' && sections && sections.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="mb-4 sm:mb-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border-2 border-purple-200/50 p-4 sm:p-6 relative overflow-hidden"
+                  >
+                    <div className="absolute inset-0 opacity-10">
+                      <div className="absolute inset-0" style={{
+                        backgroundImage: 'repeating-linear-gradient(45deg, #a855f7 0, #a855f7 1px, transparent 1px, transparent 10px)',
+                      }} />
+                    </div>
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Layout className="w-5 h-5 text-purple-600" />
+                        <h3 className="text-sm sm:text-base font-black text-slate-900">LP構成案を生成中...</h3>
+                      </div>
+                      <div className="mb-3 sm:mb-4 p-3 bg-purple-100 rounded-xl border border-purple-300">
+                        <div className="text-xs font-bold text-purple-900 mb-1">📋 以下の構成でLPを作成しています</div>
+                        <div className="text-xs text-purple-700">各セクションの詳細を確認しながら進行中です</div>
+                      </div>
+                      <div className="space-y-2 sm:space-y-3 max-h-[300px] sm:max-h-[400px] overflow-y-auto pr-2">
+                        {sections.map((section, index) => (
+                          <motion.div
+                            key={section.section_id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.1, duration: 0.3 }}
+                            className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-purple-200"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center font-black text-xs sm:text-sm flex-shrink-0">
+                                {index + 1}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div className="text-xs sm:text-sm font-black text-slate-900">{section.headline || `セクション ${index + 1}`}</div>
+                                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] sm:text-xs font-bold rounded whitespace-nowrap">{section.section_type}</span>
+                                </div>
+                                {section.sub_headline && (
+                                  <div className="text-xs text-slate-600 mb-1.5" style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{section.sub_headline}</div>
+                                )}
+                                {section.purpose && (
+                                  <div className="text-[11px] sm:text-xs text-slate-500 leading-relaxed" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{section.purpose}</div>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                      <div className="mt-3 sm:mt-4 p-3 bg-purple-100 rounded-xl border border-purple-300">
+                        <div className="text-xs font-bold text-purple-900 mb-1">✨ この構成案を基に、ワイヤーフレームと画像を生成します</div>
+                        <div className="text-xs text-purple-700">各セクションのデザインとレイアウトを最適化しています</div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 検索UI（searchモード時のみ表示、商品理解完了前） */}
+                {mood === 'search' && !productInfo && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
