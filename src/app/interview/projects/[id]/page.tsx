@@ -277,7 +277,13 @@ export default function InterviewProjectDetailPage() {
           }
           
           if (!completed) {
-            throw new Error('文字起こし処理がタイムアウトしました。しばらく待ってから再度お試しください。')
+            const material = currentProject.materials?.find((m: any) => m.id === transcription.materialId)
+            const fileSizeGB = material?.fileSize ? (Number(material.fileSize) / (1024 * 1024 * 1024)).toFixed(2) : '不明'
+            throw new Error(
+              `文字起こし処理がタイムアウトしました（最大待機時間: ${Math.ceil(maxWaitTimeSeconds / 60)}分）。\n` +
+              `ファイルサイズ: ${fileSizeGB}GB\n` +
+              `大きなファイルの場合は処理に時間がかかります。しばらく待ってから再度お試しください。`
+            )
           }
         }
         
