@@ -290,6 +290,7 @@ Text requirements:
 - List key benefits as text (3-5 points)
 - Use clear, readable Japanese typography
 - Text should explain the benefits clearly
+- DO NOT include CTA buttons - this is a benefit explanation section, not a CTA section
 
 Composition:
 - ${device === 'pc' ? 'Headline at top, benefits listed with visuals, clean layout' : 'Headline at top, benefits vertically stacked with visuals'}
