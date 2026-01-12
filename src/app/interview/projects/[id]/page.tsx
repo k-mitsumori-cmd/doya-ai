@@ -192,9 +192,10 @@ export default function InterviewProjectDetailPage() {
           const bufferTime = Math.max(10 * 60, estimatedSeconds * 0.5)
           const totalSeconds = estimatedSeconds + bufferTime
           
-          // 最小待機時間: 5分、最大待機時間: 3時間
+          // 最小待機時間: 5分、最大待機時間: 3日（72時間）
+          // 10GB動画ファイル: 約34時間、10GB音声ファイル: 約72時間かかるため
           const minWaitTime = 5 * 60 // 5分
-          const maxWaitTime = 3 * 60 * 60 // 3時間
+          const maxWaitTime = 3 * 24 * 60 * 60 // 3日（72時間）
           
           return Math.max(minWaitTime, Math.min(maxWaitTime, totalSeconds))
         }
@@ -209,7 +210,15 @@ export default function InterviewProjectDetailPage() {
         }
         
         // 待機間隔: ファイルサイズに応じて調整（大きいファイルは長めの間隔）
-        const waitInterval = maxWaitTimeSeconds > 60 * 60 ? 5000 : 2000 // 1時間以上なら5秒、それ以下なら2秒
+        // 1時間以上: 5秒、6時間以上: 10秒、24時間以上: 30秒
+        let waitInterval = 2000 // デフォルト2秒
+        if (maxWaitTimeSeconds >= 24 * 60 * 60) {
+          waitInterval = 30000 // 24時間以上なら30秒
+        } else if (maxWaitTimeSeconds >= 6 * 60 * 60) {
+          waitInterval = 10000 // 6時間以上なら10秒
+        } else if (maxWaitTimeSeconds >= 60 * 60) {
+          waitInterval = 5000 // 1時間以上なら5秒
+        }
         const maxRetries = Math.ceil(maxWaitTimeSeconds / (waitInterval / 1000))
         
         console.log(`[INTERVIEW] Transcription wait time calculated:`, {
@@ -220,7 +229,13 @@ export default function InterviewProjectDetailPage() {
         })
         
         // 文字起こしが処理中の場合は完了を待機
-        setProcessingStep(`文字起こしが完了するのを待機中...（最大${Math.ceil(maxWaitTimeSeconds / 60)}分）`)
+        const maxWaitMinutes = Math.ceil(maxWaitTimeSeconds / 60)
+        const maxWaitHours = Math.floor(maxWaitMinutes / 60)
+        const remainingMinutes = maxWaitMinutes % 60
+        const waitTimeDisplay = maxWaitHours > 0 
+          ? `${maxWaitHours}時間${remainingMinutes > 0 ? `${remainingMinutes}分` : ''}`
+          : `${maxWaitMinutes}分`
+        setProcessingStep(`文字起こしが完了するのを待機中...（最大${waitTimeDisplay}）`)
         
         for (const transcription of processingTranscriptions) {
           let retryCount = 0
@@ -236,7 +251,12 @@ export default function InterviewProjectDetailPage() {
             
             if (remainingSeconds > 0) {
               const remainingMinutes = Math.ceil(remainingSeconds / 60)
-              setProcessingStep(`文字起こしが完了するのを待機中...（残り約${remainingMinutes}分）`)
+              const remainingHours = Math.floor(remainingMinutes / 60)
+              const remainingMins = remainingMinutes % 60
+              const remainingDisplay = remainingHours > 0
+                ? `${remainingHours}時間${remainingMins > 0 ? `${remainingMins}分` : ''}`
+                : `${remainingMinutes}分`
+              setProcessingStep(`文字起こしが完了するのを待機中...（残り約${remainingDisplay}）`)
             }
             
             try {

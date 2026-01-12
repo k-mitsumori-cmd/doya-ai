@@ -396,6 +396,7 @@ export function FigmaStyleEditor({
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set(result.sections.map(s => s.section_id)))
   const [zoom, setZoom] = useState(100)
   const [rightPanelTab, setRightPanelTab] = useState<'properties' | 'competitors'>('properties')
+  const [showComments, setShowComments] = useState<Set<string>>(new Set())
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -404,14 +405,14 @@ export function FigmaStyleEditor({
     })
   )
 
-  const sections = result.sections
+  const sections = result.sections || []
   const selectedSection = sections.find(s => s.section_id === selectedSectionId) || null
-  const selectedImage = result.images.find(img => img.section_id === selectedSectionId)
+  const selectedImage = result.images?.find(img => img.section_id === selectedSectionId)
 
   // 画像生成完了チェック
   const imageRequiredSections = sections.filter(s => s.image_required)
   const allImagesGenerated = imageRequiredSections.every(section => {
-    const image = result.images.find(img => img.section_id === section.section_id)
+    const image = result.images?.find(img => img.section_id === section.section_id)
     return image && (image.image_pc || image.image_sp)
   })
   const isGenerationComplete = !isGeneratingImages && generatingSections.size === 0 && allImagesGenerated
@@ -666,7 +667,7 @@ export function FigmaStyleEditor({
               <SortableContext items={sections.map(s => s.section_id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-0.5">
                     {sections.map((section, index) => {
-                      const image = result.images.find(img => img.section_id === section.section_id)
+                      const image = result.images?.find(img => img.section_id === section.section_id)
                       const isGenerating = isGeneratingImages && !image?.image_pc && !image?.image_sp
                       const isRegenerating = regeneratingSections.has(section.section_id)
                       const generationProgress = sectionProgress?.[section.section_id] || 0
@@ -724,11 +725,11 @@ export function FigmaStyleEditor({
                     }}
                   >
                     {visibleSectionsList.map((section, index) => {
-                      const image = result.images.find(img => img.section_id === section.section_id)
+                      const image = result.images?.find(img => img.section_id === section.section_id)
                       const imageData = image?.image_sp
                       const isSelected = selectedSectionId === section.section_id
                       const isRegenerating = regeneratingSections.has(section.section_id) || generatingSections.has(section.section_id) || (isGeneratingImages && !imageData)
-                      const sectionGenProgress = sectionProgress[section.section_id] ?? 0
+                      const sectionGenProgress = sectionProgress?.[section.section_id] ?? 0
                       
                       return (
                         <div
@@ -746,7 +747,16 @@ export function FigmaStyleEditor({
                         >
                       {imageData ? (
                         <div className="relative group">
-                          <img src={imageData} alt={section.headline} className="w-full block" />
+                          <img 
+                            src={imageData} 
+                            alt={section.headline || `セクション ${index + 1}`} 
+                            className="w-full block"
+                            onError={(e) => {
+                              console.error(`[LP-SITE] SP画像読み込みエラー: ${section.section_id}`, e)
+                              // エラー時はプレースホルダーを表示
+                              e.currentTarget.style.display = 'none'
+                            }}
+                          />
                           {/* セクション意図説明コメント（外側に表示） */}
                           <div className="absolute -left-2 top-1/2 -translate-y-1/2 -translate-x-full opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
                             <div className="relative">
@@ -948,11 +958,11 @@ export function FigmaStyleEditor({
             {selectedDevice === 'pc' && (
               <div className="overflow-y-auto" style={{ maxHeight: '80vh' }}>
                 {visibleSectionsList.map((section, index) => {
-                      const image = result.images.find(img => img.section_id === section.section_id)
+                      const image = result.images?.find(img => img.section_id === section.section_id)
                       const imageData = image?.image_pc
                       const isSelected = selectedSectionId === section.section_id
                       const isRegenerating = regeneratingSections.has(section.section_id) || generatingSections.has(section.section_id) || (isGeneratingImages && !imageData)
-                      const sectionGenProgress = sectionProgress[section.section_id] ?? 0
+                      const sectionGenProgress = sectionProgress?.[section.section_id] ?? 0
                   
                   return (
                     <div
@@ -968,7 +978,7 @@ export function FigmaStyleEditor({
                         <div className="relative group">
                           <img src={imageData} alt={section.headline} className="w-full block" />
                           {/* セクション意図説明コメント（選択時またはホバー時に表示） */}
-                          {(isSelected || showComments.has(section.section_id) || group) && (
+                          {(isSelected || showComments.has(section.section_id)) && (
                             <div className={`absolute ${isSelected ? 'left-0 top-0' : '-left-2 top-1/2 -translate-y-1/2 -translate-x-full'} transition-all z-10 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                               <div className="relative">
                                 {!isSelected && (
