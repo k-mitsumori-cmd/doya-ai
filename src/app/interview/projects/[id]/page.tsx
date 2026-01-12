@@ -140,9 +140,22 @@ export default function InterviewProjectDetailPage() {
         headers['x-guest-id'] = guestId
       }
 
-      // 文字起こしが完了しているか確認（非同期ジョブ方式のため）
-      const transcriptions = project.transcriptions || []
-      const processingTranscriptions = transcriptions.filter((t: any) => t.status === 'PROCESSING')
+      // プロジェクトを最新の状態に更新
+      await fetchProject()
+      
+      // 最新のプロジェクトデータを取得
+      let currentProject = project
+      let transcriptions = currentProject.transcriptions || []
+      
+      // 文字起こしが存在しない場合
+      if (transcriptions.length === 0) {
+        throw new Error('文字起こしが存在しません。先にファイルをアップロードして文字起こしを実行してください。')
+      }
+
+      // 処理中の文字起こしを確認（PROCESSING または PENDING）
+      const processingTranscriptions = transcriptions.filter((t: any) => 
+        t.status === 'PROCESSING' || t.status === 'PENDING'
+      )
       
       if (processingTranscriptions.length > 0) {
         // 文字起こしが処理中の場合は完了を待機
@@ -150,11 +163,11 @@ export default function InterviewProjectDetailPage() {
         
         for (const transcription of processingTranscriptions) {
           let retryCount = 0
-          const maxRetries = 300 // 最大5分（1秒間隔）
+          const maxRetries = 600 // 最大20分（2秒間隔）
           let completed = false
           
           while (retryCount < maxRetries && !completed) {
-            await new Promise(resolve => setTimeout(resolve, 1000)) // 1秒待機
+            await new Promise(resolve => setTimeout(resolve, 2000)) // 2秒待機
             
             try {
               const statusRes = await fetch(`/api/interview/transcribe/status/${transcription.id}`, {
@@ -167,8 +180,19 @@ export default function InterviewProjectDetailPage() {
                 
                 if (status === 'COMPLETED' && statusData.text && statusData.text.trim().length > 0) {
                   completed = true
-                  // プロジェクトを再取得
+                  // プロジェクトを再取得して最新の状態を取得
                   await fetchProject()
+                  // 最新のプロジェクトデータを更新
+                  const res = await fetch(`/api/interview/projects/${projectId}`, {
+                    headers: guestId ? { 'x-guest-id': guestId } : {},
+                  })
+                  if (res.ok) {
+                    const data = await res.json()
+                    if (data.project) {
+                      currentProject = data.project
+                      transcriptions = currentProject.transcriptions || []
+                    }
+                  }
                   break
                 } else if (status === 'ERROR') {
                   throw new Error(`文字起こし処理でエラーが発生しました: ${statusData.text || 'Unknown error'}`)
@@ -186,12 +210,39 @@ export default function InterviewProjectDetailPage() {
             throw new Error('文字起こし処理がタイムアウトしました。しばらく待ってから再度お試しください。')
           }
         }
+        
+        // 待機後に再度プロジェクトを取得
+        await fetchProject()
+        const res = await fetch(`/api/interview/projects/${projectId}`, {
+          headers: guestId ? { 'x-guest-id': guestId } : {},
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.project) {
+            currentProject = data.project
+            transcriptions = currentProject.transcriptions || []
+          }
+        }
       }
       
-      // 文字起こしが完了しているか確認
-      const completedTranscriptions = transcriptions.filter((t: any) => t.status === 'COMPLETED' && t.text && t.text.trim().length > 0)
+      // 最新のデータで文字起こしが完了しているか確認
+      const completedTranscriptions = transcriptions.filter((t: any) => {
+        const hasText = t.text && typeof t.text === 'string' && t.text.trim().length > 0
+        return t.status === 'COMPLETED' && hasText
+      })
+      
       if (completedTranscriptions.length === 0) {
-        throw new Error('文字起こしが完了していません。文字起こしを先に実行してください。')
+        // 文字起こしの状態を確認
+        const hasProcessing = transcriptions.some((t: any) => t.status === 'PROCESSING' || t.status === 'PENDING')
+        const hasError = transcriptions.some((t: any) => t.status === 'ERROR')
+        
+        if (hasProcessing) {
+          throw new Error('文字起こしがまだ処理中です。完了するまでお待ちください。')
+        } else if (hasError) {
+          throw new Error('文字起こし処理でエラーが発生しました。ファイルを再アップロードしてください。')
+        } else {
+          throw new Error('文字起こしが完了していません。文字起こしを先に実行してください。')
+        }
       }
 
       // 1. 構成案生成
