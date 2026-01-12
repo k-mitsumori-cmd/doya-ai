@@ -412,10 +412,32 @@ export function FigmaStyleEditor({
   const imageRequiredSections = sections.filter(s => s.image_required)
   const allImagesGenerated = imageRequiredSections.every(section => {
     const image = result.images.find(img => img.section_id === section.section_id)
-    const hasImage = selectedDevice === 'pc' ? !!image?.image_pc : !!image?.image_sp
-    return hasImage
+    return image && (image.image_pc || image.image_sp)
   })
   const isGenerationComplete = !isGeneratingImages && generatingSections.size === 0 && allImagesGenerated
+  const [showCompletionNotification, setShowCompletionNotification] = useState(false)
+  const [hasShownCompletionNotification, setHasShownCompletionNotification] = useState(false)
+
+  // 生成完了時に通知を表示
+  useEffect(() => {
+    if (isGenerationComplete && !hasShownCompletionNotification) {
+      setShowCompletionNotification(true)
+      setHasShownCompletionNotification(true)
+      toast.success('🎉 プレビュー・公開機能が使えるようになりました！', {
+        duration: 5000,
+        icon: '✅',
+      })
+      // 5秒後に通知を非表示
+      const timer = setTimeout(() => {
+        setShowCompletionNotification(false)
+      }, 5000)
+      return () => clearTimeout(timer)
+    } else if (!isGenerationComplete) {
+      // 生成中に戻った場合は通知をリセット
+      setHasShownCompletionNotification(false)
+      setShowCompletionNotification(false)
+    }
+  }, [isGenerationComplete, hasShownCompletionNotification])
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
