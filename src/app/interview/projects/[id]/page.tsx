@@ -159,6 +159,7 @@ export default function InterviewProjectDetailPage() {
       
       if (processingTranscriptions.length > 0) {
         // ファイルサイズに応じた待機時間を計算
+        // 全ての文字起こしが完了するまで待機するための動的待機時間を計算
         const calculateMaxWaitTime = (material: any): number => {
           if (!material || !material.fileSize) {
             // ファイルサイズが不明な場合はデフォルト値（30分）
