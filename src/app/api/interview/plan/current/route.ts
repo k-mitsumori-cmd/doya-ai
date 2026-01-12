@@ -30,17 +30,31 @@ export async function GET(request: NextRequest) {
         },
       })
 
+      // 統一プランも取得（UserServiceSubscriptionが存在しない場合のフォールバック）
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { plan: true },
+      })
+
+      const unifiedPlan = user?.plan || null
+
       console.log('[INTERVIEW] Current plan API - User subscription:', {
         userId,
         serviceId: 'interview',
         subscriptionPlan: subscription?.plan || null,
         subscriptionExists: !!subscription,
+        unifiedPlan,
       })
 
-      plan = await getUserPlan(userId, null, subscription?.plan || null)
+      // UserServiceSubscriptionが存在する場合はそれを使用、存在しない場合は統一プランをフォールバックとして使用
+      const planToUse = subscription?.plan || unifiedPlan
+      plan = await getUserPlan(userId, null, planToUse)
       
       console.log('[INTERVIEW] Current plan API - Resolved plan:', {
         userId,
+        subscriptionPlan: subscription?.plan,
+        unifiedPlan,
+        planToUse,
         resolvedPlan: plan,
       })
     } else if (guestId) {

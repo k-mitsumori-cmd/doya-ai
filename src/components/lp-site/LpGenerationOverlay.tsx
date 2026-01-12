@@ -14,6 +14,9 @@ interface LpGenerationOverlayProps {
   mood: OverlayMood
   steps: { label: string; threshold: number; icon: React.ElementType }[]
   allowBackgroundView?: boolean // 背景の結果を表示可能にする
+  productInfo?: any // 商品情報（商品理解完了後に表示）
+  sections?: any[] // セクション情報（構成生成完了後に表示）
+  currentStep?: 'product' | 'structure' | 'wireframe' | 'image' | 'complete' // 現在のステップ
 }
 
 const loadingTips = [
