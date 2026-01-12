@@ -658,6 +658,7 @@ Text requirements:
 - ${section.sub_headline ? `Include sub text "${section.sub_headline}"` : 'Add supporting text that explains the section'}
 - Use clear, readable Japanese typography
 - Professional text layout
+- DO NOT include CTA buttons unless this section's type is explicitly "cta" or "action"
 
 Composition:
 - ${device === 'pc' ? 'Headline at top, visual in center, supporting text below' : 'Headline at top, visual in center, supporting text below - vertical'}
