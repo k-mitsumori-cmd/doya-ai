@@ -448,7 +448,7 @@ export function LpGenerationOverlay({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.98 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="w-full max-w-4xl rounded-3xl border-2 border-white/20 bg-white/98 backdrop-blur-xl shadow-2xl overflow-hidden relative"
+              className="w-full max-w-4xl max-h-[90vh] rounded-3xl border-2 border-white/20 bg-white/98 backdrop-blur-xl shadow-2xl overflow-hidden relative flex flex-col"
             >
               {/* グローエフェクト - 派手なアニメーション */}
               <motion.div
@@ -492,9 +492,9 @@ export function LpGenerationOverlay({
                   />
                 ))}
               </motion.div>
-              <div className="relative z-10">
+              <div className="relative z-10 flex flex-col h-full">
               {/* ヘッダー */}
-              <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-cyan-50">
+              <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-cyan-50 flex-shrink-0">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     {/* マスコットアイコン */}
@@ -607,7 +607,7 @@ export function LpGenerationOverlay({
               </div>
 
               {/* コンテンツエリア */}
-              <div className="p-4 sm:p-6">
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
                 {/* 商品理解のリアルタイム分析表示 */}
                 {currentStep === 'product' && (
                   <ProductUnderstandingDisplay 
