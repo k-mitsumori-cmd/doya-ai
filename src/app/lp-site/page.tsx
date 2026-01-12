@@ -152,6 +152,7 @@ function LpSitePageInner() {
         if (!step1Response.ok) throw new Error('商品理解に失敗しました')
         const step1Data = await step1Response.json()
         productInfo = step1Data.product_info
+        competitorResearch = step1Data.competitor_research || null
         updateProgress(20) // Step 1完了
 
         // Step 2: LP構成生成 (20-40%)
@@ -392,6 +393,7 @@ function LpSitePageInner() {
                   has_sp: !!img.image_sp,
                 })),
               }, null, 2),
+              competitor_research: competitorResearch,
             }
             
             setResult(finalResult) // 結果を更新（画像を追加）
