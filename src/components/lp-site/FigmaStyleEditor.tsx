@@ -57,6 +57,8 @@ interface LayerItemProps {
   isSelected: boolean
   isVisible: boolean
   isRegenerating: boolean
+  isGenerating: boolean // 初期生成中かどうか
+  generationProgress?: number // 生成進捗（0-100）
   onSelect: () => void
   onToggleVisibility: () => void
   onRegenerate: () => void
@@ -489,6 +491,9 @@ export function FigmaStyleEditor({
                 <div className="space-y-0.5">
                     {sections.map((section, index) => {
                       const image = result.images.find(img => img.section_id === section.section_id)
+                      const isGenerating = isGeneratingImages && !image?.image_pc && !image?.image_sp
+                      const isRegenerating = regeneratingSections.has(section.section_id)
+                      const generationProgress = sectionProgress?.[section.section_id] || 0
                       return (
                         <LayerItem
                           key={section.section_id}
@@ -498,7 +503,9 @@ export function FigmaStyleEditor({
                           selectedDevice={selectedDevice}
                           isSelected={selectedSectionId === section.section_id}
                           isVisible={visibleSections.has(section.section_id)}
-                          isRegenerating={regeneratingSections.has(section.section_id)}
+                          isRegenerating={isRegenerating}
+                          isGenerating={isGenerating}
+                          generationProgress={isGenerating || isRegenerating ? generationProgress : undefined}
                           onSelect={() => setSelectedSectionId(section.section_id)}
                           onToggleVisibility={() => handleToggleVisibility(section.section_id)}
                           onRegenerate={() => handleSectionRegenerate(section.section_id)}
