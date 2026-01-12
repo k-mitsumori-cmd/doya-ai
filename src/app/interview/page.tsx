@@ -141,18 +141,25 @@ export default function InterviewPage() {
           guestId = localStorage.getItem('interview-guest-id')
         }
 
+        console.log('[INTERVIEW] Fetching current plan...', { guestId: guestId || 'null' })
+
         const res = await fetch('/api/interview/plan/current', {
           headers: guestId ? { 'x-guest-id': guestId } : {},
         })
         if (res.ok) {
           const data = await res.json()
+          console.log('[INTERVIEW] Current plan API response:', data)
           setCurrentPlan(data.plan || 'GUEST')
           if (data.guestFirstAccessAt) {
             setGuestFirstAccessAt(new Date(data.guestFirstAccessAt))
           }
+          console.log('[INTERVIEW] Current plan state updated:', data.plan || 'GUEST')
+        } else {
+          const errorData = await res.json().catch(() => ({}))
+          console.error('[INTERVIEW] Failed to fetch current plan:', res.status, errorData)
         }
       } catch (error) {
-        console.error('Failed to fetch current plan:', error)
+        console.error('[INTERVIEW] Failed to fetch current plan:', error)
       }
     }
 
@@ -255,8 +262,23 @@ export default function InterviewPage() {
     const effectivePlan = getEffectivePlan(currentPlan, guestFirstAccessAt)
     const maxFileSize = getMaxFileSize(effectivePlan, isVideoFile)
 
+    console.log('[INTERVIEW] validateFile called:', {
+      fileName: file.name,
+      fileSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
+      isVideoFile,
+      currentPlan,
+      effectivePlan,
+      maxFileSize: `${(maxFileSize / 1024 / 1024 / 1024).toFixed(2)}GB`,
+      guestFirstAccessAt,
+    })
+
     // 動画ファイルが許可されていないプランの場合
     if (isVideoFile && maxFileSize === 0) {
+      console.error('[INTERVIEW] Video file not allowed:', {
+        effectivePlan,
+        maxFileSize,
+        currentPlan,
+      })
       return {
         valid: false,
         error: '動画ファイルはアップロードできません',
