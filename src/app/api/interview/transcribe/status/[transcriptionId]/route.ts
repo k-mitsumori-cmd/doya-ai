@@ -53,6 +53,12 @@ export async function GET(
       )
     }
 
+    // materialが含まれている場合、fileSizeを文字列に変換
+    const materialResponse = transcription.material ? {
+      ...transcription.material,
+      fileSize: transcription.material.fileSize ? transcription.material.fileSize.toString() : null,
+    } : null
+
     return NextResponse.json({
       id: transcription.id,
       status: transcription.status,
@@ -60,6 +66,7 @@ export async function GET(
       materialId: transcription.materialId,
       projectId: transcription.projectId,
       materialStatus: transcription.material?.status,
+      material: materialResponse,
       createdAt: transcription.createdAt,
       updatedAt: transcription.updatedAt,
     })
