@@ -182,7 +182,7 @@ TEXT REQUIREMENTS (MUST INCLUDE):
 - Use clear, readable Japanese typography
 - Text should be prominent and well-positioned
 - Follow Japanese LP text layout conventions
-- Include CTA text if this is a CTA section
+- IMPORTANT: Only include CTA buttons if this section's type is "cta" or "action" - DO NOT add CTA buttons to other section types
 
 Device-specific requirements:
 - ${device === 'pc' ? 'PC version: Wide horizontal layout (16:9), desktop-optimized' : 'Mobile version: Tall vertical layout (9:16), mobile-optimized'}
@@ -259,10 +259,10 @@ Text requirements:
 - ${section.sub_headline ? `Embed sub headline "${section.sub_headline}" below main headline` : 'Add compelling sub text that explains the value proposition'}
 - Use large, bold, readable Japanese typography
 - Text should be the focal point along with the visual
-- Consider adding a CTA button with text if appropriate
+- DO NOT include CTA buttons in hero sections - CTA buttons should only appear in dedicated CTA sections
 
 Composition:
-- ${device === 'pc' ? 'Headline at top, product/visual in center, CTA at bottom' : 'Headline at top, product/visual in center, CTA at bottom - vertical stack'}
+- ${device === 'pc' ? 'Headline at top, product/visual in center, supporting text at bottom' : 'Headline at top, product/visual in center, supporting text at bottom - vertical stack'}
 - Bold, impactful composition
 - Professional LP hero section layout
 
@@ -624,15 +624,17 @@ Visual requirements:
 Text requirements:
 - Embed CTA headline "${section.headline}" prominently
 - ${section.sub_headline ? `Include sub text "${section.sub_headline}"` : 'Add compelling CTA description'}
-- Include CTA button with text (e.g., "今すぐ始める", "無料で試す", "資料をダウンロード")
+- Include EXACTLY ONE CTA button with text (e.g., "今すぐ始める", "無料で試す", "資料をダウンロード")
 - ${productInfo.cta ? `Use CTA text: "${productInfo.cta}"` : 'Use appropriate CTA text for the product'}
 - Price information if this is pricing section
 - Clear, action-oriented typography
+- CRITICAL: Include only ONE CTA button - do NOT create multiple buttons or duplicate buttons
 
 Composition:
-- ${device === 'pc' ? 'Headline at top, product in center, CTA button prominently at bottom' : 'Headline at top, product in center, large CTA button at bottom'}
+- ${device === 'pc' ? 'Headline at top, product in center, ONE prominent CTA button at bottom' : 'Headline at top, product in center, ONE large CTA button at bottom'}
 - Clean, uncluttered, conversion-focused
 - CTA button should be prominent and clickable-looking
+- Ensure only one CTA button is visible in the image
 
 Tone: Reliable, Clear, Commercial, Action-oriented`
   }

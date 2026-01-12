@@ -321,38 +321,141 @@ export default function InterviewProjectDetailPage() {
         }
       }
       
-      // 最新のデータで文字起こしが完了しているか確認（より厳密にチェック）
+      // 全ての文字起こしが完了するまで待機（再確認）
       // プロジェクトを再取得して最新の状態を確認
       await fetchProject()
-      const finalRes = await fetch(`/api/interview/projects/${projectId}`, {
+      let finalCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
         headers: guestId ? { 'x-guest-id': guestId } : {},
       })
-      if (finalRes.ok) {
-        const finalData = await finalRes.json()
-        if (finalData.project) {
-          currentProject = finalData.project
+      if (finalCheckRes.ok) {
+        const finalCheckData = await finalCheckRes.json()
+        if (finalCheckData.project) {
+          currentProject = finalCheckData.project
           transcriptions = currentProject.transcriptions || []
         }
       }
 
-      // 完了した文字起こしを確認（テキストが存在し、空でないことを確認）
-      const completedTranscriptions = transcriptions.filter((t: any) => {
+      // 全ての文字起こしを確認
+      const allTranscriptions = transcriptions || []
+      const stillProcessing = allTranscriptions.filter((t: any) => 
+        t.status === 'PROCESSING' || t.status === 'PENDING'
+      )
+      
+      // 処理中の文字起こしがまだある場合は、全て完了するまで待機
+      if (stillProcessing.length > 0) {
+        setProcessingStep(`全ての文字起こしが完了するのを待機中...（残り${stillProcessing.length}件）`)
+        
+        // 全ての処理中の文字起こしが完了するまで待機
+        const maxWaitTimeSeconds = 3 * 24 * 60 * 60 // 最大3日
+        const waitInterval = 5000 // 5秒間隔
+        const maxRetries = Math.ceil(maxWaitTimeSeconds / (waitInterval / 1000))
+        const startTime = Date.now()
+        
+        for (const transcription of stillProcessing) {
+          let retryCount = 0
+          let completed = false
+          
+          while (retryCount < maxRetries && !completed) {
+            await new Promise(resolve => setTimeout(resolve, waitInterval))
+            
+            // 経過時間を計算
+            const elapsedSeconds = (Date.now() - startTime) / 1000
+            const remainingSeconds = maxWaitTimeSeconds - elapsedSeconds
+            
+            if (remainingSeconds > 0) {
+              const remainingMinutes = Math.ceil(remainingSeconds / 60)
+              const remainingHours = Math.floor(remainingMinutes / 60)
+              const remainingMins = remainingMinutes % 60
+              const remainingDisplay = remainingHours > 0
+                ? `${remainingHours}時間${remainingMins > 0 ? `${remainingMins}分` : ''}`
+                : `${remainingMinutes}分`
+              setProcessingStep(`全ての文字起こしが完了するのを待機中...（残り約${remainingDisplay}）`)
+            }
+            
+            try {
+              const statusRes = await fetch(`/api/interview/transcribe/status/${transcription.id}`, {
+                headers: guestId ? { 'x-guest-id': guestId } : {},
+              })
+              
+              if (statusRes.ok) {
+                const statusData = await statusRes.json()
+                const status = statusData.status
+                
+                if (status === 'COMPLETED' && statusData.text && statusData.text.trim().length > 0) {
+                  completed = true
+                  // プロジェクトを再取得
+                  await fetchProject()
+                  finalCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
+                    headers: guestId ? { 'x-guest-id': guestId } : {},
+                  })
+                  if (finalCheckRes.ok) {
+                    const finalCheckData = await finalCheckRes.json()
+                    if (finalCheckData.project) {
+                      currentProject = finalCheckData.project
+                      transcriptions = currentProject.transcriptions || []
+                    }
+                  }
+                  break
+                } else if (status === 'ERROR') {
+                  throw new Error(`文字起こし処理でエラーが発生しました: ${statusData.text || 'Unknown error'}`)
+                }
+              }
+            } catch (checkError) {
+              console.warn('Failed to check transcription status:', checkError)
+            }
+            
+            retryCount++
+          }
+          
+          if (!completed) {
+            throw new Error('文字起こし処理がタイムアウトしました。しばらく待ってから再度お試しください。')
+          }
+        }
+        
+        // 全ての文字起こしが完了したら、再度プロジェクトを取得
+        await fetchProject()
+        finalCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
+          headers: guestId ? { 'x-guest-id': guestId } : {},
+        })
+        if (finalCheckRes.ok) {
+          const finalCheckData = await finalCheckRes.json()
+          if (finalCheckData.project) {
+            currentProject = finalCheckData.project
+            transcriptions = currentProject.transcriptions || []
+          }
+        }
+      }
+
+      // 全ての文字起こしが完了していることを確認
+      const allTranscriptionsFinal = transcriptions || []
+      const allCompletedTranscriptions = allTranscriptionsFinal.filter((t: any) => {
         const hasText = t.text && typeof t.text === 'string' && t.text.trim().length > 0
         const isCompleted = t.status === 'COMPLETED'
         return isCompleted && hasText
       })
       
-      if (completedTranscriptions.length === 0) {
-        // 文字起こしの状態を確認
-        const hasProcessing = transcriptions.some((t: any) => t.status === 'PROCESSING' || t.status === 'PENDING')
-        const hasError = transcriptions.some((t: any) => t.status === 'ERROR')
-        const hasCompletedButNoText = transcriptions.some((t: any) => 
+      // 処理中の文字起こしがまだある場合はエラー
+      const stillProcessingFinal = allTranscriptionsFinal.filter((t: any) => 
+        t.status === 'PROCESSING' || t.status === 'PENDING'
+      )
+      
+      if (stillProcessingFinal.length > 0) {
+        throw new Error(`まだ処理中の文字起こしが${stillProcessingFinal.length}件あります。全て完了するまでお待ちください。`)
+      }
+      
+      // 文字起こしが1件もない場合
+      if (allTranscriptionsFinal.length === 0) {
+        throw new Error('文字起こしが存在しません。先にファイルをアップロードして文字起こしを実行してください。')
+      }
+      
+      // 完了した文字起こしがない場合
+      if (allCompletedTranscriptions.length === 0) {
+        const hasError = allTranscriptionsFinal.some((t: any) => t.status === 'ERROR')
+        const hasCompletedButNoText = allTranscriptionsFinal.some((t: any) => 
           t.status === 'COMPLETED' && (!t.text || t.text.trim().length === 0)
         )
         
-        if (hasProcessing) {
-          throw new Error('文字起こしがまだ処理中です。完了するまでお待ちください。')
-        } else if (hasError) {
+        if (hasError) {
           throw new Error('文字起こし処理でエラーが発生しました。ファイルを再アップロードしてください。')
         } else if (hasCompletedButNoText) {
           throw new Error('文字起こしは完了しましたが、テキストが取得できませんでした。しばらく待ってから再度お試しください。')
@@ -361,8 +464,20 @@ export default function InterviewProjectDetailPage() {
         }
       }
 
-      // 文字起こしテキストの内容を確認（「ご視聴ありがとうございました」などの終了フレーズが含まれているか確認）
-      const allTranscriptionText = completedTranscriptions
+      // 全ての文字起こしが完了していることを確認（全ての文字起こしが完了している必要がある）
+      if (allCompletedTranscriptions.length !== allTranscriptionsFinal.length) {
+        const notCompleted = allTranscriptionsFinal.filter((t: any) => 
+          t.status !== 'COMPLETED' || !t.text || t.text.trim().length === 0
+        )
+        throw new Error(
+          `全ての文字起こしが完了していません。\n` +
+          `完了: ${allCompletedTranscriptions.length}件 / 全体: ${allTranscriptionsFinal.length}件\n` +
+          `未完了: ${notCompleted.length}件（${notCompleted.map((t: any) => t.status).join(', ')}）`
+        )
+      }
+
+      // 文字起こしテキストの内容を確認（全ての文字起こしテキストを結合）
+      const allTranscriptionText = allCompletedTranscriptions
         .map((t: any) => t.text)
         .join('\n\n')
       
@@ -376,11 +491,13 @@ export default function InterviewProjectDetailPage() {
         throw new Error(`文字起こしテキストが短すぎます（${allTranscriptionText.trim().length}文字）。文字起こしが正しく完了していない可能性があります。`)
       }
 
-      console.log('[INTERVIEW] Transcription verified before outline generation:', {
+      console.log('[INTERVIEW] All transcriptions verified before outline generation:', {
         projectId,
-        completedCount: completedTranscriptions.length,
+        totalCount: allTranscriptionsFinal.length,
+        completedCount: allCompletedTranscriptions.length,
         totalTextLength: allTranscriptionText.length,
-        transcriptionIds: completedTranscriptions.map((t: any) => t.id),
+        transcriptionIds: allCompletedTranscriptions.map((t: any) => t.id),
+        allStatuses: allTranscriptionsFinal.map((t: any) => ({ id: t.id, status: t.status, hasText: !!(t.text && t.text.trim().length > 0) })),
       })
 
       // 1. 構成案生成（文字起こしが完全に終了したことを確認してから実行）
