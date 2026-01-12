@@ -714,6 +714,9 @@ function LpSitePageInner() {
         mood={mood}
         steps={steps}
         allowBackgroundView={false}
+        productInfo={partialResult?.product_info}
+        sections={partialResult?.sections}
+        currentStep={currentStep}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

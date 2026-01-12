@@ -469,16 +469,16 @@ export default function InterviewProjectDetailPage() {
         <Link href="/interview/projects" className="text-sm text-slate-600 hover:text-orange-600 mb-4 inline-block">
           ← プロジェクト一覧に戻る
         </Link>
-        <h1 className="text-3xl font-black text-slate-900 mb-2">{project.title || '無題のプロジェクト'}</h1>
-        <div className="flex items-center gap-4 text-sm text-slate-600">
-          <span className="px-3 py-1 bg-slate-100 rounded-lg font-bold">{project.status || '不明'}</span>
-          {project.intervieweeName && <span>対象者: {project.intervieweeName}</span>}
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 mb-2 break-words">{project.title || '無題のプロジェクト'}</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-600">
+          <span className="px-2 sm:px-3 py-1 bg-slate-100 rounded-lg font-bold inline-block w-fit">{project.status || '不明'}</span>
+          {project.intervieweeName && <span className="break-words">対象者: {project.intervieweeName}</span>}
           <span>更新: {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString('ja-JP') : '日付不明'}</span>
         </div>
       </div>
 
       {/* タブ */}
-      <div className="flex gap-2 mb-6 border-b border-slate-200">
+      <div className="flex gap-1 sm:gap-2 mb-4 sm:mb-6 border-b border-slate-200 overflow-x-auto">
         {[
           { id: 'draft', label: '記事', icon: Sparkles },
           { id: 'overview', label: '概要', icon: FileText },
@@ -489,7 +489,7 @@ export default function InterviewProjectDetailPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2 font-bold text-sm border-b-2 transition-colors ${
+            className={`px-2 sm:px-4 py-2 font-bold text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap flex-shrink-0 ${
               activeTab === tab.id
                 ? 'border-orange-500 text-orange-600'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
@@ -515,11 +515,11 @@ export default function InterviewProjectDetailPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4"
             >
-              <div className="p-8">
-                <h2 className="text-3xl font-black text-slate-900 mb-2">記事タイプを選択</h2>
-                <p className="text-slate-600 mb-8">記事の形式と表示スタイルを選択してください</p>
+              <div className="p-4 sm:p-6 md:p-8">
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-slate-900 mb-2">記事タイプを選択</h2>
+                <p className="text-sm sm:text-base text-slate-600 mb-4 sm:mb-6 md:mb-8">記事の形式と表示スタイルを選択してください</p>
 
                 {/* 記事タイプ選択 */}
                 <div className="mb-8">
@@ -539,15 +539,15 @@ export default function InterviewProjectDetailPage() {
                         onClick={() => setSelectedArticleType(item.type)}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className={`p-6 rounded-2xl border-2 transition-all text-left ${
+                        className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 transition-all text-left ${
                           selectedArticleType === item.type
                             ? 'border-orange-500 bg-orange-50 shadow-lg'
                             : 'border-slate-200 bg-white hover:border-slate-300'
                         }`}
                       >
-                        <item.icon className={`w-8 h-8 mb-3 ${selectedArticleType === item.type ? 'text-orange-600' : 'text-slate-400'}`} />
-                        <h4 className="font-black text-slate-900 mb-1">{item.label}</h4>
-                        <p className="text-sm text-slate-600">{item.desc}</p>
+                        <item.icon className={`w-6 h-6 sm:w-8 sm:h-8 mb-2 sm:mb-3 ${selectedArticleType === item.type ? 'text-orange-600' : 'text-slate-400'}`} />
+                        <h4 className="text-sm sm:text-base font-black text-slate-900 mb-1">{item.label}</h4>
+                        <p className="text-xs sm:text-sm text-slate-600">{item.desc}</p>
                       </motion.button>
                     ))}
                   </div>
@@ -628,7 +628,7 @@ export default function InterviewProjectDetailPage() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-2xl font-black text-orange-900 mb-2 flex items-center gap-2">
+              <h3 className="text-xl sm:text-2xl font-black text-orange-900 mb-2 flex items-center gap-2">
                 <Sparkles className="w-6 h-6" />
                 記事を生成しましょう
               </h3>
@@ -742,7 +742,7 @@ export default function InterviewProjectDetailPage() {
         {activeTab === 'transcription' && (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-black text-slate-900">文字起こし</h3>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900">文字起こし</h3>
               {project.transcriptions && Array.isArray(project.transcriptions) && project.transcriptions.length > 0 && 
                (!project.drafts || !Array.isArray(project.drafts) || project.drafts.length === 0) && (
                 <motion.button
@@ -799,7 +799,7 @@ export default function InterviewProjectDetailPage() {
         {activeTab === 'draft' && (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-black text-slate-900">記事</h3>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900">記事</h3>
               {project.drafts && Array.isArray(project.drafts) && project.drafts.length > 0 && 
                project.transcriptions && Array.isArray(project.transcriptions) && project.transcriptions.length > 0 && (
                 <motion.button
@@ -839,7 +839,7 @@ export default function InterviewProjectDetailPage() {
                       <div className="flex items-start justify-between mb-6">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
-                            <h4 className="text-2xl font-black text-slate-900">{draft.title || '無題'}</h4>
+                            <h4 className="text-lg sm:text-xl md:text-2xl font-black text-slate-900 break-words">{draft.title || '無題'}</h4>
                             {draft.articleType && (
                               <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-black rounded-full">
                                 {articleTypeLabels[draft.articleType] || draft.articleType}
