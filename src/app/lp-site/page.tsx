@@ -248,51 +248,105 @@ function LpSitePageInner() {
             const totalSections = imageRequiredSections.length
             let completedSections = 0
             
-            // 各セクションごとに画像を生成
+            // 各セクションごとに画像を生成（タイムアウト付き）
+            const SECTION_TIMEOUT = 30000 // 30秒
+            const MAX_RETRIES = 2 // 最大2回まで再試行
+            
             for (let index = 0; index < imageRequiredSections.length; index++) {
               const section = imageRequiredSections[index]
               const sectionId = section.section_id
+              const sectionName = section.headline || section.section_type || `セクション ${index + 1}`
               
-              try {
-                // セクション生成開始
-                setSectionProgress(prev => ({ ...prev, [sectionId]: 0 }))
-                const sectionName = section.headline || section.section_type || `セクション ${index + 1}`
-                setStageText(`${sectionName} の画像を生成中... (${index + 1}/${totalSections})`)
-                
-                // セクション画像生成APIを呼び出し
-                const sectionResponse = await fetch('/api/lp-site/regenerate-section', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    section,
-                    product_info: productInfo,
-                    regenerate_type: 'both', // PC/SP両方生成
-                  }),
-                })
-                
-                if (!sectionResponse.ok) {
-                  let errorData: any = {}
-                  try {
-                    errorData = await sectionResponse.json()
-                  } catch {
-                    // JSON解析に失敗した場合は空オブジェクトを使用
+              let sectionImage: SectionImage | null = null
+              let retryCount = 0
+              let success = false
+              
+              // 再試行ループ
+              while (retryCount <= MAX_RETRIES && !success) {
+                try {
+                  // セクション生成開始
+                  setSectionProgress(prev => ({ ...prev, [sectionId]: 0 }))
+                  if (retryCount > 0) {
+                    setStageText(`${sectionName} の画像を再生成中... (試行 ${retryCount + 1}/${MAX_RETRIES + 1})`)
+                    toast.info(`${sectionName} の画像を再生成中... (${retryCount + 1}回目)`, {
+                      duration: 3000,
+                      icon: '🔄',
+                    })
+                  } else {
+                    setStageText(`${sectionName} の画像を生成中... (${index + 1}/${totalSections})`)
                   }
-                  console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, errorData)
-                  const errorMsg = errorData.error || errorData.details || '画像生成に失敗しました'
-                  toast.error(`${sectionName} の画像生成に失敗しました: ${errorMsg}`, {
-                    duration: 5000,
-                    icon: '❌',
+                  
+                  // タイムアウト付きでセクション画像生成APIを呼び出し
+                  const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('タイムアウト: 画像生成に時間がかかりすぎています')), SECTION_TIMEOUT)
                   })
-                  throw new Error(errorMsg)
+                  
+                  const fetchPromise = fetch('/api/lp-site/regenerate-section', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      section,
+                      product_info: productInfo,
+                      regenerate_type: 'both', // PC/SP両方生成
+                    }),
+                  })
+                  
+                  const sectionResponse = await Promise.race([fetchPromise, timeoutPromise]) as Response
+                  
+                  if (!sectionResponse.ok) {
+                    let errorData: any = {}
+                    try {
+                      errorData = await sectionResponse.json()
+                    } catch {
+                      // JSON解析に失敗した場合は空オブジェクトを使用
+                    }
+                    console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, errorData)
+                    const errorMsg = errorData.error || errorData.details || '画像生成に失敗しました'
+                    throw new Error(errorMsg)
+                  }
+                  
+                  const sectionData = await sectionResponse.json()
+                  sectionImage = {
+                    section_id: sectionId,
+                    image_pc: sectionData.result?.image_pc,
+                    image_sp: sectionData.result?.image_sp,
+                  }
+                  
+                  // PC/SPの少なくともどちらかが生成されているか確認
+                  if (sectionImage.image_pc || sectionImage.image_sp) {
+                    success = true
+                  } else {
+                    throw new Error('画像が生成されませんでした（PC/SP両方とも空）')
+                  }
+                  
+                } catch (error: any) {
+                  console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}, 試行 ${retryCount + 1}):`, error)
+                  
+                  retryCount++
+                  
+                  if (retryCount > MAX_RETRIES) {
+                    // 最大再試行回数に達した場合はエラーとして記録
+                    console.error(`[LP-SITE] セクション画像生成失敗（最大再試行回数に達しました）: ${sectionId}`)
+                    toast.error(`${sectionName} の画像生成に失敗しました（${MAX_RETRIES + 1}回試行）`, {
+                      duration: 5000,
+                      icon: '❌',
+                    })
+                    // エントリは作成するが、画像は空
+                    sectionImage = {
+                      section_id: sectionId,
+                      image_pc: undefined,
+                      image_sp: undefined,
+                    }
+                    break
+                  } else {
+                    // 再試行する前に少し待機
+                    await new Promise(resolve => setTimeout(resolve, 2000))
+                  }
                 }
-                
-                const sectionData = await sectionResponse.json()
-                const sectionImage: SectionImage = {
-                  section_id: sectionId,
-                  image_pc: sectionData.result?.image_pc,
-                  image_sp: sectionData.result?.image_sp,
-                }
-                
+              }
+              
+              // 画像が生成された場合のみ完了としてカウント
+              if (sectionImage && (sectionImage.image_pc || sectionImage.image_sp)) {
                 // 既存のエントリを更新
                 const existingIndex = generatedImages.findIndex(img => img.section_id === sectionId)
                 if (existingIndex >= 0) {
@@ -315,63 +369,62 @@ function LpSitePageInner() {
                     icon: '✅',
                   })
                 }
-                
-                // 結果をリアルタイムで更新
-                const currentImages = [...generatedImages]
-                // 画像不要のセクションも追加
-                sections.filter(s => !s.image_required).forEach(s => {
-                  if (!currentImages.find(img => img.section_id === s.section_id)) {
-                    currentImages.push({ section_id: s.section_id })
-                  }
-                })
-                
-                const partialResult: LpGenerationResult = {
-                  product_info: productInfo,
-                  sections,
-                  wireframes,
-                  images: currentImages,
-                  structure_json: JSON.stringify({
-                    product_info: productInfo,
-                    sections,
-                    wireframes,
-                    images: currentImages.map(img => ({
-                      section_id: img.section_id,
-                      has_pc: !!img.image_pc,
-                      has_sp: !!img.image_sp,
-                    })),
-                  }, null, 2),
-                }
-                
-                setResult(partialResult) // リアルタイムで結果を更新
-                setGeneratingSections(prev => {
-                  const next = new Set(prev)
-                  next.delete(sectionId)
-                  return next
-                })
-                
-                console.log(`[LP-SITE] セクション画像生成完了: ${sectionId} (${completedSections}/${totalSections})`)
-              } catch (error: any) {
-                console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, error)
-                // エラーが発生しても続行（部分的な成功を許容）
-                // エントリは既に作成されているので、更新のみ
+              } else {
+                // 画像が生成されなかった場合
                 const existingIndex = generatedImages.findIndex(img => img.section_id === sectionId)
                 if (existingIndex >= 0) {
-                  generatedImages[existingIndex] = {
+                  generatedImages[existingIndex] = sectionImage || {
                     section_id: sectionId,
                     image_pc: undefined,
                     image_sp: undefined,
                   }
+                } else {
+                  generatedImages.push(sectionImage || {
+                    section_id: sectionId,
+                    image_pc: undefined,
+                    image_sp: undefined,
+                  })
                 }
-                setGeneratingSections(prev => {
-                  const next = new Set(prev)
-                  next.delete(sectionId)
-                  return next
-                })
-                // 進捗は更新（エラーでもカウント）
-                completedSections++
-                const overallProgress = 65 + Math.round((completedSections / totalSections) * 30)
-                updateProgress(overallProgress)
-                setImageProgress(Math.round((completedSections / totalSections) * 100))
+                // 進捗は更新するが、completedSectionsは増やさない
+                setSectionProgress(prev => ({ ...prev, [sectionId]: 0 }))
+              }
+              
+              // 結果をリアルタイムで更新
+              const currentImages = [...generatedImages]
+              // 画像不要のセクションも追加
+              sections.filter(s => !s.image_required).forEach(s => {
+                if (!currentImages.find(img => img.section_id === s.section_id)) {
+                  currentImages.push({ section_id: s.section_id })
+                }
+              })
+              
+              const partialResult: LpGenerationResult = {
+                product_info: productInfo,
+                sections,
+                wireframes,
+                images: currentImages,
+                structure_json: JSON.stringify({
+                  product_info: productInfo,
+                  sections,
+                  wireframes,
+                  images: currentImages.map(img => ({
+                    section_id: img.section_id,
+                    has_pc: !!img.image_pc,
+                    has_sp: !!img.image_sp,
+                  })),
+                }, null, 2),
+                competitor_research: competitorResearch,
+              }
+              
+              setResult(partialResult) // リアルタイムで結果を更新
+              setGeneratingSections(prev => {
+                const next = new Set(prev)
+                next.delete(sectionId)
+                return next
+              })
+              
+              if (success) {
+                console.log(`[LP-SITE] セクション画像生成完了: ${sectionId} (${completedSections}/${totalSections})`)
               }
             }
             
@@ -392,99 +445,10 @@ function LpSitePageInner() {
               return img || { section_id: s.section_id, image_pc: undefined, image_sp: undefined }
             })
             
-            // 画像が必要なセクションで、画像が生成されていないものを確認
-            const failedSections: string[] = []
-            // imageRequiredSections は既に上で定義されているので再定義しない
-            
-            imageRequiredSections.forEach(section => {
-              const img = orderedImages.find(i => i.section_id === section.section_id)
-              if (!img || (!img.image_pc && !img.image_sp)) {
-                failedSections.push(section.section_id)
-              }
-            })
-            
-            // 失敗したセクションがある場合は再試行
-            if (failedSections.length > 0) {
-              console.log(`[LP-SITE] ${failedSections.length} セクションの画像生成に失敗。再試行します...`)
-              toast.warning(`${failedSections.length} セクションの画像生成に失敗しました。再試行中...`, {
-                duration: 5000,
-                icon: '⚠️',
-              })
-              
-              // 失敗したセクションを再試行
-              for (const sectionId of failedSections) {
-                const section = sections.find(s => s.section_id === sectionId)
-                if (!section) continue
-                
-                try {
-                  setGeneratingSections(prev => new Set([...prev, sectionId]))
-                  setSectionProgress(prev => ({ ...prev, [sectionId]: 0 }))
-                  
-                  const sectionName = section.headline || section.section_type || `セクション ${sectionId.slice(0, 6)}`
-                  setStageText(`${sectionName} の画像を再生成中...`)
-                  
-                  const retryResponse = await fetch('/api/lp-site/regenerate-section', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      section,
-                      product_info: productInfo,
-                      regenerate_type: 'both',
-                    }),
-                  })
-                  
-                  if (!retryResponse.ok) {
-                    let errorData: any = {}
-                    try {
-                      errorData = await retryResponse.json()
-                    } catch {
-                      // JSON解析に失敗した場合は空オブジェクトを使用
-                    }
-                    throw new Error(errorData.error || errorData.details || '再生成に失敗しました')
-                  }
-                  
-                  const retryData = await retryResponse.json()
-                  const retryImage: SectionImage = {
-                    section_id: sectionId,
-                    image_pc: retryData.result?.image_pc,
-                    image_sp: retryData.result?.image_sp,
-                  }
-                  
-                  // 既存のエントリを更新
-                  const existingIndex = orderedImages.findIndex(img => img.section_id === sectionId)
-                  if (existingIndex >= 0) {
-                    orderedImages[existingIndex] = retryImage
-                  } else {
-                    orderedImages.push(retryImage)
-                  }
-                  
-                  setSectionProgress(prev => ({ ...prev, [sectionId]: 100 }))
-                  setGeneratingSections(prev => {
-                    const next = new Set(prev)
-                    next.delete(sectionId)
-                    return next
-                  })
-                  
-                  console.log(`[LP-SITE] セクション画像再生成成功: ${sectionId}`)
-                } catch (retryError: any) {
-                  console.error(`[LP-SITE] セクション画像再生成エラー (${sectionId}):`, retryError)
-                  setGeneratingSections(prev => {
-                    const next = new Set(prev)
-                    next.delete(sectionId)
-                    return next
-                  })
-                  // 再試行も失敗した場合はエラーとして記録
-                  toast.error(`${section.headline || section.section_type} の画像生成に失敗しました`, {
-                    duration: 5000,
-                    icon: '❌',
-                  })
-                }
-              }
-            }
-            
             images = orderedImages
             
             // 最終チェック：画像が必要なセクションが全て画像を持っているか確認
+            // PC/SPの少なくともどちらかが生成されている必要がある
             const finalCheck = imageRequiredSections.every(section => {
               const img = orderedImages.find(i => i.section_id === section.section_id)
               return img && (img.image_pc || img.image_sp)
@@ -562,19 +526,24 @@ function LpSitePageInner() {
             setResult(finalResult) // 結果を更新（画像を追加）
             setIsGeneratingImages(false)
             
-            // 成功した画像数を確認（画像が必要なセクションのみ）
+            // 成功した画像数を確認（画像が必要なセクションのみ、PC/SPの少なくともどちらかが生成されている必要がある）
             const successCount = imageRequiredSections.filter(section => {
               const img = orderedImages.find(i => i.section_id === section.section_id)
               return img && (img.image_pc || img.image_sp)
             }).length
             
+            // 全ての画像が必要なセクションで、少なくともPCまたはSPの画像が生成されている場合のみ完了モーダルを表示
             if (successCount === imageRequiredSections.length) {
-              // 全ての画像生成が成功した場合のみ完了モーダルを表示
               console.log('[LP-SITE] 全てのセクション画像生成が完了しました')
+              toast.success('🎉 全ての画像生成が完了しました！', {
+                duration: 3000,
+                icon: '✅',
+              })
               setTimeout(() => {
                 setShowCompletionModal(true)
               }, 500)
             } else {
+              console.error(`[LP-SITE] 画像生成が不完全です: ${successCount}/${imageRequiredSections.length}`)
               toast.warning(`${successCount}/${imageRequiredSections.length} セクションの画像生成が完了しました`, {
                 duration: 4000,
                 icon: '⚠️',
