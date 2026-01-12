@@ -237,24 +237,24 @@ export default function InterviewPlanPage() {
               } overflow-hidden`}
             >
               {/* ヘッダー */}
-              <div className={`bg-gradient-to-r ${plan.gradient} p-6 text-white`}>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xl font-black">{plan.name}</h3>
+              <div className={`bg-gradient-to-r ${plan.gradient} p-4 sm:p-6 text-white`}>
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  <h3 className="text-lg sm:text-xl font-black">{plan.name}</h3>
                   {isEffectiveCurrent && (
-                    <span className="px-3 py-1 rounded-full bg-white/20 text-white text-xs font-black">
+                    <span className="px-2 sm:px-3 py-1 rounded-full bg-white/20 text-white text-xs font-black whitespace-nowrap flex-shrink-0">
                       現在のプラン
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-white/90">{plan.description}</p>
-                <div className="mt-4">
+                <p className="text-xs sm:text-sm text-white/90">{plan.description}</p>
+                <div className="mt-3 sm:mt-4">
                   {plan.price > 0 ? (
                     <>
-                      <span className="text-3xl font-black">¥{plan.price.toLocaleString()}</span>
-                      <span className="text-sm text-white/80">/月</span>
+                      <span className="text-2xl sm:text-3xl font-black">¥{plan.price.toLocaleString()}</span>
+                      <span className="text-xs sm:text-sm text-white/80">/月</span>
                     </>
                   ) : (
-                    <span className="text-2xl font-black">無料</span>
+                    <span className="text-xl sm:text-2xl font-black">無料</span>
                   )}
                 </div>
               </div>
