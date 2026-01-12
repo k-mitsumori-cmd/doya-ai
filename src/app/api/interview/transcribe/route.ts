@@ -248,12 +248,30 @@ export async function POST(request: NextRequest) {
       })
 
       // 統一プランも取得（UserServiceSubscriptionが存在しない場合のフォールバック）
+      // 統一プランは、user.planとサービス別サブスクリプション（banner, writing, persona, seo）の最大値
+      // ただし、interviewサービスは統一プランの計算には含めない（interviewサービスは独立したプラン管理）
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { plan: true },
+        select: { 
+          plan: true,
+          serviceSubscriptions: {
+            where: {
+              serviceId: { in: ['banner', 'writing', 'persona', 'seo'] }
+            },
+            select: { plan: true }
+          }
+        },
       })
 
-      const unifiedPlan = user?.plan || null
+      // 統一プランを計算（auth.tsと同じロジック）
+      const { normalizeUnifiedPlan, maxPlan } = await import('@/lib/planSync')
+      const serviceSubscriptions = user?.serviceSubscriptions || []
+      const serviceMax = serviceSubscriptions.length > 0
+        ? serviceSubscriptions
+            .map((s: { plan: string }) => normalizeUnifiedPlan(s.plan))
+            .reduce((acc, p) => maxPlan(acc, p), 'FREE' as const)
+        : 'FREE'
+      const unifiedPlan = maxPlan(normalizeUnifiedPlan(user?.plan || 'FREE'), serviceMax)
 
       console.log('[INTERVIEW] Transcribe API - User subscription:', {
         userId,
