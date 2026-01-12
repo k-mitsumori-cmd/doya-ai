@@ -35,8 +35,8 @@ function ProductUnderstandingDisplay({ productInfo, isAnalyzing }: { productInfo
   const [currentAnalysisText, setCurrentAnalysisText] = useState('')
   const [displayedInfo, setDisplayedInfo] = useState<Record<string, string>>({})
 
-  // 分析ステップの定義
-  const analysisStepDefinitions = [
+  // 分析ステップの定義（メモ化）
+  const analysisStepDefinitions = useMemo(() => [
     { key: 'url_parsing', label: 'URLから基本情報を抽出中...', icon: ExternalLink },
     { key: 'meta_analysis', label: 'メタタグとOGタグを解析中...', icon: FileText },
     { key: 'content_extraction', label: 'ページコンテンツを抽出中...', icon: Search },
@@ -45,7 +45,7 @@ function ProductUnderstandingDisplay({ productInfo, isAnalyzing }: { productInfo
     { key: 'problem_identification', label: '解決する課題を特定中...', icon: AlertCircle },
     { key: 'value_proposition', label: '提供価値を分析中...', icon: Lightbulb },
     { key: 'summary', label: '分析結果をまとめ中...', icon: Brain },
-  ]
+  ], [])
 
   // 分析ステップを順番に表示
   useEffect(() => {
@@ -76,7 +76,7 @@ function ProductUnderstandingDisplay({ productInfo, isAnalyzing }: { productInfo
           // 少し遅れて完了マークを表示
           setTimeout(() => {
             setCompletedSteps(prev => new Set([...prev, step.key]))
-            // 商品情報が取得できた場合は表示
+            // 商品情報が取得できた場合は表示（リアルタイム更新）
             if (productInfo) {
               if (step.key === 'product_name' && productInfo.product_name) {
                 setDisplayedInfo(prev => ({ ...prev, product_name: productInfo.product_name }))
@@ -101,7 +101,7 @@ function ProductUnderstandingDisplay({ productInfo, isAnalyzing }: { productInfo
 
       return () => clearInterval(interval)
     }
-  }, [isAnalyzing, productInfo])
+  }, [isAnalyzing, productInfo, analysisStepDefinitions])
 
   return (
     <motion.div
