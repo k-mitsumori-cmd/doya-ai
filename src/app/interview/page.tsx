@@ -1754,26 +1754,43 @@ export default function InterviewPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="mb-6 p-6 bg-red-50 border-2 border-red-200 rounded-2xl shadow-lg"
+            className="mb-6 p-6 bg-gradient-to-br from-red-50 via-red-50 to-orange-50 border-2 border-red-300 rounded-2xl shadow-xl"
           >
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
-                <AlertCircle className="w-6 h-6 text-red-600" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md">
+                  <AlertCircle className="w-7 h-7 text-white" />
+                </div>
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-black text-red-900 mb-2">{errorMessage}</h3>
+                <h3 className="text-xl font-black text-red-900 mb-3">{errorMessage}</h3>
                 {errorDetails && (
-                  <div className="text-sm text-red-700 whitespace-pre-wrap bg-red-100/50 p-3 rounded-lg border border-red-200">
-                    {errorDetails}
+                  <div className="text-sm text-red-800 whitespace-pre-wrap bg-white/80 p-4 rounded-xl border-2 border-red-200 mb-4 shadow-sm">
+                    <div className="flex items-start gap-2 mb-2">
+                      <HelpCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <p className="font-black text-red-900">詳細情報</p>
+                    </div>
+                    <p className="text-red-700 leading-relaxed">{errorDetails}</p>
                   </div>
                 )}
-                <button
-                  onClick={resetUpload}
-                  className="mt-4 px-4 py-2 bg-red-600 text-white font-black rounded-lg hover:bg-red-700 transition-colors inline-flex items-center gap-2"
-                >
-                  <X className="w-4 h-4" />
-                  やり直す
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={resetUpload}
+                    className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-black rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2"
+                  >
+                    <X className="w-5 h-5" />
+                    やり直す
+                  </button>
+                  {(errorMessage.includes('プラン') || errorMessage.includes('アップグレード') || errorMessage.includes('動画ファイル')) ? (
+                    <Link
+                      href="/interview/plan"
+                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-xl hover:from-orange-600 hover:to-amber-700 transition-all shadow-md hover:shadow-lg inline-flex items-center gap-2"
+                    >
+                      <Crown className="w-5 h-5" />
+                      プランを確認
+                    </Link>
+                  ) : null}
+                </div>
               </div>
             </div>
           </motion.div>
