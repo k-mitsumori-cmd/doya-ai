@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Globe, Layout, Image as ImageIcon, Package, CheckCircle2, Loader2, Zap, Clock, Search, FileText, ExternalLink, Brain, Target, AlertCircle, Lightbulb, CheckCircle } from 'lucide-react'
+import { Sparkles, Globe, Layout, Image as ImageIcon, Package, CheckCircle2, Loader2, Zap, Clock, Search, FileText, ExternalLink, Brain, Target, AlertCircle, Lightbulb, CheckCircle, Monitor, Smartphone, Code, Palette } from 'lucide-react'
 import confetti from 'canvas-confetti'
 
 type OverlayMood = 'idle' | 'search' | 'think' | 'happy'
@@ -285,6 +285,413 @@ function ProductUnderstandingDisplay({ productInfo, isAnalyzing }: { productInfo
             <div className="text-xs text-teal-700 mt-1">
               サイトの情報を読み取り、商品の特徴を理解しています
             </div>
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
+// LP構成生成のリアルタイム表示コンポーネント
+function StructureGenerationDisplay({ sections, isGenerating }: { sections?: any[]; isGenerating: boolean }) {
+  const [generationSteps, setGenerationSteps] = useState<string[]>([])
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
+  const [currentStepText, setCurrentStepText] = useState('')
+  const [displayedSections, setDisplayedSections] = useState<any[]>([])
+
+  // 生成ステップの定義
+  const structureStepDefinitions = useMemo(() => [
+    { key: 'analyze_product', label: '商品情報を分析中...', icon: Brain },
+    { key: 'determine_structure', label: '最適なLP構成を決定中...', icon: Layout },
+    { key: 'create_hero', label: 'ヒーローセクションを作成中...', icon: Sparkles },
+    { key: 'create_problem', label: '課題提示セクションを作成中...', icon: AlertCircle },
+    { key: 'create_solution', label: '解決策セクションを作成中...', icon: Lightbulb },
+    { key: 'create_features', label: '機能紹介セクションを作成中...', icon: Package },
+    { key: 'create_cta', label: 'CTAセクションを作成中...', icon: Target },
+    { key: 'finalize', label: '構成を最終調整中...', icon: CheckCircle },
+  ], [])
+
+  // 生成ステップを順番に表示
+  useEffect(() => {
+    if (!isGenerating && sections && sections.length > 0) {
+      // 生成完了時はすべてのステップを完了として表示
+      const allSteps = structureStepDefinitions.map(s => s.key)
+      setGenerationSteps(allSteps)
+      setCompletedSteps(new Set(allSteps))
+      setDisplayedSections(sections)
+      return
+    }
+
+    if (isGenerating) {
+      // 生成中の場合は、ステップを順番に表示
+      let stepIndex = 0
+      const interval = setInterval(() => {
+        if (stepIndex < structureStepDefinitions.length) {
+          const step = structureStepDefinitions[stepIndex]
+          setGenerationSteps(prev => [...prev, step.key])
+          setCurrentStepText(step.label)
+          
+          // 少し遅れて完了マークを表示
+          setTimeout(() => {
+            setCompletedSteps(prev => new Set([...prev, step.key]))
+            // セクションが取得できた場合は表示
+            if (sections && sections.length > 0) {
+              // セクションを段階的に表示
+              const sectionsToShow = sections.slice(0, Math.min(stepIndex + 1, sections.length))
+              setDisplayedSections(sectionsToShow)
+            }
+          }, 800)
+          
+          stepIndex++
+        } else {
+          clearInterval(interval)
+        }
+      }, 1500) // 1.5秒ごとに次のステップを表示
+
+      return () => clearInterval(interval)
+    }
+  }, [isGenerating, sections, structureStepDefinitions])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="mb-4 sm:mb-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border-2 border-purple-200/50 p-4 sm:p-6 relative overflow-hidden"
+    >
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'repeating-linear-gradient(45deg, #a855f7 0, #a855f7 1px, transparent 1px, transparent 10px)',
+        }} />
+      </div>
+      <div className="relative z-10">
+        <div className="flex items-center gap-2 mb-4">
+          <motion.div
+            animate={{ rotate: isGenerating ? 360 : 0 }}
+            transition={{ duration: 2, repeat: isGenerating ? Infinity : 0, ease: 'linear' }}
+          >
+            <Layout className="w-5 h-5 text-purple-600" />
+          </motion.div>
+          <h3 className="text-sm sm:text-base font-black text-slate-900">
+            {isGenerating ? 'LP構成案を生成中...' : 'LP構成案が完了しました'}
+          </h3>
+        </div>
+
+        {/* リアルタイム生成ステップ */}
+        <div className="mb-4 space-y-2">
+          {structureStepDefinitions.map((step, index) => {
+            const isActive = generationSteps.includes(step.key)
+            const isCompleted = completedSteps.has(step.key)
+            const Icon = step.icon
+            
+            if (!isActive && !isCompleted) return null
+
+            return (
+              <motion.div
+                key={step.key}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                  isCompleted
+                    ? 'bg-white/80 border-purple-200'
+                    : isActive
+                      ? 'bg-purple-100/50 border-purple-300'
+                      : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  isCompleted
+                    ? 'bg-purple-500 text-white'
+                    : isActive
+                      ? 'bg-purple-200 text-purple-700'
+                      : 'bg-gray-200 text-gray-400'
+                }`}>
+                  {isCompleted ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : isActive ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </motion.div>
+                  ) : (
+                    <Icon className="w-4 h-4" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs sm:text-sm font-bold text-slate-900">
+                    {step.label}
+                  </div>
+                  {isActive && !isCompleted && (
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="text-xs text-purple-600 mt-1"
+                    >
+                      生成中...
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+
+        {/* 生成されたセクションをリアルタイム表示 */}
+        {displayedSections.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-2 sm:space-y-3 mt-4"
+          >
+            <div className="mb-2 p-2 bg-purple-100 rounded-lg border border-purple-300">
+              <div className="text-xs font-bold text-purple-900 mb-1">📋 生成されたセクション ({displayedSections.length}件)</div>
+            </div>
+            <div className="space-y-2 sm:space-y-3 max-h-[300px] sm:max-h-[400px] overflow-y-auto pr-2">
+              {displayedSections.map((section, index) => (
+                <motion.div
+                  key={section.section_id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-purple-200"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center font-black text-xs sm:text-sm flex-shrink-0">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="text-xs sm:text-sm font-black text-slate-900">{section.headline || `セクション ${index + 1}`}</div>
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] sm:text-xs font-bold rounded whitespace-nowrap">{section.section_type}</span>
+                      </div>
+                      {section.sub_headline && (
+                        <div className="text-xs text-slate-600 mb-1.5" style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{section.sub_headline}</div>
+                      )}
+                      {section.purpose && (
+                        <div className="text-[11px] sm:text-xs text-slate-500 leading-relaxed" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{section.purpose}</div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* 生成中のメッセージ */}
+        {isGenerating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-3 sm:mt-4 p-3 bg-purple-100 rounded-xl border border-purple-300"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              >
+                <Loader2 className="w-4 h-4 text-purple-600" />
+              </motion.div>
+              <div className="text-xs font-bold text-purple-900">
+                {currentStepText || 'LP構成案を生成中...'}
+              </div>
+            </div>
+            <div className="text-xs text-purple-700 mt-1">
+              最適なセクション構成を検討し、各セクションの内容を設計しています
+            </div>
+          </motion.div>
+        )}
+
+        {/* 生成完了メッセージ */}
+        {!isGenerating && sections && sections.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 sm:mt-4 p-3 bg-purple-100 rounded-xl border border-purple-300"
+          >
+            <div className="text-xs font-bold text-purple-900 mb-1">✨ LP構成案が完了しました</div>
+            <div className="text-xs text-purple-700">この構成案を基に、ワイヤーフレームと画像を生成します</div>
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
+// ワイヤーフレーム生成のリアルタイム表示コンポーネント
+function WireframeGenerationDisplay({ isGenerating }: { isGenerating: boolean }) {
+  const [generationSteps, setGenerationSteps] = useState<string[]>([])
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
+  const [currentStepText, setCurrentStepText] = useState('')
+
+  // 生成ステップの定義
+  const wireframeStepDefinitions = useMemo(() => [
+    { key: 'analyze_structure', label: 'LP構成を分析中...', icon: Layout },
+    { key: 'design_pc_layout', label: 'PC版レイアウトを設計中...', icon: Monitor },
+    { key: 'design_sp_layout', label: 'SP版レイアウトを設計中...', icon: Smartphone },
+    { key: 'create_pc_wireframe', label: 'PC版ワイヤーフレームを作成中...', icon: Code },
+    { key: 'create_sp_wireframe', label: 'SP版ワイヤーフレームを作成中...', icon: Code },
+    { key: 'optimize_layout', label: 'レイアウトを最適化中...', icon: Palette },
+    { key: 'finalize', label: 'ワイヤーフレームを最終調整中...', icon: CheckCircle },
+  ], [])
+
+  // 生成ステップを順番に表示
+  useEffect(() => {
+    if (!isGenerating) {
+      // 生成完了時はすべてのステップを完了として表示
+      const allSteps = wireframeStepDefinitions.map(s => s.key)
+      setGenerationSteps(allSteps)
+      setCompletedSteps(new Set(allSteps))
+      return
+    }
+
+    if (isGenerating) {
+      // 生成中の場合は、ステップを順番に表示
+      let stepIndex = 0
+      const interval = setInterval(() => {
+        if (stepIndex < wireframeStepDefinitions.length) {
+          const step = wireframeStepDefinitions[stepIndex]
+          setGenerationSteps(prev => [...prev, step.key])
+          setCurrentStepText(step.label)
+          
+          // 少し遅れて完了マークを表示
+          setTimeout(() => {
+            setCompletedSteps(prev => new Set([...prev, step.key]))
+          }, 800)
+          
+          stepIndex++
+        } else {
+          clearInterval(interval)
+        }
+      }, 1200) // 1.2秒ごとに次のステップを表示
+
+      return () => clearInterval(interval)
+    }
+  }, [isGenerating, wireframeStepDefinitions])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="mb-4 sm:mb-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl border-2 border-indigo-200/50 p-4 sm:p-6 relative overflow-hidden"
+    >
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'repeating-linear-gradient(45deg, #6366f1 0, #6366f1 1px, transparent 1px, transparent 10px)',
+        }} />
+      </div>
+      <div className="relative z-10">
+        <div className="flex items-center gap-2 mb-4">
+          <motion.div
+            animate={{ rotate: isGenerating ? 360 : 0 }}
+            transition={{ duration: 2, repeat: isGenerating ? Infinity : 0, ease: 'linear' }}
+          >
+            <Layout className="w-5 h-5 text-indigo-600" />
+          </motion.div>
+          <h3 className="text-sm sm:text-base font-black text-slate-900">
+            {isGenerating ? 'ワイヤーフレームを生成中...' : 'ワイヤーフレームが完了しました'}
+          </h3>
+        </div>
+
+        {/* リアルタイム生成ステップ */}
+        <div className="mb-4 space-y-2">
+          {wireframeStepDefinitions.map((step, index) => {
+            const isActive = generationSteps.includes(step.key)
+            const isCompleted = completedSteps.has(step.key)
+            const Icon = step.icon
+            
+            if (!isActive && !isCompleted) return null
+
+            return (
+              <motion.div
+                key={step.key}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                  isCompleted
+                    ? 'bg-white/80 border-indigo-200'
+                    : isActive
+                      ? 'bg-indigo-100/50 border-indigo-300'
+                      : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  isCompleted
+                    ? 'bg-indigo-500 text-white'
+                    : isActive
+                      ? 'bg-indigo-200 text-indigo-700'
+                      : 'bg-gray-200 text-gray-400'
+                }`}>
+                  {isCompleted ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : isActive ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </motion.div>
+                  ) : (
+                    <Icon className="w-4 h-4" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs sm:text-sm font-bold text-slate-900">
+                    {step.label}
+                  </div>
+                  {isActive && !isCompleted && (
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="text-xs text-indigo-600 mt-1"
+                    >
+                      生成中...
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+
+        {/* 生成中のメッセージ */}
+        {isGenerating && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-3 sm:mt-4 p-3 bg-indigo-100 rounded-xl border border-indigo-300"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              >
+                <Loader2 className="w-4 h-4 text-indigo-600" />
+              </motion.div>
+              <div className="text-xs font-bold text-indigo-900">
+                {currentStepText || 'ワイヤーフレームを生成中...'}
+              </div>
+            </div>
+            <div className="text-xs text-indigo-700 mt-1">
+              PC/SP別のレイアウトを設計し、最適なワイヤーフレームを作成しています
+            </div>
+          </motion.div>
+        )}
+
+        {/* 生成完了メッセージ */}
+        {!isGenerating && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 sm:mt-4 p-3 bg-indigo-100 rounded-xl border border-indigo-300"
+          >
+            <div className="text-xs font-bold text-indigo-900 mb-1">✨ ワイヤーフレームが完了しました</div>
+            <div className="text-xs text-indigo-700">このワイヤーフレームを基に、各セクションの画像を生成します</div>
           </motion.div>
         )}
       </div>
@@ -616,63 +1023,19 @@ export function LpGenerationOverlay({
                   />
                 )}
 
-                {/* LP構成案生成の詳細表示 */}
-                {currentStep === 'structure' && sections && sections.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="mb-4 sm:mb-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl border-2 border-purple-200/50 p-4 sm:p-6 relative overflow-hidden"
-                  >
-                    <div className="absolute inset-0 opacity-10">
-                      <div className="absolute inset-0" style={{
-                        backgroundImage: 'repeating-linear-gradient(45deg, #a855f7 0, #a855f7 1px, transparent 1px, transparent 10px)',
-                      }} />
-                    </div>
-                    <div className="relative z-10">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Layout className="w-5 h-5 text-purple-600" />
-                        <h3 className="text-sm sm:text-base font-black text-slate-900">LP構成案を生成中...</h3>
-                      </div>
-                      <div className="mb-3 sm:mb-4 p-3 bg-purple-100 rounded-xl border border-purple-300">
-                        <div className="text-xs font-bold text-purple-900 mb-1">📋 以下の構成でLPを作成しています</div>
-                        <div className="text-xs text-purple-700">各セクションの詳細を確認しながら進行中です</div>
-                      </div>
-                      <div className="space-y-2 sm:space-y-3 max-h-[300px] sm:max-h-[400px] overflow-y-auto pr-2">
-                        {sections.map((section, index) => (
-                          <motion.div
-                            key={section.section_id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.1, duration: 0.3 }}
-                            className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-purple-200"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center font-black text-xs sm:text-sm flex-shrink-0">
-                                {index + 1}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="text-xs sm:text-sm font-black text-slate-900">{section.headline || `セクション ${index + 1}`}</div>
-                                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] sm:text-xs font-bold rounded whitespace-nowrap">{section.section_type}</span>
-                                </div>
-                                {section.sub_headline && (
-                                  <div className="text-xs text-slate-600 mb-1.5" style={{ display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{section.sub_headline}</div>
-                                )}
-                                {section.purpose && (
-                                  <div className="text-[11px] sm:text-xs text-slate-500 leading-relaxed" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{section.purpose}</div>
-                                )}
-                              </div>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                      <div className="mt-3 sm:mt-4 p-3 bg-purple-100 rounded-xl border border-purple-300">
-                        <div className="text-xs font-bold text-purple-900 mb-1">✨ この構成案を基に、ワイヤーフレームと画像を生成します</div>
-                        <div className="text-xs text-purple-700">各セクションのデザインとレイアウトを最適化しています</div>
-                      </div>
-                    </div>
-                  </motion.div>
+                {/* LP構成案生成のリアルタイム表示 */}
+                {currentStep === 'structure' && (
+                  <StructureGenerationDisplay 
+                    sections={sections}
+                    isGenerating={!sections || sections.length === 0}
+                  />
+                )}
+
+                {/* ワイヤーフレーム生成のリアルタイム表示 */}
+                {currentStep === 'wireframe' && (
+                  <WireframeGenerationDisplay 
+                    isGenerating={currentStep === 'wireframe'}
+                  />
                 )}
 
                 {/* 検索UI（searchモード時のみ表示、商品理解完了前） */}
