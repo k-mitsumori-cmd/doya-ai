@@ -146,6 +146,11 @@ function LpSitePageInner() {
         setStageText('商品情報を分析中...')
         setMood('search')
         
+        // 商品理解開始時に部分的な結果を設定（リアルタイム表示のため）
+        setPartialResult({
+          product_info: null, // 分析中であることを示す
+        })
+        
         const step1Response = await fetch('/api/lp-site/generate-step', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -155,6 +160,12 @@ function LpSitePageInner() {
         const step1Data = await step1Response.json()
         productInfo = step1Data.product_info
         competitorResearch = step1Data.competitor_research || null
+        
+        // 商品理解完了時に部分的な結果を更新
+        setPartialResult({
+          product_info: productInfo,
+        })
+        
         updateProgress(20) // Step 1完了
 
         // Step 2: LP構成生成 (20-40%)

@@ -113,7 +113,16 @@ export async function GET(
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ project })
+    // BigIntを文字列に変換してレスポンスに含める
+    const projectResponse = {
+      ...project,
+      materials: project.materials.map((material: any) => ({
+        ...material,
+        fileSize: material.fileSize ? material.fileSize.toString() : null,
+      })),
+    }
+
+    return NextResponse.json({ project: projectResponse })
   } catch (error) {
     console.error('[INTERVIEW] Project fetch error:', error)
     return NextResponse.json({ error: 'Failed to fetch project' }, { status: 500 })

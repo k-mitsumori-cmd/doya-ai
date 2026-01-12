@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles, Globe, Layout, Image as ImageIcon, Package, CheckCircle2, Loader2, Zap, Clock, Search, FileText, ExternalLink } from 'lucide-react'
+import { Sparkles, Globe, Layout, Image as ImageIcon, Package, CheckCircle2, Loader2, Zap, Clock, Search, FileText, ExternalLink, Brain, Target, AlertCircle, Lightbulb, CheckCircle } from 'lucide-react'
 import confetti from 'canvas-confetti'
 
 type OverlayMood = 'idle' | 'search' | 'think' | 'happy'
@@ -27,6 +27,270 @@ const loadingTips = [
   'すべてのアセットを整理し、ダウンロード準備を進めています…',
   'まもなく完了します。しばらくそのままお待ちください。',
 ]
+
+// 商品理解のリアルタイム分析表示コンポーネント
+function ProductUnderstandingDisplay({ productInfo, isAnalyzing }: { productInfo?: any; isAnalyzing: boolean }) {
+  const [analysisSteps, setAnalysisSteps] = useState<string[]>([])
+  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
+  const [currentAnalysisText, setCurrentAnalysisText] = useState('')
+  const [displayedInfo, setDisplayedInfo] = useState<Record<string, string>>({})
+
+  // 分析ステップの定義
+  const analysisStepDefinitions = [
+    { key: 'url_parsing', label: 'URLから基本情報を抽出中...', icon: ExternalLink },
+    { key: 'meta_analysis', label: 'メタタグとOGタグを解析中...', icon: FileText },
+    { key: 'content_extraction', label: 'ページコンテンツを抽出中...', icon: Search },
+    { key: 'product_name', label: '商品名を特定中...', icon: Package },
+    { key: 'target_analysis', label: 'ターゲット層を分析中...', icon: Target },
+    { key: 'problem_identification', label: '解決する課題を特定中...', icon: AlertCircle },
+    { key: 'value_proposition', label: '提供価値を分析中...', icon: Lightbulb },
+    { key: 'summary', label: '分析結果をまとめ中...', icon: Brain },
+  ]
+
+  // 分析ステップを順番に表示
+  useEffect(() => {
+    if (!isAnalyzing && productInfo) {
+      // 分析完了時はすべてのステップを完了として表示
+      const allSteps = analysisStepDefinitions.map(s => s.key)
+      setAnalysisSteps(allSteps)
+      setCompletedSteps(new Set(allSteps))
+      // 商品情報を表示
+      setDisplayedInfo({
+        product_name: productInfo.product_name || '',
+        target: productInfo.target || '',
+        problem: productInfo.problem || '',
+        solution: productInfo.solution || '',
+      })
+      return
+    }
+
+    if (isAnalyzing) {
+      // 分析中の場合は、ステップを順番に表示
+      let stepIndex = 0
+      const interval = setInterval(() => {
+        if (stepIndex < analysisStepDefinitions.length) {
+          const step = analysisStepDefinitions[stepIndex]
+          setAnalysisSteps(prev => [...prev, step.key])
+          setCurrentAnalysisText(step.label)
+          
+          // 少し遅れて完了マークを表示
+          setTimeout(() => {
+            setCompletedSteps(prev => new Set([...prev, step.key]))
+            // 商品情報が取得できた場合は表示
+            if (productInfo) {
+              if (step.key === 'product_name' && productInfo.product_name) {
+                setDisplayedInfo(prev => ({ ...prev, product_name: productInfo.product_name }))
+              }
+              if (step.key === 'target_analysis' && productInfo.target) {
+                setDisplayedInfo(prev => ({ ...prev, target: productInfo.target }))
+              }
+              if (step.key === 'problem_identification' && productInfo.problem) {
+                setDisplayedInfo(prev => ({ ...prev, problem: productInfo.problem }))
+              }
+              if (step.key === 'value_proposition' && productInfo.solution) {
+                setDisplayedInfo(prev => ({ ...prev, solution: productInfo.solution }))
+              }
+            }
+          }, 800)
+          
+          stepIndex++
+        } else {
+          clearInterval(interval)
+        }
+      }, 1500) // 1.5秒ごとに次のステップを表示
+
+      return () => clearInterval(interval)
+    }
+  }, [isAnalyzing, productInfo])
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="mb-4 sm:mb-6 bg-gradient-to-br from-teal-50 to-cyan-50 rounded-2xl border-2 border-teal-200/50 p-4 sm:p-6 relative overflow-hidden"
+    >
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'repeating-linear-gradient(45deg, #14b8a6 0, #14b8a6 1px, transparent 1px, transparent 10px)',
+        }} />
+      </div>
+      <div className="relative z-10">
+        <div className="flex items-center gap-2 mb-4">
+          <motion.div
+            animate={{ rotate: isAnalyzing ? 360 : 0 }}
+            transition={{ duration: 2, repeat: isAnalyzing ? Infinity : 0, ease: 'linear' }}
+          >
+            <Search className="w-5 h-5 text-teal-600" />
+          </motion.div>
+          <h3 className="text-sm sm:text-base font-black text-slate-900">
+            {isAnalyzing ? '商品を理解中...' : '商品理解が完了しました'}
+          </h3>
+        </div>
+
+        {/* リアルタイム分析ステップ */}
+        <div className="mb-4 space-y-2">
+          {analysisStepDefinitions.map((step, index) => {
+            const isActive = analysisSteps.includes(step.key)
+            const isCompleted = completedSteps.has(step.key)
+            const Icon = step.icon
+            
+            if (!isActive && !isCompleted) return null
+
+            return (
+              <motion.div
+                key={step.key}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
+                  isCompleted
+                    ? 'bg-white/80 border-teal-200'
+                    : isActive
+                      ? 'bg-teal-100/50 border-teal-300'
+                      : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  isCompleted
+                    ? 'bg-teal-500 text-white'
+                    : isActive
+                      ? 'bg-teal-200 text-teal-700'
+                      : 'bg-gray-200 text-gray-400'
+                }`}>
+                  {isCompleted ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : isActive ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </motion.div>
+                  ) : (
+                    <Icon className="w-4 h-4" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs sm:text-sm font-bold text-slate-900">
+                    {step.label}
+                  </div>
+                  {isActive && !isCompleted && (
+                    <motion.div
+                      animate={{ opacity: [0.5, 1, 0.5] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="text-xs text-teal-600 mt-1"
+                    >
+                      分析中...
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+
+        {/* 取得できた商品情報をリアルタイム表示 */}
+        {(displayedInfo.product_name || displayedInfo.target || displayedInfo.problem || displayedInfo.solution) && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-2 sm:space-y-3 mt-4"
+          >
+            {displayedInfo.product_name && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Package className="w-4 h-4 text-teal-600" />
+                  <div className="text-xs font-bold text-teal-700">商品名</div>
+                </div>
+                <div className="text-sm sm:text-base font-bold text-slate-900">{displayedInfo.product_name}</div>
+              </motion.div>
+            )}
+            {displayedInfo.target && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Target className="w-4 h-4 text-teal-600" />
+                  <div className="text-xs font-bold text-teal-700">ターゲット</div>
+                </div>
+                <div className="text-xs sm:text-sm text-slate-700">{displayedInfo.target}</div>
+              </motion.div>
+            )}
+            {displayedInfo.problem && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertCircle className="w-4 h-4 text-teal-600" />
+                  <div className="text-xs font-bold text-teal-700">解決する課題</div>
+                </div>
+                <div className="text-xs sm:text-sm text-slate-700">{displayedInfo.problem}</div>
+              </motion.div>
+            )}
+            {displayedInfo.solution && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <Lightbulb className="w-4 h-4 text-teal-600" />
+                  <div className="text-xs font-bold text-teal-700">提供価値</div>
+                </div>
+                <div className="text-xs sm:text-sm text-slate-700">{displayedInfo.solution}</div>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+
+        {/* 分析完了メッセージ */}
+        {!isAnalyzing && productInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-3 sm:mt-4 p-3 bg-teal-100 rounded-xl border border-teal-300"
+          >
+            <div className="text-xs font-bold text-teal-900 mb-1">✨ 商品理解が完了しました</div>
+            <div className="text-xs text-teal-700">この商品情報を基に、最適なLP構成を作成します</div>
+          </motion.div>
+        )}
+
+        {/* 分析中のメッセージ */}
+        {isAnalyzing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-3 sm:mt-4 p-3 bg-teal-100 rounded-xl border border-teal-300"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              >
+                <Loader2 className="w-4 h-4 text-teal-600" />
+              </motion.div>
+              <div className="text-xs font-bold text-teal-900">
+                {currentAnalysisText || '商品情報を分析中...'}
+              </div>
+            </div>
+            <div className="text-xs text-teal-700 mt-1">
+              サイトの情報を読み取り、商品の特徴を理解しています
+            </div>
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
+  )
+}
 
 export function LpGenerationOverlay({
   open,
@@ -344,56 +608,12 @@ export function LpGenerationOverlay({
 
               {/* コンテンツエリア */}
               <div className="p-4 sm:p-6">
-                {/* 商品理解の詳細表示 */}
-                {currentStep === 'product' && productInfo && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="mb-4 sm:mb-6 bg-gradient-to-br from-teal-50 to-cyan-50 rounded-2xl border-2 border-teal-200/50 p-4 sm:p-6 relative overflow-hidden"
-                  >
-                    <div className="absolute inset-0 opacity-10">
-                      <div className="absolute inset-0" style={{
-                        backgroundImage: 'repeating-linear-gradient(45deg, #14b8a6 0, #14b8a6 1px, transparent 1px, transparent 10px)',
-                      }} />
-                    </div>
-                    <div className="relative z-10">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Search className="w-5 h-5 text-teal-600" />
-                        <h3 className="text-sm sm:text-base font-black text-slate-900">商品理解が完了しました</h3>
-                      </div>
-                      <div className="space-y-2 sm:space-y-3">
-                        {productInfo.product_name && (
-                          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200">
-                            <div className="text-xs font-bold text-teal-700 mb-1">商品名</div>
-                            <div className="text-sm sm:text-base font-bold text-slate-900">{productInfo.product_name}</div>
-                          </div>
-                        )}
-                        {productInfo.target && (
-                          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200">
-                            <div className="text-xs font-bold text-teal-700 mb-1">ターゲット</div>
-                            <div className="text-xs sm:text-sm text-slate-700">{productInfo.target}</div>
-                          </div>
-                        )}
-                        {productInfo.problem && (
-                          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200">
-                            <div className="text-xs font-bold text-teal-700 mb-1">解決する課題</div>
-                            <div className="text-xs sm:text-sm text-slate-700">{productInfo.problem}</div>
-                          </div>
-                        )}
-                        {productInfo.solution && (
-                          <div className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-teal-200">
-                            <div className="text-xs font-bold text-teal-700 mb-1">提供価値</div>
-                            <div className="text-xs sm:text-sm text-slate-700">{productInfo.solution}</div>
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-3 sm:mt-4 p-3 bg-teal-100 rounded-xl border border-teal-300">
-                        <div className="text-xs font-bold text-teal-900 mb-1">✨ これらを基に、最適なLPを生成しています...</div>
-                        <div className="text-xs text-teal-700">この商品情報を分析し、ターゲットに響くLP構成を作成します</div>
-                      </div>
-                    </div>
-                  </motion.div>
+                {/* 商品理解のリアルタイム分析表示 */}
+                {currentStep === 'product' && (
+                  <ProductUnderstandingDisplay 
+                    productInfo={productInfo}
+                    isAnalyzing={!productInfo}
+                  />
                 )}
 
                 {/* LP構成案生成の詳細表示 */}

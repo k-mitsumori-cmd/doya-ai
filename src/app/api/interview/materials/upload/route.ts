@@ -230,7 +230,13 @@ export async function POST(request: NextRequest) {
       throw dbError
     }
 
-    return NextResponse.json({ material })
+    // BigIntを文字列に変換してレスポンスに含める
+    const materialResponse = {
+      ...material,
+      fileSize: material.fileSize ? material.fileSize.toString() : null,
+    }
+
+    return NextResponse.json({ material: materialResponse })
   } catch (error) {
     console.error('[INTERVIEW] Material upload error:', error)
     console.error('[INTERVIEW] Error stack:', error instanceof Error ? error.stack : 'No stack trace')

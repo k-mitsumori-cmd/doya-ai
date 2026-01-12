@@ -64,9 +64,15 @@ export async function POST(request: NextRequest) {
 
     console.log(`[INTERVIEW] Material created after direct upload: ${material.id}, URL: ${fileUrl}`)
 
+    // BigIntを文字列に変換してレスポンスに含める
+    const materialResponse = {
+      ...material,
+      fileSize: material.fileSize ? material.fileSize.toString() : null,
+    }
+
     return NextResponse.json({
       success: true,
-      material,
+      material: materialResponse,
       message: 'ファイルのアップロードが完了しました',
     })
   } catch (error) {
