@@ -900,44 +900,50 @@ function LpSitePageInner() {
               </div>
             )}
 
-            {/* LP Type Selection */}
+            {/* LP Type Selection - 詳細設定（プルダウン） */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.3 }}
               className="mb-6"
             >
-              <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                <Layout className="w-4 h-4 text-teal-600" />
-                LPタイプ
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {(['saas', 'ec', 'service', 'recruit', 'education', 'beauty', 'healthcare', 'finance'] as LpType[]).map((type, index) => (
-                  <motion.button
-                    key={type}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2 + index * 0.05, duration: 0.2 }}
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setLpType(type)}
-                    className={`px-4 py-3 rounded-xl font-bold transition-all relative overflow-hidden ${
-                      lpType === type
-                        ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-500/30'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:shadow-md'
-                    }`}
+              <details className="group">
+                <summary className="cursor-pointer list-none">
+                  <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                    <Layout className="w-4 h-4 text-teal-600" />
+                    LPタイプ（詳細設定）
+                    <span className="ml-auto text-xs text-slate-500 font-normal">
+                      {lpType === 'saas' && 'SaaS'}
+                      {lpType === 'ec' && 'EC'}
+                      {lpType === 'service' && '無形サービス'}
+                      {lpType === 'recruit' && '採用/広報'}
+                      {lpType === 'education' && '教育'}
+                      {lpType === 'beauty' && '美容'}
+                      {lpType === 'healthcare' && '医療'}
+                      {lpType === 'finance' && '金融'}
+                    </span>
+                  </label>
+                </summary>
+                <div className="mt-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <p className="text-xs text-slate-600 mb-3">
+                    基本はURLから自動判定されますが、詳細設定で変更できます
+                  </p>
+                  <select
+                    value={lpType}
+                    onChange={(e) => setLpType(e.target.value as LpType)}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white text-slate-700 font-medium"
                   >
-                    {type === 'saas' && 'SaaS'}
-                    {type === 'ec' && 'EC'}
-                    {type === 'service' && '無形サービス'}
-                    {type === 'recruit' && '採用/広報'}
-                    {type === 'education' && '教育'}
-                    {type === 'beauty' && '美容'}
-                    {type === 'healthcare' && '医療'}
-                    {type === 'finance' && '金融'}
-                  </motion.button>
-                ))}
-              </div>
+                    <option value="saas">SaaS</option>
+                    <option value="ec">EC</option>
+                    <option value="service">無形サービス</option>
+                    <option value="recruit">採用/広報</option>
+                    <option value="education">教育</option>
+                    <option value="beauty">美容</option>
+                    <option value="healthcare">医療</option>
+                    <option value="finance">金融</option>
+                  </select>
+                </div>
+              </details>
             </motion.div>
 
             {/* Tone Selection - 後回し */}
