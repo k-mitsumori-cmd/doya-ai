@@ -158,16 +158,86 @@ export default function InterviewProjectDetailPage() {
       )
       
       if (processingTranscriptions.length > 0) {
+        // ファイルサイズに応じた待機時間を計算
+        const calculateMaxWaitTime = (material: any): number => {
+          if (!material || !material.fileSize) {
+            // ファイルサイズが不明な場合はデフォルト値（30分）
+            return 30 * 60 // 30分（秒）
+          }
+          
+          const fileSizeMB = Number(material.fileSize) / (1024 * 1024)
+          const fileSizeGB = fileSizeMB / 1024
+          const materialType = material.type || 'audio'
+          
+          let estimatedSeconds = 0
+          
+          if (materialType === 'video') {
+            // 動画ファイルの場合: 音声抽出時間 + 文字起こし時間
+            // 音声抽出時間: 1MBあたり2秒（FFmpeg処理）
+            const extractionTime = fileSizeMB * 2
+            // 文字起こし時間: 音声長の40%（音声長 = fileSizeMB * 0.25分）
+            const audioLengthMinutes = fileSizeMB * 0.25
+            const transcriptionTime = audioLengthMinutes * 60 * 0.4
+            estimatedSeconds = extractionTime + transcriptionTime
+          } else {
+            // 音声ファイルの場合: 文字起こし時間のみ
+            // 音声長 = fileSizeMB * 0.8分
+            const audioLengthMinutes = fileSizeMB * 0.8
+            // 文字起こし時間: 音声長の35%
+            const transcriptionTime = audioLengthMinutes * 60 * 0.35
+            estimatedSeconds = transcriptionTime
+          }
+          
+          // バッファ時間を追加（処理時間の50%、最低10分）
+          const bufferTime = Math.max(10 * 60, estimatedSeconds * 0.5)
+          const totalSeconds = estimatedSeconds + bufferTime
+          
+          // 最小待機時間: 5分、最大待機時間: 3時間
+          const minWaitTime = 5 * 60 // 5分
+          const maxWaitTime = 3 * 60 * 60 // 3時間
+          
+          return Math.max(minWaitTime, Math.min(maxWaitTime, totalSeconds))
+        }
+        
+        // 最大待機時間を計算（すべての処理中の文字起こしの最大値）
+        let maxWaitTimeSeconds = 0
+        for (const transcription of processingTranscriptions) {
+          // 文字起こしに関連する素材を取得
+          const material = currentProject.materials?.find((m: any) => m.id === transcription.materialId)
+          const waitTime = calculateMaxWaitTime(material)
+          maxWaitTimeSeconds = Math.max(maxWaitTimeSeconds, waitTime)
+        }
+        
+        // 待機間隔: ファイルサイズに応じて調整（大きいファイルは長めの間隔）
+        const waitInterval = maxWaitTimeSeconds > 60 * 60 ? 5000 : 2000 // 1時間以上なら5秒、それ以下なら2秒
+        const maxRetries = Math.ceil(maxWaitTimeSeconds / (waitInterval / 1000))
+        
+        console.log(`[INTERVIEW] Transcription wait time calculated:`, {
+          maxWaitTimeMinutes: (maxWaitTimeSeconds / 60).toFixed(1),
+          maxWaitTimeHours: (maxWaitTimeSeconds / 3600).toFixed(2),
+          waitInterval,
+          maxRetries,
+        })
+        
         // 文字起こしが処理中の場合は完了を待機
-        setProcessingStep('文字起こしが完了するのを待機中...')
+        setProcessingStep(`文字起こしが完了するのを待機中...（最大${Math.ceil(maxWaitTimeSeconds / 60)}分）`)
         
         for (const transcription of processingTranscriptions) {
           let retryCount = 0
-          const maxRetries = 600 // 最大20分（2秒間隔）
           let completed = false
+          const startTime = Date.now()
           
           while (retryCount < maxRetries && !completed) {
-            await new Promise(resolve => setTimeout(resolve, 2000)) // 2秒待機
+            await new Promise(resolve => setTimeout(resolve, waitInterval))
+            
+            // 経過時間を計算
+            const elapsedSeconds = (Date.now() - startTime) / 1000
+            const remainingSeconds = maxWaitTimeSeconds - elapsedSeconds
+            
+            if (remainingSeconds > 0) {
+              const remainingMinutes = Math.ceil(remainingSeconds / 60)
+              setProcessingStep(`文字起こしが完了するのを待機中...（残り約${remainingMinutes}分）`)
+            }
             
             try {
               const statusRes = await fetch(`/api/interview/transcribe/status/${transcription.id}`, {
