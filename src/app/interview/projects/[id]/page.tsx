@@ -537,14 +537,20 @@ export default function InterviewProjectDetailPage() {
         throw new Error(`文字起こしテキストが短すぎます（${allTranscriptionText.trim().length}文字）。文字起こしが正しく完了していない可能性があります。`)
       }
 
-      console.log('[INTERVIEW] All transcriptions verified before outline generation:', {
-        projectId,
-        totalCount: allTranscriptionsFinal.length,
-        completedCount: allCompletedTranscriptions.length,
-        totalTextLength: allTranscriptionText.length,
-        transcriptionIds: allCompletedTranscriptions.map((t: any) => t.id),
-        allStatuses: allTranscriptionsFinal.map((t: any) => ({ id: t.id, status: t.status, hasText: !!(t.text && t.text.trim().length > 0) })),
-      })
+      console.log('[INTERVIEW] ========== All transcriptions verified before outline generation ==========')
+      console.log('[INTERVIEW] Project ID:', projectId)
+      console.log('[INTERVIEW] Total transcription count:', allTranscriptionsFinal.length)
+      console.log('[INTERVIEW] Completed transcription count:', allCompletedTranscriptions.length)
+      console.log('[INTERVIEW] Total text length:', allTranscriptionText.length)
+      console.log('[INTERVIEW] Completed transcription IDs:', allCompletedTranscriptions.map((t: any) => t.id))
+      console.log('[INTERVIEW] All transcription statuses:', allTranscriptionsFinal.map((t: any) => ({
+        id: t.id,
+        status: t.status,
+        hasText: !!(t.text && t.text.trim().length > 0),
+        textLength: t.text?.length || 0,
+        materialId: t.materialId,
+      })))
+      console.log('[INTERVIEW] ========================================================================')
 
       // 1. 構成案生成（文字起こしが完全に終了したことを確認してから実行）
       if (!project.outline) {
