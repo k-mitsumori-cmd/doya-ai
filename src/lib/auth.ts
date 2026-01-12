@@ -87,6 +87,8 @@ export const authOptions: NextAuthOptions = {
             // kantan は Complete Pack 対象外（従来通り）
             const byService = Object.fromEntries(dbUser.serviceSubscriptions.map((s) => [s.serviceId, s.plan]))
             ;(session.user as any).kantanPlan = byService['kantan'] || undefined
+            // interview プランをセッションに載せる
+            ;(session.user as any).interviewPlan = byService['interview'] || unified
             // 初回ログイン時刻（1時間生成し放題の判定用）
             ;(session.user as any).firstLoginAt = dbUser.firstLoginAt?.toISOString() || null
           }
@@ -100,6 +102,7 @@ export const authOptions: NextAuthOptions = {
           ;(session.user as any).bannerPlan = unified
           ;(session.user as any).seoPlan = unified
           ;(session.user as any).personaPlan = unified
+          ;(session.user as any).interviewPlan = unified
         }
       }
       return session;
