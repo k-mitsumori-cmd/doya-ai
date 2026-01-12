@@ -1913,7 +1913,7 @@ export default function InterviewPage() {
                     <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all"
-                        style={{ width: `${Math.min(100, (maxAudioFileSize / (10 * 1024 * 1024 * 1024)) * 100)}%` }}
+                        style={{ width: `${Math.min(100, Math.max(0, (maxAudioFileSize / (10 * 1024 * 1024 * 1024)) * 100))}%` }}
                       />
                     </div>
                   </div>
@@ -1986,7 +1986,8 @@ export default function InterviewPage() {
                         
                         for (const sizeInfo of sizes) {
                           // プランの最大サイズを超える場合は表示しない
-                          if (sizeInfo.size * 1024 * 1024 * 1024 > Math.max(maxAudioFileSize, maxVideoFileSize)) {
+                          const maxSize = Math.max(maxAudioFileSize || 0, maxVideoFileSize || 0)
+                          if (maxSize === 0 || sizeInfo.size * 1024 * 1024 * 1024 > maxSize) {
                             continue
                           }
                           
