@@ -948,8 +948,11 @@ async function cachedSearch(query: string) {
 
 全てのサービスで統一されたプラン管理システムを使用します。
 
+#### プラン取得パターン
+
+**サーバー側（APIエンドポイント）:**
 ```typescript
-// UserServiceSubscription を使用
+// DBからサービス別プランを取得
 const subscription = await prisma.userServiceSubscription.findUnique({
   where: {
     userId_serviceId: {
@@ -959,9 +962,28 @@ const subscription = await prisma.userServiceSubscription.findUnique({
   },
 })
 
-const plan = subscription?.plan || 'FREE'
+// セッションから統一プランを取得（オプション）
+const session = await getServerSession(authOptions)
+const userPlan = (session?.user as any)?.plan
+
+// プランを決定（サービス別プラン > 統一プラン > FREE）
+const plan = subscription?.plan || userPlan || 'FREE'
 const dailyLimit = plan === 'PRO' ? 100 : plan === 'FREE' ? 3 : 0
 ```
+
+**クライアント側（サイドバー・レイアウト）:**
+```typescript
+// サービス別プランと統一プランの両方を考慮
+const servicePlan = String((session?.user as any)?.myServicePlan || '').toUpperCase()
+const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
+const effectivePlan = servicePlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
+```
+
+#### 注意点
+
+- **権限のずれを防ぐ**: サービス別プランと統一プランの両方を考慮
+- **Complete Pack**: 主要サービス（`banner`, `writing`, `persona`）は統一プランを優先
+- **フォールバック**: サービス別プランがない場合は統一プランを使用
 
 **詳細**: [implementation-patterns.md](./implementation-patterns.md#プラン管理パターン) を参照
 
@@ -1767,9 +1789,15 @@ await sendNewUserNotification({
   - [ ] お問い合わせリンク
   - [ ] ユーザープロフィール＋ログアウト（下部）
   - [ ] 折りたたみボタン（デスクトップ）
+- [ ] **プラン判定ロジックが正しく実装されている**（権限のずれを防ぐ）：
+  - [ ] サービス別プランと統一プランの両方を考慮
+  - [ ] Complete Packの統一プランを優先（必要に応じて）
+  - [ ] フォールバック処理が実装されている
 - [ ] 既存のサイドバーパターンに従っている（`DashboardSidebar.tsx` や `InterviewSidebar.tsx` を参考）
-- [ ] モバイル対応（オーバーレイ表示）
-- [ ] デスクトップ対応（折りたたみ機能）
+- [ ] **レスポンシブデザインが実装されている**：
+  - [ ] モバイル対応（オーバーレイ表示、`md:hidden`）
+  - [ ] デスクトップ対応（固定表示、`hidden md:block`）
+  - [ ] モバイルオーバーレイのクローズボタンが実装されている
 - [ ] LocalStorage で折りたたみ状態を保存
 - [ ] アニメーションが実装されている（Framer Motion）
 
@@ -1783,14 +1811,19 @@ await sendNewUserNotification({
 
 - [ ] サービス専用レイアウトコンポーネントを作成（例: `MyServiceAppLayout.tsx`）
 - [ ] レイアウトの必須要素が実装されている：
-  - [ ] サイドバー（デスクトップ）
-  - [ ] モバイルオーバーレイ（モバイル）
+  - [ ] サイドバー（デスクトップ、`hidden md:block`）
+  - [ ] モバイルオーバーレイ（モバイル、`md:hidden`）
   - [ ] ヘッダー（サービス名、プラン表示）
   - [ ] メインコンテンツエリア
-  - [ ] プラン判定ロジック（サービス専用プランまたはグローバルプラン）
+  - [ ] **プラン判定ロジック（サービス専用プランまたはグローバルプラン）**が正しく実装されている
+- [ ] **レスポンシブデザインが完全に実装されている**：
+  - [ ] サイドバー: デスクトップ固定（`hidden md:block`）、モバイルオーバーレイ（`md:hidden`）
+  - [ ] ヘッダー: モバイルメニューボタン（`md:hidden`）、プラン表示のレスポンシブ対応（`hidden sm:block` など）
+  - [ ] メインコンテンツ: パディングのレスポンシブ対応（`p-4 sm:p-6 md:p-8`）
+  - [ ] サイドバー幅の考慮: メインコンテンツのマージン（`md:pl-[240px]`）
+  - [ ] モバイルオーバーレイの背景オーバーレイとアニメーション
 - [ ] 既存のレイアウトパターンに従っている（`InterviewAppLayout.tsx` を参考）
-- [ ] プラン表示が正しく動作している
-- [ ] レスポンシブデザインが実装されている
+- [ ] プラン表示が正しく動作している（権限のずれがない）
 
 **参考実装:**
 - `src/components/InterviewAppLayout.tsx` - より実践的な実装例
@@ -2149,13 +2182,25 @@ export async function POST(request: NextRequest) {
 - ❌ **ミス**: ベータ版バッジを表示していない
 - ✅ **正解**: `status: 'beta'`, `badge: 'ベータ版'` を設定
 
-### デザイン統一
+### デザイン統一・レスポンシブ
 
 - ❌ **ミス**: カラーをハードコードする
 - ✅ **正解**: CSS変数やTailwindテーマを使用
 
 - ❌ **ミス**: 既存のコンポーネントを改変する
 - ✅ **正解**: 新しいコンポーネントを作成する
+
+- ❌ **ミス**: レスポンシブデザインを実装していない
+- ✅ **正解**: モバイル・タブレット・デスクトップの全てのブレークポイントに対応
+
+- ❌ **ミス**: サイドバーがモバイルで表示されない、またはデスクトップでオーバーレイになっている
+- ✅ **正解**: デスクトップは固定表示（`hidden md:block`）、モバイルはオーバーレイ（`md:hidden`）
+
+- ❌ **ミス**: メインコンテンツのマージンがレスポンシブでない（モバイルでもサイドバー幅分のマージンがある）
+- ✅ **正解**: デスクトップのみマージンを適用（`md:pl-[240px]`）
+
+- ❌ **ミス**: パディングが固定値（全画面サイズで同じ）
+- ✅ **正解**: レスポンシブパディングを使用（`p-4 sm:p-6 md:p-8`）
 
 ### サービス分離
 
