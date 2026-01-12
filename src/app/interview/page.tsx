@@ -168,23 +168,59 @@ export default function InterviewPage() {
   }, [])
 
   // 有効なプランを取得（1時間使い放題機能を考慮）
-  const effectivePlan = useMemo(() => getEffectivePlan(currentPlan, guestFirstAccessAt), [currentPlan, guestFirstAccessAt])
+  const effectivePlan = useMemo(() => {
+    const plan = getEffectivePlan(currentPlan, guestFirstAccessAt)
+    // 無効なプランの場合はGUESTをデフォルトとする
+    if (!plan || !PLAN_LIMITS[plan]) {
+      console.warn('[INTERVIEW] Invalid plan detected, defaulting to GUEST:', plan)
+      return 'GUEST'
+    }
+    return plan
+  }, [currentPlan, guestFirstAccessAt])
   
-  // プラン制限情報を取得
-  const planLimits = useMemo(() => PLAN_LIMITS[effectivePlan], [effectivePlan])
+  // プラン制限情報を取得（安全に取得）
+  const planLimits = useMemo(() => {
+    const limits = PLAN_LIMITS[effectivePlan]
+    if (!limits) {
+      console.error('[INTERVIEW] Plan limits not found for plan:', effectivePlan)
+      return PLAN_LIMITS.GUEST // フォールバック
+    }
+    return limits
+  }, [effectivePlan])
   
   // 最大ファイルサイズ（音声・動画別）
-  const maxAudioFileSize = useMemo(() => getMaxFileSize(effectivePlan, false), [effectivePlan])
-  const maxVideoFileSize = useMemo(() => getMaxFileSize(effectivePlan, true), [effectivePlan])
+  const maxAudioFileSize = useMemo(() => {
+    try {
+      return getMaxFileSize(effectivePlan, false)
+    } catch (error) {
+      console.error('[INTERVIEW] Failed to get max audio file size:', error)
+      return PLAN_LIMITS.GUEST.maxAudioFileSize // フォールバック
+    }
+  }, [effectivePlan])
+  
+  const maxVideoFileSize = useMemo(() => {
+    try {
+      return getMaxFileSize(effectivePlan, true)
+    } catch (error) {
+      console.error('[INTERVIEW] Failed to get max video file size:', error)
+      return PLAN_LIMITS.GUEST.maxVideoFileSize // フォールバック
+    }
+  }, [effectivePlan])
   
   // ファイルサイズの表示用フォーマット
-  const formatFileSizeDisplay = useCallback((bytes: number) => {
-    if (bytes >= 1024 * 1024 * 1024) {
-      return `${(bytes / 1024 / 1024 / 1024).toFixed(2)}GB`
-    } else if (bytes >= 1024 * 1024) {
-      return `${(bytes / 1024 / 1024).toFixed(0)}MB`
+  const formatFileSizeDisplay = useCallback((bytes: number | bigint) => {
+    const size = Number(bytes)
+    if (isNaN(size) || size < 0) {
+      return '0KB'
+    }
+    if (size >= 1024 * 1024 * 1024) {
+      return `${(size / 1024 / 1024 / 1024).toFixed(2)}GB`
+    } else if (size >= 1024 * 1024) {
+      return `${(size / 1024 / 1024).toFixed(0)}MB`
+    } else if (size >= 1024) {
+      return `${(size / 1024).toFixed(0)}KB`
     } else {
-      return `${(bytes / 1024).toFixed(0)}KB`
+      return `${size}B`
     }
   }, [])
 
@@ -1898,7 +1934,7 @@ export default function InterviewPage() {
                         <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all"
-                            style={{ width: `${Math.min(100, (maxVideoFileSize / (10 * 1024 * 1024 * 1024)) * 100)}%` }}
+                            style={{ width: `${Math.min(100, Math.max(0, (maxVideoFileSize / (10 * 1024 * 1024 * 1024)) * 100))}%` }}
                           />
                         </div>
                       </>
