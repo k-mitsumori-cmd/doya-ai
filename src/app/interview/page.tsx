@@ -150,11 +150,13 @@ export default function InterviewPage() {
         if (res.ok) {
           const data = await res.json()
           console.log('[INTERVIEW] Current plan API response:', data)
-          setCurrentPlan(data.plan || 'GUEST')
+          const receivedPlan = data.plan || 'GUEST'
+          console.log('[INTERVIEW] Setting current plan to:', receivedPlan)
+          setCurrentPlan(receivedPlan)
           if (data.guestFirstAccessAt) {
             setGuestFirstAccessAt(new Date(data.guestFirstAccessAt))
           }
-          console.log('[INTERVIEW] Current plan state updated:', data.plan || 'GUEST')
+          console.log('[INTERVIEW] Current plan state updated:', receivedPlan)
         } else {
           const errorData = await res.json().catch(() => ({}))
           console.error('[INTERVIEW] Failed to fetch current plan:', res.status, errorData)

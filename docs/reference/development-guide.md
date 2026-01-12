@@ -1664,6 +1664,62 @@ await sendNewUserNotification({
 
 ---
 
+## ⚠️ 権限管理・プラン同期の重要事項
+
+新サービス開発時に、**権限のずれを防ぐ**ための重要事項です。必ず確認してください。
+
+### プラン判定の統一パターン
+
+#### クライアント側（サイドバー・レイアウト）
+
+```typescript
+// サービス別プランと統一プランの両方を考慮
+const servicePlan = String((session?.user as any)?.myServicePlan || '').toUpperCase()
+const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
+const effectivePlan = servicePlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
+```
+
+#### サーバー側（APIエンドポイント）
+
+```typescript
+// DBからサービス別プランを取得
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: { userId_serviceId: { userId, serviceId: 'myservice' } },
+})
+
+// セッションから統一プランを取得（オプション）
+const session = await getServerSession(authOptions)
+const userPlan = (session?.user as any)?.plan
+
+// プランを決定（サービス別プラン > 統一プラン > FREE）
+const plan = subscription?.plan || userPlan || 'FREE'
+```
+
+### Complete Pack（統一プラン）の扱い
+
+主要サービス（`banner`, `writing`, `persona`）は統一プランで管理されます：
+
+- **セッション**: 統一プランが優先（`session.user.plan`）
+- **表示**: 統一プランを使用（`session.user.bannerPlan`, `session.user.seoPlan`, `session.user.personaPlan`）
+- **API**: `syncUserPlanAcrossServices()` で全サービスに同期
+
+### よくある権限のずれの原因
+
+1. **セッションとDBの不一致**: セッションコールバックで正しく同期されていない
+2. **プラン判定ロジックの不備**: サービス別プランと統一プランの優先順位が間違っている
+3. **フォールバック処理の不備**: サービス別プランがない場合の処理が不適切
+4. **Complete Packの考慮不足**: 統一プランを考慮していない
+
+### 実装時の注意点
+
+- ✅ セッションコールバック（`auth.ts`）で正しくプランを同期
+- ✅ サイドバー・レイアウトでサービス別プランと統一プランの両方を考慮
+- ✅ APIエンドポイントでDBから再取得して確認
+- ✅ Complete Pack対象サービスは統一プランを優先
+- ✅ フォールバック処理を必ず実装（サービス別プランがない場合）
+
+---
+
 ## 📋 新サービス開発 完全チェックリスト
 
 新サービスを開発する際に、**必ずこのチェックリストを確認**して、漏れやミスがないようにしてください。
@@ -2163,7 +2219,7 @@ export async function POST(request: NextRequest) {
 
 ## ⚠️ よくあるミス・注意点
 
-### プラン管理
+### プラン管理・権限
 
 - ❌ **ミス**: `User.plan` を直接更新する（サービス別プランは `UserServiceSubscription` を使用）
 - ✅ **正解**: `UserServiceSubscription` でプラン管理、Complete Pack の場合は `syncUserPlanAcrossServices` を使用
@@ -2173,6 +2229,29 @@ export async function POST(request: NextRequest) {
 
 - ❌ **ミス**: Stripe価格IDを `stripe.ts` に追加していない
 - ✅ **正解**: `STRIPE_PRICE_IDS` に追加し、`getPlanIdFromStripePriceId` にもマッピングを追加
+
+- ❌ **ミス**: プラン判定ロジックが不適切（サービス別プランと統一プランを考慮していない）
+- ✅ **正解**: サービス別プランと統一プランの両方を考慮し、優先順位を明確にする
+
+**正しいプラン判定パターン:**
+```typescript
+// サイドバー・レイアウトでのプラン判定
+const servicePlan = String((session?.user as any)?.myServicePlan || '').toUpperCase()
+const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
+const effectivePlan = servicePlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
+
+// APIエンドポイントでのプラン判定
+const subscription = await prisma.userServiceSubscription.findUnique({
+  where: { userId_serviceId: { userId, serviceId: 'myservice' } },
+})
+const plan = subscription?.plan || userPlan || 'FREE'
+```
+
+- ❌ **ミス**: セッションとDBのプラン情報が不一致（権限のずれ）
+- ✅ **正解**: セッションコールバック（`auth.ts`）で正しくプランを同期、APIエンドポイントでもDBから再取得
+
+- ❌ **ミス**: Complete Packの統一プランを考慮していない
+- ✅ **正解**: Complete Pack対象サービス（`banner`, `writing`, `persona`）は統一プランを優先
 
 ### ベータ版サービス
 

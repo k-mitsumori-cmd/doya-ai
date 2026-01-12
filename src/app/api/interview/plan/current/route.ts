@@ -51,25 +51,38 @@ export async function GET(request: NextRequest) {
       // 2. 統一プランがPROの場合、UserServiceSubscriptionのプランと統一プランの最大値を取る
       // 3. それ以外の場合、UserServiceSubscriptionのプランがあればそれを使用、なければ統一プランを使用
       let planToUse: string | null = null
-      if (unifiedPlan && unifiedPlan.toUpperCase() === 'ENTERPRISE') {
+      const unifiedPlanUpper = unifiedPlan ? unifiedPlan.toUpperCase().trim() : null
+      const subscriptionPlanUpper = subscription?.plan ? subscription.plan.toUpperCase().trim() : null
+      
+      console.log('[INTERVIEW] Current plan API - Plan resolution logic:', {
+        unifiedPlan,
+        unifiedPlanUpper,
+        subscriptionPlan: subscription?.plan,
+        subscriptionPlanUpper,
+      })
+      
+      if (unifiedPlanUpper === 'ENTERPRISE') {
         // 統一プランがENTERPRISEの場合、常にENTERPRISEを優先
         planToUse = 'ENTERPRISE'
-      } else if (unifiedPlan && unifiedPlan.toUpperCase() === 'PRO') {
+        console.log('[INTERVIEW] Current plan API - Using ENTERPRISE (unified plan is ENTERPRISE)')
+      } else if (unifiedPlanUpper === 'PRO') {
         // 統一プランがPROの場合、UserServiceSubscriptionのプランと統一プランの最大値を取る
-        const subscriptionPlan = subscription?.plan ? subscription.plan.toUpperCase() : null
-        if (subscriptionPlan === 'ENTERPRISE') {
+        if (subscriptionPlanUpper === 'ENTERPRISE') {
           planToUse = 'ENTERPRISE'
+          console.log('[INTERVIEW] Current plan API - Using ENTERPRISE (subscription plan is ENTERPRISE)')
         } else {
           planToUse = 'PRO'
+          console.log('[INTERVIEW] Current plan API - Using PRO (unified plan is PRO)')
         }
       } else {
         // それ以外の場合、UserServiceSubscriptionのプランがあればそれを使用、なければ統一プランを使用
         planToUse = subscription?.plan || unifiedPlan
+        console.log('[INTERVIEW] Current plan API - Using subscription plan or unified plan:', planToUse)
       }
       
       plan = await getUserPlan(userId, null, planToUse)
       
-      console.log('[INTERVIEW] Current plan API - Resolved plan:', {
+      console.log('[INTERVIEW] Current plan API - Final resolved plan:', {
         userId,
         subscriptionPlan: subscription?.plan,
         unifiedPlan,
