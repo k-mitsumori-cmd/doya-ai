@@ -1,10 +1,6 @@
 'use client'
 
-<<<<<<< HEAD
 import React, { useState } from 'react'
-=======
-import React, { useState } from 'react'
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -29,7 +25,6 @@ import {
   Globe,
   FileDown,
   Settings,
-<<<<<<< HEAD
   MessageSquare,
   Info,
   Search,
@@ -37,10 +32,6 @@ import {
 } from 'lucide-react'
 import { LpGenerationResult, LpSection, SectionImage } from '@/lib/lp-site/types'
 import { CompetitorResearchPanel } from './CompetitorResearchPanel'
-=======
-} from 'lucide-react'
-import { LpGenerationResult, LpSection, SectionImage } from '@/lib/lp-site/types'
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 import toast from 'react-hot-toast'
 
 interface FigmaStyleEditorProps {
@@ -54,11 +45,8 @@ interface FigmaStyleEditorProps {
   onPreview?: () => void
   onPublish?: () => void
   isGeneratingImages?: boolean
-<<<<<<< HEAD
   sectionProgress?: Record<string, number>
   generatingSections?: Set<string>
-=======
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 }
 
 interface LayerItemProps {
@@ -68,7 +56,6 @@ interface LayerItemProps {
   selectedDevice: 'pc' | 'sp'
   isSelected: boolean
   isVisible: boolean
-<<<<<<< HEAD
   isRegenerating: boolean
   isGenerating: boolean // 初期生成中かどうか
   generationProgress?: number // 生成進捗（0-100）
@@ -78,13 +65,6 @@ interface LayerItemProps {
 }
 
 function LayerItem({ section, index, image, selectedDevice, isSelected, isVisible, isRegenerating, isGenerating, generationProgress, onSelect, onToggleVisibility, onRegenerate }: LayerItemProps) {
-=======
-  onSelect: () => void
-  onToggleVisibility: () => void
-}
-
-function LayerItem({ section, index, image, selectedDevice, isSelected, isVisible, onSelect, onToggleVisibility }: LayerItemProps) {
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: section.section_id,
   })
@@ -96,34 +76,13 @@ function LayerItem({ section, index, image, selectedDevice, isSelected, isVisibl
   }
 
   const hasImage = selectedDevice === 'pc' ? !!image?.image_pc : !!image?.image_sp
-<<<<<<< HEAD
   const isInProgress = isRegenerating || isGenerating
   const isCompleted = hasImage && !isInProgress
-  const [showCompletionToast, setShowCompletionToast] = useState(false)
-  const [prevCompleted, setPrevCompleted] = useState(false)
-
-  // 完了時にトーストを表示（完了状態が変化した瞬間のみ）
-  useEffect(() => {
-    if (isCompleted && !prevCompleted) {
-      // 完了状態に変化した瞬間
-      setShowCompletionToast(true)
-      const timer = setTimeout(() => setShowCompletionToast(false), 2000)
-      setPrevCompleted(true)
-      return () => clearTimeout(timer)
-    } else if (!isCompleted) {
-      // 未完了状態に戻った場合はリセット
-      setPrevCompleted(false)
-      setShowCompletionToast(false)
-    }
-  }, [isCompleted, prevCompleted])
-=======
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-<<<<<<< HEAD
       className={`group relative flex items-center gap-1.5 px-2 py-1.5 rounded-md cursor-pointer transition-all ${
         isSelected
           ? 'bg-blue-100 text-blue-900'
@@ -146,29 +105,12 @@ function LayerItem({ section, index, image, selectedDevice, isSelected, isVisibl
         onClick={(e) => e.stopPropagation()}
       >
         <GripVertical className="w-3 h-3" />
-=======
-      className={`group flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
-        isSelected
-          ? 'bg-blue-100 text-blue-900'
-          : 'hover:bg-slate-100 text-slate-700'
-      } ${!isVisible ? 'opacity-40' : ''}`}
-      onClick={onSelect}
-    >
-      <div
-        {...attributes}
-        {...listeners}
-        className="w-4 h-4 flex items-center justify-center cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <GripVertical className="w-3.5 h-3.5" />
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
       </div>
       <button
         onClick={(e) => {
           e.stopPropagation()
           onToggleVisibility()
         }}
-<<<<<<< HEAD
         className="w-3.5 h-3.5 flex items-center justify-center text-slate-400 hover:text-slate-600"
       >
         {isVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
@@ -240,21 +182,6 @@ function LayerItem({ section, index, image, selectedDevice, isSelected, isVisibl
         </div>
       )}
 
-=======
-        className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-slate-600"
-      >
-        {isVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-      </button>
-      <div className="flex-1 min-w-0">
-        <div className="text-xs font-medium truncate">{section.headline || `セクション ${index + 1}`}</div>
-        <div className="text-[10px] text-slate-500 truncate">{section.section_type}</div>
-      </div>
-      {hasImage && (
-        <div className="w-4 h-4 rounded border border-slate-300 bg-white flex-shrink-0">
-          <ImageIcon className="w-3 h-3 text-slate-400" />
-        </div>
-      )}
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
     </div>
   )
 }
@@ -304,7 +231,6 @@ function PropertyPanel({
   return (
     <div className="h-full overflow-y-auto">
       {/* セクション情報 */}
-<<<<<<< HEAD
       <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-slate-50">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-bold text-slate-900 truncate flex-1 mr-2">{section.headline || `セクション ${section.section_id.slice(0, 6)}`}</h3>
@@ -313,13 +239,6 @@ function PropertyPanel({
         {section.sub_headline && (
           <p className="text-xs text-slate-600 mt-1 line-clamp-2">{section.sub_headline}</p>
         )}
-=======
-      <div className="p-4 border-b border-slate-200">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-900">セクション {section.section_id.slice(0, 8)}</h3>
-          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded">{section.section_type}</span>
-        </div>
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
       </div>
 
       {/* 画像プレビュー */}
@@ -392,7 +311,6 @@ function PropertyPanel({
 
         {/* アクション */}
         <div className="pt-2 border-t border-slate-200 space-y-2">
-<<<<<<< HEAD
           <button
             onClick={onRegenerate}
             disabled={isRegenerating}
@@ -418,35 +336,6 @@ function PropertyPanel({
               <Download className="w-4 h-4" />
               <span>画像をダウンロード</span>
             </button>
-=======
-          {hasImage && (
-            <>
-              <button
-                onClick={onRegenerate}
-                disabled={isRegenerating}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isRegenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>生成中...</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4" />
-                    <span>画像を再生成</span>
-                  </>
-                )}
-              </button>
-              <button
-                onClick={onDownload}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                <span>画像をダウンロード</span>
-              </button>
-            </>
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
           )}
         </div>
       </div>
@@ -465,7 +354,6 @@ export function FigmaStyleEditor({
   onPreview,
   onPublish,
   isGeneratingImages = false,
-<<<<<<< HEAD
   sectionProgress = {},
   generatingSections = new Set(),
 }: FigmaStyleEditorProps) {
@@ -475,13 +363,6 @@ export function FigmaStyleEditor({
   const [zoom, setZoom] = useState(100)
   const [rightPanelTab, setRightPanelTab] = useState<'properties' | 'competitors'>('properties')
   const [showComments, setShowComments] = useState<Set<string>>(new Set())
-=======
-}: FigmaStyleEditorProps) {
-  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
-  const [regeneratingSectionId, setRegeneratingSectionId] = useState<string | null>(null)
-  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set(result.sections.map(s => s.section_id)))
-  const [zoom, setZoom] = useState(100)
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -490,7 +371,6 @@ export function FigmaStyleEditor({
     })
   )
 
-<<<<<<< HEAD
   const sections = result.sections || []
   const selectedSection = sections.find(s => s.section_id === selectedSectionId) || null
   const selectedImage = result.images?.find(img => img.section_id === selectedSectionId)
@@ -525,11 +405,6 @@ export function FigmaStyleEditor({
       setShowCompletionNotification(false)
     }
   }, [isGenerationComplete, hasShownCompletionNotification])
-=======
-  const sections = result.sections
-  const selectedSection = sections.find(s => s.section_id === selectedSectionId) || null
-  const selectedImage = result.images.find(img => img.section_id === selectedSectionId)
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
@@ -543,7 +418,6 @@ export function FigmaStyleEditor({
   }
 
   const handleSectionRegenerate = async (sectionId: string) => {
-<<<<<<< HEAD
     // 既に再生成中の場合は何もしない
     if (regeneratingSections.has(sectionId)) {
       return
@@ -567,16 +441,6 @@ export function FigmaStyleEditor({
         next.delete(sectionId)
         return next
       })
-=======
-    setRegeneratingSectionId(sectionId)
-    try {
-      await onSectionRegenerate(sectionId)
-      toast.success('画像を再生成しました')
-    } catch (error) {
-      toast.error('画像の再生成に失敗しました')
-    } finally {
-      setRegeneratingSectionId(null)
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
     }
   }
 
@@ -641,7 +505,6 @@ export function FigmaStyleEditor({
         </div>
 
         {/* アクションボタン */}
-<<<<<<< HEAD
         <div className="flex items-center gap-2 relative">
           {/* 完了通知バナー */}
           <AnimatePresence>
@@ -736,30 +599,12 @@ export function FigmaStyleEditor({
                   <Loader2 className="w-3 h-3 animate-spin text-slate-500" />
                 </div>
               )}
-=======
-        <div className="flex items-center gap-2">
-          {onPreview && (
-            <button
-              onClick={onPreview}
-              className="px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors flex items-center gap-1.5"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              プレビュー
-            </button>
-          )}
-          {onPublish && (
-            <button
-              onClick={onPublish}
-              className="px-3 py-1.5 text-xs font-medium bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-1.5"
-            >
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
               <Globe className="w-3.5 h-3.5" />
               公開
             </button>
           )}
           <button
             onClick={() => onDownload(selectedDevice === 'pc' ? 'all_pc' : 'all_sp')}
-<<<<<<< HEAD
             disabled={!isGenerationComplete}
             className={`px-3 py-1.5 text-xs font-medium rounded transition-colors flex items-center gap-1.5 ${
               isGenerationComplete
@@ -767,9 +612,6 @@ export function FigmaStyleEditor({
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
             title={!isGenerationComplete ? '画像生成が完了すると、ダウンロード機能が利用可能になります' : '画像をダウンロード'}
-=======
-            className="px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors flex items-center gap-1.5"
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
           >
             <FileDown className="w-3.5 h-3.5" />
             ダウンロード
@@ -783,11 +625,7 @@ export function FigmaStyleEditor({
         <div className="w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
           <div className="h-12 border-b border-slate-200 flex items-center px-4">
             <Layers className="w-4 h-4 text-slate-600 mr-2" />
-<<<<<<< HEAD
             <span className="text-sm font-semibold text-slate-900">セクション</span>
-=======
-            <span className="text-sm font-semibold text-slate-900">レイヤー</span>
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
             <span className="ml-auto text-xs text-slate-500">{sections.length}</span>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
@@ -795,14 +633,10 @@ export function FigmaStyleEditor({
               <SortableContext items={sections.map(s => s.section_id)} strategy={verticalListSortingStrategy}>
                 <div className="space-y-0.5">
                     {sections.map((section, index) => {
-<<<<<<< HEAD
                       const image = result.images?.find(img => img.section_id === section.section_id)
                       const isGenerating = isGeneratingImages && !image?.image_pc && !image?.image_sp
                       const isRegenerating = regeneratingSections.has(section.section_id)
                       const generationProgress = sectionProgress?.[section.section_id] || 0
-=======
-                      const image = result.images.find(img => img.section_id === section.section_id)
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                       return (
                         <LayerItem
                           key={section.section_id}
@@ -812,17 +646,12 @@ export function FigmaStyleEditor({
                           selectedDevice={selectedDevice}
                           isSelected={selectedSectionId === section.section_id}
                           isVisible={visibleSections.has(section.section_id)}
-<<<<<<< HEAD
                           isRegenerating={isRegenerating}
                           isGenerating={isGenerating}
                           generationProgress={isGenerating || isRegenerating ? generationProgress : undefined}
                           onSelect={() => setSelectedSectionId(section.section_id)}
                           onToggleVisibility={() => handleToggleVisibility(section.section_id)}
                           onRegenerate={() => handleSectionRegenerate(section.section_id)}
-=======
-                          onSelect={() => setSelectedSectionId(section.section_id)}
-                          onToggleVisibility={() => handleToggleVisibility(section.section_id)}
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                         />
                       )
                     })}
@@ -852,7 +681,6 @@ export function FigmaStyleEditor({
                   <div className="h-8 bg-slate-900 rounded-t-[2rem] flex items-center justify-center">
                     <div className="w-32 h-6 bg-slate-900 rounded-full"></div>
                   </div>
-<<<<<<< HEAD
                   {/* スワイプ可能なLPプレビュー */}
                   <div 
                     className="overflow-y-auto snap-y snap-mandatory" 
@@ -868,29 +696,16 @@ export function FigmaStyleEditor({
                       const isSelected = selectedSectionId === section.section_id
                       const isRegenerating = regeneratingSections.has(section.section_id) || generatingSections.has(section.section_id) || (isGeneratingImages && !imageData)
                       const sectionGenProgress = sectionProgress?.[section.section_id] ?? 0
-=======
-                  <div className="overflow-y-auto" style={{ maxHeight: '896px' }}>
-                    {visibleSectionsList.map((section, index) => {
-                      const image = result.images.find(img => img.section_id === section.section_id)
-                      const imageData = image?.image_sp
-                      const isSelected = selectedSectionId === section.section_id
-                      const isRegenerating = regeneratingSectionId === section.section_id || (isGeneratingImages && !imageData)
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                       
                       return (
                         <div
                           key={section.section_id}
-<<<<<<< HEAD
                           className={`relative cursor-pointer transition-all border-b border-slate-200 snap-start snap-always min-h-[896px] flex flex-col ${
-=======
-                          className={`cursor-pointer transition-all border-b border-slate-200 ${
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                             isSelected
                               ? 'ring-4 ring-blue-500 ring-offset-2'
                               : 'hover:opacity-90'
                           }`}
                           onClick={() => setSelectedSectionId(section.section_id)}
-<<<<<<< HEAD
                           style={{
                             scrollSnapAlign: 'start',
                             scrollSnapStop: 'always',
@@ -937,11 +752,6 @@ export function FigmaStyleEditor({
                             </div>
                           </div>
                         </div>
-=======
-                        >
-                      {imageData ? (
-                        <img src={imageData} alt={section.headline} className="w-full block" />
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                       ) : (
                         <div className={`w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 border-4 border-dashed min-h-[700px] flex flex-col items-center justify-center p-6 relative overflow-hidden ${
                           isRegenerating 
@@ -1050,7 +860,6 @@ export function FigmaStyleEditor({
                                 <div className="w-full bg-slate-200 rounded-full h-2 mb-3 overflow-hidden">
                                   <motion.div
                                     className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full"
-<<<<<<< HEAD
                                     initial={{ width: '0%' }}
                                     animate={{
                                       width: sectionGenProgress > 0 ? `${sectionGenProgress}%` : ['0%', '40%', '0%'],
@@ -1071,26 +880,11 @@ export function FigmaStyleEditor({
                                       {sectionGenProgress}%
                                     </div>
                                   )}
-=======
-                                    animate={{
-                                      x: ['-100%', '100%'],
-                                    }}
-                                    transition={{
-                                      duration: 1.5,
-                                      repeat: Infinity,
-                                      ease: 'linear',
-                                    }}
-                                    style={{
-                                      width: '40%',
-                                    }}
-                                  />
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                                 </div>
                               )}
                               <p className="text-xs text-slate-600 leading-relaxed">
                                 {isRegenerating ? (
                                   <>
-<<<<<<< HEAD
                                     <span className="font-bold text-teal-700">✨ AIが画像を生成しています...</span>
                                     <br />
                                     <span className="text-slate-500">
@@ -1111,19 +905,6 @@ export function FigmaStyleEditor({
                                     <span className="text-slate-500 text-[10px]">
                                       生成完了次第、自動的に表示されます
                                     </span>
-=======
-                                    <span className="font-bold text-teal-700">AIが画像を生成しています...</span>
-                                    <br />
-                                    この処理には30秒〜2分程度かかる場合があります。
-                                    <br />
-                                    完了次第、自動的に表示されます。
-                                  </>
-                                ) : (
-                                  <>
-                                    この場所に{section.section_type}セクションの画像が表示されます。
-                                    <br />
-                                    生成完了次第、自動的に表示されます。
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                                   </>
                                 )}
                               </p>
@@ -1143,18 +924,11 @@ export function FigmaStyleEditor({
             {selectedDevice === 'pc' && (
               <div className="overflow-y-auto" style={{ maxHeight: '80vh' }}>
                 {visibleSectionsList.map((section, index) => {
-<<<<<<< HEAD
                       const image = result.images?.find(img => img.section_id === section.section_id)
                       const imageData = image?.image_pc
                       const isSelected = selectedSectionId === section.section_id
                       const isRegenerating = regeneratingSections.has(section.section_id) || generatingSections.has(section.section_id) || (isGeneratingImages && !imageData)
                       const sectionGenProgress = sectionProgress?.[section.section_id] ?? 0
-=======
-                      const image = result.images.find(img => img.section_id === section.section_id)
-                      const imageData = image?.image_pc
-                      const isSelected = selectedSectionId === section.section_id
-                      const isRegenerating = regeneratingSectionId === section.section_id || (isGeneratingImages && !imageData)
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                   
                   return (
                     <div
@@ -1167,7 +941,6 @@ export function FigmaStyleEditor({
                       onClick={() => setSelectedSectionId(section.section_id)}
                     >
                       {imageData ? (
-<<<<<<< HEAD
                         <div className="relative group">
                           <img src={imageData} alt={section.headline} className="w-full block" />
                           {/* セクション意図説明コメント（選択時またはホバー時に表示） */}
@@ -1202,9 +975,6 @@ export function FigmaStyleEditor({
                             </div>
                           )}
                         </div>
-=======
-                        <img src={imageData} alt={section.headline} className="w-full block" />
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                       ) : (
                         <div className={`w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 border-4 border-dashed min-h-[900px] flex flex-col items-center justify-center p-16 relative overflow-hidden ${
                           isRegenerating 
@@ -1313,7 +1083,6 @@ export function FigmaStyleEditor({
                                 <div className="w-full bg-slate-200 rounded-full h-3 mb-4 overflow-hidden">
                                   <motion.div
                                     className="h-full bg-gradient-to-r from-teal-500 to-cyan-500 rounded-full"
-<<<<<<< HEAD
                                     initial={{ width: '0%' }}
                                     animate={{
                                       width: sectionGenProgress > 0 ? `${sectionGenProgress}%` : ['0%', '40%', '0%'],
@@ -1334,26 +1103,11 @@ export function FigmaStyleEditor({
                                       {sectionGenProgress}%
                                     </div>
                                   )}
-=======
-                                    animate={{
-                                      x: ['-100%', '100%'],
-                                    }}
-                                    transition={{
-                                      duration: 1.5,
-                                      repeat: Infinity,
-                                      ease: 'linear',
-                                    }}
-                                    style={{
-                                      width: '40%',
-                                    }}
-                                  />
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                                 </div>
                               )}
                               <p className="text-sm text-slate-700 leading-relaxed">
                                 {isRegenerating ? (
                                   <>
-<<<<<<< HEAD
                                     <span className="font-bold text-teal-700">✨ AIが画像を生成しています...</span>
                                     <br />
                                     <span className="text-slate-600">
@@ -1374,19 +1128,6 @@ export function FigmaStyleEditor({
                                     <span className="text-slate-500 text-xs">
                                       生成完了次第、自動的に表示されます
                                     </span>
-=======
-                                    <span className="font-bold text-teal-700">AIが画像を生成しています...</span>
-                                    <br />
-                                    この処理には30秒〜2分程度かかる場合があります。
-                                    <br />
-                                    完了次第、自動的に表示されます。
-                                  </>
-                                ) : (
-                                  <>
-                                    この場所に<span className="font-bold text-teal-700">{section.section_type}</span>セクションの画像が表示されます。
-                                    <br />
-                                    生成完了次第、自動的に表示されます。
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
                                   </>
                                 )}
                               </p>
@@ -1402,7 +1143,6 @@ export function FigmaStyleEditor({
           </div>
         </div>
 
-<<<<<<< HEAD
         {/* 右サイドバー：プロパティパネル / 競合調査 */}
         <div className="w-80 bg-white border-l border-slate-200 flex flex-col flex-shrink-0">
           {/* タブ切り替え */}
@@ -1450,30 +1190,6 @@ export function FigmaStyleEditor({
             ) : (
               <CompetitorResearchPanel competitorResearch={result.competitor_research} />
             )}
-=======
-        {/* 右サイドバー：プロパティパネル */}
-        <div className="w-80 bg-white border-l border-slate-200 flex flex-col flex-shrink-0">
-          <div className="h-12 border-b border-slate-200 flex items-center px-4">
-            <Settings className="w-4 h-4 text-slate-600 mr-2" />
-            <span className="text-sm font-semibold text-slate-900">プロパティ</span>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <PropertyPanel
-              section={selectedSection}
-              image={selectedImage}
-              selectedDevice={selectedDevice}
-              isRegenerating={regeneratingSectionId === selectedSectionId}
-              onRegenerate={() => handleSectionRegenerate(selectedSectionId!)}
-              onDownload={() => {
-                const imageData = selectedDevice === 'pc' ? selectedImage?.image_pc : selectedImage?.image_sp
-                if (imageData) {
-                  onDownload('single', selectedSectionId!, imageData)
-                }
-              }}
-              onFieldUpdate={() => {}}
-              onSectionUpdate={onSectionUpdate}
-            />
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
           </div>
         </div>
       </div>
