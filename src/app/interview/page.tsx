@@ -1943,21 +1943,37 @@ export default function InterviewPage() {
                               <td className="px-4 py-3 text-slate-700 font-bold text-sm border-b border-slate-200">{sizeInfo.label}</td>
                               <td className={`px-4 py-3 text-sm border-b border-slate-200 ${
                                 maxVideoFileSize > 0 && sizeInfo.size * 1024 * 1024 * 1024 <= maxVideoFileSize
-                                  ? 'text-slate-700 font-medium'
-                                  : 'text-slate-400 line-through'
+                                  ? 'text-slate-700 font-medium bg-emerald-50'
+                                  : 'text-slate-400 bg-slate-100'
                               }`}>
-                                {maxVideoFileSize > 0 && sizeInfo.size * 1024 * 1024 * 1024 <= maxVideoFileSize
-                                  ? `約${sizeInfo.size * 30}-${sizeInfo.size * 60}分`
-                                  : '利用不可'}
+                                {maxVideoFileSize > 0 && sizeInfo.size * 1024 * 1024 * 1024 <= maxVideoFileSize ? (
+                                  <span className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                    <span>約{sizeInfo.size * 30}-{sizeInfo.size * 60}分</span>
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-2">
+                                    <X className="w-4 h-4 text-red-500" />
+                                    <span className="line-through">利用不可</span>
+                                  </span>
+                                )}
                               </td>
                               <td className={`px-4 py-3 text-sm border-b border-slate-200 ${
                                 sizeInfo.size * 1024 * 1024 * 1024 <= maxAudioFileSize
-                                  ? 'text-slate-700 font-medium'
-                                  : 'text-slate-400 line-through'
+                                  ? 'text-slate-700 font-medium bg-emerald-50'
+                                  : 'text-slate-400 bg-slate-100'
                               }`}>
-                                {sizeInfo.size * 1024 * 1024 * 1024 <= maxAudioFileSize
-                                  ? `約${sizeInfo.size * 15}-${sizeInfo.size * 30}分`
-                                  : '利用不可'}
+                                {sizeInfo.size * 1024 * 1024 * 1024 <= maxAudioFileSize ? (
+                                  <span className="flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                    <span>約{sizeInfo.size * 15}-{sizeInfo.size * 30}分</span>
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-2">
+                                    <X className="w-4 h-4 text-red-500" />
+                                    <span className="line-through">利用不可</span>
+                                  </span>
+                                )}
                               </td>
                             </tr>
                           )
@@ -2060,26 +2076,48 @@ export default function InterviewPage() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: idx * 0.1 }}
-                    className={`p-4 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all ${
-                      !item.enabled ? 'opacity-60' : ''
+                    className={`p-4 rounded-xl border-2 shadow-sm hover:shadow-md transition-all ${
+                      !item.enabled 
+                        ? 'bg-slate-100 border-slate-300 opacity-75' 
+                        : 'bg-gradient-to-br from-slate-50 to-white border-slate-200 hover:border-orange-300'
                     }`}
                   >
                     <div className="flex flex-col items-center gap-2">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-md ${
-                        !item.enabled ? 'grayscale' : ''
+                      <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-md relative ${
+                        !item.enabled ? 'grayscale opacity-50' : ''
                       }`}>
-                        <item.icon className="w-6 h-6 text-white" />
+                        <item.icon className="w-7 h-7 text-white" />
+                        {!item.enabled && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <X className="w-8 h-8 text-red-500 opacity-75" strokeWidth={3} />
+                          </div>
+                        )}
                       </div>
                       <div className="text-center">
-                        <p className="text-sm font-black text-slate-900 mb-1">{item.label}</p>
-                        <p className="text-xs text-slate-600 mb-1">{item.formats}</p>
-                        <p className={`text-xs font-black ${
-                          !item.enabled ? 'text-red-600' : 'text-orange-600'
+                        <p className={`text-sm font-black mb-1 ${
+                          !item.enabled ? 'text-slate-500' : 'text-slate-900'
                         }`}>
-                          最大: {item.maxSize}
+                          {item.label}
                         </p>
-                        {!item.enabled && (
-                          <p className="text-xs text-red-600 mt-1">※ このプランでは利用不可</p>
+                        <p className={`text-xs mb-2 ${
+                          !item.enabled ? 'text-slate-400' : 'text-slate-600'
+                        }`}>
+                          {item.formats}
+                        </p>
+                        {item.enabled ? (
+                          <div className="px-3 py-1 bg-gradient-to-r from-orange-100 to-amber-100 rounded-lg border border-orange-200">
+                            <p className="text-xs font-black text-orange-700">
+                              最大: {item.maxSize}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="px-3 py-1 bg-red-50 rounded-lg border border-red-200">
+                            <p className="text-xs font-black text-red-600 flex items-center justify-center gap-1">
+                              <X className="w-3 h-3" />
+                              利用不可
+                            </p>
+                            <p className="text-xs text-red-500 mt-1">PRO以上で利用可能</p>
+                          </div>
                         )}
                       </div>
                     </div>

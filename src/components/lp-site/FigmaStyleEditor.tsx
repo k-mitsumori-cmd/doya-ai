@@ -176,11 +176,14 @@ function PropertyPanel({
   return (
     <div className="h-full overflow-y-auto">
       {/* セクション情報 */}
-      <div className="p-4 border-b border-slate-200">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-bold text-slate-900">セクション {section.section_id.slice(0, 8)}</h3>
-          <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded">{section.section_type}</span>
+      <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-slate-50">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-bold text-slate-900 truncate flex-1 mr-2">{section.headline || `セクション ${section.section_id.slice(0, 6)}`}</h3>
+          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded whitespace-nowrap">{section.section_type}</span>
         </div>
+        {section.sub_headline && (
+          <p className="text-xs text-slate-600 mt-1 line-clamp-2">{section.sub_headline}</p>
+        )}
       </div>
 
       {/* 画像プレビュー */}
@@ -768,7 +771,40 @@ export function FigmaStyleEditor({
                       onClick={() => setSelectedSectionId(section.section_id)}
                     >
                       {imageData ? (
-                        <img src={imageData} alt={section.headline} className="w-full block" />
+                        <div className="relative group">
+                          <img src={imageData} alt={section.headline} className="w-full block" />
+                          {/* セクション意図説明コメント（選択時またはホバー時に表示） */}
+                          {(isSelected || showComments.has(section.section_id) || group) && (
+                            <div className={`absolute ${isSelected ? 'left-0 top-0' : '-left-2 top-1/2 -translate-y-1/2 -translate-x-full'} transition-all z-10 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                              <div className="relative">
+                                {!isSelected && (
+                                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-12 h-0.5 bg-teal-400"></div>
+                                )}
+                                {/* コメントバルーン */}
+                                <div className={`bg-white/95 backdrop-blur-md rounded-xl p-4 shadow-xl border-2 border-teal-400 min-w-[250px] max-w-[320px] ${!isSelected ? 'mr-12' : 'mb-2'}`}>
+                                  <div className="flex items-start gap-3">
+                                    <Info className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-sm font-bold text-slate-900 mb-1.5">
+                                        このセクションの意図
+                                      </div>
+                                      <div className="text-xs text-slate-700 leading-relaxed">
+                                        {section.purpose}
+                                      </div>
+                                      {section.section_type && (
+                                        <div className="mt-3 pt-3 border-t border-slate-200">
+                                          <div className="text-xs text-slate-500">
+                                            タイプ: {section.section_type}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <div className={`w-full bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 border-4 border-dashed min-h-[900px] flex flex-col items-center justify-center p-16 relative overflow-hidden ${
                           isRegenerating 
@@ -937,28 +973,53 @@ export function FigmaStyleEditor({
           </div>
         </div>
 
-        {/* 右サイドバー：プロパティパネル */}
+        {/* 右サイドバー：プロパティパネル / 競合調査 */}
         <div className="w-80 bg-white border-l border-slate-200 flex flex-col flex-shrink-0">
-          <div className="h-12 border-b border-slate-200 flex items-center px-4">
-            <Settings className="w-4 h-4 text-slate-600 mr-2" />
-            <span className="text-sm font-semibold text-slate-900">プロパティ</span>
+          {/* タブ切り替え */}
+          <div className="h-12 border-b border-slate-200 flex items-center px-2 gap-1">
+            <button
+              onClick={() => setRightPanelTab('properties')}
+              className={`flex-1 h-full flex items-center justify-center gap-2 text-xs font-semibold rounded transition-colors ${
+                rightPanelTab === 'properties'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5" />
+              プロパティ
+            </button>
+            <button
+              onClick={() => setRightPanelTab('competitors')}
+              className={`flex-1 h-full flex items-center justify-center gap-2 text-xs font-semibold rounded transition-colors ${
+                rightPanelTab === 'competitors'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              競合調査
+            </button>
           </div>
           <div className="flex-1 overflow-hidden">
-            <PropertyPanel
-              section={selectedSection}
-              image={selectedImage}
-              selectedDevice={selectedDevice}
-              isRegenerating={selectedSectionId ? regeneratingSections.has(selectedSectionId) : false}
-              onRegenerate={() => handleSectionRegenerate(selectedSectionId!)}
-              onDownload={() => {
-                const imageData = selectedDevice === 'pc' ? selectedImage?.image_pc : selectedImage?.image_sp
-                if (imageData) {
-                  onDownload('single', selectedSectionId!, imageData)
-                }
-              }}
-              onFieldUpdate={() => {}}
-              onSectionUpdate={onSectionUpdate}
-            />
+            {rightPanelTab === 'properties' ? (
+              <PropertyPanel
+                section={selectedSection}
+                image={selectedImage}
+                selectedDevice={selectedDevice}
+                isRegenerating={selectedSectionId ? regeneratingSections.has(selectedSectionId) : false}
+                onRegenerate={() => handleSectionRegenerate(selectedSectionId!)}
+                onDownload={() => {
+                  const imageData = selectedDevice === 'pc' ? selectedImage?.image_pc : selectedImage?.image_sp
+                  if (imageData) {
+                    onDownload('single', selectedSectionId!, imageData)
+                  }
+                }}
+                onFieldUpdate={() => {}}
+                onSectionUpdate={onSectionUpdate}
+              />
+            ) : (
+              <CompetitorResearchPanel competitorResearch={result.competitor_research} />
+            )}
           </div>
         </div>
       </div>
