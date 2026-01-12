@@ -260,7 +260,9 @@ export async function POST(request: NextRequest) {
         serviceId: 'interview',
         subscriptionPlan: subscription?.plan || null,
         subscriptionExists: !!subscription,
-        unifiedPlan,
+        userPlan: user?.plan || null,
+        serviceSubscriptions: user?.serviceSubscriptions?.map(s => s.plan) || [],
+        calculatedUnifiedPlan: unifiedPlan,
       })
 
       // プラン解決ロジック：
@@ -279,9 +281,9 @@ export async function POST(request: NextRequest) {
       })
       
       if (unifiedPlanUpper === 'ENTERPRISE') {
-        // 統一プランがENTERPRISEの場合、常にENTERPRISEを優先
+        // 統一プランがENTERPRISEの場合、常にENTERPRISEを優先（UserServiceSubscriptionのプランに関係なく）
         planToUse = 'ENTERPRISE'
-        console.log('[INTERVIEW] Transcribe API - Using ENTERPRISE (unified plan is ENTERPRISE)')
+        console.log('[INTERVIEW] Transcribe API - Using ENTERPRISE (unified plan is ENTERPRISE, overriding subscription plan)')
       } else if (unifiedPlanUpper === 'PRO') {
         // 統一プランがPROの場合、UserServiceSubscriptionのプランと統一プランの最大値を取る
         if (subscriptionPlanUpper === 'ENTERPRISE') {

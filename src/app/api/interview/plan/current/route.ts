@@ -31,12 +31,27 @@ export async function GET(request: NextRequest) {
       })
 
       // 統一プランも取得（UserServiceSubscriptionが存在しない場合のフォールバック）
+      // 統一プランは、user.planとサービス別サブスクリプション（banner, writing, persona, seo）の最大値
+      // ただし、interviewサービスは統一プランの計算には含めない（interviewサービスは独立したプラン管理）
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { plan: true },
+        select: { 
+          plan: true,
+          serviceSubscriptions: {
+            where: {
+              serviceId: { in: ['banner', 'writing', 'persona', 'seo'] }
+            },
+            select: { plan: true }
+          }
+        },
       })
 
-      const unifiedPlan = user?.plan || null
+      // 統一プランを計算（auth.tsと同じロジック）
+      const { normalizeUnifiedPlan, maxPlan } = await import('@/lib/planSync')
+      const serviceMax = user?.serviceSubscriptions
+        ?.map((s) => normalizeUnifiedPlan(s.plan))
+        .reduce((acc, p) => maxPlan(acc, p), 'FREE' as const) || 'FREE'
+      const unifiedPlan = maxPlan(normalizeUnifiedPlan(user?.plan || 'FREE'), serviceMax)
 
       console.log('[INTERVIEW] Current plan API - User subscription:', {
         userId,
@@ -62,9 +77,9 @@ export async function GET(request: NextRequest) {
       })
       
       if (unifiedPlanUpper === 'ENTERPRISE') {
-        // 統一プランがENTERPRISEの場合、常にENTERPRISEを優先
+        // 統一プランがENTERPRISEの場合、常にENTERPRISEを優先（UserServiceSubscriptionのプランに関係なく）
         planToUse = 'ENTERPRISE'
-        console.log('[INTERVIEW] Current plan API - Using ENTERPRISE (unified plan is ENTERPRISE)')
+        console.log('[INTERVIEW] Current plan API - Using ENTERPRISE (unified plan is ENTERPRISE, overriding subscription plan)')
       } else if (unifiedPlanUpper === 'PRO') {
         // 統一プランがPROの場合、UserServiceSubscriptionのプランと統一プランの最大値を取る
         if (subscriptionPlanUpper === 'ENTERPRISE') {
