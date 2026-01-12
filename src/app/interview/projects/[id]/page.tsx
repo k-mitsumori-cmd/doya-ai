@@ -321,27 +321,69 @@ export default function InterviewProjectDetailPage() {
         }
       }
       
-      // 最新のデータで文字起こしが完了しているか確認
+      // 最新のデータで文字起こしが完了しているか確認（より厳密にチェック）
+      // プロジェクトを再取得して最新の状態を確認
+      await fetchProject()
+      const finalRes = await fetch(`/api/interview/projects/${projectId}`, {
+        headers: guestId ? { 'x-guest-id': guestId } : {},
+      })
+      if (finalRes.ok) {
+        const finalData = await finalRes.json()
+        if (finalData.project) {
+          currentProject = finalData.project
+          transcriptions = currentProject.transcriptions || []
+        }
+      }
+
+      // 完了した文字起こしを確認（テキストが存在し、空でないことを確認）
       const completedTranscriptions = transcriptions.filter((t: any) => {
         const hasText = t.text && typeof t.text === 'string' && t.text.trim().length > 0
-        return t.status === 'COMPLETED' && hasText
+        const isCompleted = t.status === 'COMPLETED'
+        return isCompleted && hasText
       })
       
       if (completedTranscriptions.length === 0) {
         // 文字起こしの状態を確認
         const hasProcessing = transcriptions.some((t: any) => t.status === 'PROCESSING' || t.status === 'PENDING')
         const hasError = transcriptions.some((t: any) => t.status === 'ERROR')
+        const hasCompletedButNoText = transcriptions.some((t: any) => 
+          t.status === 'COMPLETED' && (!t.text || t.text.trim().length === 0)
+        )
         
         if (hasProcessing) {
           throw new Error('文字起こしがまだ処理中です。完了するまでお待ちください。')
         } else if (hasError) {
           throw new Error('文字起こし処理でエラーが発生しました。ファイルを再アップロードしてください。')
+        } else if (hasCompletedButNoText) {
+          throw new Error('文字起こしは完了しましたが、テキストが取得できませんでした。しばらく待ってから再度お試しください。')
         } else {
           throw new Error('文字起こしが完了していません。文字起こしを先に実行してください。')
         }
       }
 
-      // 1. 構成案生成
+      // 文字起こしテキストの内容を確認（「ご視聴ありがとうございました」などの終了フレーズが含まれているか確認）
+      const allTranscriptionText = completedTranscriptions
+        .map((t: any) => t.text)
+        .join('\n\n')
+      
+      if (!allTranscriptionText || allTranscriptionText.trim().length === 0) {
+        throw new Error('文字起こしテキストが空です。文字起こしを再実行してください。')
+      }
+
+      // 文字起こしが完全に終了していることを確認（最低限の文字数があることを確認）
+      const minTextLength = 10 // 最低10文字以上
+      if (allTranscriptionText.trim().length < minTextLength) {
+        throw new Error(`文字起こしテキストが短すぎます（${allTranscriptionText.trim().length}文字）。文字起こしが正しく完了していない可能性があります。`)
+      }
+
+      console.log('[INTERVIEW] Transcription verified before outline generation:', {
+        projectId,
+        completedCount: completedTranscriptions.length,
+        totalTextLength: allTranscriptionText.length,
+        transcriptionIds: completedTranscriptions.map((t: any) => t.id),
+      })
+
+      // 1. 構成案生成（文字起こしが完全に終了したことを確認してから実行）
       if (!project.outline) {
         setProcessingStep('構成案を生成中...')
         
@@ -354,6 +396,26 @@ export default function InterviewProjectDetailPage() {
         if (!outlineRes.ok) {
           const errorData = await outlineRes.json().catch(() => ({}))
           const errorMessage = errorData.details || errorData.error || '構成案生成に失敗しました'
+          
+          // エラーが発生した場合、再度文字起こしの状態を確認
+          console.error('[INTERVIEW] Outline generation failed, checking transcription status again')
+          await fetchProject()
+          const checkRes = await fetch(`/api/interview/projects/${projectId}`, {
+            headers: guestId ? { 'x-guest-id': guestId } : {},
+          })
+          if (checkRes.ok) {
+            const checkData = await checkRes.json()
+            const checkTranscriptions = checkData.project?.transcriptions || []
+            const checkCompleted = checkTranscriptions.filter((t: any) => 
+              t.status === 'COMPLETED' && t.text && t.text.trim().length > 0
+            )
+            console.error('[INTERVIEW] Transcription status after outline error:', {
+              totalCount: checkTranscriptions.length,
+              completedCount: checkCompleted.length,
+              statuses: checkTranscriptions.map((t: any) => ({ id: t.id, status: t.status, hasText: !!(t.text && t.text.trim().length > 0) })),
+            })
+          }
+          
           throw new Error(errorMessage)
         }
         await fetchProject() // 再取得
