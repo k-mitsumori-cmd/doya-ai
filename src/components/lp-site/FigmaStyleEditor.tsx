@@ -303,6 +303,8 @@ export function FigmaStyleEditor({
   const [regeneratingSections, setRegeneratingSections] = useState<Set<string>>(new Set())
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set(result.sections.map(s => s.section_id)))
   const [zoom, setZoom] = useState(100)
+  const [rightPanelTab, setRightPanelTab] = useState<'properties' | 'competitors'>('properties')
+  const [showComments, setShowComments] = useState<Set<string>>(new Set())
 
   const sensors = useSensors(
     useSensor(PointerSensor),

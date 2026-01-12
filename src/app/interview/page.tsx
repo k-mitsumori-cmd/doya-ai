@@ -19,6 +19,7 @@ import {
   Rocket,
   Wand2,
   Clock,
+  Crown,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -1823,34 +1824,83 @@ export default function InterviewPage() {
               <p className="text-slate-600 mb-2 text-lg">
                 またはクリックしてファイルを選択
               </p>
-              <div className="text-sm text-slate-500 mb-6 p-4 bg-gradient-to-br from-slate-50 to-white rounded-xl border border-slate-200">
-                <div className="mb-2">
-                  <p className="font-black text-slate-900 mb-1">現在のプラン: <span className="text-orange-600">{planLimits.planName}</span></p>
-                  <p className="text-xs text-slate-600 mb-2">{planLimits.description}</p>
-                </div>
-                <div className="space-y-1 text-xs">
-                  <p>
-                    <span className="font-black text-slate-700">音声ファイル:</span>{' '}
-                    <span className="font-black text-orange-600">最大{formatFileSizeDisplay(maxAudioFileSize)}</span>
-                  </p>
-                  {maxVideoFileSize > 0 ? (
-                    <p>
-                      <span className="font-black text-slate-700">動画ファイル:</span>{' '}
-                      <span className="font-black text-orange-600">最大{formatFileSizeDisplay(maxVideoFileSize)}</span>
-                    </p>
-                  ) : (
-                    <p className="text-red-600 font-black">
-                      <span className="font-black">動画ファイル:</span> アップロード不可（PROプラン以上で利用可能）
-                    </p>
+              {/* プラン情報カード - より目立つデザイン */}
+              <div className="mb-6 p-5 bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 rounded-2xl border-2 border-orange-300 shadow-lg">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
+                        <Crown className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-base font-black text-slate-900">現在のプラン</p>
+                        <p className="text-2xl font-black text-orange-600">{planLimits.planName}</p>
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-700 font-medium mb-3">{planLimits.description}</p>
+                  </div>
+                  {maxVideoFileSize === 0 && (
+                    <Link
+                      href="/interview/plan"
+                      className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white text-sm font-black rounded-xl shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+                    >
+                      プランを見る
+                    </Link>
                   )}
                 </div>
-                <div className="mt-3 pt-3 border-t border-slate-200">
-                  <p className="text-xs text-slate-400">
-                    ※ クライアントから直接Google Cloud Storageにアップロードします
+                
+                {/* ファイルサイズ制限を視覚的に表示 */}
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="p-3 bg-white rounded-xl border border-orange-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Music className="w-4 h-4 text-purple-600" />
+                      <p className="text-xs font-black text-slate-700">音声ファイル</p>
+                    </div>
+                    <p className="text-lg font-black text-orange-600">{formatFileSizeDisplay(maxAudioFileSize)}</p>
+                    <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all"
+                        style={{ width: `${Math.min(100, (maxAudioFileSize / (10 * 1024 * 1024 * 1024)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className={`p-3 rounded-xl border ${
+                    maxVideoFileSize > 0 
+                      ? 'bg-white border-blue-200' 
+                      : 'bg-slate-100 border-slate-300 opacity-75'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Video className={`w-4 h-4 ${maxVideoFileSize > 0 ? 'text-blue-600' : 'text-slate-400'}`} />
+                      <p className={`text-xs font-black ${maxVideoFileSize > 0 ? 'text-slate-700' : 'text-slate-500'}`}>
+                        動画ファイル
+                      </p>
+                    </div>
+                    {maxVideoFileSize > 0 ? (
+                      <>
+                        <p className="text-lg font-black text-orange-600">{formatFileSizeDisplay(maxVideoFileSize)}</p>
+                        <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all"
+                            style={{ width: `${Math.min(100, (maxVideoFileSize / (10 * 1024 * 1024 * 1024)) * 100)}%` }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-black text-red-600">利用不可</p>
+                        <p className="text-xs text-slate-500 mt-1">PRO以上で利用可能</p>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="pt-3 border-t border-orange-200">
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    <span className="font-black">※</span> クライアントから直接Google Cloud Storageにアップロードします
                     <br />
-                    ※ 文字起こし機能を使用するため、プラン別の制限が適用されます
+                    <span className="font-black">※</span> 文字起こし機能を使用するため、プラン別の制限が適用されます
                     <br />
-                    ※ 大きなファイルも対応可能です（時間がかかる場合があります）
+                    <span className="font-black">※</span> 大きなファイルも対応可能です（時間がかかる場合があります）
                   </p>
                 </div>
               </div>
@@ -1941,19 +1991,29 @@ export default function InterviewPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border-l-4 border-orange-500">
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-black text-lg">ℹ️</span>
+                  <div className="p-5 bg-gradient-to-r from-orange-50 via-amber-50 to-orange-100 rounded-xl border-2 border-orange-400 shadow-md">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center flex-shrink-0 shadow-md">
+                        <AlertCircle className="w-6 h-6 text-white" />
                       </div>
-                      <div>
-                        <p className="text-sm font-black text-slate-900 mb-1">動画ファイルのアップロードについて</p>
-                        <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                          現在のプラン（{planLimits.planName}）では動画ファイルのアップロードはできません。
+                      <div className="flex-1">
+                        <p className="text-base font-black text-slate-900 mb-2">動画ファイルのアップロードについて</p>
+                        <p className="text-sm text-slate-700 font-medium leading-relaxed mb-3">
+                          現在のプラン（<span className="font-black text-orange-600">{planLimits.planName}</span>）では動画ファイルのアップロードはできません。
                           <br />
                           動画ファイルをアップロードするには、PROプランまたはEnterpriseプランにアップグレードしてください。
-                          <br />
-                          または、動画から音声を抽出してMP3形式でアップロードすることをおすすめします。
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <Link
+                            href="/interview/plan"
+                            className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white text-sm font-black rounded-lg shadow-md hover:shadow-lg transition-all inline-flex items-center gap-2"
+                          >
+                            <Crown className="w-4 h-4" />
+                            プランを確認・アップグレード
+                          </Link>
+                        </div>
+                        <p className="text-xs text-slate-600 mt-3 pt-3 border-t border-orange-200">
+                          💡 <span className="font-black">代替案:</span> 動画から音声を抽出してMP3形式でアップロードすることも可能です。
                         </p>
                       </div>
                     </div>
