@@ -343,6 +343,12 @@ export default function InterviewProjectDetailPage() {
       
       // 処理中の文字起こしがまだある場合は、全て完了するまで待機
       if (stillProcessing.length > 0) {
+        console.log('[INTERVIEW] Processing transcriptions found, waiting for all to complete:', {
+          projectId,
+          processingCount: stillProcessing.length,
+          processingIds: stillProcessing.map((t: any) => t.id),
+        })
+        
         setProcessingStep(`全ての文字起こしが完了するのを待機中...（残り${stillProcessing.length}件）`)
         
         // 全ての処理中の文字起こしが完了するまで待機
@@ -351,27 +357,53 @@ export default function InterviewProjectDetailPage() {
         const maxRetries = Math.ceil(maxWaitTimeSeconds / (waitInterval / 1000))
         const startTime = Date.now()
         
-        for (const transcription of stillProcessing) {
-          let retryCount = 0
-          let completed = false
-          
-          while (retryCount < maxRetries && !completed) {
-            await new Promise(resolve => setTimeout(resolve, waitInterval))
-            
-            // 経過時間を計算
-            const elapsedSeconds = (Date.now() - startTime) / 1000
-            const remainingSeconds = maxWaitTimeSeconds - elapsedSeconds
-            
-            if (remainingSeconds > 0) {
-              const remainingMinutes = Math.ceil(remainingSeconds / 60)
-              const remainingHours = Math.floor(remainingMinutes / 60)
-              const remainingMins = remainingMinutes % 60
-              const remainingDisplay = remainingHours > 0
-                ? `${remainingHours}時間${remainingMins > 0 ? `${remainingMins}分` : ''}`
-                : `${remainingMinutes}分`
-              setProcessingStep(`全ての文字起こしが完了するのを待機中...（残り約${remainingDisplay}）`)
+        // 全ての処理中の文字起こしが完了するまでループ
+        let allCompleted = false
+        let totalWaitCount = 0
+        
+        while (!allCompleted && totalWaitCount < maxRetries) {
+          // プロジェクトを再取得して最新の状態を確認
+          await fetchProject()
+          const statusCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
+            headers: guestId ? { 'x-guest-id': guestId } : {},
+          })
+          if (statusCheckRes.ok) {
+            const statusCheckData = await statusCheckRes.json()
+            if (statusCheckData.project) {
+              currentProject = statusCheckData.project
+              transcriptions = currentProject.transcriptions || []
             }
-            
+          }
+          
+          // 現在の処理中の文字起こしを確認
+          const currentProcessing = transcriptions.filter((t: any) => 
+            t.status === 'PROCESSING' || t.status === 'PENDING'
+          )
+          
+          console.log('[INTERVIEW] Checking transcription status:', {
+            projectId,
+            waitCount: totalWaitCount,
+            stillProcessingCount: currentProcessing.length,
+            processingIds: currentProcessing.map((t: any) => t.id),
+            allTranscriptionCount: transcriptions.length,
+          })
+          
+          // 処理中の文字起こしがなくなったら完了
+          if (currentProcessing.length === 0) {
+            allCompleted = true
+            console.log('[INTERVIEW] All transcriptions completed:', {
+              projectId,
+              totalWaitCount,
+              totalTranscriptionCount: transcriptions.length,
+            })
+            break
+          }
+          
+          // 残り件数を更新
+          setProcessingStep(`全ての文字起こしが完了するのを待機中...（残り${currentProcessing.length}件）`)
+          
+          // 各処理中の文字起こしの状態を確認
+          for (const transcription of currentProcessing) {
             try {
               const statusRes = await fetch(`/api/interview/transcribe/status/${transcription.id}`, {
                 headers: guestId ? { 'x-guest-id': guestId } : {},
@@ -382,34 +414,48 @@ export default function InterviewProjectDetailPage() {
                 const status = statusData.status
                 
                 if (status === 'COMPLETED' && statusData.text && statusData.text.trim().length > 0) {
-                  completed = true
-                  // プロジェクトを再取得
-                  await fetchProject()
-                  finalCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
-                    headers: guestId ? { 'x-guest-id': guestId } : {},
+                  console.log('[INTERVIEW] Transcription completed:', {
+                    transcriptionId: transcription.id,
+                    textLength: statusData.text.length,
                   })
-                  if (finalCheckRes.ok) {
-                    const finalCheckData = await finalCheckRes.json()
-                    if (finalCheckData.project) {
-                      currentProject = finalCheckData.project
-                      transcriptions = currentProject.transcriptions || []
-                    }
-                  }
-                  break
                 } else if (status === 'ERROR') {
+                  console.error('[INTERVIEW] Transcription error:', {
+                    transcriptionId: transcription.id,
+                    error: statusData.text || 'Unknown error',
+                  })
                   throw new Error(`文字起こし処理でエラーが発生しました: ${statusData.text || 'Unknown error'}`)
                 }
               }
             } catch (checkError) {
-              console.warn('Failed to check transcription status:', checkError)
+              console.warn('[INTERVIEW] Failed to check transcription status:', {
+                transcriptionId: transcription.id,
+                error: checkError,
+              })
             }
-            
-            retryCount++
           }
           
-          if (!completed) {
-            throw new Error('文字起こし処理がタイムアウトしました。しばらく待ってから再度お試しください。')
+          // 待機
+          await new Promise(resolve => setTimeout(resolve, waitInterval))
+          
+          // 経過時間を計算して表示
+          const elapsedSeconds = (Date.now() - startTime) / 1000
+          const remainingSeconds = maxWaitTimeSeconds - elapsedSeconds
+          
+          if (remainingSeconds > 0) {
+            const remainingMinutes = Math.ceil(remainingSeconds / 60)
+            const remainingHours = Math.floor(remainingMinutes / 60)
+            const remainingMins = remainingMinutes % 60
+            const remainingDisplay = remainingHours > 0
+              ? `${remainingHours}時間${remainingMins > 0 ? `${remainingMins}分` : ''}`
+              : `${remainingMinutes}分`
+            setProcessingStep(`全ての文字起こしが完了するのを待機中...（残り${currentProcessing.length}件、残り約${remainingDisplay}）`)
           }
+          
+          totalWaitCount++
+        }
+        
+        if (!allCompleted) {
+          throw new Error('文字起こし処理がタイムアウトしました。しばらく待ってから再度お試しください。')
         }
         
         // 全ての文字起こしが完了したら、再度プロジェクトを取得
