@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
         subscriptionPlan: subscription?.plan || null,
         subscriptionExists: !!subscription,
         userPlan: user?.plan || null,
-        serviceSubscriptions: user?.serviceSubscriptions?.map(s => s.plan) || [],
+        serviceSubscriptions: serviceSubscriptions.map((s: { plan: string }) => s.plan),
         calculatedUnifiedPlan: unifiedPlan,
       })
 
