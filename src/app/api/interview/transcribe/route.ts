@@ -263,8 +263,27 @@ export async function POST(request: NextRequest) {
         unifiedPlan,
       })
 
-      // UserServiceSubscriptionが存在する場合はそれを使用、存在しない場合は統一プランをフォールバックとして使用
-      const planToUse = subscription?.plan || unifiedPlan
+      // プラン解決ロジック：
+      // 1. 統一プランがENTERPRISEの場合、ENTERPRISEを優先（UserServiceSubscriptionのプランより優先）
+      // 2. 統一プランがPROの場合、UserServiceSubscriptionのプランと統一プランの最大値を取る
+      // 3. それ以外の場合、UserServiceSubscriptionのプランがあればそれを使用、なければ統一プランを使用
+      let planToUse: string | null = null
+      if (unifiedPlan && unifiedPlan.toUpperCase() === 'ENTERPRISE') {
+        // 統一プランがENTERPRISEの場合、常にENTERPRISEを優先
+        planToUse = 'ENTERPRISE'
+      } else if (unifiedPlan && unifiedPlan.toUpperCase() === 'PRO') {
+        // 統一プランがPROの場合、UserServiceSubscriptionのプランと統一プランの最大値を取る
+        const subscriptionPlan = subscription?.plan ? subscription.plan.toUpperCase() : null
+        if (subscriptionPlan === 'ENTERPRISE') {
+          planToUse = 'ENTERPRISE'
+        } else {
+          planToUse = 'PRO'
+        }
+      } else {
+        // それ以外の場合、UserServiceSubscriptionのプランがあればそれを使用、なければ統一プランを使用
+        planToUse = subscription?.plan || unifiedPlan
+      }
+      
       plan = await getUserPlan(userId, null, planToUse)
       
       console.log('[INTERVIEW] Transcribe API - Resolved plan:', {
