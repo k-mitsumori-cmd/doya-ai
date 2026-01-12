@@ -1,7 +1,7 @@
 'use client'
 
 <<<<<<< HEAD
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 =======
 import React, { useState } from 'react'
 >>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
@@ -240,23 +240,6 @@ function LayerItem({ section, index, image, selectedDevice, isSelected, isVisibl
         </div>
       )}
 
-      {/* 完了通知（小さなポップアップ） */}
-      <AnimatePresence>
-        {showCompletionToast && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.8, y: -10 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-            className="absolute -top-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
-          >
-            <div className="bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg whitespace-nowrap">
-              完成しました
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-green-500" />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 =======
         className="w-4 h-4 flex items-center justify-center text-slate-400 hover:text-slate-600"
       >
@@ -701,7 +684,7 @@ export function FigmaStyleEditor({
                     ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 shadow-sm'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-60'
                 }`}
-                title={!isGenerationComplete ? '画像生成中はロックされています' : 'プレビューを表示'}
+                title={!isGenerationComplete ? '画像生成が完了すると、プレビュー機能が利用可能になります' : 'プレビューを表示'}
               >
                 {!isGenerationComplete && (
                   <div className="absolute inset-0 flex items-center justify-center bg-slate-300/50 rounded">
