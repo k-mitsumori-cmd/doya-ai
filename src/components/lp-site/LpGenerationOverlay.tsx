@@ -899,7 +899,7 @@ export function LpGenerationOverlay({
                   />
                 ))}
               </motion.div>
-              <div className="relative z-10 flex flex-col h-full">
+              <div className="relative z-10 flex flex-col flex-1 min-h-0">
               {/* ヘッダー */}
               <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-cyan-50 flex-shrink-0">
                 <div className="flex items-center justify-between gap-4">

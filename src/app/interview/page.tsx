@@ -275,26 +275,35 @@ export default function InterviewPage() {
 
     // 2. 文字起こし時間の推定（音声・動画の場合）
     if (materialType === 'audio' || materialType === 'video') {
-      // ファイルサイズから音声長を推定
-      // MP3: 1MB ≈ 1分の音声（128kbps）
-      // 動画: 圧縮率を考慮して0.2-0.4倍（動画の品質による）
-      const audioLengthMinutes = materialType === 'video' 
-        ? fileSizeMB * 0.25 // 動画は圧縮率が高いため0.25倍（より保守的）
-        : fileSizeMB * 0.8 // 音声は0.8倍（圧縮を考慮）
+      // ファイルサイズから音声長を推定（より現実的な値に修正）
+      // MP3 (128kbps): 1時間 ≈ 約56MB、1GB ≈ 約18時間
+      // 動画 (H.264, 1080p): 圧縮率が高いため、音声長はファイルサイズから推定が困難
+      // より現実的な推定: 1GBの動画 ≈ 約1-2時間、1GBのMP3 ≈ 約18時間
+      let audioLengthMinutes = 0
+      
+      if (materialType === 'video') {
+        // 動画ファイルの場合: ファイルサイズから音声長を推定（より保守的）
+        // 1GBの動画 ≈ 約1時間（一般的な1080p動画）
+        audioLengthMinutes = fileSizeGB * 60 // 1GB ≈ 1時間
+      } else {
+        // 音声ファイルの場合: MP3 (128kbps)基準
+        // 1GB ≈ 約18時間、1MB ≈ 約1.08分
+        audioLengthMinutes = fileSizeMB * 1.08 // より正確な推定
+      }
       
       if (materialType === 'video') {
         // 動画ファイルの場合: 音声抽出時間 + 文字起こし時間
-        // 音声抽出時間: ファイルサイズに比例（FFmpeg処理）
-        const extractionTime = fileSizeMB * 2 // 1MBあたり2秒（FFmpeg処理）
+        // 音声抽出時間: FFmpeg処理（動画の長さに比例、1分の動画 ≈ 約5-10秒）
+        const extractionTime = audioLengthMinutes * 8 // 1分の動画 ≈ 約8秒（FFmpeg処理）
         totalSeconds += extractionTime
         
-        // 文字起こし時間: Google Cloud Speech-to-Textは音声長の0.3-0.5倍
-        const transcriptionTime = audioLengthMinutes * 60 * 0.4 // 音声長の40%（より保守的）
+        // 文字起こし時間: Google Cloud Speech-to-Textは音声長の約0.3-0.5倍
+        const transcriptionTime = audioLengthMinutes * 60 * 0.3 // 音声長の30%（リアルタイムファクター）
         totalSeconds += transcriptionTime
       } else {
         // 音声ファイルの場合: 文字起こし時間のみ
-        // Google Cloud Speech-to-Textは音声長の0.3-0.5倍
-        const transcriptionTime = audioLengthMinutes * 60 * 0.35 // 音声長の35%
+        // Google Cloud Speech-to-Textは音声長の約0.3-0.5倍
+        const transcriptionTime = audioLengthMinutes * 60 * 0.3 // 音声長の30%（リアルタイムファクター）
         totalSeconds += transcriptionTime
       }
     }
@@ -303,9 +312,10 @@ export default function InterviewPage() {
     // 文字起こしテキストの長さを推定（1分の音声 ≈ 800-1200文字、平均1000文字）
     let estimatedTextLength = 0
     if (materialType === 'audio' || materialType === 'video') {
+      // 音声長を再計算（上記と同じロジック）
       const audioLengthMinutes = materialType === 'video' 
-        ? fileSizeMB * 0.25 
-        : fileSizeMB * 0.8
+        ? fileSizeGB * 60 // 1GB ≈ 1時間
+        : fileSizeMB * 1.08 // 1MB ≈ 約1.08分（MP3 128kbps）
       estimatedTextLength = audioLengthMinutes * 1000 // 1分あたり1000文字
     } else if (materialType === 'text' || materialType === 'pdf') {
       // テキストファイルの場合はファイルサイズから推定（1KB ≈ 500文字）
@@ -2030,20 +2040,24 @@ export default function InterviewPage() {
                                   <span className="flex items-center gap-2">
                                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                                     <span>約{(() => {
-                                      // より正確な処理時間の計算
+                                      // より正確な処理時間の計算（動画ファイル）
                                       const fileSizeMB = sizeInfo.size * 1024
+                                      const fileSizeGB = sizeInfo.size
+                                      
                                       // アップロード時間（チャンクアップロード）
                                       const totalChunks = Math.ceil((sizeInfo.size * 1024 * 1024 * 1024) / (4 * 1024 * 1024))
                                       const chunkTime = totalChunks * 1.5 // チャンクあたり1.5秒
                                       const mergeTime = Math.max(3, sizeInfo.size * 2) // 結合時間
                                       const uploadTime = (chunkTime + mergeTime) / 60
                                       
-                                      // 音声抽出時間（FFmpeg）
-                                      const extractionTime = (fileSizeMB * 2) / 60 // 1MBあたり2秒
+                                      // 音声長の推定: 1GB ≈ 1時間（一般的な1080p動画）
+                                      const audioLengthMinutes = fileSizeGB * 60
                                       
-                                      // 文字起こし時間（音声長の40%）
-                                      const audioLengthMinutes = fileSizeMB * 0.25
-                                      const transcriptionTime = audioLengthMinutes * 0.4
+                                      // 音声抽出時間（FFmpeg）: 1分の動画 ≈ 約8秒
+                                      const extractionTime = (audioLengthMinutes * 8) / 60
+                                      
+                                      // 文字起こし時間（音声長の30%）
+                                      const transcriptionTime = audioLengthMinutes * 0.3
                                       
                                       // 構成案生成時間（1000文字あたり12秒）
                                       const textLength = audioLengthMinutes * 1000
@@ -2053,10 +2067,10 @@ export default function InterviewPage() {
                                       const articleTime = (textLength / 1000) * 25 / 60
                                       
                                       // バッファ時間
-                                      const bufferTime = 5 // 5分
+                                      const bufferTime = 3 // 3分
                                       
                                       const totalMinutes = uploadTime + extractionTime + transcriptionTime + outlineTime + articleTime + bufferTime
-                                      const minMinutes = Math.floor(totalMinutes * 0.8) // 最小値（80%）
+                                      const minMinutes = Math.max(1, Math.floor(totalMinutes * 0.8)) // 最小値（80%）、最低1分
                                       const maxMinutes = Math.ceil(totalMinutes * 1.2) // 最大値（120%）
                                       
                                       return `${minMinutes}-${maxMinutes}分`
@@ -2087,9 +2101,11 @@ export default function InterviewPage() {
                                       const mergeTime = Math.max(2, sizeInfo.size * 1.5) // 結合時間
                                       const uploadTime = (chunkTime + mergeTime) / 60
                                       
-                                      // 文字起こし時間（音声長の35%）
-                                      const audioLengthMinutes = fileSizeMB * 0.8
-                                      const transcriptionTime = audioLengthMinutes * 0.35
+                                      // 音声長の推定: MP3 (128kbps) 1MB ≈ 約1.08分
+                                      const audioLengthMinutes = fileSizeMB * 1.08
+                                      
+                                      // 文字起こし時間（音声長の30%）
+                                      const transcriptionTime = audioLengthMinutes * 0.3
                                       
                                       // 構成案生成時間（1000文字あたり12秒）
                                       const textLength = audioLengthMinutes * 1000
@@ -2099,10 +2115,10 @@ export default function InterviewPage() {
                                       const articleTime = (textLength / 1000) * 25 / 60
                                       
                                       // バッファ時間
-                                      const bufferTime = 3 // 3分（音声は動画より短い）
+                                      const bufferTime = 2 // 2分（音声は動画より短い）
                                       
                                       const totalMinutes = uploadTime + transcriptionTime + outlineTime + articleTime + bufferTime
-                                      const minMinutes = Math.floor(totalMinutes * 0.8) // 最小値（80%）
+                                      const minMinutes = Math.max(1, Math.floor(totalMinutes * 0.8)) // 最小値（80%）、最低1分
                                       const maxMinutes = Math.ceil(totalMinutes * 1.2) // 最大値（120%）
                                       
                                       return `${minMinutes}-${maxMinutes}分`
