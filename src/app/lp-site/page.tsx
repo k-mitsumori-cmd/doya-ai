@@ -196,15 +196,77 @@ function LpSitePageInner() {
         setStageText('ワイヤーフレームを生成中...')
         setMood('think')
         
-        const step3Response = await fetch('/api/lp-site/generate-step', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ step: 'wireframe-generation', product_info: productInfo, sections }),
-        })
-        if (!step3Response.ok) throw new Error('ワイヤーフレーム生成に失敗しました')
-        const step3Data = await step3Response.json()
-        wireframes = step3Data.wireframes
-        updateProgress(60) // Step 3完了
+        // タイムアウト処理（最大300秒 = 5分）
+        // API側のmaxDuration（300秒）に合わせて設定
+        // 各セクションのタイムアウト（120秒）を考慮し、セクション数 × 130秒 + 余裕
+        const WIREFRAME_TIMEOUT = 300000 // 5分
+        const abortController = new AbortController()
+        let timeoutId: NodeJS.Timeout | null = null
+        let progressInterval: NodeJS.Timeout | null = null
+        
+        try {
+          timeoutId = setTimeout(() => {
+            abortController.abort()
+          }, WIREFRAME_TIMEOUT)
+          
+          // 進捗を段階的に更新（セクション数に基づく）
+          const sectionCount = sections.length
+          progressInterval = setInterval(() => {
+            updateProgress((prev) => {
+              // 45%から60%の間で徐々に進捗を更新
+              if (prev < 60) {
+                return Math.min(60, prev + 0.3)
+              }
+              return prev
+            })
+          }, 2000) // 2秒ごとに0.3%更新
+          
+          const step3Response = await fetch('/api/lp-site/generate-step', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ step: 'wireframe-generation', product_info: productInfo, sections }),
+            signal: abortController.signal,
+          })
+          
+          // 成功した場合、タイムアウトと進捗更新をクリア
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+          }
+          if (progressInterval) {
+            clearInterval(progressInterval)
+          }
+          
+          if (!step3Response.ok) {
+            const errorData = await step3Response.json().catch(() => ({}))
+            // エラーをそのままスロー（デフォルトで続行しない）
+            const errorMessage = errorData.error || errorData.details || 'ワイヤーフレーム生成に失敗しました'
+            console.error('[LP-SITE] ワイヤーフレーム生成APIエラー:', errorData)
+            throw new Error(errorMessage)
+          }
+          
+          const step3Data = await step3Response.json()
+          wireframes = step3Data.wireframes || []
+          
+          // ワイヤーフレームが生成されていない場合（空配列）はエラー
+          if (wireframes.length === 0 || wireframes.length < sections.length) {
+            throw new Error(`ワイヤーフレーム生成が不完全です（${wireframes.length}/${sections.length}セクション）`)
+          }
+          
+          updateProgress(60) // Step 3完了
+          setStageText('ワイヤーフレーム生成完了！')
+        } catch (error: any) {
+          // エラー時もクリア
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+          }
+          if (progressInterval) {
+            clearInterval(progressInterval)
+          }
+          
+          // エラーをそのままスロー（デフォルトで続行しない）
+          console.error('[LP-SITE] ワイヤーフレーム生成エラー:', error)
+          throw error
+        }
 
         // ワイヤーフレームが生成されたら、すぐに結果を表示（オーバーレイを閉じる）
         const wireframeResult: LpGenerationResult = {

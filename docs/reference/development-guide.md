@@ -2125,7 +2125,7 @@ pricing: {
   - [ ] `features`: 機能一覧（配列）
   - [ ] `pricing`: 料金設定（free/pro の dailyLimit, price を設定）**← プラン設計に基づく**
   - [ ] `status`: 'active' | 'beta' | 'coming_soon' | 'stopped'
-  - [ ] `badge`: バッジ表示（ベータ版の場合: 'ベータ版'）
+  - [ ] `badge`: バッジ表示（ベータ版の場合: 'ベータ版'、停止中の場合は必要に応じて設定）
   - [ ] `category`: 'text' | 'image' | 'video' | 'other'
   - [ ] `order`: 表示順序（数値）
   - [ ] `requiresAuth`: 認証必須かどうか（通常は false）

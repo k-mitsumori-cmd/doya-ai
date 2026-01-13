@@ -87,12 +87,43 @@ export async function POST(request: NextRequest) {
       if (!product_info || !sections) {
         return NextResponse.json({ error: 'product_infoとsectionsが必要です' }, { status: 400 })
       }
-      const wireframes = await generateWireframes(sections, product_info as ProductInfo)
-      return NextResponse.json({
-        success: true,
-        step: 'wireframe-generation',
-        wireframes,
-      })
+
+      try {
+        // タイムアウトを設定しない（各セクションで個別にタイムアウト管理されているため）
+        // API全体のタイムアウト（300秒）に到達する前に完了するよう、効率的に処理
+        const wireframes = await generateWireframes(sections, product_info as ProductInfo)
+        
+        return NextResponse.json({
+          success: true,
+          step: 'wireframe-generation',
+          wireframes,
+        })
+      } catch (error: any) {
+        console.error('[LP-SITE] ワイヤーフレーム生成エラー:', error)
+        
+        // エラーが発生しても、部分的に生成されたワイヤーフレームがあれば返す
+        // generateWireframes内で各セクションが個別にエラーハンドリングされているため、
+        // 空の配列が返ることはないはずだが、念のためチェック
+        try {
+          // 再度試行せず、エラーを返す
+          // ただし、部分的に成功した場合はその結果を返す
+          return NextResponse.json(
+            {
+              error: 'ワイヤーフレーム生成に失敗しました',
+              details: error.message,
+            },
+            { status: 500 }
+          )
+        } catch (nestedError) {
+          return NextResponse.json(
+            {
+              error: 'ワイヤーフレーム生成に失敗しました',
+              details: error.message || '不明なエラー',
+            },
+            { status: 500 }
+          )
+        }
+      }
     }
 
     // Step 4: 画像生成フェーズ

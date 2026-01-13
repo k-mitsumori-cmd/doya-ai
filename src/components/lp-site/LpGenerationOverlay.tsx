@@ -545,11 +545,16 @@ function WireframeGenerationDisplay({ isGenerating }: { isGenerating: boolean })
       const allSteps = wireframeStepDefinitions.map(s => s.key)
       setGenerationSteps(allSteps)
       setCompletedSteps(new Set(allSteps))
+      setCurrentStepText('ワイヤーフレームが完了しました')
       return
     }
 
     if (isGenerating) {
       // 生成中の場合は、ステップを順番に表示
+      // まずリセット
+      setGenerationSteps([])
+      setCompletedSteps(new Set())
+      
       let stepIndex = 0
       const interval = setInterval(() => {
         if (stepIndex < wireframeStepDefinitions.length) {
@@ -557,16 +562,22 @@ function WireframeGenerationDisplay({ isGenerating }: { isGenerating: boolean })
           setGenerationSteps(prev => [...prev, step.key])
           setCurrentStepText(step.label)
           
-          // 少し遅れて完了マークを表示
-          setTimeout(() => {
-            setCompletedSteps(prev => new Set([...prev, step.key]))
-          }, 800)
+          // 少し遅れて完了マークを表示（最後のステップ以外）
+          if (stepIndex < wireframeStepDefinitions.length - 1) {
+            setTimeout(() => {
+              setCompletedSteps(prev => new Set([...prev, step.key]))
+            }, 800)
+          }
           
           stepIndex++
         } else {
+          // 最後のステップを完了としてマーク
+          const lastStep = wireframeStepDefinitions[wireframeStepDefinitions.length - 1]
+          setCompletedSteps(prev => new Set([...prev, lastStep.key]))
+          setCurrentStepText('ワイヤーフレームが完了しました')
           clearInterval(interval)
         }
-      }, 1200) // 1.2秒ごとに次のステップを表示
+      }, 1500) // 1.5秒ごとに次のステップを表示（セクション数に応じて調整）
 
       return () => clearInterval(interval)
     }

@@ -88,57 +88,88 @@ export async function generateTextWithGemini(
   // Gemini 3 Pro Preview → Gemini 3 Flash Preview → 2.0 Flash → 1.5 Flash の順で試す
   const models = [getPrimaryTextModel(), 'gemini-3-flash-preview', 'gemini-2.0-flash', GEMINI_FALLBACK_MODEL]
   
+  // Gemini APIのタイムアウト時間（120秒）
+  const GEMINI_TIMEOUT = 120000 // 120秒
+  
   for (const model of models) {
     try {
       const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
       
-      const response = await fetch(`${endpoint}?key=${apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: `${systemPrompt}\n\n---\n\n${finalPrompt}` }],
-            },
-          ],
-          generationConfig: {
-            temperature,
-            maxOutputTokens,
-            topP,
-            topK,
+      // AbortControllerでタイムアウトを管理
+      const abortController = new AbortController()
+      const timeoutId = setTimeout(() => {
+        abortController.abort()
+      }, GEMINI_TIMEOUT)
+      
+      try {
+        const response = await fetch(`${endpoint}?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-          ],
-        }),
-      })
+          body: JSON.stringify({
+            contents: [
+              {
+                role: 'user',
+                parts: [{ text: `${systemPrompt}\n\n---\n\n${finalPrompt}` }],
+              },
+            ],
+            generationConfig: {
+              temperature,
+              maxOutputTokens,
+              topP,
+              topK,
+            },
+            safetySettings: [
+              { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+              { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+              { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+              { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+            ],
+          }),
+          signal: abortController.signal,
+        })
+        
+        // 成功した場合、タイムアウトをクリア
+        clearTimeout(timeoutId)
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.warn(`Gemini ${model} error: ${response.status}`, errorText.substring(0, 300))
-        continue // 次のモデルを試行
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.warn(`Gemini ${model} error: ${response.status}`, errorText.substring(0, 300))
+          continue // 次のモデルを試行
+        }
+
+        const data = await response.json()
+        
+        // レスポンスからテキストを抽出
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+        
+        if (!text) {
+          console.warn(`Gemini ${model} returned empty text`)
+          continue
+        }
+
+        console.log(`Successfully generated with ${model}`)
+        return text
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId)
+        if (fetchError.name === 'AbortError') {
+          // タイムアウトの場合は次のモデルを試行
+          console.warn(`Gemini ${model} timeout: 120秒以内に完了しませんでした`)
+          if (model === models[models.length - 1]) {
+            throw new Error(`Gemini APIタイムアウト: すべてのモデルで120秒以内に完了しませんでした`)
+          }
+          continue
+        }
+        // その他のエラーも次のモデルを試行
+        throw fetchError
       }
-
-      const data = await response.json()
-      
-      // レスポンスからテキストを抽出
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
-      
-      if (!text) {
-        console.warn(`Gemini ${model} returned empty text`)
-        continue
-      }
-
-      console.log(`Successfully generated with ${model}`)
-      return text
     } catch (error: any) {
       console.warn(`Gemini ${model} failed:`, error?.message || error)
+      // 最後のモデルでも失敗した場合はエラーをスロー
+      if (model === models[models.length - 1]) {
+        throw error
+      }
       continue
     }
   }

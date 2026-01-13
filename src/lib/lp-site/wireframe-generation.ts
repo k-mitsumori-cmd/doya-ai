@@ -14,41 +14,53 @@ export async function generateWireframes(
 ): Promise<SectionWireframe[]> {
   const wireframes: SectionWireframe[] = []
 
-  // タイムアウト処理（各セクションに最大30秒）
-  const SECTION_TIMEOUT = 30000 // 30秒
-  const MAX_RETRIES = 2 // 最大2回まで再試行
+  // タイムアウト処理（各セクションに最大120秒）
+  // Gemini APIのタイムアウト（120秒）に合わせて設定
+  const SECTION_TIMEOUT = 120000 // 120秒
+  const MAX_RETRIES = 1 // 最大1回まで再試行
 
   for (const section of sections) {
     let retryCount = 0
     let wireframe: SectionWireframe | null = null
+    let lastError: Error | null = null
 
     while (retryCount <= MAX_RETRIES && !wireframe) {
       try {
         // タイムアウト付きでワイヤーフレーム生成を実行
+        // Gemini API側で120秒のタイムアウトが設定されているため、
+        // ここでは十分な余裕を持たせて150秒に設定
+        // これにより、Gemini APIが120秒でタイムアウトしても、実際の処理が完了するまで待てる
         const wireframePromise = generateSectionWireframe(section, productInfo)
+        let timeoutId: NodeJS.Timeout | null = null
+        
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('タイムアウト: ワイヤーフレーム生成に時間がかかりすぎています')), SECTION_TIMEOUT)
+          timeoutId = setTimeout(() => {
+            reject(new Error('タイムアウト: ワイヤーフレーム生成に時間がかかりすぎています（150秒）'))
+          }, 150000) // 150秒（Gemini APIの120秒 + 十分な余裕）
         })
 
-        wireframe = await Promise.race([wireframePromise, timeoutPromise])
+        // Promise.raceを使用し、どちらかが完了したら結果を取得
+        const result = await Promise.race([wireframePromise, timeoutPromise])
+        
+        // 成功した場合、タイムアウトをクリア
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+        }
+        
+        wireframe = result
         wireframes.push(wireframe)
         console.log(`[LP-SITE] ワイヤーフレーム生成完了: ${section.section_id}`)
       } catch (error: any) {
         console.error(`[LP-SITE] ワイヤーフレーム生成エラー (${section.section_id}, 試行 ${retryCount + 1}):`, error)
+        lastError = error
         
         retryCount++
         if (retryCount > MAX_RETRIES) {
-          // 最大再試行回数に達した場合は、デフォルトのワイヤーフレームを使用
-          console.warn(`[LP-SITE] ワイヤーフレーム生成失敗、デフォルトを使用: ${section.section_id}`)
-          wireframe = {
-            section_id: section.section_id,
-            pc: getDefaultWireframeData('pc'),
-            sp: getDefaultWireframeData('sp'),
-          }
-          wireframes.push(wireframe)
+          // 最大再試行回数に達した場合はエラーをスロー
+          throw new Error(`ワイヤーフレーム生成に失敗しました (${section.section_id}): ${error.message || '不明なエラー'}`)
         } else {
           // 再試行する前に少し待機
-          await new Promise(resolve => setTimeout(resolve, 2000))
+          await new Promise(resolve => setTimeout(resolve, 3000))
         }
       }
     }
