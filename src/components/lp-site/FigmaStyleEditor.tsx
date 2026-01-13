@@ -613,29 +613,89 @@ export function FigmaStyleEditor({
               画像生成中...
             </div>
           )}
+          
+          {/* プレビューボタン */}
           {onPreview && (
-            <button
-              onClick={onPreview}
-              className="px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors flex items-center gap-1.5"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              プレビュー
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => {
+                  if (isGeneratingImages) {
+                    toast.error('画像生成中はプレビューできません', { icon: '⏳' })
+                    return
+                  }
+                  if (missingSections.length > 0) {
+                    toast.error(`${missingSections.length}件の画像が未生成です。先に画像を生成してください`, { icon: '🖼️' })
+                    return
+                  }
+                  onPreview()
+                }}
+                disabled={isGeneratingImages}
+                className={`px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 transition-all ${
+                  isGeneratingImages || missingSections.length > 0
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                <ExternalLink className="w-4 h-4" />
+                プレビュー
+              </button>
+              {/* ツールチップ */}
+              {(isGeneratingImages || missingSections.length > 0) && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  {isGeneratingImages ? '画像生成中...' : `${missingSections.length}件の画像が未生成`}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                </div>
+              )}
+            </div>
           )}
+          
+          {/* 公開ボタン */}
           {onPublish && (
-            <button
-              onClick={onPublish}
-              className="px-3 py-1.5 text-xs font-medium bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex items-center gap-1.5"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              公開
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => {
+                  if (isGeneratingImages) {
+                    toast.error('画像生成中は公開できません', { icon: '⏳' })
+                    return
+                  }
+                  if (missingSections.length > 0) {
+                    toast.error(`${missingSections.length}件の画像が未生成です。先に画像を生成してください`, { icon: '🖼️' })
+                    return
+                  }
+                  if (partialSections.length > 0) {
+                    // 部分生成の場合は警告を表示して続行を確認
+                    if (!confirm(`${partialSections.length}件のセクションでPC/SPどちらかの画像のみ生成されています。このまま公開しますか？`)) {
+                      return
+                    }
+                  }
+                  onPublish()
+                }}
+                disabled={isGeneratingImages}
+                className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-all shadow-md ${
+                  isGeneratingImages || missingSections.length > 0
+                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700'
+                }`}
+              >
+                <Globe className="w-4 h-4" />
+                公開する
+              </button>
+              {/* ツールチップ */}
+              {(isGeneratingImages || missingSections.length > 0) && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  {isGeneratingImages ? '画像生成中...' : `${missingSections.length}件の画像が未生成`}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                </div>
+              )}
+            </div>
           )}
+          
+          {/* ダウンロードボタン */}
           <button
             onClick={() => onDownload(selectedDevice === 'pc' ? 'all_pc' : 'all_sp')}
-            className="px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 rounded hover:bg-slate-200 transition-colors flex items-center gap-1.5"
+            className="px-4 py-2 text-sm font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
           >
-            <FileDown className="w-3.5 h-3.5" />
+            <FileDown className="w-4 h-4" />
             ダウンロード
           </button>
         </div>
