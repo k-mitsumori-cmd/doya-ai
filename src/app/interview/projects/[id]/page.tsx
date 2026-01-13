@@ -558,38 +558,189 @@ export default function InterviewProjectDetailPage() {
       if (!project.outline) {
         setProcessingStep('構成案を生成中...')
         
-        const outlineRes = await fetch('/api/interview/outline', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ projectId }),
-        })
+        // 構成案生成をリトライ可能な形で実行
+        // 処理中の文字起こしがある場合は自動的にリトライする
+        // 長時間処理でもエラーを発生させずに処理を継続する
+        let outlineGenerated = false
+        let retryCount = 0
+        const maxRetries = 100000 // 実質的に無制限（長時間処理に対応、最大3日 = 259200秒 / 5秒 = 51840回）
+        const baseRetryInterval = 5000 // 基本5秒間隔
+        const maxRetryInterval = 30000 // 最大30秒間隔（長時間待機時）
         
-        if (!outlineRes.ok) {
-          const errorData = await outlineRes.json().catch(() => ({}))
-          const errorMessage = errorData.details || errorData.error || '構成案生成に失敗しました'
-          
-          // エラーが発生した場合、再度文字起こしの状態を確認
-          console.error('[INTERVIEW] Outline generation failed, checking transcription status again')
-          await fetchProject()
-          const checkRes = await fetch(`/api/interview/projects/${projectId}`, {
-            headers: guestId ? { 'x-guest-id': guestId } : {},
-          })
-          if (checkRes.ok) {
-            const checkData = await checkRes.json()
-            const checkTranscriptions = checkData.project?.transcriptions || []
-            const checkCompleted = checkTranscriptions.filter((t: any) => 
-              t.status === 'COMPLETED' && t.text && t.text.trim().length > 0
-            )
-            console.error('[INTERVIEW] Transcription status after outline error:', {
-              totalCount: checkTranscriptions.length,
-              completedCount: checkCompleted.length,
-              statuses: checkTranscriptions.map((t: any) => ({ id: t.id, status: t.status, hasText: !!(t.text && t.text.trim().length > 0) })),
+        while (!outlineGenerated && retryCount < maxRetries) {
+          try {
+            // タイムアウト制御用のAbortController
+            const abortController = new AbortController()
+            const timeoutId = setTimeout(() => abortController.abort(), 60000) // 60秒タイムアウト
+            
+            let outlineRes: Response
+            try {
+              outlineRes = await fetch('/api/interview/outline', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ projectId }),
+                signal: abortController.signal,
+              })
+            } finally {
+              clearTimeout(timeoutId)
+            }
+            
+            if (outlineRes.ok) {
+              // 成功した場合
+              outlineGenerated = true
+              await fetchProject() // 再取得
+              break
+            }
+            
+            // エラーレスポンスを解析
+            const errorData = await outlineRes.json().catch(() => ({}))
+            const errorMessage = errorData.details || errorData.error || '構成案生成に失敗しました'
+            
+            // 処理中の文字起こしがある場合は自動的にリトライ
+            // retryableフラグがある場合、またはエラーメッセージに「まだ処理中」が含まれる場合
+            if (errorData.retryable || errorData.error === 'Transcription still processing' || errorMessage.includes('まだ処理中')) {
+              retryCount++
+              
+              // プロジェクトを再取得して最新の状態を確認
+              try {
+                await fetchProject()
+                const checkAbortController = new AbortController()
+                const checkTimeoutId = setTimeout(() => checkAbortController.abort(), 30000) // 30秒タイムアウト
+                
+                let checkRes: Response
+                try {
+                  checkRes = await fetch(`/api/interview/projects/${projectId}`, {
+                    headers: guestId ? { 'x-guest-id': guestId } : {},
+                    signal: checkAbortController.signal,
+                  })
+                } finally {
+                  clearTimeout(checkTimeoutId)
+                }
+                
+                let processingCount = 0
+                let processingDetails: any[] = []
+                if (checkRes.ok) {
+                  const checkData = await checkRes.json()
+                  const checkTranscriptions = checkData.project?.transcriptions || []
+                  const processing = checkTranscriptions.filter((t: any) => 
+                    t.status === 'PROCESSING' || t.status === 'PENDING'
+                  )
+                  processingCount = processing.length
+                  
+                  // 処理中の詳細情報を取得
+                  processingDetails = processing.map((t: any) => {
+                    const material = checkData.project?.materials?.find((m: any) => m.id === t.materialId)
+                    const fileSize = material?.fileSize 
+                      ? (typeof material.fileSize === 'bigint' 
+                          ? Number(material.fileSize) 
+                          : Number(material.fileSize)) / (1024 * 1024 * 1024)
+                      : null
+                    return {
+                      id: t.id,
+                      fileName: material?.fileName || '不明',
+                      fileSize: fileSize ? `${fileSize.toFixed(2)}GB` : '不明',
+                      status: t.status,
+                    }
+                  })
+                }
+                
+                // 待機メッセージを更新（詳細情報を含める）
+                if (processingCount > 0) {
+                  const detailText = processingDetails.length > 0 
+                    ? `（${processingDetails.map(d => d?.fileName || '不明').filter((name, index, arr) => arr.indexOf(name) === index).join(', ')}）`
+                    : ''
+                  setProcessingStep(`文字起こしの完了を待機中...（残り${processingCount}件${detailText}、${retryCount}回目の確認）`)
+                } else {
+                  setProcessingStep(`構成案生成を準備中...（${retryCount}回目の確認）`)
+                }
+                
+                console.log(`[INTERVIEW] Transcription still processing, retrying outline generation (attempt ${retryCount}):`, {
+                  projectId,
+                  processingCount: errorData.processingCount || processingCount,
+                  processingDetails: errorData.processingDetails || processingDetails,
+                  retryCount,
+                })
+              } catch (fetchError) {
+                // プロジェクト取得エラーは無視して続行（ネットワークエラーの可能性）
+                console.warn('[INTERVIEW] Failed to fetch project status, continuing retry:', fetchError)
+                setProcessingStep(`文字起こしの完了を待機中...（${retryCount}回目の確認、状態確認中...）`)
+              }
+              
+              // リトライ間隔を動的に調整（長時間待機時は間隔を長くする）
+              const retryInterval = retryCount > 100 
+                ? Math.min(maxRetryInterval, baseRetryInterval * Math.floor(retryCount / 100))
+                : baseRetryInterval
+              
+              // 待機してからリトライ
+              await new Promise(resolve => setTimeout(resolve, retryInterval))
+              continue
+            }
+            
+            // その他のエラーの場合は、詳細を確認してからエラーを投げる
+            console.error('[INTERVIEW] Outline generation failed (non-retryable error):', {
+              error: errorMessage,
+              errorData,
+              retryCount,
             })
+            
+            // エラーが発生した場合、再度文字起こしの状態を確認
+            try {
+              await fetchProject()
+              const checkAbortController = new AbortController()
+              const checkTimeoutId = setTimeout(() => checkAbortController.abort(), 30000) // 30秒タイムアウト
+              
+              let checkRes: Response
+              try {
+                checkRes = await fetch(`/api/interview/projects/${projectId}`, {
+                  headers: guestId ? { 'x-guest-id': guestId } : {},
+                  signal: checkAbortController.signal,
+                })
+              } finally {
+                clearTimeout(checkTimeoutId)
+              }
+              if (checkRes.ok) {
+                const checkData = await checkRes.json()
+                const checkTranscriptions = checkData.project?.transcriptions || []
+                const checkCompleted = checkTranscriptions.filter((t: any) => 
+                  t.status === 'COMPLETED' && t.text && t.text.trim().length > 0
+                )
+                console.error('[INTERVIEW] Transcription status after outline error:', {
+                  totalCount: checkTranscriptions.length,
+                  completedCount: checkCompleted.length,
+                  statuses: checkTranscriptions.map((t: any) => ({ id: t.id, status: t.status, hasText: !!(t.text && t.text.trim().length > 0) })),
+                })
+              }
+            } catch (checkError) {
+              console.warn('[INTERVIEW] Failed to check transcription status after error:', checkError)
+            }
+            
+            throw new Error(errorMessage)
+          } catch (fetchError: any) {
+            // ネットワークエラーやタイムアウトエラーの場合もリトライ
+            if (fetchError.name === 'AbortError' || fetchError.name === 'TimeoutError' || fetchError.message?.includes('timeout')) {
+              retryCount++
+              console.warn(`[INTERVIEW] Network/timeout error during outline generation, retrying (attempt ${retryCount}):`, fetchError)
+              setProcessingStep(`構成案生成を試行中...（ネットワークエラー、${retryCount}回目のリトライ）`)
+              
+              // ネットワークエラーの場合は少し長めに待機
+              await new Promise(resolve => setTimeout(resolve, baseRetryInterval * 2))
+              continue
+            }
+            
+            // その他のエラーは再スロー
+            throw fetchError
           }
-          
-          throw new Error(errorMessage)
         }
-        await fetchProject() // 再取得
+        
+        // 最大リトライ回数に達した場合（通常は発生しない）
+        if (!outlineGenerated) {
+          console.error('[INTERVIEW] Outline generation reached max retries:', {
+            projectId,
+            retryCount,
+            maxRetries,
+          })
+          throw new Error('構成案生成のリトライ回数が上限に達しました。しばらく待ってから再度お試しください。')
+        }
       }
 
       // 2. 記事生成

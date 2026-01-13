@@ -961,6 +961,17 @@ async function cachedSearch(query: string) {
 
 全てのサービスで統一されたプラン管理システムを使用します。
 
+#### プラン体系
+
+| プラン | 説明 | 認証状態 | 主な特徴 |
+|--------|------|----------|----------|
+| **GUEST** | ゲストユーザー | 未ログイン | 基本的な機能のみ、厳しい使用制限（1回/日など） |
+| **FREE** | 無料プラン | ログイン済み | すべての基本機能、軽い使用制限（3-10回/日など） |
+| **PRO** | プロプラン | ログイン済み + サブスクリプション | すべての機能、緩い使用制限（50-100回/日など） |
+| **ENTERPRISE** | エンタープライズプラン | ログイン済み + サブスクリプション | すべての機能、使用制限なしまたは大幅に緩和 |
+
+**重要**: 新サービス開発時は、**まずプラン設計（プランごとの権限・機能制限）を行ってから実装を開始**してください。
+
 #### プラン取得パターン
 
 **サーバー側（APIエンドポイント）:**
@@ -1025,6 +1036,290 @@ if (subscription.dailyUsage >= dailyLimit) {
   )
 }
 ```
+
+### 2.5 初回ログイン1時間使い放題機能
+
+**重要**: 新サービス開発時は、**初回ログイン後1時間は全ての機能を使い放題**とする機能を実装してください。
+
+#### 機能概要
+
+ユーザーが初回ログインしてから1時間以内は、プランに関係なく全ての機能を使い放題（PRO相当の権限）にします。
+
+#### 実装パターン
+
+**1. セッションコールバックでの `firstLoginAt` 記録**
+
+`src/lib/auth.ts` の `session` コールバックで、初回ログイン時刻を記録：
+
+```typescript
+// src/lib/auth.ts
+async session({ session, user }) {
+  if (session.user && user) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { firstLoginAt: true }
+    })
+    
+    // firstLoginAt をセッションに載せる
+    ;(session.user as any).firstLoginAt = dbUser?.firstLoginAt?.toISOString() || null
+  }
+  return session
+}
+```
+
+**2. 初回ログイン時刻の記録（`signIn` コールバック）**
+
+`src/lib/auth.ts` の `signIn` コールバックで、初回ログイン時刻を記録：
+
+```typescript
+// src/lib/auth.ts
+async signIn({ user, account, profile }) {
+  if (user?.id) {
+    // 初回ログイン時刻を記録（既に記録されている場合は更新しない）
+    await prisma.user.upsert({
+      where: { id: user.id },
+      update: {},
+      create: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        image: user.image,
+        firstLoginAt: new Date(),
+        // その他のフィールド
+      },
+    })
+    
+    // 既存ユーザーの場合、firstLoginAtがnullなら設定
+    const existingUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { firstLoginAt: true }
+    })
+    
+    if (!existingUser?.firstLoginAt) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { firstLoginAt: new Date() },
+      })
+    }
+  }
+  return true
+}
+```
+
+**3. 1時間以内かどうかの判定（`src/lib/pricing.ts`）**
+
+```typescript
+// src/lib/pricing.ts
+export function isWithinFreeHour(firstLoginAt: string | null | undefined): boolean {
+  if (!firstLoginAt) return false
+  const start = Date.parse(firstLoginAt)
+  if (!Number.isFinite(start)) return false
+  const end = start + 60 * 60 * 1000 // 1時間
+  return Date.now() < end
+}
+
+export function getFreeHourRemainingMs(firstLoginAt: string | null | undefined): number {
+  if (!firstLoginAt) return 0
+  const start = Date.parse(firstLoginAt)
+  if (!Number.isFinite(start)) return 0
+  const end = start + 60 * 60 * 1000 // 1時間
+  return Math.max(0, end - Date.now())
+}
+```
+
+**4. APIエンドポイントでの使用量チェック（1時間使い放題を考慮）**
+
+```typescript
+// APIエンドポイントでの実装
+import { isWithinFreeHour } from '@/lib/pricing'
+
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  const userId = session?.user?.id
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+  }
+  
+  // 初回ログイン時刻を取得
+  const firstLoginAt = (session.user as any)?.firstLoginAt as string | null | undefined
+  
+  // 1時間以内かどうかを判定
+  const isFreeHourActive = isWithinFreeHour(firstLoginAt)
+  
+  // 1時間以内の場合は使用量チェックをスキップ（PRO相当の権限）
+  if (!isFreeHourActive) {
+    // 通常の使用量チェック
+    const subscription = await prisma.userServiceSubscription.findUnique({
+      where: { userId_serviceId: { userId, serviceId: 'myservice' } },
+    })
+    
+    const plan = subscription?.plan || 'FREE'
+    const dailyLimit = plan === 'PRO' ? 100 : plan === 'FREE' ? 3 : 0
+    
+    // 日次リセットチェック
+    const now = new Date()
+    const isNewDay = now.toDateString() !== subscription?.lastUsageReset.toDateString()
+    if (isNewDay) {
+      await prisma.userServiceSubscription.update({
+        where: { id: subscription.id },
+        data: { dailyUsage: 0, lastUsageReset: now },
+      })
+    }
+    
+    // 使用量チェック
+    if (subscription && subscription.dailyUsage >= dailyLimit) {
+      return NextResponse.json(
+        { error: '1日の使用上限に達しました。明日以降、またはPROプランにアップグレードしてご利用ください。', limit: dailyLimit, usage: subscription.dailyUsage },
+        { status: 429 }
+      )
+    }
+  }
+  
+  // 処理実行（1時間以内の場合は使用量をカウントしない）
+  // ...
+  
+  // 使用量更新（1時間以内の場合は更新しない）
+  if (!isFreeHourActive && subscription) {
+    await prisma.userServiceSubscription.update({
+      where: { id: subscription.id },
+      data: { dailyUsage: { increment: 1 } },
+    })
+  }
+  
+  return NextResponse.json({ success: true })
+}
+```
+
+**5. クライアント側での表示（サイドバー・レイアウト）**
+
+```typescript
+// サイドバー・レイアウトでの実装
+import { useSession } from 'next-auth/react'
+import { isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
+
+function MyServiceSidebar() {
+  const { data: session } = useSession()
+  const isLoggedIn = !!session?.user
+  const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
+  
+  // 1時間以内かどうかを判定
+  const isFreeHourActive = isLoggedIn && isWithinFreeHour(firstLoginAt)
+  
+  // 残り時間を計算
+  const [freeHourRemainingMs, setFreeHourRemainingMs] = useState(() => 
+    getFreeHourRemainingMs(firstLoginAt)
+  )
+  
+  useEffect(() => {
+    if (!isFreeHourActive) return
+    const interval = setInterval(() => {
+      const remaining = getFreeHourRemainingMs(firstLoginAt)
+      setFreeHourRemainingMs(remaining)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isFreeHourActive, firstLoginAt])
+  
+  const formatRemainingTime = (ms: number): string => {
+    const totalSeconds = Math.floor(ms / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+  
+  // プラン表示（1時間以内の場合は「PRO相当」と表示）
+  const planLabel = isFreeHourActive 
+    ? '初回特典中（PRO相当）'
+    : plan === 'PRO' ? 'PRO' : plan === 'FREE' ? 'FREE' : 'GUEST'
+  
+  // 1時間使い放題バナーの表示
+  return (
+    <>
+      {isFreeHourActive && (
+        <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white p-4 rounded-xl mb-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-black text-sm">初回ログイン特典：1時間 使い放題（PRO相当）</p>
+              <p className="text-xs mt-1">全機能解放されています</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-black uppercase">残り</p>
+              <p className="text-lg font-black tabular-nums">
+                {formatRemainingTime(freeHourRemainingMs)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* その他のコンテンツ */}
+    </>
+  )
+}
+```
+
+**6. レイアウトでの表示（ヘッダー）**
+
+```typescript
+// レイアウトでの実装例（InterviewAppLayout.tsx を参考）
+function MyServiceAppLayout() {
+  const { data: session } = useSession()
+  const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
+  const isFreeHourActive = isWithinFreeHour(firstLoginAt)
+  
+  return (
+    <div>
+      {/* 1時間使い放題バナー（ヘッダーの下） */}
+      {isFreeHourActive && (
+        <div className="px-4 md:px-8 pt-2">
+          <div className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-black text-orange-900">
+                  初回ログイン特典：1時間 使い放題（PRO相当）
+                </p>
+                <p className="text-[10px] font-bold text-orange-800/80">
+                  全機能解放されています
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black text-orange-700 uppercase">残り</p>
+                <p className="text-sm font-black text-orange-900 tabular-nums">
+                  {formatRemainingTime(getFreeHourRemainingMs(firstLoginAt))}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ヘッダー、メインコンテンツ */}
+    </div>
+  )
+}
+```
+
+#### 実装チェックリスト
+
+- [ ] `src/lib/auth.ts` の `signIn` コールバックで `firstLoginAt` を記録
+- [ ] `src/lib/auth.ts` の `session` コールバックで `firstLoginAt` をセッションに載せる
+- [ ] `src/lib/pricing.ts` に `isWithinFreeHour` と `getFreeHourRemainingMs` 関数を実装
+- [ ] APIエンドポイントで `isWithinFreeHour` を使用して使用量チェックをスキップ
+- [ ] 1時間以内の場合は使用量をカウントしない
+- [ ] サイドバー・レイアウトで1時間使い放題バナーを表示
+- [ ] 残り時間のカウントダウンを実装
+- [ ] プラン表示で「PRO相当」と表示（1時間以内の場合）
+
+#### 注意点
+
+- ✅ **1時間以内の場合は使用量をカウントしない**: 使用量を増やさないようにする
+- ✅ **PRO相当の権限**: 1時間以内の場合は、PROプランと同等の機能を利用できる
+- ✅ **初回ログインのみ**: `firstLoginAt` が既に設定されている場合は、新たに設定しない
+- ✅ **残り時間の表示**: ユーザーに残り時間を分かりやすく表示する
+
+**参考実装:**
+- `src/lib/pricing.ts` - `isWithinFreeHour`, `getFreeHourRemainingMs` 関数
+- `src/lib/auth.ts` - `signIn`, `session` コールバック
+- `src/components/InterviewSidebar.tsx` - 1時間使い放題バナーの表示
+- `src/components/InterviewAppLayout.tsx` - レイアウトでの1時間使い放題バナーの表示
 
 ### 3. ゲストユーザー対応
 
@@ -1747,9 +2042,74 @@ const plan = subscription?.plan || userPlan || 'FREE'
 
 ### 📌 Phase 1: サービス定義・基本設定
 
+#### 1.0 プラン設計（最初に行う）
+
+**重要**: プラン設計は**サービス実装の最初**に行います。プランごとの権限・機能制限を明確にしてから実装を開始してください。
+
+**プラン体系:**
+
+| プラン | 説明 | 認証状態 |
+|--------|------|----------|
+| **GUEST** | ゲストユーザー（ログインしていない） | 未ログイン |
+| **FREE** | 無料プラン（ログイン済み） | ログイン済み |
+| **PRO** | プロプラン（有料） | ログイン済み + サブスクリプション |
+| **ENTERPRISE** | エンタープライズプラン（有料） | ログイン済み + サブスクリプション |
+
+**プラン設計のチェックリスト:**
+
+- [ ] **プランごとの機能制限を設計**
+  - [ ] GUEST: どの機能を制限するか
+  - [ ] FREE: どの機能を制限するか、使用制限は何回か
+  - [ ] PRO: どの機能を解放するか、使用制限は何回か
+  - [ ] ENTERPRISE: すべての機能を解放、使用制限は無制限か
+
+- [ ] **プランごとの使用制限を設計**
+  - [ ] 1日の使用回数制限（dailyLimit）
+  - [ ] 1ヶ月の使用回数制限（必要に応じて）
+  - [ ] ファイルサイズ制限（アップロード機能がある場合）
+  - [ ] 生成文字数・画像数などの制限
+
+- [ ] **プランごとの機能アクセス権限を設計**
+  - [ ] どの機能がどのプランで利用可能か
+  - [ ] どの機能がどのプランで制限されるか
+  - [ ] プレミアム機能の定義
+
+- [ ] **プラン設計をドキュメント化**
+  - [ ] プラン設計を `services.ts` の `pricing` フィールドに反映
+  - [ ] プラン設計を開発ドキュメントに記録（必要に応じて）
+
+**プラン設計例:**
+
+```typescript
+// services.ts での定義例
+pricing: {
+  free: { 
+    name: '無料プラン', 
+    limit: '1日3回まで', 
+    dailyLimit: 3, 
+    price: 0 
+  },
+  pro: { 
+    name: 'プロプラン', 
+    limit: '1日100回まで', 
+    dailyLimit: 100, 
+    price: 4980 
+  },
+}
+
+// プランごとの機能制限の設計例
+// GUEST: 基本的な機能のみ、使用制限1回
+// FREE: すべての機能、使用制限3回/日
+// PRO: すべての機能、使用制限100回/日
+// ENTERPRISE: すべての機能、使用制限無制限
+```
+
+---
+
 #### 1.1 サービス定義（`src/lib/services.ts`）
 
 - [ ] `SERVICES` 配列にサービスを追加
+- [ ] **プラン設計が完了している（上記の1.0を参照）**
 - [ ] 必須フィールドが全て設定されている：
   - [ ] `id`: サービスID（英数字、ハイフン使用可）
   - [ ] `name`: サービス名（例: 'ドヤ○○AI'）
@@ -1763,7 +2123,7 @@ const plan = subscription?.plan || userPlan || 'FREE'
   - [ ] `pricingHref`: 料金ページのURL（必要に応じて）
   - [ ] `guideHref`: ガイドページのURL（必要に応じて）
   - [ ] `features`: 機能一覧（配列）
-  - [ ] `pricing`: 料金設定（free/pro の dailyLimit, price を設定）
+  - [ ] `pricing`: 料金設定（free/pro の dailyLimit, price を設定）**← プラン設計に基づく**
   - [ ] `status`: 'active' | 'beta' | 'coming_soon' | 'stopped'
   - [ ] `badge`: バッジ表示（ベータ版の場合: 'ベータ版'）
   - [ ] `category`: 'text' | 'image' | 'video' | 'other'
@@ -1911,6 +2271,41 @@ const plan = subscription?.plan || userPlan || 'FREE'
 ---
 
 ### 📌 Phase 3: プラン管理・課金連携
+
+#### 3.0 プラン設計（最初に行う）
+
+**重要**: プラン管理実装の前に、**プラン設計を完了**してください。
+
+- [ ] **プランごとの機能制限を設計**
+  - [ ] GUEST: どの機能を制限するか（例: 基本機能のみ、1回/日の制限）
+  - [ ] FREE: どの機能を制限するか、使用制限は何回か（例: すべての基本機能、3回/日）
+  - [ ] PRO: どの機能を解放するか、使用制限は何回か（例: すべての機能、100回/日）
+  - [ ] ENTERPRISE: すべての機能を解放、使用制限は無制限か
+
+- [ ] **プランごとの使用制限を設計**
+  - [ ] 1日の使用回数制限（dailyLimit）
+    - [ ] GUEST: 1回/日（例）
+    - [ ] FREE: 3-10回/日（サービス定義の `pricing.free.dailyLimit` に反映）
+    - [ ] PRO: 50-100回/日（サービス定義の `pricing.pro.dailyLimit` に反映）
+    - [ ] ENTERPRISE: 無制限または大幅に緩和
+  - [ ] ファイルサイズ制限（アップロード機能がある場合）
+  - [ ] 生成文字数・画像数などの制限
+
+- [ ] **プランごとの機能アクセス権限を設計**
+  - [ ] どの機能がどのプランで利用可能か
+  - [ ] どの機能がどのプランで制限されるか
+  - [ ] プレミアム機能の定義
+
+- [ ] **プラン設計を `services.ts` に反映**
+  - [ ] `pricing.free.dailyLimit` を設定
+  - [ ] `pricing.pro.dailyLimit` を設定
+  - [ ] プラン設計がサービス定義と一致しているか確認
+
+**参考:**
+- Phase 1.0「プラン設計」も参照
+- [プラン管理システム](#1-プラン管理システム) の「プラン体系」を参照
+
+---
 
 #### 3.1 Stripe設定
 
@@ -2106,9 +2501,12 @@ export async function POST(request: NextRequest) {
 
 - [ ] try-catch でエラーを捕捉
 - [ ] 適切なHTTPステータスコードを返す
-- [ ] エラーメッセージがユーザーフレンドリー
+- [ ] **エラーメッセージがユーザーフレンドリーで、原因がわかりやすい**
+- [ ] **開発者が修正しやすいように、ログに詳細情報を出力**
 - [ ] ログ出力が適切（`[SERVICE_NAME]` プレフィックス付き）
 - [ ] Prismaエラーの適切な処理
+
+**詳細**: [エラーメッセージの設計ガイドライン](#エラーメッセージの設計ガイドライン) を参照
 
 ---
 
@@ -2146,6 +2544,243 @@ export async function POST(request: NextRequest) {
 - [ ] TypeScriptの型定義が適切
 - [ ] 型エラーがない
 - [ ] `any` 型の使用を最小限に
+
+---
+
+## ⚠️ 機能実装後の徹底的なデバッグ・確認・修正（必須）
+
+**重要**: 機能を実装したら、**必ず徹底的にデバッグ確認して修正する**ことが必須です。
+
+### デバッグ・確認の原則
+
+1. **実装したら即座にテスト**: 機能を実装したら、すぐに動作確認を行う
+2. **全てのパターンをテスト**: 正常系だけでなく、異常系・エッジケースも確認
+3. **複数の環境で確認**: ローカル環境、本番環境（プレビュー）で確認
+4. **複数のデバイスで確認**: PC、タブレット、モバイルで表示・動作を確認
+5. **エラーを放置しない**: エラーや警告は必ず修正する
+
+### デバッグ・確認のチェックリスト
+
+#### 1. 基本動作確認
+
+- [ ] 実装した機能が正常に動作するか
+- [ ] エラーやコンソール警告がないか（ブラウザの開発者ツールで確認）
+- [ ] TypeScriptエラーがないか（`pnpm build` で確認）
+- [ ] Lintエラーがないか（`pnpm lint` で確認）
+- [ ] 型エラーがないか
+
+#### 2. エラーケースの確認
+
+- [ ] ネットワークエラー時の処理が適切か
+- [ ] APIエラー時の処理が適切か（404、500、429など）
+- [ ] バリデーションエラーの表示が適切か
+- [ ] ログインしていないユーザーの処理が適切か
+- [ ] プラン制限に達した時の処理が適切か
+
+#### 3. UI/UX確認
+
+- [ ] レスポンシブデザインが適切か（PC、タブレット、モバイル）
+- [ ] ローディング状態の表示が適切か
+- [ ] エラーメッセージがユーザーフレンドリーか
+- [ ] フォームのバリデーションが適切か
+- [ ] ボタンの無効化・有効化が適切か
+- [ ] アニメーションが適切に動作するか
+
+#### 4. パフォーマンス確認
+
+- [ ] ページの読み込み速度が適切か
+- [ ] APIリクエストが適切な頻度か（過度なポーリングがないか）
+- [ ] メモリリークがないか（長時間使用しても問題ないか）
+- [ ] 大きなデータを扱う場合のパフォーマンスが適切か
+
+#### 5. セキュリティ確認
+
+- [ ] 認証チェックが適切か
+- [ ] 権限チェックが適切か（他のユーザーのデータにアクセスできないか）
+- [ ] 入力値のサニタイズが適切か（XSS対策）
+- [ ] 機密情報がクライアント側に露出していないか
+
+#### 6. データ整合性確認
+
+- [ ] データベースへの保存が適切か
+- [ ] データの更新が適切か
+- [ ] トランザクションが適切か（複数の操作が途中で失敗した場合）
+- [ ] 日次リセットなどの時間ベースの処理が適切か
+
+#### 7. ブラウザ・デバイス確認
+
+- [ ] Chrome で正常に動作するか
+- [ ] Safari で正常に動作するか
+- [ ] Firefox で正常に動作するか（必要に応じて）
+- [ ] モバイルブラウザ（iOS Safari、Android Chrome）で正常に動作するか
+- [ ] タブレットで正常に表示・動作するか
+
+#### 8. 統合確認
+
+- [ ] 他のサービスに影響を与えていないか
+- [ ] 共通コンポーネントの動作に問題がないか
+- [ ] サイドバー・ナビゲーションが正常に動作するか
+- [ ] プラン管理が正常に動作するか
+
+### デバッグ手順
+
+#### Step 1: ローカル環境での確認
+
+```bash
+# 1. ビルドエラーの確認
+pnpm build
+
+# 2. Lintエラーの確認
+pnpm lint
+
+# 3. 型チェックの確認
+pnpm type-check  # または tsc --noEmit
+
+# 4. ローカルサーバーで動作確認
+pnpm dev
+```
+
+**確認項目:**
+- ブラウザの開発者ツール（Console、Network、Application）を開く
+- エラーや警告がないか確認
+- ネットワークリクエストが適切に送信されているか確認
+- ストレージ（LocalStorage、SessionStorage）の使用が適切か確認
+
+#### Step 2: ブラウザ開発者ツールでの確認
+
+**Consoleタブ:**
+- エラー（赤色）がないか確認
+- 警告（黄色）がないか確認
+- 想定外のログがないか確認
+
+**Networkタブ:**
+- APIリクエストが適切に送信されているか確認
+- レスポンスステータスコードが適切か確認（200、201、400、401、403、404、429、500など）
+- レスポンス時間が適切か確認
+- リクエストの重複がないか確認
+
+**Applicationタブ:**
+- LocalStorage、SessionStorageの使用が適切か確認
+- クッキーの使用が適切か確認
+
+**Elementsタブ:**
+- HTMLの構造が適切か確認
+- CSSが適切に適用されているか確認
+- レスポンシブデザインが適切か確認（デバイスツールバーで確認）
+
+#### Step 3: エラーハンドリングの確認
+
+**以下のシナリオをテスト:**
+
+1. **ネットワークエラー**
+   - オフライン状態にする
+   - ネットワーク速度を制限する（Chrome DevTools の Network タブで Throttling を設定）
+
+2. **APIエラー**
+   - サーバーを停止する
+   - 不正なリクエストを送信する
+   - 認証エラー（401）を発生させる
+   - 権限エラー（403）を発生させる
+   - リソースが見つからないエラー（404）を発生させる
+   - レート制限エラー（429）を発生させる
+   - サーバーエラー（500）を発生させる
+
+3. **バリデーションエラー**
+   - 空の入力値を送信する
+   - 不正な形式の入力値を送信する
+   - 制限を超えた値を送信する
+
+4. **状態エラー**
+   - ログインしていない状態でアクセスする
+   - プラン制限に達した状態でアクセスする
+   - データが存在しない状態でアクセスする
+
+#### Step 4: レスポンシブデザインの確認
+
+**Chrome DevTools のデバイスツールバーで確認:**
+
+- [ ] モバイル（375px、390px、414px）
+- [ ] タブレット（768px、1024px）
+- [ ] デスクトップ（1280px、1920px）
+
+**確認項目:**
+- レイアウトが崩れていないか
+- テキストが適切に折り返されているか
+- ボタンやリンクがタップしやすいサイズか
+- サイドバーが適切に表示・非表示されるか
+- モーダルやポップアップが適切に表示されるか
+
+#### Step 5: パフォーマンス確認
+
+**Chrome DevTools の Performance タブ:**
+
+- [ ] ページの読み込み時間が適切か
+- [ ] JavaScriptの実行時間が適切か
+- [ ] レンダリング時間が適切か
+- [ ] メモリ使用量が適切か
+
+**Network タブ:**
+
+- [ ] リクエストの数が適切か（過度に多い場合は最適化を検討）
+- [ ] リクエストのサイズが適切か
+- [ ] キャッシュが適切に使用されているか
+
+#### Step 6: セキュリティ確認
+
+- [ ] 認証チェックが全ての保護されたエンドポイントで実装されているか
+- [ ] 権限チェックが適切か（他のユーザーのデータにアクセスできないか）
+- [ ] 入力値のサニタイズが適切か（XSS対策）
+- [ ] SQLインジェクション対策が適切か（Prismaを使用している場合は自動で保護されるが、確認）
+- [ ] 機密情報（APIキー、トークンなど）がクライアント側に露出していないか
+
+### 修正の原則
+
+1. **エラーは即座に修正**: エラーや警告は放置せず、即座に修正する
+2. **根本原因を修正**: 症状だけでなく、根本原因を修正する
+3. **再現手順を記録**: バグを見つけたら、再現手順を記録する
+4. **修正後は再テスト**: 修正したら、必ず再テストを行う
+5. **関連機能も確認**: 修正が他の機能に影響を与えていないか確認する
+
+### よくあるデバッグ漏れ
+
+- ❌ **ミス**: 正常系だけをテストして、異常系をテストしない
+- ✅ **正解**: 正常系・異常系・エッジケースを全てテストする
+
+- ❌ **ミス**: ローカル環境だけでテストして、本番環境（プレビュー）でテストしない
+- ✅ **正解**: ローカル環境と本番環境（プレビュー）の両方でテストする
+
+- ❌ **ミス**: PCだけでテストして、モバイルでテストしない
+- ✅ **正解**: PC、タブレット、モバイルの全てでテストする
+
+- ❌ **ミス**: エラーや警告を無視して、デプロイする
+- ✅ **正解**: エラーや警告は必ず修正してからデプロイする
+
+- ❌ **ミス**: ビルドエラーがないから大丈夫だと思って、動作確認をしない
+- ✅ **正解**: ビルドエラーがなくても、必ず動作確認を行う
+
+- ❌ **ミス**: 自分のブラウザ（Chrome）だけでテストする
+- ✅ **正解**: 複数のブラウザ（Chrome、Safari、Firefox）でテストする
+
+### デバッグチェックリスト（実装時）
+
+機能を実装したら、以下のチェックリストを**必ず確認**してください：
+
+- [ ] ビルドエラーがない（`pnpm build` が成功する）
+- [ ] TypeScriptエラーがない
+- [ ] Lintエラーがない（`pnpm lint` が成功する）
+- [ ] ブラウザのコンソールにエラーや警告がない
+- [ ] 実装した機能が正常に動作する
+- [ ] エラーケースの処理が適切か（ネットワークエラー、APIエラーなど）
+- [ ] レスポンシブデザインが適切か（PC、タブレット、モバイル）
+- [ ] ローディング状態の表示が適切か
+- [ ] エラーメッセージがユーザーフレンドリーか
+- [ ] 認証チェックが適切か
+- [ ] 権限チェックが適切か
+- [ ] パフォーマンスが適切か（過度なリクエストがないか）
+- [ ] 他のサービスに影響を与えていないか
+- [ ] 複数のブラウザで動作確認した（Chrome、Safari）
+
+**全ての項目にチェックを入れてから、コミット・デプロイしてください。**
 
 ---
 
@@ -2309,6 +2944,34 @@ const plan = subscription?.plan || userPlan || 'FREE'
 
 - ❌ **ミス**: Vercelに環境変数を設定していない
 - ✅ **正解**: デプロイ前にVercelダッシュボードで環境変数を設定
+
+### デバッグ・確認
+
+- ❌ **ミス**: 機能を実装したら、すぐにコミット・デプロイする
+- ✅ **正解**: 機能を実装したら、必ず徹底的にデバッグ確認して修正する
+
+- ❌ **ミス**: 正常系だけをテストして、異常系をテストしない
+- ✅ **正解**: 正常系・異常系・エッジケースを全てテストする
+
+- ❌ **ミス**: ローカル環境だけでテストして、本番環境（プレビュー）でテストしない
+- ✅ **正解**: ローカル環境と本番環境（プレビュー）の両方でテストする
+
+- ❌ **ミス**: PCだけでテストして、モバイルでテストしない
+- ✅ **正解**: PC、タブレット、モバイルの全てでテストする
+
+- ❌ **ミス**: エラーや警告を無視して、デプロイする
+- ✅ **正解**: エラーや警告は必ず修正してからデプロイする
+
+- ❌ **ミス**: ビルドエラーがないから大丈夫だと思って、動作確認をしない
+- ✅ **正解**: ビルドエラーがなくても、必ず動作確認を行う
+
+- ❌ **ミス**: 自分のブラウザ（Chrome）だけでテストする
+- ✅ **正解**: 複数のブラウザ（Chrome、Safari、Firefox）でテストする
+
+- ❌ **ミス**: コンソールのエラーや警告を無視する
+- ✅ **正解**: ブラウザの開発者ツールでエラーや警告を確認し、全て修正する
+
+**詳細**: [機能実装後の徹底的なデバッグ・確認・修正](#機能実装後の徹底的なデバッグ確認修正必須) を参照
 
 ---
 
@@ -2758,6 +3421,364 @@ const pushLog = useCallback((item: Omit<ActivityLogItem, 'id'>) => {
 
 **実装例:**
 - `src/app/api/lp-site/generate-stream/route.ts`
+
+---
+
+## エラーメッセージの設計ガイドライン
+
+エラーが起きた際のメッセージは、**エラーの原因をわかりやすく、修正しやすいメッセージを出力する**ことが重要です。
+
+### エラーメッセージの原則
+
+1. **ユーザー向けメッセージ**: 技術的な詳細は省き、原因と対処法をわかりやすく伝える
+2. **開発者向けログ**: 詳細な情報（スタックトレース、コンテキスト情報）を出力して、原因を特定しやすくする
+3. **一貫性**: エラーメッセージの形式を統一する
+4. **具体的な対処法**: エラーの原因と、ユーザーが取れる対処法を示す
+
+### ユーザー向けエラーメッセージ
+
+#### 良い例 ✅
+
+**認証エラー:**
+```typescript
+{ error: 'ログインが必要です。ログインしてから再度お試しください。' }
+```
+
+**権限エラー:**
+```typescript
+{ error: 'この機能を利用するには、PROプランへのアップグレードが必要です。' }
+```
+
+**使用制限エラー:**
+```typescript
+{ error: '1日の使用上限に達しました。明日以降、またはPROプランにアップグレードしてご利用ください。', limit: 3, usage: 3 }
+```
+
+**バリデーションエラー:**
+```typescript
+{ error: '入力内容に問題があります。', details: { field: 'title', message: 'タイトルは1文字以上、100文字以内で入力してください。' } }
+```
+
+**ネットワークエラー:**
+```typescript
+{ error: 'ネットワークエラーが発生しました。インターネット接続を確認して、しばらく時間をおいて再度お試しください。' }
+```
+
+**サーバーエラー:**
+```typescript
+{ error: 'サーバーエラーが発生しました。しばらく時間をおいて再度お試しください。' }
+```
+
+#### 悪い例 ❌
+
+```typescript
+// 技術的な詳細が含まれている
+{ error: 'Prisma error: P2021 - Table does not exist' }
+
+// 原因が不明確
+{ error: 'エラーが発生しました' }
+
+// 対処法が示されていない
+{ error: '認証に失敗しました' }
+
+// 開発者向けの情報が含まれている
+{ error: 'TypeError: Cannot read property \'id\' of undefined' }
+```
+
+### 開発者向けログ
+
+開発者向けのログには、**原因を特定しやすくするための詳細情報**を含めます。
+
+#### 良い例 ✅
+
+```typescript
+try {
+  // 処理
+} catch (error: any) {
+  // 開発者向けログ: 詳細な情報を出力
+  console.error('[SERVICE_NAME] Error:', {
+    message: error?.message,
+    stack: error?.stack,
+    code: error?.code,
+    // エラー発生時のコンテキスト情報
+    userId: userId || 'guest',
+    serviceId: 'myservice',
+    endpoint: '/api/myservice/generate',
+    method: 'POST',
+    // リクエストの詳細（機密情報は除く）
+    requestBody: {
+      // 機密情報は含めない
+      title: body?.title,
+      // パスワードやトークンなどは含めない
+    },
+    // 環境情報
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+  })
+  
+  // ユーザー向けメッセージ
+  return NextResponse.json(
+    { error: '処理に失敗しました。しばらく時間をおいて再度お試しください。' },
+    { status: 500 }
+  )
+}
+```
+
+#### ログの形式
+
+**推奨形式:**
+```typescript
+console.error('[SERVICE_NAME] Error:', {
+  // エラー情報
+  message: string,
+  stack?: string,
+  code?: string,
+  
+  // コンテキスト情報
+  userId?: string,
+  serviceId: string,
+  endpoint: string,
+  method: string,
+  
+  // その他の関連情報
+  [key: string]: any,
+})
+```
+
+**プレフィックスの統一:**
+- サービス名を `[SERVICE_NAME]` 形式で統一
+- 例: `[BANNER]`, `[SEO]`, `[INTERVIEW]`, `[PERSONA]`
+
+### エラータイプ別のメッセージ設計
+
+#### 1. 認証エラー (401)
+
+```typescript
+// ユーザー向け
+{ error: 'ログインが必要です。ログインしてから再度お試しください。' }
+
+// 開発者向けログ
+console.error('[SERVICE_NAME] Auth Error:', {
+  message: 'Unauthorized',
+  userId: userId || 'not-set',
+  endpoint: '/api/myservice/generate',
+})
+```
+
+#### 2. 権限エラー (403)
+
+```typescript
+// ユーザー向け
+{ error: 'この機能を利用するには、PROプランへのアップグレードが必要です。', requiredPlan: 'PRO', currentPlan: 'FREE' }
+
+// 開発者向けログ
+console.error('[SERVICE_NAME] Permission Error:', {
+  message: 'Insufficient permissions',
+  userId,
+  requiredPlan: 'PRO',
+  currentPlan: subscription?.plan || 'FREE',
+  endpoint: '/api/myservice/generate',
+})
+```
+
+#### 3. 使用制限エラー (429)
+
+```typescript
+// ユーザー向け
+{ error: '1日の使用上限に達しました。明日以降、またはPROプランにアップグレードしてご利用ください。', limit: 3, usage: 3, resetAt: '2024-01-02T00:00:00Z' }
+
+// 開発者向けログ
+console.error('[SERVICE_NAME] Rate Limit Error:', {
+  message: 'Daily limit exceeded',
+  userId,
+  serviceId: 'myservice',
+  limit: dailyLimit,
+  usage: subscription.dailyUsage,
+  resetAt: subscription.lastUsageReset,
+})
+```
+
+#### 4. バリデーションエラー (400)
+
+```typescript
+// ユーザー向け
+{ error: '入力内容に問題があります。', details: [
+  { field: 'title', message: 'タイトルは1文字以上、100文字以内で入力してください。' },
+  { field: 'description', message: '説明は1000文字以内で入力してください。' },
+] }
+
+// 開発者向けログ
+console.error('[SERVICE_NAME] Validation Error:', {
+  message: 'Invalid input',
+  userId: userId || 'guest',
+  errors: validationErrors,
+  requestBody: body,
+})
+```
+
+#### 5. リソース未找到エラー (404)
+
+```typescript
+// ユーザー向け
+{ error: 'お探しのリソースが見つかりませんでした。' }
+
+// 開発者向けログ
+console.error('[SERVICE_NAME] Not Found Error:', {
+  message: 'Resource not found',
+  userId,
+  resourceId: params.id,
+  resourceType: 'article',
+  endpoint: '/api/myservice/articles/[id]',
+})
+```
+
+#### 6. サーバーエラー (500)
+
+```typescript
+// ユーザー向け
+{ error: 'サーバーエラーが発生しました。しばらく時間をおいて再度お試しください。' }
+
+// 開発者向けログ
+console.error('[SERVICE_NAME] Server Error:', {
+  message: error?.message,
+  stack: error?.stack,
+  code: error?.code,
+  userId,
+  endpoint: '/api/myservice/generate',
+  requestBody: body,
+})
+```
+
+### Prismaエラーの処理
+
+Prismaエラーは、ユーザー向けメッセージに変換します。
+
+```typescript
+try {
+  // Prisma操作
+} catch (error: any) {
+  // 開発者向けログ
+  console.error('[SERVICE_NAME] Prisma Error:', {
+    code: error?.code,
+    message: error?.message,
+    meta: error?.meta,
+    userId,
+  })
+  
+  // Prismaエラーコードに応じてユーザー向けメッセージを返す
+  if (error?.code === 'P2002') {
+    // ユニーク制約違反
+    return NextResponse.json(
+      { error: 'このデータは既に登録されています。' },
+      { status: 409 }
+    )
+  } else if (error?.code === 'P2025') {
+    // レコードが見つからない
+    return NextResponse.json(
+      { error: 'お探しのデータが見つかりませんでした。' },
+      { status: 404 }
+    )
+  } else if (error?.code === 'P2021') {
+    // テーブルが存在しない
+    return NextResponse.json(
+      { error: 'データベースエラーが発生しました。しばらく時間をおいて再度お試しください。' },
+      { status: 503 }
+    )
+  }
+  
+  // その他のPrismaエラー
+  return NextResponse.json(
+    { error: 'データベースエラーが発生しました。しばらく時間をおいて再度お試しください。' },
+    { status: 500 }
+  )
+}
+```
+
+### エラーメッセージのチェックリスト
+
+エラーメッセージを実装する際は、以下を確認してください：
+
+- [ ] ユーザー向けメッセージが技術的な詳細を含んでいない
+- [ ] ユーザー向けメッセージに原因がわかりやすく書かれている
+- [ ] ユーザー向けメッセージに対処法が示されている
+- [ ] 開発者向けログに詳細な情報が含まれている（スタックトレース、コンテキスト情報）
+- [ ] 開発者向けログにプレフィックス `[SERVICE_NAME]` が付いている
+- [ ] 機密情報（パスワード、トークンなど）がログに含まれていない
+- [ ] HTTPステータスコードが適切か
+- [ ] エラーメッセージの形式が統一されている
+
+### 実装例
+
+```typescript
+// APIエンドポイントでのエラーハンドリング例
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+    
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'ログインが必要です。ログインしてから再度お試しください。' },
+        { status: 401 }
+      )
+    }
+    
+    const body = await request.json()
+    
+    // バリデーション
+    if (!body.title || body.title.length > 100) {
+      return NextResponse.json(
+        { error: '入力内容に問題があります。', details: { field: 'title', message: 'タイトルは1文字以上、100文字以内で入力してください。' } },
+        { status: 400 }
+      )
+    }
+    
+    // 使用量チェック
+    const subscription = await prisma.userServiceSubscription.findUnique({
+      where: { userId_serviceId: { userId, serviceId: 'myservice' } },
+    })
+    
+    const dailyLimit = subscription?.plan === 'PRO' ? 100 : 3
+    if (subscription && subscription.dailyUsage >= dailyLimit) {
+      const resetAt = new Date(subscription.lastUsageReset)
+      resetAt.setDate(resetAt.getDate() + 1)
+      resetAt.setHours(0, 0, 0, 0)
+      
+      return NextResponse.json(
+        { 
+          error: '1日の使用上限に達しました。明日以降、またはPROプランにアップグレードしてご利用ください。',
+          limit: dailyLimit,
+          usage: subscription.dailyUsage,
+          resetAt: resetAt.toISOString(),
+        },
+        { status: 429 }
+      )
+    }
+    
+    // 処理実行
+    // ...
+    
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    // 開発者向けログ: 詳細な情報を出力
+    console.error('[MYSERVICE] Error:', {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code,
+      userId: session?.user?.id || 'not-set',
+      serviceId: 'myservice',
+      endpoint: '/api/myservice/generate',
+      method: 'POST',
+    })
+    
+    // ユーザー向けメッセージ: 原因がわかりやすく、対処法が示されている
+    return NextResponse.json(
+      { error: '処理に失敗しました。しばらく時間をおいて再度お試しください。' },
+      { status: 500 }
+    )
+  }
+}
+```
 
 ---
 

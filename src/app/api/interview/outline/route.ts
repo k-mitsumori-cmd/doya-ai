@@ -71,11 +71,34 @@ export async function POST(request: NextRequest) {
     // フロントエンド側で待機処理を実装しているため、API側では待機しない
     // これによりVercelのタイムアウト（300秒）を回避できる
     if (processingTranscriptions.length > 0) {
+      // 処理中の文字起こしの詳細情報を取得
+      const processingDetails = processingTranscriptions.map((t) => {
+        const material = t.material
+        // BigInt対応: fileSizeがBigIntの場合はNumberに変換
+        const fileSizeValue = material?.fileSize 
+          ? (typeof material.fileSize === 'bigint' 
+              ? Number(material.fileSize) 
+              : Number(material.fileSize))
+          : null
+        const fileSizeMB = fileSizeValue ? fileSizeValue / (1024 * 1024) : null
+        const fileSizeGB = fileSizeMB ? fileSizeMB / 1024 : null
+        return {
+          transcriptionId: t.id,
+          materialId: t.materialId,
+          status: t.status,
+          fileName: material?.fileName || '不明',
+          fileSizeMB: fileSizeMB ? fileSizeMB.toFixed(2) : null,
+          fileSizeGB: fileSizeGB ? fileSizeGB.toFixed(2) : null,
+          fileType: material?.type || '不明',
+        }
+      })
+
       console.log('[INTERVIEW] Outline generation blocked: Transcription still processing:', {
         projectId,
         processingCount: processingTranscriptions.length,
         processingIds: processingTranscriptions.map((t) => t.id),
-        note: 'Frontend will wait and retry',
+        processingDetails,
+        note: 'Frontend will wait and retry automatically',
       })
 
       return NextResponse.json(
@@ -84,6 +107,8 @@ export async function POST(request: NextRequest) {
           details: '文字起こしがまだ処理中です。文字起こしが完了するまでお待ちください。',
           processingCount: processingTranscriptions.length,
           processingIds: processingTranscriptions.map((t) => t.id),
+          processingDetails,
+          retryable: true, // リトライ可能であることを明示
         },
         { status: 400 }
       )
