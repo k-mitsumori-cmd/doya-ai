@@ -286,14 +286,24 @@ function LpSitePageInner() {
         toast.success('ワイヤーフレームが生成されました！画像を自動生成中...')
 
         // Step 4: 画像生成（バックグラウンドで実行、セクションごとに個別生成）
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:289',message:'画像生成開始: 状態を設定',data:{imageRequiredCount:sections.filter(s => s.image_required).length,totalSections:sections.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
         setIsGeneratingImages(true)
         setImageProgress(0)
         setSectionProgress({})
-        setGeneratingSections(new Set(sections.filter(s => s.image_required).map(s => s.section_id)))
+        const initialGeneratingSections = new Set(sections.filter(s => s.image_required).map(s => s.section_id))
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:293',message:'generatingSections初期化',data:{sectionIds:Array.from(initialGeneratingSections)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+        // #endregion
+        setGeneratingSections(initialGeneratingSections)
         
         // 画像生成を非同期で実行（セクションごとに個別生成）
         ;(async () => {
           try {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:297',message:'画像生成非同期処理開始',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
+            // #endregion
             setCurrentStep('image')
             setImageProgress(0)
             updateProgress(65) // 画像生成開始
@@ -321,6 +331,9 @@ function LpSitePageInner() {
                 const section = imageRequiredSections[index]
                 const sectionId = section.section_id
                 const sectionName = section.headline || section.section_type || `セクション ${index + 1}`
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:318',message:'セクション画像生成開始',data:{sectionId,index:index+1,total:imageRequiredSections.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+                // #endregion
                 
                 let sectionImage: SectionImage | null = null
                 let retryCount = 0
@@ -330,6 +343,9 @@ function LpSitePageInner() {
               while (retryCount <= MAX_RETRIES && !success) {
                 try {
                   // セクション生成開始
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:333',message:'セクション進捗更新開始',data:{sectionId,retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+                  // #endregion
                   setSectionProgress(prev => ({ ...prev, [sectionId]: 0 }))
                   if (retryCount > 0) {
                     setStageText(`${sectionName} の画像を再生成中... (試行 ${retryCount + 1}/${MAX_RETRIES + 1})`)
@@ -361,6 +377,9 @@ function LpSitePageInner() {
                     
                     const sectionResponse = await fetchPromise
                     clearTimeout(timeoutId)
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:362',message:'APIレスポンス受信',data:{sectionId,ok:sectionResponse.ok,status:sectionResponse.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+                    // #endregion
                     
                     if (!sectionResponse.ok) {
                       let errorData: any = {}
@@ -369,6 +388,9 @@ function LpSitePageInner() {
                       } catch {
                         // JSON解析に失敗した場合は空オブジェクトを使用
                       }
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:372',message:'APIエラー検出',data:{sectionId,status:sectionResponse.status,error:errorData.error||'unknown'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+                      // #endregion
                       console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, errorData)
                       
                       // タイムアウトエラーの場合、特別なメッセージを表示
@@ -381,6 +403,9 @@ function LpSitePageInner() {
                     }
                     
                     const sectionData = await sectionResponse.json()
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:383',message:'画像データ受信',data:{sectionId,hasPc:!!sectionData.result?.image_pc,hasSp:!!sectionData.result?.image_sp},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+                    // #endregion
                     sectionImage = {
                       section_id: sectionId,
                       image_pc: sectionData.result?.image_pc,
@@ -390,7 +415,13 @@ function LpSitePageInner() {
                     // PC/SPの少なくともどちらかが生成されているか確認
                     if (sectionImage.image_pc || sectionImage.image_sp) {
                       success = true
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:393',message:'画像生成成功',data:{sectionId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+                      // #endregion
                     } else {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:395',message:'画像生成失敗（空）',data:{sectionId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H2'})}).catch(()=>{});
+                      // #endregion
                       throw new Error('画像が生成されませんでした（PC/SP両方とも空）')
                     }
                   } catch (fetchError: any) {
@@ -447,6 +478,9 @@ function LpSitePageInner() {
                 
                 // 進捗を更新
                 const overallProgress = 65 + Math.round((completedSections / totalSections) * 30) // 65-95%
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:448',message:'進捗更新',data:{sectionId,completedSections,totalSections,overallProgress,imageProgress:Math.round((completedSections / totalSections) * 100)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+                // #endregion
                 updateProgress(overallProgress)
                 setImageProgress(Math.round((completedSections / totalSections) * 100))
                 setSectionProgress(prev => ({ ...prev, [sectionId]: 100 }))
@@ -506,9 +540,15 @@ function LpSitePageInner() {
               }
               
               setResult(partialResult) // リアルタイムで結果を更新
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:508',message:'結果更新とgeneratingSections更新',data:{sectionId,imagesCount:currentImages.length,generatingSectionsBefore:Array.from(generatingSections)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+              // #endregion
               setGeneratingSections(prev => {
                 const next = new Set(prev)
                 next.delete(sectionId)
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:512',message:'generatingSections更新後',data:{sectionId,remaining:Array.from(next)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
+                // #endregion
                 return next
               })
               

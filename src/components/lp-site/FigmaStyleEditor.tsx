@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core'
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -40,6 +40,8 @@ interface FigmaStyleEditorProps {
   onPreview?: () => void
   onPublish?: () => void
   isGeneratingImages?: boolean
+  sectionProgress?: Record<string, number>
+  generatingSections?: Set<string>
 }
 
 interface LayerItemProps {
@@ -274,6 +276,8 @@ export function FigmaStyleEditor({
   onPreview,
   onPublish,
   isGeneratingImages = false,
+  sectionProgress = {},
+  generatingSections = new Set(),
 }: FigmaStyleEditorProps) {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [regeneratingSectionId, setRegeneratingSectionId] = useState<string | null>(null)
@@ -290,6 +294,11 @@ export function FigmaStyleEditor({
   const sections = result.sections
   const selectedSection = sections.find(s => s.section_id === selectedSectionId) || null
   const selectedImage = result.images.find(img => img.section_id === selectedSectionId)
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FigmaStyleEditor.tsx:render',message:'FigmaStyleEditor状態',data:{isGeneratingImages,generatingSectionsCount:generatingSections?.size||0,sectionProgressKeys:Object.keys(sectionProgress||{}).length,imagesCount:result.images.length,sectionsCount:sections.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H5'})}).catch(()=>{});
+  }, [isGeneratingImages, generatingSections, sectionProgress, result.images.length, sections.length]);
+  // #endregion
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
