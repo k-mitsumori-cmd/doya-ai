@@ -1,10 +1,10 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
-// SEO用途は Gemini 3 系（品質要件）
-// - テキスト: Gemini 3（未対応環境では自動でフォールバック）
+// SEO用途は Gemini 2.0/1.5 系（品質要件）
+// - テキスト: Gemini 2.0 Flash（高速・高品質、未対応環境では自動でフォールバック）
 // - 画像(図解/サムネ): Nano Banana Pro（運用上の事故防止）
 export const GEMINI_TEXT_MODEL_DEFAULT =
-  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-3-pro'
+  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-2.0-flash'
 export const GEMINI_IMAGE_MODEL_DEFAULT =
   process.env.SEO_GEMINI_IMAGE_MODEL || process.env.SEO_GEMINI_NANO_BANANA_MODEL || 'nano-banana-pro-preview'
 
@@ -225,10 +225,8 @@ function closeIncompleteJson(input: string): string {
 
 // レート制限時のフォールバックモデル
 const FALLBACK_MODELS = [
-  // Gemini 3 系（環境によっては未提供の可能性があるため、404時は下へ）
-  'gemini-3-pro',
-  // 安定系
-  'gemini-2.0-flash',
+  // 安定系（利用可能なモデルのみ）
+  'gemini-1.5-pro',
   'gemini-1.5-flash',
 ]
 
