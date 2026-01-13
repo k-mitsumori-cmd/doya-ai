@@ -5,6 +5,13 @@
 export type LpType = 'saas' | 'ec' | 'service' | 'recruit' | 'education' | 'beauty' | 'healthcare' | 'finance'
 export type Tone = 'trust' | 'pop' | 'luxury' | 'simple'
 
+export interface BrandColors {
+  main_color?: string // メインカラー（HEX）
+  sub_colors?: string[] // サブカラー（HEX配列）
+  accent_color?: string // アクセントカラー（HEX）
+  color_summary?: string // カラーサマリーテキスト
+}
+
 export interface ProductInfo {
   product_name: string
   target: string
@@ -15,6 +22,7 @@ export interface ProductInfo {
   tone: Tone
   lp_type: LpType
   cta?: string
+  brand_colors?: BrandColors // ブランドカラー情報
 }
 
 export interface LpSection {

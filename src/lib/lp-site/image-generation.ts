@@ -195,6 +195,9 @@ export function generateImagePrompt(
     }
   }
 
+  // ブランドカラー情報を生成
+  const brandColorInstructions = generateBrandColorInstructions(productInfo)
+
   return `${commonBase}
 
 ${sectionSpecific}
@@ -209,6 +212,8 @@ Product Information:
 - Target audience: ${productInfo.target}
 - Tone: ${toneDescription}
 - LP type: ${productInfo.lp_type}
+
+${brandColorInstructions}
 
 TEXT REQUIREMENTS (MUST INCLUDE):
 - Embed the headline "${section.headline}" as actual text in the image
@@ -238,6 +243,42 @@ SEAMLESS BOUNDARY TREATMENT:
 - Maintain consistent color palette with adjacent sections for smooth transitions
 - Use soft shadows or gentle gradients at boundaries instead of hard lines
 - The section should appear as a natural part of a continuous scrollable page`
+}
+
+/**
+ * ブランドカラー指示を生成
+ */
+function generateBrandColorInstructions(productInfo: ProductInfo): string {
+  const brandColors = productInfo.brand_colors
+  if (!brandColors || !brandColors.main_color) {
+    return ''
+  }
+
+  const instructions: string[] = []
+  instructions.push('BRAND COLOR REQUIREMENTS (CRITICAL - USE THESE EXACT COLORS):')
+  
+  if (brandColors.main_color) {
+    instructions.push(`- PRIMARY/MAIN COLOR: ${brandColors.main_color} - Use this as the dominant color for backgrounds, headers, and key elements`)
+  }
+  
+  if (brandColors.sub_colors && brandColors.sub_colors.length > 0) {
+    instructions.push(`- SECONDARY COLORS: ${brandColors.sub_colors.join(', ')} - Use these for supporting elements, borders, and accents`)
+  }
+  
+  if (brandColors.accent_color) {
+    instructions.push(`- ACCENT COLOR: ${brandColors.accent_color} - Use this for CTAs, buttons, and important highlights`)
+  }
+
+  instructions.push('')
+  instructions.push('COLOR APPLICATION GUIDELINES:')
+  instructions.push('- The main color should be prominently visible in the design')
+  instructions.push('- Use the brand colors consistently throughout the section')
+  instructions.push('- Ensure text remains readable against the brand colors (use white or dark text as needed)')
+  instructions.push('- CTAs and buttons should use the accent color or main color for high visibility')
+  instructions.push('- Background can use lighter tints of the main color or white with colored accents')
+  instructions.push('- Maintain brand consistency - this LP should feel like it belongs to the original website')
+
+  return instructions.join('\n')
 }
 
 /**
