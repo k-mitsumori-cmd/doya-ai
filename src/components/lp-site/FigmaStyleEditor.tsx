@@ -46,6 +46,7 @@ interface FigmaStyleEditorProps {
   isGeneratingImages?: boolean
   sectionProgress?: Record<string, number>
   generatingSections?: Set<string>
+  onAutoRegenerate?: (sectionIds: string[]) => void // 未生成画像の自動再生成
 }
 
 interface LayerItemProps {
@@ -55,11 +56,12 @@ interface LayerItemProps {
   selectedDevice: 'pc' | 'sp'
   isSelected: boolean
   isVisible: boolean
+  isGenerating?: boolean
   onSelect: () => void
   onToggleVisibility: () => void
 }
 
-function LayerItem({ section, index, image, selectedDevice, isSelected, isVisible, onSelect, onToggleVisibility }: LayerItemProps) {
+function LayerItem({ section, index, image, selectedDevice, isSelected, isVisible, isGenerating, onSelect, onToggleVisibility }: LayerItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: section.section_id,
   })
@@ -70,7 +72,21 @@ function LayerItem({ section, index, image, selectedDevice, isSelected, isVisibl
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const hasImage = selectedDevice === 'pc' ? !!image?.image_pc : !!image?.image_sp
+  const hasImagePc = !!image?.image_pc
+  const hasImageSp = !!image?.image_sp
+  const hasImage = selectedDevice === 'pc' ? hasImagePc : hasImageSp
+  const hasBothImages = hasImagePc && hasImageSp
+  const needsImage = section.image_required
+
+  // 画像生成状態を判定
+  const getImageStatus = () => {
+    if (!needsImage) return 'not_required' // 画像不要
+    if (isGenerating) return 'generating' // 生成中
+    if (hasBothImages) return 'complete' // PC/SP両方完了
+    if (hasImagePc || hasImageSp) return 'partial' // 片方のみ完了
+    return 'pending' // 未生成
+  }
+  const imageStatus = getImageStatus()
 
   return (
     <div
@@ -104,10 +120,39 @@ function LayerItem({ section, index, image, selectedDevice, isSelected, isVisibl
         <div className="text-xs font-medium truncate">{section.headline || `セクション ${index + 1}`}</div>
         <div className="text-[10px] text-slate-500 truncate">{section.section_type}</div>
       </div>
-      {hasImage && (
-        <div className="w-4 h-4 rounded border border-slate-300 bg-white flex-shrink-0">
-          <ImageIcon className="w-3 h-3 text-slate-400" />
+      {/* 画像生成状態の表示 */}
+      {needsImage && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {imageStatus === 'complete' && (
+            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-[9px] font-bold rounded flex items-center gap-0.5">
+              <ImageIcon className="w-2.5 h-2.5" />
+              完了
+            </span>
+          )}
+          {imageStatus === 'partial' && (
+            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-bold rounded flex items-center gap-0.5">
+              <ImageIcon className="w-2.5 h-2.5" />
+              {hasImagePc ? 'PC' : 'SP'}のみ
+            </span>
+          )}
+          {imageStatus === 'generating' && (
+            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-bold rounded flex items-center gap-0.5">
+              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+              生成中
+            </span>
+          )}
+          {imageStatus === 'pending' && (
+            <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-bold rounded flex items-center gap-0.5">
+              <ImageIcon className="w-2.5 h-2.5" />
+              未生成
+            </span>
+          )}
         </div>
+      )}
+      {!needsImage && (
+        <span className="px-1.5 py-0.5 bg-slate-50 text-slate-400 text-[9px] font-medium rounded">
+          画像不要
+        </span>
       )}
     </div>
   )
@@ -282,12 +327,39 @@ export function FigmaStyleEditor({
   isGeneratingImages = false,
   sectionProgress = {},
   generatingSections = new Set(),
+  onAutoRegenerate,
 }: FigmaStyleEditorProps) {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [regeneratingSectionId, setRegeneratingSectionId] = useState<string | null>(null)
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set(result.sections.map(s => s.section_id)))
   const [zoom, setZoom] = useState(100)
   const [rightPanelTab, setRightPanelTab] = useState<'property' | 'product' | 'competitor'>('property')
+  const [isAutoRegenerating, setIsAutoRegenerating] = useState(false)
+
+  // 未生成の画像があるセクションを取得
+  const getMissingSections = () => {
+    return result.sections.filter(section => {
+      if (!section.image_required) return false
+      const image = result.images.find(img => img.section_id === section.section_id)
+      // PC/SP両方とも未生成の場合のみ
+      return !image || (!image.image_pc && !image.image_sp)
+    })
+  }
+
+  // 部分的に生成されているセクション（PC/SPどちらか一方のみ）
+  const getPartialSections = () => {
+    return result.sections.filter(section => {
+      if (!section.image_required) return false
+      const image = result.images.find(img => img.section_id === section.section_id)
+      if (!image) return false
+      // PC/SPどちらか一方のみ生成されている場合
+      return (image.image_pc && !image.image_sp) || (!image.image_pc && image.image_sp)
+    })
+  }
+
+  const missingSections = getMissingSections()
+  const partialSections = getPartialSections()
+  const hasIncompleteImages = missingSections.length > 0 || partialSections.length > 0
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -390,6 +462,37 @@ export function FigmaStyleEditor({
 
         {/* アクションボタン */}
         <div className="flex items-center gap-2">
+          {/* 未生成画像の自動再生成ボタン */}
+          {hasIncompleteImages && !isGeneratingImages && onAutoRegenerate && (
+            <button
+              onClick={() => {
+                const sectionIds = [...missingSections, ...partialSections].map(s => s.section_id)
+                setIsAutoRegenerating(true)
+                onAutoRegenerate(sectionIds)
+              }}
+              disabled={isAutoRegenerating}
+              className="px-3 py-1.5 text-xs font-medium bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors flex items-center gap-1.5 animate-pulse"
+            >
+              {isAutoRegenerating ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  再生成中...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  未生成画像を再生成 ({missingSections.length + partialSections.length})
+                </>
+              )}
+            </button>
+          )}
+          {/* 画像生成中の表示 */}
+          {isGeneratingImages && (
+            <div className="px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded flex items-center gap-1.5">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              画像生成中...
+            </div>
+          )}
           {onPreview && (
             <button
               onClick={onPreview}
@@ -433,6 +536,7 @@ export function FigmaStyleEditor({
                 <div className="space-y-0.5">
                     {sections.map((section, index) => {
                       const image = result.images.find(img => img.section_id === section.section_id)
+                      const isGeneratingThisSection = generatingSections?.has(section.section_id) || false
                       return (
                         <LayerItem
                           key={section.section_id}
@@ -442,6 +546,7 @@ export function FigmaStyleEditor({
                           selectedDevice={selectedDevice}
                           isSelected={selectedSectionId === section.section_id}
                           isVisible={visibleSections.has(section.section_id)}
+                          isGenerating={isGeneratingThisSection}
                           onSelect={() => setSelectedSectionId(section.section_id)}
                           onToggleVisibility={() => handleToggleVisibility(section.section_id)}
                         />

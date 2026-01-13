@@ -1049,6 +1049,121 @@ function LpSitePageInner() {
     }
   }
 
+  // 未生成画像の自動再生成
+  const handleAutoRegenerate = async (sectionIds: string[]) => {
+    if (!result || sectionIds.length === 0) return
+
+    console.log(`[LP-SITE] 自動再生成開始: ${sectionIds.length}セクション`)
+    setIsGeneratingImages(true)
+    setGeneratingSections(new Set(sectionIds))
+
+    const toastId = 'auto-regenerate'
+    toast.loading(`${sectionIds.length}セクションの画像を自動再生成中...`, {
+      id: toastId,
+      duration: Infinity,
+    })
+
+    let successCount = 0
+    let failCount = 0
+
+    for (const sectionId of sectionIds) {
+      const section = result.sections.find(s => s.section_id === sectionId)
+      if (!section) continue
+
+      const sectionName = section.headline || section.section_type || `セクション`
+
+      try {
+        setSectionProgress(prev => ({ ...prev, [sectionId]: 0 }))
+
+        const response = await fetch('/api/lp-site/regenerate-section', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            section,
+            product_info: result.product_info,
+            regenerate_type: 'both',
+          }),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || '再生成に失敗しました')
+        }
+
+        const data = await response.json()
+
+        // 結果を更新
+        setResult(prev => {
+          if (!prev) return prev
+          const updatedImages = prev.images.map(img => {
+            if (img.section_id === sectionId) {
+              return {
+                ...img,
+                image_pc: data.result?.image_pc || img.image_pc,
+                image_sp: data.result?.image_sp || img.image_sp,
+              }
+            }
+            return img
+          })
+
+          // 画像がまだない場合は新規追加
+          const hasExistingImage = prev.images.some(img => img.section_id === sectionId)
+          const finalImages = hasExistingImage
+            ? updatedImages
+            : [
+                ...prev.images,
+                {
+                  section_id: sectionId,
+                  image_pc: data.result?.image_pc,
+                  image_sp: data.result?.image_sp,
+                },
+              ]
+
+          return {
+            ...prev,
+            images: finalImages,
+          }
+        })
+
+        setSectionProgress(prev => ({ ...prev, [sectionId]: 100 }))
+        setGeneratingSections(prev => {
+          const next = new Set(prev)
+          next.delete(sectionId)
+          return next
+        })
+
+        successCount++
+        console.log(`[LP-SITE] 自動再生成完了: ${sectionName} (${successCount}/${sectionIds.length})`)
+      } catch (error: any) {
+        console.error(`[LP-SITE] 自動再生成エラー (${sectionId}):`, error)
+        failCount++
+        setGeneratingSections(prev => {
+          const next = new Set(prev)
+          next.delete(sectionId)
+          return next
+        })
+      }
+    }
+
+    setIsGeneratingImages(false)
+    setSectionProgress({})
+    setGeneratingSections(new Set())
+
+    if (failCount === 0) {
+      toast.success(`🎉 ${successCount}セクションの画像を再生成しました！`, {
+        id: toastId,
+        duration: 4000,
+        icon: '✅',
+      })
+    } else {
+      toast.error(`${successCount}セクション成功、${failCount}セクション失敗`, {
+        id: toastId,
+        duration: 6000,
+        icon: '⚠️',
+      })
+    }
+  }
+
   // 結果がある場合はフルスクリーンのFigma風エディタを表示
   if (result) {
     return (
@@ -1080,6 +1195,7 @@ function LpSitePageInner() {
           isGeneratingImages={isGeneratingImages}
           sectionProgress={sectionProgress}
           generatingSections={generatingSections}
+          onAutoRegenerate={handleAutoRegenerate}
           onSectionsReorder={(newSections) => {
             setResult({
               ...result,
