@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { extractProductInfoFromUrl, structureProductInfo } from '@/lib/lp-site/product-understanding'
 import { generateLpStructure } from '@/lib/lp-site/structure-generation'
 import { generateWireframes } from '@/lib/lp-site/wireframe-generation'
+import { LpSection } from '@/lib/lp-site/types'
 import { generateSectionImages } from '@/lib/lp-site/image-generation'
 import { researchCompetitors } from '@/lib/lp-site/competitor-research'
 import { LpGenerationRequest, ProductInfo } from '@/lib/lp-site/types'
@@ -82,48 +83,42 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Step 3: ワイヤーフレーム生成フェーズ
+    // Step 3: ワイヤーフレーム生成フェーズ（バックグラウンドジョブ方式）
     if (step === 'wireframe-generation') {
       if (!product_info || !sections) {
         return NextResponse.json({ error: 'product_infoとsectionsが必要です' }, { status: 400 })
       }
 
-      try {
-        // タイムアウトを設定しない（各セクションで個別にタイムアウト管理されているため）
-        // API全体のタイムアウト（300秒）に到達する前に完了するよう、効率的に処理
-        const wireframes = await generateWireframes(sections, product_info as ProductInfo)
-        
-        return NextResponse.json({
-          success: true,
-          step: 'wireframe-generation',
-          wireframes,
+      // バックグラウンドジョブ方式: ワイヤーフレーム生成を開始して即座にレスポンスを返す
+      // これにより、Vercelのタイムアウト（300秒）を回避できる
+      const { createWireframeJob, updateWireframeJob } = await import('@/lib/lp-site/wireframe-job-storage')
+      const jobId = createWireframeJob()
+      
+      console.log(`[LP-SITE] ワイヤーフレーム生成ジョブを作成: ${jobId}`)
+
+      // バックグラウンドで処理を開始（非同期）
+      // 注意: この処理は即座に完了し、実際のワイヤーフレーム生成はバックグラウンドで実行される
+      processWireframeGenerationInBackground({
+        jobId,
+        sections,
+        productInfo: product_info as ProductInfo,
+      }).catch((error: any) => {
+        console.error('[LP-SITE] バックグラウンドワイヤーフレーム生成エラー:', error)
+        updateWireframeJob(jobId, {
+          status: 'ERROR',
+          error: error.message || 'Unknown error',
         })
-      } catch (error: any) {
-        console.error('[LP-SITE] ワイヤーフレーム生成エラー:', error)
-        
-        // エラーが発生しても、部分的に生成されたワイヤーフレームがあれば返す
-        // generateWireframes内で各セクションが個別にエラーハンドリングされているため、
-        // 空の配列が返ることはないはずだが、念のためチェック
-        try {
-          // 再度試行せず、エラーを返す
-          // ただし、部分的に成功した場合はその結果を返す
-          return NextResponse.json(
-            {
-              error: 'ワイヤーフレーム生成に失敗しました',
-              details: error.message,
-            },
-            { status: 500 }
-          )
-        } catch (nestedError) {
-          return NextResponse.json(
-            {
-              error: 'ワイヤーフレーム生成に失敗しました',
-              details: error.message || '不明なエラー',
-            },
-            { status: 500 }
-          )
-        }
-      }
+      })
+
+      // 即座にレスポンスを返す（処理はバックグラウンドで継続）
+      return NextResponse.json({
+        success: true,
+        step: 'wireframe-generation',
+        jobId,
+        status: 'PROCESSING',
+        message: 'ワイヤーフレーム生成を開始しました。バックグラウンドで処理が続行されます。',
+        pollingRequired: true,
+      })
     }
 
     // Step 4: 画像生成フェーズ
@@ -149,6 +144,46 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     )
+  }
+}
+
+// バックグラウンドでワイヤーフレーム生成を実行
+async function processWireframeGenerationInBackground({
+  jobId,
+  sections,
+  productInfo,
+}: {
+  jobId: string
+  sections: LpSection[]
+  productInfo: ProductInfo
+}) {
+  try {
+    console.log(`[LP-SITE] バックグラウンドワイヤーフレーム生成を開始: ${jobId}`)
+    
+    const { updateWireframeJob } = await import('@/lib/lp-site/wireframe-job-storage')
+    
+    // ワイヤーフレームを生成
+    const wireframes = await generateWireframes(sections, productInfo)
+    
+    // データベースに保存
+    updateWireframeJob(jobId, {
+      status: 'COMPLETED',
+      wireframes,
+    })
+    
+    console.log(`[LP-SITE] バックグラウンドワイヤーフレーム生成完了: ${jobId}`)
+  } catch (error: any) {
+    console.error(`[LP-SITE] バックグラウンドワイヤーフレーム生成エラー: ${jobId}`, error)
+    
+    const { updateWireframeJob } = await import('@/lib/lp-site/wireframe-job-storage')
+    
+    // エラーを記録
+    updateWireframeJob(jobId, {
+      status: 'ERROR',
+      error: error.message || 'Unknown error',
+    })
+    
+    throw error
   }
 }
 

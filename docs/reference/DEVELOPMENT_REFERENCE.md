@@ -1399,38 +1399,300 @@ export async function POST(request: NextRequest) {
 **実装例:**
 - `src/app/api/lp-site/generate-stream/route.ts` - ストリーミング生成実装
 
-### 6. ジョブ進行型処理
+### 6. ジョブ進行型処理（Vercelタイムアウト対策）
 
-複数ステップで完了する処理のパターン（SEO記事生成など）。
+**重要**: Vercelのサーバーレス関数には**300秒（5分）のタイムアウト制限**があります。長時間かかる処理（5分以上）は、ジョブキュー方式で実装する必要があります。
+
+#### Vercelのタイムアウト制限
+
+- **Hobbyプラン**: 10秒
+- **Proプラン**: 300秒（5分）
+- **Enterpriseプラン**: 300秒（5分）
+
+**5分以上かかる処理の場合**: ジョブキュー方式で実装し、バックグラウンドで処理を進めます。
+
+#### 実装パターン
+
+**1. ジョブの作成（初期化）**
 
 ```typescript
-// API: POST /api/myservice/jobs/[id]/advance
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-  const job = await prisma.myServiceJob.findUnique({
-    where: { id: params.id },
-  })
-
-  const currentStep = job.currentStep
-  const nextStep = getNextStep(currentStep)
-
-  // 次のステップを実行
-  const result = await executeStep(nextStep, job)
-
-  // ジョブ状態を更新
-  await prisma.myServiceJob.update({
-    where: { id: params.id },
+// API: POST /api/myservice/jobs
+export async function POST(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  const userId = session?.user?.id
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+  }
+  
+  const body = await request.json()
+  
+  // ジョブを作成（状態: pending）
+  const job = await prisma.myServiceJob.create({
     data: {
-      currentStep: nextStep,
-      [`${nextStep}Result`]: result,
+      userId,
+      status: 'pending',
+      step: 'initialize',
+      progress: 0,
+      inputData: body,
     },
   })
-
-  return NextResponse.json({ status: 'in_progress', currentStep: nextStep })
+  
+  // 非同期で処理を開始（タイムアウトを避けるため、すぐにレスポンスを返す）
+  // 注意: ここでは実際の処理は開始しない（クライアント側のポーリングで開始）
+  
+  return NextResponse.json({ 
+    jobId: job.id,
+    status: 'pending',
+    message: 'ジョブを作成しました。処理を開始します...'
+  })
 }
 ```
 
+**2. ジョブの進行（ステップごとに実行）**
+
+```typescript
+// API: POST /api/myservice/jobs/[id]/advance
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions)
+  const userId = session?.user?.id
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+  }
+  
+  const job = await prisma.myServiceJob.findUnique({
+    where: { id: params.id, userId }, // ユーザーIDもチェック
+  })
+  
+  if (!job) {
+    return NextResponse.json({ error: 'ジョブが見つかりません' }, { status: 404 })
+  }
+  
+  if (job.status === 'completed' || job.status === 'failed') {
+    return NextResponse.json({ 
+      status: job.status,
+      message: 'ジョブは既に完了しています'
+    })
+  }
+  
+  // 現在のステップに応じて処理を実行
+  const currentStep = job.step
+  let nextStep: string
+  let progress: number
+  let result: any
+  
+  try {
+    switch (currentStep) {
+      case 'initialize':
+        // 初期化処理
+        result = await initializeProcessing(job.inputData)
+        nextStep = 'process'
+        progress = 20
+        break
+        
+      case 'process':
+        // メイン処理
+        result = await executeMainProcess(job.inputData)
+        nextStep = 'finalize'
+        progress = 80
+        break
+        
+      case 'finalize':
+        // 最終処理
+        result = await finalizeProcessing(job.inputData)
+        nextStep = 'completed'
+        progress = 100
+        break
+        
+      default:
+        throw new Error(`Unknown step: ${currentStep}`)
+    }
+    
+    // ジョブ状態を更新
+    const updateData: any = {
+      step: nextStep,
+      progress,
+      [`${currentStep}Result`]: result,
+    }
+    
+    if (nextStep === 'completed') {
+      updateData.status = 'completed'
+      updateData.completedAt = new Date()
+    } else {
+      updateData.status = 'processing'
+    }
+    
+    await prisma.myServiceJob.update({
+      where: { id: params.id },
+      data: updateData,
+    })
+    
+    return NextResponse.json({
+      status: nextStep === 'completed' ? 'completed' : 'processing',
+      step: nextStep,
+      progress,
+    })
+  } catch (error: any) {
+    // エラー時はジョブを失敗状態にする
+    await prisma.myServiceJob.update({
+      where: { id: params.id },
+      data: {
+        status: 'failed',
+        errorMessage: error.message,
+        failedAt: new Date(),
+      },
+    })
+    
+    return NextResponse.json(
+      { error: '処理に失敗しました', details: error.message },
+      { status: 500 }
+    )
+  }
+}
+```
+
+**3. ジョブ状態の取得（ポーリング用）**
+
+```typescript
+// API: GET /api/myservice/jobs/[id]
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions)
+  const userId = session?.user?.id
+  
+  if (!userId) {
+    return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+  }
+  
+  const job = await prisma.myServiceJob.findUnique({
+    where: { id: params.id, userId },
+  })
+  
+  if (!job) {
+    return NextResponse.json({ error: 'ジョブが見つかりません' }, { status: 404 })
+  }
+  
+  return NextResponse.json({
+    id: job.id,
+    status: job.status,
+    step: job.step,
+    progress: job.progress,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+    completedAt: job.completedAt,
+    errorMessage: job.errorMessage,
+  })
+}
+```
+
+**4. クライアント側の実装（ポーリング）**
+
+```typescript
+// クライアント側: ジョブの進行と状態監視
+'use client'
+
+import { useState, useEffect } from 'react'
+
+export function useJobProgress(jobId: string | null) {
+  const [job, setJob] = useState<any>(null)
+  const [isPolling, setIsPolling] = useState(false)
+  
+  // ジョブ状態をポーリング
+  useEffect(() => {
+    if (!jobId) return
+    
+    const pollJobStatus = async () => {
+      try {
+        const response = await fetch(`/api/myservice/jobs/${jobId}`)
+        const data = await response.json()
+        setJob(data)
+        
+        // 処理中の場合、次のステップに進める
+        if (data.status === 'pending' || data.status === 'processing') {
+          setIsPolling(true)
+          
+          // 次のステップを実行
+          const advanceResponse = await fetch(`/api/myservice/jobs/${jobId}/advance`, {
+            method: 'POST',
+          })
+          
+          if (!advanceResponse.ok) {
+            console.error('Failed to advance job')
+            return
+          }
+          
+          // 4秒後に再取得（ポーリング間隔）
+          setTimeout(pollJobStatus, 4000)
+        } else {
+          setIsPolling(false)
+        }
+      } catch (error) {
+        console.error('Error polling job status:', error)
+        setIsPolling(false)
+      }
+    }
+    
+    pollJobStatus()
+  }, [jobId])
+  
+  return { job, isPolling }
+}
+```
+
+**5. データベーススキーマ例**
+
+```prisma
+model MyServiceJob {
+  id          String   @id @default(cuid())
+  userId      String
+  status      String   // 'pending' | 'processing' | 'completed' | 'failed'
+  step        String   // 現在のステップ
+  progress    Int      @default(0) // 0-100
+  inputData   Json     // 入力データ
+  resultData  Json?    // 結果データ
+  errorMessage String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  completedAt DateTime?
+  failedAt    DateTime?
+  
+  user User @relation(fields: [userId], references: [id])
+  
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+```
+
+#### 実装のポイント
+
+1. **ジョブの作成**: 初期状態（`pending`）でジョブを作成し、すぐにレスポンスを返す
+2. **ステップごとの処理**: 各ステップは300秒以内に完了するように設計
+3. **ポーリング**: クライアント側で定期的にジョブ状態を確認し、次のステップに進める
+4. **エラーハンドリング**: エラー時はジョブを`failed`状態にし、エラーメッセージを保存
+5. **進捗管理**: `progress`フィールドで進捗率（0-100）を管理
+
+#### 実装チェックリスト
+
+- [ ] ジョブテーブルをPrismaスキーマに追加
+- [ ] ジョブ作成API（`POST /api/myservice/jobs`）を実装
+- [ ] ジョブ進行API（`POST /api/myservice/jobs/[id]/advance`）を実装
+- [ ] ジョブ状態取得API（`GET /api/myservice/jobs/[id]`）を実装
+- [ ] クライアント側でポーリングを実装
+- [ ] 各ステップが300秒以内に完了することを確認
+- [ ] エラーハンドリングを実装
+- [ ] 進捗表示を実装
+
 **実装例:**
-- `src/app/api/seo/jobs/[id]/advance/route.ts` - ジョブ進行実装
+- `src/app/api/seo/jobs/route.ts` - ジョブ作成API
+- `src/app/api/seo/jobs/[id]/route.ts` - ジョブ状態取得API
+- `src/app/api/seo/jobs/[id]/advance/route.ts` - ジョブ進行API
+- `src/app/seo/jobs/[id]/page.tsx` - ジョブ進捗ページ（ポーリング実装）
 
 ### 7. ファイルアップロード
 
