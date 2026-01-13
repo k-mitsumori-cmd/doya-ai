@@ -15,7 +15,6 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ success: true })
   } catch (e: any) {
     const msg = e?.message || '不明なエラー'
-<<<<<<< HEAD
     const m = String(msg || '')
     const hint = (() => {
       if (m.includes('GOOGLE_GENAI_API_KEY') || m.includes('Gemini APIキーが設定されていません')) {
@@ -28,16 +27,13 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
       if (/quota|RESOURCE_EXHAUSTED|rate limit/i.test(m)) {
         return 'APIのクォータ/レート制限に達している可能性があります。時間を置くか、クォータを増やして再実行してください。'
       }
+      // データベース接続プールエラー
+      if (/MaxClientsInSessionMode|max clients reached|pool_size/i.test(m)) {
+        return 'データベース接続プールの上限に達しています。しばらく待ってから再試行してください。'
+      }
       return undefined
     })()
-    console.error('[seo advance] failed', { jobId: ctx.params.id, msg })
-=======
-    const hint =
-      typeof msg === 'string' && msg.includes('GOOGLE_GENAI_API_KEY')
-        ? 'Vercelの環境変数に GOOGLE_GENAI_API_KEY を設定して再デプロイしてください。'
-        : undefined
     console.error('[seo advance] failed', { jobId: id, msg, error: e, stack: e?.stack })
->>>>>>> persona-fix
     return NextResponse.json(
       { success: false, error: msg, hint },
       { status: 500 }
