@@ -2716,6 +2716,9 @@ async function integrate(jobId: string) {
     .filter(Boolean)
     .join('\n\n')
 
+  // 原則: 50,000字以内に収める（ただし“途中で切れる”ことは最優先で回避）
+  const HARD_SOFT_CAP = 50000
+
   // まずは“セクション結合”で文字数を担保（ここで短くしない）
   const parts: string[] = [`# ${article.title}`]
   // 既にバナーがあるなら先頭に差し込む（ない場合は後で生成）
@@ -2735,11 +2738,11 @@ async function integrate(jobId: string) {
 
   // 短い記事ほど、冒頭に表を置く（読者のスキャン性を最大化）
   const topTables = await generateTopTables(article, mergedSections)
-  if (topTables) parts.push(topTables)
+  const topTablesIdx = topTables ? (parts.push(topTables), parts.length - 1) : -1
 
   // LLMOの追加ブロック（短くてもOK、品質補助＆文字数補助）
   const llmoBlocks = await generateLlmoBlocks(article, mergedSections)
-  if (llmoBlocks) parts.push(llmoBlocks)
+  const llmoBlocksIdx = llmoBlocks ? (parts.push(llmoBlocks), parts.length - 1) : -1
 
   if (memo) {
     parts.push('<!-- リライト用メモ（次回改善用） -->')
@@ -2777,14 +2780,50 @@ async function integrate(jobId: string) {
     refsAppend = ''
   }
 
+  // 引用元（参考URL）: 「## まとめ」内のH3として末尾に含める（記事が“まとめ”で終わるようにする）
+  let refsAppend = ''
+  try {
+    const refs = await p.seoReference.findMany({
+      where: { articleId: article.id },
+      orderBy: { createdAt: 'asc' },
+      select: { url: true, title: true },
+    })
+    const urls = Array.isArray(article.referenceUrls) ? (article.referenceUrls as any[]) : []
+    const fromInput = urls.map((u: any) => normalizeUrlMaybe(u)).filter(Boolean)
+    const mergedUrls = Array.from(
+      new Set([
+        ...refs.map((r: any) => String(r.url || '').trim()).filter(Boolean),
+        ...fromInput,
+      ])
+    ).slice(0, 25)
+    if (mergedUrls.length) {
+      const lines = [
+        '### 参考文献（引用元）',
+        '※ 本文は引用元の内容をそのまま転載せず、要点を言い換えて整理しています。',
+        ...mergedUrls.map((u) => `- ${u}`),
+      ]
+      refsAppend = lines.join('\n')
+    }
+  } catch {
+    refsAppend = ''
+  }
+
   // 目標文字数に足りない場合は、追補セクションを自動生成して埋める（最大5回）
-  // ただし、目標が小さい場合（10,000字未満）は追補を控えめに
+  // ただし、原則 50,000字以内に収めるため、追補には字数バジェットを適用する
   const target = Math.max(3000, Number(article.targetChars || 10000))
+  const softCap = Math.min(HARD_SOFT_CAP, target)
+  // まとめ + 参考文献（H3）ぶんを確保（概算）
+  const reserveForEnding = 2600 + (refsAppend ? 1500 : 0)
   const maxExtraIterations = target < 10000 ? 2 : 5
+  const extraSections: string[] = []
   for (let i = 0; i < maxExtraIterations; i++) {
     const cur = mdCharCount(parts.join('\n\n'))
+    // 原則 50,000字以内: 追補は softCap の範囲で止める
+    if (cur >= Math.max(0, softCap - reserveForEnding)) break
     if (cur >= target) break // 目標超過は許容、ただし不足は埋める
-    const need = Math.round(target - cur)
+    const remainingBudget = Math.max(0, softCap - reserveForEnding - cur)
+    const need = Math.min(Math.round(target - cur), remainingBudget)
+    if (need <= 0) break
     const addPrompt = [
       'You are a Japanese SEO writer.',
       'Write an additional section to improve completeness and meet the target length.',
@@ -2796,7 +2835,7 @@ async function integrate(jobId: string) {
       `Tone: ${article.tone}`,
       memo ? `User notes (preferences/constraints):\n${clampText(memo, 900)}` : '',
       '',
-      `Target chars for this additional section: ~${Math.min(3500, Math.max(600, need))}`,
+      `Target chars for this additional section: ~${Math.min(3000, Math.max(600, need))}`,
       '',
       'Context (truncated):',
       clampText(parts.join('\n\n'), 9000),
@@ -2809,13 +2848,17 @@ async function integrate(jobId: string) {
         parts: [{ text: addPrompt }],
         generationConfig: { temperature: 0.6, maxOutputTokens: 6500 },
       })
-      if (extra && extra.trim()) parts.push(extra.trim())
+      if (extra && extra.trim()) {
+        const trimmed = extra.trim()
+        parts.push(trimmed)
+        extraSections.push(trimmed)
+      }
     } catch {
       break
     }
   }
 
-  // 必ず「まとめ」で終わる（目標文字数を超えてもOK）
+  // 必ず「まとめ」で終わる
   if (!mdHasSummarySection(parts.join('\n\n'))) {
     try {
       const summary = await generateSummarySection({ article, context: parts.join('\n\n') })
@@ -2831,6 +2874,36 @@ async function integrate(jobId: string) {
   }
 
   let finalMarkdown = parts.join('\n\n')
+
+  // 原則 50,000字以内: 超過している場合は、影響の小さい順に削って収める
+  // - 追補（自動追加セクション）→ LLMOブロック → 冒頭表 の順で削る
+  const removeAt = (idx: number) => {
+    if (idx < 0 || idx >= parts.length) return
+    parts.splice(idx, 1)
+  }
+  if (softCap > 0) {
+    while (mdCharCount(finalMarkdown) > softCap + 200) {
+      let removed = false
+      const lastExtra = extraSections.pop()
+      if (lastExtra) {
+        const pos = parts.lastIndexOf(lastExtra)
+        if (pos >= 0) {
+          parts.splice(pos, 1)
+          removed = true
+        }
+      }
+      if (!removed && llmoBlocksIdx >= 0 && parts[llmoBlocksIdx]) {
+        removeAt(llmoBlocksIdx)
+        removed = true
+      }
+      if (!removed && topTablesIdx >= 0 && parts[topTablesIdx]) {
+        removeAt(topTablesIdx)
+        removed = true
+      }
+      if (!removed) break
+      finalMarkdown = parts.join('\n\n')
+    }
+  }
 
   // 途中で切れている場合は「続き」を追記して完結させる（最大2回）
   for (let i = 0; i < 2; i++) {
