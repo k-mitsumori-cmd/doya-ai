@@ -391,34 +391,40 @@ function PropertyPanel({
         </div>
 
         {/* アクション */}
-        <div className="pt-2 border-t border-slate-200 space-y-2">
+        <div className="pt-4 border-t border-slate-200 space-y-3">
+          {/* メイン再生成ボタン */}
+          <button
+            onClick={onRegenerate}
+            disabled={isRegenerating}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-bold bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isRegenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>生成中...</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-5 h-5" />
+                <span>修正内容で再生成</span>
+              </>
+            )}
+          </button>
+
+          {/* 補足テキスト */}
+          <p className="text-[10px] text-slate-500 text-center">
+            上記の見出し・サブ見出し・目的を修正後、ボタンを押すと新しい画像が生成されます
+          </p>
+
+          {/* ダウンロードボタン */}
           {hasImage && (
-            <>
-              <button
-                onClick={onRegenerate}
-                disabled={isRegenerating}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isRegenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>生成中...</span>
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4" />
-                    <span>画像を再生成</span>
-                  </>
-                )}
-              </button>
-              <button
-                onClick={onDownload}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                <span>画像をダウンロード</span>
-              </button>
-            </>
+            <button
+              onClick={onDownload}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              <span>画像をダウンロード</span>
+            </button>
           )}
         </div>
       </div>
