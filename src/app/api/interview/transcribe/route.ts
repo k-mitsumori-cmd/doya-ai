@@ -560,250 +560,65 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Cloud Runサービスが設定されていない場合、直接APIを呼び出す（既存の処理）
-    // 注意: MP4ファイルの場合は上記でエラーを返すため、ここには到達しません
-    // MP4ファイルの場合は上記でエラーを返すため、ここには到達しません
-    // MP4以外のビデオファイルまたは音声ファイルの場合のみ実行
-    const configPatterns: any[] = []
-
-    if (isVideoFile && isMP4File) {
-      // このコードには到達しないはずですが、念のため残しておきます
-      // MP4ファイルの場合、複数の設定パターンを準備
-      configPatterns.push(
-        { languageCode: 'ja-JP' }, // パターン1: 最小限
-        { languageCode: 'ja-JP', enableAutomaticPunctuation: true }, // パターン2
-        { languageCode: 'ja-JP', model: 'video' }, // パターン3: 公式ドキュメント推奨
-      )
-      console.log('[INTERVIEW] MP4 video file: will try multiple config patterns')
-    } else if (isVideoFile) {
-      // MP4以外のビデオファイルの場合
-      configPatterns.push({ languageCode: 'ja-JP', model: 'video' })
-      console.log('[INTERVIEW] Video file (non-MP4): using model "video"')
-    } else {
-      // 音声ファイルの場合
-      configPatterns.push({
-        languageCode: 'ja-JP',
-        model: 'latest_long',
-        enableAutomaticPunctuation: true,
-      })
-      console.log('[INTERVIEW] Audio file: using model "latest_long"')
-    }
-
-    // ========== ステップ4: APIリクエストの準備 ==========
-    console.log('[INTERVIEW] ========== STEP 4: Preparing API Request ==========')
-    console.log(`[INTERVIEW] Config patterns prepared: ${configPatterns.length} pattern(s)`)
-    console.log('[INTERVIEW] Request Audio:')
-    console.log('[INTERVIEW]   URI:', gcsUri)
-    console.log('[INTERVIEW]   Type:', isVideoFile ? 'video' : 'audio')
-    console.log('[INTERVIEW]   File Name:', material.fileName)
-    console.log('[INTERVIEW]   File Size:', `${((material.fileSize || 0) / 1024 / 1024).toFixed(2)} MB`)
-    console.log('[INTERVIEW]   MIME Type:', material.mimeType || 'N/A')
-    console.log('[INTERVIEW] ================================================')
-
-    // ========== ステップ5: Google Cloud Speech-to-Text API呼び出し ==========
-    console.log('[INTERVIEW] ========== STEP 5: Calling Speech-to-Text API ==========')
-    console.log('[INTERVIEW] Method:', isVideoFile || isLargeFile ? 'longRunningRecognize' : 'recognize')
-    console.log('[INTERVIEW] Reason:', isVideoFile ? 'Video file' : isLargeFile ? 'Large file (>10MB)' : 'Short audio file')
-    
-    // MP4ファイルの場合、複数の設定パターンを試す
-    let transcriptionText: string = ''
-    let lastError: any = null
-    
-    for (let patternIndex = 0; patternIndex < configPatterns.length; patternIndex++) {
-      const currentConfig = configPatterns[patternIndex]
-      const speechRequest = {
-        config: currentConfig,
-        audio: {
-          uri: gcsUri,
-        },
-      }
-      
-      console.log(`[INTERVIEW] Trying config pattern ${patternIndex + 1}/${configPatterns.length}:`, JSON.stringify(currentConfig, null, 2))
-      
-      if (isVideoFile || isLargeFile) {
-        // ビデオファイルや大きなファイルの場合はlongRunningRecognizeを使用
-        console.log('[INTERVIEW] Calling longRunningRecognize...')
-        const startTime = Date.now()
-        
-        try {
-          const [operation] = await speechClient.longRunningRecognize(speechRequest)
-          console.log('[INTERVIEW] ✓ Long-running operation started')
-          console.log('[INTERVIEW]   Operation Name:', operation.name)
-          console.log('[INTERVIEW]   Waiting for operation to complete...')
-          
-          const [operationResult] = await operation.promise()
-          const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
-          console.log('[INTERVIEW] ✓ Operation completed')
-          console.log('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
-          
-          if (!operationResult.results || operationResult.results.length === 0) {
-            console.error('[INTERVIEW] ✗ Empty transcription results')
-            console.error('[INTERVIEW]   Operation Result:', JSON.stringify(operationResult, null, 2))
-            return NextResponse.json(
-              { error: '文字起こし結果が空です', details: 'APIは成功しましたが、文字起こし結果が空でした。音声が検出されなかった可能性があります。' },
-              { status: 400 }
-            )
-          }
-
-          console.log('[INTERVIEW] ✓ Transcription results received')
-          console.log('[INTERVIEW]   Results Count:', operationResult.results.length)
-          
-          transcriptionText = operationResult.results
-            .map((result: any) => result.alternatives?.[0]?.transcript || '')
-            .filter((text: string) => text.trim().length > 0)
-            .join(' ')
-          
-          console.log('[INTERVIEW] ✓ Transcription text extracted')
-          console.log('[INTERVIEW]   Text Length:', `${transcriptionText.length} characters`)
-          console.log('[INTERVIEW]   Preview:', transcriptionText.substring(0, 100) + (transcriptionText.length > 100 ? '...' : ''))
-          console.log(`[INTERVIEW] ✓ Success with config pattern ${patternIndex + 1}`)
-          break // 成功したらループを抜ける
-        } catch (apiError: any) {
-          const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
-          console.error(`[INTERVIEW] ✗ Config pattern ${patternIndex + 1} failed`)
-          console.error('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
-          console.error('[INTERVIEW]   Error Code:', apiError?.code || 'N/A')
-          console.error('[INTERVIEW]   Error Message:', apiError?.message || 'N/A')
-          console.error('[INTERVIEW]   Error Details:', apiError?.details || 'N/A')
-          
-          lastError = apiError
-          
-          // MP4ファイルで最後のパターンの場合、特別なエラーメッセージを返す
-          if (patternIndex === configPatterns.length - 1) {
-            if (isMP4File) {
-              // MP4ファイルの場合、すべてのパターンで失敗した場合は特別なエラーメッセージを返す
-              console.error('[INTERVIEW] All config patterns failed for MP4 file')
-              return NextResponse.json(
-                {
-                  error: 'MP4ビデオファイルは直接処理できません',
-                  details: 'Google Cloud Speech-to-Text APIはMP4ファイルを直接処理できません。\n\n対処方法:\n1. MP4ファイルから音声を抽出してください（FFmpegなどのツールを使用）\n2. 抽出した音声ファイル（MP3、WAV、FLACなど）をアップロードしてください\n\n参考: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja',
-                  errorCode: 'MP4_NOT_SUPPORTED',
-                },
-                { status: 400 }
-              )
-            }
-            throw apiError
-          }
-          
-          // bad encodingエラーの場合、次のパターンを試す（最後のパターンでない場合のみ）
-          if (apiError?.code === 3 && apiError?.details?.includes('bad encoding')) {
-            if (patternIndex < configPatterns.length - 1) {
-              console.log(`[INTERVIEW] Bad encoding error - trying next config pattern...`)
-              continue
-            }
-          }
-        }
-      } else {
-        // 短い音声ファイルの場合はrecognizeを使用
-        console.log('[INTERVIEW] Calling recognize...')
-        const startTime = Date.now()
-        
-        try {
-          const [response] = await speechClient.recognize(speechRequest)
-          const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
-          console.log('[INTERVIEW] ✓ Recognize completed')
-          console.log('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
-        
-          if (!response.results || response.results.length === 0) {
-            console.error('[INTERVIEW] ✗ Empty transcription results')
-            console.error('[INTERVIEW]   Response:', JSON.stringify(response, null, 2))
-            return NextResponse.json(
-              { error: '文字起こし結果が空です', details: 'APIは成功しましたが、文字起こし結果が空でした。音声が検出されなかった可能性があります。' },
-              { status: 400 }
-            )
-          }
-
-          console.log('[INTERVIEW] ✓ Transcription results received')
-          console.log('[INTERVIEW]   Results Count:', response.results.length)
-          
-          transcriptionText = response.results
-            .map((result: any) => result.alternatives?.[0]?.transcript || '')
-            .filter((text: string) => text.trim().length > 0)
-            .join(' ')
-          
-          console.log('[INTERVIEW] ✓ Transcription text extracted')
-          console.log('[INTERVIEW]   Text Length:', `${transcriptionText.length} characters`)
-          console.log('[INTERVIEW]   Preview:', transcriptionText.substring(0, 100) + (transcriptionText.length > 100 ? '...' : ''))
-          console.log(`[INTERVIEW] ✓ Success with config pattern ${patternIndex + 1}`)
-          break // 成功したらループを抜ける
-        } catch (apiError: any) {
-          const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1)
-          console.error(`[INTERVIEW] ✗ Config pattern ${patternIndex + 1} failed`)
-          console.error('[INTERVIEW]   Elapsed Time:', `${elapsedTime} seconds`)
-          console.error('[INTERVIEW]   Error Code:', apiError?.code || 'N/A')
-          console.error('[INTERVIEW]   Error Message:', apiError?.message || 'N/A')
-          console.error('[INTERVIEW]   Error Details:', apiError?.details || 'N/A')
-          
-          lastError = apiError
-          
-          // MP4ファイルで最後のパターンの場合、特別なエラーメッセージを返す
-          if (patternIndex === configPatterns.length - 1) {
-            if (isMP4File) {
-              // MP4ファイルの場合、すべてのパターンで失敗した場合は特別なエラーメッセージを返す
-              console.error('[INTERVIEW] All config patterns failed for MP4 file')
-              return NextResponse.json(
-                {
-                  error: 'MP4ビデオファイルは直接処理できません',
-                  details: 'Google Cloud Speech-to-Text APIはMP4ファイルを直接処理できません。\n\n対処方法:\n1. MP4ファイルから音声を抽出してください（FFmpegなどのツールを使用）\n2. 抽出した音声ファイル（MP3、WAV、FLACなど）をアップロードしてください\n\n参考: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja',
-                  errorCode: 'MP4_NOT_SUPPORTED',
-                },
-                { status: 400 }
-              )
-            }
-            throw apiError
-          }
-          
-          // bad encodingエラーの場合、次のパターンを試す（最後のパターンでない場合のみ）
-          if (apiError?.code === 3 && apiError?.details?.includes('bad encoding')) {
-            if (patternIndex < configPatterns.length - 1) {
-              console.log(`[INTERVIEW] Bad encoding error - trying next config pattern...`)
-              continue
-            }
-          }
-        }
-      }
-    }
-    console.log('[INTERVIEW] ================================================')
-
-    // MP4ファイルの場合、すべてのパターンが失敗した時に特別なエラーメッセージを返す
-    if (!transcriptionText || transcriptionText.trim().length === 0) {
-      if (isMP4File && lastError) {
-        console.error('[INTERVIEW] All config patterns failed for MP4 file')
-        return NextResponse.json(
-          {
-            error: 'MP4ビデオファイルは直接処理できません',
-            details: 'Google Cloud Speech-to-Text APIはMP4ファイルを直接処理できません。\n\n対処方法:\n1. MP4ファイルから音声を抽出してください（FFmpegなどのツールを使用）\n2. 抽出した音声ファイル（MP3、WAV、FLACなど）をアップロードしてください\n\n参考: https://docs.cloud.google.com/speech-to-text/docs/v1/transcribe-audio-from-video-speech-to-text?hl=ja',
-            errorCode: 'MP4_NOT_SUPPORTED',
-          },
-          { status: 400 }
-        )
-      }
-      
-      return NextResponse.json(
-        { error: '文字起こし結果が空です', details: lastError?.message || 'すべての設定パターンで失敗しました' },
-        { status: 400 }
-      )
-    }
-
-    // データベースに保存
+    // Cloud Runサービスが設定されていない場合もバックグラウンドジョブ方式で処理
+    // 文字起こしレコードを作成（処理中ステータス）
     const transcription = await prisma.interviewTranscription.create({
       data: {
         projectId,
         materialId,
-        text: transcriptionText,
+        text: '', // 空文字列で初期化
         provider: 'google-cloud-speech',
+        status: 'PROCESSING', // 処理中
       },
     })
 
     // 素材のステータスを更新
     await prisma.interviewMaterial.update({
       where: { id: materialId },
-      data: { status: 'COMPLETED' },
+      data: { status: 'PROCESSING' },
     })
 
-    console.log(`[INTERVIEW] Transcription saved - ID: ${transcription.id}`)
+    console.log('[INTERVIEW] ✓ Transcription job created:', transcription.id)
 
-    return NextResponse.json({ transcription })
+    // バックグラウンドで処理を開始（非同期）
+    processDirectSpeechToTextInBackground({
+      transcriptionId: transcription.id,
+      materialId,
+      projectId,
+      gcsUri,
+      mimeType: material.mimeType,
+      fileName: material.fileName,
+      isVideoFile: Boolean(isVideoFile),
+      fileSize: material.fileSize ? Number(material.fileSize) : 0,
+      speechClient,
+      isMP4File: Boolean(isMP4File),
+      isLargeFile: Boolean(isLargeFile),
+    }).catch((error: any) => {
+      console.error('[INTERVIEW] Background transcription error:', error)
+      // エラー時はステータスを更新
+      prisma.interviewTranscription.update({
+        where: { id: transcription.id },
+        data: {
+          status: 'ERROR',
+          text: `エラー: ${error.message || 'Unknown error'}`,
+        },
+      }).catch(console.error)
+      prisma.interviewMaterial.update({
+        where: { id: materialId },
+        data: { status: 'ERROR', error: error.message || 'Unknown error' },
+      }).catch(console.error)
+    })
+
+    // 即座にレスポンスを返す（処理はバックグラウンドで継続）
+    return NextResponse.json({
+      transcription: {
+        id: transcription.id,
+        status: 'PROCESSING',
+        text: '',
+      },
+      message: '文字起こし処理を開始しました。バックグラウンドで処理が続行されます。',
+      pollingRequired: true,
+    })
   } catch (error: any) {
     console.error('[INTERVIEW] ========== ERROR OCCURRED ==========')
     console.error('[INTERVIEW] Error Type:', error?.constructor?.name || typeof error)
@@ -966,6 +781,143 @@ async function processTranscriptionInBackground({
     console.error('[INTERVIEW] Background transcription error:', error)
     
     // エラーをデータベースに記録
+    await prisma.interviewTranscription.update({
+      where: { id: transcriptionId },
+      data: {
+        status: 'ERROR',
+        text: `エラー: ${error.message || 'Unknown error'}`,
+      },
+    }).catch(console.error)
+
+    await prisma.interviewMaterial.update({
+      where: { id: materialId },
+      data: {
+        status: 'ERROR',
+        error: error.message || 'Unknown error',
+      },
+    }).catch(console.error)
+
+    throw error
+  }
+}
+
+// 直接Speech-to-Text APIを呼び出すバックグラウンド処理
+async function processDirectSpeechToTextInBackground({
+  transcriptionId,
+  materialId,
+  projectId,
+  gcsUri,
+  mimeType,
+  fileName,
+  isVideoFile,
+  fileSize,
+  speechClient,
+  isMP4File,
+  isLargeFile,
+}: {
+  transcriptionId: string
+  materialId: string
+  projectId: string
+  gcsUri: string
+  mimeType: string | null
+  fileName: string
+  isVideoFile: boolean
+  fileSize: number
+  speechClient: SpeechClient
+  isMP4File: boolean
+  isLargeFile: boolean
+}) {
+  try {
+    console.log('[INTERVIEW] Starting direct Speech-to-Text background processing:', transcriptionId)
+
+    const configPatterns: any[] = []
+
+    if (isVideoFile && isMP4File) {
+      // MP4ファイルの場合（通常はCloud Runサービスを使用するため、ここには到達しないはず）
+      configPatterns.push(
+        { languageCode: 'ja-JP' },
+        { languageCode: 'ja-JP', enableAutomaticPunctuation: true },
+        { languageCode: 'ja-JP', model: 'video' },
+      )
+    } else if (isVideoFile) {
+      configPatterns.push({ languageCode: 'ja-JP', model: 'video' })
+    } else {
+      configPatterns.push({
+        languageCode: 'ja-JP',
+        model: 'latest_long',
+        enableAutomaticPunctuation: true,
+      })
+    }
+
+    let transcriptionText: string = ''
+    let lastError: any = null
+
+    for (let patternIndex = 0; patternIndex < configPatterns.length; patternIndex++) {
+      const currentConfig = configPatterns[patternIndex]
+      const speechRequest = {
+        config: currentConfig,
+        audio: { uri: gcsUri },
+      }
+
+      try {
+        if (isVideoFile || isLargeFile) {
+          const [operation] = await speechClient.longRunningRecognize(speechRequest)
+          const [operationResult] = await operation.promise()
+
+          if (!operationResult.results || operationResult.results.length === 0) {
+            throw new Error('文字起こし結果が空です')
+          }
+
+          transcriptionText = operationResult.results
+            .map((result: any) => result.alternatives?.[0]?.transcript || '')
+            .filter((text: string) => text.trim().length > 0)
+            .join(' ')
+        } else {
+          const [response] = await speechClient.recognize(speechRequest)
+
+          if (!response.results || response.results.length === 0) {
+            throw new Error('文字起こし結果が空です')
+          }
+
+          transcriptionText = response.results
+            .map((result: any) => result.alternatives?.[0]?.transcript || '')
+            .filter((text: string) => text.trim().length > 0)
+            .join(' ')
+        }
+
+        if (transcriptionText && transcriptionText.trim().length > 0) {
+          break
+        }
+      } catch (apiError: any) {
+        lastError = apiError
+        if (patternIndex < configPatterns.length - 1) {
+          continue
+        }
+      }
+    }
+
+    if (!transcriptionText || transcriptionText.trim().length === 0) {
+      throw lastError || new Error('文字起こし結果が空です')
+    }
+
+    // データベースに保存
+    await prisma.interviewTranscription.update({
+      where: { id: transcriptionId },
+      data: {
+        text: transcriptionText,
+        status: 'COMPLETED',
+      },
+    })
+
+    await prisma.interviewMaterial.update({
+      where: { id: materialId },
+      data: { status: 'COMPLETED' },
+    })
+
+    console.log('[INTERVIEW] Direct Speech-to-Text background processing completed:', transcriptionId)
+  } catch (error: any) {
+    console.error('[INTERVIEW] Direct Speech-to-Text background processing error:', error)
+
     await prisma.interviewTranscription.update({
       where: { id: transcriptionId },
       data: {

@@ -38,7 +38,7 @@ const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB（Vercelのサーバーレス関
 const CHUNK_SIZE = 4 * 1024 * 1024 // 4MB（チャンクサイズ - Vercelの制限より少し小さく）
 const USE_CHUNK_UPLOAD = true // チャンクアップロードを有効化（4.5MB以上のファイルをアップロード可能）
 // サービスステータス: 'BETA' | 'STOPPED' | 'ACTIVE'
-const SERVICE_STATUS = 'STOPPED' // サービスを停止中に設定
+const SERVICE_STATUS = 'ACTIVE' // サービスを再開（バックグラウンドジョブ方式）
 
 const SUPPORTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg']
 const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm']
