@@ -652,32 +652,50 @@ function LpSitePageInner() {
           }
         })()
       } catch (error: any) {
-        console.error('生成エラー:', error)
-        // 途中まで完了している場合は、部分的な結果を表示
+        console.error('[LP-SITE] 画像生成エラー:', error)
+        console.error('[LP-SITE] エラー詳細:', error.message, error.stack)
+        setIsGeneratingImages(false)
+        setImageProgress(0)
+        setSectionProgress({})
+        setGeneratingSections(new Set())
+        const errorMessage = error.message || '画像生成に失敗しました'
+        toast.error(`${errorMessage}。ワイヤーフレームは表示できます。`, { duration: 5000 })
+        
+        // エラーが発生しても、部分的に生成された画像があれば表示
         if (sections.length > 0) {
-          const partialResult: Partial<LpGenerationResult> = {
+          const partialResult: LpGenerationResult = {
             product_info: productInfo,
             sections,
             wireframes,
             images: [],
             structure_json: JSON.stringify({ product_info: productInfo, sections, wireframes }, null, 2),
+            competitor_research: competitorResearch,
           }
-          setPartialResult(partialResult)
-          setResult(partialResult as LpGenerationResult)
-          setIsGenerating(false)
-          toast.warning('一部の処理に失敗しましたが、完了した部分は表示できます')
-        } else {
-          setIsGenerating(false)
-          toast.error(error.message || '生成に失敗しました')
+          setResult(partialResult)
         }
       }
     } catch (error: any) {
-      console.error('生成エラー:', error)
+      console.error('[LP-SITE] 生成エラー:', error)
+      console.error('[LP-SITE] エラー詳細:', error.message, error.stack)
       setIsGenerating(false)
+      setIsGeneratingImages(false)
       setApiCompleted(false)
       setApiResult(null)
+      setPartialResult(null)
       setProgress(0)
-      toast.error(error.message || '生成に失敗しました')
+      setImageProgress(0)
+      setSectionProgress({})
+      setGeneratingSections(new Set())
+      setCurrentStep('product')
+      setStageText('準備中...')
+      setMood('idle')
+      
+      // エラーメッセージを詳細に表示
+      let errorMessage = error.message || '生成に失敗しました'
+      if (error.response?.status) {
+        errorMessage = `HTTP ${error.response.status}: ${errorMessage}`
+      }
+      toast.error(errorMessage, { duration: 6000, icon: '❌' })
     }
   }
 
