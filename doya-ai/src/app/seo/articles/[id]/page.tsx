@@ -551,6 +551,8 @@ function SeoArticleInner() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [autoRun, setAutoRun] = useState(false)
+  const [resumeBusy, setResumeBusy] = useState(false)
+  const [resumeNotice, setResumeNotice] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [memo, setMemo] = useState('')
   const [tab, setTab] = useState<typeof TABS[number]['id']>('preview')
@@ -994,6 +996,33 @@ function SeoArticleInner() {
     }
   }, [latestJobId, load])
 
+  // 途中から再開（タイトル/キーワードは維持、既存セクションも維持）
+  const resumeFromCurrent = useCallback(async () => {
+    if (!article?.id || resumeBusy) return
+    setResumeBusy(true)
+    setResumeNotice(null)
+    try {
+      const res = await fetch(`/api/seo/articles/${article.id}/jobs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resetSections: false, autoStart: true }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || `再開に失敗しました (${res.status})`)
+      }
+      const jobId = json.jobId
+      setResumeNotice('途中から生成を再開しました（ジョブ画面で進捗を確認できます）')
+      if (jobId) router.push(`/seo/jobs/${jobId}?auto=1`)
+      else await load({ showLoading: false })
+    } catch (e: any) {
+      setResumeNotice(e?.message || '再開に失敗しました')
+    } finally {
+      setResumeBusy(false)
+      setTimeout(() => setResumeNotice(null), 4500)
+    }
+  }, [article?.id, load, resumeBusy, router])
+
   useEffect(() => {
     if (!autoRun || !latestJob) return
     if (latestJob.status === 'done' || latestJob.status === 'error') return
@@ -1266,11 +1295,29 @@ function SeoArticleInner() {
                 {autoRun ? '一時停止' : '生成を再開'}
               </Button>
             )}
+            {(article?.status === 'RUNNING' || article?.status === 'ERROR') && (
+              <Button
+                variant="secondary"
+                onClick={resumeFromCurrent}
+                disabled={resumeBusy}
+                className="flex-1 sm:flex-none h-11 sm:h-12 rounded-xl sm:rounded-2xl px-4 sm:px-6 font-black text-xs sm:text-sm"
+                title="途中から続き生成（タイトル/キーワードは変更しません）"
+              >
+                {resumeBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
+                {resumeBusy ? '再開中...' : '途中から再開'}
+              </Button>
+            )}
             <Button variant="ghost" onClick={() => load({ showLoading: true })} className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
               <RefreshCcw className="w-5 h-5 text-gray-400" />
             </Button>
           </div>
         </div>
+
+        {resumeNotice && (
+          <div className="mt-3 rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 text-xs sm:text-sm font-black text-blue-900">
+            {resumeNotice}
+          </div>
+        )}
 
         {/* Progress Display */}
         {isGenerating && (
