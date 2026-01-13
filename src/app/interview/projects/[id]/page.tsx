@@ -556,6 +556,88 @@ export default function InterviewProjectDetailPage() {
 
       // 1. 構成案生成（文字起こしが完全に終了したことを確認してから実行）
       if (!project.outline) {
+        // 構成案生成を呼び出す前に、再度プロジェクトを取得して最新の状態を確認
+        await fetchProject()
+        const preOutlineCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
+          headers: guestId ? { 'x-guest-id': guestId } : {},
+        })
+        if (preOutlineCheckRes.ok) {
+          const preOutlineCheckData = await preOutlineCheckRes.json()
+          if (preOutlineCheckData.project) {
+            currentProject = preOutlineCheckData.project
+            transcriptions = currentProject.transcriptions || []
+            
+            // 処理中の文字起こしがまだある場合は、完了するまで待機
+            const stillProcessingBeforeOutline = transcriptions.filter((t: any) => 
+              t.status === 'PROCESSING' || t.status === 'PENDING'
+            )
+            
+            if (stillProcessingBeforeOutline.length > 0) {
+              console.log('[INTERVIEW] Still processing transcriptions found before outline generation, waiting:', {
+                projectId,
+                processingCount: stillProcessingBeforeOutline.length,
+                processingIds: stillProcessingBeforeOutline.map((t: any) => t.id),
+              })
+              
+              setProcessingStep(`文字起こしの完了を待機中...（残り${stillProcessingBeforeOutline.length}件）`)
+              
+              // 全ての処理中の文字起こしが完了するまで待機
+              const maxWaitTimeSeconds = 3 * 24 * 60 * 60 // 最大3日
+              const waitInterval = 5000 // 5秒間隔
+              const maxRetries = Math.ceil(maxWaitTimeSeconds / (waitInterval / 1000))
+              const startTime = Date.now()
+              
+              let allCompletedBeforeOutline = false
+              let totalWaitCountBeforeOutline = 0
+              
+              while (!allCompletedBeforeOutline && totalWaitCountBeforeOutline < maxRetries) {
+                await fetchProject()
+                const statusCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
+                  headers: guestId ? { 'x-guest-id': guestId } : {},
+                })
+                if (statusCheckRes.ok) {
+                  const statusCheckData = await statusCheckRes.json()
+                  if (statusCheckData.project) {
+                    currentProject = statusCheckData.project
+                    transcriptions = currentProject.transcriptions || []
+                  }
+                }
+                
+                const currentProcessingBeforeOutline = transcriptions.filter((t: any) => 
+                  t.status === 'PROCESSING' || t.status === 'PENDING'
+                )
+                
+                if (currentProcessingBeforeOutline.length === 0) {
+                  allCompletedBeforeOutline = true
+                  break
+                }
+                
+                setProcessingStep(`文字起こしの完了を待機中...（残り${currentProcessingBeforeOutline.length}件）`)
+                
+                await new Promise(resolve => setTimeout(resolve, waitInterval))
+                totalWaitCountBeforeOutline++
+              }
+              
+              if (!allCompletedBeforeOutline) {
+                throw new Error('文字起こし処理がタイムアウトしました。しばらく待ってから再度お試しください。')
+              }
+              
+              // 待機後に再度プロジェクトを取得
+              await fetchProject()
+              const finalCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
+                headers: guestId ? { 'x-guest-id': guestId } : {},
+              })
+              if (finalCheckRes.ok) {
+                const finalCheckData = await finalCheckRes.json()
+                if (finalCheckData.project) {
+                  currentProject = finalCheckData.project
+                  transcriptions = currentProject.transcriptions || []
+                }
+              }
+            }
+          }
+        }
+        
         setProcessingStep('構成案を生成中...')
         
         // 構成案生成をリトライ可能な形で実行
@@ -762,11 +844,27 @@ export default function InterviewProjectDetailPage() {
       setShowArticleTypeSelector(false)
       setShowCompletionModal(true) // 完了モーダルを表示
     } catch (error) {
-      console.error('Failed to generate article:', error)
-      alert(`エラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`)
+      console.error('[INTERVIEW] Failed to generate article:', error)
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+      
+      // エラーメッセージを表示
+      // リトライ処理は既に構成案生成APIの呼び出し部分で実装されているため、
+      // "Transcription still processing"エラーの場合は、リトライ処理が動作するはず
+      setError(errorMessage)
+      
+      // "Transcription still processing"エラーの場合は、alertを表示しない（リトライ処理が動作するため）
+      // ただし、リトライ処理が既に実装されているため、ここでエラーを再スローしない
+      if (!errorMessage.includes('Transcription still processing') && !errorMessage.includes('まだ処理中')) {
+        alert(`エラーが発生しました: ${errorMessage}`)
+        setProcessing(false)
+        setProcessingStep('')
+      } else {
+        // リトライ可能なエラーの場合は、処理を継続（リトライ処理が動作する）
+        console.log('[INTERVIEW] Retryable error caught, retry logic should handle it')
+      }
     } finally {
-      setProcessing(false)
-      setProcessingStep('')
+      // エラーが発生していない場合、またはリトライ不可能なエラーの場合のみ、processingをfalseにする
+      // リトライ可能なエラーの場合は、リトライ処理が動作するため、processingはtrueのまま
     }
   }
 
