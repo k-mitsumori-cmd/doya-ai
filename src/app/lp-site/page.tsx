@@ -253,15 +253,17 @@ function LpSitePageInner() {
             const MAX_RETRIES = 4 // 最大4回まで再試行（合計5回試行）
             
             for (let index = 0; index < imageRequiredSections.length; index++) {
-              const section = imageRequiredSections[index]
-              const sectionId = section.section_id
-              const sectionName = section.headline || section.section_type || `セクション ${index + 1}`
-              
-              let sectionImage: SectionImage | null = null
-              let retryCount = 0
-              let success = false
-              
-              // 再試行ループ
+              // 各セクションの処理をtry-catchで包んで、エラーが発生しても次のセクションに進む
+              try {
+                const section = imageRequiredSections[index]
+                const sectionId = section.section_id
+                const sectionName = section.headline || section.section_type || `セクション ${index + 1}`
+                
+                let sectionImage: SectionImage | null = null
+                let retryCount = 0
+                let success = false
+                
+                // 再試行ループ
               while (retryCount <= MAX_RETRIES && !success) {
                 try {
                   // セクション生成開始
@@ -276,47 +278,58 @@ function LpSitePageInner() {
                     setStageText(`${sectionName} の画像を生成中... (${index + 1}/${totalSections})`)
                   }
                   
-                  // タイムアウト付きでセクション画像生成APIを呼び出し
-                  const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('タイムアウト: 画像生成に時間がかかりすぎています')), SECTION_TIMEOUT)
-                  })
+                  // AbortControllerでタイムアウトを制御
+                  const abortController = new AbortController()
+                  const timeoutId = setTimeout(() => {
+                    abortController.abort()
+                  }, SECTION_TIMEOUT)
                   
-                  const fetchPromise = fetch('/api/lp-site/regenerate-section', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      section,
-                      product_info: productInfo,
-                      regenerate_type: 'both', // PC/SP両方生成
-                    }),
-                  })
-                  
-                  const sectionResponse = await Promise.race([fetchPromise, timeoutPromise]) as Response
-                  
-                  if (!sectionResponse.ok) {
-                    let errorData: any = {}
-                    try {
-                      errorData = await sectionResponse.json()
-                    } catch {
-                      // JSON解析に失敗した場合は空オブジェクトを使用
+                  try {
+                    const fetchPromise = fetch('/api/lp-site/regenerate-section', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        section,
+                        product_info: productInfo,
+                        regenerate_type: 'both', // PC/SP両方生成
+                      }),
+                      signal: abortController.signal,
+                    })
+                    
+                    const sectionResponse = await fetchPromise
+                    clearTimeout(timeoutId)
+                    
+                    if (!sectionResponse.ok) {
+                      let errorData: any = {}
+                      try {
+                        errorData = await sectionResponse.json()
+                      } catch {
+                        // JSON解析に失敗した場合は空オブジェクトを使用
+                      }
+                      console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, errorData)
+                      const errorMsg = errorData.error || errorData.details || '画像生成に失敗しました'
+                      throw new Error(errorMsg)
                     }
-                    console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, errorData)
-                    const errorMsg = errorData.error || errorData.details || '画像生成に失敗しました'
-                    throw new Error(errorMsg)
-                  }
-                  
-                  const sectionData = await sectionResponse.json()
-                  sectionImage = {
-                    section_id: sectionId,
-                    image_pc: sectionData.result?.image_pc,
-                    image_sp: sectionData.result?.image_sp,
-                  }
-                  
-                  // PC/SPの少なくともどちらかが生成されているか確認
-                  if (sectionImage.image_pc || sectionImage.image_sp) {
-                    success = true
-                  } else {
-                    throw new Error('画像が生成されませんでした（PC/SP両方とも空）')
+                    
+                    const sectionData = await sectionResponse.json()
+                    sectionImage = {
+                      section_id: sectionId,
+                      image_pc: sectionData.result?.image_pc,
+                      image_sp: sectionData.result?.image_sp,
+                    }
+                    
+                    // PC/SPの少なくともどちらかが生成されているか確認
+                    if (sectionImage.image_pc || sectionImage.image_sp) {
+                      success = true
+                    } else {
+                      throw new Error('画像が生成されませんでした（PC/SP両方とも空）')
+                    }
+                  } catch (fetchError: any) {
+                    clearTimeout(timeoutId)
+                    if (fetchError.name === 'AbortError') {
+                      throw new Error('タイムアウト: 画像生成に時間がかかりすぎています')
+                    }
+                    throw fetchError
                   }
                   
                 } catch (error: any) {
@@ -427,6 +440,62 @@ function LpSitePageInner() {
               
               if (success) {
                 console.log(`[LP-SITE] セクション画像生成完了: ${sectionId} (${completedSections}/${totalSections})`)
+              }
+              } catch (sectionError: any) {
+                // セクション全体の処理で予期しないエラーが発生した場合でも続行
+                const failedSection = imageRequiredSections[index]
+                const failedSectionId = failedSection?.section_id || `unknown-${index}`
+                console.error(`[LP-SITE] セクション処理で予期しないエラー (${failedSectionId}):`, sectionError)
+                
+                // 空のエントリを追加して続行
+                const failedImage: SectionImage = {
+                  section_id: failedSectionId,
+                  image_pc: undefined,
+                  image_sp: undefined,
+                }
+                const existingIndex = generatedImages.findIndex(img => img.section_id === failedSectionId)
+                if (existingIndex >= 0) {
+                  generatedImages[existingIndex] = failedImage
+                } else {
+                  generatedImages.push(failedImage)
+                }
+                
+                // 結果を更新
+                const currentImages = [...generatedImages]
+                sections.filter(s => !s.image_required).forEach(s => {
+                  if (!currentImages.find(img => img.section_id === s.section_id)) {
+                    currentImages.push({ section_id: s.section_id })
+                  }
+                })
+                const partialResult: LpGenerationResult = {
+                  product_info: productInfo,
+                  sections,
+                  wireframes,
+                  images: currentImages,
+                  structure_json: JSON.stringify({
+                    product_info: productInfo,
+                    sections,
+                    wireframes,
+                    images: currentImages.map(img => ({
+                      section_id: img.section_id,
+                      has_pc: !!img.image_pc,
+                      has_sp: !!img.image_sp,
+                    })),
+                  }, null, 2),
+                  competitor_research: competitorResearch,
+                }
+                setResult(partialResult)
+                setGeneratingSections(prev => {
+                  const next = new Set(prev)
+                  next.delete(failedSectionId)
+                  return next
+                })
+                
+                // エラーをログに記録するが、処理は続行
+                toast.error(`セクション ${index + 1} の処理でエラーが発生しましたが、続行します`, {
+                  duration: 4000,
+                  icon: '⚠️',
+                })
               }
             }
             

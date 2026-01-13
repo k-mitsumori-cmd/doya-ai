@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
 
     // プロジェクト取得（ユーザーまたはゲスト）
-    const project = await prisma.interviewProject.findFirst({
+    let project = await prisma.interviewProject.findFirst({
       where: {
         id: projectId,
         OR: [
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 完了した文字起こしのみを取得（COMPLETED ステータスでテキストが存在するもの）
-    const completedTranscriptions = project.transcriptions.filter(
+    let completedTranscriptions = project.transcriptions.filter(
       (t) => t.status === 'COMPLETED' && t.text && typeof t.text === 'string' && t.text.trim().length > 0
     )
 
