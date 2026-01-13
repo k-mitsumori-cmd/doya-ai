@@ -14,6 +14,7 @@ let speechClient: SpeechClient | null = null
 
 function getSpeechClient(): SpeechClient {
   if (!speechClient) {
+<<<<<<< HEAD
     // 認証情報の取得（Base64エンコードされたJSON文字列もサポート）
     let credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS
     if (!credsEnvVar && process.env.GOOGLE_APPLICATION_CREDENTIALS_B64) {
@@ -28,6 +29,12 @@ function getSpeechClient(): SpeechClient {
     
     if (!credsEnvVar) {
       throw new Error('GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_APPLICATION_CREDENTIALS_B64 environment variable is not set')
+=======
+    // 認証情報の取得
+    const credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS
+    if (!credsEnvVar) {
+      throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable is not set')
+>>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
     }
 
     let credentials: any
@@ -58,12 +65,19 @@ export async function transcribeAudio(options: TranscribeOptions): Promise<strin
 
   const speechClient = getSpeechClient()
 
+<<<<<<< HEAD
   // ファイルサイズチェック（10GB制限）
   const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024 // 10GB
   if (fileSize > MAX_FILE_SIZE) {
     const maxSizeGB = (MAX_FILE_SIZE / 1024 / 1024 / 1024).toFixed(2)
     const fileSizeGB = (fileSize / 1024 / 1024 / 1024).toFixed(2)
     throw new Error(`File size exceeds limit (max ${maxSizeGB}GB, file size: ${fileSizeGB}GB)`)
+=======
+  // ファイルサイズチェック（1GB制限）
+  const MAX_FILE_SIZE = 1024 * 1024 * 1024 // 1GB
+  if (fileSize > MAX_FILE_SIZE) {
+    throw new Error(`File size exceeds limit (max ${MAX_FILE_SIZE / 1024 / 1024 / 1024}GB)`)
+>>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
   }
 
   // リクエスト設定の準備

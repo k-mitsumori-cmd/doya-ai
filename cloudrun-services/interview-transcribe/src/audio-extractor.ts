@@ -12,6 +12,7 @@ let storage: Storage | null = null
 
 function getStorage(): Storage {
   if (!storage) {
+<<<<<<< HEAD
     // 認証情報の取得（Base64エンコードされたJSON文字列もサポート）
     let credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS
     if (!credsEnvVar && process.env.GOOGLE_APPLICATION_CREDENTIALS_B64) {
@@ -26,6 +27,11 @@ function getStorage(): Storage {
     
     if (!credsEnvVar) {
       throw new Error('GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_APPLICATION_CREDENTIALS_B64 environment variable is not set')
+=======
+    const credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS
+    if (!credsEnvVar) {
+      throw new Error('GOOGLE_APPLICATION_CREDENTIALS environment variable is not set')
+>>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
     }
 
     let credentials: any

@@ -89,21 +89,32 @@ echo ""
 echo "Cloud Runにデプロイ中..."
 echo "（これには数分かかる場合があります）"
 
+<<<<<<< HEAD
 # JSON文字列をBase64エンコードして設定（YAMLのエスケープ問題を回避）
 GOOGLE_APPLICATION_CREDENTIALS_B64=$(echo -n "$GOOGLE_APPLICATION_CREDENTIALS_JSON" | base64)
 
+=======
+>>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 gcloud run deploy interview-transcribe-service \
   --source . \
   --platform managed \
   --region asia-northeast1 \
   --allow-unauthenticated \
+<<<<<<< HEAD
   --memory 4Gi \
+=======
+  --memory 2Gi \
+>>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
   --cpu 2 \
   --timeout 3600 \
   --max-instances 10 \
   --min-instances 0 \
   --set-env-vars GOOGLE_CLOUD_PROJECT_ID="$GOOGLE_CLOUD_PROJECT_ID" \
+<<<<<<< HEAD
   --set-env-vars GOOGLE_APPLICATION_CREDENTIALS_B64="$GOOGLE_APPLICATION_CREDENTIALS_B64" \
+=======
+  --set-env-vars GOOGLE_APPLICATION_CREDENTIALS="$GOOGLE_APPLICATION_CREDENTIALS_JSON" \
+>>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
   --service-account $SA_EMAIL
 
 # サービスURLを取得

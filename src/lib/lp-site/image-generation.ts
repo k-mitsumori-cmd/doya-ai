@@ -62,6 +62,7 @@ export async function generateSectionImagePair(
   sectionIndex?: number,
   totalSections?: number
 ): Promise<SectionImage> {
+<<<<<<< HEAD
   // PC/SP画像生成を並列実行して処理時間を短縮
   const pcPrompt = generateImagePrompt(section, productInfo, 'pc', sectionIndex, totalSections)
   const spPrompt = generateImagePrompt(section, productInfo, 'sp', sectionIndex, totalSections)
@@ -97,6 +98,37 @@ export async function generateSectionImagePair(
   
   const imagePc = pcResult.status === 'fulfilled' ? pcResult.value : undefined
   const imageSp = spResult.status === 'fulfilled' ? spResult.value : undefined
+=======
+  // PC用画像生成（横長）- 1920x1080 (16:9)
+  let imagePc: string | undefined
+  try {
+    console.log(`[LP-SITE] PC画像生成開始: ${section.section_id}`)
+    const pcPrompt = generateImagePrompt(section, productInfo, 'pc', sectionIndex, totalSections)
+    console.log(`[LP-SITE] PCプロンプト長: ${pcPrompt.length}文字`)
+    const pcResult = await generateSingleBanner(pcPrompt, '1920x1080', {})
+    imagePc = pcResult.image
+    console.log(`[LP-SITE] PC画像生成成功: ${section.section_id}, モデル: ${pcResult.model}`)
+  } catch (error: any) {
+    console.error(`[LP-SITE] PC画像生成エラー (${section.section_id}):`, error)
+    console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
+    // エラーが発生しても続行（空の画像として扱う）
+  }
+
+  // SP用画像生成（縦長）- 1080x1920 (9:16)
+  let imageSp: string | undefined
+  try {
+    console.log(`[LP-SITE] SP画像生成開始: ${section.section_id}`)
+    const spPrompt = generateImagePrompt(section, productInfo, 'sp', sectionIndex, totalSections)
+    console.log(`[LP-SITE] SPプロンプト長: ${spPrompt.length}文字`)
+    const spResult = await generateSingleBanner(spPrompt, '1080x1920', {})
+    imageSp = spResult.image
+    console.log(`[LP-SITE] SP画像生成成功: ${section.section_id}, モデル: ${spResult.model}`)
+  } catch (error: any) {
+    console.error(`[LP-SITE] SP画像生成エラー (${section.section_id}):`, error)
+    console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
+    // エラーが発生しても続行（空の画像として扱う）
+  }
+>>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 
   return {
     section_id: section.section_id,
