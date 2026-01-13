@@ -1330,6 +1330,13 @@ function LpSitePageInner() {
               ),
             })
           }}
+          onSectionDelete={(sectionId) => {
+            setResult({
+              ...result,
+              sections: result.sections.filter((s) => s.section_id !== sectionId),
+              images: result.images.filter((img) => img.section_id !== sectionId),
+            })
+          }}
           onPreview={async () => {
             if (!result) return
             try {
