@@ -9,7 +9,7 @@ import { generateSingleBanner } from '@/lib/nanobanner'
 import { LpSection, ProductInfo } from '@/lib/lp-site/types'
 import { generateSectionImagePair, generateImagePrompt } from '@/lib/lp-site/image-generation'
 
-export const maxDuration = 180 // 3分（画像生成には時間がかかるため延長）
+export const maxDuration = 300 // 5分（Vercelの最大値、画像生成には時間がかかるため）
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,10 +90,24 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('[LP-SITE] Regenerate error:', error)
+    console.error('[LP-SITE] エラー詳細:', error.message, error.stack)
+    
+    // タイムアウトエラーの場合、特別なメッセージを返す
+    if (error.message?.includes('timeout') || error.message?.includes('timed out') || error.message?.includes('タイムアウト')) {
+      return NextResponse.json(
+        {
+          error: '画像生成に時間がかかりすぎています（タイムアウト）',
+          details: '画像生成には通常30秒〜2分かかりますが、処理が長引いている場合は再試行してください。',
+          timeout: true,
+        },
+        { status: 504 } // Gateway Timeout
+      )
+    }
+    
     return NextResponse.json(
       {
         error: '再生成に失敗しました',
-        details: error.message,
+        details: error.message || '不明なエラーが発生しました',
       },
       { status: 500 }
     )

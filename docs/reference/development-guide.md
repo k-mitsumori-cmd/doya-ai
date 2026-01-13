@@ -2465,11 +2465,13 @@ export async function POST(request: NextRequest) {
 
 - [ ] Framer Motion を使用
 - [ ] Party Mode 対応（必要に応じて）
+- [ ] **生成完了時の派手なお祝いアニメーションを実装**
 - [ ] 既存のアニメーションパターンに従っている
 - [ ] パフォーマンスを考慮した実装
 
 **参考:**
 - `docs/reference/animation-spec.md` - アニメーション仕様
+- [共通で使える開発項目](#共通で使える開発項目) の「生成完了時の派手なお祝いアニメーション」を参照
 
 ---
 

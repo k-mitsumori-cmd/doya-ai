@@ -2005,14 +2005,18 @@ export default function InterviewPage() {
                                       // 実際の処理時間の平均に基づいた計算（動画ファイル）
                                       const fileSizeGB = sizeInfo.size
                                       
-                                      // 実際の経験値に基づく処理時間（1GBあたりの処理時間）
-                                      // 動画ファイル（1GB）: 約10-15分（アップロード+音声抽出+文字起こし+記事生成）
-                                      const baseMinutesPerGB = 12 // 1GBあたりの平均処理時間（分）
+                                      // 実際の処理時間の計算（動画ファイル）
+                                      // 1GBの動画 ≈ 1時間の音声（一般的な1080p動画）
+                                      // 音声抽出時間: 1時間の動画 ≈ 約4分（FFmpeg処理）
+                                      // 文字起こし時間: 1時間の音声 ≈ 約12分（音声長の20%）
+                                      // アップロード+記事生成: 約5分
+                                      // 合計: 約21分/GB
+                                      const baseMinutesPerGB = 21 // 1GBあたりの平均処理時間（分）
                                       const totalMinutes = fileSizeGB * baseMinutesPerGB
                                       
-                                      // 範囲を計算（±20%の変動幅）
-                                      const minMinutes = Math.max(1, Math.floor(totalMinutes * 0.8)) // 最小値（80%）、最低1分
-                                      const maxMinutes = Math.ceil(totalMinutes * 1.2) // 最大値（120%）
+                                      // 範囲を計算（±25%の変動幅）
+                                      const minMinutes = Math.max(1, Math.floor(totalMinutes * 0.75)) // 最小値（75%）、最低1分
+                                      const maxMinutes = Math.ceil(totalMinutes * 1.25) // 最大値（125%）
                                       
                                       return `${minMinutes}-${maxMinutes}分`
                                     })()}</span>
@@ -2036,14 +2040,21 @@ export default function InterviewPage() {
                                       // 実際の処理時間の平均に基づいた計算（音声ファイル）
                                       const fileSizeGB = sizeInfo.size
                                       
-                                      // 実際の経験値に基づく処理時間（1GBあたりの処理時間）
-                                      // 音声ファイル（1GB）: 約5-8分（アップロード+文字起こし+記事生成、動画より速い）
-                                      const baseMinutesPerGB = 6 // 1GBあたりの平均処理時間（分）
+                                      // 実際の処理時間の計算（音声ファイル）
+                                      // 1GBの音声 ≈ 約18.4時間の音声（MP3 128kbps、1MB ≈ 1.08分）
+                                      // 文字起こし時間: 18.4時間の音声 ≈ 約221分（音声長の20%）
+                                      // アップロード+記事生成: 約5分
+                                      // 合計: 約226分/GB
+                                      // ただし、動画ファイルは音声抽出が必要なため、同じ音声長でも動画の方が時間がかかる
+                                      // しかし、1GBの音声ファイルは18時間分の音声なので、1GBの動画（1時間分）より長くなる
+                                      // 実際の処理では、音声ファイルの方が音声抽出が不要なため、同じ音声長なら速い
+                                      // しかし、ファイルサイズベースで比較すると、音声ファイルの方が長くなる
+                                      const baseMinutesPerGB = 226 // 1GBあたりの平均処理時間（分）
                                       const totalMinutes = fileSizeGB * baseMinutesPerGB
                                       
-                                      // 範囲を計算（±20%の変動幅）
-                                      const minMinutes = Math.max(1, Math.floor(totalMinutes * 0.8)) // 最小値（80%）、最低1分
-                                      const maxMinutes = Math.ceil(totalMinutes * 1.2) // 最大値（120%）
+                                      // 範囲を計算（±25%の変動幅）
+                                      const minMinutes = Math.max(1, Math.floor(totalMinutes * 0.75)) // 最小値（75%）、最低1分
+                                      const maxMinutes = Math.ceil(totalMinutes * 1.25) // 最大値（125%）
                                       
                                       return `${minMinutes}-${maxMinutes}分`
                                     })()}</span>
@@ -2079,9 +2090,11 @@ export default function InterviewPage() {
                       <div>
                         <p className="text-sm font-black text-slate-900 mb-1">おすすめ: MP3（音声）に変換してからアップロード</p>
                         <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                          動画ファイルをMP3などの音声ファイルに変換してからアップロードすると、処理時間が大幅に短縮されます。
+                          動画ファイルをMP3などの音声ファイルに変換してからアップロードすると、同じ音声長の場合、処理時間が大幅に短縮されます。
                           <br />
-                          動画ファイルは音声抽出に時間がかかりますが、音声ファイル（MP3）なら直接処理できるため、より早く完了します。
+                          <span className="font-black">※</span> 上記の表は同じファイルサイズで比較しています。1GBの動画は約1時間の音声ですが、1GBの音声は約18時間の音声のため、処理時間が長くなります。
+                          <br />
+                          <span className="font-black">※</span> 同じ音声長で比較すると、音声ファイル（MP3）の方が音声抽出が不要なため、より早く完了します。
                         </p>
                       </div>
                     </div>

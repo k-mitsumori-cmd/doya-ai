@@ -249,7 +249,7 @@ function LpSitePageInner() {
             let completedSections = 0
             
             // 各セクションごとに画像を生成（タイムアウト付き）
-            const SECTION_TIMEOUT = 90000 // 90秒（画像生成には時間がかかるため延長）
+            const SECTION_TIMEOUT = 240000 // 240秒（4分）- API側のmaxDuration(300秒)より短く設定
             const MAX_RETRIES = 4 // 最大4回まで再試行（合計5回試行）
             
             for (let index = 0; index < imageRequiredSections.length; index++) {
