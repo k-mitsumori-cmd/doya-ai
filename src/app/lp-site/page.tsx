@@ -347,7 +347,7 @@ function LpSitePageInner() {
                   if (retryCount > MAX_RETRIES) {
                     // 最大再試行回数に達した場合は、空の画像として扱い処理を続行
                     console.warn(`[LP-SITE] セクション画像生成失敗（最大再試行回数に達しました）: ${sectionId}。空の画像として処理を続行します。`)
-                    toast(`${sectionName} の画像生成に失敗しましたが、処理を続行します（後で再生成可能）`, {
+                    toast.error(`${sectionName} の画像生成に失敗しましたが、処理を続行します（後で再生成可能）`, {
                       duration: 5000,
                       icon: '⚠️',
                       style: {
@@ -544,7 +544,7 @@ function LpSitePageInner() {
               })
               
               console.warn(`[LP-SITE] ${stillFailed.length} セクションの画像生成が完了していません:`, stillFailed.map(s => s.section_id))
-              toast(`${stillFailed.length} セクションの画像生成に失敗しましたが、処理を続行します。後で再生成できます。`, {
+              toast.error(`${stillFailed.length} セクションの画像生成に失敗しましたが、処理を続行します。後で再生成できます。`, {
                 duration: 6000,
                 icon: '⚠️',
                 style: {
@@ -636,11 +636,11 @@ function LpSitePageInner() {
               }, 500)
             } else {
               console.error(`[LP-SITE] 画像生成が不完全です: ${successCount}/${imageRequiredSections.length}`)
-              toast(`${successCount}/${imageRequiredSections.length} セクションの画像生成が完了しました`, {
+              toast.success(`${successCount}/${imageRequiredSections.length} セクションの画像生成が完了しました`, {
                 duration: 4000,
-                icon: '⚠️',
+                icon: '✅',
                 style: {
-                  background: '#fbbf24',
+                  background: '#10b981',
                   color: '#fff',
                 },
               })
@@ -656,7 +656,7 @@ function LpSitePageInner() {
             setGeneratingSections(new Set())
             
             const errorMessage = error.message || '画像生成に失敗しました'
-            toast(`${errorMessage}。ワイヤーフレームは表示できます。後で画像を再生成してください。`, { 
+            toast.error(`${errorMessage}。ワイヤーフレームは表示できます。後で画像を再生成してください。`, { 
               duration: 6000, 
               icon: '⚠️',
               style: {
@@ -703,7 +703,7 @@ function LpSitePageInner() {
         setGeneratingSections(new Set())
         
         const errorMessage = error.message || '画像生成に失敗しました'
-        toast(`${errorMessage}。ワイヤーフレームは表示できます。後で画像を再生成してください。`, { 
+        toast.error(`${errorMessage}。ワイヤーフレームは表示できます。後で画像を再生成してください。`, { 
           duration: 6000, 
           icon: '⚠️',
           style: {
@@ -770,7 +770,7 @@ function LpSitePageInner() {
         setSectionProgress({})
         setGeneratingSections(new Set())
         
-        toast('一部の処理でエラーが発生しましたが、完了した部分は表示できます。', { 
+        toast.error('一部の処理でエラーが発生しましたが、完了した部分は表示できます。', { 
           duration: 6000, 
           icon: '⚠️',
           style: {

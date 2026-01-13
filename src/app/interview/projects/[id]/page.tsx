@@ -649,6 +649,13 @@ export default function InterviewProjectDetailPage() {
         const baseRetryInterval = 5000 // 基本5秒間隔
         const maxRetryInterval = 30000 // 最大30秒間隔（長時間待機時）
         
+        console.log('[INTERVIEW] Starting outline generation with retry logic:', {
+          projectId,
+          maxRetries,
+          baseRetryInterval,
+          maxRetryInterval,
+        })
+        
         while (!outlineGenerated && retryCount < maxRetries) {
           try {
             // タイムアウト制御用のAbortController
@@ -678,9 +685,33 @@ export default function InterviewProjectDetailPage() {
             const errorData = await outlineRes.json().catch(() => ({}))
             const errorMessage = errorData.details || errorData.error || '構成案生成に失敗しました'
             
+            // デバッグログを追加
+            console.log('[INTERVIEW] Outline generation API error response:', {
+              status: outlineRes.status,
+              errorData,
+              errorMessage,
+              retryable: errorData.retryable,
+              error: errorData.error,
+              details: errorData.details,
+            })
+            
             // 処理中の文字起こしがある場合は自動的にリトライ
             // retryableフラグがある場合、またはエラーメッセージに「まだ処理中」が含まれる場合
-            if (errorData.retryable || errorData.error === 'Transcription still processing' || errorMessage.includes('まだ処理中')) {
+            const isRetryable = errorData.retryable || 
+                                errorData.error === 'Transcription still processing' || 
+                                errorMessage.includes('まだ処理中') ||
+                                errorData.error?.includes('Transcription still processing') ||
+                                errorData.details?.includes('まだ処理中')
+            
+            console.log('[INTERVIEW] Retry check:', {
+              isRetryable,
+              retryable: errorData.retryable,
+              error: errorData.error,
+              errorMessage,
+              errorMessageIncludes: errorMessage.includes('まだ処理中'),
+            })
+            
+            if (isRetryable) {
               retryCount++
               
               // プロジェクトを再取得して最新の状態を確認
