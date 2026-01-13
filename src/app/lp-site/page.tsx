@@ -59,10 +59,10 @@ function LpSitePageInner() {
     { label: 'アセット整理', threshold: 100, icon: Package },
   ]
 
-  // 経過時間のカウント（生成中は継続、リセットしない）
+  // 経過時間のカウント（ワイヤーフレーム生成中のみ）
   useEffect(() => {
-    if (!isGenerating && !isGeneratingImages) {
-      // 生成が完全に終了した場合のみタイマーをリセット
+    if (!isGenerating) {
+      // ワイヤーフレーム生成が終了したらタイマーをリセット
       setElapsedTime(0)
       return
     }
@@ -70,19 +70,19 @@ function LpSitePageInner() {
       setElapsedTime((prev) => prev + 1)
     }, 1000)
     return () => clearInterval(timer)
-  }, [isGenerating, isGeneratingImages])
+  }, [isGenerating])
 
-  // 進捗リセット（生成開始時のみ、画像生成中はリセットしない）
+  // 進捗リセット（ワイヤーフレーム生成終了時）
   useEffect(() => {
-    if (!isGenerating && !isGeneratingImages) {
-      // 生成が完全に終了した場合のみ進捗をリセット
+    if (!isGenerating) {
+      // ワイヤーフレーム生成が終了したら進捗をリセット
       setProgress(0)
       setStageText('準備中...')
       setMood('idle')
       setApiCompleted(false)
       setApiResult(null)
     }
-  }, [isGenerating, isGeneratingImages])
+  }, [isGenerating])
 
   // API完了時に進捗を100%にして結果を表示
   useEffect(() => {
@@ -275,11 +275,11 @@ function LpSitePageInner() {
         setPartialResult(wireframeResult)
         setResult(wireframeResult)
         
-        // ワイヤーフレーム生成完了：オーバーレイを閉じて操作可能にする
+        // ワイヤーフレーム生成完了：オーバーレイを完全に閉じる
         setIsGenerating(false)
-        updateProgress(60) // Step 3完了
-        setStageText('ワイヤーフレーム生成完了！')
-        setMood('happy')
+        setProgress(0) // 進捗をリセット
+        setStageText('準備中...')
+        setMood('idle')
         toast.success('ワイヤーフレームが生成されました！画像を自動生成中...', {
           duration: 5000,
           icon: '✅',
@@ -287,12 +287,14 @@ function LpSitePageInner() {
 
         // Step 4: 画像生成（バックグラウンドで実行、セクションごとに個別生成）
         // オーバーレイは開かず、バックグラウンドで静かに実行
+        // 注意: isGeneratingImagesはtrueにするが、オーバーレイは表示しない
         console.log('[LP-SITE] 画像生成をバックグラウンドで開始します...')
-        setIsGeneratingImages(true)
         setImageProgress(0)
         setSectionProgress({})
         const initialGeneratingSections = new Set(sections.filter(s => s.image_required).map(s => s.section_id))
         setGeneratingSections(initialGeneratingSections)
+        // isGeneratingImagesはオーバーレイ表示に使わず、エディタ内の進捗表示にのみ使用
+        setIsGeneratingImages(true)
         
         // 画像生成を非同期で実行（セクションごとに個別生成）
         // 即座に実行されるように、awaitなしで呼び出す
@@ -1051,9 +1053,9 @@ function LpSitePageInner() {
   if (result) {
     return (
       <>
-        {/* 生成中オーバーレイ */}
+        {/* 生成中オーバーレイ（ワイヤーフレーム生成中のみ表示、画像生成中は非表示） */}
         <LpGenerationOverlay
-          open={isGenerating || isGeneratingImages}
+          open={isGenerating}
           progress={progress}
           stageText={stageText}
           mood={mood}
@@ -1156,9 +1158,9 @@ function LpSitePageInner() {
 
   return (
     <LpSiteAppLayout>
-      {/* 生成中オーバーレイ */}
+      {/* 生成中オーバーレイ（ワイヤーフレーム生成中のみ表示） */}
       <LpGenerationOverlay
-        open={isGenerating || isGeneratingImages}
+        open={isGenerating}
         progress={progress}
         stageText={stageText}
         mood={mood}
