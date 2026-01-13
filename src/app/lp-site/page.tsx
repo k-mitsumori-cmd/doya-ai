@@ -411,6 +411,12 @@ function LpSitePageInner() {
             // 進捗は更新しない（オーバーレイが閉じているため）
             console.log('[LP-SITE] 画像生成の状態を設定しました')
             
+            // 画像生成が開始されたことを確認
+            if (!isGeneratingImages) {
+              console.warn('[LP-SITE] 警告: isGeneratingImagesがfalseです。再設定します。')
+              setIsGeneratingImages(true)
+            }
+            
             // すべてのセクションのエントリを最初に作成（確実に全セクションを含めるため）
             const generatedImages: SectionImage[] = sections.map(s => ({
               section_id: s.section_id,
