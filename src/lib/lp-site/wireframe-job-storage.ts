@@ -19,10 +19,12 @@ export interface WireframeJob {
 const jobStorage = new Map<string, WireframeJob>()
 
 // 古いジョブをクリーンアップ（1時間以上経過したジョブを削除）
+// 注意: サーバーレス環境ではsetIntervalは推奨されないため、使用時のみクリーンアップを実行
 const CLEANUP_INTERVAL = 60 * 60 * 1000 // 1時間
 const JOB_MAX_AGE = 60 * 60 * 1000 // 1時間
 
-setInterval(() => {
+// クリーンアップ関数（必要に応じて手動で呼び出す）
+export function cleanupOldJobs(): void {
   const now = Date.now()
   for (const [id, job] of jobStorage.entries()) {
     if (now - job.createdAt > JOB_MAX_AGE) {
@@ -30,7 +32,13 @@ setInterval(() => {
       console.log(`[LP-SITE] 古いワイヤーフレーム生成ジョブを削除: ${id}`)
     }
   }
-}, CLEANUP_INTERVAL)
+}
+
+// サーバーレス環境ではsetIntervalは推奨されないため、コメントアウト
+// 必要に応じて、getWireframeJobやupdateWireframeJob内でクリーンアップを実行
+// setInterval(() => {
+//   cleanupOldJobs()
+// }, CLEANUP_INTERVAL)
 
 export function createWireframeJob(): string {
   const id = `wireframe-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
@@ -46,6 +54,8 @@ export function createWireframeJob(): string {
 }
 
 export function getWireframeJob(id: string): WireframeJob | null {
+  // 取得時に古いジョブをクリーンアップ（サーバーレス環境対応）
+  cleanupOldJobs()
   return jobStorage.get(id) || null
 }
 
