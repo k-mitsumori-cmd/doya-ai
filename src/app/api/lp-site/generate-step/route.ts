@@ -13,7 +13,7 @@ import { generateSectionImages } from '@/lib/lp-site/image-generation'
 import { researchCompetitors } from '@/lib/lp-site/competitor-research'
 import { LpGenerationRequest, ProductInfo } from '@/lib/lp-site/types'
 
-export const maxDuration = 300 // 5分
+export const maxDuration = 800 // 13分20秒（Proプランの最大値）
 
 export async function POST(request: NextRequest) {
   try {

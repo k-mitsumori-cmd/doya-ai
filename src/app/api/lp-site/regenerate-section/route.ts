@@ -9,7 +9,7 @@ import { generateSingleBanner } from '@/lib/nanobanner'
 import { LpSection, ProductInfo } from '@/lib/lp-site/types'
 import { generateSectionImagePair, generateImagePrompt } from '@/lib/lp-site/image-generation'
 
-export const maxDuration = 300 // 5分（Vercelの最大値、画像生成には時間がかかるため）
+export const maxDuration = 800 // 13分20秒（Proプランの最大値、画像生成には時間がかかるため）
 
 export async function POST(request: NextRequest) {
   try {

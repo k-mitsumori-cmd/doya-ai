@@ -6,5 +6,13 @@
       "path": "/api/interview/projects/cleanup",
       "schedule": "0 2 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "src/app/api/lp-site/generate-step/route.ts": {
+      "maxDuration": 800
+    },
+    "src/app/api/lp-site/regenerate-section/route.ts": {
+      "maxDuration": 800
+    }
+  }
 }
