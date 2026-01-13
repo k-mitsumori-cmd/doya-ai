@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { LpGenerationResult, LpSection, SectionImage } from '@/lib/lp-site/types'
 import { CompetitorPanel } from './CompetitorPanel'
+import { DownloadModal } from './DownloadModal'
 import toast from 'react-hot-toast'
 
 interface FigmaStyleEditorProps {
@@ -505,6 +506,9 @@ export function FigmaStyleEditor({
   const partialSections = getPartialSections()
   const hasIncompleteImages = missingSections.length > 0 || partialSections.length > 0
 
+  // ダウンロードモーダルの状態
+  const [showDownloadModal, setShowDownloadModal] = useState(false)
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -616,7 +620,7 @@ export function FigmaStyleEditor({
           
           {/* ダウンロードボタン */}
           <button
-            onClick={() => onDownload(selectedDevice === 'pc' ? 'all_pc' : 'all_sp')}
+            onClick={() => setShowDownloadModal(true)}
             className="px-4 py-2.5 text-sm font-medium bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors flex items-center gap-2"
           >
             <FileDown className="w-4 h-4" />
@@ -1305,6 +1309,14 @@ export function FigmaStyleEditor({
           </div>
         </div>
       </div>
+
+      {/* ダウンロードモーダル */}
+      <DownloadModal
+        open={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        result={result}
+        onDownload={onDownload}
+      />
     </div>
   )
 }

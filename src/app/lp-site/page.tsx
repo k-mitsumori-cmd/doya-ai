@@ -1118,10 +1118,58 @@ function LpSitePageInner() {
     }
   }
 
-  const handleDownload = async (type: 'single' | 'section' | 'all_pc' | 'all_sp', sectionId?: string, imageData?: string) => {
+  const handleDownload = async (type: 'single' | 'section' | 'all_pc' | 'all_sp' | 'all_both', sectionId?: string, imageData?: string) => {
     if (!result) return
 
     try {
+      // all_bothの場合は、PC画像とSP画像を両方ダウンロード
+      if (type === 'all_both') {
+        // PC画像をダウンロード
+        const pcResponse = await fetch('/api/lp-site/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            download_type: 'all_pc',
+            all_data: result,
+          }),
+        })
+        if (pcResponse.ok) {
+          const pcBlob = await pcResponse.blob()
+          const pcUrl = window.URL.createObjectURL(pcBlob)
+          const pcA = document.createElement('a')
+          pcA.href = pcUrl
+          pcA.download = 'lp-pc-all.zip'
+          document.body.appendChild(pcA)
+          pcA.click()
+          document.body.removeChild(pcA)
+          window.URL.revokeObjectURL(pcUrl)
+        }
+
+        // SP画像をダウンロード
+        const spResponse = await fetch('/api/lp-site/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            download_type: 'all_sp',
+            all_data: result,
+          }),
+        })
+        if (spResponse.ok) {
+          const spBlob = await spResponse.blob()
+          const spUrl = window.URL.createObjectURL(spBlob)
+          const spA = document.createElement('a')
+          spA.href = spUrl
+          spA.download = 'lp-sp-all.zip'
+          document.body.appendChild(spA)
+          spA.click()
+          document.body.removeChild(spA)
+          window.URL.revokeObjectURL(spUrl)
+        }
+
+        toast.success('PC画像とSP画像をダウンロードしました')
+        return
+      }
+
       const response = await fetch('/api/lp-site/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
