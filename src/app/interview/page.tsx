@@ -37,6 +37,9 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 * 1024 // 10GB（最大値、プラン別
 const VERCEL_LIMIT = 4.5 * 1024 * 1024 // 4.5MB（Vercelのサーバーレス関数のリクエストボディサイズ制限）
 const CHUNK_SIZE = 4 * 1024 * 1024 // 4MB（チャンクサイズ - Vercelの制限より少し小さく）
 const USE_CHUNK_UPLOAD = true // チャンクアップロードを有効化（4.5MB以上のファイルをアップロード可能）
+// サービスステータス: 'BETA' | 'STOPPED' | 'ACTIVE'
+const SERVICE_STATUS = 'STOPPED' // サービスを停止中に設定
+
 const SUPPORTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac', 'audio/ogg']
 const SUPPORTED_VIDEO_TYPES = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm']
 const SUPPORTED_TEXT_TYPES = ['text/plain', 'text/markdown']
@@ -307,6 +310,15 @@ export default function InterviewPage() {
   }, [uploadedFile, materialType, progress, isUploading])
 
   const validateFile = (file: File): { valid: boolean; error?: string; details?: string; useChunk?: boolean } => {
+    // サービスステータスチェック（停止中の場合は即座に拒否）
+    if (SERVICE_STATUS === 'STOPPED') {
+      return {
+        valid: false,
+        error: 'サービスは現在停止中です',
+        details: 'ドヤインタビューAIサービスは現在、ベータ版から一時停止中です。\n\n新規のファイルアップロードは受け付けていません。\n\n既存のプロジェクトの閲覧は引き続き可能です。\n\nサービス再開の予定が決まり次第、お知らせいたします。',
+      }
+    }
+
     // ファイルタイプを判定
     const mimeType = file.type
     const fileName = file.name.toLowerCase()
@@ -844,6 +856,14 @@ export default function InterviewPage() {
     // エラーメッセージをクリア
     setErrorMessage(null)
     setErrorDetails(null)
+
+    // サービスステータスチェック（停止中の場合は即座に拒否）
+    if (SERVICE_STATUS === 'STOPPED') {
+      setErrorMessage('サービスは現在停止中です')
+      setErrorDetails('ドヤインタビューAIサービスは現在、ベータ版から一時停止中です。\n\n新規のファイルアップロードは受け付けていません。\n\n既存のプロジェクトの閲覧は引き続き可能です。\n\nサービス再開の予定が決まり次第、お知らせいたします。')
+      setUploadStatus('error')
+      return
+    }
 
     // ファイル検証
     const validation = validateFile(file)
@@ -1716,6 +1736,35 @@ export default function InterviewPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
+      {/* サービス停止中バナー */}
+      {SERVICE_STATUS === 'STOPPED' && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-6 bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 border-2 border-amber-400 rounded-2xl shadow-xl"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-md">
+                <AlertCircle className="w-6 h-7 text-white" />
+              </div>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-black text-amber-900 mb-2">サービス一時停止中</h3>
+              <p className="text-sm text-amber-800 leading-relaxed mb-3">
+                ドヤインタビューAIサービスは現在、ベータ版から一時停止中です。
+                <br />
+                新規のファイルアップロードは受け付けていません。
+                <br />
+                既存のプロジェクトの閲覧は引き続き可能です。
+              </p>
+              <p className="text-xs text-amber-700">
+                サービス再開の予定が決まり次第、お知らせいたします。
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
       {/* アップロード中のローディングオーバーレイ */}
       <PartyLoadingOverlay
         open={isUploading}
@@ -1841,11 +1890,15 @@ export default function InterviewPage() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
             className={`bg-white rounded-2xl sm:rounded-3xl border-2 ${
-              isDragging ? 'border-orange-500 bg-orange-50' : 'border-dashed border-slate-300'
+              SERVICE_STATUS === 'STOPPED' 
+                ? 'border-slate-300 bg-slate-50 opacity-60 cursor-not-allowed' 
+                : isDragging 
+                  ? 'border-orange-500 bg-orange-50' 
+                  : 'border-dashed border-slate-300'
             } shadow-xl p-4 sm:p-6 md:p-8 lg:p-12 transition-all`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+            onDragOver={SERVICE_STATUS === 'STOPPED' ? undefined : handleDragOver}
+            onDragLeave={SERVICE_STATUS === 'STOPPED' ? undefined : handleDragLeave}
+            onDrop={SERVICE_STATUS === 'STOPPED' ? undefined : handleDrop}
           >
             <div
               className={`text-center transition-all ${
@@ -2230,14 +2283,19 @@ export default function InterviewPage() {
                 ))}
               </div>
               <motion.button
-                onClick={() => fileInputRef.current?.click()}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="px-10 py-5 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-black rounded-2xl shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 transition-all inline-flex items-center gap-3 text-xl"
+                onClick={() => SERVICE_STATUS !== 'STOPPED' && fileInputRef.current?.click()}
+                whileHover={SERVICE_STATUS !== 'STOPPED' ? { scale: 1.05 } : {}}
+                whileTap={SERVICE_STATUS !== 'STOPPED' ? { scale: 0.95 } : {}}
+                disabled={SERVICE_STATUS === 'STOPPED'}
+                className={`px-10 py-5 font-black rounded-2xl shadow-lg transition-all inline-flex items-center gap-3 text-xl ${
+                  SERVICE_STATUS === 'STOPPED'
+                    ? 'bg-slate-400 text-slate-200 cursor-not-allowed shadow-slate-400/30'
+                    : 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40'
+                }`}
               >
                 <Upload className="w-7 h-7" />
-                ファイルを選択して開始
-                <ArrowRight className="w-6 h-6" />
+                {SERVICE_STATUS === 'STOPPED' ? 'サービス停止中' : 'ファイルを選択して開始'}
+                {SERVICE_STATUS !== 'STOPPED' && <ArrowRight className="w-6 h-6" />}
               </motion.button>
               <input
                 ref={fileInputRef}

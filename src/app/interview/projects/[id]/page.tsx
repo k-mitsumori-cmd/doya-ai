@@ -617,15 +617,28 @@ export default function InterviewProjectDetailPage() {
               let totalWaitCountBeforeOutline = 0
               
               while (!allCompletedBeforeOutline && totalWaitCountBeforeOutline < maxRetries) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:620',message:'Wait loop iteration start',data:{projectId,iteration:totalWaitCountBeforeOutline+1,maxRetries},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
+                
                 await fetchProject()
                 const statusCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
                   headers: guestId ? { 'x-guest-id': guestId } : {},
                 })
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:625',message:'Status check response',data:{projectId,ok:statusCheckRes.ok,status:statusCheckRes.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+                // #endregion
+                
                 if (statusCheckRes.ok) {
                   const statusCheckData = await statusCheckRes.json()
                   if (statusCheckData.project) {
                     currentProject = statusCheckData.project
                     transcriptions = currentProject.transcriptions || []
+                    
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:632',message:'Transcriptions from API',data:{projectId,count:transcriptions.length,statuses:transcriptions.map((t:any)=>({id:t.id,status:t.status}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                    // #endregion
                   }
                 }
                 
@@ -633,8 +646,15 @@ export default function InterviewProjectDetailPage() {
                   t.status === 'PROCESSING' || t.status === 'PENDING'
                 )
                 
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:636',message:'Processing check result',data:{projectId,processingCount:currentProcessingBeforeOutline.length,processingIds:currentProcessingBeforeOutline.map((t:any)=>t.id),willBreak:currentProcessingBeforeOutline.length===0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
+                
                 if (currentProcessingBeforeOutline.length === 0) {
                   allCompletedBeforeOutline = true
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:638',message:'Wait loop completed',data:{projectId,iterations:totalWaitCountBeforeOutline+1},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                  // #endregion
                   break
                 }
                 
@@ -660,10 +680,19 @@ export default function InterviewProjectDetailPage() {
               })
               
               // 待機後に再度プロジェクトを取得
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:663',message:'Final check before outline API call',data:{projectId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+              // #endregion
+              
               await fetchProject()
               const finalCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
                 headers: guestId ? { 'x-guest-id': guestId } : {},
               })
+              
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:668',message:'Final check response',data:{projectId,ok:finalCheckRes.ok,status:finalCheckRes.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+              // #endregion
+              
               if (finalCheckRes.ok) {
                 const finalCheckData = await finalCheckRes.json()
                 if (finalCheckData.project) {
@@ -674,6 +703,11 @@ export default function InterviewProjectDetailPage() {
                   const finalProcessingCheck = transcriptions.filter((t: any) => 
                     t.status === 'PROCESSING' || t.status === 'PENDING'
                   )
+                  
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:677',message:'Final processing check',data:{projectId,totalTranscriptions:transcriptions.length,stillProcessing:finalProcessingCheck.length,statuses:transcriptions.map((t:any)=>({id:t.id,status:t.status}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  // #endregion
+                  
                   console.log('[INTERVIEW] Final transcription status check before outline:', {
                     projectId,
                     totalTranscriptions: transcriptions.length,
@@ -687,6 +721,9 @@ export default function InterviewProjectDetailPage() {
                       processingCount: finalProcessingCheck.length,
                       processingIds: finalProcessingCheck.map((t: any) => t.id),
                     })
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:686',message:'WARNING: Proceeding with processing transcriptions',data:{projectId,processingCount:finalProcessingCheck.length,processingIds:finalProcessingCheck.map((t:any)=>t.id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                    // #endregion
                   }
                 }
               }
@@ -733,22 +770,33 @@ export default function InterviewProjectDetailPage() {
             const abortController = new AbortController()
             const timeoutId = setTimeout(() => abortController.abort(), 60000) // 60秒タイムアウト
             
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:738',message:'Calling outline API',data:{projectId,retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
+            
             let outlineRes: Response
             try {
               outlineRes = await fetch('/api/interview/outline', {
-                method: 'POST',
+          method: 'POST',
                 headers,
-                body: JSON.stringify({ projectId }),
+          body: JSON.stringify({ projectId }),
                 signal: abortController.signal,
               })
             } finally {
               clearTimeout(timeoutId)
             }
             
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:748',message:'Outline API response',data:{projectId,ok:outlineRes.ok,status:outlineRes.status,retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
+            
             if (outlineRes.ok) {
               // 成功した場合
               outlineGenerated = true
-              await fetchProject() // 再取得
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:751',message:'Outline generation succeeded',data:{projectId,retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+              // #endregion
+        await fetchProject() // 再取得
               break
             }
             
@@ -766,6 +814,10 @@ export default function InterviewProjectDetailPage() {
               details: errorData.details,
             })
             
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:757',message:'Error response parsed',data:{projectId,status:outlineRes.status,error:errorData.error,details:errorData.details,retryable:errorData.retryable,errorMessage},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
+            
             // 処理中の文字起こしがある場合は自動的にリトライ
             // retryableフラグがある場合、またはエラーメッセージに「まだ処理中」が含まれる場合
             const isRetryable = errorData.retryable || 
@@ -781,6 +833,10 @@ export default function InterviewProjectDetailPage() {
               errorMessage,
               errorMessageIncludes: errorMessage.includes('まだ処理中'),
             })
+            
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:777',message:'Retry decision',data:{projectId,isRetryable,retryable:errorData.retryable,error:errorData.error,errorMessage,retryCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
             
             if (isRetryable) {
               retryCount++
@@ -958,8 +1014,8 @@ export default function InterviewProjectDetailPage() {
       // ただし、リトライ処理が既に実装されているため、ここでエラーを再スローしない
       if (!errorMessage.includes('Transcription still processing') && !errorMessage.includes('まだ処理中')) {
         alert(`エラーが発生しました: ${errorMessage}`)
-        setProcessing(false)
-        setProcessingStep('')
+      setProcessing(false)
+      setProcessingStep('')
       } else {
         // リトライ可能なエラーの場合は、処理を継続（リトライ処理が動作する）
         console.log('[INTERVIEW] Retryable error caught, retry logic should handle it')

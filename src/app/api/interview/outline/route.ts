@@ -67,10 +67,17 @@ export async function POST(request: NextRequest) {
       transcriptionTextLength: completedTranscriptions.reduce((sum, t) => sum + (t.text?.length || 0), 0),
     })
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outline/route.ts:60',message:'API transcription status check',data:{projectId,totalCount:project.transcriptions.length,completedCount:completedTranscriptions.length,processingCount:processingTranscriptions.length,statuses:project.transcriptions.map((t:any)=>({id:t.id,status:t.status}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+
     // 処理中の文字起こしがある場合は、即座にエラーを返す
     // フロントエンド側で待機処理を実装しているため、API側では待機しない
     // これによりVercelのタイムアウト（300秒）を回避できる
     if (processingTranscriptions.length > 0) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'outline/route.ts:74',message:'API blocking outline - processing found',data:{projectId,processingCount:processingTranscriptions.length,processingIds:processingTranscriptions.map((t:any)=>t.id)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       // 処理中の文字起こしの詳細情報を取得
       const processingDetails = processingTranscriptions.map((t) => {
         const material = t.material
