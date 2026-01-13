@@ -920,100 +920,113 @@ export function LpGenerationOverlay({
                 ))}
               </motion.div>
               <div className="relative z-10 flex flex-col flex-1 min-h-0">
-              {/* ヘッダー */}
-              <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-cyan-50 flex-shrink-0">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    {/* マスコットアイコン */}
-                    <motion.div
-                      animate={mascotAnim}
-                      className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 flex items-center justify-center shadow-xl shadow-teal-500/40 relative overflow-hidden"
-                    >
-                      {/* グローエフェクト */}
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                        animate={{ x: ['-100%', '100%'] }}
-                        transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+              {/* ヘッダー - ドヤライティングAI風の円グラフプログレス */}
+              <div className="px-6 py-5 border-b border-gray-100 bg-gradient-to-br from-slate-800 to-slate-900 flex-shrink-0">
+                <div className="flex items-center gap-6">
+                  {/* 円グラフ風プログレス */}
+                  <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex-shrink-0">
+                    {/* 背景の円 */}
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="45%"
+                        stroke="currentColor"
+                        strokeWidth="10"
+                        fill="none"
+                        className="text-slate-700"
                       />
-                      {/* パルスするリング */}
-                      {[0, 1, 2].map((i) => (
-                        <motion.div
-                          key={i}
-                          className="absolute inset-0 rounded-2xl border-2 border-white/30"
-                          animate={{
-                            scale: [1, 1.5, 1],
-                            opacity: [0.5, 0, 0.5],
-                          }}
-                          transition={{
-                            duration: 2,
-                            repeat: Infinity,
-                            ease: 'easeOut',
-                            delay: i * 0.7,
-                          }}
-                        />
-                      ))}
-                      <Globe className="w-7 h-7 text-white relative z-10" />
-                    </motion.div>
-                    <div className="w-11 h-11 rounded-2xl bg-white/80 border border-teal-200 flex items-center justify-center">
-                      <Sparkles className="w-6 h-6 text-teal-600" />
-                    </div>
-                    <div>
-                      <div className="text-slate-900 font-black text-lg leading-tight">LP生成中</div>
-                      <div className="text-teal-600 text-xs font-bold mt-1">{stageText}</div>
+                      {/* 進捗の円 */}
+                      <circle
+                        cx="50%"
+                        cy="50%"
+                        r="45%"
+                        stroke="url(#lpProgressGradient)"
+                        strokeWidth="10"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 45}`}
+                        strokeDashoffset={`${2 * Math.PI * 45 * (1 - p / 100)}`}
+                        className="transition-all duration-500 ease-out"
+                      />
+                      <defs>
+                        <linearGradient id="lpProgressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#14b8a6" />
+                          <stop offset="50%" stopColor="#06b6d4" />
+                          <stop offset="100%" stopColor="#3b82f6" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    
+                    {/* 中央のパーセント表示 */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-2xl sm:text-3xl font-black text-white">{Math.round(p)}%</span>
+                      <span className="text-[10px] text-gray-400 font-bold">進捗</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-xs text-gray-500 font-bold">
-                      {formatTime(elapsedTime)}
+                  
+                  {/* 右側の情報 */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <motion.div
+                        animate={mascotAnim}
+                        className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-teal-500/40"
+                      >
+                        <Globe className="w-5 h-5 text-white" />
+                      </motion.div>
+                      <div>
+                        <div className="text-white font-black text-base sm:text-lg leading-tight">LP生成中</div>
+                        <div className="text-teal-400 text-xs font-bold">{stageText}</div>
+                      </div>
                     </div>
-                    <div className="w-8 h-8 rounded-full border-2 border-teal-200 border-t-teal-500 animate-spin" />
+                    
+                    {/* 時間情報 */}
+                    <div className="flex items-center gap-4 mt-3 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-gray-300 font-bold">経過: {formatTime(elapsedTime)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-gray-500">|</span>
+                        <span className="text-gray-400 font-medium">目安: 1〜3分</span>
+                      </div>
+                    </div>
+                    
+                    {/* ステップインジケーター（コンパクト版） */}
+                    <div className="mt-3 flex items-center gap-1">
+                      {steps.map((s, i) => {
+                        const active = p >= s.threshold
+                        const isCurrent = i === currentStepIndex
+                        const Icon = s.icon
+                        return (
+                          <div key={`${s.label}-${i}`} className="flex items-center gap-1">
+                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center transition-all ${
+                              isCurrent
+                                ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30'
+                                : active
+                                  ? 'bg-teal-500/30 text-teal-400'
+                                  : 'bg-slate-700 text-slate-500'
+                            }`}>
+                              {isCurrent ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : active ? (
+                                <CheckCircle2 className="w-3 h-3" />
+                              ) : (
+                                <Icon className="w-3 h-3" />
+                              )}
+                            </div>
+                            {i < steps.length - 1 && (
+                              <div className={`w-3 h-0.5 ${active ? 'bg-teal-500/50' : 'bg-slate-700'}`} />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
                 
-                {/* 時間がかかる旨のメッセージ */}
-                <div className="mt-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-                  <div className="flex items-start sm:items-center gap-2">
-                    <Clock className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5 sm:mt-0" />
-                    <p className="text-xs font-bold text-amber-700 leading-relaxed">
-                      画像生成のため 2〜5分 ほどかかります。しばらくお待ちください。
-                    </p>
-                  </div>
-                </div>
-
-                {/* ステップインジケーター */}
-                <div className="mt-4 flex items-center gap-1 sm:gap-2 flex-wrap">
-                  {steps.map((s, i) => {
-                    const active = p >= s.threshold
-                    const isCurrent = i === currentStepIndex
-                    const Icon = s.icon
-                    return (
-                      <div key={`${s.label}-${i}`} className="flex items-center gap-1 sm:gap-2">
-                        <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center transition-all ${
-                          isCurrent
-                            ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30 scale-110'
-                            : active
-                              ? 'bg-teal-100 text-teal-600'
-                              : 'bg-gray-100 text-gray-300'
-                        }`}>
-                          {isCurrent ? (
-                            <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
-                          ) : (
-                            <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
-                          )}
-                        </div>
-                        <div className={`text-[10px] sm:text-[11px] font-black ${active ? 'text-slate-900' : 'text-gray-400'} hidden sm:block`}>
-                          {s.label}
-                        </div>
-                        {i < steps.length - 1 && (
-                          <div className={`w-4 sm:w-6 h-px ${active ? 'bg-teal-300' : 'bg-gray-200'}`} />
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-
                 {/* プログレスバー */}
-                <div className="mt-4 h-3 rounded-full bg-gray-100 overflow-hidden border border-gray-200 shadow-inner">
+                <div className="mt-4 h-2 rounded-full bg-slate-700 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${p}%` }}
@@ -1026,10 +1039,6 @@ export function LpGenerationOverlay({
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
                     />
                   </motion.div>
-                </div>
-                <div className="flex justify-between mt-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  <span>進捗</span>
-                  <span className="text-teal-600">{Math.round(p)}%</span>
                 </div>
               </div>
 

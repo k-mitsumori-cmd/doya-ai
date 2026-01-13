@@ -25,8 +25,12 @@ import {
   Globe,
   FileDown,
   Settings,
+  Target,
+  Package,
+  Users,
 } from 'lucide-react'
 import { LpGenerationResult, LpSection, SectionImage } from '@/lib/lp-site/types'
+import { CompetitorPanel } from './CompetitorPanel'
 import toast from 'react-hot-toast'
 
 interface FigmaStyleEditorProps {
@@ -283,6 +287,7 @@ export function FigmaStyleEditor({
   const [regeneratingSectionId, setRegeneratingSectionId] = useState<string | null>(null)
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set(result.sections.map(s => s.section_id)))
   const [zoom, setZoom] = useState(100)
+  const [rightPanelTab, setRightPanelTab] = useState<'property' | 'product' | 'competitor'>('property')
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -810,28 +815,144 @@ export function FigmaStyleEditor({
           </div>
         </div>
 
-        {/* 右サイドバー：プロパティパネル */}
+        {/* 右サイドバー：タブ切り替え（プロパティ / 商品情報 / 競合情報） */}
         <div className="w-80 bg-white border-l border-slate-200 flex flex-col flex-shrink-0">
-          <div className="h-12 border-b border-slate-200 flex items-center px-4">
-            <Settings className="w-4 h-4 text-slate-600 mr-2" />
-            <span className="text-sm font-semibold text-slate-900">プロパティ</span>
+          {/* タブヘッダー */}
+          <div className="h-12 border-b border-slate-200 flex items-center px-2 gap-1">
+            <button
+              onClick={() => setRightPanelTab('property')}
+              className={`flex-1 h-9 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                rightPanelTab === 'property'
+                  ? 'bg-blue-500 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5" />
+              プロパティ
+            </button>
+            <button
+              onClick={() => setRightPanelTab('product')}
+              className={`flex-1 h-9 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                rightPanelTab === 'product'
+                  ? 'bg-teal-500 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Package className="w-3.5 h-3.5" />
+              商品情報
+            </button>
+            <button
+              onClick={() => setRightPanelTab('competitor')}
+              className={`flex-1 h-9 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                rightPanelTab === 'competitor'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Target className="w-3.5 h-3.5" />
+              競合
+            </button>
           </div>
           <div className="flex-1 overflow-hidden">
-            <PropertyPanel
-              section={selectedSection}
-              image={selectedImage}
-              selectedDevice={selectedDevice}
-              isRegenerating={regeneratingSectionId === selectedSectionId}
-              onRegenerate={() => handleSectionRegenerate(selectedSectionId!)}
-              onDownload={() => {
-                const imageData = selectedDevice === 'pc' ? selectedImage?.image_pc : selectedImage?.image_sp
-                if (imageData) {
-                  onDownload('single', selectedSectionId!, imageData)
-                }
-              }}
-              onFieldUpdate={() => {}}
-              onSectionUpdate={onSectionUpdate}
-            />
+            {/* プロパティパネル */}
+            {rightPanelTab === 'property' && (
+              <PropertyPanel
+                section={selectedSection}
+                image={selectedImage}
+                selectedDevice={selectedDevice}
+                isRegenerating={regeneratingSectionId === selectedSectionId}
+                onRegenerate={() => handleSectionRegenerate(selectedSectionId!)}
+                onDownload={() => {
+                  const imageData = selectedDevice === 'pc' ? selectedImage?.image_pc : selectedImage?.image_sp
+                  if (imageData) {
+                    onDownload('single', selectedSectionId!, imageData)
+                  }
+                }}
+                onFieldUpdate={() => {}}
+                onSectionUpdate={onSectionUpdate}
+              />
+            )}
+            
+            {/* 商品情報パネル */}
+            {rightPanelTab === 'product' && (
+              <div className="h-full overflow-y-auto p-4">
+                <div className="space-y-4">
+                  {/* 商品名 */}
+                  <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-4 border border-teal-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Package className="w-4 h-4 text-teal-600" />
+                      <span className="text-xs font-bold text-teal-700">商品名</span>
+                    </div>
+                    <p className="text-sm font-bold text-slate-900">{result.product_info.product_name}</p>
+                  </div>
+                  
+                  {/* ターゲット */}
+                  <div className="bg-white rounded-xl p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="w-4 h-4 text-blue-600" />
+                      <span className="text-xs font-bold text-slate-700">ターゲット</span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{result.product_info.target}</p>
+                  </div>
+                  
+                  {/* 課題 */}
+                  <div className="bg-white rounded-xl p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold text-slate-700">🎯 解決する課題</span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{result.product_info.problem}</p>
+                  </div>
+                  
+                  {/* 提供価値 */}
+                  <div className="bg-white rounded-xl p-4 border border-slate-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold text-slate-700">💡 提供価値</span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">{result.product_info.solution}</p>
+                  </div>
+                  
+                  {/* ベネフィット */}
+                  {result.product_info.benefit && (
+                    <div className="bg-white rounded-xl p-4 border border-slate-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-slate-700">✨ ベネフィット</span>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">{result.product_info.benefit}</p>
+                    </div>
+                  )}
+                  
+                  {/* 差別化ポイント */}
+                  {result.product_info.differentiation && (
+                    <div className="bg-white rounded-xl p-4 border border-slate-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-bold text-slate-700">🚀 差別化ポイント</span>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">{result.product_info.differentiation}</p>
+                    </div>
+                  )}
+                  
+                  {/* トーン・LPタイプ */}
+                  <div className="flex gap-2">
+                    <div className="flex-1 bg-slate-50 rounded-lg p-3 border border-slate-200">
+                      <div className="text-xs font-bold text-slate-500 mb-1">トーン</div>
+                      <div className="text-xs font-bold text-slate-900">{result.product_info.tone}</div>
+                    </div>
+                    <div className="flex-1 bg-slate-50 rounded-lg p-3 border border-slate-200">
+                      <div className="text-xs font-bold text-slate-500 mb-1">LPタイプ</div>
+                      <div className="text-xs font-bold text-slate-900">{result.product_info.lp_type}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* 競合情報パネル */}
+            {rightPanelTab === 'competitor' && (
+              <CompetitorPanel
+                competitorResearch={result.competitor_research}
+                productName={result.product_info.product_name}
+              />
+            )}
           </div>
         </div>
       </div>
