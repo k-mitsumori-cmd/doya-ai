@@ -1500,7 +1500,7 @@ export default function InterviewPage() {
                 // エラーが続く場合は、最大試行回数に達するまで継続
               }
               retryCount++
-            }
+              }
             
             if (!completed) {
               console.warn('[INTERVIEW] Transcription polling timeout, but continuing...')
@@ -1794,7 +1794,7 @@ export default function InterviewPage() {
               <div className="flex-shrink-0">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md">
                   <AlertCircle className="w-5 h-5 sm:w-6 sm:h-7 text-white" />
-                </div>
+              </div>
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base sm:text-lg md:text-xl font-black text-red-900 mb-2 sm:mb-3 break-words">{errorMessage}</h3>
@@ -1808,13 +1808,13 @@ export default function InterviewPage() {
                   </div>
                 )}
                 <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
-                  <button
-                    onClick={resetUpload}
+                <button
+                  onClick={resetUpload}
                     className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm sm:text-base font-black rounded-lg sm:rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg inline-flex items-center justify-center gap-2"
-                  >
+                >
                     <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                    やり直す
-                  </button>
+                  やり直す
+                </button>
                   {(errorMessage.includes('プラン') || errorMessage.includes('アップグレード') || errorMessage.includes('動画ファイル')) ? (
                     <Link
                       href="/interview/plan"
@@ -1948,9 +1948,9 @@ export default function InterviewPage() {
                 <div className="pt-3 border-t border-orange-200">
                   <p className="text-xs text-slate-600 leading-relaxed">
                     <span className="font-black">※</span> クライアントから直接Google Cloud Storageにアップロードします
-                    <br />
+                <br />
                     <span className="font-black">※</span> 文字起こし機能を使用するため、プラン別の制限が適用されます
-                    <br />
+                  <br />
                     <span className="font-black">※</span> 大きなファイルも対応可能です（時間がかかる場合があります）
                   </p>
                 </div>
@@ -1966,60 +1966,75 @@ export default function InterviewPage() {
                   <table className="w-full border-collapse bg-white rounded-xl shadow-md border border-slate-200">
                     <thead>
                       <tr className="bg-gradient-to-r from-blue-500 to-indigo-600">
-                        <th className="px-4 py-3 text-left text-white font-black text-sm border-b-2 border-blue-600">ファイルサイズ</th>
+                        <th className="px-4 py-3 text-left text-white font-black text-sm border-b-2 border-blue-600">音声長</th>
                         <th className="px-4 py-3 text-left text-white font-black text-sm border-b-2 border-blue-600">動画ファイル</th>
                         <th className="px-4 py-3 text-left text-white font-black text-sm border-b-2 border-blue-600">音声ファイル（MP3推奨）</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(() => {
-                        // プランに応じた処理時間表を生成
+                        // 音声長（時間）を基準にした処理時間表を生成
                         const rows = []
-                        const sizes = [
-                          { size: 1, label: '1GB' },
-                          { size: 2, label: '2GB' },
-                          { size: 5, label: '5GB' },
-                          { size: 10, label: '10GB' },
+                        const durations = [
+                          { hours: 0.5, label: '30分' },
+                          { hours: 1, label: '1時間' },
+                          { hours: 2, label: '2時間' },
+                          { hours: 5, label: '5時間' },
+                          { hours: 10, label: '10時間' },
                         ]
                         
-                        for (const sizeInfo of sizes) {
+                        for (const durationInfo of durations) {
+                          const audioLengthHours = durationInfo.hours
+                          
+                          // 動画ファイル: 1時間の動画 ≈ 約1GB（一般的な1080p動画）
+                          const videoFileSizeGB = audioLengthHours
+                          const videoFileSizeBytes = videoFileSizeGB * 1024 * 1024 * 1024
+                          
+                          // 音声ファイル（MP3 128kbps）: 1時間の音声 ≈ 約55MB
+                          // 1MB ≈ 約1.08分の音声（MP3 128kbps）
+                          const audioFileSizeMB = audioLengthHours * 60 / 1.08 // 時間を分に変換して1.08で割る
+                          const audioFileSizeGB = audioFileSizeMB / 1024
+                          const audioFileSizeBytes = audioFileSizeGB * 1024 * 1024 * 1024
+                          
                           // プランの最大サイズを超える場合は表示しない
                           const maxSize = Math.max(maxAudioFileSize || 0, maxVideoFileSize || 0)
-                          if (maxSize === 0 || sizeInfo.size * 1024 * 1024 * 1024 > maxSize) {
+                          if (maxSize === 0 || (videoFileSizeBytes > maxVideoFileSize && audioFileSizeBytes > maxAudioFileSize)) {
                             continue
                           }
                           
                           const isEven = rows.length % 2 === 0
                           rows.push(
-                            <tr key={sizeInfo.size} className={isEven ? 'bg-white hover:bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'}>
-                              <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-700 font-bold text-xs sm:text-sm border-b border-slate-200">{sizeInfo.label}</td>
+                            <tr key={durationInfo.hours} className={isEven ? 'bg-white hover:bg-slate-50' : 'bg-slate-50 hover:bg-slate-100'}>
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate-700 font-bold text-xs sm:text-sm border-b border-slate-200">{durationInfo.label}</td>
                               <td className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm border-b border-slate-200 ${
-                                maxVideoFileSize > 0 && sizeInfo.size * 1024 * 1024 * 1024 <= maxVideoFileSize
+                                maxVideoFileSize > 0 && videoFileSizeBytes <= maxVideoFileSize
                                   ? 'text-slate-700 font-medium bg-emerald-50'
                                   : 'text-slate-400 bg-slate-100'
                               }`}>
-                                {maxVideoFileSize > 0 && sizeInfo.size * 1024 * 1024 * 1024 <= maxVideoFileSize ? (
-                                  <span className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                    <span>約{(() => {
-                                      // 実際の処理時間の平均に基づいた計算（動画ファイル）
-                                      const fileSizeGB = sizeInfo.size
-                                      
-                                      // 実際の処理時間の計算（動画ファイル）
-                                      // 1GBの動画 ≈ 1時間の音声（一般的な1080p動画）
-                                      // 音声抽出時間: 1時間の動画 ≈ 約4分（FFmpeg処理）
-                                      // 文字起こし時間: 1時間の音声 ≈ 約12分（音声長の20%）
-                                      // アップロード+記事生成: 約5分
-                                      // 合計: 約21分/GB
-                                      const baseMinutesPerGB = 21 // 1GBあたりの平均処理時間（分）
-                                      const totalMinutes = fileSizeGB * baseMinutesPerGB
-                                      
-                                      // 範囲を計算（±25%の変動幅）
-                                      const minMinutes = Math.max(1, Math.floor(totalMinutes * 0.75)) // 最小値（75%）、最低1分
-                                      const maxMinutes = Math.ceil(totalMinutes * 1.25) // 最大値（125%）
-                                      
-                                      return `${minMinutes}-${maxMinutes}分`
-                                    })()}</span>
+                                {maxVideoFileSize > 0 && videoFileSizeBytes <= maxVideoFileSize ? (
+                                  <span className="flex flex-col gap-1">
+                                    <span className="flex items-center gap-2">
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                      <span className="font-medium">約{(() => {
+                                        // 動画ファイルの処理時間計算
+                                        // 音声抽出時間: 1時間の動画 ≈ 約4分（FFmpeg処理）
+                                        const extractionTime = audioLengthHours * 4
+                                        // 文字起こし時間: 音声長の20%
+                                        const transcriptionTime = audioLengthHours * 60 * 0.2
+                                        // アップロード+記事生成: 約5分
+                                        const otherTime = 5
+                                        const totalMinutes = extractionTime + transcriptionTime + otherTime
+                                        
+                                        // 範囲を計算（±25%の変動幅）
+                                        const minMinutes = Math.max(1, Math.floor(totalMinutes * 0.75))
+                                        const maxMinutes = Math.ceil(totalMinutes * 1.25)
+                                        
+                                        return `${minMinutes}-${maxMinutes}分`
+                                      })()}</span>
+                                    </span>
+                                    <span className="text-xs text-slate-500 ml-6">
+                                      （約{videoFileSizeGB.toFixed(1)}GB）
+                                    </span>
                                   </span>
                                 ) : (
                                   <span className="flex items-center gap-2">
@@ -2029,35 +2044,32 @@ export default function InterviewPage() {
                                 )}
                               </td>
                               <td className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm border-b border-slate-200 ${
-                                sizeInfo.size * 1024 * 1024 * 1024 <= maxAudioFileSize
+                                audioFileSizeBytes <= maxAudioFileSize
                                   ? 'text-slate-700 font-medium bg-emerald-50'
                                   : 'text-slate-400 bg-slate-100'
                               }`}>
-                                {sizeInfo.size * 1024 * 1024 * 1024 <= maxAudioFileSize ? (
-                                  <span className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                                    <span>約{(() => {
-                                      // 実際の処理時間の平均に基づいた計算（音声ファイル）
-                                      const fileSizeGB = sizeInfo.size
-                                      
-                                      // 実際の処理時間の計算（音声ファイル）
-                                      // 1GBの音声 ≈ 約18.4時間の音声（MP3 128kbps、1MB ≈ 1.08分）
-                                      // 文字起こし時間: 18.4時間の音声 ≈ 約221分（音声長の20%）
-                                      // アップロード+記事生成: 約5分
-                                      // 合計: 約226分/GB
-                                      // ただし、動画ファイルは音声抽出が必要なため、同じ音声長でも動画の方が時間がかかる
-                                      // しかし、1GBの音声ファイルは18時間分の音声なので、1GBの動画（1時間分）より長くなる
-                                      // 実際の処理では、音声ファイルの方が音声抽出が不要なため、同じ音声長なら速い
-                                      // しかし、ファイルサイズベースで比較すると、音声ファイルの方が長くなる
-                                      const baseMinutesPerGB = 226 // 1GBあたりの平均処理時間（分）
-                                      const totalMinutes = fileSizeGB * baseMinutesPerGB
-                                      
-                                      // 範囲を計算（±25%の変動幅）
-                                      const minMinutes = Math.max(1, Math.floor(totalMinutes * 0.75)) // 最小値（75%）、最低1分
-                                      const maxMinutes = Math.ceil(totalMinutes * 1.25) // 最大値（125%）
-                                      
-                                      return `${minMinutes}-${maxMinutes}分`
-                                    })()}</span>
+                                {audioFileSizeBytes <= maxAudioFileSize ? (
+                                  <span className="flex flex-col gap-1">
+                                    <span className="flex items-center gap-2">
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                      <span className="font-medium">約{(() => {
+                                        // 音声ファイルの処理時間計算
+                                        // 文字起こし時間: 音声長の20%（音声抽出が不要なため速い）
+                                        const transcriptionTime = audioLengthHours * 60 * 0.2
+                                        // アップロード+記事生成: 約5分
+                                        const otherTime = 5
+                                        const totalMinutes = transcriptionTime + otherTime
+                                        
+                                        // 範囲を計算（±25%の変動幅）
+                                        const minMinutes = Math.max(1, Math.floor(totalMinutes * 0.75))
+                                        const maxMinutes = Math.ceil(totalMinutes * 1.25)
+                                        
+                                        return `${minMinutes}-${maxMinutes}分`
+                                      })()}</span>
+                                    </span>
+                                    <span className="text-xs text-slate-500 ml-6">
+                                      （約{audioFileSizeMB.toFixed(0)}MB = {audioFileSizeGB.toFixed(2)}GB）
+                                    </span>
                                   </span>
                                 ) : (
                                   <span className="flex items-center gap-2">
@@ -2092,9 +2104,9 @@ export default function InterviewPage() {
                         <p className="text-xs text-slate-700 font-medium leading-relaxed">
                           動画ファイルをMP3などの音声ファイルに変換してからアップロードすると、同じ音声長の場合、処理時間が大幅に短縮されます。
                           <br />
-                          <span className="font-black">※</span> 上記の表は同じファイルサイズで比較しています。1GBの動画は約1時間の音声ですが、1GBの音声は約18時間の音声のため、処理時間が長くなります。
+                          <span className="font-black">※</span> 上記の表は同じ音声長で比較しています。音声ファイル（MP3）の方が音声抽出が不要なため、より早く完了します。
                           <br />
-                          <span className="font-black">※</span> 同じ音声長で比較すると、音声ファイル（MP3）の方が音声抽出が不要なため、より早く完了します。
+                          <span className="font-black">※</span> 例: 1時間の動画（約1GB）は約16-26分、1時間の音声（約55MB）は約12-18分で処理が完了します。
                         </p>
                       </div>
                     </div>

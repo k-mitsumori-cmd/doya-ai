@@ -133,6 +133,7 @@ function LpSitePageInner() {
       }
 
       // 段階的にAPIを呼び出して途中結果を表示
+      // エラーハンドリングで参照できるように、tryブロックの外で定義
       let productInfo: any = null
       let sections: any[] = []
       let wireframes: any[] = []
@@ -344,18 +345,19 @@ function LpSitePageInner() {
                   retryCount++
                   
                   if (retryCount > MAX_RETRIES) {
-                    // 最大再試行回数に達した場合はエラーとして記録
-                    console.error(`[LP-SITE] セクション画像生成失敗（最大再試行回数に達しました）: ${sectionId}`)
-                    toast.error(`${sectionName} の画像生成に失敗しました（${MAX_RETRIES + 1}回試行）`, {
-                      duration: Infinity,
-                      icon: '❌',
+                    // 最大再試行回数に達した場合は、空の画像として扱い処理を続行
+                    console.warn(`[LP-SITE] セクション画像生成失敗（最大再試行回数に達しました）: ${sectionId}。空の画像として処理を続行します。`)
+                    toast.warning(`${sectionName} の画像生成に失敗しましたが、処理を続行します（後で再生成可能）`, {
+                      duration: 5000,
+                      icon: '⚠️',
                     })
-                    // エントリは作成するが、画像は空
+                    // エントリは作成するが、画像は空（後で再生成可能）
                     sectionImage = {
                       section_id: sectionId,
                       image_pc: undefined,
                       image_sp: undefined,
                     }
+                    // エラーとして扱わず、処理を続行
                     break
                   } else {
                     // 再試行する前に少し待機（試行回数に応じて待機時間を増やす）
@@ -629,45 +631,63 @@ function LpSitePageInner() {
           } catch (error: any) {
             console.error('[LP-SITE] 画像生成エラー:', error)
             console.error('[LP-SITE] エラー詳細:', error.message, error.stack)
+            
+            // エラーが発生しても、可能な限り結果を返す
             setIsGeneratingImages(false)
-            setImageProgress(0)
+            setImageProgress(100) // 進捗を100%にして完了状態にする
+            setSectionProgress({})
+            setGeneratingSections(new Set())
+            
             const errorMessage = error.message || '画像生成に失敗しました'
-            toast.error(`${errorMessage}。ワイヤーフレームは表示できます。`, { duration: Infinity, icon: '❌' })
+            toast.warning(`${errorMessage}。ワイヤーフレームは表示できます。後で画像を再生成してください。`, { 
+              duration: 6000, 
+              icon: '⚠️' 
+            })
             
             // エラーが発生しても、部分的に生成された画像があれば表示
-            if (images && images.length > 0) {
-              const partialResult: LpGenerationResult = {
+            // 画像が生成されていない場合でも、ワイヤーフレームは表示できる
+            const partialResult: LpGenerationResult = {
+              product_info: productInfo,
+              sections,
+              wireframes,
+              images: images || [],
+              structure_json: JSON.stringify({
                 product_info: productInfo,
                 sections,
                 wireframes,
-                images,
-                structure_json: JSON.stringify({
-                  product_info: productInfo,
-                  sections,
-                  wireframes,
-                  images: images.map(img => ({
-                    section_id: img.section_id,
-                    has_pc: !!img.image_pc,
-                    has_sp: !!img.image_sp,
-                  })),
-                }, null, 2),
-              }
-              setResult(partialResult)
-              toast.warning('一部の画像は生成されましたが、エラーが発生しました')
+                images: (images || []).map(img => ({
+                  section_id: img.section_id,
+                  has_pc: !!img.image_pc,
+                  has_sp: !!img.image_sp,
+                })),
+              }, null, 2),
+              competitor_research: competitorResearch,
             }
+            setResult(partialResult)
+            
+            // 進捗を完了状態にする
+            updateProgress(100)
+            setStageText('完了（画像未生成）')
+            setMood('happy')
           }
         })()
       } catch (error: any) {
         console.error('[LP-SITE] 画像生成エラー:', error)
         console.error('[LP-SITE] エラー詳細:', error.message, error.stack)
+        
+        // エラーが発生しても、可能な限り結果を返す
         setIsGeneratingImages(false)
-        setImageProgress(0)
+        setImageProgress(100) // 進捗を100%にして完了状態にする
         setSectionProgress({})
         setGeneratingSections(new Set())
-        const errorMessage = error.message || '画像生成に失敗しました'
-        toast.error(`${errorMessage}。ワイヤーフレームは表示できます。`, { duration: Infinity, icon: '❌' })
         
-        // エラーが発生しても、部分的に生成された画像があれば表示
+        const errorMessage = error.message || '画像生成に失敗しました'
+        toast.warning(`${errorMessage}。ワイヤーフレームは表示できます。後で画像を再生成してください。`, { 
+          duration: 6000, 
+          icon: '⚠️' 
+        })
+        
+        // エラーが発生しても、ワイヤーフレームは表示できる
         if (sections.length > 0) {
           const partialResult: LpGenerationResult = {
             product_info: productInfo,
@@ -678,30 +698,75 @@ function LpSitePageInner() {
             competitor_research: competitorResearch,
           }
           setResult(partialResult)
+          
+          // 進捗を完了状態にする
+          updateProgress(100)
+          setStageText('完了（画像未生成）')
+          setMood('happy')
         }
       }
     } catch (error: any) {
       console.error('[LP-SITE] 生成エラー:', error)
       console.error('[LP-SITE] エラー詳細:', error.message, error.stack)
+      
+      // エラーが発生しても、可能な限り結果を返す
       setIsGenerating(false)
       setIsGeneratingImages(false)
       setApiCompleted(false)
       setApiResult(null)
-      setPartialResult(null)
-      setProgress(0)
-      setImageProgress(0)
-      setSectionProgress({})
-      setGeneratingSections(new Set())
-      setCurrentStep('product')
-      setStageText('準備中...')
-      setMood('idle')
       
-      // エラーメッセージを詳細に表示
-      let errorMessage = error.message || '生成に失敗しました'
-      if (error.response?.status) {
-        errorMessage = `HTTP ${error.response.status}: ${errorMessage}`
+      // 部分的に生成された結果があれば表示
+      if (partialResult && (partialResult.sections?.length || 0) > 0) {
+        const errorResult: LpGenerationResult = {
+          product_info: partialResult.product_info || productInfo,
+          sections: partialResult.sections || sections || [],
+          wireframes: partialResult.wireframes || wireframes || [],
+          images: partialResult.images || [],
+          structure_json: JSON.stringify({
+            product_info: partialResult.product_info || productInfo,
+            sections: partialResult.sections || sections || [],
+            wireframes: partialResult.wireframes || wireframes || [],
+            images: (partialResult.images || []).map(img => ({
+              section_id: img.section_id,
+              has_pc: !!img.image_pc,
+              has_sp: !!img.image_sp,
+            })),
+          }, null, 2),
+          competitor_research: partialResult.competitor_research || competitorResearch,
+        }
+        setResult(errorResult)
+        setPartialResult(null)
+        
+        // 進捗を完了状態にする
+        setProgress(100)
+        setImageProgress(100)
+        setStageText('完了（一部エラーあり）')
+        setMood('happy')
+        setSectionProgress({})
+        setGeneratingSections(new Set())
+        
+        toast.warning('一部の処理でエラーが発生しましたが、完了した部分は表示できます。', { 
+          duration: 6000, 
+          icon: '⚠️' 
+        })
+      } else {
+        // 結果がない場合は、状態をリセット
+        setPartialResult(null)
+        setProgress(0)
+        setImageProgress(0)
+        setSectionProgress({})
+        setGeneratingSections(new Set())
+        setCurrentStep('product')
+        setStageText('準備中...')
+        setMood('idle')
+        
+        // エラーメッセージを詳細に表示
+        let errorMessage = error.message || '生成に失敗しました'
+        if (error.response?.status) {
+          errorMessage = `HTTP ${error.response.status}: ${errorMessage}`
+        }
+        toast.error(errorMessage, { duration: Infinity, icon: '❌' })
       }
-      toast.error(errorMessage, { duration: Infinity, icon: '❌' })
     }
   }
 
