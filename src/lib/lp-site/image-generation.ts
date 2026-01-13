@@ -54,6 +54,7 @@ export async function generateSectionImages(
  * セクションのPC/SP画像ペアを生成
  * 必ず別々の画像を生成（リサイズ禁止）
  * 継ぎ目が目立たないようにセクション位置情報を使用
+ * リトライ機能付きで信頼性を向上
  */
 export async function generateSectionImagePair(
   section: LpSection,
@@ -61,34 +62,68 @@ export async function generateSectionImagePair(
   sectionIndex?: number,
   totalSections?: number
 ): Promise<SectionImage> {
+  const MAX_RETRIES = 3 // 最大3回まで再試行
+  const RETRY_DELAY = 2000 // 再試行前の待機時間（2秒）
+
   // PC用画像生成（横長）- 1920x1080 (16:9)
   let imagePc: string | undefined
-  try {
-    console.log(`[LP-SITE] PC画像生成開始: ${section.section_id}`)
-    const pcPrompt = generateImagePrompt(section, productInfo, 'pc', sectionIndex, totalSections)
-    console.log(`[LP-SITE] PCプロンプト長: ${pcPrompt.length}文字`)
-    const pcResult = await generateSingleBanner(pcPrompt, '1920x1080', {})
-    imagePc = pcResult.image
-    console.log(`[LP-SITE] PC画像生成成功: ${section.section_id}, モデル: ${pcResult.model}`)
-  } catch (error: any) {
-    console.error(`[LP-SITE] PC画像生成エラー (${section.section_id}):`, error)
-    console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
-    // エラーが発生しても続行（空の画像として扱う）
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[LP-SITE] PC画像生成開始: ${section.section_id} (試行 ${attempt}/${MAX_RETRIES})`)
+      const pcPrompt = generateImagePrompt(section, productInfo, 'pc', sectionIndex, totalSections)
+      console.log(`[LP-SITE] PCプロンプト長: ${pcPrompt.length}文字`)
+      const pcResult = await generateSingleBanner(pcPrompt, '1920x1080', {})
+      
+      if (pcResult.image) {
+        imagePc = pcResult.image
+        console.log(`[LP-SITE] PC画像生成成功: ${section.section_id}, モデル: ${pcResult.model}`)
+        break // 成功したらループを抜ける
+      } else {
+        throw new Error('画像データが空です')
+      }
+    } catch (error: any) {
+      console.error(`[LP-SITE] PC画像生成エラー (${section.section_id}, 試行 ${attempt}):`, error.message)
+      
+      if (attempt < MAX_RETRIES) {
+        console.log(`[LP-SITE] ${RETRY_DELAY}ms後に再試行します...`)
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+      } else {
+        console.error(`[LP-SITE] PC画像生成失敗（最大再試行回数に達しました）: ${section.section_id}`)
+      }
+    }
   }
 
   // SP用画像生成（縦長）- 1080x1920 (9:16)
   let imageSp: string | undefined
-  try {
-    console.log(`[LP-SITE] SP画像生成開始: ${section.section_id}`)
-    const spPrompt = generateImagePrompt(section, productInfo, 'sp', sectionIndex, totalSections)
-    console.log(`[LP-SITE] SPプロンプト長: ${spPrompt.length}文字`)
-    const spResult = await generateSingleBanner(spPrompt, '1080x1920', {})
-    imageSp = spResult.image
-    console.log(`[LP-SITE] SP画像生成成功: ${section.section_id}, モデル: ${spResult.model}`)
-  } catch (error: any) {
-    console.error(`[LP-SITE] SP画像生成エラー (${section.section_id}):`, error)
-    console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
-    // エラーが発生しても続行（空の画像として扱う）
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      console.log(`[LP-SITE] SP画像生成開始: ${section.section_id} (試行 ${attempt}/${MAX_RETRIES})`)
+      const spPrompt = generateImagePrompt(section, productInfo, 'sp', sectionIndex, totalSections)
+      console.log(`[LP-SITE] SPプロンプト長: ${spPrompt.length}文字`)
+      const spResult = await generateSingleBanner(spPrompt, '1080x1920', {})
+      
+      if (spResult.image) {
+        imageSp = spResult.image
+        console.log(`[LP-SITE] SP画像生成成功: ${section.section_id}, モデル: ${spResult.model}`)
+        break // 成功したらループを抜ける
+      } else {
+        throw new Error('画像データが空です')
+      }
+    } catch (error: any) {
+      console.error(`[LP-SITE] SP画像生成エラー (${section.section_id}, 試行 ${attempt}):`, error.message)
+      
+      if (attempt < MAX_RETRIES) {
+        console.log(`[LP-SITE] ${RETRY_DELAY}ms後に再試行します...`)
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+      } else {
+        console.error(`[LP-SITE] SP画像生成失敗（最大再試行回数に達しました）: ${section.section_id}`)
+      }
+    }
+  }
+
+  // 両方とも失敗した場合はエラーをスロー（呼び出し側で再試行できるように）
+  if (!imagePc && !imageSp) {
+    throw new Error(`PC/SP両方の画像生成に失敗しました: ${section.section_id}`)
   }
 
   return {

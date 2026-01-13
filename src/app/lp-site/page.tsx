@@ -654,24 +654,136 @@ function LpSitePageInner() {
               })
               
               console.warn(`[LP-SITE] ${stillFailed.length} セクションの画像生成が完了していません:`, stillFailed.map(s => s.section_id))
-              toast.error(`${stillFailed.length} セクションの画像生成に失敗しましたが、処理を続行します。後で再生成できます。`, {
-                duration: 6000,
-                icon: '⚠️',
-                style: {
-                  background: '#fbbf24',
-                  color: '#fff',
-                },
-              })
               
-              // エラーとして扱わず、完了として処理を続行
+              // 自動再生成を試みる（最大2回）
+              const AUTO_RETRY_COUNT = 2
+              let retryAttempt = 0
+              let retrySuccess = false
+              
+              while (retryAttempt < AUTO_RETRY_COUNT && stillFailed.length > 0) {
+                retryAttempt++
+                console.log(`[LP-SITE] 未生成画像の自動再生成を開始 (試行 ${retryAttempt}/${AUTO_RETRY_COUNT})`)
+                toast.info(`未生成画像を自動再生成中... (${retryAttempt}/${AUTO_RETRY_COUNT})`, {
+                  duration: 3000,
+                  icon: '🔄',
+                })
+                
+                for (const failedSection of stillFailed) {
+                  try {
+                    setGeneratingSections(prev => new Set([...prev, failedSection.section_id]))
+                    setSectionProgress(prev => ({ ...prev, [failedSection.section_id]: 0 }))
+                    
+                    const retryResponse = await fetch('/api/lp-site/regenerate-section', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        section: failedSection,
+                        product_info: productInfo,
+                        regenerate_type: 'both',
+                      }),
+                    })
+                    
+                    if (retryResponse.ok) {
+                      const retryData = await retryResponse.json()
+                      if (retryData.result?.image_pc || retryData.result?.image_sp) {
+                        // 成功した画像を更新
+                        const existingIndex = orderedImages.findIndex(img => img.section_id === failedSection.section_id)
+                        if (existingIndex >= 0) {
+                          orderedImages[existingIndex] = {
+                            section_id: failedSection.section_id,
+                            image_pc: retryData.result?.image_pc || orderedImages[existingIndex].image_pc,
+                            image_sp: retryData.result?.image_sp || orderedImages[existingIndex].image_sp,
+                          }
+                        }
+                        console.log(`[LP-SITE] 自動再生成成功: ${failedSection.section_id}`)
+                        retrySuccess = true
+                      }
+                    }
+                    
+                    setSectionProgress(prev => ({ ...prev, [failedSection.section_id]: 100 }))
+                    setGeneratingSections(prev => {
+                      const next = new Set(prev)
+                      next.delete(failedSection.section_id)
+                      return next
+                    })
+                    
+                    // 結果をリアルタイムで更新
+                    const currentImages = [...orderedImages]
+                    const partialResult: LpGenerationResult = {
+                      product_info: productInfo,
+                      sections,
+                      wireframes,
+                      images: currentImages,
+                      structure_json: JSON.stringify({
+                        product_info: productInfo,
+                        sections,
+                        wireframes,
+                        images: currentImages.map(img => ({
+                          section_id: img.section_id,
+                          has_pc: !!img.image_pc,
+                          has_sp: !!img.image_sp,
+                        })),
+                      }, null, 2),
+                      competitor_research: competitorResearch,
+                    }
+                    setResult(partialResult)
+                  } catch (retryError: any) {
+                    console.error(`[LP-SITE] 自動再生成エラー (${failedSection.section_id}):`, retryError)
+                    setGeneratingSections(prev => {
+                      const next = new Set(prev)
+                      next.delete(failedSection.section_id)
+                      return next
+                    })
+                  }
+                }
+                
+                // 再チェック
+                const stillFailedAfterRetry = imageRequiredSections.filter(section => {
+                  const img = orderedImages.find(i => i.section_id === section.section_id)
+                  return !img || (!img.image_pc && !img.image_sp)
+                })
+                
+                if (stillFailedAfterRetry.length === 0) {
+                  console.log('[LP-SITE] 自動再生成で全ての画像が生成されました')
+                  break
+                } else {
+                  // 次の再試行のために更新
+                  stillFailed.length = 0
+                  stillFailed.push(...stillFailedAfterRetry)
+                }
+              }
+              
+              // 最終チェック
+              const finalFailedCount = imageRequiredSections.filter(section => {
+                const img = orderedImages.find(i => i.section_id === section.section_id)
+                return !img || (!img.image_pc && !img.image_sp)
+              }).length
+              
+              if (finalFailedCount > 0) {
+                toast.error(`${finalFailedCount} セクションの画像生成に失敗しましたが、処理を続行します。後で再生成できます。`, {
+                  duration: 6000,
+                  icon: '⚠️',
+                  style: {
+                    background: '#fbbf24',
+                    color: '#fff',
+                  },
+                })
+              } else if (retrySuccess) {
+                toast.success('🎉 自動再生成で全ての画像が生成されました！', {
+                  duration: 4000,
+                  icon: '✅',
+                })
+              }
+              
+              // 完了処理
               setIsGeneratingImages(false)
               setImageProgress(100)
-              setStageText('完了（一部画像未生成）')
+              setStageText(finalFailedCount > 0 ? '完了（一部画像未生成）' : '完了！')
               setSectionProgress({})
               setGeneratingSections(new Set())
               
-              // 部分的に生成された画像は表示
-              const partialResult: LpGenerationResult = {
+              // 最終結果を更新
+              const finalResult: LpGenerationResult = {
                 product_info: productInfo,
                 sections,
                 wireframes,
@@ -689,9 +801,9 @@ function LpSitePageInner() {
                 competitor_research: competitorResearch,
               }
               
-              setResult(partialResult)
+              setResult(finalResult)
               
-              // 完了モーダルを表示（一部失敗していても完了として扱う）
+              // 完了モーダルを表示
               setTimeout(() => {
                 setShowCompletionModal(true)
               }, 500)
