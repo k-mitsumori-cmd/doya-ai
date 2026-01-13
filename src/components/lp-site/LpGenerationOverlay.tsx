@@ -565,9 +565,9 @@ function WireframeGenerationDisplay({ isGenerating }: { isGenerating: boolean })
           
           // 少し遅れて完了マークを表示（最後のステップ以外）
           if (stepIndex < wireframeStepDefinitions.length - 1) {
-            setTimeout(() => {
-              setCompletedSteps(prev => new Set([...prev, step.key]))
-            }, 800)
+          setTimeout(() => {
+            setCompletedSteps(prev => new Set([...prev, step.key]))
+          }, 800)
           }
           
           stepIndex++
