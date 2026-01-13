@@ -2504,7 +2504,7 @@ git push origin main
 - `src/app/api/banner/generate/route.ts`
 - `src/app/api/persona/generate/route.ts`
 
-### パターン2: ジョブ進行型サービス
+### パターン2: ジョブ進行型サービス（リアルタイム生成表示）
 
 **例**: SEO記事生成（分割生成パイプライン）
 
@@ -2515,6 +2515,216 @@ git push origin main
 // 3. ジョブ状態を更新
 // 4. 完了判定
 ```
+
+#### AI生成中のリアルタイム表示パターン
+
+ドヤライティングAIのように、**現在進行形感を出して、今作っている文章や調査内容を表示する**パターンです。
+
+**必須要素:**
+
+1. **進捗表示**
+   - 進捗パーセンテージ（0-100%）
+   - プログレスバー（アニメーション付き）
+   - ステップ（工程）の表示
+   - 経過時間の表示
+
+2. **リアルタイム生成表示**
+   - 「制作中（ライブ）」セクション
+   - 現在生成中のセクション/項目の表示
+   - タイピング演出（`useTypewriter`フックなど）
+   - 完成済みコンテンツのプレビュー
+
+3. **調査・処理内容の表示**
+   - リサーチイベントのログ表示
+   - 稼働ログ（activityLog）
+   - 工程別の詳細メッセージ
+
+**実装パターン:**
+
+```typescript
+// 1. ジョブ状態のポーリング
+useEffect(() => {
+  load({ showLoading: true })
+  const t = setInterval(() => {
+    const j = jobRef.current
+    if (j && (j.status === 'done' || j.status === 'error' || j.status === 'cancelled')) return
+    load({ showLoading: false })
+  }, 4000) // 4秒ごとにポーリング
+  return () => clearInterval(t)
+}, [jobId, load])
+
+// 2. タイピング演出フック
+function useTypewriter(text: string, opts?: { cps?: number; maxChars?: number }) {
+  const cps = Math.max(15, Math.min(90, Number(opts?.cps || 55))) // chars per second
+  const maxChars = Math.max(240, Math.min(1400, Number(opts?.maxChars || 900)))
+  const src = String(text || '').slice(0, maxChars)
+  const [out, setOut] = useState('')
+  const rafRef = useRef<number | null>(null)
+  const startRef = useRef<number>(0)
+
+  useEffect(() => {
+    if (!src) {
+      setOut('')
+      return
+    }
+    startRef.current = performance.now()
+    setOut('')
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    const tick = (now: number) => {
+      const elapsed = Math.max(0, now - startRef.current)
+      const n = Math.min(src.length, Math.floor((elapsed / 1000) * cps))
+      setOut(src.slice(0, Math.max(1, n)))
+      if (n < src.length) rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+  }, [src])
+
+  return out
+}
+
+// 3. 進捗表示コンポーネント
+<div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+  <div className="flex items-center justify-between mb-2">
+    <span className="text-gray-500 text-sm font-black">現在の進捗</span>
+    <span className="text-gray-900 font-black text-2xl tabular-nums">{job.progress}%</span>
+  </div>
+  <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
+    <motion.div
+      className="h-full rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600"
+      initial={{ width: 0 }}
+      animate={{ width: `${job.progress}%` }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+    />
+  </div>
+</div>
+
+// 4. リアルタイム生成表示セクション
+<div className="bg-white rounded-[28px] border border-gray-100 shadow-xl">
+  <div className="px-5 sm:px-6 py-4 border-b border-gray-100">
+    <p className="text-[10px] font-black text-gray-400 uppercase">制作中（ライブ）</p>
+    <p className="text-sm sm:text-base font-black text-gray-900">
+      {job.step === 'sections' ? '本文を執筆中' : '準備中'}
+    </p>
+  </div>
+  
+  {/* ライブ執筆表示 */}
+  <div className="p-5 sm:p-6">
+    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[10px] font-black uppercase">
+      <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+      ライブ執筆
+    </div>
+    <h3 className="mt-3 text-xl sm:text-2xl font-black text-gray-900">
+      {liveHeading || '本文を執筆中...'}
+    </h3>
+    
+    {/* タイピング演出付きテキスト */}
+    <div className="mt-5 p-4 bg-slate-50 rounded-2xl">
+      <p className="text-sm text-gray-800 whitespace-pre-wrap">
+        {liveTyped}
+      </p>
+    </div>
+  </div>
+</div>
+
+// 5. セクション進捗表示
+<div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {job.sections.map((s) => {
+    const isGenerating = s.status === 'generating'
+    const isComplete = s.status === 'reviewed' || s.status === 'generated'
+    return (
+      <div className={`p-4 rounded-2xl border ${
+        isGenerating ? 'bg-blue-50 border-blue-100' :
+        isComplete ? 'bg-emerald-50 border-emerald-100' :
+        'bg-white border-gray-100'
+      }`}>
+        {isGenerating && (
+          <motion.div
+            className="mb-3 h-1.5 rounded-full bg-gradient-to-r from-blue-200 via-blue-500 to-indigo-200"
+            animate={{ backgroundPositionX: ['0%', '100%'] }}
+            transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
+          />
+        )}
+        <div className="flex items-start gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+            isGenerating ? 'bg-blue-100' : isComplete ? 'bg-emerald-100' : 'bg-gray-100'
+          }`}>
+            {isGenerating ? (
+              <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+            ) : isComplete ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+            ) : (
+              <span className="text-xs font-black text-gray-500">{s.index + 1}</span>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-black text-gray-900 truncate">
+              {s.headingPath || `セクション ${s.index + 1}`}
+            </p>
+            <p className="text-[10px] text-gray-500 mt-1 font-bold">
+              {isGenerating ? '生成中' : isComplete ? '生成済み' : '未生成'}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  })}
+</div>
+
+// 6. 稼働ログ（activityLog）の表示
+const [activityLog, setActivityLog] = useState<ActivityLogItem[]>([])
+
+const pushLog = useCallback((item: Omit<ActivityLogItem, 'id'>) => {
+  setActivityLog((prev) => {
+    const next: ActivityLogItem[] = [
+      ...prev,
+      { ...item, id: `${item.at}_${Math.random().toString(16).slice(2)}` },
+    ]
+    // 最大200件（重くしない）
+    if (next.length > 200) return next.slice(next.length - 200)
+    return next
+  })
+}, [])
+
+// ログ表示
+<div className="space-y-2 max-h-96 overflow-y-auto">
+  {activityLog.map((item) => (
+    <div key={item.id} className="flex items-start gap-3 p-3 bg-white rounded-xl border border-gray-100">
+      <div className={`w-2 h-2 rounded-full mt-2 ${
+        item.kind === 'error' ? 'bg-red-500' :
+        item.kind === 'success' ? 'bg-emerald-500' :
+        'bg-blue-500'
+      }`} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-black text-gray-900">{item.title}</p>
+        {item.detail && (
+          <p className="text-xs text-gray-500 mt-1">{item.detail}</p>
+        )}
+        <p className="text-[10px] text-gray-400 mt-1">
+          {new Date(item.at).toLocaleTimeString()}
+        </p>
+      </div>
+    </div>
+  ))}
+</div>
+```
+
+**参考実装:**
+- `src/app/seo/jobs/[id]/page.tsx` - ドヤライティングAIのジョブ進捗ページ
+- `src/app/seo/articles/[id]/page.tsx` - 記事ページ（生成中表示）
+
+**UIデザインのポイント:**
+
+- ✅ **現在進行形感を出す**: 「制作中（ライブ）」「生成中」などのラベル
+- ✅ **リアルタイム更新**: ポーリングで定期的に状態を更新
+- ✅ **タイピング演出**: `useTypewriter`フックでタイピング感を演出
+- ✅ **進捗の可視化**: プログレスバー、セクション進捗、パーセンテージ
+- ✅ **完成済みコンテンツのプレビュー**: 生成が完了した部分から見せていく
+- ✅ **調査・処理内容の表示**: リサーチイベント、稼働ログで「何をしているか」を表示
+- ✅ **アニメーション**: ローディングスピナー、パルス、グラデーションアニメーション
 
 **実装例:**
 - `src/app/api/seo/jobs/[id]/advance/route.ts`
