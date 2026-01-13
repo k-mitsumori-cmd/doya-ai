@@ -343,29 +343,24 @@ function LpSitePageInner() {
         toast.success('ワイヤーフレームが生成されました！画像を自動生成中...')
 
         // Step 4: 画像生成（バックグラウンドで実行、セクションごとに個別生成）
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:289',message:'画像生成開始: 状態を設定',data:{imageRequiredCount:sections.filter(s => s.image_required).length,totalSections:sections.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
+        console.log('[LP-SITE] 画像生成を開始します...')
         setIsGeneratingImages(true)
         setImageProgress(0)
         setSectionProgress({})
         const initialGeneratingSections = new Set(sections.filter(s => s.image_required).map(s => s.section_id))
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:293',message:'generatingSections初期化',data:{sectionIds:Array.from(initialGeneratingSections)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
         setGeneratingSections(initialGeneratingSections)
         
         // 画像生成を非同期で実行（セクションごとに個別生成）
-        ;(async () => {
+        // 即座に実行されるように、awaitなしで呼び出す
+        const imageGenerationPromise = (async () => {
           try {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:297',message:'画像生成非同期処理開始',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'H3'})}).catch(()=>{});
-            // #endregion
+            console.log('[LP-SITE] 画像生成非同期処理を開始します')
             setCurrentStep('image')
             setImageProgress(0)
-            updateProgress(65) // 画像生成開始
+            updateProgress(65) // 画像生成開始（60%から65%に更新）
             setStageText('セクション画像を生成中...')
             setMood('think')
+            console.log('[LP-SITE] 画像生成の状態を設定しました')
             
             // すべてのセクションのエントリを最初に作成（確実に全セクションを含めるため）
             const generatedImages: SectionImage[] = sections.map(s => ({
