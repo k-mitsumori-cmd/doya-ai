@@ -341,7 +341,7 @@ function LpSitePageInner() {
                     // 最大再試行回数に達した場合はエラーとして記録
                     console.error(`[LP-SITE] セクション画像生成失敗（最大再試行回数に達しました）: ${sectionId}`)
                     toast.error(`${sectionName} の画像生成に失敗しました（${MAX_RETRIES + 1}回試行）`, {
-                      duration: 5000,
+                      duration: Infinity,
                       icon: '❌',
                     })
                     // エントリは作成するが、画像は空
@@ -533,7 +533,7 @@ function LpSitePageInner() {
               
               console.error(`[LP-SITE] ${stillFailed.length} セクションの画像生成が完了していません:`, stillFailed.map(s => s.section_id))
               toast.error(`${stillFailed.length} セクションの画像生成に失敗しました。手動で再生成してください。`, {
-                duration: 6000,
+                duration: Infinity,
                 icon: '❌',
               })
               
@@ -626,7 +626,7 @@ function LpSitePageInner() {
             setIsGeneratingImages(false)
             setImageProgress(0)
             const errorMessage = error.message || '画像生成に失敗しました'
-            toast.error(`${errorMessage}。ワイヤーフレームは表示できます。`, { duration: 5000 })
+            toast.error(`${errorMessage}。ワイヤーフレームは表示できます。`, { duration: Infinity, icon: '❌' })
             
             // エラーが発生しても、部分的に生成された画像があれば表示
             if (images && images.length > 0) {
@@ -695,7 +695,7 @@ function LpSitePageInner() {
       if (error.response?.status) {
         errorMessage = `HTTP ${error.response.status}: ${errorMessage}`
       }
-      toast.error(errorMessage, { duration: 6000, icon: '❌' })
+      toast.error(errorMessage, { duration: Infinity, icon: '❌' })
     }
   }
 
@@ -776,7 +776,7 @@ function LpSitePageInner() {
       console.error(`[LP-SITE] 再生成エラー (${sectionId}):`, error)
       toast.error(`${sectionName} の再生成に失敗しました: ${error.message || 'エラーが発生しました'}`, {
         id: toastId,
-        duration: 5000,
+        duration: Infinity,
         icon: '❌',
       })
       throw error // エラーを再スローして、呼び出し側で状態リセットを確実に実行
@@ -822,7 +822,7 @@ function LpSitePageInner() {
 
       toast.success('ダウンロードが完了しました')
     } catch (error: any) {
-      toast.error(error.message || 'ダウンロードに失敗しました')
+      toast.error(error.message || 'ダウンロードに失敗しました', { duration: Infinity, icon: '❌' })
     }
   }
 
@@ -892,7 +892,7 @@ function LpSitePageInner() {
               window.open(`/lp-site/preview/${previewId}`, '_blank')
               toast.success('プレビューを開きました')
             } catch (error: any) {
-              toast.error(error.message || 'プレビューの作成に失敗しました')
+              toast.error(error.message || 'プレビューの作成に失敗しました', { duration: Infinity, icon: '❌' })
             }
           }}
           onPublish={async () => {
@@ -914,7 +914,7 @@ function LpSitePageInner() {
               toast.success('LPを公開しました！')
               window.open(data.published_url, '_blank')
             } catch (error: any) {
-              toast.error(error.message || '公開に失敗しました')
+              toast.error(error.message || '公開に失敗しました', { duration: Infinity, icon: '❌' })
             } finally {
               setIsPublishing(false)
             }
