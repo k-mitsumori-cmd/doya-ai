@@ -510,11 +510,11 @@ export default function SeoNewArticlePage() {
   }
 
   function applyArticleType(typeId: ArticleTypeId) {
+    // 記事タイプ選択は「作成イメージ（構造/戦略）」を切り替えるだけにする。
+    // タイトル/キーワード/目標文字数など入力欄は一切変更しない（ユーザー入力を守る）。
     setArticleType(typeId)
-    const def = ARTICLE_TYPES.find((t) => t.id === typeId)
-    const tpl = TEMPLATES.find((t) => t.id === def?.defaultTemplateId)
-    // 記事タイプ選択は“構造/戦略”を変える操作なので、入力済みのタイトルは維持する
-    if (tpl) applyTemplate(tpl, { preserveTitle: true })
+    // ただし、比較記事（調査型）だけは生成パイプラインが異なるため mode は切り替える
+    setMode(typeId === 'comparison' ? 'comparison_research' : 'standard')
   }
 
   const preview = useMemo(() => {
