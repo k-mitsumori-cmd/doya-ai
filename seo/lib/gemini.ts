@@ -311,6 +311,11 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
   // 試行するモデルのリストを作成
   const modelsToTry = [req.model, ...FALLBACK_MODELS.filter(m => m !== req.model)]
   
+  // gemini-3-proの利用可能性をログに記録（初回のみ）
+  if (req.model === 'gemini-3-pro') {
+    console.log('[Gemini] Attempting to use gemini-3-pro model...')
+  }
+  
   for (const model of modelsToTry) {
     const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
     
@@ -338,9 +343,15 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
 
         // 404(モデル未提供)やレート制限の場合は次のモデルを試す
         if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
-          console.log(
-            `[Gemini] Model ${model} failed (${res.status}${isNotFound ? ', NOT_FOUND' : ''}), trying next model...`
-          )
+          if (isNotFound && model === 'gemini-3-pro') {
+            console.log(
+              `[Gemini] ⚠️  gemini-3-pro is NOT_FOUND (404) - Model is not available. Falling back to ChatGPT...`
+            )
+          } else {
+            console.log(
+              `[Gemini] Model ${model} failed (${res.status}${isNotFound ? ', NOT_FOUND' : ''}), trying next model...`
+            )
+          }
           continue
         }
         throw new Error(`Gemini API Error: ${res.status} - ${t.substring(0, 500)}`)
@@ -351,7 +362,9 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
       const text = joinPartsText(parts)
       if (!text) throw new Error('Gemini が空のテキストを返しました')
       
-      if (model !== req.model) {
+      if (model === 'gemini-3-pro') {
+        console.log(`[Gemini] ✅ gemini-3-pro is working correctly`)
+      } else if (model !== req.model) {
         console.log(`[Gemini] Successfully used fallback model: ${model}`)
       }
       return text
