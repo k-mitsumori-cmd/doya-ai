@@ -58,13 +58,11 @@ function LpSitePageInner() {
     { label: 'アセット整理', threshold: 100, icon: Package },
   ]
 
-  // 進捗リセット（生成開始時のみ）
+  // 進捗リセット（生成開始時のみ、画像生成中はリセットしない）
   useEffect(() => {
-    if (!isGenerating) {
-      // 画像生成中でない場合のみ進捗をリセット
-      if (!isGeneratingImages) {
-        setProgress(0)
-      }
+    if (!isGenerating && !isGeneratingImages) {
+      // 生成が完全に終了した場合のみ進捗をリセット
+      setProgress(0)
       setStageText('準備中...')
       setMood('idle')
       setApiCompleted(false)
@@ -279,10 +277,11 @@ function LpSitePageInner() {
         }
         setPartialResult(wireframeResult)
         setResult(wireframeResult)
-        setIsGenerating(false) // オーバーレイを閉じる
+        // 画像生成中はオーバーレイを開いたままにする（時間と進捗をリセットしない）
+        // setIsGenerating(false) を削除 - 画像生成中もオーバーレイを表示し続ける
         // 進捗はリセットしない（60%のまま維持）
-        setStageText('準備中...')
-        setMood('idle')
+        setStageText('画像生成を開始します...')
+        setMood('think')
         toast.success('ワイヤーフレームが生成されました！画像を自動生成中...')
 
         // Step 4: 画像生成（バックグラウンドで実行、セクションごとに個別生成）

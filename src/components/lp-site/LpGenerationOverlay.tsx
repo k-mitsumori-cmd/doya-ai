@@ -748,9 +748,10 @@ export function LpGenerationOverlay({
     return () => clearInterval(timer)
   }, [open])
 
-  // 経過時間のカウント
+  // 経過時間のカウント（オーバーレイが開いている間は継続、リセットしない）
   useEffect(() => {
     if (!open) {
+      // オーバーレイが閉じられた場合のみリセット（画像生成中は開いたままなのでリセットされない）
       setElapsedTime(0)
       return
     }
