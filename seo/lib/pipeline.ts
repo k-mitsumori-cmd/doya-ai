@@ -94,6 +94,62 @@ function mdCharCount(s: string): number {
   return (s || '').replace(/\r\n/g, '\n').length
 }
 
+function mdHasUnclosedCodeFence(md: string): boolean {
+  const s = String(md || '')
+  const n = (s.match(/```/g) || []).length
+  return n % 2 === 1
+}
+
+function mdLooksTruncated(md: string): boolean {
+  const s = String(md || '').replace(/\r\n/g, '\n').trim()
+  if (!s) return false
+  if (s.includes('...(truncated)')) return true
+  if (mdHasUnclosedCodeFence(s)) return true
+
+  const tail = s.slice(-220)
+  // 途中で切れた時にありがちな終端記号
+  if (/[、・,:：（(「『【\[\/]\s*$/.test(tail)) return true
+  // 省略記号/執筆中っぽい文言
+  if (/(…|…\s*$|（執筆中）|続き|途中で|to be continued)/i.test(tail)) return true
+
+  // 末尾が文として閉じていない（ざっくり）
+  const last = s.slice(-1)
+  const okEnd = /[。．.!?！？）」』】\]]/.test(last)
+  return !okEnd
+}
+
+function mdHasSummarySection(md: string): boolean {
+  return /^##\s*(まとめ|要約|Summary)\b/m.test(String(md || ''))
+}
+
+async function generateSummarySection(args: { article: any; context: string }): Promise<string> {
+  const a = args.article
+  const prompt = [
+    'You are a Japanese business editor.',
+    'Write the FINAL section of the article.',
+    'Output ONLY Markdown and start with "## まとめ".',
+    NO_AI_MARKDOWN_RULES,
+    '',
+    `Title: ${String(a.title || '')}`,
+    `Keywords: ${((a.keywords as any) || []).join(', ')}`,
+    `Tone: ${String(a.tone || '')}`,
+    '',
+    'Rules:',
+    '- Summarize decisions/steps/checkpoints in a business-like way.',
+    '- End with a clear closing sentence (do not cut off).',
+    '',
+    'Context (truncated):',
+    clampText(args.context, 9000),
+  ].join('\n')
+  const out = await geminiGenerateText({
+    model: GEMINI_TEXT_MODEL_DEFAULT,
+    parts: [{ text: prompt }],
+    generationConfig: { temperature: 0.35, maxOutputTokens: 2200 },
+  })
+  const s = out?.trim() ? sanitizeAiMarkdown(out.trim()) : ''
+  return normalizeH2Heading(s, 'まとめ')
+}
+
 async function generateTopTables(article: any, merged: string): Promise<string> {
   // 短い記事ほど「冒頭に表」が効く（表でスキャン→本文を読ませる）
   const target = Math.max(3000, Number(article?.targetChars || 10000))
@@ -2693,7 +2749,8 @@ async function integrate(jobId: string) {
   parts.push('## 本文')
   parts.push(mergedSections)
 
-  // 引用元（参考URL）を記事末尾に明示（実在サービス・一次情報の担保）
+  // 引用元（参考URL）: 「## まとめ」内のH3として末尾に含める（記事が“まとめ”で終わるようにする）
+  let refsAppend = ''
   try {
     const refs = await p.seoReference.findMany({
       where: { articleId: article.id },
@@ -2709,13 +2766,15 @@ async function integrate(jobId: string) {
       ])
     ).slice(0, 25)
     if (mergedUrls.length) {
-      parts.push('')
-      parts.push('## 参考文献（引用元）')
-      parts.push('※ 本文は引用元の内容をそのまま転載せず、要点を言い換えて整理しています。')
-      for (const u of mergedUrls) parts.push(`- ${u}`)
+      const lines = [
+        '### 参考文献（引用元）',
+        '※ 本文は引用元の内容をそのまま転載せず、要点を言い換えて整理しています。',
+        ...mergedUrls.map((u) => `- ${u}`),
+      ]
+      refsAppend = lines.join('\n')
     }
   } catch {
-    // ignore
+    refsAppend = ''
   }
 
   // 目標文字数に足りない場合は、追補セクションを自動生成して埋める（最大5回）
@@ -2724,8 +2783,8 @@ async function integrate(jobId: string) {
   const maxExtraIterations = target < 10000 ? 2 : 5
   for (let i = 0; i < maxExtraIterations; i++) {
     const cur = mdCharCount(parts.join('\n\n'))
-    if (cur >= target * 0.90) break // 90%以上あればOK（小さい記事向けに緩和）
-    const need = Math.round(target * 0.95 - cur)
+    if (cur >= target) break // 目標超過は許容、ただし不足は埋める
+    const need = Math.round(target - cur)
     const addPrompt = [
       'You are a Japanese SEO writer.',
       'Write an additional section to improve completeness and meet the target length.',
@@ -2756,7 +2815,58 @@ async function integrate(jobId: string) {
     }
   }
 
+  // 必ず「まとめ」で終わる（目標文字数を超えてもOK）
+  if (!mdHasSummarySection(parts.join('\n\n'))) {
+    try {
+      const summary = await generateSummarySection({ article, context: parts.join('\n\n') })
+      if (summary.trim()) parts.push(summary.trim())
+    } catch {
+      // 最低限のまとめ（生成失敗しても“途中で終わる”のを防ぐ）
+      parts.push('## まとめ\n\n- （要点）\n- （次のアクション）\n\n最後までお読みいただきありがとうございました。')
+    }
+  }
+  if (refsAppend) {
+    // まとめセクションの末尾に出典を“含める”
+    parts.push(refsAppend)
+  }
+
   let finalMarkdown = parts.join('\n\n')
+
+  // 途中で切れている場合は「続き」を追記して完結させる（最大2回）
+  for (let i = 0; i < 2; i++) {
+    if (!mdLooksTruncated(finalMarkdown)) break
+    const contPrompt = [
+      'You are a Japanese business writer.',
+      'Task: Continue the article from EXACTLY where it ends.',
+      'Output ONLY the continuation in Markdown. Do NOT repeat previous text.',
+      'CRITICAL: Finish any unfinished sentence/paragraph/table and end with a complete closing sentence.',
+      'If the article does not end with "## まとめ", append/complete that section at the end.',
+      NO_AI_MARKDOWN_RULES,
+      '',
+      `Title: ${String(article.title || '')}`,
+      `Tone: ${String(article.tone || '')}`,
+      '',
+      'Last part of article (tail):',
+      clampText(finalMarkdown.slice(-9000), 9000),
+    ].join('\n')
+    try {
+      const cont = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: contPrompt }],
+        generationConfig: { temperature: 0.35, maxOutputTokens: 6500 },
+      })
+      const add = cont?.trim() ? sanitizeAiMarkdown(cont.trim()) : ''
+      if (!add) break
+      finalMarkdown = `${finalMarkdown.trim()}\n\n${add}\n`
+    } catch {
+      break
+    }
+  }
+
+  // 最終的にまとめが無い/崩れた場合も保険で付与
+  if (!mdHasSummarySection(finalMarkdown)) {
+    finalMarkdown = `${finalMarkdown.trim()}\n\n## まとめ\n\n最後までお読みいただきありがとうございました。\n`
+  }
 
   // 比較記事: 候補0件で本文を完成させない（「比較になってない」記事を防ぐ）
   if (isComparison) {

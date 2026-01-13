@@ -33,7 +33,7 @@ import { FeatureGuide } from '@/components/FeatureGuide'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { SEO_PRICING } from '@/lib/pricing'
 
-const TARGETS = [5000, 10000, 20000, 30000, 40000, 50000, 60000]
+const TARGETS = [5000, 10000, 20000, 30000, 40000, 50000]
 const TONES = ['丁寧', 'フランク', 'ビジネス', '専門的'] as const
 const STORAGE_KEY = 'doya_seo_new_draft_v2'
 
@@ -481,8 +481,11 @@ export default function SeoNewArticlePage() {
   }
 
   // 4. テンプレート適用
-  function applyTemplate(t: typeof TEMPLATES[number]) {
-    setTitle(t.title)
+  function applyTemplate(t: typeof TEMPLATES[number], opts?: { preserveTitle?: boolean }) {
+    // ユーザーが入力済みの場合、記事タイプ切替ではタイトルを勝手に上書きしない
+    if (!opts?.preserveTitle || !title.trim()) {
+      setTitle(t.title)
+    }
     setTargetChars(t.targetChars)
     setSearchIntent(t.searchIntent)
     setLlmo(t.llmo)
@@ -510,7 +513,8 @@ export default function SeoNewArticlePage() {
     setArticleType(typeId)
     const def = ARTICLE_TYPES.find((t) => t.id === typeId)
     const tpl = TEMPLATES.find((t) => t.id === def?.defaultTemplateId)
-    if (tpl) applyTemplate(tpl)
+    // 記事タイプ選択は“構造/戦略”を変える操作なので、入力済みのタイトルは維持する
+    if (tpl) applyTemplate(tpl, { preserveTitle: true })
   }
 
   const preview = useMemo(() => {
