@@ -556,13 +556,31 @@ export default function InterviewProjectDetailPage() {
 
       // 1. 構成案生成（文字起こしが完全に終了したことを確認してから実行）
       if (!project.outline) {
+        console.log('[INTERVIEW] Starting outline generation check:', {
+          projectId,
+          hasOutline: !!project.outline,
+        })
+        
         // 構成案生成を呼び出す前に、再度プロジェクトを取得して最新の状態を確認
         await fetchProject()
         const preOutlineCheckRes = await fetch(`/api/interview/projects/${projectId}`, {
           headers: guestId ? { 'x-guest-id': guestId } : {},
         })
+        
+        console.log('[INTERVIEW] Pre-outline check response:', {
+          projectId,
+          ok: preOutlineCheckRes.ok,
+          status: preOutlineCheckRes.status,
+        })
+        
         if (preOutlineCheckRes.ok) {
           const preOutlineCheckData = await preOutlineCheckRes.json()
+          console.log('[INTERVIEW] Pre-outline check data:', {
+            projectId,
+            hasProject: !!preOutlineCheckData.project,
+            transcriptionCount: preOutlineCheckData.project?.transcriptions?.length || 0,
+          })
+          
           if (preOutlineCheckData.project) {
             currentProject = preOutlineCheckData.project
             transcriptions = currentProject.transcriptions || []
@@ -571,6 +589,14 @@ export default function InterviewProjectDetailPage() {
             const stillProcessingBeforeOutline = transcriptions.filter((t: any) => 
               t.status === 'PROCESSING' || t.status === 'PENDING'
             )
+            
+            console.log('[INTERVIEW] Transcription status check before outline:', {
+              projectId,
+              totalTranscriptions: transcriptions.length,
+              processingCount: stillProcessingBeforeOutline.length,
+              processingIds: stillProcessingBeforeOutline.map((t: any) => t.id),
+              allStatuses: transcriptions.map((t: any) => ({ id: t.id, status: t.status })),
+            })
             
             if (stillProcessingBeforeOutline.length > 0) {
               console.log('[INTERVIEW] Still processing transcriptions found before outline generation, waiting:', {
@@ -619,8 +645,19 @@ export default function InterviewProjectDetailPage() {
               }
               
               if (!allCompletedBeforeOutline) {
+                console.error('[INTERVIEW] Transcription wait timeout before outline generation:', {
+                  projectId,
+                  totalWaitCount: totalWaitCountBeforeOutline,
+                  maxRetries,
+                })
                 throw new Error('文字起こし処理がタイムアウトしました。しばらく待ってから再度お試しください。')
               }
+              
+              console.log('[INTERVIEW] All transcriptions completed before outline generation:', {
+                projectId,
+                totalWaitCount: totalWaitCountBeforeOutline,
+                elapsedSeconds: (Date.now() - startTime) / 1000,
+              })
               
               // 待機後に再度プロジェクトを取得
               await fetchProject()
@@ -632,10 +669,44 @@ export default function InterviewProjectDetailPage() {
                 if (finalCheckData.project) {
                   currentProject = finalCheckData.project
                   transcriptions = currentProject.transcriptions || []
+                  
+                  // 最終確認
+                  const finalProcessingCheck = transcriptions.filter((t: any) => 
+                    t.status === 'PROCESSING' || t.status === 'PENDING'
+                  )
+                  console.log('[INTERVIEW] Final transcription status check before outline:', {
+                    projectId,
+                    totalTranscriptions: transcriptions.length,
+                    stillProcessing: finalProcessingCheck.length,
+                    allStatuses: transcriptions.map((t: any) => ({ id: t.id, status: t.status })),
+                  })
+                  
+                  if (finalProcessingCheck.length > 0) {
+                    console.warn('[INTERVIEW] WARNING: Still processing transcriptions found after wait, but proceeding to outline generation:', {
+                      projectId,
+                      processingCount: finalProcessingCheck.length,
+                      processingIds: finalProcessingCheck.map((t: any) => t.id),
+                    })
+                  }
                 }
               }
+            } else {
+              console.log('[INTERVIEW] No processing transcriptions found before outline generation, proceeding:', {
+                projectId,
+                totalTranscriptions: transcriptions.length,
+                allStatuses: transcriptions.map((t: any) => ({ id: t.id, status: t.status })),
+              })
             }
+          } else {
+            console.warn('[INTERVIEW] Pre-outline check: project not found in response:', {
+              projectId,
+            })
           }
+        } else {
+          console.warn('[INTERVIEW] Pre-outline check failed:', {
+            projectId,
+            status: preOutlineCheckRes.status,
+          })
         }
         
         setProcessingStep('構成案を生成中...')
