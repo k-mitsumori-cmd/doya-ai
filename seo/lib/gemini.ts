@@ -42,10 +42,12 @@ async function generateTextWithChatGPT(prompt: string, options?: { temperature?:
 }
 
 // SEO用途は Gemini 3 系（品質要件）
-// - テキスト: Gemini 3（未対応環境では自動でフォールバック）
+// - テキスト: Gemini 3 Pro Preview（公式モデルID: gemini-3-pro-preview）
+//   - 環境変数 SEO_GEMINI_TEXT_MODEL で gemini-3-pro-preview または gemini-3-flash-preview を指定可能
+//   - 未対応環境では自動でChatGPT APIにフォールバック
 // - 画像(図解/サムネ): Nano Banana Pro（運用上の事故防止）
 export const GEMINI_TEXT_MODEL_DEFAULT =
-  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-3-pro'
+  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-3-pro-preview'
 export const GEMINI_IMAGE_MODEL_DEFAULT =
   process.env.SEO_GEMINI_IMAGE_MODEL || process.env.SEO_GEMINI_NANO_BANANA_MODEL || 'nano-banana-pro-preview'
 
@@ -343,9 +345,9 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
 
         // 404(モデル未提供)やレート制限の場合は次のモデルを試す
         if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
-          if (isNotFound && model === 'gemini-3-pro') {
+          if (isNotFound && (model === 'gemini-3-pro-preview' || model === 'gemini-3-pro')) {
             console.log(
-              `[Gemini] ⚠️  gemini-3-pro is NOT_FOUND (404) - Model is not available. Falling back to ChatGPT...`
+              `[Gemini] ⚠️  ${model} is NOT_FOUND (404) - Model is not available. Falling back to ChatGPT...`
             )
           } else {
             console.log(
@@ -362,8 +364,8 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
       const text = joinPartsText(parts)
       if (!text) throw new Error('Gemini が空のテキストを返しました')
       
-      if (model === 'gemini-3-pro') {
-        console.log(`[Gemini] ✅ gemini-3-pro is working correctly`)
+      if (model === 'gemini-3-pro-preview' || model === 'gemini-3-pro') {
+        console.log(`[Gemini] ✅ ${model} is working correctly`)
       } else if (model !== req.model) {
         console.log(`[Gemini] Successfully used fallback model: ${model}`)
       }
