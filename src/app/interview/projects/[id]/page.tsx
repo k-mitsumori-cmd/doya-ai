@@ -1149,7 +1149,6 @@ export default function InterviewProjectDetailPage() {
     setEditedContent('')
   }
 
-<<<<<<< HEAD
   const handleInsertTable = (tableMarkdown: string) => {
     if (!editingDraftId) return
     const textarea = document.querySelector('textarea') as HTMLTextAreaElement
@@ -1190,8 +1189,6 @@ export default function InterviewProjectDetailPage() {
     }, 0)
   }
 
-=======
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
   // エクスポートメニュー外クリックで閉じる
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

@@ -4,11 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { SpeechClient } from '@google-cloud/speech'
 import { Storage } from '@google-cloud/storage'
-<<<<<<< HEAD
 import { GoogleAuth } from 'google-auth-library'
 import { getUserPlan, getMaxFileSize, getEffectivePlan, isFileSizeWithinLimit, type InterviewPlan } from '@/lib/interview/planLimits'
-=======
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -59,7 +56,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (material.type !== 'audio' && material.type !== 'video') {
-<<<<<<< HEAD
       return NextResponse.json(
         { error: '音声または動画ファイルのみ文字起こし可能です' },
         { status: 400 }
@@ -785,15 +781,10 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json(
         { error: '文字起こし結果が空です', details: lastError?.message || 'すべての設定パターンで失敗しました' },
-=======
-      return NextResponse.json(
-        { error: '音声または動画ファイルのみ文字起こし可能です' },
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
         { status: 400 }
       )
     }
 
-<<<<<<< HEAD
     // データベースに保存
     const transcription = await prisma.interviewTranscription.create({
       data: {
@@ -820,64 +811,6 @@ export async function POST(request: NextRequest) {
     console.error('[INTERVIEW] Error Message:', error?.message || 'N/A')
     console.error('[INTERVIEW] Error Details:', error?.details || 'N/A')
     console.error('[INTERVIEW] Error Stack:', error?.stack || 'N/A')
-    
-=======
-
-
-    // Google Cloud Speech-to-Text認証情報の取得
-    const credsEnvVar = process.env.GOOGLE_APPLICATION_CREDENTIALS
-    if (!credsEnvVar) {
-      return NextResponse.json(
-        { error: 'Google Cloud認証情報が設定されていません' },
-        { status: 500 }
-      )
-    }
-
-    let credentials: any
-    try {
-      const credsStr = credsEnvVar.trim()
-      if (credsStr.startsWith('{')) {
-        credentials = JSON.parse(credsStr)
-      } else {
-        return NextResponse.json(
-          { error: 'GOOGLE_APPLICATION_CREDENTIALSはJSON文字列である必要があります' },
-          { status: 500 }
-        )
-      }
-    } catch (parseError) {
-      return NextResponse.json(
-        { error: '認証情報のパースに失敗しました' },
-        { status: 500 }
-      )
-    }
-
-    // SpeechClientを初期化
-    const speechClient = new SpeechClient({
-      projectId: credentials.project_id || process.env.GOOGLE_CLOUD_PROJECT_ID,
-      credentials,
-    })
-
-    console.log('[INTERVIEW] SpeechClient initialized')
-
-    // ========== ステップ1: データベースから素材情報を取得 ==========
-    console.log('[INTERVIEW] ========== STEP 1: Material from Database ==========')
-    console.log('[INTERVIEW] Material ID:', material.id)
-    console.log('[INTERVIEW] Material Type:', material.type)
-    console.log('[INTERVIEW] Material File Name:', material.fileName)
-    console.log('[INTERVIEW] Material MIME Type:', material.mimeType)
-    console.log('[INTERVIEW] Material File Size:', material.fileSize ? `${(material.fileSize / 1024 / 1024).toFixed(2)} MB` : 'N/A')
-    console.log('[INTERVIEW] Material File URL:', material.fileUrl || 'N/A')
-    console.log('[INTERVIEW] Material File Path:', material.filePath || 'N/A')
-    console.log('[INTERVIEW] Material Status:', material.status)
-    console.log('[INTERVIEW] ====================================================')
-
-    // ========== ステップ2: GCS URIを構築 ==========
-    console.log('[INTERVIEW] ========== STEP 2: Building GCS URI ==========')
-    let gcsUri: string
-    let bucketName: string
-    let filePath: string
-    
-    if (material.fileUrl && material.fileUrl.includes('storage.googleapis.com')) {
       const urlPattern = /https:\/\/storage\.googleapis\.com\/([^/]+)\/(.+)$/
       const match = material.fileUrl.match(urlPattern)
       if (match && match[1] && match[2]) {
@@ -1258,7 +1191,6 @@ export async function POST(request: NextRequest) {
     console.error('[INTERVIEW] Error Details:', error?.details || 'N/A')
     console.error('[INTERVIEW] Error Stack:', error?.stack || 'N/A')
     
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
     // エラーが発生した段階を特定
     if (error?.message?.includes('GCS') || error?.message?.includes('Storage') || error?.code === 404) {
       console.error('[INTERVIEW] Error Location: STEP 3 (GCS File Verification)')
@@ -1307,7 +1239,6 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-<<<<<<< HEAD
 
 // バックグラウンドで文字起こし処理を実行
 async function processTranscriptionInBackground({
@@ -1407,5 +1338,3 @@ async function processTranscriptionInBackground({
     throw error
   }
 }
-=======
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f

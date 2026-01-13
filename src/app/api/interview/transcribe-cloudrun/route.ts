@@ -132,11 +132,7 @@ export async function POST(request: NextRequest) {
         mimeType: material.mimeType,
         fileName: material.fileName,
         isVideoFile,
-<<<<<<< HEAD
         fileSize: material.fileSize ? Number(material.fileSize) : 0,
-=======
-        fileSize: material.fileSize,
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
       }),
     })
 

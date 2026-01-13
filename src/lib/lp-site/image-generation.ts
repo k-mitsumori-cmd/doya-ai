@@ -5,7 +5,6 @@
 
 import { generateSingleBanner } from '@/lib/nanobanner'
 import { LpSection, SectionImage, ProductInfo } from './types'
-import { enhanceImagePromptWithArchive } from './prompt-templates'
 
 /**
  * セクション画像を生成
@@ -62,43 +61,6 @@ export async function generateSectionImagePair(
   sectionIndex?: number,
   totalSections?: number
 ): Promise<SectionImage> {
-<<<<<<< HEAD
-  // PC/SP画像生成を並列実行して処理時間を短縮
-  const pcPrompt = generateImagePrompt(section, productInfo, 'pc', sectionIndex, totalSections)
-  const spPrompt = generateImagePrompt(section, productInfo, 'sp', sectionIndex, totalSections)
-  
-  console.log(`[LP-SITE] セクション画像生成開始（並列）: ${section.section_id}`)
-  console.log(`[LP-SITE] PCプロンプト長: ${pcPrompt.length}文字, SPプロンプト長: ${spPrompt.length}文字`)
-  
-  // PC/SP画像生成を並列実行
-  const [pcResult, spResult] = await Promise.allSettled([
-    (async () => {
-      try {
-        const result = await generateSingleBanner(pcPrompt, '1920x1080', {})
-        console.log(`[LP-SITE] PC画像生成成功: ${section.section_id}, モデル: ${result.model}`)
-        return result.image
-      } catch (error: any) {
-        console.error(`[LP-SITE] PC画像生成エラー (${section.section_id}):`, error)
-        console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
-        return undefined
-      }
-    })(),
-    (async () => {
-      try {
-        const result = await generateSingleBanner(spPrompt, '1080x1920', {})
-        console.log(`[LP-SITE] SP画像生成成功: ${section.section_id}, モデル: ${result.model}`)
-        return result.image
-      } catch (error: any) {
-        console.error(`[LP-SITE] SP画像生成エラー (${section.section_id}):`, error)
-        console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
-        return undefined
-      }
-    })(),
-  ])
-  
-  const imagePc = pcResult.status === 'fulfilled' ? pcResult.value : undefined
-  const imageSp = spResult.status === 'fulfilled' ? spResult.value : undefined
-=======
   // PC用画像生成（横長）- 1920x1080 (16:9)
   let imagePc: string | undefined
   try {
@@ -128,7 +90,6 @@ export async function generateSectionImagePair(
     console.error(`[LP-SITE] エラー詳細:`, error.message, error.stack)
     // エラーが発生しても続行（空の画像として扱う）
   }
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 
   return {
     section_id: section.section_id,
@@ -199,7 +160,7 @@ export function generateImagePrompt(
     }
   }
 
-  let prompt = `${commonBase}
+  return `${commonBase}
 
 ${sectionSpecific}
 
@@ -220,7 +181,7 @@ TEXT REQUIREMENTS (MUST INCLUDE):
 - Use clear, readable Japanese typography
 - Text should be prominent and well-positioned
 - Follow Japanese LP text layout conventions
-- IMPORTANT: Only include CTA buttons if this section's type is "cta" or "action" - DO NOT add CTA buttons to other section types
+- Include CTA text if this is a CTA section
 
 Device-specific requirements:
 - ${device === 'pc' ? 'PC version: Wide horizontal layout (16:9), desktop-optimized' : 'Mobile version: Tall vertical layout (9:16), mobile-optimized'}
@@ -242,11 +203,6 @@ SEAMLESS BOUNDARY TREATMENT:
 - Maintain consistent color palette with adjacent sections for smooth transitions
 - Use soft shadows or gentle gradients at boundaries instead of hard lines
 - The section should appear as a natural part of a continuous scrollable page`
-
-  // LPアーカイブの学習データを基にプロンプトを強化
-  prompt = enhanceImagePromptWithArchive(prompt, productInfo)
-
-  return prompt
 }
 
 /**
@@ -297,10 +253,10 @@ Text requirements:
 - ${section.sub_headline ? `Embed sub headline "${section.sub_headline}" below main headline` : 'Add compelling sub text that explains the value proposition'}
 - Use large, bold, readable Japanese typography
 - Text should be the focal point along with the visual
-- DO NOT include CTA buttons in hero sections - CTA buttons should only appear in dedicated CTA sections
+- Consider adding a CTA button with text if appropriate
 
 Composition:
-- ${device === 'pc' ? 'Headline at top, product/visual in center, supporting text at bottom' : 'Headline at top, product/visual in center, supporting text at bottom - vertical stack'}
+- ${device === 'pc' ? 'Headline at top, product/visual in center, CTA at bottom' : 'Headline at top, product/visual in center, CTA at bottom - vertical stack'}
 - Bold, impactful composition
 - Professional LP hero section layout
 
@@ -328,7 +284,6 @@ Text requirements:
 - List key benefits as text (3-5 points)
 - Use clear, readable Japanese typography
 - Text should explain the benefits clearly
-- DO NOT include CTA buttons - this is a benefit explanation section, not a CTA section
 
 Composition:
 - ${device === 'pc' ? 'Headline at top, benefits listed with visuals, clean layout' : 'Headline at top, benefits vertically stacked with visuals'}
@@ -663,17 +618,15 @@ Visual requirements:
 Text requirements:
 - Embed CTA headline "${section.headline}" prominently
 - ${section.sub_headline ? `Include sub text "${section.sub_headline}"` : 'Add compelling CTA description'}
-- Include EXACTLY ONE CTA button with text (e.g., "今すぐ始める", "無料で試す", "資料をダウンロード")
+- Include CTA button with text (e.g., "今すぐ始める", "無料で試す", "資料をダウンロード")
 - ${productInfo.cta ? `Use CTA text: "${productInfo.cta}"` : 'Use appropriate CTA text for the product'}
 - Price information if this is pricing section
 - Clear, action-oriented typography
-- CRITICAL: Include only ONE CTA button - do NOT create multiple buttons or duplicate buttons
 
 Composition:
-- ${device === 'pc' ? 'Headline at top, product in center, ONE prominent CTA button at bottom' : 'Headline at top, product in center, ONE large CTA button at bottom'}
+- ${device === 'pc' ? 'Headline at top, product in center, CTA button prominently at bottom' : 'Headline at top, product in center, large CTA button at bottom'}
 - Clean, uncluttered, conversion-focused
 - CTA button should be prominent and clickable-looking
-- Ensure only one CTA button is visible in the image
 
 Tone: Reliable, Clear, Commercial, Action-oriented`
   }
@@ -696,7 +649,6 @@ Text requirements:
 - ${section.sub_headline ? `Include sub text "${section.sub_headline}"` : 'Add supporting text that explains the section'}
 - Use clear, readable Japanese typography
 - Professional text layout
-- DO NOT include CTA buttons unless this section's type is explicitly "cta" or "action"
 
 Composition:
 - ${device === 'pc' ? 'Headline at top, visual in center, supporting text below' : 'Headline at top, visual in center, supporting text below - vertical'}

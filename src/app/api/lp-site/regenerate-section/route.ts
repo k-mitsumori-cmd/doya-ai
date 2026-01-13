@@ -61,11 +61,7 @@ export async function POST(request: NextRequest) {
       try {
         const pcResult = await generateSingleBanner(imagePrompt, '1920x1080', {})
         imagePc = pcResult.image
-<<<<<<< HEAD
         console.log(`[LP-SITE] PC画像再生成成功: ${sectionData.section_id}, モデル ${pcResult.model}`)
-=======
-        console.log(`[LP-SITE] PC画像再生成成功: モデル ${pcResult.model}`)
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
       } catch (error) {
         console.error(`[LP-SITE] PC画像再生成エラー (${sectionData.section_id}):`, error)
         throw error
@@ -77,11 +73,7 @@ export async function POST(request: NextRequest) {
       try {
         const spResult = await generateSingleBanner(imagePrompt, '1080x1920', {})
         imageSp = spResult.image
-<<<<<<< HEAD
         console.log(`[LP-SITE] SP画像再生成成功: ${sectionData.section_id}, モデル ${spResult.model}`)
-=======
-        console.log(`[LP-SITE] SP画像再生成成功: モデル ${spResult.model}`)
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
       } catch (error) {
         console.error(`[LP-SITE] SP画像再生成エラー (${sectionData.section_id}):`, error)
         throw error

@@ -3000,11 +3000,19 @@ const plan = subscription?.plan || userPlan || 'FREE'
 
 本番環境へのデプロイ手順です。
 
+### ⚠️ 重要: Vercelへの反映について
+
+**変更をVercelに反映するには、`doya-ai`ブランチ（またはリポジトリ）にプッシュする必要があります。**
+
+- ❌ **間違い**: 他のブランチやリポジトリにプッシュしても、Vercelには反映されません
+- ✅ **正解**: `doya-ai`ブランチ/リポジトリにプッシュすることで、Vercelが自動的にデプロイを開始します
+
 ### 前提条件
 
 - Vercelアカウント
 - Gitリポジトリ（GitHub推奨）
 - Vercelプロジェクトとリモートリポジトリの接続
+- **`doya-ai`ブランチ/リポジトリへのアクセス権限**
 
 ### デプロイ方法
 
@@ -3015,11 +3023,13 @@ const plan = subscription?.plan || userPlan || 'FREE'
 git add -A
 git commit -m "feat: 新機能追加"
 
-# 2. メインブランチにプッシュ
-git push origin main
+# 2. doya-aiブランチにプッシュ（重要！）
+git push origin doya-ai
+# または
+git push origin main  # mainブランチがdoya-aiリポジトリと連携している場合
 ```
 
-Vercelが自動的にデプロイを開始します。
+**重要**: `doya-ai`ブランチ/リポジトリにプッシュすることで、Vercelが自動的にデプロイを開始します。
 
 #### 方法2: Subtree Push（サブディレクトリのみ）
 
@@ -3045,6 +3055,29 @@ git remote add vercel https://vercel.com/your-project.git
 # またはSSH
 git remote add vercel git@vercel.com:your-project.git
 ```
+
+**注意**: Subtree Pushの場合も、最終的には`doya-ai`リポジトリにプッシュされる必要があります。
+
+### デプロイ確認
+
+プッシュ後、以下を確認してください：
+
+1. **GitHub/Gitリポジトリ**: `doya-ai`ブランチ/リポジトリに変更がプッシュされているか確認
+2. **Vercelダッシュボード**: デプロイが開始されているか確認
+   - [Vercel Dashboard](https://vercel.com/dashboard) にアクセス
+   - プロジェクトを選択
+   - 「Deployments」タブでデプロイ状況を確認
+
+### よくあるミス
+
+- ❌ **ミス**: 変更をコミットしたが、`doya-ai`ブランチ/リポジトリにプッシュしていない
+- ✅ **正解**: 必ず`doya-ai`ブランチ/リポジトリにプッシュする
+
+- ❌ **ミス**: 他のブランチ（例: `develop`, `feature/xxx`）にプッシュして、Vercelに反映されないと思っている
+- ✅ **正解**: Vercelに反映するには、`doya-ai`ブランチ/リポジトリにプッシュする必要がある
+
+- ❌ **ミス**: ローカルで変更したが、コミット・プッシュを忘れている
+- ✅ **正解**: 変更をコミットしてから、`doya-ai`ブランチ/リポジトリにプッシュする
 
 ### デプロイ後の確認
 
