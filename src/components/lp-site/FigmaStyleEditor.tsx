@@ -462,34 +462,10 @@ export function FigmaStyleEditor({
 
         {/* アクションボタン */}
         <div className="flex items-center gap-2">
-          {/* 未生成画像の自動再生成ボタン */}
-          {hasIncompleteImages && !isGeneratingImages && onAutoRegenerate && (
-            <button
-              onClick={() => {
-                const sectionIds = [...missingSections, ...partialSections].map(s => s.section_id)
-                setIsAutoRegenerating(true)
-                onAutoRegenerate(sectionIds)
-              }}
-              disabled={isAutoRegenerating}
-              className="px-3 py-1.5 text-xs font-medium bg-amber-500 text-white rounded hover:bg-amber-600 transition-colors flex items-center gap-1.5 animate-pulse"
-            >
-              {isAutoRegenerating ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  再生成中...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  未生成画像を再生成 ({missingSections.length + partialSections.length})
-                </>
-              )}
-            </button>
-          )}
           {/* 画像生成中の表示 */}
           {isGeneratingImages && (
-            <div className="px-3 py-1.5 text-xs font-medium bg-blue-100 text-blue-700 rounded flex items-center gap-1.5">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <div className="px-4 py-2 text-sm font-medium bg-blue-100 text-blue-700 rounded-lg flex items-center gap-2 border border-blue-200">
+              <Loader2 className="w-4 h-4 animate-spin" />
               画像生成中...
             </div>
           )}
@@ -520,6 +496,53 @@ export function FigmaStyleEditor({
           </button>
         </div>
       </div>
+
+      {/* 未生成画像がある場合の大きな警告バナー */}
+      {hasIncompleteImages && !isGeneratingImages && onAutoRegenerate && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 px-6 py-4 flex items-center justify-between shadow-lg"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+              <ImageIcon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-white font-bold text-lg">
+                ⚠️ {missingSections.length + partialSections.length}件の画像が未生成です
+              </h3>
+              <p className="text-white/90 text-sm">
+                {missingSections.length > 0 && `完全未生成: ${missingSections.length}件`}
+                {missingSections.length > 0 && partialSections.length > 0 && ' / '}
+                {partialSections.length > 0 && `部分生成: ${partialSections.length}件`}
+                {' '}— ボタンをクリックして再生成してください
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const sectionIds = [...missingSections, ...partialSections].map(s => s.section_id)
+              setIsAutoRegenerating(true)
+              onAutoRegenerate(sectionIds)
+            }}
+            disabled={isAutoRegenerating}
+            className="px-8 py-3 bg-white text-orange-600 font-bold text-base rounded-xl hover:bg-orange-50 transition-all transform hover:scale-105 shadow-lg flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {isAutoRegenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                再生成中...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-5 h-5" />
+                未生成画像を今すぐ再生成
+              </>
+            )}
+          </button>
+        </motion.div>
+      )}
 
       {/* メインエリア */}
       <div className="flex-1 flex overflow-hidden">
