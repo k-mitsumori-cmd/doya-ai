@@ -35,6 +35,7 @@ function LpSitePageInner() {
   const [partialResult, setPartialResult] = useState<Partial<LpGenerationResult> | null>(null)
   const [currentStep, setCurrentStep] = useState<'product' | 'structure' | 'wireframe' | 'image' | 'complete'>('product')
   const [isGeneratingImages, setIsGeneratingImages] = useState(false)
+  const [elapsedTime, setElapsedTime] = useState(0) // 経過時間を親コンポーネントで管理（リセットされないように）
   const [imageProgress, setImageProgress] = useState(0)
   const [sectionProgress, setSectionProgress] = useState<Record<string, number>>({})
   const [generatingSections, setGeneratingSections] = useState<Set<string>>(new Set())
@@ -57,6 +58,19 @@ function LpSitePageInner() {
     { label: '画像生成', threshold: 90, icon: ImageIcon },
     { label: 'アセット整理', threshold: 100, icon: Package },
   ]
+
+  // 経過時間のカウント（生成中は継続、リセットしない）
+  useEffect(() => {
+    if (!isGenerating && !isGeneratingImages) {
+      // 生成が完全に終了した場合のみタイマーをリセット
+      setElapsedTime(0)
+      return
+    }
+    const timer = setInterval(() => {
+      setElapsedTime((prev) => prev + 1)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [isGenerating, isGeneratingImages])
 
   // 進捗リセット（生成開始時のみ、画像生成中はリセットしない）
   useEffect(() => {
@@ -1086,6 +1100,7 @@ function LpSitePageInner() {
           productInfo={partialResult?.product_info}
           sections={partialResult?.sections}
           currentStep={currentStep}
+          elapsedTime={elapsedTime}
         />
         {result && (
           <CompletionModal
@@ -1190,6 +1205,7 @@ function LpSitePageInner() {
         productInfo={partialResult?.product_info}
         sections={partialResult?.sections}
         currentStep={currentStep}
+        elapsedTime={elapsedTime}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

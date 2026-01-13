@@ -17,6 +17,7 @@ interface LpGenerationOverlayProps {
   productInfo?: any // 商品情報（商品理解完了後に表示）
   sections?: any[] // セクション情報（構成生成完了後に表示）
   currentStep?: 'product' | 'structure' | 'wireframe' | 'image' | 'complete' // 現在のステップ
+  elapsedTime?: number // 経過時間（秒）、親コンポーネントから渡される
 }
 
 const loadingTips = [
@@ -720,10 +721,13 @@ export function LpGenerationOverlay({
   productInfo,
   sections,
   currentStep,
+  elapsedTime: elapsedTimeProp = 0, // 親コンポーネントから渡される経過時間
 }: LpGenerationOverlayProps) {
   const p = Math.max(0, Math.min(100, Number.isFinite(progress) ? progress : 0))
   const [tipIndex, setTipIndex] = useState(0)
-  const [elapsedTime, setElapsedTime] = useState(0)
+  // 親コンポーネントから経過時間が渡される場合はそれを使用、そうでない場合は内部で管理（後方互換性のため）
+  const [internalElapsedTime, setInternalElapsedTime] = useState(0)
+  const elapsedTime = elapsedTimeProp > 0 ? elapsedTimeProp : internalElapsedTime
   const [hasShownConfetti, setHasShownConfetti] = useState(false)
 
   // 完了時に紙吹雪
@@ -748,18 +752,22 @@ export function LpGenerationOverlay({
     return () => clearInterval(timer)
   }, [open])
 
-  // 経過時間のカウント（オーバーレイが開いている間は継続、リセットしない）
+  // 経過時間のカウント（親コンポーネントから渡されない場合のみ内部で管理）
   useEffect(() => {
+    if (elapsedTimeProp > 0) {
+      // 親コンポーネントから経過時間が渡される場合は、内部タイマーを使用しない
+      return
+    }
     if (!open) {
       // オーバーレイが閉じられた場合のみリセット（画像生成中は開いたままなのでリセットされない）
-      setElapsedTime(0)
+      setInternalElapsedTime(0)
       return
     }
     const timer = setInterval(() => {
-      setElapsedTime((prev) => prev + 1)
+      setInternalElapsedTime((prev) => prev + 1)
     }, 1000)
     return () => clearInterval(timer)
-  }, [open])
+  }, [open, elapsedTimeProp])
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
