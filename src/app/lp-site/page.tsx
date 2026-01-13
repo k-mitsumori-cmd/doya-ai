@@ -403,13 +403,19 @@ function LpSitePageInner() {
                   // #endregion
                   setSectionProgress(prev => ({ ...prev, [sectionId]: 0 }))
                   if (retryCount > 0) {
-                    setStageText(`${sectionName} の画像を再生成中... (試行 ${retryCount + 1}/${MAX_RETRIES + 1})`)
+                    // バックグラウンド実行中は、トースト通知のみ（オーバーレイは開かない）
                     toast.info(`${sectionName} の画像を再生成中... (${retryCount + 1}回目)`, {
                       duration: 3000,
                       icon: '🔄',
                     })
                   } else {
-                    setStageText(`${sectionName} の画像を生成中... (${index + 1}/${totalSections})`)
+                    // 最初の試行時のみ、静かに進捗を通知
+                    if (index === 0) {
+                      toast.info(`画像を生成中... (${index + 1}/${totalSections})`, {
+                        duration: 2000,
+                        icon: '🖼️',
+                      })
+                    }
                   }
                   
                   // AbortControllerでタイムアウトを制御
@@ -540,10 +546,10 @@ function LpSitePageInner() {
                 setImageProgress(Math.round((completedSections / totalSections) * 100))
                 setSectionProgress(prev => ({ ...prev, [sectionId]: 100 }))
                 
-                // 個別セクション完了の通知（最初と最後のセクションのみ）
-                if (completedSections === 1 || completedSections === totalSections) {
+                // 個別セクション完了の通知（最後のセクションのみ、または10個ごと）
+                if (completedSections === totalSections || completedSections % 10 === 0) {
                   toast.success(`${sectionName} の画像生成が完了しました (${completedSections}/${totalSections})`, {
-                    duration: 3000,
+                    duration: 2000,
                     icon: '✅',
                   })
                 }
