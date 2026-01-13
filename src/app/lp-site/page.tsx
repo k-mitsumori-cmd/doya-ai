@@ -846,6 +846,19 @@ function LpSitePageInner() {
             setMood('happy')
           }
         })()
+        
+        // 画像生成のPromiseをcatchしてエラーハンドリング
+        imageGenerationPromise.catch((error: any) => {
+          console.error('[LP-SITE] 画像生成Promiseエラー:', error)
+          setIsGeneratingImages(false)
+          setImageProgress(100)
+          setSectionProgress({})
+          setGeneratingSections(new Set())
+          toast.error(`画像生成でエラーが発生しました: ${error.message || '不明なエラー'}`, {
+            duration: 6000,
+            icon: '⚠️',
+          })
+        })
       } catch (error: any) {
         console.error('[LP-SITE] 画像生成エラー:', error)
         console.error('[LP-SITE] エラー詳細:', error.message, error.stack)
