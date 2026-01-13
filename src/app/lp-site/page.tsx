@@ -324,7 +324,7 @@ function LpSitePageInner() {
           throw error
         }
 
-        // ワイヤーフレームが生成されたら、すぐに結果を表示（オーバーレイを閉じる）
+        // ワイヤーフレームが生成されたら、すぐに結果を表示（オーバーレイを閉じて操作可能にする）
         const wireframeResult: LpGenerationResult = {
           product_info: productInfo,
           sections,
@@ -335,15 +335,20 @@ function LpSitePageInner() {
         }
         setPartialResult(wireframeResult)
         setResult(wireframeResult)
-        // 画像生成中はオーバーレイを開いたままにする（時間と進捗をリセットしない）
-        // setIsGenerating(false) を削除 - 画像生成中もオーバーレイを表示し続ける
-        // 進捗はリセットしない（60%のまま維持）
-        setStageText('画像生成を開始します...')
-        setMood('think')
-        toast.success('ワイヤーフレームが生成されました！画像を自動生成中...')
+        
+        // ワイヤーフレーム生成完了：オーバーレイを閉じて操作可能にする
+        setIsGenerating(false)
+        updateProgress(60) // Step 3完了
+        setStageText('ワイヤーフレーム生成完了！')
+        setMood('happy')
+        toast.success('ワイヤーフレームが生成されました！画像を自動生成中...', {
+          duration: 5000,
+          icon: '✅',
+        })
 
         // Step 4: 画像生成（バックグラウンドで実行、セクションごとに個別生成）
-        console.log('[LP-SITE] 画像生成を開始します...')
+        // オーバーレイは開かず、バックグラウンドで静かに実行
+        console.log('[LP-SITE] 画像生成をバックグラウンドで開始します...')
         setIsGeneratingImages(true)
         setImageProgress(0)
         setSectionProgress({})
@@ -357,9 +362,7 @@ function LpSitePageInner() {
             console.log('[LP-SITE] 画像生成非同期処理を開始します')
             setCurrentStep('image')
             setImageProgress(0)
-            updateProgress(65) // 画像生成開始（60%から65%に更新）
-            setStageText('セクション画像を生成中...')
-            setMood('think')
+            // 進捗は更新しない（オーバーレイが閉じているため）
             console.log('[LP-SITE] 画像生成の状態を設定しました')
             
             // すべてのセクションのエントリを最初に作成（確実に全セクションを含めるため）
