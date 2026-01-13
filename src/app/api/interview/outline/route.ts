@@ -67,195 +67,26 @@ export async function POST(request: NextRequest) {
       transcriptionTextLength: completedTranscriptions.reduce((sum, t) => sum + (t.text?.length || 0), 0),
     })
 
-    // 処理中の文字起こしがある場合は、完了するまで待機
+    // 処理中の文字起こしがある場合は、即座にエラーを返す
+    // フロントエンド側で待機処理を実装しているため、API側では待機しない
+    // これによりVercelのタイムアウト（300秒）を回避できる
     if (processingTranscriptions.length > 0) {
-      console.log('[INTERVIEW] Waiting for transcriptions to complete:', {
+      console.log('[INTERVIEW] Outline generation blocked: Transcription still processing:', {
         projectId,
         processingCount: processingTranscriptions.length,
         processingIds: processingTranscriptions.map((t) => t.id),
+        note: 'Frontend will wait and retry',
       })
 
-      // 最大待機時間を計算（各文字起こしのファイルサイズに基づく）
-      const calculateMaxWaitTime = (materialId: string): number => {
-        // 文字起こしに関連する素材を取得
-        const transcription = project.transcriptions.find((t) => t.materialId === materialId)
-        const material = transcription?.material
-        
-        if (!material || !material.fileSize) {
-          return 30 * 60 // デフォルト30分（秒）
-        }
-        
-        const fileSizeMB = Number(material.fileSize) / (1024 * 1024)
-        const fileSizeGB = fileSizeMB / 1024
-        const materialType = material.type || 'audio'
-        
-        let estimatedSeconds = 0
-        
-        if (materialType === 'video') {
-          // 動画ファイルの場合: 音声抽出時間 + 文字起こし時間
-          const audioLengthMinutes = fileSizeGB * 60 // 1GB ≈ 1時間
-          const extractionTime = audioLengthMinutes * 4 // 1分の動画 ≈ 約4秒
-          const transcriptionTime = audioLengthMinutes * 60 * 0.2 // 音声長の20%
-          estimatedSeconds = extractionTime + transcriptionTime
-        } else {
-          // 音声ファイルの場合: 文字起こし時間のみ
-          const audioLengthMinutes = fileSizeMB * 1.08
-          const transcriptionTime = audioLengthMinutes * 60 * 0.2 // 音声長の20%
-          estimatedSeconds = transcriptionTime
-        }
-        
-        // バッファ時間を追加（処理時間の50%、最低10分）
-        const bufferTime = Math.max(10 * 60, estimatedSeconds * 0.5)
-        const totalSeconds = estimatedSeconds + bufferTime
-        
-        // 最小待機時間: 5分、最大待機時間: 3日（72時間）
-        const minWaitTime = 5 * 60 // 5分
-        const maxWaitTime = 3 * 24 * 60 * 60 // 3日（72時間）
-        
-        return Math.max(minWaitTime, Math.min(maxWaitTime, totalSeconds))
-      }
-
-      // 最大待機時間を計算（すべての処理中の文字起こしの最大値）
-      let maxWaitTimeSeconds = 0
-      for (const transcription of processingTranscriptions) {
-        const waitTime = calculateMaxWaitTime(transcription.materialId)
-        maxWaitTimeSeconds = Math.max(maxWaitTimeSeconds, waitTime)
-      }
-
-      // 待機間隔: ファイルサイズに応じて調整
-      let waitInterval = 2000 // デフォルト2秒
-      if (maxWaitTimeSeconds >= 24 * 60 * 60) {
-        waitInterval = 30000 // 24時間以上なら30秒
-      } else if (maxWaitTimeSeconds >= 6 * 60 * 60) {
-        waitInterval = 10000 // 6時間以上なら10秒
-      } else if (maxWaitTimeSeconds >= 60 * 60) {
-        waitInterval = 5000 // 1時間以上なら5秒
-      }
-      const maxRetries = Math.ceil(maxWaitTimeSeconds / (waitInterval / 1000))
-
-      console.log(`[INTERVIEW] Transcription wait time calculated:`, {
-        maxWaitTimeMinutes: (maxWaitTimeSeconds / 60).toFixed(1),
-        maxWaitTimeHours: (maxWaitTimeSeconds / 3600).toFixed(2),
-        waitInterval,
-        maxRetries,
-      })
-
-      // 全ての処理中の文字起こしが完了するまで待機
-      const startTime = Date.now()
-      for (const transcription of processingTranscriptions) {
-        let retryCount = 0
-        let completed = false
-
-        while (retryCount < maxRetries && !completed) {
-          await new Promise(resolve => setTimeout(resolve, waitInterval))
-          retryCount++
-
-          // プロジェクトを再取得して最新の状態を確認
-          const updatedProject = await prisma.interviewProject.findFirst({
-            where: {
-              id: projectId,
-              OR: [
-                { userId: userId || undefined },
-                { guestId: guestId || undefined },
-              ],
-            },
-            include: {
-              transcriptions: {
-                include: {
-                  material: true,
-                },
-              },
-              recipe: true,
-            },
-          })
-
-          if (!updatedProject) {
-            return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-          }
-
-          // 対象の文字起こしを確認
-          const currentTranscription = updatedProject.transcriptions.find((t) => t.id === transcription.id)
-          
-          if (currentTranscription && 
-              currentTranscription.status === 'COMPLETED' && 
-              currentTranscription.text && 
-              currentTranscription.text.trim().length > 0) {
-            completed = true
-            console.log('[INTERVIEW] Transcription completed:', {
-              transcriptionId: transcription.id,
-              textLength: currentTranscription.text.length,
-            })
-          } else if (currentTranscription && currentTranscription.status === 'ERROR') {
-            return NextResponse.json(
-              {
-                error: 'Transcription failed',
-                details: '文字起こし処理でエラーが発生しました。ファイルを再アップロードしてください。',
-                transcriptionId: transcription.id,
-              },
-              { status: 400 }
-            )
-          }
-
-          // タイムアウトチェック
-          const elapsedSeconds = (Date.now() - startTime) / 1000
-          if (elapsedSeconds > maxWaitTimeSeconds) {
-            return NextResponse.json(
-              {
-                error: 'Transcription timeout',
-                details: `文字起こし処理がタイムアウトしました（最大待機時間: ${Math.ceil(maxWaitTimeSeconds / 60)}分）。しばらく待ってから再度お試しください。`,
-                transcriptionId: transcription.id,
-              },
-              { status: 400 }
-            )
-          }
-        }
-
-        if (!completed) {
-          return NextResponse.json(
-            {
-              error: 'Transcription timeout',
-              details: `文字起こし処理がタイムアウトしました。しばらく待ってから再度お試しください。`,
-              transcriptionId: transcription.id,
-            },
-            { status: 400 }
-          )
-        }
-      }
-
-      // 待機後にプロジェクトを再取得して最新の状態を確認
-      const updatedProject = await prisma.interviewProject.findFirst({
-        where: {
-          id: projectId,
-          OR: [
-            { userId: userId || undefined },
-            { guestId: guestId || undefined },
-          ],
+      return NextResponse.json(
+        {
+          error: 'Transcription still processing',
+          details: '文字起こしがまだ処理中です。文字起こしが完了するまでお待ちください。',
+          processingCount: processingTranscriptions.length,
+          processingIds: processingTranscriptions.map((t) => t.id),
         },
-        include: {
-          transcriptions: {
-            include: {
-              material: true,
-            },
-          },
-          recipe: true,
-        },
-      })
-
-      if (!updatedProject) {
-        return NextResponse.json({ error: 'Project not found' }, { status: 404 })
-      }
-
-      // 最新の状態で完了した文字起こしを再取得
-      project = updatedProject
-      completedTranscriptions = project.transcriptions.filter(
-        (t) => t.status === 'COMPLETED' && t.text && typeof t.text === 'string' && t.text.trim().length > 0
+        { status: 400 }
       )
-      
-      console.log('[INTERVIEW] All transcriptions completed after waiting:', {
-        projectId,
-        completedCount: completedTranscriptions.length,
-        totalCount: project.transcriptions.length,
-      })
     }
 
     // 完了した文字起こしが存在しない場合はエラーを返す

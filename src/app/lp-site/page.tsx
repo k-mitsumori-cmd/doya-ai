@@ -659,7 +659,7 @@ function LpSitePageInner() {
         setSectionProgress({})
         setGeneratingSections(new Set())
         const errorMessage = error.message || '画像生成に失敗しました'
-        toast.error(`${errorMessage}。ワイヤーフレームは表示できます。`, { duration: 5000 })
+        toast.error(`${errorMessage}。ワイヤーフレームは表示できます。`, { duration: Infinity, icon: '❌' })
         
         // エラーが発生しても、部分的に生成された画像があれば表示
         if (sections.length > 0) {
