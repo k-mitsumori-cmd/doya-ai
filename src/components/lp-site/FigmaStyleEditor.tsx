@@ -605,16 +605,25 @@ export function FigmaStyleEditor({
         </div>
 
         {/* アクションボタン */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {/* 画像生成中の表示 */}
           {isGeneratingImages && (
-            <div className="px-4 py-2 text-sm font-medium bg-blue-100 text-blue-700 rounded-lg flex items-center gap-2 border border-blue-200">
+            <div className="px-4 py-2.5 text-sm font-medium bg-blue-50 text-blue-700 rounded-xl flex items-center gap-2 border border-blue-200">
               <Loader2 className="w-4 h-4 animate-spin" />
               画像生成中...
             </div>
           )}
           
-          {/* プレビューボタン */}
+          {/* ダウンロードボタン */}
+          <button
+            onClick={() => onDownload(selectedDevice === 'pc' ? 'all_pc' : 'all_sp')}
+            className="px-4 py-2.5 text-sm font-medium bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors flex items-center gap-2"
+          >
+            <FileDown className="w-4 h-4" />
+            ダウンロード
+          </button>
+          
+          {/* プレビューボタン - 大きく目立つデザイン */}
           {onPreview && (
             <div className="relative group">
               <button
@@ -630,26 +639,29 @@ export function FigmaStyleEditor({
                   onPreview()
                 }}
                 disabled={isGeneratingImages}
-                className={`px-4 py-2 text-sm font-medium rounded-lg flex items-center gap-2 transition-all ${
+                className={`px-5 py-2.5 text-sm font-bold rounded-xl flex items-center gap-2 transition-all border-2 ${
                   isGeneratingImages || missingSections.length > 0
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed'
+                    : 'bg-white text-slate-800 border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-sm hover:shadow'
                 }`}
               >
-                <ExternalLink className="w-4 h-4" />
-                プレビュー
+                <Eye className="w-5 h-5" />
+                <span>プレビュー</span>
+                {missingSections.length === 0 && !isGeneratingImages && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded">OK</span>
+                )}
               </button>
               {/* ツールチップ */}
               {(isGeneratingImages || missingSections.length > 0) && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                  {isGeneratingImages ? '画像生成中...' : `${missingSections.length}件の画像が未生成`}
+                  {isGeneratingImages ? '⏳ 画像生成中...' : `🖼️ ${missingSections.length}件の画像が未生成`}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                 </div>
               )}
             </div>
           )}
           
-          {/* 公開ボタン */}
+          {/* 公開ボタン - 最も目立つデザイン */}
           {onPublish && (
             <div className="relative group">
               <button
@@ -663,7 +675,6 @@ export function FigmaStyleEditor({
                     return
                   }
                   if (partialSections.length > 0) {
-                    // 部分生成の場合は警告を表示して続行を確認
                     if (!confirm(`${partialSections.length}件のセクションでPC/SPどちらかの画像のみ生成されています。このまま公開しますか？`)) {
                       return
                     }
@@ -671,33 +682,24 @@ export function FigmaStyleEditor({
                   onPublish()
                 }}
                 disabled={isGeneratingImages}
-                className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-2 transition-all shadow-md ${
+                className={`px-6 py-2.5 text-sm font-bold rounded-xl flex items-center gap-2 transition-all ${
                   isGeneratingImages || missingSections.length > 0
-                    ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
-                    : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700'
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white hover:from-emerald-600 hover:to-teal-700 shadow-lg hover:shadow-xl transform hover:scale-[1.02]'
                 }`}
               >
-                <Globe className="w-4 h-4" />
-                公開する
+                <Globe className="w-5 h-5" />
+                <span>🚀 公開する</span>
               </button>
               {/* ツールチップ */}
               {(isGeneratingImages || missingSections.length > 0) && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                  {isGeneratingImages ? '画像生成中...' : `${missingSections.length}件の画像が未生成`}
+                  {isGeneratingImages ? '⏳ 画像生成中...' : `🖼️ ${missingSections.length}件の画像が未生成`}
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                 </div>
               )}
             </div>
           )}
-          
-          {/* ダウンロードボタン */}
-          <button
-            onClick={() => onDownload(selectedDevice === 'pc' ? 'all_pc' : 'all_sp')}
-            className="px-4 py-2 text-sm font-medium bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-2"
-          >
-            <FileDown className="w-4 h-4" />
-            ダウンロード
-          </button>
         </div>
       </div>
 
