@@ -258,8 +258,96 @@ function LpSitePageInner() {
           
           const step3Data = await step3Response.json()
           
-          // ワイヤーフレームを取得（同期方式）
-          wireframes = step3Data.wireframes || []
+          // バックグラウンドジョブ方式の場合、ポーリングが必要
+          if (step3Data.pollingRequired && step3Data.jobId) {
+            const jobId = step3Data.jobId
+            console.log(`[LP-SITE] ワイヤーフレーム生成ジョブを開始: ${jobId}`)
+            
+            // ポーリングで結果を取得
+            let pollCount = 0
+            const MAX_POLL_COUNT = 300 // 最大5分間（1秒ごとにポーリング）
+            const POLL_INTERVAL = 1000 // 1秒ごと
+            let pollingFailed = false
+            
+            while (pollCount < MAX_POLL_COUNT) {
+              await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL))
+              
+              try {
+                const statusResponse = await fetch(`/api/lp-site/wireframe-status/${jobId}`)
+                if (!statusResponse.ok) {
+                  // 404エラーの場合、サーバーレス環境でジョブが見つからない可能性がある
+                  // 一定回数失敗したら、直接生成を試みる
+                  if (statusResponse.status === 404 && pollCount > 30) {
+                    console.warn(`[LP-SITE] ジョブが見つかりません（404）。直接生成を試みます: ${jobId}`)
+                    pollingFailed = true
+                    break
+                  }
+                  // その他のエラーは無視して続行
+                  pollCount++
+                  continue
+                }
+                
+                const statusData = await statusResponse.json()
+                
+                if (statusData.status === 'COMPLETED') {
+                  wireframes = statusData.wireframes || []
+                  console.log(`[LP-SITE] ワイヤーフレーム生成完了: ${jobId}`)
+                  break
+                } else if (statusData.status === 'ERROR') {
+                  throw new Error(statusData.error || 'ワイヤーフレーム生成に失敗しました')
+                }
+                // PROCESSINGの場合は続行
+              } catch (pollError: any) {
+                // 404エラーの場合、一定回数後に直接生成を試みる
+                if (pollError.message?.includes('404') && pollCount > 30) {
+                  console.warn(`[LP-SITE] ポーリングが失敗しました。直接生成を試みます: ${pollError.message}`)
+                  pollingFailed = true
+                  break
+                }
+                // その他のエラーはログに記録して続行
+                if (pollCount % 10 === 0) {
+                  console.warn(`[LP-SITE] ポーリングエラー（続行）:`, pollError.message)
+                }
+              }
+              
+              pollCount++
+            }
+            
+            // ポーリングが失敗した場合、直接生成を試みる
+            if (pollingFailed || (pollCount >= MAX_POLL_COUNT && wireframes.length === 0)) {
+              console.warn('[LP-SITE] ポーリングがタイムアウトまたは失敗しました。直接ワイヤーフレーム生成を試みます...')
+              try {
+                // 直接生成APIを呼び出す（同期方式）
+                const directResponse = await fetch('/api/lp-site/generate-step', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ 
+                    step: 'wireframe-generation', 
+                    product_info: productInfo, 
+                    sections 
+                  }),
+                })
+                
+                if (directResponse.ok) {
+                  const directData = await directResponse.json()
+                  if (directData.wireframes && directData.wireframes.length > 0) {
+                    wireframes = directData.wireframes
+                    console.log('[LP-SITE] 直接生成でワイヤーフレームを取得しました')
+                  } else {
+                    throw new Error('直接生成でもワイヤーフレームが取得できませんでした')
+                  }
+                } else {
+                  throw new Error(`直接生成APIエラー: ${directResponse.status}`)
+                }
+              } catch (directError: any) {
+                console.error('[LP-SITE] 直接生成も失敗しました:', directError)
+                throw new Error('ワイヤーフレーム生成に失敗しました。しばらく待ってから再試行してください。')
+              }
+            }
+          } else {
+            // 従来の方式（即座に結果が返る場合）
+            wireframes = step3Data.wireframes || []
+          }
           
           // ワイヤーフレームが生成されていない場合（空配列）はエラー
           if (wireframes.length === 0 || wireframes.length < sections.length) {
