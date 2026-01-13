@@ -994,7 +994,7 @@ function LpSitePageInner() {
       <>
         {/* 生成中オーバーレイ */}
         <LpGenerationOverlay
-          open={isGenerating}
+          open={isGenerating || isGeneratingImages}
           progress={progress}
           stageText={stageText}
           mood={mood}
@@ -1098,7 +1098,7 @@ function LpSitePageInner() {
     <LpSiteAppLayout>
       {/* 生成中オーバーレイ */}
       <LpGenerationOverlay
-        open={isGenerating}
+        open={isGenerating || isGeneratingImages}
         progress={progress}
         stageText={stageText}
         mood={mood}

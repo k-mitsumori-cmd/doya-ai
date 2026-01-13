@@ -14,45 +14,89 @@ export async function generateWireframes(
 ): Promise<SectionWireframe[]> {
   const wireframes: SectionWireframe[] = []
 
-  // タイムアウト処理（各セクションに最大120秒）
-  // Gemini APIのタイムアウト（120秒）に合わせて設定
-  const SECTION_TIMEOUT = 120000 // 120秒
+  // タイムアウト処理（各セクションに最大200秒）
+  // Gemini APIのタイムアウト（120秒）に十分な余裕を持たせて設定
+  // Promise.raceの問題を避けるため、タイムアウト時間を十分に長く設定
+  const SECTION_TIMEOUT = 200000 // 200秒（Gemini APIの120秒 + 80秒の余裕）
   const MAX_RETRIES = 1 // 最大1回まで再試行
 
   for (const section of sections) {
     let retryCount = 0
     let wireframe: SectionWireframe | null = null
-    let lastError: Error | null = null
 
     while (retryCount <= MAX_RETRIES && !wireframe) {
       try {
         // タイムアウト付きでワイヤーフレーム生成を実行
         // Gemini API側で120秒のタイムアウトが設定されているため、
-        // ここでは十分な余裕を持たせて150秒に設定
-        // これにより、Gemini APIが120秒でタイムアウトしても、実際の処理が完了するまで待てる
+        // ここでは十分な余裕を持たせて200秒に設定
+        // これにより、Gemini APIが成功した場合、タイムアウトが先に発火することを防ぐ
         const wireframePromise = generateSectionWireframe(section, productInfo)
         let timeoutId: NodeJS.Timeout | null = null
+        let promiseResolved = false
         
         const timeoutPromise = new Promise<never>((_, reject) => {
           timeoutId = setTimeout(() => {
-            reject(new Error('タイムアウト: ワイヤーフレーム生成に時間がかかりすぎています（150秒）'))
-          }, 150000) // 150秒（Gemini APIの120秒 + 十分な余裕）
+            if (!promiseResolved) {
+              promiseResolved = true
+              reject(new Error('タイムアウト: ワイヤーフレーム生成に時間がかかりすぎています（200秒）'))
+            }
+          }, SECTION_TIMEOUT)
         })
 
         // Promise.raceを使用し、どちらかが完了したら結果を取得
-        const result = await Promise.race([wireframePromise, timeoutPromise])
-        
-        // 成功した場合、タイムアウトをクリア
-        if (timeoutId) {
-          clearTimeout(timeoutId)
+        try {
+          const result = await Promise.race([wireframePromise, timeoutPromise])
+          
+          // 成功した場合、タイムアウトをクリア
+          promiseResolved = true
+          if (timeoutId) {
+            clearTimeout(timeoutId)
+          }
+          
+          wireframe = result
+          wireframes.push(wireframe)
+          console.log(`[LP-SITE] ワイヤーフレーム生成完了: ${section.section_id}`)
+        } catch (raceError: any) {
+          // タイムアウトエラーの場合、wireframePromiseが完了するまで少し待つ
+          if (raceError.message && raceError.message.includes('タイムアウト')) {
+            console.warn(`[LP-SITE] タイムアウトが発火しましたが、wireframePromiseの完了を待機中: ${section.section_id}`)
+            
+            // 最大5秒待って、wireframePromiseの結果を確認
+            try {
+              const result = await Promise.race([
+                wireframePromise,
+                new Promise<never>((_, reject) => 
+                  setTimeout(() => reject(new Error('追加タイムアウト')), 5000)
+                )
+              ])
+              
+              // 成功した場合
+              promiseResolved = true
+              if (timeoutId) {
+                clearTimeout(timeoutId)
+              }
+              wireframe = result
+              wireframes.push(wireframe)
+              console.log(`[LP-SITE] ワイヤーフレーム生成完了（タイムアウト後に成功）: ${section.section_id}`)
+            } catch (waitError: any) {
+              // 追加タイムアウトも発生した場合は、元のタイムアウトエラーをスロー
+              promiseResolved = true
+              if (timeoutId) {
+                clearTimeout(timeoutId)
+              }
+              throw raceError
+            }
+          } else {
+            // タイムアウト以外のエラーの場合
+            promiseResolved = true
+            if (timeoutId) {
+              clearTimeout(timeoutId)
+            }
+            throw raceError
+          }
         }
-        
-        wireframe = result
-        wireframes.push(wireframe)
-        console.log(`[LP-SITE] ワイヤーフレーム生成完了: ${section.section_id}`)
       } catch (error: any) {
         console.error(`[LP-SITE] ワイヤーフレーム生成エラー (${section.section_id}, 試行 ${retryCount + 1}):`, error)
-        lastError = error
         
         retryCount++
         if (retryCount > MAX_RETRIES) {
