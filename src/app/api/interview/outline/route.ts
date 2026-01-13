@@ -63,17 +63,68 @@ export async function POST(request: NextRequest) {
       transcriptionTextLength: completedTranscriptions.reduce((sum, t) => sum + (t.text?.length || 0), 0),
     })
 
-    // 処理中の文字起こしがある場合
+    // 処理中の文字起こしがある場合は必ずエラーを返す
     if (processingTranscriptions.length > 0) {
-      console.warn('[INTERVIEW] Transcription still processing:', {
+      console.log('[INTERVIEW] Outline generation blocked: Transcription still processing:', {
         projectId,
+        processingCount: processingTranscriptions.length,
         processingIds: processingTranscriptions.map((t) => t.id),
       })
       return NextResponse.json(
         {
           error: 'Transcription in progress',
-          details: '文字起こしがまだ処理中です。完了するまでお待ちください。',
+          details: '文字起こしがまだ処理中です。全ての文字起こしが完了するまでお待ちください。',
           processingCount: processingTranscriptions.length,
+        },
+        { status: 400 }
+      )
+    }
+
+    // 完了した文字起こしが存在しない場合はエラーを返す
+    if (completedTranscriptions.length === 0) {
+      console.error('[INTERVIEW] Outline generation blocked: No completed transcription found:', {
+        projectId,
+        totalCount: project.transcriptions.length,
+        transcriptionStatuses: project.transcriptions.map((t) => ({
+          id: t.id,
+          status: t.status,
+          hasText: !!(t.text && t.text.trim().length > 0),
+          textLength: t.text?.length || 0,
+        })),
+      })
+      return NextResponse.json(
+        {
+          error: 'No completed transcription',
+          details: '文字起こしが完了していません。全ての文字起こしが完了するまでお待ちください。',
+        },
+        { status: 400 }
+      )
+    }
+
+    // 全ての文字起こしが完了していることを確認（処理中または保留中のものがない）
+    const allTranscriptions = project.transcriptions || []
+    const notCompletedTranscriptions = allTranscriptions.filter(
+      (t) => t.status !== 'COMPLETED' || !t.text || t.text.trim().length === 0
+    )
+    
+    if (notCompletedTranscriptions.length > 0) {
+      console.error('[INTERVIEW] Outline generation blocked: Some transcriptions not completed:', {
+        projectId,
+        totalCount: allTranscriptions.length,
+        completedCount: completedTranscriptions.length,
+        notCompletedCount: notCompletedTranscriptions.length,
+        notCompletedStatuses: notCompletedTranscriptions.map((t) => ({
+          id: t.id,
+          status: t.status,
+          hasText: !!(t.text && t.text.trim().length > 0),
+          textLength: t.text?.length || 0,
+        })),
+      })
+      return NextResponse.json(
+        {
+          error: 'Incomplete transcription',
+          details: '全ての文字起こしが完了していません。全ての文字起こしが完了するまでお待ちください。',
+          notCompletedCount: notCompletedTranscriptions.length,
         },
         { status: 400 }
       )
@@ -85,7 +136,7 @@ export async function POST(request: NextRequest) {
       .join('\n\n')
 
     if (!transcriptionText || transcriptionText.trim() === '') {
-      console.error('[INTERVIEW] No completed transcription found for project:', {
+      console.error('[INTERVIEW] Outline generation blocked: Transcription text is empty:', {
         projectId,
         totalCount: project.transcriptions.length,
         completedCount: completedTranscriptions.length,

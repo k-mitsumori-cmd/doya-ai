@@ -9,7 +9,7 @@ import { generateSingleBanner } from '@/lib/nanobanner'
 import { LpSection, ProductInfo } from '@/lib/lp-site/types'
 import { generateSectionImagePair, generateImagePrompt } from '@/lib/lp-site/image-generation'
 
-export const maxDuration = 120 // 2分
+export const maxDuration = 180 // 3分（画像生成には時間がかかるため延長）
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,10 +38,22 @@ export async function POST(request: NextRequest) {
 
     if (regenerate_type === 'both') {
       // 両方再生成（セクション位置情報なしで再生成）
-      const result = await generateSectionImagePair(sectionData, productInfo)
-      imagePc = result.image_pc
-      imageSp = result.image_sp
-      console.log(`[LP-SITE] 両方の画像再生成成功: ${sectionData.section_id}`)
+      try {
+        console.log(`[LP-SITE] 両方の画像再生成開始: ${sectionData.section_id}`)
+        const result = await generateSectionImagePair(sectionData, productInfo)
+        imagePc = result.image_pc
+        imageSp = result.image_sp
+        
+        // PC/SPの少なくともどちらかが生成されているか確認
+        if (!imagePc && !imageSp) {
+          throw new Error('PC/SP両方の画像が生成されませんでした')
+        }
+        
+        console.log(`[LP-SITE] 両方の画像再生成成功: ${sectionData.section_id} (PC: ${!!imagePc}, SP: ${!!imageSp})`)
+      } catch (error: any) {
+        console.error(`[LP-SITE] 両方の画像再生成エラー (${sectionData.section_id}):`, error)
+        throw new Error(`画像再生成に失敗しました: ${error.message || '不明なエラー'}`)
+      }
     } else if (regenerate_type === 'image_pc') {
       // PC画像のみ再生成
       const imagePrompt = generateImagePrompt(sectionData, productInfo, 'pc')

@@ -176,17 +176,17 @@ export default function InterviewProjectDetailPage() {
             // 動画ファイルの場合: 音声抽出時間 + 文字起こし時間
             // 音声長の推定: 1GB ≈ 1時間（一般的な1080p動画）
             const audioLengthMinutes = fileSizeGB * 60
-            // 音声抽出時間: 1分の動画 ≈ 約8秒（FFmpeg処理）
-            const extractionTime = audioLengthMinutes * 8
-            // 文字起こし時間: 音声長の30%（リアルタイムファクター）
-            const transcriptionTime = audioLengthMinutes * 60 * 0.3
+            // 音声抽出時間: 1分の動画 ≈ 約4秒（FFmpeg処理、より現実的な値）
+            const extractionTime = audioLengthMinutes * 4
+            // 文字起こし時間: 音声長の20%（リアルタイムファクター、より現実的な値）
+            const transcriptionTime = audioLengthMinutes * 60 * 0.2
             estimatedSeconds = extractionTime + transcriptionTime
           } else {
             // 音声ファイルの場合: 文字起こし時間のみ
             // 音声長の推定: MP3 (128kbps) 1MB ≈ 約1.08分
             const audioLengthMinutes = fileSizeMB * 1.08
-            // 文字起こし時間: 音声長の30%（リアルタイムファクター）
-            const transcriptionTime = audioLengthMinutes * 60 * 0.3
+            // 文字起こし時間: 音声長の20%（リアルタイムファクター、より現実的な値）
+            const transcriptionTime = audioLengthMinutes * 60 * 0.2
             estimatedSeconds = transcriptionTime
           }
           

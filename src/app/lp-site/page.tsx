@@ -249,8 +249,8 @@ function LpSitePageInner() {
             let completedSections = 0
             
             // 各セクションごとに画像を生成（タイムアウト付き）
-            const SECTION_TIMEOUT = 30000 // 30秒
-            const MAX_RETRIES = 2 // 最大2回まで再試行
+            const SECTION_TIMEOUT = 90000 // 90秒（画像生成には時間がかかるため延長）
+            const MAX_RETRIES = 4 // 最大4回まで再試行（合計5回試行）
             
             for (let index = 0; index < imageRequiredSections.length; index++) {
               const section = imageRequiredSections[index]
@@ -339,8 +339,10 @@ function LpSitePageInner() {
                     }
                     break
                   } else {
-                    // 再試行する前に少し待機
-                    await new Promise(resolve => setTimeout(resolve, 2000))
+                    // 再試行する前に少し待機（試行回数に応じて待機時間を増やす）
+                    const waitTime = 3000 + (retryCount * 1000) // 3秒, 4秒, 5秒, 6秒...
+                    console.log(`[LP-SITE] ${waitTime/1000}秒待機してから再試行します (${sectionId})`)
+                    await new Promise(resolve => setTimeout(resolve, waitTime))
                   }
                 }
               }
