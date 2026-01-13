@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Globe, Layout, Image as ImageIcon, Package, CheckCircle2, Loader2, Zap, Clock, Search, FileText, ExternalLink, Brain, Target, AlertCircle, Lightbulb, CheckCircle, Monitor, Smartphone, Code, Palette } from 'lucide-react'
 import confetti from 'canvas-confetti'
