@@ -224,12 +224,8 @@ function closeIncompleteJson(input: string): string {
 }
 
 // レート制限時のフォールバックモデル
-const FALLBACK_MODELS = [
-  // Gemini 3.0 系（将来の利用に備えて維持、環境によっては未提供の可能性があるため404時は下へ）
-  'gemini-3-pro',
-  // 安定系
-  'gemini-1.5-pro',
-  'gemini-1.5-flash',
+const FALLBACK_MODELS: string[] = [
+  // フォールバックなし（gemini-3-proのみを使用）
 ]
 
 // レート制限(429)やサーバーエラー(5xx)時にリトライ
