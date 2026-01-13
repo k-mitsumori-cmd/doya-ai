@@ -1,5 +1,46 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
+// OpenAI API用のヘルパー関数
+async function generateTextWithChatGPT(prompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
+  const openaiApiKey = process.env.OPENAI_API_KEY
+  if (!openaiApiKey) {
+    throw new Error('OPENAI_API_KEY環境変数が設定されていません。ChatGPTフォールバックを使用するにはOPENAI_API_KEYが必要です。')
+  }
+
+  const model = process.env.CHATGPT_FALLBACK_MODEL || 'gpt-4o' // デフォルトはgpt-4o、環境変数でchatgpt-5.2-proなどを指定可能
+  
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${openaiApiKey}`,
+    },
+    body: JSON.stringify({
+      model: model,
+      messages: [
+        {
+          role: 'system',
+          content: 'あなたはプロフェッショナルなコンテンツ作成アシスタントです。日本語で高品質なコンテンツを生成してください。',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: options?.temperature ?? 0.4,
+      max_tokens: options?.maxTokens ?? 16384,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`OpenAI API Error: ${response.status} - ${errorText.substring(0, 500)}`)
+  }
+
+  const json = await response.json()
+  return json.choices?.[0]?.message?.content || ''
+}
+
 // SEO用途は Gemini 3 系（品質要件）
 // - テキスト: Gemini 3（未対応環境では自動でフォールバック）
 // - 画像(図解/サムネ): Nano Banana Pro（運用上の事故防止）
@@ -328,7 +369,23 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
     }
   }
   
-  throw new Error('All Gemini models exhausted')
+  // すべてのGeminiモデルが失敗した場合、ChatGPTにフォールバック
+  const promptText = joinPartsText(req.parts)
+  if (!promptText) {
+    throw new Error('All Gemini models exhausted and no prompt text available for ChatGPT fallback')
+  }
+  
+  console.log('[Gemini] All models failed, falling back to ChatGPT...')
+  try {
+    const chatgptResult = await generateTextWithChatGPT(promptText, {
+      temperature: req.generationConfig?.temperature ?? 0.4,
+      maxTokens: Math.min(Math.floor((req.generationConfig?.maxOutputTokens ?? 65536) / 4), 16384), // OpenAIはトークン単位なので概算変換
+    })
+    console.log('[Gemini] Successfully used ChatGPT fallback')
+    return chatgptResult
+  } catch (chatgptError: any) {
+    throw new Error(`All Gemini models exhausted and ChatGPT fallback failed: ${chatgptError?.message || 'unknown error'}`)
+  }
 }
 
 export async function geminiGenerateJson<T>(
