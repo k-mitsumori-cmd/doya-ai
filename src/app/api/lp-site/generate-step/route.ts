@@ -83,42 +83,35 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Step 3: ワイヤーフレーム生成フェーズ（バックグラウンドジョブ方式）
+    // Step 3: ワイヤーフレーム生成フェーズ（同期方式に戻す）
+    // メモリベースのストレージはVercelのサーバーレス環境ではインスタンス間で共有されないため、
+    // バックグラウンドジョブ方式は使用しない
     if (step === 'wireframe-generation') {
       if (!product_info || !sections) {
         return NextResponse.json({ error: 'product_infoとsectionsが必要です' }, { status: 400 })
       }
 
-      // バックグラウンドジョブ方式: ワイヤーフレーム生成を開始して即座にレスポンスを返す
-      // これにより、Vercelのタイムアウト（300秒）を回避できる
-      const { createWireframeJob, updateWireframeJob } = await import('@/lib/lp-site/wireframe-job-storage')
-      const jobId = createWireframeJob()
-      
-      console.log(`[LP-SITE] ワイヤーフレーム生成ジョブを作成: ${jobId}`)
-
-      // バックグラウンドで処理を開始（非同期）
-      // 注意: この処理は即座に完了し、実際のワイヤーフレーム生成はバックグラウンドで実行される
-      processWireframeGenerationInBackground({
-        jobId,
-        sections,
-        productInfo: product_info as ProductInfo,
-      }).catch((error: any) => {
-        console.error('[LP-SITE] バックグラウンドワイヤーフレーム生成エラー:', error)
-        updateWireframeJob(jobId, {
-          status: 'ERROR',
-          error: error.message || 'Unknown error',
+      try {
+        // 順次処理でワイヤーフレームを生成（各セクションのタイムアウトは90秒）
+        // 8セクション × 90秒 = 最大720秒だが、実際は30-60秒で完了するため問題ない
+        const wireframes = await generateWireframes(sections, product_info as ProductInfo)
+        
+        return NextResponse.json({
+          success: true,
+          step: 'wireframe-generation',
+          wireframes,
         })
-      })
-
-      // 即座にレスポンスを返す（処理はバックグラウンドで継続）
-      return NextResponse.json({
-        success: true,
-        step: 'wireframe-generation',
-        jobId,
-        status: 'PROCESSING',
-        message: 'ワイヤーフレーム生成を開始しました。バックグラウンドで処理が続行されます。',
-        pollingRequired: true,
-      })
+      } catch (error: any) {
+        console.error('[LP-SITE] ワイヤーフレーム生成エラー:', error)
+        
+        return NextResponse.json(
+          {
+            error: 'ワイヤーフレーム生成に失敗しました',
+            details: error.message,
+          },
+          { status: 500 }
+        )
+      }
     }
 
     // Step 4: 画像生成フェーズ
@@ -147,45 +140,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// バックグラウンドでワイヤーフレーム生成を実行
-async function processWireframeGenerationInBackground({
-  jobId,
-  sections,
-  productInfo,
-}: {
-  jobId: string
-  sections: LpSection[]
-  productInfo: ProductInfo
-}) {
-  try {
-    console.log(`[LP-SITE] バックグラウンドワイヤーフレーム生成を開始: ${jobId}`)
-    
-    const { updateWireframeJob } = await import('@/lib/lp-site/wireframe-job-storage')
-    
-    // ワイヤーフレームを生成
-    const wireframes = await generateWireframes(sections, productInfo)
-    
-    // データベースに保存
-    updateWireframeJob(jobId, {
-      status: 'COMPLETED',
-      wireframes,
-    })
-    
-    console.log(`[LP-SITE] バックグラウンドワイヤーフレーム生成完了: ${jobId}`)
-  } catch (error: any) {
-    console.error(`[LP-SITE] バックグラウンドワイヤーフレーム生成エラー: ${jobId}`, error)
-    
-    const { updateWireframeJob } = await import('@/lib/lp-site/wireframe-job-storage')
-    
-    // エラーを記録
-    updateWireframeJob(jobId, {
-      status: 'ERROR',
-      error: error.message || 'Unknown error',
-    })
-    
-    throw error
-  }
-}
 
 
 

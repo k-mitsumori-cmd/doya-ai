@@ -258,50 +258,8 @@ function LpSitePageInner() {
           
           const step3Data = await step3Response.json()
           
-          // バックグラウンドジョブ方式の場合、ポーリングが必要
-          if (step3Data.pollingRequired && step3Data.jobId) {
-            const jobId = step3Data.jobId
-            console.log(`[LP-SITE] ワイヤーフレーム生成ジョブを開始: ${jobId}`)
-            
-            // ポーリングで結果を取得
-            let pollCount = 0
-            const MAX_POLL_COUNT = 300 // 最大5分間（1秒ごとにポーリング）
-            const POLL_INTERVAL = 1000 // 1秒ごと
-            
-            while (pollCount < MAX_POLL_COUNT) {
-              await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL))
-              
-              try {
-                const statusResponse = await fetch(`/api/lp-site/wireframe-status/${jobId}`)
-                if (!statusResponse.ok) {
-                  throw new Error(`ステータス取得エラー: ${statusResponse.status}`)
-                }
-                
-                const statusData = await statusResponse.json()
-                
-                if (statusData.status === 'COMPLETED') {
-                  wireframes = statusData.wireframes || []
-                  console.log(`[LP-SITE] ワイヤーフレーム生成完了: ${jobId}`)
-                  break
-                } else if (statusData.status === 'ERROR') {
-                  throw new Error(statusData.error || 'ワイヤーフレーム生成に失敗しました')
-                }
-                // PROCESSINGの場合は続行
-              } catch (pollError: any) {
-                console.error('[LP-SITE] ポーリングエラー:', pollError)
-                throw pollError
-              }
-              
-              pollCount++
-            }
-            
-            if (pollCount >= MAX_POLL_COUNT) {
-              throw new Error('ワイヤーフレーム生成がタイムアウトしました')
-            }
-          } else {
-            // 従来の方式（即座に結果が返る場合）
-            wireframes = step3Data.wireframes || []
-          }
+          // ワイヤーフレームを取得（同期方式）
+          wireframes = step3Data.wireframes || []
           
           // ワイヤーフレームが生成されていない場合（空配列）はエラー
           if (wireframes.length === 0 || wireframes.length < sections.length) {
