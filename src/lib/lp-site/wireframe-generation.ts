@@ -12,24 +12,20 @@ export async function generateWireframes(
   sections: LpSection[],
   productInfo: any
 ): Promise<SectionWireframe[]> {
-  const wireframes: SectionWireframe[] = []
-
-  // タイムアウト処理（各セクションに最大200秒）
-  // Gemini APIのタイムアウト（120秒）に十分な余裕を持たせて設定
-  // Promise.raceの問題を避けるため、タイムアウト時間を十分に長く設定
-  const SECTION_TIMEOUT = 200000 // 200秒（Gemini APIの120秒 + 80秒の余裕）
+  // タイムアウト処理（各セクションに最大150秒）
+  // Gemini APIのタイムアウト（120秒）に余裕を持たせて設定
+  // Vercelの300秒タイムアウトを考慮し、並列処理で効率化
+  const SECTION_TIMEOUT = 150000 // 150秒（Gemini APIの120秒 + 30秒の余裕）
   const MAX_RETRIES = 1 // 最大1回まで再試行
+  const CONCURRENT_LIMIT = 3 // 同時実行数を3に制限（Gemini APIのレート制限を考慮）
 
-  for (const section of sections) {
+  // セクションごとのワイヤーフレーム生成関数（リトライ付き）
+  const generateWithRetry = async (section: LpSection): Promise<SectionWireframe> => {
     let retryCount = 0
-    let wireframe: SectionWireframe | null = null
+    let lastError: Error | null = null
 
-    while (retryCount <= MAX_RETRIES && !wireframe) {
+    while (retryCount <= MAX_RETRIES) {
       try {
-        // タイムアウト付きでワイヤーフレーム生成を実行
-        // Gemini API側で120秒のタイムアウトが設定されているため、
-        // ここでは十分な余裕を持たせて200秒に設定
-        // これにより、Gemini APIが成功した場合、タイムアウトが先に発火することを防ぐ
         const wireframePromise = generateSectionWireframe(section, productInfo)
         let timeoutId: NodeJS.Timeout | null = null
         let promiseResolved = false
@@ -38,26 +34,22 @@ export async function generateWireframes(
           timeoutId = setTimeout(() => {
             if (!promiseResolved) {
               promiseResolved = true
-              reject(new Error('タイムアウト: ワイヤーフレーム生成に時間がかかりすぎています（200秒）'))
+              reject(new Error('タイムアウト: ワイヤーフレーム生成に時間がかかりすぎています（150秒）'))
             }
           }, SECTION_TIMEOUT)
         })
 
-        // Promise.raceを使用し、どちらかが完了したら結果を取得
         try {
           const result = await Promise.race([wireframePromise, timeoutPromise])
           
-          // 成功した場合、タイムアウトをクリア
           promiseResolved = true
           if (timeoutId) {
             clearTimeout(timeoutId)
           }
           
-          wireframe = result
-          wireframes.push(wireframe)
           console.log(`[LP-SITE] ワイヤーフレーム生成完了: ${section.section_id}`)
+          return result
         } catch (raceError: any) {
-          // タイムアウトエラーの場合、wireframePromiseが完了するまで少し待つ
           if (raceError.message && raceError.message.includes('タイムアウト')) {
             console.warn(`[LP-SITE] タイムアウトが発火しましたが、wireframePromiseの完了を待機中: ${section.section_id}`)
             
@@ -70,16 +62,13 @@ export async function generateWireframes(
                 )
               ])
               
-              // 成功した場合
               promiseResolved = true
               if (timeoutId) {
                 clearTimeout(timeoutId)
               }
-              wireframe = result
-              wireframes.push(wireframe)
               console.log(`[LP-SITE] ワイヤーフレーム生成完了（タイムアウト後に成功）: ${section.section_id}`)
+              return result
             } catch (waitError: any) {
-              // 追加タイムアウトも発生した場合は、元のタイムアウトエラーをスロー
               promiseResolved = true
               if (timeoutId) {
                 clearTimeout(timeoutId)
@@ -87,7 +76,6 @@ export async function generateWireframes(
               throw raceError
             }
           } else {
-            // タイムアウト以外のエラーの場合
             promiseResolved = true
             if (timeoutId) {
               clearTimeout(timeoutId)
@@ -97,10 +85,10 @@ export async function generateWireframes(
         }
       } catch (error: any) {
         console.error(`[LP-SITE] ワイヤーフレーム生成エラー (${section.section_id}, 試行 ${retryCount + 1}):`, error)
+        lastError = error
         
         retryCount++
         if (retryCount > MAX_RETRIES) {
-          // 最大再試行回数に達した場合はエラーをスロー
           throw new Error(`ワイヤーフレーム生成に失敗しました (${section.section_id}): ${error.message || '不明なエラー'}`)
         } else {
           // 再試行する前に少し待機
@@ -108,6 +96,42 @@ export async function generateWireframes(
         }
       }
     }
+
+    throw lastError || new Error(`ワイヤーフレーム生成に失敗しました (${section.section_id})`)
+  }
+
+  // 並列処理（同時実行数を制限）
+  const wireframes: SectionWireframe[] = []
+  const results: (SectionWireframe | Error)[] = new Array(sections.length)
+  
+  // バッチ処理：CONCURRENT_LIMIT個ずつ処理
+  for (let i = 0; i < sections.length; i += CONCURRENT_LIMIT) {
+    const batch = sections.slice(i, i + CONCURRENT_LIMIT)
+    const batchPromises = batch.map((section, batchIndex) => 
+      generateWithRetry(section)
+        .then(result => ({ index: i + batchIndex, result }))
+        .catch(error => ({ index: i + batchIndex, error }))
+    )
+    
+    const batchResults = await Promise.all(batchPromises)
+    
+    // 結果をインデックス順に保存
+    for (const { index, result, error } of batchResults) {
+      if (error) {
+        results[index] = error as Error
+      } else {
+        results[index] = result as SectionWireframe
+      }
+    }
+  }
+
+  // 結果を順番に整理（エラーがあればスロー）
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i]
+    if (result instanceof Error) {
+      throw result
+    }
+    wireframes.push(result as SectionWireframe)
   }
 
   return wireframes
