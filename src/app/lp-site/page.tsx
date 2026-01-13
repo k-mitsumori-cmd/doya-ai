@@ -307,6 +307,12 @@ function LpSitePageInner() {
                         // JSON解析に失敗した場合は空オブジェクトを使用
                       }
                       console.error(`[LP-SITE] セクション画像生成エラー (${sectionId}):`, errorData)
+                      
+                      // タイムアウトエラーの場合、特別なメッセージを表示
+                      if (sectionResponse.status === 504 || errorData.timeout) {
+                        throw new Error(`タイムアウト: ${errorData.details || '画像生成に時間がかかりすぎています。再試行してください。'}`)
+                      }
+                      
                       const errorMsg = errorData.error || errorData.details || '画像生成に失敗しました'
                       throw new Error(errorMsg)
                     }
@@ -327,7 +333,7 @@ function LpSitePageInner() {
                   } catch (fetchError: any) {
                     clearTimeout(timeoutId)
                     if (fetchError.name === 'AbortError') {
-                      throw new Error('タイムアウト: 画像生成に時間がかかりすぎています')
+                      throw new Error('タイムアウト: 画像生成に時間がかかりすぎています（240秒）。再試行してください。')
                     }
                     throw fetchError
                   }
