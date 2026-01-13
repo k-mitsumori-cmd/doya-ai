@@ -539,16 +539,16 @@ function LpSitePageInner() {
                 return !img || (!img.image_pc && !img.image_sp)
               })
               
-              console.error(`[LP-SITE] ${stillFailed.length} セクションの画像生成が完了していません:`, stillFailed.map(s => s.section_id))
-              toast.error(`${stillFailed.length} セクションの画像生成に失敗しました。手動で再生成してください。`, {
-                duration: Infinity,
-                icon: '❌',
+              console.warn(`[LP-SITE] ${stillFailed.length} セクションの画像生成が完了していません:`, stillFailed.map(s => s.section_id))
+              toast.warning(`${stillFailed.length} セクションの画像生成に失敗しましたが、処理を続行します。後で再生成できます。`, {
+                duration: 6000,
+                icon: '⚠️',
               })
               
-              // 完了モーダルは表示しない
+              // エラーとして扱わず、完了として処理を続行
               setIsGeneratingImages(false)
               setImageProgress(100)
-              setStageText('一部の画像生成に失敗しました')
+              setStageText('完了（一部画像未生成）')
               setSectionProgress({})
               setGeneratingSections(new Set())
               
@@ -572,6 +572,11 @@ function LpSitePageInner() {
               }
               
               setResult(partialResult)
+              
+              // 完了モーダルを表示（一部失敗していても完了として扱う）
+              setTimeout(() => {
+                setShowCompletionModal(true)
+              }, 500)
               return
             }
             
