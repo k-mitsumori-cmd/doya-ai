@@ -1935,6 +1935,14 @@ async function generateOutline(article: any, researchContext: string): Promise<S
   const referenceInputs = Array.isArray(article.referenceInputs) ? (article.referenceInputs as any[]) : []
   const coverageNote = comparisonCoverageNote(article)
 
+  // 比較記事: 各サービスをH2セクションとして生成するためのリスト
+  const serviceH2Sections = isComparison && comparisonCandidates.length > 0
+    ? comparisonCandidates.slice(0, desiredCompanies ? Math.min(desiredCompanies, 60) : 60).map((c, i) => {
+        const name = String(c?.name || '').trim()
+        return `- ## ${name}（サービス詳細H2セクション）: 特徴/料金/メリット・デメリット/おすすめシーン/公式URL`
+      }).join('\n')
+    : ''
+
   const comparisonBlock = isComparison
     ? [
         'Comparison article mode: ENABLED (research-based / factual).',
@@ -1944,10 +1952,17 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         '- 公式サイト・一次情報を前提に調査した内容のみを記載する',
         '- 不明な情報は推測しない（「公式に明記なし」「要問い合わせ」「非公開」と明示）',
         '',
+        '★★★ CRITICAL: 各サービスを個別のH2セクションとして生成 ★★★',
+        '比較対象の全サービスを、それぞれ独立したH2見出しセクションとして作成してください。',
+        '例: 30社比較なら、30個のサービス名H2セクションを作成する。',
+        '',
         'Required structure (must appear in outline):',
         '- 導入（比較が必要な理由/失敗例）',
         `- 比較対象サービス一覧（表：サービス名/特徴/料金/向いている人/公式URL）※候補が不足する場合は不足注記を入れ、調査できた範囲（M社）で比較する`,
-        '- 各サービス詳細（できること/できないこと/料金/メリデメ/おすすめシーン）',
+        '',
+        '★ 以下、各サービスを個別H2セクションとして生成（必須）:',
+        serviceH2Sections || '(候補リストが空のため、サービス別H2は生成しない)',
+        '',
         `- サービス比較表（横並び：機能/価格帯/特徴/サポートなど）※候補が不足する場合は不足注記を入れ、調査できた範囲（M社）で比較する`,
         '- タイプ別おすすめ（初心者/コスト/高機能/中小/大企業）',
         '- まとめ（選び方/チェックポイント/結論）',
@@ -2028,10 +2043,13 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     comparisonBlock ? `\n=== COMPARISON BRIEF ===\n${clampText(comparisonBlock, 5000)}\n` : '',
     '',
     'Constraints:',
-    `- sections: exactly ${minSections} items (H2).`,
+    isComparison && comparisonCandidates.length > 0
+      ? `- sections: ${comparisonCandidates.length + 5}-${comparisonCandidates.length + 10} items (H2). Each comparison service MUST have its own H2 section.`
+      : `- sections: exactly ${minSections} items (H2).`,
     '- Each section: {h2: string, intentTag: string, plannedChars: number (1800-3200), h3: string[], h4: {}}',
     '- Keep h4 empty ({}) to reduce JSON size. Details will be generated per section.',
-    '- intentTag: 定義/比較/手順/事例/注意点/FAQ/用語 etc.',
+    '- intentTag: 定義/比較/手順/事例/注意点/FAQ/用語/サービス詳細 etc.',
+    '- For comparison articles: use intentTag "サービス詳細" for each service H2 section.',
     '- faq: array of 5-10 question strings.',
     '- glossary: array of 5-10 term strings.',
     '',
