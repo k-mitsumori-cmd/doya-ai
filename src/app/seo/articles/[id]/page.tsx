@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AnimatePresence, motion } from 'framer-motion'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
+import { EditableMarkdownPreview } from '@seo/components/EditableMarkdownPreview'
 import { ScorePanel } from './components/ScorePanel'
 import { OutlineEditor } from './components/OutlineEditor'
 import { ClientErrorBoundary } from '@seo/components/ClientErrorBoundary'
@@ -1520,9 +1521,17 @@ function SeoArticleInner() {
                         </div>
                       )}
 
-                      {/* 記事本文 - 全幅で読みやすく */}
+                      {/* 記事本文 - 全幅で読みやすく + バイブ編集対応 */}
                       <article className="max-w-none">
-                        <MarkdownPreview markdown={previewMarkdown || markdown} />
+                        {article.status === 'DONE' ? (
+                          <EditableMarkdownPreview 
+                            markdown={previewMarkdown || markdown} 
+                            articleId={id}
+                            onUpdate={() => load({ showLoading: false })}
+                          />
+                        ) : (
+                          <MarkdownPreview markdown={previewMarkdown || markdown} />
+                        )}
                       </article>
                     </>
                   ) : (
