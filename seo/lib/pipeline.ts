@@ -3470,15 +3470,11 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
       } catch (sectionErr: any) {
         // セクション生成エラーでも、次のセクションを試みる（ただし、連続エラーは避ける）
         console.error(`[seo generateSection] failed for job ${jobId}:`, sectionErr?.message)
-        // エラーが続く場合は、残りのセクションをスキップして統合に進む（部分的な記事でも完成させる）
+        // 途中で「完成」になってしまうのを防ぐため、未生成セクションが残っている場合は統合に進まない
         if (iteration > 5 && remaining.length > 0) {
-          await pushResearchEvent(jobId, {
-            at: Date.now(),
-            kind: 'warn',
-            title: '一部セクションの生成に失敗しましたが、統合を続行します',
-            detail: `未生成セクション: ${remaining.map((s: any) => s.index).join(', ')}`,
-          })
-          break
+          throw new Error(
+            `セクション生成が連続で失敗したため停止します。未生成/空セクション: ${remaining.map((s: any) => s.index).join(', ')}`
+          )
         }
       }
 
