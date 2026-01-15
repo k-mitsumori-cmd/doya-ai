@@ -3521,13 +3521,14 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
     )
 
     if (stillRemaining.length > 0) {
-      // 未生成セクションがあっても、統合を試みる（部分的な記事でも完成させる）
+      // 未生成が残るなら統合しない（途中で完成扱いにしない）
       await pushResearchEvent(jobId, {
         at: Date.now(),
         kind: 'warn',
-        title: '一部セクションが未生成ですが、統合を続行します',
-        detail: `未生成セクション: ${stillRemaining.map((s: any) => s.index).join(', ')}`,
+        title: '未生成セクションが残っているため、次回も生成を継続します',
+        detail: `未生成/空セクション: ${stillRemaining.map((s: any) => s.index).join(', ')}`,
       })
+      return { jobId }
     }
 
     await p.seoJob.update({ where: { id: jobId }, data: { step: 'integrate', progress: 85, status: 'running' } })
