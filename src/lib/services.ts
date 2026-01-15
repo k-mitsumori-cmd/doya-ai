@@ -191,6 +191,34 @@ export const SERVICES: Service[] = [
     order: 11,
     requiresAuth: false,
   },
+  {
+    id: 'strategy',
+    name: 'ドヤ戦略AI',
+    shortName: '戦略',
+    description: 'マーケティング戦略を構造化・可視化・再利用するAI',
+    icon: '📊',
+    color: 'indigo',
+    gradient: 'from-indigo-500 to-purple-600',
+    href: '/strategy',
+    dashboardHref: '/strategy',
+    pricingHref: '/strategy/pricing',
+    features: [
+      '戦略の構造化・可視化',
+      'フェーズ別戦略展開',
+      'ダッシュボードで一瞬で理解',
+      '予算配分・KPI管理',
+      '競合調査連携',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: '1日3回まで', dailyLimit: 3, price: 0 },
+      pro: { name: 'プロプラン', limit: '1日100回まで', dailyLimit: 100, price: 4980 },
+    },
+    status: 'active',
+    category: 'text',
+    order: 12,
+    requiresAuth: false,
+    isNew: true,
+  },
 ]
 
 // サービスIDでサービスを取得

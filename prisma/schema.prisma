@@ -82,6 +82,9 @@ model User {
   interviewProjects InterviewProject[]
   interviewRecipes  InterviewRecipe[]
 
+  // ドヤ戦略AI
+  strategyProjects StrategyProject[]
+
   // Stripe関連（ポータル全体の顧客情報）
   stripeCustomerId       String?   @unique
   stripeSubscriptionId   String?   @unique
@@ -773,4 +776,50 @@ model GuestSession {
   @@index([guestId])
   @@index([firstAccessAt])
   @@map("guest_session")
+}
+
+// ============================================
+// ドヤ戦略AI
+// ============================================
+
+model StrategyProject {
+  id String @id @default(cuid())
+
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId String?
+
+  // 入力情報
+  serviceUrl    String? @db.Text
+  businessModel String? @db.Text
+  averagePrice  String? // 平均単価
+  targetCustomer String? @db.Text // 想定顧客
+  budgetRange   String? @db.Text // 予算レンジ
+  salesType     String? @db.Text // 営業体制
+
+  // 戦略データ（多層構造）
+  // Kernel（コア戦略）
+  coreStrategy Json? // {core_strategy: string, main_levers: string[]}
+  
+  // Phase（フェーズ別戦略）
+  phases Json? // [{phase_name: string, goal: string, actions: string[], kpi: string[], budget_ratio: number}]
+  
+  // Visualization（可視化データ）
+  visualizationData Json? // {budget_chart: [], kpi_chart: [], phase_map: []}
+  
+  // ExternalResearch（外部調査結果）
+  externalResearch Json? // {competitors: [], summary: string, patterns: []}
+
+  // メタデータ
+  title       String?
+  description String? @db.Text
+  status      String   @default("DRAFT") // DRAFT | GENERATED | COMPLETED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+  @@index([status, createdAt])
+  @@map("strategy_project")
 }

@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target, Mic } from 'lucide-react'
+import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target, Mic, BarChart3 } from 'lucide-react'
 
-type ToolId = 'persona' | 'banner' | 'writing' | 'interview'
+type ToolId = 'persona' | 'banner' | 'writing' | 'interview' | 'strategy'
 
 type ToolSwitcherMenuProps = {
   currentTool: ToolId
@@ -52,6 +52,14 @@ const TOOLS: Array<{
     description: 'SEO記事生成',
     icon: FileText,
     iconBgClassName: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+  },
+  {
+    id: 'strategy',
+    href: '/strategy',
+    title: 'ドヤ戦略AI',
+    description: 'マーケティング戦略',
+    icon: BarChart3,
+    iconBgClassName: 'bg-gradient-to-br from-indigo-500 to-purple-600',
   },
   // ベータ版サービス（interview）は他サービスのサイドバーには表示しない
   // ベータ版サービス自身のサイドバー（InterviewSidebar）でのみ表示する
