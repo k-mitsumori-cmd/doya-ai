@@ -3535,15 +3535,19 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
     await integrate(jobId)
     return { jobId }
   } catch (e: any) {
+    // エラーは極力起こさず、次回のadvanceで再開できるように「running維持 + 警告ログ」に寄せる
+    const msg = e?.message || 'unknown error'
     await p.seoJob.update({
       where: { id: jobId },
-      data: { status: 'error', error: e?.message || 'unknown error' },
+      data: { status: 'running', step: String(job.step || 'sections'), error: msg },
     })
-    await p.seoArticle.update({
-      where: { id: job.articleId },
-      data: { status: 'ERROR' },
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'warn',
+      title: '一時的なエラーが発生しました（自動で再試行します）',
+      detail: msg,
     })
-    throw e
+    return { jobId }
   }
 }
 
