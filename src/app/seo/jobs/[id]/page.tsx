@@ -1057,10 +1057,16 @@ export default function SeoJobPage() {
           {!isDone && !isError && (
             <div className="mt-6 max-w-5xl mx-auto">
               <div className="bg-white rounded-[28px] border border-gray-100 shadow-xl shadow-blue-500/5 overflow-hidden">
-                <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+                <div className="px-5 sm:px-6 py-4 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-700 text-white flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">制作中（ライブ）</p>
-                    <p className="text-sm sm:text-base font-black text-gray-900 truncate">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/15 border border-white/20 text-[11px] font-black tracking-widest">
+                        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        制作中（ライブ）
+                      </span>
+                      <span className="text-[10px] font-black text-white/80 tracking-widest uppercase">STATUS</span>
+                    </div>
+                    <p className="mt-2 text-base sm:text-lg font-black text-white truncate">
                       {job.step?.toLowerCase() === 'outline'
                         ? '見出しを組み立て中'
                         : job.step?.toLowerCase() === 'sections'
@@ -1072,7 +1078,8 @@ export default function SeoJobPage() {
                               : '準備中'}
                     </p>
                   </div>
-                  <div className="text-[10px] font-black text-blue-600 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
+                  <div className="inline-flex items-center gap-2 text-[11px] font-black text-white bg-white/15 border border-white/20 px-4 py-2 rounded-full shadow-lg shadow-indigo-900/30">
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     生成中
                   </div>
                 </div>
@@ -1105,21 +1112,39 @@ export default function SeoJobPage() {
 
                   return (
                     <div className="px-5 sm:px-6 pt-4">
-                      <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-sky-50 p-4">
-                        <div className="flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-indigo-500/20">
-                            <Clock className="w-5 h-5" />
+                      <div className="rounded-3xl border border-indigo-500/25 bg-gradient-to-br from-[#0B1020] via-[#0B1328] to-[#0B1020] p-5 shadow-2xl shadow-indigo-900/30 relative overflow-hidden">
+                        <div className="absolute inset-0 pointer-events-none opacity-[0.18]" style={{ backgroundImage: 'radial-gradient(circle at 20% 10%, rgba(99,102,241,0.45), transparent 55%), radial-gradient(circle at 80% 40%, rgba(59,130,246,0.35), transparent 60%)' }} />
+                        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/25">
+                              <Clock className="w-5 h-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-black text-blue-100 uppercase tracking-widest">
+                                推定生成時間
+                                {isComparison ? (
+                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-200 border border-orange-500/25 text-[10px] font-black">
+                                    {comparisonCount}社比較
+                                  </span>
+                                ) : null}
+                              </p>
+                              <p className="mt-1 text-2xl sm:text-3xl font-black text-white tracking-tight">
+                                {timeEstimate}
+                              </p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-black text-gray-900">
-                              推定生成時間: <span className="text-indigo-700">{timeEstimate}</span>
-                              {isComparison && <span className="ml-2 text-xs font-bold text-orange-600">（{comparisonCount}社比較）</span>}
-                            </p>
-                            <p className="mt-1 text-[11px] font-bold text-gray-600">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[13px] leading-6 font-bold text-slate-100/95">
                               {timeDetail}
-                              <span className="text-indigo-700 ml-1">他のタブに移動しても問題ありません</span>
-                              （戻ってきたら自動で最新状態に追いつきます）
                             </p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-black text-white/90">
+                                他のタブに移動してもOK
+                              </span>
+                              <span className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-white/70">
+                                戻ると自動で最新状態に追いつきます
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
