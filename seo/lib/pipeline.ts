@@ -1927,6 +1927,93 @@ function parseOutlineFromMarkdown(md: string, targetChars: number): SeoOutline {
   return ensureMinSections(outline, targetChars)
 }
 
+function normalizeNameForMatch(s: string): string {
+  return String(s || '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[（）()［\[\]］【】「」『』<>]/g, '')
+    .trim()
+}
+
+function appendMissingComparisonToolIntroductions(md: string, candidatesRaw: any[]): { md: string; added: number } {
+  const candidates = uniqCandidatesByName(Array.isArray(candidatesRaw) ? candidatesRaw : [])
+  if (!candidates.length) return { md, added: 0 }
+
+  const hay = normalizeNameForMatch(md)
+  const missing = candidates.filter((c: any) => {
+    const name = String(c?.name || '').trim()
+    if (!name) return false
+    const key = normalizeNameForMatch(name)
+    if (!key) return false
+    return !hay.includes(key)
+  })
+  if (!missing.length) return { md, added: 0 }
+
+  const lines: string[] = []
+  lines.push('')
+  lines.push('## ツール別ミニ紹介（補足）')
+  lines.push('> 網羅性を担保するため、本文中で触れられていないツールを短く補足します。')
+  lines.push('')
+
+  for (const c of missing.slice(0, 80)) {
+    const name = String(c?.name || '').trim() || '（名称不明）'
+    const url = typeof c?.websiteUrl === 'string' && c.websiteUrl.trim() ? c.websiteUrl.trim() : ''
+    const pricing = c?.pricing ? String(c.pricing).trim() : ''
+    const features = Array.isArray(c?.features) ? c.features.map((x: any) => String(x || '').trim()).filter(Boolean) : []
+    const desc = c?.description ? String(c.description).trim() : c?.notes ? String(c.notes).trim() : ''
+    const featureText = features.length ? features.slice(0, 5).join('、') : desc ? clampText(desc, 180) : '公式に明記なし（要確認）'
+    const pricingText = pricing || '要問い合わせ/非公開（公式に明記なし）'
+
+    lines.push(`### ${name}`)
+    lines.push(`- 公式URL: ${url || '（要確認）'}`)
+    lines.push(`- 特徴: ${featureText}`)
+    lines.push(`- 料金: ${pricingText}`)
+    lines.push('- おすすめ: 目的（SEO/広告/企画/要約など）と運用体制に合わせて選ぶ。まずは無料枠/トライアルの有無を確認。')
+    lines.push('')
+  }
+
+  return { md: [md.trim(), lines.join('\n').trim()].filter(Boolean).join('\n\n') + '\n', added: missing.length }
+}
+
+function buildMissingComparisonToolIntroductionsSection(md: string, candidatesRaw: any[]): { section: string; missing: number } {
+  const candidates = uniqCandidatesByName(Array.isArray(candidatesRaw) ? candidatesRaw : [])
+  if (!candidates.length) return { section: '', missing: 0 }
+
+  const hay = normalizeNameForMatch(md)
+  const missing = candidates.filter((c: any) => {
+    const name = String(c?.name || '').trim()
+    if (!name) return false
+    const key = normalizeNameForMatch(name)
+    if (!key) return false
+    return !hay.includes(key)
+  })
+  if (!missing.length) return { section: '', missing: 0 }
+
+  const lines: string[] = []
+  lines.push('## ツール別ミニ紹介（補足）')
+  lines.push('> 網羅性を担保するため、本文中で触れられていないツールを短く補足します。')
+  lines.push('')
+
+  for (const c of missing.slice(0, 80)) {
+    const name = String(c?.name || '').trim() || '（名称不明）'
+    const url = typeof c?.websiteUrl === 'string' && c.websiteUrl.trim() ? c.websiteUrl.trim() : ''
+    const pricing = c?.pricing ? String(c.pricing).trim() : ''
+    const features = Array.isArray(c?.features) ? c.features.map((x: any) => String(x || '').trim()).filter(Boolean) : []
+    const desc = c?.description ? String(c.description).trim() : c?.notes ? String(c.notes).trim() : ''
+    const featureText = features.length ? features.slice(0, 5).join('、') : desc ? clampText(desc, 180) : '公式に明記なし（要確認）'
+    const pricingText = pricing || '要問い合わせ/非公開（公式に明記なし）'
+
+    lines.push(`### ${name}`)
+    lines.push(`- 公式URL: ${url || '（要確認）'}`)
+    lines.push(`- 特徴: ${featureText}`)
+    lines.push(`- 料金: ${pricingText}`)
+    lines.push('- おすすめ: 目的（SEO/広告/企画/要約など）と運用体制に合わせて選ぶ。まずは無料枠/トライアルの有無を確認。')
+    lines.push('')
+  }
+
+  return { section: lines.join('\n').trim(), missing: missing.length }
+}
+
 async function generateOutline(article: any, researchContext: string): Promise<SeoOutline> {
   const forbidden = Array.isArray(article.forbidden) ? article.forbidden : (article.forbidden as any) || []
   const keywords = Array.isArray(article.keywords) ? article.keywords : (article.keywords as any) || []
@@ -1958,14 +2045,6 @@ async function generateOutline(article: any, researchContext: string): Promise<S
   const referenceInputs = Array.isArray(article.referenceInputs) ? (article.referenceInputs as any[]) : []
   const coverageNote = comparisonCoverageNote(article)
 
-  // 比較記事: 各サービスをH2セクションとして生成するためのリスト
-  const serviceH2Sections = isComparison && comparisonCandidates.length > 0
-    ? comparisonCandidates.slice(0, desiredCompanies ? Math.min(desiredCompanies, 60) : 60).map((c, i) => {
-        const name = String(c?.name || '').trim()
-        return `- ## ${name}（サービス詳細H2セクション）: 特徴/料金/メリット・デメリット/おすすめシーン/公式URL`
-      }).join('\n')
-    : ''
-
   const comparisonBlock = isComparison
     ? [
         'Comparison article mode: ENABLED (research-based / factual).',
@@ -1975,16 +2054,19 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         '- 公式サイト・一次情報を前提に調査した内容のみを記載する',
         '- 不明な情報は推測しない（「公式に明記なし」「要問い合わせ」「非公開」と明示）',
         '',
-        '★★★ CRITICAL: 各サービスを個別のH2セクションとして生成 ★★★',
-        '比較対象の全サービスを、それぞれ独立したH2見出しセクションとして作成してください。',
-        '例: 30社比較なら、30個のサービス名H2セクションを作成する。',
+        '★★★ CRITICAL: 網羅性（全ツール紹介）を最優先 ★★★',
+        '比較対象の全サービスを、必ず本文内で紹介してください（短くてもOK）。',
+        'IMPORTANT:',
+        '- 1サービスあたり2000字などの最低文字数は不要。網羅性を最優先する。',
+        '- 見出し階層は柔軟でよい（各ツールをH2にする必要はない）。推奨: 「各ツール紹介」H2の下で、各ツールをH3で短くまとめる。',
+        '- 1ツールあたりの目安: 120〜300字 + 箇条書き（特徴/料金/向いている人/公式URL）。',
         '',
         'Required structure (must appear in outline):',
         '- 導入（比較が必要な理由/失敗例）',
         `- 比較対象サービス一覧（表：サービス名/特徴/料金/向いている人/公式URL）※候補が不足する場合は不足注記を入れ、調査できた範囲（M社）で比較する`,
         '',
-        '★ 以下、各サービスを個別H2セクションとして生成（必須）:',
-        serviceH2Sections || '(候補リストが空のため、サービス別H2は生成しない)',
+        '★ 各ツール紹介（必須）:',
+        '- 「各ツール紹介」セクション内で、候補リストの全ツールを漏れなく紹介する（H3推奨）',
         '',
         `- サービス比較表（横並び：機能/価格帯/特徴/サポートなど）※候補が不足する場合は不足注記を入れ、調査できた範囲（M社）で比較する`,
         '- タイプ別おすすめ（初心者/コスト/高機能/中小/大企業）',
@@ -2073,13 +2155,11 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     comparisonBlock ? `\n=== COMPARISON BRIEF ===\n${clampText(comparisonBlock, 5000)}\n` : '',
     '',
     'Constraints:',
-    isComparison && comparisonCandidates.length > 0
-      ? `- sections: ${comparisonCandidates.length + 5}-${comparisonCandidates.length + 10} items (H2). Each comparison service MUST have its own H2 section.`
-      : `- sections: exactly ${minSections} items (H2).`,
+    `- sections: exactly ${minSections} items (H2).`,
     '- Each section: {h2: string, intentTag: string, plannedChars: number (1800-3200), h3: string[], h4: {}}',
     '- Keep h4 empty ({}) to reduce JSON size. Details will be generated per section.',
     '- intentTag: 定義/比較/手順/事例/注意点/FAQ/用語/サービス詳細 etc.',
-    '- For comparison articles: use intentTag "サービス詳細" for each service H2 section.',
+    '- For comparison articles: include ONE section with intentTag "サービス詳細" (or "ツール紹介") that covers ALL candidates.',
     '- faq: array of 5-10 question strings.',
     '- glossary: array of 5-10 term strings.',
     '',
@@ -2476,15 +2556,18 @@ async function generateSection(jobId: string) {
           (() => {
             const h = String(next.headingPath || '')
             const mustCoverAll =
-              /比較対象|サービス一覧|比較表|ランキング|おすすめ|料金比較|機能比較|タイプ別おすすめ/.test(h)
+              /比較対象|サービス一覧|比較表|ランキング|おすすめ|料金比較|機能比較|タイプ別おすすめ|サービス詳細|各サービス|ツール紹介|ツール別|サービス紹介/.test(h)
             const desired = desiredCompanies
             const actual = uniqCandidatesByName(comparisonCandidates).length
             if (!mustCoverAll) return ''
+            const needsTable = /比較対象|サービス一覧|比較表|料金比較|機能比較/.test(h)
             return [
               desired
                 ? `- IMPORTANT: This section MUST cover ALL available companies (${actual}社). (original target: ${desired}社)`
                 : `- IMPORTANT: This section MUST cover ALL available companies (${actual}社).`,
-              '- Include at least ONE markdown table that contains ALL available companies.',
+              needsTable
+                ? '- Include at least ONE markdown table that contains ALL available companies.'
+                : '- You may use H3 per tool + bullet points (no need to force one huge table).',
               '- Do NOT label tables as "例" or write disclaimers like "上記の表はあくまで例です". Output the real table.',
               '- If the table becomes too wide, split into multiple tables, but still include all companies across them.',
               '- For unknown fields, write "公式に明記なし/要問い合わせ/非公開" instead of guessing.',
@@ -2849,6 +2932,22 @@ async function integrate(jobId: string) {
 
   parts.push('## 本文')
   parts.push(mergedSections)
+
+  // 比較記事: 「全ツール紹介」が漏れないように最終段で補足セクションを追加（文字数より網羅性優先）
+  if (isComparison) {
+    const candidates = Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
+    const curMd = parts.join('\n\n')
+    const { section, missing } = buildMissingComparisonToolIntroductionsSection(curMd, candidates)
+    if (section && section.trim()) {
+      parts.push(section.trim())
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'info',
+        title: '比較ツール紹介の網羅補正',
+        detail: `本文内で未言及だったツールを補足しました（${missing}件）`,
+      })
+    }
+  }
 
   // 引用元（参考URL）: 「## まとめ」内のH3として末尾に含める（記事が“まとめ”で終わるようにする）
   let refsAppend = ''
