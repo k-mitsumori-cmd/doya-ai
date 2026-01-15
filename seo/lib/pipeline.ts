@@ -2580,6 +2580,11 @@ async function generateSection(jobId: string) {
     // ignore
   }
 
+  // 空のままreviewedにすると統合で「途中まで完成」になり得るため、最低限の本文があることを保証
+  if (!String(rewritten || '').trim() || mdCharCount(rewritten) < 200) {
+    throw new Error('セクション本文が短すぎるため再試行します（生成が空/短文）')
+  }
+
   await p.seoSection.update({
     where: { id: next.id },
     data: {
@@ -2766,10 +2771,24 @@ async function integrate(jobId: string) {
   const sections = job.sections
   const memo = article.memo?.content
 
+  // 全てのセクションが生成済み（reviewed）かつ content が存在することを確認（途中で完成扱いになるのを防ぐ）
+  const incompleteSections = sections.filter((s: any) => s.status !== 'reviewed' || !s.content || !String(s.content).trim())
+  if (incompleteSections.length > 0) {
+    const missingIndices = incompleteSections.map((s: any) => s.index).join(', ')
+    throw new Error(
+      `統合前に全てのセクションを生成する必要があります。未生成/空セクション: ${missingIndices} (全${sections.length}セクション中${incompleteSections.length}件未完成)`
+    )
+  }
+
   const mergedSections = sections
+    .filter((s: any) => s.status === 'reviewed' && s.content && String(s.content).trim())
     .map((s: any) => normalizeH2Heading(s.content || '', s.headingPath || `section_${s.index}`))
     .filter(Boolean)
     .join('\n\n')
+
+  if (!mergedSections || !mergedSections.trim()) {
+    throw new Error('統合するセクションがありません。全てのセクションが生成済みであることを確認してください。')
+  }
 
   // 原則: 50,000字以内に収める（ただし“途中で切れる”ことは最優先で回避）
   const HARD_SOFT_CAP = 50000
@@ -3456,7 +3475,8 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
       where: { id: jobId },
       include: { sections: true },
     })
-    const remaining = (afterOutline?.sections || []).some((s: any) => s.status !== 'reviewed')
+    // NOTE: statusだけでなく content も必須。空contentでreviewedになっていると「途中までで完成」になるため。
+    const remaining = (afterOutline?.sections || []).some((s: any) => s.status !== 'reviewed' || !s.content || !String(s.content).trim())
 
     if (remaining) {
       await generateSection(jobId)
