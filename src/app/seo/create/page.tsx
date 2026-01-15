@@ -23,9 +23,49 @@ import {
   TrendingUp,
   Search,
   BarChart3,
+  Link2,
   Lock,
 } from 'lucide-react'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
+
+function normalizeUrlInput(raw: string): string | null {
+  const s = String(raw || '')
+    .trim()
+    .replace(/[)\]】】）]+$/g, '')
+    .replace(/^[「『【\[]+/g, '')
+    .replace(/[、。,\s]+$/g, '')
+  if (!s) return null
+  const withScheme = /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, '')}`
+  try {
+    const u = new URL(withScheme)
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
+    // 追跡系は落として“同一URL”として扱いやすくする
+    u.hash = ''
+    return u.toString()
+  } catch {
+    return null
+  }
+}
+
+function parseUrlListText(text: string, max: number) {
+  const parts = String(text || '')
+    .split(/[\n\r,、\t ]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const urls: string[] = []
+  const invalid: string[] = []
+  for (const p of parts) {
+    const u = normalizeUrlInput(p)
+    if (!u) {
+      invalid.push(p)
+      continue
+    }
+    urls.push(u)
+  }
+  const uniq = Array.from(new Set(urls)).slice(0, max)
+  const invalidUniq = Array.from(new Set(invalid)).slice(0, 6)
+  return { urls: uniq, invalid: invalidUniq }
+}
 
 // ================== 定数 ==================
 const ARTICLE_TYPES = [
@@ -286,7 +326,6 @@ export default function SeoCreateWizardPage() {
   // Step3: 仕上がり
   const [tone, setTone] = useState<string>('logical')
   const [targetChars, setTargetChars] = useState(10000)
-  const [competitorUrlsText, setCompetitorUrlsText] = useState('')
 
   // プラン情報
   const isLoggedIn = !!session?.user?.email
@@ -299,7 +338,7 @@ export default function SeoCreateWizardPage() {
     if (p === 'PRO') return 'PRO'
     return 'FREE'
   }, [session, isLoggedIn])
-  
+
   const charLimit = CHAR_LIMITS[userPlan] || 10000
 
   // 詳細設定（折りたたみ）
@@ -307,6 +346,7 @@ export default function SeoCreateWizardPage() {
   const [relatedKeywords, setRelatedKeywords] = useState('')
   const [originalContent, setOriginalContent] = useState('')
   const [constraints, setConstraints] = useState('')
+  const [referenceUrlsText, setReferenceUrlsText] = useState('')
   const [showSampleMenu, setShowSampleMenu] = useState(false)
   const [sampleCursor, setSampleCursor] = useState(0)
 
@@ -340,6 +380,8 @@ export default function SeoCreateWizardPage() {
       seoIntent,
     }
   }, [mainKeyword, articleType, audiencePreset, customAudience, tone, targetChars])
+
+  const referenceUrlParse = useMemo(() => parseUrlListText(referenceUrlsText, 20), [referenceUrlsText])
 
   const canProceed = useMemo(() => {
     if (step === 1) return mainKeyword.trim().length >= 2
@@ -392,39 +434,7 @@ export default function SeoCreateWizardPage() {
     setErrorCta(null)
 
     try {
-      const competitorUrlsRaw = competitorUrlsText
-        .split(/[\s,\n、]+/)
-        .map((s) => s.trim())
-        .filter(Boolean)
-      const competitorUrls = Array.from(
-        new Set(
-          competitorUrlsRaw
-            .map((u) => {
-              try {
-                const x = new URL(u)
-                if (x.protocol !== 'http:' && x.protocol !== 'https:') return ''
-                return x.toString()
-              } catch {
-                return ''
-              }
-            })
-            .filter(Boolean)
-        )
-      ).slice(0, 20)
-      const invalidCompetitorUrls = competitorUrlsRaw.filter((u) => {
-        try {
-          const x = new URL(u)
-          return !(x.protocol === 'http:' || x.protocol === 'https:')
-        } catch {
-          return true
-        }
-      })
-      if (invalidCompetitorUrls.length) {
-        throw new Error(
-          `参考（競合）記事URLに無効な値があります。URLを修正してください。\n\n例：\n- https://example.com/article\n\n無効な入力：\n${invalidCompetitorUrls.slice(0, 5).join('\n')}${invalidCompetitorUrls.length > 5 ? '\n…' : ''}`
-        )
-      }
-
+      const referenceUrls = referenceUrlParse.urls
       const related = relatedKeywords
         .split(/[,、\n]/)
         .map((s) => s.trim())
@@ -448,18 +458,15 @@ export default function SeoCreateWizardPage() {
         ? {
             template: articleType === 'ranking' ? 'ranking' : 'tools',
             count: 10,
-            region: 'JP',
-            requireOfficial: true,
-            includeThirdParty: true,
-          }
+          region: 'JP',
+          requireOfficial: true,
+          includeThirdParty: true,
+        }
         : undefined
 
       const requestText = [
         originalContent.trim() ? `【一次情報（経験・訴求ポイント）】\n${originalContent.trim()}` : '',
         constraints.trim() ? `【制約・NG表現】\n${constraints.trim()}` : '',
-        competitorUrls.length
-          ? '【参考（競合）記事URLの扱い】\n- 入力したURLは「構成・フォーマット改善の参考」としてのみ使用し、文章/見出し/表現のコピーは一切しない。\n- 主キーワード/検索意図を最優先に、より良い記事に改善する。'
-          : '',
       ]
         .filter(Boolean)
         .join('\n\n')
@@ -477,6 +484,7 @@ export default function SeoCreateWizardPage() {
           tone: toneMap[tone] || '丁寧',
           targetChars,
           searchIntent: preview.seoIntent,
+          referenceUrls,
           llmoOptions: {
             ...DEFAULT_LLMO,
             comparison: isComparisonMode ? true : DEFAULT_LLMO.comparison,
@@ -484,8 +492,6 @@ export default function SeoCreateWizardPage() {
           autoBundle: true,
           createJob: true,
           requestText: requestText || undefined,
-          referenceUrls: competitorUrls.length ? competitorUrls : undefined,
-          referenceInputs: competitorUrls.length ? [{ kind: 'competitor_format', urls: competitorUrls }] : undefined,
           mode,
           comparisonConfig,
         }),
@@ -507,7 +513,7 @@ export default function SeoCreateWizardPage() {
         router.push(`/seo/jobs/${jobId}?auto=1`)
       } else if (articleId) {
         router.push(`/seo/articles/${articleId}`)
-      } else {
+        } else {
         router.push('/seo')
       }
     } catch (e: any) {
@@ -547,23 +553,23 @@ export default function SeoCreateWizardPage() {
         className="w-full max-w-2xl"
       >
         <div className="bg-white rounded-3xl sm:rounded-[40px] border border-gray-100 shadow-2xl shadow-blue-500/5 overflow-hidden">
-          {/* ヘッダー */}
+      {/* ヘッダー */}
           <div className="px-6 sm:px-10 pt-8 sm:pt-10 pb-6 text-center border-b border-gray-50 relative">
-            <button
+                  <button
               type="button"
               onClick={() => setShowHelp(true)}
               className="absolute top-4 right-4 sm:top-6 sm:right-6 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-[10px] font-black hover:bg-blue-100 transition-all"
             >
               <HelpCircle className="w-3.5 h-3.5" />
               使い方
-            </button>
+                  </button>
 
             <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-xl shadow-blue-500/30">
               <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-            </div>
+                </div>
             <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
               SEO記事を作成する
-            </h1>
+              </h1>
             <p className="text-sm text-gray-400 font-bold mt-2">
               3ステップで高品質な記事を生成
             </p>
@@ -585,23 +591,23 @@ export default function SeoCreateWizardPage() {
                   </div>
                   {s < 3 && (
                     <div className={`w-8 h-0.5 ${step > s ? 'bg-blue-300' : 'bg-gray-200'}`} />
-                  )}
-                </div>
-              ))}
+              )}
             </div>
+              ))}
+          </div>
             <div className="mt-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
               {step === 1 && 'Step 1: 記事の軸'}
               {step === 2 && 'Step 2: 読者像'}
               {step === 3 && 'Step 3: 仕上がり'}
+        </div>
             </div>
-          </div>
 
           {/* コンテンツ */}
           <div className="px-6 sm:px-10 py-6 sm:py-8">
             <AnimatePresence mode="wait">
               {/* Step 1: 記事の軸 */}
               {step === 1 && (
-                <motion.div
+          <motion.div
                   key="step1"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -616,7 +622,7 @@ export default function SeoCreateWizardPage() {
                         主キーワード <span className="text-red-400">*</span>
                       </label>
                       <div className="relative flex items-center gap-2">
-                        <button
+                  <button
                           type="button"
                           onClick={cycleSample}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 text-purple-600 text-[10px] font-black hover:from-purple-100 hover:to-indigo-100 transition-all"
@@ -624,8 +630,8 @@ export default function SeoCreateWizardPage() {
                         >
                           <Wand2 className="w-3 h-3" />
                           サンプル（切替）
-                        </button>
-                        <button
+                  </button>
+                  <button
                           type="button"
                           onClick={() => setShowSampleMenu((v) => !v)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-gray-200 text-gray-600 text-[10px] font-black hover:bg-gray-50 transition-all"
@@ -633,10 +639,10 @@ export default function SeoCreateWizardPage() {
                         >
                           一覧
                           <ChevronDown className={`w-3 h-3 transition-transform ${showSampleMenu ? 'rotate-180' : ''}`} />
-                        </button>
-                        <AnimatePresence>
+                  </button>
+      <AnimatePresence>
                           {showSampleMenu && (
-                            <motion.div
+          <motion.div
                               initial={{ opacity: 0, y: -8, scale: 0.98 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: -8, scale: 0.98 }}
@@ -648,7 +654,7 @@ export default function SeoCreateWizardPage() {
                               </div>
                               <div className="max-h-80 overflow-y-auto">
                                 {SAMPLES.map((s) => (
-                                  <button
+                  <button
                                     key={s.id}
                                     type="button"
                                     onClick={() => applySample(s.id)}
@@ -662,14 +668,14 @@ export default function SeoCreateWizardPage() {
                                       </span>
                                       <span className="text-[10px] text-gray-400">{s.targetChars.toLocaleString()}字</span>
                                     </div>
-                                  </button>
+                  </button>
                                 ))}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </div>
+                </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+            </div>
+          </div>
                     <input
                       type="text"
                       value={mainKeyword}
@@ -681,7 +687,7 @@ export default function SeoCreateWizardPage() {
                     <p className="mt-2 text-xs text-gray-400 font-medium">
                       💡 上位表示したい検索キーワードを入力してください
                     </p>
-                  </div>
+        </div>
 
                   {/* 記事タイトル（キーワードから自動生成） */}
                   <div>
@@ -699,7 +705,7 @@ export default function SeoCreateWizardPage() {
                         {titleLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                         タイトル自動生成（6）
                       </button>
-                    </div>
+          </div>
 
                     <input
                       type="text"
@@ -720,11 +726,11 @@ export default function SeoCreateWizardPage() {
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {titleCandidates.slice(0, 6).map((t, i) => {
                           const active = titleSelected === i
-                          return (
-                            <button
+                    return (
+                      <button
                               key={`${i}_${t}`}
                               type="button"
-                              onClick={() => {
+                        onClick={() => {
                                 setArticleTitle(t)
                                 setTitleSelected(i)
                               }}
@@ -740,33 +746,33 @@ export default function SeoCreateWizardPage() {
                                 <div className="text-sm font-black text-gray-900 leading-snug">{t}</div>
                                 {active ? <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" /> : null}
                               </div>
-                            </button>
-                          )
-                        })}
-                      </div>
+            </button>
+                    )
+                  })}
+                </div>
                     ) : null}
                   </div>
 
                   {/* 一次情報（最重要） */}
                   <div className="rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-white p-5 shadow-lg shadow-blue-500/10">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <div>
+                  <div>
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black tracking-widest">
                             重要
                           </span>
                           <label className="text-xs font-black text-blue-800 uppercase tracking-widest">
                             一次情報（経験・訴求ポイント）
-                          </label>
-                        </div>
+                    </label>
+          </div>
                         <p className="mt-1 text-xs font-bold text-blue-700">
                           ぜひ入力してください。ここが入るほど「あなたにしか書けない記事」になり、差別化できます。
                         </p>
-                      </div>
+              </div>
                       <div className="text-[10px] font-black text-blue-700/80 bg-white/70 border border-blue-100 px-3 py-2 rounded-2xl">
                         例：実体験 / 数字 / 失敗談 / 現場の工夫 / 比較の結論
-                      </div>
-                    </div>
+            </div>
+          </div>
 
                     <textarea
                       value={originalContent}
@@ -778,20 +784,20 @@ export default function SeoCreateWizardPage() {
                     <p className="mt-2 text-xs font-bold text-blue-700">
                       ✨ この内容は本文プロンプトに組み込み、オリジナル性が高い記事になるよう反映されます
                     </p>
-                  </div>
+        </div>
 
                   {/* 記事タイプ */}
-                  <div>
+                    <div>
                     <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
-                      記事タイプ
-                    </label>
+                  記事タイプ
+                      </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {ARTICLE_TYPES.map((type) => {
-                        const Icon = type.icon
+                  {ARTICLE_TYPES.map((type) => {
+                    const Icon = type.icon
                         const selected = articleType === type.id
-                        return (
-                          <button
-                            key={type.id}
+                    return (
+                      <button
+                        key={type.id}
                             type="button"
                             onClick={() => setArticleType(type.id)}
                             className={`p-4 rounded-2xl border-2 text-left transition-all ${
@@ -805,14 +811,14 @@ export default function SeoCreateWizardPage() {
                               {type.label}
                             </p>
                             <p className="text-[10px] text-gray-400 mt-1">{type.desc}</p>
-                          </button>
-                        )
-                      })}
-                    </div>
+                      </button>
+                    )
+                  })}
+                </div>
                     <p className="mt-3 text-xs text-gray-400 font-medium">
                       📝 記事タイプに応じて構成が最適化されます
                     </p>
-                  </div>
+                    </div>
                 </motion.div>
               )}
 
@@ -853,22 +859,22 @@ export default function SeoCreateWizardPage() {
                           </button>
                         )
                       })}
-                    </div>
+                      </div>
                   </div>
 
                   {audiencePreset === 'custom' && (
-                    <div>
+                  <div>
                       <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
                         読者を具体的に
-                      </label>
-                      <input
-                        type="text"
+                    </label>
+                    <input
+                      type="text"
                         value={customAudience}
                         onChange={(e) => setCustomAudience(e.target.value)}
                         placeholder="例：SaaS企業のマーケ責任者（30〜40代）"
                         className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                       />
-                    </div>
+                  </div>
                   )}
 
                   <p className="text-xs text-gray-400 font-medium">
@@ -888,15 +894,15 @@ export default function SeoCreateWizardPage() {
                   className="space-y-6"
                 >
                   {/* 文体 */}
-                  <div>
+                    <div>
                     <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
                       文体・トーン
-                    </label>
+                      </label>
                     <div className="grid grid-cols-2 gap-3">
                       {TONE_OPTIONS.map((option) => {
                         const selected = tone === option.id
                         return (
-                          <button
+                              <button
                             key={option.id}
                             type="button"
                             onClick={() => setTone(option.id)}
@@ -910,23 +916,23 @@ export default function SeoCreateWizardPage() {
                               <span className="text-lg">{option.emoji}</span>
                               <p className={`text-sm font-black ${selected ? 'text-blue-600' : 'text-gray-700'}`}>
                                 {option.label}
-                              </p>
-                            </div>
+                      </p>
+                    </div>
                             <p className="text-[10px] text-gray-400">{option.desc}</p>
                           </button>
                         )
                       })}
-                    </div>
                   </div>
+                </div>
 
                   {/* 文字数 */}
-                  <div>
+                    <div>
                     <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
                       文字数目安
                       <span className="ml-2 text-[10px] font-bold text-gray-400 normal-case">
                         ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'PRO' ? 'プロ' : 'エンタープライズ'}プラン: 最大{charLimit.toLocaleString()}字)
                       </span>
-                    </label>
+                      </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {CHAR_PRESETS.map((preset) => {
                         const selected = targetChars === preset.value
@@ -999,72 +1005,80 @@ export default function SeoCreateWizardPage() {
                             <div className="flex items-center justify-center gap-1 text-sm font-black text-gray-400">
                               <Lock className="w-3.5 h-3.5" />
                               <span>もっと長く</span>
-                            </div>
+                      </div>
                             <p className="text-[10px] text-gray-400 mt-0.5">プランをアップグレード</p>
-                          </div>
+                      </div>
                         </Link>
                       )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* 参考（競合）記事URL（重要） */}
+                  {/* 参考記事URL（競合｜フォーマット参考） */}
                   <div className="rounded-3xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-blue-50 to-white p-5 shadow-lg shadow-indigo-500/10">
                     <div className="flex items-start justify-between gap-3 flex-wrap">
-                      <div>
+                    <div>
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-black tracking-widest">
                             重要
                           </span>
-                          <div className="text-xs font-black text-indigo-800 uppercase tracking-widest">
-                            参考（競合）記事URL
-                          </div>
-                        </div>
+                          <label className="text-xs font-black text-indigo-900 uppercase tracking-widest">
+                            参考記事URL（競合｜フォーマット参考）
+                      </label>
+                      </div>
                         <p className="mt-1 text-xs font-bold text-indigo-700">
-                          ここにURLを入れると、AIが“構成/フォーマット”を参考にして、より良い記事に改善します（コピーはしません）。
-                        </p>
-                      </div>
-                      <div className="text-[10px] font-black text-indigo-700/80 bg-white/70 border border-indigo-100 px-3 py-2 rounded-2xl">
-                        最大20URL / 改行・カンマOK
-                      </div>
+                          ぜひ入力してください。ここに入れたURLを調査し、構成・見出しの“型”を参考にして、より上位表示を狙える記事にします（内容のコピーはしません）。
+                      </p>
                     </div>
+                      <div className="text-[10px] font-black text-indigo-700/80 bg-white/70 border border-indigo-100 px-3 py-2 rounded-2xl inline-flex items-center gap-2">
+                        <Link2 className="w-3.5 h-3.5" />
+                        <span>有効: {referenceUrlParse.urls.length}件</span>
+                  </div>
+                    </div>
+
                     <textarea
-                      value={competitorUrlsText}
-                      onChange={(e) => setCompetitorUrlsText(e.target.value)}
-                      placeholder={'例：\nhttps://example.com/comp1\nhttps://example.com/comp2'}
+                      value={referenceUrlsText}
+                      onChange={(e) => setReferenceUrlsText(e.target.value)}
+                      placeholder="例：競合記事（上位表示されている記事）のURLを貼り付けてください&#10;https://example.com/article-a&#10;https://example.com/article-b"
                       rows={4}
                       className="mt-4 w-full px-5 py-4 rounded-2xl bg-white border-2 border-indigo-200 text-slate-900 font-bold text-sm placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-200/40 transition-all resize-none"
                     />
-                    <p className="mt-2 text-xs font-bold text-indigo-700">
-                      ✨ 競合の“内容”を写すのではなく、見出しの切り口/構成の弱点を埋めて上回るために使います
-                    </p>
-                  </div>
+                    {referenceUrlParse.invalid.length ? (
+                      <p className="mt-2 text-xs font-bold text-rose-600">
+                        入力形式を確認してください（URLとして解釈できないもの）: {referenceUrlParse.invalid.join(' / ')}
+                      </p>
+                    ) : (
+                      <p className="mt-2 text-xs font-bold text-indigo-700">
+                        ✨ 参考URLが無い場合は空でOK。キーワードと調査結果をベースに記事を作成します
+                      </p>
+                        )}
+                      </div>
 
                   {/* 詳細設定（折りたたみ） */}
                   <div className="pt-2">
-                    <button
+                <button
                       type="button"
-                      onClick={() => setShowAdvanced(!showAdvanced)}
+                  onClick={() => setShowAdvanced(!showAdvanced)}
                       className="flex items-center gap-2 text-xs font-black text-gray-500 hover:text-blue-600 transition-colors"
                     >
                       {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       <Zap className="w-3.5 h-3.5" />
                       SEOを本気で強化する（任意）
-                    </button>
+                </button>
 
-                    <AnimatePresence>
-                      {showAdvanced && (
-                        <motion.div
+                <AnimatePresence>
+                  {showAdvanced && (
+                    <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.3 }}
                           className="mt-4 space-y-4 overflow-hidden"
                         >
-                          <div>
+                        <div>
                             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
                               関連キーワード
-                            </label>
-                            <textarea
+                          </label>
+                          <textarea
                               value={relatedKeywords}
                               onChange={(e) => setRelatedKeywords(e.target.value)}
                               placeholder="カンマ区切りで入力&#10;例：SEO対策, コンテンツ作成, 記事代行"
@@ -1074,13 +1088,13 @@ export default function SeoCreateWizardPage() {
                             <p className="mt-1 text-[10px] text-gray-400">
                               💡 入れなくても生成できます。入れると網羅性が上がります
                             </p>
-                          </div>
+                        </div>
 
-                          <div>
+                        <div>
                             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
                               制約・NG表現（任意）
-                            </label>
-                            <textarea
+                          </label>
+                          <textarea
                               value={constraints}
                               onChange={(e) => setConstraints(e.target.value)}
                               placeholder="例：この表現は使わない、必ず『料金相場』を入れる、結論を冒頭に置く…"
@@ -1094,7 +1108,7 @@ export default function SeoCreateWizardPage() {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
+                        </div>
 
                   {/* プレビューパネル */}
                   <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
@@ -1102,15 +1116,15 @@ export default function SeoCreateWizardPage() {
                       生成プレビュー
                     </p>
                     <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
+                        <div>
                         <p className="text-[10px] text-blue-500 font-bold">記事タイプ</p>
                         <p className="font-black text-gray-900">{preview.type}</p>
-                      </div>
-                      <div>
+                        </div>
+                        <div>
                         <p className="text-[10px] text-blue-500 font-bold">想定読者</p>
                         <p className="font-black text-gray-900">{preview.audience}</p>
-                      </div>
-                      <div>
+                        </div>
+                        <div>
                         <p className="text-[10px] text-blue-500 font-bold">想定見出し数</p>
                         <p className="font-black text-gray-900">{preview.headings}見出し</p>
                       </div>
@@ -1138,11 +1152,11 @@ export default function SeoCreateWizardPage() {
                         <Target className="w-3.5 h-3.5" />
                         <span>日本語SEO特化の文章生成</span>
                       </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
             {/* エラー */}
             {error && (
@@ -1204,9 +1218,9 @@ export default function SeoCreateWizardPage() {
                 }}
                 disabled={!canProceed || loading}
                 className="flex-1 h-14 sm:h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-base shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
-              >
-                {loading ? (
-                  <>
+                >
+                  {loading ? (
+                    <>
                     <Loader2 className="w-5 h-5 animate-spin" />
                     生成中...
                   </>
@@ -1214,13 +1228,13 @@ export default function SeoCreateWizardPage() {
                   <>
                     次へ
                     <ArrowRight className="w-5 h-5" />
-                  </>
-                ) : (
-                  <>
+                    </>
+                  ) : (
+                    <>
                     記事を生成する
                     <Sparkles className="w-5 h-5" />
-                  </>
-                )}
+                    </>
+                  )}
               </button>
             </div>
           </div>
@@ -1254,7 +1268,7 @@ export default function SeoCreateWizardPage() {
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
                     <Lightbulb className="w-5 h-5 text-blue-600" />
-                  </div>
+                </div>
                   <h2 className="text-lg font-black text-gray-900">使い方ガイド</h2>
                 </div>
                 <button
@@ -1273,8 +1287,8 @@ export default function SeoCreateWizardPage() {
                     <p className="text-xs text-gray-500">
                       上位表示したいキーワードと記事タイプを選択します。
                     </p>
-                  </div>
                 </div>
+              </div>
 
                 <div className="flex gap-4 items-start">
                   <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-black flex-shrink-0">2</div>
@@ -1284,7 +1298,7 @@ export default function SeoCreateWizardPage() {
                       誰に向けた記事かを選ぶと、語り口や具体例が最適化されます。
                     </p>
                   </div>
-                </div>
+                      </div>
 
                 <div className="flex gap-4 items-start">
                   <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-black flex-shrink-0">3</div>
@@ -1301,8 +1315,8 @@ export default function SeoCreateWizardPage() {
                     💡 「SEOを本気で強化する」を開くと、関連キーワードや独自情報を追加できます。
                     入力しなくても高品質な記事が生成されます。
                   </p>
-                </div>
-              </div>
+                  </div>
+                  </div>
 
               <div className="px-6 py-4 border-t border-gray-100">
                 <button
@@ -1313,7 +1327,7 @@ export default function SeoCreateWizardPage() {
                 </button>
               </div>
             </motion.div>
-          </div>
+            </div>
         )}
       </AnimatePresence>
 
@@ -1392,8 +1406,8 @@ export default function SeoCreateWizardPage() {
                         <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>チーム利用・複数アカウント対応</span></div>
                         <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>API連携・カスタム開発相談</span></div>
                       </>
-                    )}
-                  </div>
+          )}
+        </div>
                 </motion.div>
 
                 <motion.div
@@ -1416,7 +1430,7 @@ export default function SeoCreateWizardPage() {
                     閉じる
                   </button>
                 </motion.div>
-              </div>
+    </div>
             </motion.div>
           </motion.div>
         )}
