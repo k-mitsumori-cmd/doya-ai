@@ -2835,41 +2835,14 @@ async function integrate(jobId: string) {
     refsAppend = ''
   }
 
-  // 引用元（参考URL）: 「## まとめ」内のH3として末尾に含める（記事が“まとめ”で終わるようにする）
-  let refsAppend = ''
-  try {
-    const refs = await p.seoReference.findMany({
-      where: { articleId: article.id },
-      orderBy: { createdAt: 'asc' },
-      select: { url: true, title: true },
-    })
-    const urls = Array.isArray(article.referenceUrls) ? (article.referenceUrls as any[]) : []
-    const fromInput = urls.map((u: any) => normalizeUrlMaybe(u)).filter(Boolean)
-    const mergedUrls = Array.from(
-      new Set([
-        ...refs.map((r: any) => String(r.url || '').trim()).filter(Boolean),
-        ...fromInput,
-      ])
-    ).slice(0, 25)
-    if (mergedUrls.length) {
-      const lines = [
-        '### 参考文献（引用元）',
-        '※ 本文は引用元の内容をそのまま転載せず、要点を言い換えて整理しています。',
-        ...mergedUrls.map((u) => `- ${u}`),
-      ]
-      refsAppend = lines.join('\n')
-    }
-  } catch {
-    refsAppend = ''
-  }
-
   // 目標文字数に足りない場合は、追補セクションを自動生成して埋める（最大5回）
   // ただし、原則 50,000字以内に収めるため、追補には字数バジェットを適用する
   const target = Math.max(3000, Number(article.targetChars || 10000))
   const softCap = Math.min(HARD_SOFT_CAP, target)
   // まとめ + 参考文献（H3）ぶんを確保（概算）
   const reserveForEnding = 2600 + (refsAppend ? 1500 : 0)
-  const maxExtraIterations = target < 10000 ? 2 : 5
+  const maxExtraIterations =
+    target >= 40000 ? 14 : target >= 30000 ? 12 : target >= 20000 ? 10 : target >= 12000 ? 7 : target < 10000 ? 2 : 5
   const extraSections: string[] = []
   for (let i = 0; i < maxExtraIterations; i++) {
     const cur = mdCharCount(parts.join('\n\n'))
@@ -2879,6 +2852,10 @@ async function integrate(jobId: string) {
     const remainingBudget = Math.max(0, softCap - reserveForEnding - cur)
     const need = Math.min(Math.round(target - cur), remainingBudget)
     if (need <= 0) break
+    const remainingIters = Math.max(1, maxExtraIterations - i)
+    const perTarget = target >= 20000
+      ? Math.min(12000, Math.max(4500, Math.round(need / remainingIters)))
+      : Math.min(3500, Math.max(600, need))
     const addPrompt = [
       'You are a Japanese SEO writer.',
       'Write an additional section to improve completeness and meet the target length.',
@@ -2890,7 +2867,7 @@ async function integrate(jobId: string) {
       `Tone: ${article.tone}`,
       memo ? `User notes (preferences/constraints):\n${clampText(memo, 900)}` : '',
       '',
-      `Target chars for this additional section: ~${Math.min(3000, Math.max(600, need))}`,
+      `Target chars for this additional section: ~${perTarget}`,
       '',
       'Context (truncated):',
       clampText(parts.join('\n\n'), 9000),

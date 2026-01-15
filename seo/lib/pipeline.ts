@@ -2811,14 +2811,20 @@ async function integrate(jobId: string) {
     // ignore
   }
 
-  // 目標文字数に足りない場合は、追補セクションを自動生成して埋める（最大5回）
-  // ただし、目標が小さい場合（10,000字未満）は追補を控えめに
+  // 目標文字数に足りない場合は、追補セクションを自動生成して埋める
+  // NOTE: 大記事（例: 50,000字）でも途中でDONEにならないよう、目標に応じて追補回数/追補量を増やす
   const target = Math.max(3000, Number(article.targetChars || 10000))
-  const maxExtraIterations = target < 10000 ? 2 : 5
+  const maxExtraIterations =
+    target >= 40000 ? 14 : target >= 30000 ? 12 : target >= 20000 ? 10 : target >= 12000 ? 7 : target < 10000 ? 2 : 5
   for (let i = 0; i < maxExtraIterations; i++) {
     const cur = mdCharCount(parts.join('\n\n'))
     if (cur >= target * 0.90) break // 90%以上あればOK（小さい記事向けに緩和）
-    const need = Math.round(target * 0.95 - cur)
+    const needTotal = Math.max(0, Math.round(target * 0.95 - cur))
+    const remainingIters = Math.max(1, maxExtraIterations - i)
+    // 1回の追補目安（大記事は大きめに。小記事は従来通り）
+    const perTarget = target >= 20000
+      ? Math.min(12000, Math.max(4500, Math.round(needTotal / remainingIters)))
+      : Math.min(3500, Math.max(600, needTotal))
     const addPrompt = [
       'You are a Japanese SEO writer.',
       'Write an additional section to improve completeness and meet the target length.',
@@ -2830,7 +2836,7 @@ async function integrate(jobId: string) {
       `Tone: ${article.tone}`,
       memo ? `User notes (preferences/constraints):\n${clampText(memo, 900)}` : '',
       '',
-      `Target chars for this additional section: ~${Math.min(3500, Math.max(600, need))}`,
+      `Target chars for this additional section: ~${perTarget}`,
       '',
       'Context (truncated):',
       clampText(parts.join('\n\n'), 9000),
@@ -2912,9 +2918,10 @@ async function integrate(jobId: string) {
   // 上限超過時の短縮処理は削除（無理に短くすると記事がおかしくなるため）
   // 文字数が長くても、品質を優先してそのまま使用する
 
-  // もし短すぎる場合は、統合の最終段で追加セクションを生成して底上げする（最大3回）
+  // もし短すぎる場合は、統合の最終段で追加セクションを生成して底上げする
   try {
-    for (let i = 0; i < 3; i++) {
+    const maxBottomUp = target >= 20000 ? 10 : 3
+    for (let i = 0; i < maxBottomUp; i++) {
       const cur = mdCharCount(finalMarkdown)
       if (cur >= minAllowed) break
       const need = Math.round(minAllowed - cur)
@@ -2936,7 +2943,7 @@ async function integrate(jobId: string) {
         `Tone: ${article.tone}`,
         memo ? `User notes (preferences/constraints):\n${clampText(memo, 900)}` : '',
         '',
-        `Target chars for this additional section: ~${Math.min(3000, Math.max(700, need))}`,
+        `Target chars for this additional section: ~${Math.min(12000, Math.max(2500, need))}`,
         '',
         'Context (truncated):',
         clampText(finalMarkdown, 9000),
