@@ -258,23 +258,15 @@ export default function SeoDashboardPage() {
     }
   }
 
-  const statusTabs: { id: 'ALL' | 'RUNNING' | 'DONE' | 'DRAFT' | 'ERROR'; label: string }[] = [
-    { id: 'ALL', label: '総合' },
-    { id: 'RUNNING', label: '生成中' },
-    { id: 'DONE', label: '完成' },
-    { id: 'DRAFT', label: '下書き' },
-    { id: 'ERROR', label: 'エラー' },
-  ]
-
   return (
     <main className="min-h-screen bg-white">
-      {/* NewsPicks風ヘッダー（カテゴリ＋検索） */}
+      {/* ヘッダー（ドヤライティングAI） */}
       <div className="border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4">
           <div className="h-14 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <Link href="/seo" className="font-black tracking-tight text-gray-900 truncate">
-                DOYA<span className="text-blue-600">Picks</span>
+                ドヤライティングAI
               </Link>
               <span className="hidden sm:inline text-xs font-bold text-gray-400 truncate">生成記事一覧</span>
             </div>
@@ -295,39 +287,6 @@ export default function SeoDashboardPage() {
                 </button>
               </Link>
             </div>
-          </div>
-
-          <div className="pb-3 flex flex-wrap gap-2">
-            {statusTabs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActiveStatus(t.id)}
-                className={`h-8 px-3 rounded-full border text-xs font-black transition-colors ${
-                  activeStatus === t.id
-                    ? 'bg-gray-900 text-white border-gray-900'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-
-            {topicChips.length > 0 && (
-              <div className="w-full flex flex-wrap gap-2 pt-1">
-                {topicChips.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setQuery(t)}
-                    className="h-8 px-3 rounded-full border border-gray-200 bg-white text-gray-700 text-xs font-black hover:bg-gray-50 transition-colors"
-                    title={`このキーワードで絞り込み: ${t}`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       </div>
