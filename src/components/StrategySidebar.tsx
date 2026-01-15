@@ -24,7 +24,8 @@ import { useSession, signOut } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
-import { BarChart3 } from 'lucide-react'
+import { BarChart3, Target, Image, FileText, LayoutGrid, ChevronDown, ExternalLink } from 'lucide-react'
+import { useState } from 'react'
 
 type NavItem = {
   href: string
@@ -276,8 +277,8 @@ function StrategySidebarImpl({
         {/* プラン案内バナー */}
         <PlanBanner />
 
-        {/* 他のAIツールも使う（共通） */}
-        <ToolSwitcherMenu currentTool="strategy" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 pb-2" />
+        {/* 他のAIツールも使う（ベータ版も含む） */}
+        <StrategyToolSwitcher showLabel={showLabel} isCollapsed={isCollapsed} />
 
         {/* お問い合わせ */}
         <div className="px-3 pb-2">
