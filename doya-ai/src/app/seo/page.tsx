@@ -796,6 +796,7 @@ export default function SeoDashboardPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </main>
   )
 }
