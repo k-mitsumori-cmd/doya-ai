@@ -286,6 +286,7 @@ export default function SeoCreateWizardPage() {
   // Step3: 仕上がり
   const [tone, setTone] = useState<string>('logical')
   const [targetChars, setTargetChars] = useState(10000)
+  const [competitorUrlsText, setCompetitorUrlsText] = useState('')
 
   // プラン情報
   const isLoggedIn = !!session?.user?.email
@@ -391,6 +392,39 @@ export default function SeoCreateWizardPage() {
     setErrorCta(null)
 
     try {
+      const competitorUrlsRaw = competitorUrlsText
+        .split(/[\s,\n、]+/)
+        .map((s) => s.trim())
+        .filter(Boolean)
+      const competitorUrls = Array.from(
+        new Set(
+          competitorUrlsRaw
+            .map((u) => {
+              try {
+                const x = new URL(u)
+                if (x.protocol !== 'http:' && x.protocol !== 'https:') return ''
+                return x.toString()
+              } catch {
+                return ''
+              }
+            })
+            .filter(Boolean)
+        )
+      ).slice(0, 20)
+      const invalidCompetitorUrls = competitorUrlsRaw.filter((u) => {
+        try {
+          const x = new URL(u)
+          return !(x.protocol === 'http:' || x.protocol === 'https:')
+        } catch {
+          return true
+        }
+      })
+      if (invalidCompetitorUrls.length) {
+        throw new Error(
+          `参考（競合）記事URLに無効な値があります。URLを修正してください。\n\n例：\n- https://example.com/article\n\n無効な入力：\n${invalidCompetitorUrls.slice(0, 5).join('\n')}${invalidCompetitorUrls.length > 5 ? '\n…' : ''}`
+        )
+      }
+
       const related = relatedKeywords
         .split(/[,、\n]/)
         .map((s) => s.trim())
@@ -423,6 +457,9 @@ export default function SeoCreateWizardPage() {
       const requestText = [
         originalContent.trim() ? `【一次情報（経験・訴求ポイント）】\n${originalContent.trim()}` : '',
         constraints.trim() ? `【制約・NG表現】\n${constraints.trim()}` : '',
+        competitorUrls.length
+          ? '【参考（競合）記事URLの扱い】\n- 入力したURLは「構成・フォーマット改善の参考」としてのみ使用し、文章/見出し/表現のコピーは一切しない。\n- 主キーワード/検索意図を最優先に、より良い記事に改善する。'
+          : '',
       ]
         .filter(Boolean)
         .join('\n\n')
@@ -447,6 +484,8 @@ export default function SeoCreateWizardPage() {
           autoBundle: true,
           createJob: true,
           requestText: requestText || undefined,
+          referenceUrls: competitorUrls.length ? competitorUrls : undefined,
+          referenceInputs: competitorUrls.length ? [{ kind: 'competitor_format', urls: competitorUrls }] : undefined,
           mode,
           comparisonConfig,
         }),
@@ -966,6 +1005,38 @@ export default function SeoCreateWizardPage() {
                         </Link>
                       )}
                     </div>
+                  </div>
+
+                  {/* 参考（競合）記事URL（重要） */}
+                  <div className="rounded-3xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-blue-50 to-white p-5 shadow-lg shadow-indigo-500/10">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-600 text-white text-[10px] font-black tracking-widest">
+                            重要
+                          </span>
+                          <div className="text-xs font-black text-indigo-800 uppercase tracking-widest">
+                            参考（競合）記事URL
+                          </div>
+                        </div>
+                        <p className="mt-1 text-xs font-bold text-indigo-700">
+                          ここにURLを入れると、AIが“構成/フォーマット”を参考にして、より良い記事に改善します（コピーはしません）。
+                        </p>
+                      </div>
+                      <div className="text-[10px] font-black text-indigo-700/80 bg-white/70 border border-indigo-100 px-3 py-2 rounded-2xl">
+                        最大20URL / 改行・カンマOK
+                      </div>
+                    </div>
+                    <textarea
+                      value={competitorUrlsText}
+                      onChange={(e) => setCompetitorUrlsText(e.target.value)}
+                      placeholder={'例：\nhttps://example.com/comp1\nhttps://example.com/comp2'}
+                      rows={4}
+                      className="mt-4 w-full px-5 py-4 rounded-2xl bg-white border-2 border-indigo-200 text-slate-900 font-bold text-sm placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-200/40 transition-all resize-none"
+                    />
+                    <p className="mt-2 text-xs font-bold text-indigo-700">
+                      ✨ 競合の“内容”を写すのではなく、見出しの切り口/構成の弱点を埋めて上回るために使います
+                    </p>
                   </div>
 
                   {/* 詳細設定（折りたたみ） */}
