@@ -2469,11 +2469,33 @@ async function generateSection(jobId: string) {
     .filter(Boolean)
     .join('\n')
 
-  const raw = await geminiGenerateText({
-    model: GEMINI_TEXT_MODEL_DEFAULT,
-    parts: [{ text: prompt }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 6000 },
-  })
+  // 失敗しづらくするため、多段リトライ（タイムアウト・空出力対策）
+  const minSectionChars = Math.max(900, Math.min(2000, Math.round(Number(next.plannedChars || 2200) * 0.35)))
+  let raw = ''
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const out = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: prompt }],
+        generationConfig: { temperature: attempt === 0 ? 0.7 : 0.5, maxOutputTokens: 6000 },
+      })
+      if (out && out.trim()) raw = out.trim()
+      if (mdCharCount(raw) >= minSectionChars) break
+      await new Promise((r) => setTimeout(r, 600 + attempt * 800))
+    } catch {
+      await new Promise((r) => setTimeout(r, 600 + attempt * 800))
+    }
+  }
+
+  if (!raw || mdCharCount(raw) < 120) {
+    // どうしても生成できない場合のフォールバック（止めずに完走させる）
+    raw =
+      `## ${String(next.headingPath || `セクション${next.index + 1}`).trim()}\n\n` +
+      `このセクションは生成が不安定だったため、最低限のたたき台を出力します。必要に応じて「本文編集」で追記してください。\n\n` +
+      `### ポイント\n- 読者が知りたい結論（要点）\n- 選び方/判断基準（チェックリスト）\n- よくある失敗と対策\n\n` +
+      `### チェックリスト\n- 目的（何を達成したいか）\n- 前提条件（予算/体制/期間）\n- 比較軸（機能/料金/運用/サポート）\n\n` +
+      `### 次のアクション\n- 公式情報の確認（料金/機能/制限）\n- 無料トライアルで検証\n- 導入後の運用フローを決める\n`
+  }
 
   // 整合性チェック（簡易）
   const checkPrompt = [
@@ -2544,6 +2566,13 @@ async function generateSection(jobId: string) {
     }
   } catch {
     // ignore
+  }
+
+  // 空のままreviewedにすると統合で「途中まで完成」になり得るため、最低限の本文があることを保証（フォールバック）
+  if (!String(rewritten || '').trim() || mdCharCount(rewritten) < 200) {
+    rewritten =
+      `## ${String(next.headingPath || `セクション${next.index + 1}`).trim()}\n\n` +
+      `（このセクションは自動生成が不安定だったため、最低限の本文を挿入しています。必要に応じて追記してください。）\n`
   }
 
   await p.seoSection.update({
@@ -3470,12 +3499,13 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
       } catch (sectionErr: any) {
         // セクション生成エラーでも、次のセクションを試みる（ただし、連続エラーは避ける）
         console.error(`[seo generateSection] failed for job ${jobId}:`, sectionErr?.message)
-        // 途中で「完成」になってしまうのを防ぐため、未生成セクションが残っている場合は統合に進まない
-        if (iteration > 5 && remaining.length > 0) {
-          throw new Error(
-            `セクション生成が連続で失敗したため停止します。未生成/空セクション: ${remaining.map((s: any) => s.index).join(', ')}`
-          )
-        }
+        // エラーは極力起こさず、完走を優先（ログだけ残して継続）
+        await pushResearchEvent(jobId, {
+          at: Date.now(),
+          kind: 'warn',
+          title: 'セクション生成に失敗しました（自動で継続）',
+          detail: sectionErr?.message || 'unknown error',
+        })
       }
 
       iteration++

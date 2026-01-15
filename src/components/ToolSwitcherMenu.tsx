@@ -53,16 +53,8 @@ const TOOLS: Array<{
     icon: FileText,
     iconBgClassName: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
   },
-  {
-    id: 'strategy',
-    href: '/strategy',
-    title: 'ドヤ戦略AI',
-    description: 'マーケティング戦略',
-    icon: BarChart3,
-    iconBgClassName: 'bg-gradient-to-br from-indigo-500 to-purple-600',
-  },
-  // ベータ版サービス（interview）は他サービスのサイドバーには表示しない
-  // ベータ版サービス自身のサイドバー（InterviewSidebar）でのみ表示する
+  // ベータ版サービス（strategy, interview）は他サービスのサイドバーには表示しない
+  // ベータ版サービス自身のサイドバーでのみ表示する
 ]
 
 export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, className }: ToolSwitcherMenuProps) {

@@ -31,9 +31,14 @@ export function StrategyDashboard({ projects, isLoggedIn }: StrategyDashboardPro
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 mb-2">戦略ダッシュボード</h1>
-          <p className="text-sm text-slate-600">マーケティング戦略を構造化・可視化・再利用</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 mb-2">戦略ダッシュボード</h1>
+            <p className="text-sm text-slate-600">マーケティング戦略を構造化・可視化・再利用</p>
+          </div>
+          <span className="px-2 py-1 bg-amber-500 text-white text-xs font-black rounded-md shadow-sm">
+            ベータ版
+          </span>
         </div>
         <Link
           href="/strategy/create"

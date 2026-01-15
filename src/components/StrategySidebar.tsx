@@ -24,6 +24,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { BarChart3 } from 'lucide-react'
 
 type NavItem = {
   href: string
@@ -212,10 +213,15 @@ function StrategySidebarImpl({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -10 }}
-                className="overflow-hidden"
+                className="overflow-hidden flex items-center gap-2"
               >
-                <h1 className="text-lg font-black text-white tracking-tighter leading-none">ドヤ戦略AI</h1>
-                <p className="text-[10px] font-bold text-indigo-100/70 mt-0.5">マーケティング戦略AI</p>
+                <div>
+                  <h1 className="text-lg font-black text-white tracking-tighter leading-none">ドヤ戦略AI</h1>
+                  <p className="text-[10px] font-bold text-indigo-100/70 mt-0.5">マーケティング戦略AI</p>
+                </div>
+                <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-md flex-shrink-0">
+                  ベータ版
+                </span>
               </motion.div>
             )}
           </AnimatePresence>
