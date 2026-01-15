@@ -1927,6 +1927,23 @@ async function generateOutline(article: any, researchContext: string): Promise<S
   const minSections = computeMinSections(Number(article.targetChars || 10000))
   const userKnowledge = await buildUserKnowledgeContext(article.userId)
   const requestText = article.requestText ? clampText(String(article.requestText || ''), 1800) : ''
+  const refUrlsRaw = Array.isArray(article?.referenceUrls) ? (article.referenceUrls as any[]) : []
+  const refUrls = refUrlsRaw
+    .map((u: any) => normalizeUrlMaybe(u))
+    .filter(Boolean)
+    .slice(0, 10)
+  const competitorFormatNote = refUrls.length
+    ? [
+        'COMPETITOR REFERENCE URLS (format-only):',
+        '- The following URLs were provided as reference competitor articles.',
+        '- Use them ONLY to infer format/structure (sections, ordering, common headings).',
+        '- DO NOT copy phrases, unique examples, or wording.',
+        '- For factual claims, prefer primary/official sources from research. If uncertain, state it is unknown.',
+        '- If the URLs are unrelated to the keyword/title, ignore them and follow the keyword/search intent instead.',
+        '',
+        ...refUrls.map((u) => `- ${u}`),
+      ].join('\n')
+    : ''
 
   const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
   const comparisonConfig = (article.comparisonConfig as any) || null
@@ -2013,7 +2030,6 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     'You are a Japanese SEO + LLMO expert editor.',
     'Goal: produce a COMPLETE, parseable JSON outline for a long-form article.',
     'Do NOT copy text from sources. Only paraphrase insights.',
-    'Reference URLs may include competitor articles. Use them ONLY to improve structure/coverage/format; NEVER copy headings, sentences, or phrasing.',
     '',
     'CRITICAL: Output COMPLETE JSON. Do not truncate.',
     'Output JSON with keys: sections, faq, glossary (all simple arrays).',
@@ -2030,6 +2046,7 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     'LLMO elements toggles:',
     llmoOptionsText(article),
     '',
+    competitorFormatNote ? `\n=== REFERENCE URLS BRIEF ===\n${clampText(competitorFormatNote, 2500)}\n` : '',
     researchContext
       ? [
           'RESEARCH USAGE (must follow):',
@@ -2079,7 +2096,6 @@ async function generateOutline(article: any, researchContext: string): Promise<S
       '- H4: "#### ..."',
       `Create ${minSections}-28 H2 sections suitable for a ${article.targetChars} char article.`,
       'Do NOT copy from sources.',
-      'Reference URLs may include competitor articles. Use them ONLY to improve structure/coverage/format; NEVER copy headings, sentences, or phrasing.',
       '',
       `Title: ${article.title}`,
       `Keywords: ${(keywords as string[]).join(', ')}`,
@@ -2089,6 +2105,9 @@ async function generateOutline(article: any, researchContext: string): Promise<S
       forbidden.length ? `Forbidden: ${(forbidden as string[]).join(' / ')}` : '',
       requestText
         ? `\n【一次情報（最優先で反映）】\n以下はユーザーが提供した固有情報です。必ず本文に具体的に反映してください。\n- ここに無い事実（数字/体験/実績/断定）は作らない\n- 具体例・結論・比較の根拠は可能な限りこの一次情報に基づける\n- 文章の“芯”として扱い、薄い一般論で上書きしない\n\n${requestText}\n`
+        : '',
+      competitorFormatNote
+        ? `\n【参考記事URL（競合｜フォーマット参考）】\n下記URLは“構成・見出しの型”の参考です。本文のコピーは禁止。言い回しや独自例を真似しない。\n${refUrls.map((u) => `- ${u}`).join('\n')}\n`
         : '',
       '',
       userKnowledge,
