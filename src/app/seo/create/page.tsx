@@ -709,19 +709,35 @@ export default function SeoCreateWizardPage() {
                   </div>
 
                   {/* 一次情報（最重要） */}
-                  <div>
-                    <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">
-                      一次情報（経験・訴求ポイント）
-                    </label>
+                  <div className="rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 via-indigo-50 to-white p-5 shadow-lg shadow-blue-500/10">
+                    <div className="flex items-start justify-between gap-3 flex-wrap">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black tracking-widest">
+                            重要
+                          </span>
+                          <label className="text-xs font-black text-blue-800 uppercase tracking-widest">
+                            一次情報（経験・訴求ポイント）
+                          </label>
+                        </div>
+                        <p className="mt-1 text-xs font-bold text-blue-700">
+                          ぜひ入力してください。ここが入るほど「あなたにしか書けない記事」になり、差別化できます。
+                        </p>
+                      </div>
+                      <div className="text-[10px] font-black text-blue-700/80 bg-white/70 border border-blue-100 px-3 py-2 rounded-2xl">
+                        例：実体験 / 数字 / 失敗談 / 現場の工夫 / 比較の結論
+                      </div>
+                    </div>
+
                     <textarea
                       value={originalContent}
                       onChange={(e) => setOriginalContent(e.target.value)}
                       placeholder="例：実体験、現場の失敗談、数字、独自の主張、比較の結論、読者に必ず伝えたいこと…"
-                      rows={4}
-                      className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
+                      rows={5}
+                      className="mt-4 w-full px-5 py-4 rounded-2xl bg-white border-2 border-blue-200 text-slate-900 font-bold text-sm placeholder:text-slate-300 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-200/40 transition-all resize-none"
                     />
-                    <p className="mt-2 text-xs text-gray-400 font-medium">
-                      ✨ ここに一次情報を入れるほど、独自性と説得力が増し、実務で使いやすい記事に仕上がります
+                    <p className="mt-2 text-xs font-bold text-blue-700">
+                      ✨ この内容は本文プロンプトに組み込み、オリジナル性が高い記事になるよう反映されます
                     </p>
                   </div>
 
