@@ -52,7 +52,7 @@ export default function StrategyCreatePage() {
       setProjectId(newProjectId)
 
       // Step 2: Phase生成
-      await fetch('/api/strategy/generate', {
+      const phaseResponse = await fetch('/api/strategy/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -62,6 +62,12 @@ export default function StrategyCreatePage() {
         }),
       })
 
+      if (!phaseResponse.ok) {
+        throw new Error('フェーズ生成に失敗しました')
+      }
+
+      const phaseResult = await phaseResponse.json()
+
       // Step 3: Visualization生成（非同期で実行）
       fetch('/api/strategy/generate', {
         method: 'POST',
@@ -69,7 +75,7 @@ export default function StrategyCreatePage() {
         body: JSON.stringify({
           step: 'visualization',
           projectId: newProjectId,
-          phases: kernelResult.result,
+          phases: phaseResult.result,
         }),
       }).catch(console.error)
 
