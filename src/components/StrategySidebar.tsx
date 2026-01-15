@@ -19,13 +19,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Target,
+  Image,
+  FileText,
+  LayoutGrid,
+  ChevronDown,
+  ExternalLink,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
-import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
-import { BarChart3, Target, Image, FileText, LayoutGrid, ChevronDown, ExternalLink } from 'lucide-react'
-import { useState } from 'react'
 
 type NavItem = {
   href: string

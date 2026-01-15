@@ -12,9 +12,6 @@ function run(cmd, args, options = {}) {
     ...options,
   })
 
-  if (r.stdout) console.log(r.stdout.toString())
-  if (r.stderr) console.error(r.stderr.toString())
-
   if (r.status !== 0) {
     const stderr = r.stderr ? r.stderr.toString() : ''
     const stdout = r.stdout ? r.stdout.toString() : ''
@@ -31,15 +28,23 @@ function run(cmd, args, options = {}) {
           'Some database objects already exist'
         }`
       )
+      console.warn('[db-push] ⚠️  This is usually safe to ignore if the objects already exist.')
       console.warn('[db-push] ⚠️  Continuing build...')
       return true
     }
+
+    // 非無視エラーのときだけ詳細を表示（Vercelログのノイズ抑制）
+    if (r.stdout) console.log(stdout.toString())
+    if (r.stderr) console.error(stderr.toString())
 
     console.error(`[db-push] ❌ Command failed: ${cmd} ${args.join(' ')}`)
     console.error(`[db-push] Exit code: ${r.status}`)
     if (r.error) console.error('[db-push] Error:', r.error)
     return false
   }
+  // 成功時は出力を表示（デバッグ用）
+  if (r.stdout) console.log(r.stdout.toString())
+  if (r.stderr) console.error(r.stderr.toString())
   return true
 }
 

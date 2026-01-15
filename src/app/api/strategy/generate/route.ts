@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import {
   getStrategyKernelPrompt,
   getPhaseGeneratorPrompt,
@@ -14,10 +13,45 @@ import {
   getExternalResearchPrompt,
 } from '@/lib/strategy/prompts'
 
+export const runtime = 'nodejs'
 export const maxDuration = 300 // 5分
 
-// Gemini API初期化
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY || '')
+function getGeminiApiKey(): string {
+  return (
+    process.env.GOOGLE_GENAI_API_KEY ||
+    process.env.GOOGLE_GEMINI_API_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    ''
+  )
+}
+
+async function geminiGenerateText(prompt: string, model = 'gemini-2.0-flash'): Promise<string> {
+  const key = getGeminiApiKey()
+  if (!key) throw new Error('Gemini APIキーが設定されていません（GOOGLE_GENAI_API_KEY / GOOGLE_GEMINI_API_KEY 等）')
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(
+    key
+  )}`
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.6 },
+    }),
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`Gemini generateContent failed: ${res.status} ${res.statusText} ${text}`.trim())
+  }
+
+  const json: any = await res.json()
+  const out = json?.candidates?.[0]?.content?.parts?.map((p: any) => p?.text).filter(Boolean).join('') || ''
+  return String(out || '')
+}
 
 interface StrategyGenerationRequest {
   step: 'kernel' | 'phase' | 'visualization' | 'external-research'
@@ -90,7 +124,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
     let result: any
 
     // Step 1: Kernel（コア戦略生成）
@@ -100,8 +133,7 @@ export async function POST(request: NextRequest) {
       }
 
       const prompt = getStrategyKernelPrompt(input)
-      const response = await model.generateContent(prompt)
-      const text = response.response.text()
+      const text = await geminiGenerateText(prompt, 'gemini-2.0-flash')
 
       // JSON抽出
       const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -143,8 +175,7 @@ export async function POST(request: NextRequest) {
       }
 
       const prompt = getPhaseGeneratorPrompt(coreStrategy)
-      const response = await model.generateContent(prompt)
-      const text = response.response.text()
+      const text = await geminiGenerateText(prompt, 'gemini-2.0-flash')
 
       // JSON抽出
       const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -168,8 +199,7 @@ export async function POST(request: NextRequest) {
       }
 
       const prompt = getVisualizationPrompt(phases)
-      const response = await model.generateContent(prompt)
-      const text = response.response.text()
+      const text = await geminiGenerateText(prompt, 'gemini-2.0-flash')
 
       // JSON抽出
       const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -193,8 +223,7 @@ export async function POST(request: NextRequest) {
       }
 
       const prompt = getExternalResearchPrompt(productInfo)
-      const response = await model.generateContent(prompt)
-      const text = response.response.text()
+      const text = await geminiGenerateText(prompt, 'gemini-2.0-flash')
 
       // JSON抽出
       const jsonMatch = text.match(/\{[\s\S]*\}/)
