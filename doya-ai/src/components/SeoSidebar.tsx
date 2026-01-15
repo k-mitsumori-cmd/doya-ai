@@ -35,7 +35,6 @@ type NavItem = {
 
 const SEO_NAV: NavItem[] = [
   { href: '/seo/create', label: '新規記事作成', icon: Plus },
-  { href: '/seo/new', label: '新規記事作成（詳細）', icon: Settings },
   { href: '/seo', label: '生成記事一覧', icon: FileText },
   { href: '/seo/pricing', label: '料金/プラン', icon: CreditCard },
   { href: '/seo/settings', label: '設定', icon: Settings },
