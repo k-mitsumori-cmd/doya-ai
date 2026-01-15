@@ -272,6 +272,11 @@ export default function SeoCreateWizardPage() {
 
   // Step1: 記事の軸
   const [mainKeyword, setMainKeyword] = useState('')
+  const [articleTitle, setArticleTitle] = useState('')
+  const [titleCandidates, setTitleCandidates] = useState<string[]>([])
+  const [titleSelected, setTitleSelected] = useState<number | null>(null)
+  const [titleLoading, setTitleLoading] = useState(false)
+  const [titleError, setTitleError] = useState<string | null>(null)
   const [articleType, setArticleType] = useState<string>('comparison')
 
   // Step2: 読者
@@ -341,6 +346,44 @@ export default function SeoCreateWizardPage() {
     return true
   }, [step, mainKeyword, audiencePreset, customAudience])
 
+  async function generateTitleCandidates() {
+    if (titleLoading) return
+    const kw = mainKeyword.trim()
+    if (kw.length < 2) return
+    setTitleLoading(true)
+    setTitleError(null)
+    try {
+      const res = await fetch('/api/seo/title-suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keyword: kw,
+          articleType,
+          targetChars,
+          tone,
+          count: 6,
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || `タイトル生成に失敗しました (${res.status})`)
+      }
+      const list = Array.isArray(json?.titles) ? (json.titles as string[]) : []
+      const uniq = Array.from(new Set(list.map((s) => String(s || '').trim()).filter(Boolean))).slice(0, 6)
+      if (!uniq.length) throw new Error('タイトル候補を生成できませんでした')
+      setTitleCandidates(uniq)
+      // まだタイトルが空なら、先頭候補を仮セット（いつでも編集/選び直し可能）
+      if (!articleTitle.trim()) {
+        setArticleTitle(uniq[0])
+        setTitleSelected(0)
+      }
+    } catch (e: any) {
+      setTitleError(e?.message || 'タイトル候補の生成に失敗しました')
+    } finally {
+      setTitleLoading(false)
+    }
+  }
+
   async function handleGenerate() {
     if (loading) return
     setLoading(true)
@@ -384,11 +427,14 @@ export default function SeoCreateWizardPage() {
         .filter(Boolean)
         .join('\n\n')
 
+      const fallbackTitle = `${mainKeyword}に関する${ARTICLE_TYPES.find((t) => t.id === articleType)?.label || '記事'}`
+      const finalTitle = articleTitle.trim() || fallbackTitle
+
       const res = await fetch('/api/seo/articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: `${mainKeyword}に関する${ARTICLE_TYPES.find((t) => t.id === articleType)?.label || '記事'}`,
+          title: finalTitle,
           keywords: [mainKeyword, ...related],
           persona,
           tone: toneMap[tone] || '丁寧',
@@ -596,6 +642,70 @@ export default function SeoCreateWizardPage() {
                     <p className="mt-2 text-xs text-gray-400 font-medium">
                       💡 上位表示したい検索キーワードを入力してください
                     </p>
+                  </div>
+
+                  {/* 記事タイトル（キーワードから自動生成） */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs font-black text-gray-500 uppercase tracking-widest">
+                        記事タイトル <span className="text-red-400">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={generateTitleCandidates}
+                        disabled={titleLoading || mainKeyword.trim().length < 2}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white text-[10px] font-black shadow-lg shadow-blue-500/25 hover:from-blue-700 hover:to-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        title="主キーワードからタイトル候補を6つ生成します"
+                      >
+                        {titleLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        タイトル自動生成（6）
+                      </button>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={articleTitle}
+                      onChange={(e) => setArticleTitle(e.target.value)}
+                      placeholder="例：AIライティングツール比較｜料金・特徴・選び方を2026年版で徹底解説"
+                      className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-base placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    />
+                    {titleError ? (
+                      <p className="mt-2 text-xs font-bold text-red-600">{titleError}</p>
+                    ) : (
+                      <p className="mt-2 text-xs text-gray-400 font-medium">
+                        💡 ボタンで候補を生成→クリックでタイトル確定（後から編集もOK）
+                      </p>
+                    )}
+
+                    {titleCandidates.length ? (
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {titleCandidates.slice(0, 6).map((t, i) => {
+                          const active = titleSelected === i
+                          return (
+                            <button
+                              key={`${i}_${t}`}
+                              type="button"
+                              onClick={() => {
+                                setArticleTitle(t)
+                                setTitleSelected(i)
+                              }}
+                              className={[
+                                'text-left px-4 py-3 rounded-2xl border transition-all',
+                                active
+                                  ? 'border-blue-400 bg-blue-50 shadow-sm'
+                                  : 'border-gray-100 bg-white hover:bg-gray-50',
+                              ].join(' ')}
+                              title="クリックでタイトルに反映"
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="text-sm font-black text-gray-900 leading-snug">{t}</div>
+                                {active ? <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" /> : null}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* 一次情報（最重要） */}
