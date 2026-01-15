@@ -3,6 +3,9 @@ import { advanceSeoJob } from '@seo/lib/pipeline'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+// Vercel Pro: 長文生成（統合・追記）のためタイムアウトを延長
+export const maxDuration = 300
 
 export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
   try {

@@ -2927,9 +2927,42 @@ async function integrate(jobId: string) {
         const trimmed = extra.trim()
         parts.push(trimmed)
         extraSections.push(trimmed)
+      } else {
+        // 空出力でも止めずに最低限の追補を入れて前進させる
+        const fb = [
+          '## 補足：実務で失敗しないためのチェックリスト',
+          '',
+          '（自動追補が空出力だったため、最低限の追補を挿入しています。必要に応じて追記してください。）',
+          '',
+          '### チェックリスト',
+          '- 目的（何を達成したいか）を1文で定義する',
+          '- 前提条件（予算/体制/期限/必須機能）を整理する',
+          '- 比較軸（料金/機能/運用/サポート/セキュリティ）を決める',
+          '- 公式情報（仕様/料金/制限）を一次情報で確認する',
+          '- 無料トライアルで検証し、導入後の運用フローを決める',
+        ].join('\n')
+        parts.push(fb)
+        extraSections.push(fb)
       }
-    } catch {
-      break
+    } catch (e: any) {
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'warn',
+        title: '追補セクション生成に失敗（継続します）',
+        detail: e?.message || 'unknown error',
+      })
+      const fb = [
+        '## 補足：補足解説（自動生成のフォールバック）',
+        '',
+        'このパートは生成が不安定だったため、最低限の追補を挿入しています。必要に応じて「本文編集」で追記してください。',
+        '',
+        '### 追加で書くと強い観点',
+        '- 具体例（良い例/悪い例）',
+        '- よくある失敗と回避策',
+        '- 判断基準（迷った時の見分け方）',
+      ].join('\n')
+      parts.push(fb)
+      extraSections.push(fb)
     }
   }
 
