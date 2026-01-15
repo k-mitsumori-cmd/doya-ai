@@ -408,6 +408,7 @@ function stripCoverFromMarkdown(md: string, bannerId?: string | null): string {
 const TABS = [
   { id: 'preview', label: 'プレビュー', icon: Eye, color: 'text-blue-500' },
   { id: 'media', label: '画像', icon: ImageIcon, color: 'text-orange-500' },
+  { id: 'competitors', label: '競合記事', icon: Search, color: 'text-cyan-500' },
   { id: 'score', label: 'SEOスコア', icon: BarChart3, color: 'text-emerald-500' },
   { id: 'outline', label: '見出し編集', icon: Layers, color: 'text-indigo-500' },
   { id: 'edit', label: '本文編集', icon: Edit3, color: 'text-purple-500' },
@@ -1474,6 +1475,61 @@ function SeoArticleInner() {
                   onGoEdit={() => setTab('edit')}
                   onGoOutline={() => setTab('outline')}
                 />
+              </div>
+            )}
+
+            {tab === 'competitors' && (
+              <div className="bg-white rounded-2xl sm:rounded-[40px] border border-gray-100 shadow-xl p-6 sm:p-8">
+                {(() => {
+                  const item = (article.knowledgeItems || []).find((k: any) => k.type === 'competitor_report')
+                  const report = String(item?.content || '').trim()
+                  const refs = Array.isArray(article.references) ? article.references : []
+                  return (
+                    <>
+                      <h2 className="text-lg sm:text-xl font-black text-gray-900 mb-2 flex items-center gap-3">
+                        <Search className="w-6 h-6 text-cyan-600" /> 競合記事の状況・差別化（SEOで勝つ）
+                      </h2>
+                      <p className="text-xs font-bold text-gray-500 mb-6">
+                        主キーワードで上位記事を調査し、「コピー禁止」で構成・不足点を分析して、本記事の勝ち筋を可視化します。
+                      </p>
+
+                      {report ? (
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50/40 p-5">
+                          <MarkdownPreview markdown={report} />
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 via-white to-sky-50 p-5">
+                          <p className="text-sm font-black text-cyan-900">競合比較レポートは生成完了時に自動作成されます</p>
+                          <p className="mt-2 text-xs font-bold text-cyan-900/70 leading-relaxed">
+                            まだレポートがありません（既存記事は未生成の可能性）。次回の生成からこのタブに「上位記事の傾向 vs 本記事の優位点」の表が表示されます。
+                          </p>
+                          {refs.length ? (
+                            <div className="mt-4">
+                              <p className="text-[10px] font-black text-cyan-700 uppercase tracking-widest mb-2">
+                                参考に保存済みのURL（{refs.length}件）
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                {refs.slice(0, 10).map((r: any) => (
+                                  <a
+                                    key={r.id}
+                                    href={r.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-cyan-200 text-[11px] font-black text-cyan-800 hover:bg-cyan-50"
+                                    title={r.title || r.url}
+                                  >
+                                    <Link2 className="w-3.5 h-3.5" />
+                                    {String(r.title || r.url).slice(0, 34)}
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
             )}
 

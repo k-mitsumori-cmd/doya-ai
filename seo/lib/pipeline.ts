@@ -403,6 +403,7 @@ async function maybeDiscoverReferenceUrls(article: any, jobId?: string) {
 
   const title = String(article?.title || '').trim()
   const keywords = Array.isArray(article?.keywords) ? (article.keywords as any[]) : []
+  const primaryKeyword = String(keywords?.[0] || '').trim()
   // NOTE: タイトル丸ごとだとノイズで検索精度が落ちるため「核だけ」に正規化
   const q = buildResearchBaseQuery(title, keywords) || [title, ...keywords.slice(0, 3)].filter(Boolean).join(' ')
   if (!q) return
@@ -418,19 +419,24 @@ async function maybeDiscoverReferenceUrls(article: any, jobId?: string) {
   const queries =
     targetChars >= 10000
       ? [
+          primaryKeyword ? `${primaryKeyword}` : '',
+          primaryKeyword ? `${primaryKeyword} 上位 記事` : '',
           `${q} 最新`, // 最新情報
           `${q} 事例 成功事例`, // 具体例・実例
           `${q} やり方 方法`, // ハウツー
           `${q} 料金 費用`, // 料金情報
         ]
       : [
+          primaryKeyword ? `${primaryKeyword}` : '',
           `${q} 最新`,
           `${q} やり方 方法`,
           `${q} 料金 費用`,
         ]
+  // 空要素を除外
+  const queries2 = queries.filter(Boolean)
 
   const allUrls: string[] = [...existing]
-  for (const query of queries) {
+  for (const query of queries2) {
     if (allUrls.length >= maxUrls) break
     try {
       const perQuery = targetChars >= 10000 ? 5 : 3
@@ -2000,6 +2006,12 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     'Goal: produce a COMPLETE, parseable JSON outline for a long-form article.',
     'Do NOT copy text from sources. Only paraphrase insights.',
     '',
+    'COMPETITIVE GOAL (SERP):',
+    '- Assume users search by the primary keyword and compare top-ranked pages.',
+    '- The outline MUST cover the must-have topics of top pages AND add clear differentiators:',
+    '  - Primary info / unique experience, practical checklists, pitfalls, decision criteria, better structure and tables.',
+    '- Never copy sentences/phrases from competitors.',
+    '',
     'CRITICAL: Output COMPLETE JSON. Do not truncate.',
     'Output JSON with keys: sections, faq, glossary (all simple arrays).',
     '',
@@ -2386,6 +2398,10 @@ async function generateSection(jobId: string) {
     'Write ONE section only in Japanese. Markdown output.',
     'Do NOT copy from sources; paraphrase ideas and add originality (experience, tradeoffs, examples, failure cases).',
     'Avoid generic filler. Be specific and practical.',
+    '',
+    'COMPETITIVE GOAL (SERP): write a section that would beat top-ranked pages for the primary keyword.',
+    '- Cover must-have points, but add differentiators: checklists, pitfalls, decision criteria, concrete examples, and clear tables.',
+    '- Never copy wording from competitors.',
     NO_AI_MARKDOWN_RULES,
     '',
     `Article title: ${article.title}`,
@@ -3209,6 +3225,82 @@ async function integrate(jobId: string) {
       sourceUrls: article.referenceUrls as any,
     },
   })
+
+  // 差別化④: 競合比較（上位記事の傾向 vs 本記事の優位性）
+  try {
+    const refs = await p.seoReference.findMany({
+      where: { articleId: article.id },
+      orderBy: { createdAt: 'asc' },
+      take: 6,
+      select: { url: true, title: true, summary: true, headings: true, insights: true },
+    })
+    const refLines = refs
+      .map((r: any, i: number) => {
+        const url = String(r?.url || '').trim()
+        const t = String(r?.title || '').trim()
+        const s = String(r?.summary || '').trim()
+        const hs = Array.isArray(r?.headings) ? (r.headings as any[]).map((x) => String(x || '').trim()).filter(Boolean) : []
+        return [
+          `#${i + 1} ${t || shortHost(url) || url}`,
+          `URL: ${url}`,
+          s ? `要約: ${clampText(s, 420)}` : '',
+          hs.length ? `見出し: ${hs.slice(0, 12).join(' / ')}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n')
+      })
+      .join('\n\n')
+
+    const primaryKw = String((Array.isArray(article.keywords) ? article.keywords[0] : '') || '').trim()
+    const ownHeadings = (String(finalMarkdown || '').match(/^#{1,3}\s+.+$/gm) || []).slice(0, 30).join('\n')
+
+    const competitorPrompt = [
+      'You are a Japanese SEO strategist.',
+      'Task: Create a "competitive advantage" report comparing this article vs top-ranked competitor articles.',
+      'You must NOT copy competitor sentences or unique examples. Use only paraphrased insights.',
+      'Do NOT claim actual rankings. Use language like "上位記事の傾向" / "よくある不足" / "本記事の強み".',
+      '',
+      'Output: Markdown only.',
+      'Include:',
+      '1) A short section "競合記事の状況" that lists the competitor URLs with 1-line gist each.',
+      '2) A comparison table with rows like: 検索意図の網羅 / 比較軸の明確さ / 一次情報・独自性 / 具体性（手順・チェックリスト） / 最新性・根拠 / 読みやすさ / FAQ / 導入判断の助け.',
+      '   Columns: 上位記事の傾向 | 本記事の優位点 | さらに強くする改善案（任意）',
+      '3) "次にやる改善TOP5" (action items).',
+      '',
+      `Primary keyword: ${primaryKw || '（不明）'}`,
+      `Article title: ${article.title}`,
+      requestText ? `User primary info (must be treated as differentiator):\n${clampText(String(requestText || ''), 900)}` : '',
+      '',
+      'Our article headings (partial):',
+      ownHeadings || '（見出し取得不可）',
+      '',
+      'Competitor articles (summaries/headings):',
+      refLines || '（参考記事がまだ保存されていません）',
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    const competitorReport = await geminiGenerateText({
+      model: GEMINI_TEXT_MODEL_DEFAULT,
+      parts: [{ text: competitorPrompt }],
+      generationConfig: { temperature: 0.35, maxOutputTokens: 1800 },
+    }).catch(() => '')
+
+    if (String(competitorReport || '').trim()) {
+      await p.seoKnowledgeItem.create({
+        data: {
+          userId: article.userId,
+          articleId: article.id,
+          type: 'competitor_report',
+          title: '競合記事（SEO勝ち筋）',
+          content: sanitizeAiMarkdown(competitorReport),
+          sourceUrls: (Array.isArray(article.referenceUrls) ? article.referenceUrls : []) as any,
+        },
+      })
+    }
+  } catch {
+    // ignore (best-effort)
+  }
 
   await p.seoJob.update({
     where: { id: jobId },
