@@ -104,6 +104,7 @@ export default function SeoDashboardPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [regenBusyId, setRegenBusyId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [activeStatus, setActiveStatus] = useState<'ALL' | 'RUNNING' | 'DONE' | 'DRAFT' | 'ERROR'>('ALL')
   const isLoadingRef = useRef(false)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   const [welcomePlan, setWelcomePlan] = useState<string>('')
@@ -200,10 +201,32 @@ export default function SeoDashboardPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
+    const statusOk = (status: string) => {
+      const st = String(status || '').toUpperCase()
+      if (activeStatus === 'ALL') return true
+      if (activeStatus === 'DONE') return st === 'DONE' || st === 'EXPORTED'
+      return st === activeStatus
+    }
     return articles
+      .filter((a) => statusOk(a.status))
       .filter((a) => (!q ? true : a.title.toLowerCase().includes(q) || (a.keywords || []).some(k => k.toLowerCase().includes(q))))
       .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-  }, [articles, query])
+  }, [articles, query, activeStatus])
+
+  const topicChips = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const a of articles) {
+      for (const kw of a.keywords || []) {
+        const k = String(kw || '').trim()
+        if (!k) continue
+        counts.set(k, (counts.get(k) || 0) + 1)
+      }
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([k]) => k)
+  }, [articles])
 
   // 記事の続きへのリンクを決定
   function getResumeLink(a: SeoArticleRow): string {
@@ -235,8 +258,168 @@ export default function SeoDashboardPage() {
     }
   }
 
+  const statusTabs: { id: 'ALL' | 'RUNNING' | 'DONE' | 'DRAFT' | 'ERROR'; label: string }[] = [
+    { id: 'ALL', label: '総合' },
+    { id: 'RUNNING', label: '生成中' },
+    { id: 'DONE', label: '完成' },
+    { id: 'DRAFT', label: '下書き' },
+    { id: 'ERROR', label: 'エラー' },
+  ]
+
   return (
-    <main className="max-w-6xl mx-auto py-6 sm:py-8 px-4">
+    <main className="min-h-screen bg-white">
+      {/* NewsPicks風ヘッダー（カテゴリ＋検索） */}
+      <div className="border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="h-14 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <Link href="/seo" className="font-black tracking-tight text-gray-900 truncate">
+                DOYA<span className="text-blue-600">Picks</span>
+              </Link>
+              <span className="hidden sm:inline text-xs font-bold text-gray-400 truncate">生成記事一覧</span>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="relative hidden sm:block w-[320px]">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-blue-500"
+                  placeholder="キーワードや記事名で検索"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+              <Link href="/seo/create">
+                <button className="h-9 px-3 sm:px-4 rounded-lg bg-blue-600 text-white text-xs sm:text-sm font-black hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  新規作成
+                </button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="pb-3 flex flex-wrap gap-2">
+            {statusTabs.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setActiveStatus(t.id)}
+                className={`h-8 px-3 rounded-full border text-xs font-black transition-colors ${
+                  activeStatus === t.id
+                    ? 'bg-gray-900 text-white border-gray-900'
+                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+
+            {topicChips.length > 0 && (
+              <div className="w-full flex flex-wrap gap-2 pt-1">
+                {topicChips.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setQuery(t)}
+                    className="h-8 px-3 rounded-full border border-gray-200 bg-white text-gray-700 text-xs font-black hover:bg-gray-50 transition-colors"
+                    title={`このキーワードで絞り込み: ${t}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto py-6 sm:py-8 px-4">
+        {/* NewsPicks風: トップストーリー（最新の1本を大きく） */}
+        {!loading && !error && filtered.length > 0 && (
+          <div className="mb-8 border-b border-gray-200 pb-6">
+            {(() => {
+              const hero = filtered[0]
+              const rest = filtered.slice(1, 4)
+              const config = STATUS_CONFIG[hero.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.DRAFT
+              const bannerId = hero.images?.[0]?.id || ''
+              const href = `/seo/articles/${hero.id}`
+              return (
+                <div className="grid lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-black text-gray-500 tracking-widest">トップストーリー</p>
+                      <Link href={href} className="text-xs font-black text-gray-900 hover:underline">
+                        これまでの話題 →
+                      </Link>
+                    </div>
+
+                    <div className="mt-3">
+                      <div className="flex items-center gap-2">
+                        <Badge tone={config.tone}>{config.label}</Badge>
+                        {(hero.keywords || [])[0] ? (
+                          <span className="text-[11px] font-black text-gray-500 truncate max-w-[240px]">
+                            {(hero.keywords || [])[0]}
+                          </span>
+                        ) : null}
+                      </div>
+                      <Link href={href} className="block mt-2">
+                        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-snug hover:underline decoration-gray-300">
+                          {hero.title}
+                        </h1>
+                      </Link>
+                      <p className="mt-2 text-sm font-bold text-gray-600">
+                        {(hero.keywords || []).slice(0, 6).join(' / ') || 'キーワード未設定'}
+                      </p>
+                      <p className="mt-2 text-xs font-bold text-gray-400">
+                        更新: {new Date(hero.updatedAt || hero.createdAt).toLocaleDateString('ja-JP')}
+                      </p>
+                    </div>
+
+                    {rest.length > 0 && (
+                      <div className="mt-4">
+                        <ul className="space-y-2">
+                          {rest.map((a) => {
+                            const u = `/seo/articles/${a.id}`
+                            return (
+                              <li key={a.id} className="flex items-start gap-3">
+                                <span className="mt-[7px] w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />
+                                <Link href={u} className="flex-1 min-w-0">
+                                  <p className="text-[11px] font-black text-gray-400">
+                                    {new Date(a.updatedAt || a.createdAt).toLocaleDateString('ja-JP')}
+                                  </p>
+                                  <p className="text-sm font-black text-gray-900 truncate hover:underline">
+                                    {a.title}
+                                  </p>
+                                </Link>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="lg:col-span-1">
+                    <div className="aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+                      {bannerId ? (
+                        <img
+                          src={`/api/seo/images/${bannerId}`}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <FileText className="w-8 h-8" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
       {/* 統計カード */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
@@ -326,8 +509,8 @@ export default function SeoDashboardPage() {
       </div>
 
       {/* Search */}
-      <div className="flex justify-end mb-6">
-        <div className="relative w-full sm:max-w-sm">
+      <div className="flex justify-end mb-6 sm:hidden">
+        <div className="relative w-full">
           <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-100 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all"
