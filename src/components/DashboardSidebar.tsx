@@ -54,7 +54,6 @@ const bannerNavItems: NavItem[] = [
 const seoNavItems: NavItem[] = [
   // /seo に「ダッシュボード＋生成履歴」を統合
   { href: '/seo/create', label: '新規記事作成', icon: Sparkles },
-  { href: '/seo/new', label: '新規記事作成（詳細）', icon: Sparkles },
   { href: '/seo', label: '生成記事一覧', icon: LayoutDashboard },
 ]
 
