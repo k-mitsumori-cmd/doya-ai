@@ -575,6 +575,14 @@ function SeoArticleInner() {
   const [promptOpen, setPromptOpen] = useState(false)
   const [bannerPromptTemplate, setBannerPromptTemplate] = useState(DEFAULT_BANNER_PROMPT_TEMPLATE)
   const [diagramPromptTemplate, setDiagramPromptTemplate] = useState(DEFAULT_DIAGRAM_PROMPT_TEMPLATE)
+
+  // 記事の同テーマ再生成
+  const [regenArticleOpen, setRegenArticleOpen] = useState(false)
+  const [regenArticleTitle, setRegenArticleTitle] = useState('')
+  const [regenArticleKeywords, setRegenArticleKeywords] = useState('')
+  const [regenArticleFix, setRegenArticleFix] = useState('')
+  const [regenArticleBusy, setRegenArticleBusy] = useState(false)
+  const [regenArticleError, setRegenArticleError] = useState<string | null>(null)
   
   // 比較サービス追加モーダル
   const [addServiceOpen, setAddServiceOpen] = useState(false)
@@ -964,6 +972,88 @@ function SeoArticleInner() {
     }
   }
 
+  function openRegenerateArticle() {
+    if (!article) return
+    setRegenArticleTitle(String(article.title || ''))
+    setRegenArticleKeywords((Array.isArray((article as any).keywords) ? ((article as any).keywords as any[]) : [])
+      .map((s) => String(s || '').trim())
+      .filter(Boolean)
+      .join('\n'))
+    setRegenArticleFix('')
+    setRegenArticleError(null)
+    setRegenArticleOpen(true)
+  }
+
+  async function submitRegenerateArticle() {
+    if (!article) return
+    if (regenArticleBusy) return
+
+    const title = regenArticleTitle.trim() || String(article.title || '')
+    const keywords = regenArticleKeywords
+      .split(/[\n,、]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 50)
+    if (!title) {
+      setRegenArticleError('タイトルを入力してください')
+      return
+    }
+    if (!keywords.length) {
+      setRegenArticleError('キーワードを1つ以上入力してください')
+      return
+    }
+
+    const baseReq = String((article as any).requestText || '').trim()
+    const fix = regenArticleFix.trim()
+    const requestText = (baseReq || fix)
+      ? [baseReq, fix ? `【再生成の修正指示】\n${fix}` : ''].filter(Boolean).join('\n\n')
+      : null
+
+    setRegenArticleBusy(true)
+    setRegenArticleError(null)
+    try {
+      const payload: any = {
+        title,
+        keywords,
+        persona: String((article as any).persona || ''),
+        searchIntent: String((article as any).searchIntent || ''),
+        targetChars: Number((article as any).targetChars || 10000),
+        referenceUrls: Array.isArray((article as any).referenceUrls) ? (article as any).referenceUrls : [],
+        tone: (article as any).tone || '丁寧',
+        forbidden: Array.isArray((article as any).forbidden) ? (article as any).forbidden : [],
+        llmoOptions: (article as any).llmoOptions ?? undefined,
+        requestText,
+        referenceImages: (article as any).referenceImages ?? null,
+        autoBundle: (article as any).autoBundle ?? true,
+        mode: (article as any).mode ?? 'standard',
+        comparisonConfig: (article as any).comparisonConfig ?? null,
+        comparisonCandidates: (article as any).comparisonCandidates ?? null,
+        referenceInputs: (article as any).referenceInputs ?? null,
+        createJob: true,
+      }
+
+      const res = await fetch('/api/seo/articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || `再生成に失敗しました (${res.status})`)
+      }
+      const jobId = json.jobId || json.job?.id
+      const articleId = json.articleId || json.article?.id
+      setRegenArticleOpen(false)
+      if (jobId) router.push(`/seo/jobs/${jobId}?auto=1`)
+      else if (articleId) router.push(`/seo/articles/${articleId}`)
+      else throw new Error('再生成結果のID取得に失敗しました')
+    } catch (e: any) {
+      setRegenArticleError(e?.message || '再生成に失敗しました')
+    } finally {
+      setRegenArticleBusy(false)
+    }
+  }
+
 
   useEffect(() => {
     if (searchParams.get('auto') === '1') setAutoRun(true)
@@ -1183,6 +1273,106 @@ function SeoArticleInner() {
           )}
         </AnimatePresence>
 
+        {/* 同テーマ再生成モーダル */}
+        <AnimatePresence>
+          {regenArticleOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+              onClick={() => !regenArticleBusy && setRegenArticleOpen(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.98, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.98, opacity: 0 }}
+                className="w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center">
+                      <Wand2 className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-black text-gray-900">同じテーマで再生成</h3>
+                      <p className="text-sm text-gray-500">
+                        タイトル/キーワードは引き継ぎつつ、修正指示を追加して再生成できます
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6 space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">
+                      タイトル <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={regenArticleTitle}
+                      onChange={(e) => setRegenArticleTitle(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm font-bold"
+                      disabled={regenArticleBusy}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">
+                      キーワード（改行区切り） <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={regenArticleKeywords}
+                      onChange={(e) => setRegenArticleKeywords(e.target.value)}
+                      rows={4}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm font-bold resize-none"
+                      disabled={regenArticleBusy}
+                      placeholder="例：AIライティングツール\nSEO\n比較"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">修正内容（追加指示）</label>
+                    <textarea
+                      value={regenArticleFix}
+                      onChange={(e) => setRegenArticleFix(e.target.value)}
+                      rows={5}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-sm resize-none"
+                      disabled={regenArticleBusy}
+                      placeholder="例：比較表に“無料枠の有無”を追加／各ツールの注意点を1行で入れる／初心者向けに噛み砕く…"
+                    />
+                    <p className="mt-2 text-[11px] text-gray-500 font-bold">
+                      ※「同じテーマ」で再生成しつつ、この指示を一次情報として優先的に反映します
+                    </p>
+                  </div>
+                  {regenArticleError && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-bold">
+                      {regenArticleError}
+                    </div>
+                  )}
+                </div>
+                <div className="p-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => !regenArticleBusy && setRegenArticleOpen(false)}
+                    className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 text-sm font-bold hover:bg-gray-50 transition-colors"
+                    disabled={regenArticleBusy}
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submitRegenerateArticle}
+                    className="flex-1 px-4 py-3 rounded-xl bg-blue-600 text-white text-sm font-black hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    disabled={regenArticleBusy}
+                  >
+                    {regenArticleBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                    {regenArticleBusy ? '再生成中...' : '再生成を開始'}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Header */}
         <div className="mb-6 sm:mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="w-full md:w-auto">
@@ -1236,6 +1426,14 @@ function SeoArticleInner() {
             </div>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              variant="secondary"
+              onClick={openRegenerateArticle}
+              className="flex-1 sm:flex-none h-11 sm:h-12 rounded-xl sm:rounded-2xl px-4 sm:px-6 font-black shadow-lg shadow-blue-500/10 text-xs sm:text-sm"
+            >
+              <Wand2 className="w-4 h-4 mr-2" />
+              同テーマで再生成
+            </Button>
             {isGenerating && (
               <Button variant={autoRun ? 'secondary' : 'primary'} onClick={() => setAutoRun(!autoRun)} className="flex-1 sm:flex-none h-11 sm:h-12 rounded-xl sm:rounded-2xl px-4 sm:px-6 font-black shadow-lg shadow-blue-500/20 text-xs sm:text-sm">
                 {autoRun ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
