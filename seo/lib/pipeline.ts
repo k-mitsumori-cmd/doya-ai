@@ -854,6 +854,53 @@ function inferComparisonCountFromTitle(title: string, keywords: any): number {
   return 0
 }
 
+/**
+ * 収集したサービス数に応じてタイトルの「○選」を更新
+ * 例: "AIライティングツール15選" → "AIライティングツール28選"
+ */
+function updateTitleWithActualCount(title: string, actualCount: number): string {
+  const t = String(title || '').trim()
+  if (!t || actualCount <= 0) return t
+
+  // 「○選」「○社」のパターンを検出して置換
+  const patterns = [
+    /(\d{1,3})\s*(選|社)/g, // 15選、30社など
+    /(TOP)\s*(\d{1,3})/gi, // TOP15など
+  ]
+
+  let updated = t
+  let matched = false
+
+  // 「○選」「○社」パターン
+  updated = updated.replace(/(\d{1,3})\s*(選|社)/g, (match, num, suffix) => {
+    matched = true
+    return `${actualCount}${suffix}`
+  })
+
+  // 「TOP○」パターン
+  if (!matched) {
+    updated = updated.replace(/(TOP)\s*(\d{1,3})/gi, (match, prefix, num) => {
+      matched = true
+      return `${prefix}${actualCount}`
+    })
+  }
+
+  // マッチしなかった場合、タイトルに「○選」を追加（比較記事の場合）
+  if (!matched && actualCount >= 3) {
+    // タイトルの末尾に追加（ただし既に「比較」「おすすめ」等がある場合のみ）
+    if (/比較|おすすめ|ランキング|厳選/.test(t)) {
+      // 「｜」や「|」の前に挿入
+      if (/[｜|]/.test(t)) {
+        updated = t.replace(/([｜|])/, `${actualCount}選$1`)
+      } else {
+        updated = `${t}${actualCount}選`
+      }
+    }
+  }
+
+  return updated
+}
+
 function buildComparisonBaseQuery(title: any, keywords: any): string {
   const t = String(title || '').replace(/\r\n/g, ' ').trim()
   const ks = Array.isArray(keywords) ? keywords.map((x: any) => String(x || '')).join(' ') : String(keywords || '')
@@ -2294,6 +2341,25 @@ async function ensureOutlineAndSections(jobId: string) {
     }
     // 不足しても止めない（記事内に不足注記を明示して進行する）
     article.comparisonCandidates = ensured
+
+    // 収集したサービス数に応じてタイトルの「○選」を更新
+    const actualCount = uniqCandidatesByName(ensured).length
+    if (actualCount > 0) {
+      const updatedTitle = updateTitleWithActualCount(article.title, actualCount)
+      if (updatedTitle !== article.title) {
+        await p.seoArticle.update({
+          where: { id: article.id },
+          data: { title: updatedTitle },
+        })
+        article.title = updatedTitle
+        await pushResearchEvent(jobId, {
+          at: Date.now(),
+          kind: 'info',
+          title: `タイトルを更新しました（${actualCount}選）`,
+          detail: `収集したサービス数に合わせてタイトルを「${updatedTitle}」に変更しました`,
+        })
+      }
+    }
   }
 
   // 比較記事は「実在サービスのみ」を担保するため、公式URLがある場合は軽量に自動リサーチ（最大2件）
