@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Search, Loader2, Link2, Sparkles, RefreshCcw, CheckCircle2, AlertCircle } from 'lucide-react'
-import { MarkdownPreview } from '@/seo/components/MarkdownPreview'
+import { MarkdownPreview } from '@seo/components/MarkdownPreview'
 
 interface CompetitorAnalysisTabProps {
   articleId: string
