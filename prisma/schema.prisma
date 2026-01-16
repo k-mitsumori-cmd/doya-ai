@@ -77,6 +77,7 @@ model User {
   // SEO記事生成（ドヤ記事作成）
   seoArticles       SeoArticle[]
   seoKnowledgeItems SeoKnowledgeItem[]
+  swipeSessions     SwipeSession[]
 
   // ドヤインタビューAI
   interviewProjects InterviewProject[]
@@ -366,6 +367,27 @@ model SeoArticle {
   @@index([userId, createdAt])
   @@index([guestId, createdAt])
   @@index([status, createdAt])
+}
+
+model SwipeSession {
+  id          String   @id @default(cuid())
+  sessionId   String   @unique // UUID（フロント側で生成）
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId     String?  // 未ログイン時の識別子
+
+  mainKeyword String   // 最初に入力したキーワード
+  swipes      Json     // SwipeLog[]（スワイプログ配列）
+  finalConditions Json? // {targetChars: number, articleType: string}
+  primaryInfo Json?     // {results: string, experience: string, opinion: string, fixedPhrase: string}
+  generatedArticleId String? // 生成された記事のID
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
 }
 
 model SeoJob {
