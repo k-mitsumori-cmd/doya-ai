@@ -2619,6 +2619,7 @@ async function generateSection(jobId: string) {
           '- Comparison mode: NEVER invent services/features/prices.',
           '- When writing about a service: include official URL (if known) and clearly label unknown fields as "公式に明記なし/要問い合わせ/非公開".',
           '- Prefer facts from RESEARCH blocks (official sources). If not present, do not assert.',
+          '- OUTPUT FORMAT: Write in natural Japanese prose and Markdown (H2/H3/bullets/tables). Do NOT output JSON, key-value pairs like "ツール名": "...", or code blocks. The candidate list is reference data only—never copy it verbatim.',
           (() => {
             const h = String(next.headingPath || '')
             const mustCoverAll =
