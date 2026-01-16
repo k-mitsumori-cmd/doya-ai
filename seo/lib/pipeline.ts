@@ -1380,7 +1380,8 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   const existing = Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
   const uniqExisting = uniqCandidatesByName(existing)
 
-  // count が未設定（0）の場合、タイトルから推定するか、デフォルト10社で進める
+  // 「○選」の上限を撤廃: 収集した全サービスを比較対象に含める
+  // desired は「最低限これだけは集める」目安として使い、上限は設けない
   if (!desired) {
     const inferred = inferComparisonCountFromTitle(article?.title, article?.keywords)
     if (inferred > 0) {
@@ -1388,42 +1389,21 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
       await pushResearchEvent(jobId, {
         at: Date.now(),
         kind: 'discover',
-        title: `タイトルから比較数を推定しました（${desired}社）`,
-        detail: `「${String(article?.title || '').slice(0, 40)}」から自動検出`,
+        title: `タイトルから最低収集数を推定しました（${desired}社以上）`,
+        detail: `「${String(article?.title || '').slice(0, 40)}」から自動検出（上限なし：収集した全サービスを比較）`,
       })
-      // DB にも反映
-      try {
-        const nextCfg = { ...cfg, count: desired }
-        await (prisma as any).seoArticle.update({
-          where: { id: article.id },
-          data: { comparisonConfig: nextCfg as any },
-        })
-        article.comparisonConfig = nextCfg
-      } catch {
-        // ignore
-      }
     } else {
-      // タイトルからも推定できない場合はデフォルト10社で進める
-      desired = 10
+      // タイトルからも推定できない場合はデフォルト15社を最低目標として進める
+      desired = 15
       await pushResearchEvent(jobId, {
         at: Date.now(),
-        kind: 'warn',
-        title: '比較数が未設定のためデフォルト10社で進行します',
-        detail: '比較したいサービス数を明示的に設定することをお勧めします。',
+        kind: 'info',
+        title: '比較数が未設定のため、競合記事から全サービスを収集します',
+        detail: '最低15社を目標に収集し、見つかった全サービスを比較対象に含めます。',
       })
-      try {
-        const nextCfg = { ...cfg, count: desired }
-        await (prisma as any).seoArticle.update({
-          where: { id: article.id },
-          data: { comparisonConfig: nextCfg as any },
-        })
-        article.comparisonConfig = nextCfg
-      } catch {
-        // ignore
-      }
     }
   }
-  if (uniqExisting.length >= desired) return uniqExisting.slice(0, desired)
+  // 既存候補が最低目標を満たしていても、追加収集は行う（全サービス収集のため）
 
   const keywords = Array.isArray(article.keywords) ? article.keywords : (article.keywords as any) || []
   const baseQuery = buildCandidateSearchSeed(article)
@@ -1463,9 +1443,9 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
       .filter(Boolean) as string[]
 
     const collected: any[] = [...uniqExisting]
-    const maxParse = desired >= 30 ? 10 : 5
+    // 全サービス収集: 上限なしで全ての参照URLをパース
+    const maxParse = 15
     for (const u of normalizedRefs.slice(0, maxParse)) {
-      if (uniqCandidatesByName(collected).length >= desired) break
       const services = await extractServicesFromComparisonArticle(u, baseQuery, jobId)
       for (const s of services) {
         if (s.name && !containsPlaceholderNames(s.name)) {
@@ -1480,10 +1460,11 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
       })
     }
 
-    let merged = uniqCandidatesByName(collected).slice(0, desired)
+    // 全サービス収集: 上限なし
+    let merged = uniqCandidatesByName(collected)
 
     // referenceUrlsからの抽出でも足りない場合、Gemini知識で補完
-    if (merged.length < Math.max(3, Math.ceil(desired * 0.3))) {
+    if (merged.length < Math.max(3, desired)) {
       await pushResearchEvent(jobId, {
         at: Date.now(),
         kind: 'warn',
@@ -1506,7 +1487,8 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
             collected.push({ ...gc, source: 'gemini_knowledge' })
           }
         }
-        merged = uniqCandidatesByName(collected).slice(0, desired)
+        // 全サービス収集: 上限なし
+        merged = uniqCandidatesByName(collected)
 
         await pushResearchEvent(jobId, {
           at: Date.now(),
@@ -1673,11 +1655,10 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
     // ignore
   }
 
-  // 比較メディアからサービスを抽出（最大5記事をパース）
+  // 比較メディアからサービスを抽出（全サービス収集: 上限なしで全記事をパース）
   const collected: any[] = [...uniqExisting]
-  const maxParse = desired >= 30 ? 10 : 5
+  const maxParse = 15 // 最大15記事をパース
   for (const mediaUrl of comparisonMediaUrls.slice(0, maxParse)) {
-    if (uniqCandidatesByName(collected).length >= desired) break
     const services = await extractServicesFromComparisonArticle(mediaUrl, baseQuery, jobId)
     for (const s of services) {
       if (s.name && !containsPlaceholderNames(s.name)) {
@@ -1692,8 +1673,8 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
     })
   }
 
-  // フォールバック: まだ足りなければ従来の検索も実行
-  if (uniqCandidatesByName(collected).length < desired) {
+  // 追加収集: 最低目標に達していなければ従来の検索も実行（全サービス収集のため常に実行）
+  if (uniqCandidatesByName(collected).length < desired || true) {
     const fallbackQueries = Array.from(
       new Set([
         `${baseQuery} 比較`,
@@ -1715,7 +1696,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
       const maxStart = desired >= 40 ? 100 : desired >= 20 ? 60 : 30
       const organicPool: { title: string; url: string; snippet?: string }[] = []
 
-      for (let start = 0; start < maxStart && uniqCandidatesByName(collected).length < desired; start += 10) {
+      for (let start = 0; start < maxStart; start += 10) {
         let found: { organic: { title: string; url: string; snippet?: string }[] } | null = null
         try {
           found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10, start })
@@ -1730,7 +1711,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
         }
         if (!found?.organic?.length) break
         organicPool.push(...found.organic.slice(0, 10))
-        if (uniqCandidatesByName(collected).length >= desired) break
+        // 全サービス収集: 上限チェックを削除（ページング上限で自然に止まる）
       }
 
       // Serp結果一覧からAIでサービス名を抽出（タイトルパースだけに頼らない）
@@ -1749,15 +1730,15 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
       } catch {
         // ignore
       }
-
-      if (uniqCandidatesByName(collected).length >= desired) break
+      // 全サービス収集: クエリごとの上限チェックを削除（全クエリを実行）
     }
   }
 
-  let merged = uniqCandidatesByName(collected).slice(0, desired)
+  // 全サービス収集: 上限なし
+  let merged = uniqCandidatesByName(collected)
 
   // ========= 最終フォールバック: 検索結果から候補が得られなかった場合はGemini知識から生成 =========
-  if (merged.length < Math.max(3, Math.ceil(desired * 0.3))) {
+  if (merged.length < Math.max(3, desired)) {
     await pushResearchEvent(jobId, {
       at: Date.now(),
       kind: 'warn',
@@ -1780,7 +1761,8 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
           collected.push({ ...gc, source: 'gemini_knowledge' })
         }
       }
-      merged = uniqCandidatesByName(collected).slice(0, desired)
+      // 全サービス収集: 上限なし
+      merged = uniqCandidatesByName(collected)
 
       await pushResearchEvent(jobId, {
         at: Date.now(),
@@ -2092,15 +2074,14 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         '★★★ CRITICAL: 網羅性（全ツール紹介）を最優先 ★★★',
         '比較対象の全サービスを、必ず本文内で紹介してください（短くてもOK）。',
         'IMPORTANT:',
-        '- 1サービスあたり2000字などの最低文字数は不要。網羅性を最優先する。',
-        '- 見出し階層は柔軟でよい（各ツールをH2にする必要はない）。推奨: 「各ツール紹介」H2の下で、各ツールをH3で短くまとめる。',
-        '- 1ツールあたりの目安: 120〜300字 + 箇条書き（公式URL/実績・特徴/料金/筆者の所感）。',
-        '- 各ツール紹介は“短くても全件”。各ツールは必ず以下の項目を含める:',
+        '- 競合記事で紹介されている全サービスを収集し、全て比較対象に含める（「○選」の上限は撤廃）。',
+        '- 見出し階層は柔軟でよい（各ツールをH2にする必要はない）。推奨: 「各ツール紹介」H2の下で、各ツールをH3で紹介する。',
+        '- 1ツールあたりの目安: 約500文字（400〜600字）。以下の項目を含める:',
         '  - 公式URL',
-        '  - 実績/特徴（例：累計支援社数、体制、最低契約期間など）',
+        '  - 実績/特徴（例：累計支援社数、体制、最低契約期間、強みなど）',
         '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
-        '  - （任意）口コミ/評判（引用できるものがある場合のみ。無ければ書かない）',
         '  - 筆者の所感（一次情報 requestText を最優先で反映。推測で作らない）',
+        '- 各ツール紹介は"全件必須"。収集した全サービスを漏れなく紹介する。',
         '',
         'Reference structure hint (FORMAT ONLY; do NOT copy content):',
         '- 比較記事は以下のような「型」にすると読みやすい（構成の参考にしてよい）。',
@@ -2636,11 +2617,10 @@ async function generateSection(jobId: string) {
                 ? '- Include at least ONE markdown table that contains ALL available companies.'
                 : [
                     '- You may use H3 per tool + bullet points (no need to force one huge table).',
-                    '- For each tool, include these bullets (short but mandatory):',
+                    '- For each tool, write approximately 500 characters (400-600 chars) including:',
                     '  - 公式URL',
                     '  - 実績/特徴（体制/最低契約期間/強みなど）',
                     '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
-                    '  - （任意）口コミ/評判（引用できるものがある場合のみ。無ければ書かない）',
                     '  - 筆者の所感（一次情報 requestText を優先。推測で作らない）',
                   ].join('\n'),
               '- Do NOT label tables as "例" or write disclaimers like "上記の表はあくまで例です". Output the real table.',
