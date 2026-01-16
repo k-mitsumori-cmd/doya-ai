@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { StrategyAppLayout } from '@/components/StrategyAppLayout'
 import { motion } from 'framer-motion'
@@ -39,7 +39,7 @@ interface StrategyData {
   }
 }
 
-export default function SwipeResultPage() {
+function SwipeResultContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const projectId = searchParams.get('projectId')
@@ -325,5 +325,22 @@ export default function SwipeResultPage() {
         </div>
       </div>
     </StrategyAppLayout>
+  )
+}
+
+export default function SwipeResultPage() {
+  return (
+    <Suspense fallback={
+      <StrategyAppLayout currentPlan="FREE" isLoggedIn={true} firstLoginAt={null}>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-600">読み込み中...</p>
+          </div>
+        </div>
+      </StrategyAppLayout>
+    }>
+      <SwipeResultContent />
+    </Suspense>
   )
 }
