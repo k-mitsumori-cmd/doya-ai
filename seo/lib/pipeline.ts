@@ -222,9 +222,10 @@ function computeMinSections(targetChars: number): number {
     // 10,001-20,000字: 8-12セクション
     return Math.max(8, Math.ceil(t / 2200))
   } else {
-    // 20,001字以上: 12-28セクション
-    const min = Math.ceil(t / 2800)
-    return Math.max(12, Math.min(28, min))
+    // 20,001字以上: 12-60セクション
+    // 大記事ほど細かく分割し、1セクションが“無理やり長い”状態を避ける（記事ごと最適化）
+    const min = Math.ceil(t / 2000)
+    return Math.max(12, Math.min(60, min))
   }
 }
 
@@ -2165,7 +2166,7 @@ async function generateOutline(article: any, researchContext: string): Promise<S
       '- H2: "## ...（意図: xxx）"',
       '- H3: "### ..."',
       '- H4: "#### ..."',
-      `Create ${minSections}-28 H2 sections suitable for a ${article.targetChars} char article.`,
+      `Create ${minSections}-60 H2 sections suitable for a ${article.targetChars} char article.`,
       'Do NOT copy from sources.',
       '',
       `Title: ${article.title}`,
