@@ -1964,12 +1964,29 @@ function appendMissingComparisonToolIntroductions(md: string, candidatesRaw: any
     const desc = c?.description ? String(c.description).trim() : c?.notes ? String(c.notes).trim() : ''
     const featureText = features.length ? features.slice(0, 5).join('、') : desc ? clampText(desc, 180) : '公式に明記なし（要確認）'
     const pricingText = pricing || '要問い合わせ/非公開（公式に明記なし）'
+    const review =
+      typeof (c as any)?.review === 'string'
+        ? String((c as any).review).trim()
+        : typeof (c as any)?.reviews === 'string'
+          ? String((c as any).reviews).trim()
+          : typeof (c as any)?.reviewSnippet === 'string'
+            ? String((c as any).reviewSnippet).trim()
+            : ''
+    const authorTake =
+      typeof (c as any)?.authorNote === 'string'
+        ? String((c as any).authorNote).trim()
+        : typeof (c as any)?.take === 'string'
+          ? String((c as any).take).trim()
+          : typeof (c as any)?.notes === 'string'
+            ? String((c as any).notes).trim()
+            : ''
 
     lines.push(`### ${name}`)
     lines.push(`- 公式URL: ${url || '（要確認）'}`)
-    lines.push(`- 特徴: ${featureText}`)
+    lines.push(`- 実績/特徴: ${featureText}`)
     lines.push(`- 料金: ${pricingText}`)
-    lines.push('- おすすめ: 目的（SEO/広告/企画/要約など）と運用体制に合わせて選ぶ。まずは無料枠/トライアルの有無を確認。')
+    lines.push(`- 口コミ: ${review ? clampText(review, 180) : '公開情報で確認できず（要確認）'}`)
+    lines.push(`- 筆者の所感: ${authorTake ? clampText(authorTake, 240) : '一次情報（経験・訴求ポイント）に基づく所感を追記してください'}`)
     lines.push('')
   }
 
@@ -2003,12 +2020,29 @@ function buildMissingComparisonToolIntroductionsSection(md: string, candidatesRa
     const desc = c?.description ? String(c.description).trim() : c?.notes ? String(c.notes).trim() : ''
     const featureText = features.length ? features.slice(0, 5).join('、') : desc ? clampText(desc, 180) : '公式に明記なし（要確認）'
     const pricingText = pricing || '要問い合わせ/非公開（公式に明記なし）'
+    const review =
+      typeof (c as any)?.review === 'string'
+        ? String((c as any).review).trim()
+        : typeof (c as any)?.reviews === 'string'
+          ? String((c as any).reviews).trim()
+          : typeof (c as any)?.reviewSnippet === 'string'
+            ? String((c as any).reviewSnippet).trim()
+            : ''
+    const authorTake =
+      typeof (c as any)?.authorNote === 'string'
+        ? String((c as any).authorNote).trim()
+        : typeof (c as any)?.take === 'string'
+          ? String((c as any).take).trim()
+          : typeof (c as any)?.notes === 'string'
+            ? String((c as any).notes).trim()
+            : ''
 
     lines.push(`### ${name}`)
     lines.push(`- 公式URL: ${url || '（要確認）'}`)
-    lines.push(`- 特徴: ${featureText}`)
+    lines.push(`- 実績/特徴: ${featureText}`)
     lines.push(`- 料金: ${pricingText}`)
-    lines.push('- おすすめ: 目的（SEO/広告/企画/要約など）と運用体制に合わせて選ぶ。まずは無料枠/トライアルの有無を確認。')
+    lines.push(`- 口コミ: ${review ? clampText(review, 180) : '公開情報で確認できず（要確認）'}`)
+    lines.push(`- 筆者の所感: ${authorTake ? clampText(authorTake, 240) : '一次情報（経験・訴求ポイント）に基づく所感を追記してください'}`)
     lines.push('')
   }
 
@@ -2060,7 +2094,13 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         'IMPORTANT:',
         '- 1サービスあたり2000字などの最低文字数は不要。網羅性を最優先する。',
         '- 見出し階層は柔軟でよい（各ツールをH2にする必要はない）。推奨: 「各ツール紹介」H2の下で、各ツールをH3で短くまとめる。',
-        '- 1ツールあたりの目安: 120〜300字 + 箇条書き（特徴/料金/向いている人/公式URL）。',
+        '- 1ツールあたりの目安: 120〜300字 + 箇条書き（公式URL/実績・特徴/料金/口コミ/筆者の所感）。',
+        '- 各ツール紹介は“短くても全件”。各ツールは必ず以下の項目を含める:',
+        '  - 公式URL',
+        '  - 実績/特徴（例：累計支援社数、体制、最低契約期間など）',
+        '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
+        '  - 口コミ（引用できるものがあれば。無ければ「公開情報で確認できず」）',
+        '  - 筆者の所感（一次情報 requestText を最優先で反映。推測で作らない）',
         '',
         'Required structure (must appear in outline):',
         '- 導入（比較が必要な理由/失敗例）',
@@ -2094,7 +2134,21 @@ async function generateOutline(article: any, researchContext: string): Promise<S
                 const pricing = c?.pricing ? `料金: ${c.pricing}` : ''
                 const features = Array.isArray(c?.features) && c.features.length ? `特徴: ${c.features.join('、')}` : ''
                 const desc = c?.description || c?.notes || ''
-                const details = [pricing, features, desc].filter(Boolean).join(' / ')
+                const review =
+                  typeof (c as any)?.review === 'string'
+                    ? `口コミ: ${String((c as any).review).trim()}`
+                    : typeof (c as any)?.reviews === 'string'
+                      ? `口コミ: ${String((c as any).reviews).trim()}`
+                      : typeof (c as any)?.reviewSnippet === 'string'
+                        ? `口コミ: ${String((c as any).reviewSnippet).trim()}`
+                        : ''
+                const take =
+                  typeof (c as any)?.authorNote === 'string'
+                    ? `所感: ${String((c as any).authorNote).trim()}`
+                    : typeof (c as any)?.take === 'string'
+                      ? `所感: ${String((c as any).take).trim()}`
+                      : ''
+                const details = [pricing, features, desc, review, take].filter(Boolean).join(' / ')
                 return `${i + 1}. ${name}${u ? ` (${u})` : ''}${details ? `\n   → ${details}` : ''}`
               }),
             ].join('\n')
@@ -2568,7 +2622,15 @@ async function generateSection(jobId: string) {
                 : `- IMPORTANT: This section MUST cover ALL available companies (${actual}社).`,
               needsTable
                 ? '- Include at least ONE markdown table that contains ALL available companies.'
-                : '- You may use H3 per tool + bullet points (no need to force one huge table).',
+                : [
+                    '- You may use H3 per tool + bullet points (no need to force one huge table).',
+                    '- For each tool, include these bullets (short but mandatory):',
+                    '  - 公式URL',
+                    '  - 実績/特徴（体制/最低契約期間/強みなど）',
+                    '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
+                    '  - 口コミ（引用できるものがあれば。無ければ「公開情報で確認できず」）',
+                    '  - 筆者の所感（一次情報 requestText を優先。推測で作らない）',
+                  ].join('\n'),
               '- Do NOT label tables as "例" or write disclaimers like "上記の表はあくまで例です". Output the real table.',
               '- If the table becomes too wide, split into multiple tables, but still include all companies across them.',
               '- For unknown fields, write "公式に明記なし/要問い合わせ/非公開" instead of guessing.',
