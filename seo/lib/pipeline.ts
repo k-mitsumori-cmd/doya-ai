@@ -2061,9 +2061,10 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         '★★★ CRITICAL: 網羅性（全ツール紹介）を最優先 ★★★',
         '比較対象の全サービスを、必ず本文内で紹介してください（短くてもOK）。',
         'IMPORTANT:',
-        '- 競合記事で紹介されている全サービスを収集し、全て比較対象に含める（「○選」の上限は撤廃）。',
-        '- 見出し階層は柔軟でよい（各ツールをH2にする必要はない）。推奨: 「各ツール紹介」H2の下で、各ツールをH3で紹介する。',
-        '- 1ツールあたりの目安: 約500文字（400〜600字）。以下の項目を含める:',
+        '- 競合記事で紹介されている全サービスを収集し、全て比較対象に含める（「○選」の上限は撤廃。タイトルが「15選」でも、収集した全サービスを盛り込む）。',
+        '- サービス紹介の構造: 「サービス紹介」または「各サービス紹介」などのH2タグの下で、各サービスをH3タグで紹介する。',
+        '- 各サービスをH2タグで分ける必要はない。必ずH2タグ内にH3タグでサービス紹介を行う。',
+        '- 1サービスあたりの目安: 約500文字（400〜600字）。以下の項目を含める:',
         '  - 公式URL',
         '  - 実績/特徴（例：累計支援社数、体制、最低契約期間、強みなど）',
         '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
@@ -2099,7 +2100,8 @@ async function generateOutline(article: any, researchContext: string): Promise<S
               'Final candidate list with details (do not invent new companies beyond this list):',
               '(Use these details for comparison tables and individual explanations)',
               '',
-              ...comparisonCandidates.slice(0, desiredCompanies ? Math.min(desiredCompanies, 60) : 60).map((c, i) => {
+              // 全サービスを盛り込む（「○選」の上限は撤廃）
+              ...comparisonCandidates.map((c, i) => {
                 const name = String(c?.name || '').trim()
                 const u = typeof c?.websiteUrl === 'string' ? c.websiteUrl : ''
                 const pricing = c?.pricing ? `料金: ${c.pricing}` : ''
@@ -2590,12 +2592,14 @@ async function generateSection(jobId: string) {
             return [
               desired
                 ? `- IMPORTANT: This section MUST cover ALL available companies (${actual}社). (original target: ${desired}社)`
-                : `- IMPORTANT: This section MUST cover ALL available companies (${actual}社).`,
+                : `- IMPORTANT: This section MUST cover ALL available companies (${actual}社). タイトルが「○選」でも、収集した全サービスを盛り込む。`,
               needsTable
                 ? '- Include at least ONE markdown table that contains ALL available companies.'
                 : [
-                    '- You may use H3 per tool + bullet points (no need to force one huge table).',
-                    '- For each tool, write approximately 500 characters (400-600 chars) including:',
+                    '- サービス紹介の構造: このH2タグ内で、各サービスをH3タグで紹介する。',
+                    '- 各サービスをH2タグで分ける必要はない。必ずH2タグ内にH3タグでサービス紹介を行う。',
+                    '- H2タグのセクションの文字数制限はない。全サービスを紹介するために必要な文字数を使用してよい。',
+                    '- For each service (H3), write approximately 500 characters (400-600 chars) including:',
                     '  - 公式URL',
                     '  - 実績/特徴（体制/最低契約期間/強みなど）',
                     '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
