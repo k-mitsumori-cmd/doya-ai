@@ -3253,45 +3253,20 @@ async function integrate(jobId: string) {
       detail: candidates.length ? `候補: ${candidates.slice(0, 8).map((c) => c.name).join(' / ')}` : '候補が空です',
     })
 
-    const fixPrompt = [
-      'You are a Japanese editor specialized in factual comparison articles.',
-      'Task: remove placeholder/dummy service names and ensure only REAL service names are used.',
-      '',
-      'CRITICAL RULES:',
-      '- Do NOT invent any new service/company names.',
-      '- Use ONLY the services listed in the candidate list below.',
-      '- If the candidate list is empty, remove all placeholder names and rewrite the text so it stays truthful and general (no specific names).',
-      '- Remove patterns like: （ツール名）, （サービス名）, サービスA, 会社A, XXX, 〇〇, etc.',
-      '',
-      'Candidate list (ONLY allowed proper nouns):',
-      candidateText,
-      '',
-      'Return: FULL MARKDOWN of the corrected article (no JSON).',
-      '',
-      'Original markdown:',
-      clampText(finalMarkdown, 14000),
-    ]
-      .filter(Boolean)
-      .join('\n')
-
-    try {
-      const fixed = await geminiGenerateText({
-        model: GEMINI_TEXT_MODEL_DEFAULT,
-        parts: [{ text: fixPrompt }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 22000 },
-      })
-      if (fixed && fixed.trim() && !containsPlaceholderNames(fixed)) {
-        finalMarkdown = sanitizeAiMarkdown(fixed.trim())
-      }
-    } catch {
-      // 失敗しても本文完成は優先（ただしテンプレが残る可能性があるので、次の工程で気づけるようログに残す）
-      await pushResearchEvent(jobId, {
-        at: Date.now(),
-        kind: 'error',
-        title: 'テンプレ除去の自動修正に失敗しました',
-        detail: '候補が不足している可能性があります。比較候補の入力/SerpAPI設定を確認してください。',
-      })
-    }
+    // IMPORTANT:
+    // ここでLLMに「全文修正」を任せると、入力をclampした分だけ出力が短くなり、
+    // “目標字数なのに途中で完了”が再発する（実害が大きい）ため、決定的な置換のみを行う。
+    const beforeLen = mdCharCount(finalMarkdown)
+    const placeholderRe =
+      /（\s*(ツール名|サービス名|企業名|会社名)\s*）|\(\s*(tool name|service name|company name)\s*\)|サービス[ＡA]|会社[ＡA]|ツール[ＡA]|XXX|ＸＸＸ|〇〇/g
+    finalMarkdown = String(finalMarkdown || '').replace(placeholderRe, '（要確認）')
+    const afterLen = mdCharCount(finalMarkdown)
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'info',
+      title: 'テンプレ（仮名）を安全に置換しました',
+      detail: `placeholderを（要確認）へ置換（${beforeLen.toLocaleString()}字 → ${afterLen.toLocaleString()}字）`,
+    })
   }
 
   // 比較記事: 「表が空（ヘッダーだけ）」で出てしまう事故を最終段で防ぐ（候補から自動補完）
