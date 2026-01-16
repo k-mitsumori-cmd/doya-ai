@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
-import { SWIPE_QUESTIONS } from '@/seo/lib/swipe-questions'
+import { SWIPE_QUESTIONS } from '@seo/lib/swipe-questions'
 import { v4 as uuidv4 } from 'uuid'
 
 /**
