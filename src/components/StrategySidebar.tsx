@@ -24,6 +24,7 @@ import {
   LayoutGrid,
   ChevronDown,
   ExternalLink,
+  Hand,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
@@ -37,6 +38,7 @@ type NavItem = {
 
 const STRATEGY_NAV: NavItem[] = [
   { href: '/strategy', label: 'ダッシュボード', icon: BarChart3 },
+  { href: '/strategy/swipe', label: 'スワイプで戦略を決める', icon: Hand },
   { href: '/strategy/create', label: '新規戦略作成', icon: Plus },
   { href: '/strategy/history', label: '戦略履歴', icon: Target },
   { href: '/strategy/pricing', label: '料金/プラン', icon: CreditCard },

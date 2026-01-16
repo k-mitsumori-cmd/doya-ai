@@ -40,13 +40,22 @@ export function StrategyDashboard({ projects, isLoggedIn }: StrategyDashboardPro
             ベータ版
           </span>
         </div>
-        <Link
-          href="/strategy/create"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-500/20"
-        >
-          <Plus className="w-5 h-5" />
-          新規戦略作成
-        </Link>
+        <div className="flex gap-3">
+          <Link
+            href="/strategy/swipe"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg shadow-purple-500/20"
+          >
+            <Sparkles className="w-5 h-5" />
+            スワイプで戦略を決める
+          </Link>
+          <Link
+            href="/strategy/create"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-500/20"
+          >
+            <Plus className="w-5 h-5" />
+            新規戦略作成
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
