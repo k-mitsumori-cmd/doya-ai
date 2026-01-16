@@ -28,10 +28,11 @@ type NavItem = {
   href: string
   label: string
   icon: React.ElementType
+  badge?: string
 }
 
 const SEO_NAV: NavItem[] = [
-  { href: '/seo/swipe', label: 'スワイプ記事作成', icon: Sparkles },
+  { href: '/seo/swipe', label: 'スワイプ記事作成', icon: Sparkles, badge: 'β' },
   { href: '/seo', label: '新規記事作成', icon: Plus },
   { href: '/seo/articles', label: '生成記事一覧', icon: FileText },
   { href: '/seo/pricing', label: '料金/プラン', icon: CreditCard },
@@ -247,9 +248,14 @@ function SeoSidebarImpl({
                         initial={{ opacity: 0, width: 0 }}
                         animate={{ opacity: 1, width: 'auto' }}
                         exit={{ opacity: 0, width: 0 }}
-                        className="text-sm font-semibold whitespace-nowrap overflow-hidden"
+                        className="text-sm font-semibold whitespace-nowrap overflow-hidden flex items-center gap-2"
                       >
                         {item.label}
+                        {item.badge && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold bg-white/20 text-white rounded-full">
+                            {item.badge}
+                          </span>
+                        )}
                       </motion.span>
                     )}
                   </AnimatePresence>
