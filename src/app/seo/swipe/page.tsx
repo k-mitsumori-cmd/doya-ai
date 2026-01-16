@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SwipeCard, SwipeDecision } from '@/components/seo/SwipeCard'
-import { shouldShowQuestion } from '@/seo/lib/swipe-questions'
+import { shouldShowQuestion } from '@seo/lib/swipe-questions'
 import { Loader2, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react'
 
 type Step = 'keyword' | 'swipe' | 'conditions' | 'primary' | 'confirm' | 'generating'
