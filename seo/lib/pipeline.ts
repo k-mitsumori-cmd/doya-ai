@@ -1969,7 +1969,7 @@ function appendMissingComparisonToolIntroductions(md: string, candidatesRaw: any
     lines.push(`- 公式URL: ${url || '（要確認）'}`)
     lines.push(`- 実績/特徴: ${featureText}`)
     lines.push(`- 料金: ${pricingText}`)
-    lines.push(`- 口コミ: ${review ? clampText(review, 180) : '公開情報で確認できず（要確認）'}`)
+    if (review) lines.push(`- 口コミ: ${clampText(review, 180)}`)
     lines.push(`- 筆者の所感: ${authorTake ? clampText(authorTake, 240) : '一次情報（経験・訴求ポイント）に基づく所感を追記してください'}`)
     lines.push('')
   }
@@ -2025,7 +2025,7 @@ function buildMissingComparisonToolIntroductionsSection(md: string, candidatesRa
     lines.push(`- 公式URL: ${url || '（要確認）'}`)
     lines.push(`- 実績/特徴: ${featureText}`)
     lines.push(`- 料金: ${pricingText}`)
-    lines.push(`- 口コミ: ${review ? clampText(review, 180) : '公開情報で確認できず（要確認）'}`)
+    if (review) lines.push(`- 口コミ: ${clampText(review, 180)}`)
     lines.push(`- 筆者の所感: ${authorTake ? clampText(authorTake, 240) : '一次情報（経験・訴求ポイント）に基づく所感を追記してください'}`)
     lines.push('')
   }
@@ -2081,12 +2081,12 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         'IMPORTANT:',
         '- 1サービスあたり2000字などの最低文字数は不要。網羅性を最優先する。',
         '- 見出し階層は柔軟でよい（各ツールをH2にする必要はない）。推奨: 「各ツール紹介」H2の下で、各ツールをH3で短くまとめる。',
-        '- 1ツールあたりの目安: 120〜300字 + 箇条書き（公式URL/実績・特徴/料金/口コミ/筆者の所感）。',
+        '- 1ツールあたりの目安: 120〜300字 + 箇条書き（公式URL/実績・特徴/料金/筆者の所感）。',
         '- 各ツール紹介は“短くても全件”。各ツールは必ず以下の項目を含める:',
         '  - 公式URL',
         '  - 実績/特徴（例：累計支援社数、体制、最低契約期間など）',
         '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
-        '  - 口コミ（引用できるものがあれば。無ければ「公開情報で確認できず」）',
+        '  - （任意）口コミ/評判（引用できるものがある場合のみ。無ければ書かない）',
         '  - 筆者の所感（一次情報 requestText を最優先で反映。推測で作らない）',
         '',
         'Reference structure hint (FORMAT ONLY; do NOT copy content):',
@@ -2617,7 +2617,7 @@ async function generateSection(jobId: string) {
                     '  - 公式URL',
                     '  - 実績/特徴（体制/最低契約期間/強みなど）',
                     '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
-                    '  - 口コミ（引用できるものがあれば。無ければ「公開情報で確認できず」）',
+                    '  - （任意）口コミ/評判（引用できるものがある場合のみ。無ければ書かない）',
                     '  - 筆者の所感（一次情報 requestText を優先。推測で作らない）',
                   ].join('\n'),
               '- Do NOT label tables as "例" or write disclaimers like "上記の表はあくまで例です". Output the real table.',
