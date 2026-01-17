@@ -54,7 +54,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
 
   return (
     <motion.div
-      className="absolute w-full max-w-lg mx-auto cursor-grab active:cursor-grabbing"
+      className="absolute w-full max-w-sm mx-auto cursor-grab active:cursor-grabbing"
       style={{
         x,
         y,
@@ -73,7 +73,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
       exit={{ scale: 0.8, opacity: 0, x: index % 2 === 0 ? 300 : -300 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
-      <div className="bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/30 rounded-3xl shadow-2xl p-12 border-2 border-emerald-100 relative overflow-hidden h-[650px] flex flex-col backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100 relative overflow-hidden h-[500px] flex flex-col">
         {/* LIKE/NOPE オーバーレイ */}
         {index === 0 && (
           <>
@@ -81,18 +81,16 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
               className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
               style={{ opacity: likeOpacity }}
             >
-              <div className="w-40 h-40 rounded-full border-6 border-emerald-500 flex items-center justify-center bg-gradient-to-br from-emerald-400/30 to-emerald-600/30 backdrop-blur-sm shadow-2xl">
-                <Heart className="w-20 h-20 text-emerald-600 fill-emerald-600" strokeWidth={4} />
-                <span className="absolute bottom-0 -mb-12 text-2xl font-black text-emerald-600">YES</span>
+              <div className="w-32 h-32 rounded-full border-4 border-green-500 flex items-center justify-center bg-green-500/20">
+                <Heart className="w-16 h-16 text-green-500 fill-green-500" />
               </div>
             </motion.div>
             <motion.div
               className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
               style={{ opacity: nopeOpacity }}
             >
-              <div className="w-40 h-40 rounded-full border-6 border-red-500 flex items-center justify-center bg-gradient-to-br from-red-400/30 to-red-600/30 backdrop-blur-sm shadow-2xl">
-                <X className="w-20 h-20 text-red-600" strokeWidth={4} />
-                <span className="absolute bottom-0 -mb-12 text-2xl font-black text-red-600">NO</span>
+              <div className="w-32 h-32 rounded-full border-4 border-red-500 flex items-center justify-center bg-red-500/20">
+                <X className="w-16 h-16 text-red-500" />
               </div>
             </motion.div>
           </>
@@ -106,42 +104,32 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
         </div>
 
         {/* 質問 */}
-        <div className="flex-1 flex items-center justify-center px-6">
-          <h2 className="text-4xl font-black text-gray-900 leading-relaxed text-center" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', lineHeight: '1.6' }}>
-            {question.question.split(/([。、？])/).map((part, i, arr) => {
-              if (!part) return null
-              // 「。」「、」「？」の後で改行
-              if (['。', '？'].includes(part) && i < arr.length - 1) {
-                return (
-                  <span key={i}>
-                    {part}
-                    <br />
-                  </span>
-                )
-              }
-              return <span key={i}>{part}</span>
-            })}
+        <div className="flex-1 flex items-center justify-center">
+          <h2 className="text-3xl font-black text-gray-900 leading-tight text-center">
+            {question.question}
           </h2>
         </div>
 
-        {/* YES/NOボタン */}
-        {index === 0 && (
-          <div className="flex items-center justify-center gap-8 mt-8 mb-4">
-            <button
-              onClick={() => onSwipe('no')}
-              className="group relative w-24 h-24 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center border-4 border-red-500 hover:from-red-500 hover:to-red-700 hover:scale-110 transition-all shadow-xl active:scale-95"
-            >
-              <X className="w-12 h-12 text-white" />
-              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs font-black text-red-600 whitespace-nowrap">NO</span>
-            </button>
-            <button
-              onClick={() => onSwipe('yes')}
-              className="group relative w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center border-4 border-emerald-500 hover:from-emerald-500 hover:to-emerald-700 hover:scale-110 transition-all shadow-xl active:scale-95"
-            >
-              <Heart className="w-12 h-12 text-white fill-white" />
-              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs font-black text-emerald-600 whitespace-nowrap">YES</span>
-            </button>
-          </div>
+        {/* 操作ヒント（初回のみ） */}
+        {index === 0 && !isDragging && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center justify-center gap-8 mt-8"
+          >
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center border-2 border-red-200">
+                <X className="w-8 h-8 text-red-500" />
+              </div>
+              <span className="text-xs font-black text-gray-600">左にスワイプ</span>
+            </div>
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center border-2 border-green-200">
+                <Heart className="w-8 h-8 text-green-500 fill-green-500" />
+              </div>
+              <span className="text-xs font-black text-gray-600">右にスワイプ</span>
+            </div>
+          </motion.div>
         )}
       </div>
     </motion.div>

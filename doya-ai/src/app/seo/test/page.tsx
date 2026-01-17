@@ -35,6 +35,10 @@ export default function TestSwipePage() {
     targetChars: number
     summary?: string
   } | null>(null)
+  const [celebrationImage, setCelebrationImage] = useState<{
+    imageBase64: string
+    mimeType: string
+  } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -96,6 +100,21 @@ export default function TestSwipePage() {
       if (json.done) {
         // 質問が完了したら最終確認へ
         setFinalData(json.finalData)
+        
+        // 完了時の画像を取得
+        try {
+          const imgRes = await fetch('/api/swipe/celebration-images?category=thanks&count=1')
+          const imgJson = await imgRes.json()
+          if (imgJson.success && imgJson.images?.[0]) {
+            setCelebrationImage({
+              imageBase64: imgJson.images[0].imageBase64,
+              mimeType: imgJson.images[0].mimeType,
+            })
+          }
+        } catch (e) {
+          console.warn('Failed to load celebration image:', e)
+        }
+        
         setStep('confirm')
       } else if (json.questions && Array.isArray(json.questions)) {
         // 新しい質問をキューに追加
@@ -233,14 +252,14 @@ export default function TestSwipePage() {
         {step === 'swipe' && (
           <div className="relative ml-0 sm:ml-64">
             {/* 背景の操作説明 */}
-            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-8 opacity-30">
+            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-8 opacity-20">
               <div className="text-left">
-                <p className="text-6xl font-black text-gray-400 leading-none">NO</p>
-                <p className="text-sm font-bold text-gray-500 mt-2">左にスワイプ</p>
+                <p className="text-7xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">NO</p>
+                <p className="text-sm font-black text-red-500 mt-2">左にスワイプ</p>
               </div>
               <div className="text-right">
-                <p className="text-6xl font-black text-gray-400 leading-none">YES</p>
-                <p className="text-sm font-bold text-gray-500 mt-2">右にスワイプ</p>
+                <p className="text-7xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent leading-none">YES</p>
+                <p className="text-sm font-black text-emerald-500 mt-2">右にスワイプ</p>
               </div>
             </div>
 
@@ -299,6 +318,21 @@ export default function TestSwipePage() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white rounded-2xl shadow-xl p-8"
           >
+            {/* 完了時の画像表示 */}
+            {celebrationImage && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mb-6 rounded-xl overflow-hidden"
+              >
+                <img
+                  src={`data:${celebrationImage.mimeType};base64,${celebrationImage.imageBase64}`}
+                  alt="ありがとうございました"
+                  className="w-full h-auto rounded-xl shadow-lg"
+                />
+              </motion.div>
+            )}
+            
             <h2 className="text-2xl font-black text-gray-900 mb-6">最終確認</h2>
 
             <div className="space-y-6 mb-8">

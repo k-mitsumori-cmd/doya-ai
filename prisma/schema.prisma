@@ -390,6 +390,20 @@ model SwipeSession {
   @@index([guestId, createdAt])
 }
 
+model SwipeCelebrationImage {
+  id        String   @id @default(cuid())
+  category  String   // カテゴリ（例: "thanks", "completion", "article"など）
+  prompt    String   @db.Text // 生成時のプロンプト
+  imageBase64 String @db.Text // base64エンコードされた画像データ
+  mimeType  String   @default("image/png")
+  width     Int?
+  height    Int?
+  
+  createdAt DateTime @default(now())
+
+  @@index([category])
+}
+
 model SeoJob {
   id        String     @id @default(cuid())
   articleId String
