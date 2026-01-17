@@ -77,24 +77,50 @@ export default function TestSwipePage() {
       
       Promise.all(
         Array.from(new Set(questions.map((q: Question) => q.category))).map(async (category: string) => {
-          try {
-            const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(String(category))}&count=1`)
-            if (!imgRes.ok) {
-              console.warn(`[画像取得失敗] category: ${category}, status: ${imgRes.status}`)
-              return
+          // リトライ機能付きで画像を取得
+          let retryCount = 0
+          const maxRetries = 3
+          
+          while (retryCount < maxRetries) {
+            try {
+              const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(String(category))}&count=1`)
+              if (!imgRes.ok) {
+                throw new Error(`HTTP ${imgRes.status}`)
+              }
+              const imgJson = await imgRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
+              if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
+                categoryImageMap.set(String(category), {
+                  imageBase64: String(imgJson.images[0].imageBase64),
+                  mimeType: String(imgJson.images[0].mimeType || 'image/png'),
+                })
+                return // 成功したら終了
+              } else {
+                throw new Error('画像データなし')
+              }
+            } catch (e) {
+              retryCount++
+              if (retryCount >= maxRetries) {
+                console.warn(`[画像取得失敗] category: ${category}, リトライ上限に達しました`, e)
+                // 最後の試行でも失敗した場合、デフォルトカテゴリから取得を試みる
+                try {
+                  const defaultRes = await fetch(`/api/swipe/question-images?category=確認&count=1`)
+                  if (defaultRes.ok) {
+                    const defaultJson = await defaultRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
+                    if (defaultJson.success && defaultJson.images?.[0] && defaultJson.images[0].imageBase64) {
+                      categoryImageMap.set(String(category), {
+                        imageBase64: String(defaultJson.images[0].imageBase64),
+                        mimeType: String(defaultJson.images[0].mimeType || 'image/png'),
+                      })
+                    }
+                  }
+                } catch (defaultError) {
+                  console.warn(`[デフォルト画像取得も失敗] category: ${category}`, defaultError)
+                }
+              } else {
+                // リトライ前に待機
+                await new Promise(resolve => setTimeout(resolve, 500 * retryCount))
+              }
             }
-            const imgJson = await imgRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
-            if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
-              categoryImageMap.set(String(category), {
-                imageBase64: String(imgJson.images[0].imageBase64),
-                mimeType: String(imgJson.images[0].mimeType || 'image/png'),
-              })
-            } else {
-              console.warn(`[画像データなし] category: ${category}`, imgJson)
-            }
-          } catch (e) {
-            console.warn(`[画像取得エラー] category: ${category}`, e)
-            // 画像取得失敗は無視（エラーログのみ）
           }
         })
       ).then(() => {
@@ -180,24 +206,50 @@ export default function TestSwipePage() {
         
         Promise.all(
           Array.from(new Set(newQuestions.map((q: Question) => q.category))).map(async (category: string) => {
-            try {
-              const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(String(category))}&count=1`)
-              if (!imgRes.ok) {
-                console.warn(`[画像取得失敗] category: ${category}, status: ${imgRes.status}`)
-                return
+            // リトライ機能付きで画像を取得
+            let retryCount = 0
+            const maxRetries = 3
+            
+            while (retryCount < maxRetries) {
+              try {
+                const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(String(category))}&count=1`)
+                if (!imgRes.ok) {
+                  throw new Error(`HTTP ${imgRes.status}`)
+                }
+                const imgJson = await imgRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
+                if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
+                  categoryImageMap.set(String(category), {
+                    imageBase64: String(imgJson.images[0].imageBase64),
+                    mimeType: String(imgJson.images[0].mimeType || 'image/png'),
+                  })
+                  return // 成功したら終了
+                } else {
+                  throw new Error('画像データなし')
+                }
+              } catch (e) {
+                retryCount++
+                if (retryCount >= maxRetries) {
+                  console.warn(`[画像取得失敗] category: ${category}, リトライ上限に達しました`, e)
+                  // 最後の試行でも失敗した場合、デフォルトカテゴリから取得を試みる
+                  try {
+                    const defaultRes = await fetch(`/api/swipe/question-images?category=確認&count=1`)
+                    if (defaultRes.ok) {
+                      const defaultJson = await defaultRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
+                      if (defaultJson.success && defaultJson.images?.[0] && defaultJson.images[0].imageBase64) {
+                        categoryImageMap.set(String(category), {
+                          imageBase64: String(defaultJson.images[0].imageBase64),
+                          mimeType: String(defaultJson.images[0].mimeType || 'image/png'),
+                        })
+                      }
+                    }
+                  } catch (defaultError) {
+                    console.warn(`[デフォルト画像取得も失敗] category: ${category}`, defaultError)
+                  }
+                } else {
+                  // リトライ前に待機
+                  await new Promise(resolve => setTimeout(resolve, 500 * retryCount))
+                }
               }
-              const imgJson = await imgRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
-              if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
-                categoryImageMap.set(String(category), {
-                  imageBase64: String(imgJson.images[0].imageBase64),
-                  mimeType: String(imgJson.images[0].mimeType || 'image/png'),
-                })
-              } else {
-                console.warn(`[画像データなし] category: ${category}`, imgJson)
-              }
-            } catch (e) {
-              console.warn(`[画像取得エラー] category: ${category}`, e)
-              // 画像取得失敗は無視（エラーログのみ）
             }
           })
         ).then(() => {
@@ -370,13 +422,13 @@ export default function TestSwipePage() {
         {step === 'swipe' && (
           <div className="relative ml-0 sm:ml-64">
             {/* 背景の操作説明 */}
-            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-4 md:px-8 opacity-40">
-              <div className="text-left">
-                <p className="text-6xl md:text-7xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">NO</p>
+            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-2 md:px-4 opacity-50">
+              <div className="text-left -ml-8 md:-ml-16">
+                <p className="text-6xl md:text-8xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">NO</p>
                 <p className="text-xs md:text-sm font-black text-red-500 mt-2">左にスワイプ</p>
               </div>
-              <div className="text-right">
-                <p className="text-6xl md:text-7xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent leading-none">YES</p>
+              <div className="text-right -mr-8 md:-mr-16">
+                <p className="text-6xl md:text-8xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent leading-none">YES</p>
                 <p className="text-xs md:text-sm font-black text-emerald-500 mt-2">右にスワイプ</p>
               </div>
             </div>

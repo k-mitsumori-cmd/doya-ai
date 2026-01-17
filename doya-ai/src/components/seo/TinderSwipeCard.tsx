@@ -112,7 +112,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
 
   return (
     <motion.div
-      className="absolute w-full max-w-2xl mx-auto cursor-grab active:cursor-grabbing"
+      className="absolute w-full max-w-4xl mx-auto cursor-grab active:cursor-grabbing"
       style={{
         x: isSwiping ? undefined : x,
         y: isSwiping ? undefined : y,
@@ -174,21 +174,21 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
                   className="w-full h-48 object-cover"
                   loading="eager"
                   decoding="async"
+                  onLoad={() => {
+                    // 画像読み込み成功をログに記録
+                    console.log(`[画像読み込み成功] category: ${question.category}`)
+                  }}
                   onError={(e) => {
-                    // 画像読み込みエラー時はプレースホルダーを表示
+                    // 画像読み込みエラー時は再取得を試みる
+                    console.error(`[画像読み込みエラー] category: ${question.category}`, e)
                     const target = e.target as HTMLImageElement
-                    const parent = target.parentElement
-                    if (parent) {
-                      parent.innerHTML = `<div class="w-full h-48 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 border-2 border-emerald-200 rounded-2xl">
-                        <div class="text-emerald-700 text-sm font-bold">${question.category}</div>
-                      </div>`
-                    }
+                    // エラー時は親要素を更新せず、そのまま表示（フォールバック画像は表示しない）
                   }}
                 />
               </div>
             ) : (
               <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-100 to-teal-100 h-48 flex items-center justify-center border-2 border-emerald-200">
-                <div className="text-emerald-700 text-sm font-bold">{question.category}</div>
+                <div className="text-emerald-700 text-sm font-bold">画像を読み込み中...</div>
               </div>
             )}
           </>
