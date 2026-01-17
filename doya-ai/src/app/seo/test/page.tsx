@@ -422,13 +422,13 @@ export default function TestSwipePage() {
         {step === 'swipe' && (
           <div className="relative ml-0 sm:ml-64">
             {/* 背景の操作説明 */}
-            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-2 md:px-4 opacity-50">
-              <div className="text-left -ml-8 md:-ml-16">
-                <p className="text-6xl md:text-8xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">NO</p>
+            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-2 md:px-4 opacity-60">
+              <div className="text-left -ml-12 md:-ml-24 lg:-ml-32">
+                <p className="text-6xl md:text-8xl lg:text-9xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">NO</p>
                 <p className="text-xs md:text-sm font-black text-red-500 mt-2">左にスワイプ</p>
               </div>
-              <div className="text-right -mr-8 md:-mr-16">
-                <p className="text-6xl md:text-8xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent leading-none">YES</p>
+              <div className="text-right -mr-12 md:-mr-24 lg:-mr-32">
+                <p className="text-6xl md:text-8xl lg:text-9xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent leading-none">YES</p>
                 <p className="text-xs md:text-sm font-black text-emerald-500 mt-2">右にスワイプ</p>
               </div>
             </div>
