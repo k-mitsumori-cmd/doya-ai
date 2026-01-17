@@ -1599,14 +1599,22 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
     )
   )
 
-  // desired が大きいほど検索のバリエーションを増やす（必要に応じて機能を調整）
+  // desired が大きいほど検索のバリエーションを増やす（サービスを最大限収集するため）
   const queries = Array.from(
     new Set(
       extraSeeds.flatMap((seed) => [
-        `${seed} 比較 おすすめ 一覧`,
+        `${seed} 比較`,
+        `${seed} おすすめ`,
+        `${seed} 一覧`,
+        `${seed} ランキング`,
+        `${seed} 比較 おすすめ`,
+        `${seed} 比較 一覧`,
+        `${seed} サービス比較`,
         `${seed} サービス比較 ランキング`,
         `${seed} 比較 50社`,
-        ...(desired >= 30
+        `${seed} 比較 30選`,
+        `${seed} おすすめ 一覧`,
+        ...(desired >= 20
           ? [
               `${seed} 会社 一覧`,
               `${seed} 事業者 一覧`,
@@ -1614,6 +1622,17 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
               `${seed} 提供 企業`,
               `${seed} ベンダー 一覧`,
               `${seed} 評判 口コミ 比較`,
+              `${seed} 徹底比較`,
+              `${seed} 完全ガイド`,
+            ]
+          : []),
+        ...(desired >= 30
+          ? [
+              `${seed} 比較 徹底`,
+              `${seed} おすすめ ランキング`,
+              `${seed} 選び方 比較`,
+              `${seed} 料金 比較`,
+              `${seed} 機能 比較`,
             ]
           : []),
       ])
