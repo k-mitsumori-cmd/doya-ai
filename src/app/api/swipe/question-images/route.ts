@@ -11,11 +11,28 @@ export async function GET(req: NextRequest) {
     const count = parseInt(searchParams.get('count') || '1', 10)
 
     // 指定カテゴリの画像をランダムに取得（キャッシュを有効活用）
-    const images = await prisma.swipeQuestionImage.findMany({
+    let images = await prisma.swipeQuestionImage.findMany({
       where: { category },
       take: 100, // より多くの候補から選択
       orderBy: { createdAt: 'desc' },
     })
+
+    // カテゴリに画像がない場合、デフォルトカテゴリ（'確認'）から取得を試みる
+    if (images.length === 0 && category !== '確認') {
+      images = await prisma.swipeQuestionImage.findMany({
+        where: { category: '確認' },
+        take: 100,
+        orderBy: { createdAt: 'desc' },
+      })
+    }
+
+    // それでも画像がない場合、全カテゴリから取得
+    if (images.length === 0) {
+      images = await prisma.swipeQuestionImage.findMany({
+        take: 100,
+        orderBy: { createdAt: 'desc' },
+      })
+    }
 
     // ランダムに選択（より効率的な方法）
     const selected = images.length > 0
@@ -25,8 +42,9 @@ export async function GET(req: NextRequest) {
         })
       : []
 
-    // 画像がない場合は空を返す
+    // 画像がない場合は空を返す（ただし、通常はここに到達しない）
     if (selected.length === 0) {
+      console.warn(`[question-images] No images found for category: ${category}`)
       return NextResponse.json({
         success: true,
         images: [],
