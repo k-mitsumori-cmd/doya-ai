@@ -2098,18 +2098,21 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         'Required structure (must appear in outline):',
         '- 導入（比較が必要な理由/失敗例）',
         `- 比較対象サービス一覧（表：サービス名/特徴/料金/向いている人/公式URL）※候補が不足する場合は不足注記を入れ、調査できた範囲（M社）で比較する`,
+        '- サービス紹介（H2タグ1つ。この中で全サービスをH3タグで紹介）※このセクションで全サービスを1回だけ紹介する',
         '★★★ CRITICAL: 網羅性（全ツール紹介）を最優先 ★★★',
-        '比較対象の全サービスを、必ず本文内で紹介してください（短くてもOK）。',
+        '比較対象の全サービスを、必ず「サービス紹介」セクションで1回だけ紹介してください。',
         'IMPORTANT:',
         '- 競合記事で紹介されている全サービスを収集し、全て比較対象に含める（「○選」の上限は撤廃。タイトルが「15選」でも、収集した全サービスを盛り込む）。',
-        '- サービス紹介の構造: 「サービス紹介」または「各サービス紹介」などのH2タグの下で、各サービスをH3タグで紹介する。',
-        '- 各サービスをH2タグで分ける必要はない。必ずH2タグ内にH3タグでサービス紹介を行う。',
+        '- サービス紹介は「サービス紹介」または「各サービス紹介」というH2タグのセクションで1回だけ行う。',
+        '- サービス紹介の構造: H2タグ1つの下で、各サービスをH3タグで紹介する。',
+        '- 各サービスをH2タグで分ける必要はない。必ずH2タグ1つ内にH3タグで全サービスを紹介する。',
         '- 1サービスあたりの目安: 約500文字（400〜600字）。以下の項目を含める:',
         '  - 公式URL',
         '  - 実績/特徴（例：累計支援社数、体制、最低契約期間、強みなど）',
         '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
         '  - 筆者の所感（一次情報 requestText を最優先で反映。推測で作らない）',
         '- 各ツール紹介は"全件必須"。収集した全サービスを漏れなく紹介する。',
+        '- サービス紹介は1回だけ。他のセクション（比較表、選び方、FAQなど）ではサービス紹介を繰り返さない。',
         '',
         'Reference structure hint (FORMAT ONLY; do NOT copy content):',
         '- 比較記事は以下のような「型」にすると読みやすい（構成の参考にしてよい）。',
@@ -2710,32 +2713,64 @@ async function generateSection(jobId: string) {
           '- OUTPUT FORMAT: Write in natural Japanese prose and Markdown (H2/H3/bullets/tables). Do NOT output JSON, key-value pairs like "ツール名": "...", or code blocks. The candidate list is reference data only—never copy it verbatim.',
           (() => {
             const h = String(next.headingPath || '')
-            const mustCoverAll =
-              /比較対象|サービス一覧|比較表|ランキング|おすすめ|料金比較|機能比較|タイプ別おすすめ|サービス詳細|各サービス|ツール紹介|ツール別|サービス紹介/.test(h)
+            // サービス紹介専用セクションのみ全サービスを紹介（繰り返し防止）
+            const isServiceIntroductionSection = /比較対象サービス一覧|サービス紹介|各サービス紹介|ツール紹介|サービス詳細紹介/.test(h)
+            // 比較表セクション（表のみ、詳細紹介はしない）
+            const isComparisonTableSection = /比較表|比較対象|サービス一覧|料金比較|機能比較/.test(h)
+            
             const desired = desiredCompanies
             const actual = uniqCandidatesByName(comparisonCandidates).length
-            if (!mustCoverAll) return ''
-            const needsTable = /比較対象|サービス一覧|比較表|料金比較|機能比較/.test(h)
-            return [
-              desired
-                ? `- IMPORTANT: This section MUST cover ALL available companies (${actual}社). (original target: ${desired}社)`
-                : `- IMPORTANT: This section MUST cover ALL available companies (${actual}社). タイトルが「○選」でも、収集した全サービスを盛り込む。`,
-              needsTable
-                ? '- Include at least ONE markdown table that contains ALL available companies.'
-                : [
-                    '- サービス紹介の構造: このH2タグ内で、各サービスをH3タグで紹介する。',
-                    '- 各サービスをH2タグで分ける必要はない。必ずH2タグ内にH3タグでサービス紹介を行う。',
-                    '- H2タグのセクションの文字数制限はない。全サービスを紹介するために必要な文字数を使用してよい。',
-                    '- For each service (H3), write approximately 500 characters (400-600 chars) including:',
-                    '  - 公式URL',
-                    '  - 実績/特徴（体制/最低契約期間/強みなど）',
-                    '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
-                    '  - 筆者の所感（一次情報 requestText を優先。推測で作らない）',
-                  ].join('\n'),
-              '- Do NOT label tables as "例" or write disclaimers like "上記の表はあくまで例です". Output the real table.',
-              '- If the table becomes too wide, split into multiple tables, but still include all companies across them.',
-              '- For unknown fields, write "公式に明記なし/要問い合わせ/非公開" instead of guessing.',
-            ].join('\n')
+            
+            // 既に生成されたセクションでサービス紹介があるかチェック
+            const hasServiceIntroduction = sections
+              .filter((s: any) => s.index < next.index && s.content)
+              .some((s: any) => {
+                const content = String(s.content || '')
+                return /比較対象サービス一覧|サービス紹介|各サービス紹介|ツール紹介/.test(content) ||
+                       /###\s+(Catchy|SAKUBUN|ELYZA|AI Writer|Transcope|Buzz Finder|Katchy|WriteSonic|Jasper|Copy\.ai)/i.test(content)
+              })
+            
+            // サービス紹介専用セクションの場合のみ全サービスを紹介
+            if (isServiceIntroductionSection && !hasServiceIntroduction) {
+              return [
+                desired
+                  ? `- CRITICAL: This is the ONLY section where you introduce ALL services. Cover ALL ${actual} companies in this section. (original target: ${desired}社)`
+                  : `- CRITICAL: This is the ONLY section where you introduce ALL services. Cover ALL ${actual} companies in this section. タイトルが「○選」でも、収集した全サービスを盛り込む。`,
+                '- サービス紹介の構造: このH2タグ内で、各サービスをH3タグで紹介する。',
+                '- 各サービスをH2タグで分ける必要はない。必ずH2タグ内にH3タグでサービス紹介を行う。',
+                '- H2タグのセクションの文字数制限はない。全サービスを紹介するために必要な文字数を使用してよい。',
+                '- For each service (H3), write approximately 500 characters (400-600 chars) including:',
+                '  - 公式URL',
+                '  - 実績/特徴（体制/最低契約期間/強みなど）',
+                '  - 料金（不明なら「公式に明記なし/要問い合わせ/非公開」）',
+                '  - 筆者の所感（一次情報 requestText を優先。推測で作らない）',
+                '- Do NOT repeat service introductions in other sections. This is the ONLY place for detailed service introductions.',
+              ].join('\n')
+            }
+            
+            // 比較表セクションの場合（表のみ、詳細紹介はしない）
+            if (isComparisonTableSection && !isServiceIntroductionSection) {
+              return [
+                '- Include at least ONE markdown table that contains ALL available companies.',
+                '- Do NOT write detailed service introductions here (that should be in the service introduction section).',
+                '- Focus on comparison tables, feature comparisons, or price comparisons.',
+                '- Do NOT label tables as "例" or write disclaimers like "上記の表はあくまで例です". Output the real table.',
+                '- If the table becomes too wide, split into multiple tables, but still include all companies across them.',
+                '- For unknown fields, write "公式に明記なし/要問い合わせ/非公開" instead of guessing.',
+              ].join('\n')
+            }
+            
+            // その他のセクションではサービス紹介を繰り返さない
+            if (hasServiceIntroduction) {
+              return [
+                '- IMPORTANT: Do NOT repeat service introductions in this section.',
+                '- Services have already been introduced in a previous section.',
+                '- Focus on other content: comparison criteria, selection methods, FAQs, use cases, etc.',
+                '- You may reference service names briefly, but do NOT write detailed introductions again.',
+              ].join('\n')
+            }
+            
+            return ''
           })(),
         ].join('\n')
       : '',
