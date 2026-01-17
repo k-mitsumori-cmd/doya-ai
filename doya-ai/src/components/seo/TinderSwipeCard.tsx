@@ -112,14 +112,14 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
 
   return (
     <motion.div
-      className="absolute w-full max-w-lg mx-auto cursor-grab active:cursor-grabbing"
+      className="absolute w-full max-w-2xl mx-auto cursor-grab active:cursor-grabbing"
       style={{
         x: isSwiping ? undefined : x,
         y: isSwiping ? undefined : y,
         rotate: isSwiping ? undefined : rotate,
-        opacity: isSwiping ? undefined : (index === 0 ? opacity : Math.max(0.3, 1 - index * 0.25)),
+        opacity: isSwiping ? undefined : (index === 0 ? opacity : Math.max(0.4, 1 - index * 0.2)),
         zIndex: total - index,
-        scale: index === 0 ? scale : 1 - index * 0.08,
+        scale: index === 0 ? scale : 1 - index * 0.05,
       }}
       animate={isSwiping ? controls : undefined}
       drag={!isSwiping}
@@ -131,7 +131,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
       exit={{ scale: 0.8, opacity: 0, x: index % 2 === 0 ? 300 : -300 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
-      <div className="bg-gradient-to-br from-white via-emerald-50 to-teal-50 rounded-3xl shadow-2xl p-12 border-2 border-emerald-100 relative overflow-hidden h-[650px] flex flex-col">
+      <div className="bg-gradient-to-br from-white via-emerald-50 to-teal-50 rounded-3xl shadow-2xl p-8 md:p-12 border-2 border-emerald-100 relative overflow-hidden h-[650px] flex flex-col">
         {/* LIKE/NOPE オーバーレイ */}
         {index === 0 && (
           <>
@@ -175,53 +175,38 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
                   loading="eager"
                   decoding="async"
                   onError={(e) => {
-                    // 画像読み込みエラー時は非表示にする
+                    // 画像読み込みエラー時はプレースホルダーを表示
                     const target = e.target as HTMLImageElement
-                    target.style.display = 'none'
-                    // プレースホルダーを表示するために親要素を更新
                     const parent = target.parentElement
                     if (parent) {
-                      parent.innerHTML = '<div class="w-full h-48 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 border-2 border-emerald-200 rounded-2xl"><div class="text-emerald-700 text-sm font-bold">画像読み込みエラー</div></div>'
+                      parent.innerHTML = `<div class="w-full h-48 flex items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 border-2 border-emerald-200 rounded-2xl">
+                        <div class="text-emerald-700 text-sm font-bold">${question.category}</div>
+                      </div>`
                     }
                   }}
                 />
               </div>
             ) : (
               <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-100 to-teal-100 h-48 flex items-center justify-center border-2 border-emerald-200">
-                <div className="text-emerald-700 text-sm font-bold">画像を生成中...</div>
+                <div className="text-emerald-700 text-sm font-bold">{question.category}</div>
               </div>
             )}
           </>
         )}
 
         {/* 質問 */}
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-emerald-100 w-full max-w-full">
+        <div className="flex-1 flex items-center justify-center px-4 md:px-8">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 md:p-10 shadow-lg border border-emerald-100 w-full max-w-full">
             <h2 
-              className="text-4xl font-black text-gray-900 leading-relaxed text-center"
+              className="text-2xl md:text-4xl font-black text-gray-900 leading-tight md:leading-relaxed text-center"
               style={{ 
-                wordBreak: 'break-word',
+                wordBreak: 'keep-all',
                 overflowWrap: 'break-word',
-                hyphens: 'auto',
-                lineHeight: '1.6',
+                lineHeight: '1.5',
                 textShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                maxWidth: '100%',
-                overflow: 'hidden',
               }}
             >
-              {question.question.split(/([。、？])/).map((part, i, arr) => {
-                if (!part) return null
-                // 「。」「、」「？」の後で改行
-                if (['。', '？'].includes(part) && i < arr.length - 1) {
-                  return (
-                    <span key={i}>
-                      {part}
-                      <br />
-                    </span>
-                  )
-                }
-                return <span key={i}>{part}</span>
-              })}
+              {question.question}
             </h2>
           </div>
         </div>

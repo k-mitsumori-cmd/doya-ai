@@ -370,19 +370,19 @@ export default function TestSwipePage() {
         {step === 'swipe' && (
           <div className="relative ml-0 sm:ml-64">
             {/* 背景の操作説明 */}
-            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-8 opacity-30">
+            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-4 md:px-8 opacity-40">
               <div className="text-left">
-                <p className="text-7xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">NO</p>
-                <p className="text-sm font-black text-red-500 mt-2">左にスワイプ</p>
+                <p className="text-6xl md:text-7xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">NO</p>
+                <p className="text-xs md:text-sm font-black text-red-500 mt-2">左にスワイプ</p>
               </div>
               <div className="text-right">
-                <p className="text-7xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent leading-none">YES</p>
-                <p className="text-sm font-black text-emerald-500 mt-2">右にスワイプ</p>
+                <p className="text-6xl md:text-7xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent leading-none">YES</p>
+                <p className="text-xs md:text-sm font-black text-emerald-500 mt-2">右にスワイプ</p>
               </div>
             </div>
 
             {/* カードスタック */}
-            <div className="relative h-[700px] mb-8 z-10">
+            <div className="relative h-[700px] mb-8 z-10 flex items-center justify-center">
               {questionQueue.length > 0 ? (
                 questionQueue.slice(0, 4).map((question, index) => (
                   <TinderSwipeCard
