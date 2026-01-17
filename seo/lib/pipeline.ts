@@ -561,11 +561,17 @@ async function maybeAutoResearchComparison(article: any, jobId?: string) {
   const isComparison = String(article?.mode || '').toLowerCase() === 'comparison_research'
   if (!isComparison) return
 
+  // タイトルから「○選」の数を抽出し、その数に合わせて候補数を調整
+  const targetCountFromTitle = extractTargetCountFromTitle(article?.title)
+  const maxCandidatesToResearch = targetCountFromTitle > 0 
+    ? Math.min(targetCountFromTitle, 50) // 最大50件まで
+    : 8
+
   const candidates = Array.isArray(article?.comparisonCandidates) ? (article.comparisonCandidates as any[]) : []
   const urlsFromCandidates = candidates
     .map((c) => normalizeUrlMaybe(c?.websiteUrl))
     .filter(Boolean)
-    .slice(0, 8) // タイムアウト/コスト対策
+    .slice(0, maxCandidatesToResearch) // タイトルの「○選」に合わせて調整
 
   if (!urlsFromCandidates.length) return
 
@@ -856,49 +862,36 @@ function inferComparisonCountFromTitle(title: string, keywords: any): number {
 
 /**
  * 収集したサービス数に応じてタイトルの「○選」を更新
- * 例: "AIライティングツール15選" → "AIライティングツール28選"
+ * ※ユーザーが指定したタイトルを尊重するため、この機能は無効化
+ * ユーザーが「30選」と指定した場合、30件のサービスを収集するよう努力する
  */
 function updateTitleWithActualCount(title: string, actualCount: number): string {
+  // ユーザーが指定したタイトルをそのまま返す（自動変更しない）
+  return String(title || '').trim()
+}
+
+/**
+ * タイトルから「○選」の数を抽出
+ * 例: "AIライティングツール30選" → 30
+ * 例: "TOP15 おすすめツール" → 15
+ */
+function extractTargetCountFromTitle(title: string): number {
   const t = String(title || '').trim()
-  if (!t || actualCount <= 0) return t
-
-  // 「○選」「○社」のパターンを検出して置換
-  const patterns = [
-    /(\d{1,3})\s*(選|社)/g, // 15選、30社など
-    /(TOP)\s*(\d{1,3})/gi, // TOP15など
-  ]
-
-  let updated = t
-  let matched = false
+  if (!t) return 0
 
   // 「○選」「○社」パターン
-  updated = updated.replace(/(\d{1,3})\s*(選|社)/g, (match, num, suffix) => {
-    matched = true
-    return `${actualCount}${suffix}`
-  })
+  const selectMatch = t.match(/(\d{1,3})\s*(?:選|社)/)
+  if (selectMatch) {
+    return parseInt(selectMatch[1], 10)
+  }
 
   // 「TOP○」パターン
-  if (!matched) {
-    updated = updated.replace(/(TOP)\s*(\d{1,3})/gi, (match, prefix, num) => {
-      matched = true
-      return `${prefix}${actualCount}`
-    })
+  const topMatch = t.match(/TOP\s*(\d{1,3})/i)
+  if (topMatch) {
+    return parseInt(topMatch[1], 10)
   }
 
-  // マッチしなかった場合、タイトルに「○選」を追加（比較記事の場合）
-  if (!matched && actualCount >= 3) {
-    // タイトルの末尾に追加（ただし既に「比較」「おすすめ」等がある場合のみ）
-    if (/比較|おすすめ|ランキング|厳選/.test(t)) {
-      // 「｜」や「|」の前に挿入
-      if (/[｜|]/.test(t)) {
-        updated = t.replace(/([｜|])/, `${actualCount}選$1`)
-      } else {
-        updated = `${t}${actualCount}選`
-      }
-    }
-  }
-
-  return updated
+  return 0
 }
 
 function buildComparisonBaseQuery(title: any, keywords: any): string {
@@ -2342,21 +2335,25 @@ async function ensureOutlineAndSections(jobId: string) {
     // 不足しても止めない（記事内に不足注記を明示して進行する）
     article.comparisonCandidates = ensured
 
-    // 収集したサービス数に応じてタイトルの「○選」を更新
+    // タイトルで指定された「○選」の数と収集したサービス数をログに出力
     const actualCount = uniqCandidatesByName(ensured).length
+    const targetCountFromTitle = extractTargetCountFromTitle(article.title)
     if (actualCount > 0) {
-      const updatedTitle = updateTitleWithActualCount(article.title, actualCount)
-      if (updatedTitle !== article.title) {
-        await p.seoArticle.update({
-          where: { id: article.id },
-          data: { title: updatedTitle },
+      if (targetCountFromTitle > 0 && actualCount < targetCountFromTitle) {
+        await pushResearchEvent(jobId, {
+          at: Date.now(),
+          kind: 'warn',
+          title: `サービス収集中（${actualCount}/${targetCountFromTitle}社）`,
+          detail: `タイトル「${article.title}」で指定された${targetCountFromTitle}社に向けて収集を継続します`,
         })
-        article.title = updatedTitle
+      } else {
         await pushResearchEvent(jobId, {
           at: Date.now(),
           kind: 'info',
-          title: `タイトルを更新しました（${actualCount}選）`,
-          detail: `収集したサービス数に合わせてタイトルを「${updatedTitle}」に変更しました`,
+          title: `${actualCount}社のサービスを収集しました`,
+          detail: targetCountFromTitle > 0 
+            ? `タイトルで指定された${targetCountFromTitle}社を達成しました`
+            : `収集した全サービスを比較対象に含めます`,
         })
       }
     }
@@ -2401,7 +2398,11 @@ async function ensureOutlineAndSections(jobId: string) {
 
   // 比較記事の場合: 全ての参考URLを解析してからアウトラインを生成
   // 通常記事の場合: 1件だけ解析（タイムアウト対策）
-  const maxUrlsToResearch = isComparison ? 10 : 1
+  // タイトルから「○選」の数を抽出し、その数に合わせて調査量を調整
+  const targetCountFromTitle = extractTargetCountFromTitle(article.title)
+  const maxUrlsToResearch = isComparison 
+    ? Math.max(10, Math.ceil(targetCountFromTitle / 3)) // 30選なら10件、50選なら17件
+    : 1
   try {
     await p.seoJob.update({
       where: { id: jobId },
@@ -2451,17 +2452,16 @@ async function ensureOutlineAndSections(jobId: string) {
             detail: `競合記事の調査から新しいサービス候補を抽出しました: ${newCandidates.map((c: any) => c?.name).filter(Boolean).join(', ')}`,
           })
           
-          // タイトルの「○選」を更新
+          // タイトルで指定された「○選」の数と収集したサービス数をログに出力（タイトルは変更しない）
           const actualCount = uniqCandidatesByName(mergedCandidates).length
-          if (actualCount > 0) {
-            const updatedTitle = updateTitleWithActualCount(article.title, actualCount)
-            if (updatedTitle !== article.title) {
-              await p.seoArticle.update({
-                where: { id: article.id },
-                data: { title: updatedTitle },
-              })
-              article.title = updatedTitle
-            }
+          const targetCountFromTitle = extractTargetCountFromTitle(article.title)
+          if (actualCount > 0 && targetCountFromTitle > 0 && actualCount < targetCountFromTitle) {
+            await pushResearchEvent(jobId, {
+              at: Date.now(),
+              kind: 'info',
+              title: `追加収集で${actualCount}社に到達`,
+              detail: `タイトル「${article.title}」で指定された${targetCountFromTitle}社に向けて収集を継続中`,
+            })
           }
         }
       }
