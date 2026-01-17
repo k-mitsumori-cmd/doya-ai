@@ -1566,15 +1566,27 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   const gl = region === 'JP' ? 'jp' : 'us'
   const hl = region === 'JP' ? 'ja' : 'en'
 
-  // ========= 改善: 比較メディアをパースしてサービスを抽出 =========
+  // ========= 改善: 比較メディアを積極的に検索してサービスを抽出 =========
   await pushResearchEvent(jobId, {
     at: Date.now(),
     kind: 'search',
-    title: '比較メディアを検索中…',
+    title: '比較メディアを積極的に検索中…',
     detail: `${baseQuery} 比較 おすすめ 一覧`,
   })
 
   const comparisonMediaUrls: string[] = []
+  // 複数の検索クエリで比較記事を積極的に検索（サービスを最大限収集）
+  const searchQueries = [
+    `${baseQuery} 比較`,
+    `${baseQuery} おすすめ`,
+    `${baseQuery} 一覧`,
+    `${baseQuery} ランキング`,
+    `${baseQuery} 選`,
+    `${baseQuery} 比較 おすすめ`,
+    `${baseQuery} 比較 ランキング`,
+    `${baseQuery} おすすめ 一覧`,
+  ]
+  
   // テーマが「RPO/採用代行」系なら、同義語/補助語も併用して拾いやすくする
   const extraSeeds = Array.from(
     new Set(
@@ -1608,29 +1620,43 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
     )
   )
 
+  // より積極的に比較記事を検索（サービスを最大限収集するため）
+  const maxMediaToCollect = desired >= 50 ? 20 : desired >= 30 ? 15 : desired >= 20 ? 12 : 10
+  
   for (const q of queries) {
     try {
-      const found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10 })
-      for (const r of found.organic) {
-        const maxMedia = desired >= 30 ? 10 : 6
-        if (comparisonMediaUrls.length >= maxMedia) break
-        const url = normalizeUrlMaybe(r.url)
-        if (!url) continue
-        // 比較メディアっぽいURLを優先
-        const host = shortHost(url).toLowerCase()
-        if (
-          host.includes('itreview') ||
-          host.includes('boxil') ||
-          host.includes('comparison') ||
-          host.includes('best') ||
-          host.includes('recommend') ||
-          host.includes('ranking') ||
-          r.title?.includes('比較') ||
-          r.title?.includes('おすすめ') ||
-          r.title?.includes('選')
-        ) {
-          if (!comparisonMediaUrls.includes(url)) {
-            comparisonMediaUrls.push(url)
+      // ページングしてより多くの比較記事を取得
+      const maxPages = desired >= 50 ? 3 : desired >= 30 ? 2 : 1
+      for (let page = 0; page < maxPages && comparisonMediaUrls.length < maxMediaToCollect; page++) {
+        const found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10, start: page * 10 })
+        for (const r of found.organic) {
+          if (comparisonMediaUrls.length >= maxMediaToCollect) break
+          const url = normalizeUrlMaybe(r.url)
+          if (!url) continue
+          // 比較メディアっぽいURLを優先（条件を緩和してより多くの記事を収集）
+          const host = shortHost(url).toLowerCase()
+          const title = String(r.title || '').toLowerCase()
+          if (
+            host.includes('itreview') ||
+            host.includes('boxil') ||
+            host.includes('comparison') ||
+            host.includes('best') ||
+            host.includes('recommend') ||
+            host.includes('ranking') ||
+            host.includes('media') ||
+            host.includes('blog') ||
+            host.includes('magazine') ||
+            title.includes('比較') ||
+            title.includes('おすすめ') ||
+            title.includes('選') ||
+            title.includes('ランキング') ||
+            title.includes('一覧') ||
+            title.includes('徹底比較') ||
+            title.includes('完全ガイド')
+          ) {
+            if (!comparisonMediaUrls.includes(url)) {
+              comparisonMediaUrls.push(url)
+            }
           }
         }
       }
@@ -1642,8 +1668,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
         detail: String(e?.message || e || '').slice(0, 240),
       })
     }
-    const maxMedia = desired >= 30 ? 10 : 6
-    if (comparisonMediaUrls.length >= maxMedia) break
+    if (comparisonMediaUrls.length >= maxMediaToCollect) break
   }
 
   // 比較メディアURLを引用元として保存（記事本文で「比較サイトから抽出」として出典表示できるように）
@@ -1674,21 +1699,52 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
 
   // 比較メディアからサービスを抽出（全サービス収集: 上限なしで全記事をパース）
   const collected: any[] = [...uniqExisting]
-  const maxParse = 15 // 最大15記事をパース
+  // より多くの比較記事をパースしてサービスを収集（サービスを最大限増やすため）
+  const maxParse = desired >= 50 ? 25 : desired >= 30 ? 20 : desired >= 20 ? 18 : 15
+  await pushResearchEvent(jobId, {
+    at: Date.now(),
+    kind: 'info',
+    title: `比較記事からサービスを抽出中（${Math.min(maxParse, comparisonMediaUrls.length)}記事）`,
+    detail: `最大${maxParse}記事を解析してサービスを収集します`,
+  })
+  
   for (const mediaUrl of comparisonMediaUrls.slice(0, maxParse)) {
-    const services = await extractServicesFromComparisonArticle(mediaUrl, baseQuery, jobId)
-    for (const s of services) {
-      if (s.name && !containsPlaceholderNames(s.name)) {
-        collected.push({ ...s, source: 'comparison_media', sourceUrl: s.sourceUrl || mediaUrl })
+    try {
+      const services = await extractServicesFromComparisonArticle(mediaUrl, baseQuery, jobId)
+      const beforeCount = uniqCandidatesByName(collected).length
+      for (const s of services) {
+        if (s.name && !containsPlaceholderNames(s.name)) {
+          collected.push({ ...s, source: 'comparison_media', sourceUrl: s.sourceUrl || mediaUrl })
+        }
       }
+      const afterCount = uniqCandidatesByName(collected).length
+      const addedCount = afterCount - beforeCount
+      if (addedCount > 0) {
+        await pushResearchEvent(jobId, {
+          at: Date.now(),
+          kind: 'candidates',
+          title: `候補を追加（${addedCount}件）`,
+          detail: `${shortHost(mediaUrl)}: ${services.slice(0, 5).map(s => s.name).join(' / ')}`,
+        })
+      }
+    } catch (e: any) {
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'warn',
+        title: '比較記事の解析に失敗',
+        detail: `${shortHost(mediaUrl)}: ${String(e?.message || e || '').slice(0, 100)}`,
+      })
     }
-    await pushResearchEvent(jobId, {
-      at: Date.now(),
-      kind: 'candidates',
-      title: `候補を追加（${services.length}件）`,
-      detail: services.slice(0, 5).map(s => s.name).join(' / '),
-    })
   }
+  
+  // 収集結果を報告
+  const totalCollected = uniqCandidatesByName(collected).length
+  await pushResearchEvent(jobId, {
+    at: Date.now(),
+    kind: 'discover',
+    title: `比較記事からサービスを収集完了（${totalCollected}社）`,
+    detail: `${comparisonMediaUrls.length}記事を解析して${totalCollected}社のサービスを収集しました`,
+  })
 
   // 追加収集: 最低目標に達していなければ従来の検索も実行（全サービス収集のため常に実行）
   if (uniqCandidatesByName(collected).length < desired || true) {
