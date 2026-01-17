@@ -38,17 +38,70 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    // キーワードの関連キーワードを調査して質問を生成
+    const keywordAnalysisPrompt = `あなたはSEOキーワード分析の専門家です。
+以下のキーワードについて、関連キーワードや派生キーワードを分析してください。
+
+主キーワード: ${keywords.join(', ')}
+
+要件:
+- 主キーワードに関連するキーワードを5-10個抽出してください
+- 関連キーワードには、類義語、上位概念、下位概念、関連語などを含めてください
+- 各関連キーワードについて、主キーワードとの関係性を簡潔に説明してください
+
+出力形式:
+{
+  "relatedKeywords": [
+    {
+      "keyword": "関連キーワード1",
+      "relationship": "関係性の説明"
+    },
+    {
+      "keyword": "関連キーワード2",
+      "relationship": "関係性の説明"
+    }
+  ]
+}
+
+JSONのみを出力してください。`
+
+    let relatedKeywords: any[] = []
+    try {
+      const analysisResponse = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: keywordAnalysisPrompt }],
+        generationConfig: {
+          maxOutputTokens: 1000,
+          temperature: 0.7,
+        },
+      })
+      
+      const analysisMatch = analysisResponse.match(/\{[\s\S]*\}/)
+      if (analysisMatch) {
+        const analysisData = JSON.parse(analysisMatch[0])
+        relatedKeywords = Array.isArray(analysisData.relatedKeywords) ? analysisData.relatedKeywords : []
+      }
+    } catch (e) {
+      console.warn('[keyword analysis] error:', e)
+      // エラー時は空配列のまま
+    }
+
     // 初期質問を3-4問まとめてAIで生成
+    const relatedKeywordsText = relatedKeywords.length > 0
+      ? `\n関連キーワード:\n${relatedKeywords.map((k: any) => `- ${k.keyword} (${k.relationship || ''})`).join('\n')}`
+      : ''
+    
     const prompt = `あなたはSEO記事作成のための質問を生成するAIです。
 入力されたキーワードを分析し、記事を作成するために必要な情報を収集するための最初の質問を3-4問まとめて生成してください。
 
-入力キーワード: ${keywords.join(', ')}
+主キーワード: ${keywords.join(', ')}${relatedKeywordsText}
 
 要件:
 - 質問はYes/Noで答えられる形式にしてください
+- 「このキーワードは狙いますか？」「この関連キーワードも含めますか？」のような形で、キーワードや関連キーワードを具体的に質問に含めてください
 - 極力短く、はっきり分かりやすい質問にしてください（30文字以内を推奨）
 - 長文は禁止。1文で簡潔に表現してください
-- 記事の種類、ターゲット読者、記事の方向性などに関連する質問にしてください
+- 記事の種類、ターゲット読者、記事の方向性、関連キーワードの扱いなどに関連する質問にしてください
 - 各質問は独立して答えられるようにしてください
 - 日本語で質問してください
 - 適切な位置で改行ができるよう、自然な区切りを意識してください

@@ -37,6 +37,8 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
   const controls = useAnimation()
 
   const handleDragEnd = async (_: any, info: PanInfo) => {
+    if (isSwiping) return
+    
     const threshold = 120
     const velocity = info.velocity.x
 
@@ -49,18 +51,19 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
         x: direction === 'yes' ? 500 : -500,
         rotate: direction === 'yes' ? 35 : -35,
         opacity: 0,
-        transition: { duration: 0.3, ease: 'easeOut' },
+        transition: { duration: 0.4, ease: 'easeInOut' },
       })
       
-      onSwipe(direction)
+      // アニメーション完了後にコールバックを呼び出す
+      setTimeout(() => {
+        onSwipe(direction)
+      }, 100)
     } else if (Math.abs(info.offset.y) > threshold || Math.abs(info.velocity.y) > 600) {
       if (info.offset.y > 0) {
         onSwipe('hold')
       }
-    }
-
-    // リセット
-    if (!isSwiping) {
+    } else {
+      // リセット
       x.set(0)
       y.set(0)
     }
@@ -78,10 +81,13 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
       x: direction * 500,
       rotate: direction * 35,
       opacity: 0,
-      transition: { duration: 0.3, ease: 'easeOut' },
+      transition: { duration: 0.4, ease: 'easeInOut' },
     })
     
-    onSwipe(decision)
+    // アニメーション完了後にコールバックを呼び出す
+    setTimeout(() => {
+      onSwipe(decision)
+    }, 100)
   }
 
   if (index >= 4) return null // 4枚目以降は非表示
