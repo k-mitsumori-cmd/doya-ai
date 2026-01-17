@@ -2594,7 +2594,15 @@ async function ensureOutlineAndSections(jobId: string) {
     }
   }
 
-  // 比較記事の場合: サービス抽出完了を確認してから記事構成を開始
+  // 全記事: 全ての収集が完了してから記事構成を開始
+  await pushResearchEvent(jobId, {
+    at: Date.now(),
+    kind: 'info',
+    title: '記事構成生成を開始',
+    detail: '全ての情報収集が完了しました。SEOで勝てる記事構成を生成します。',
+  })
+
+  // 比較記事の場合: サービス抽出完了を確認
   if (isComparison) {
     // 最終的な候補数を確認
     const finalArticle = await p.seoArticle.findUnique({
