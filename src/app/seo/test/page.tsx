@@ -33,6 +33,7 @@ export default function TestSwipePage() {
   const [finalData, setFinalData] = useState<{
     title: string
     targetChars: number
+    summary?: string
   } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -176,7 +177,7 @@ export default function TestSwipePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
         {/* ヘッダー */}
         <div className="mb-8">
           <h1 className="text-3xl font-black text-gray-900 mb-2">スワイプ記事作成（テスト版）</h1>
@@ -230,9 +231,21 @@ export default function TestSwipePage() {
 
         {/* ステップ2: スワイプ */}
         {step === 'swipe' && (
-          <div className="relative">
+          <div className="relative ml-0 sm:ml-64">
+            {/* 背景の操作説明 */}
+            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-8 opacity-30">
+              <div className="text-left">
+                <p className="text-6xl font-black text-gray-400 leading-none">NO</p>
+                <p className="text-sm font-bold text-gray-500 mt-2">左にスワイプ</p>
+              </div>
+              <div className="text-right">
+                <p className="text-6xl font-black text-gray-400 leading-none">YES</p>
+                <p className="text-sm font-bold text-gray-500 mt-2">右にスワイプ</p>
+              </div>
+            </div>
+
             {/* カードスタック */}
-            <div className="relative h-[600px] mb-8">
+            <div className="relative h-[700px] mb-8 z-10">
               {questionQueue.length > 0 ? (
                 questionQueue.slice(0, 4).map((question, index) => (
                   <TinderSwipeCard
@@ -258,28 +271,20 @@ export default function TestSwipePage() {
             </div>
 
             {/* 進捗バー（下部） */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 p-4">
-              <div className="max-w-4xl mx-auto">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-black text-gray-700">
-                    回答済み: {answers.length}問
-                  </span>
-                  <span className="text-sm font-black text-gray-700">
-                    残り: {questionQueue.length}問
-                  </span>
-                </div>
-                <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+            <div className="fixed bottom-0 left-0 sm:left-64 right-0 bg-white border-t border-gray-200 shadow-lg z-50 p-6">
+              <div className="max-w-5xl mx-auto">
+                <div className="w-full h-6 bg-gray-100 rounded-full overflow-hidden shadow-inner">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-lg"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                   />
                 </div>
                 {isGeneratingQuestion && (
-                  <div className="flex items-center justify-center gap-2 mt-2 text-xs text-gray-500">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    <span>次の質問を生成中...</span>
+                  <div className="flex items-center justify-center gap-2 mt-3 text-sm text-gray-500">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="font-bold">次の質問を生成中...</span>
                   </div>
                 )}
               </div>
@@ -321,6 +326,19 @@ export default function TestSwipePage() {
                   <option value={10000}>約10,000文字</option>
                 </select>
               </div>
+
+              {finalData.summary && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    質問回答から得た情報と記事の方向性
+                  </label>
+                  <div className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50">
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {finalData.summary}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-4">
