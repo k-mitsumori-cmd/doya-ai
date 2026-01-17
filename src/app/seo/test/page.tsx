@@ -27,6 +27,7 @@ export default function TestSwipePage() {
   const [keywords, setKeywords] = useState('')
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [questionQueue, setQuestionQueue] = useState<Question[]>([])
+  const [questionImages, setQuestionImages] = useState<Map<string, { imageBase64: string; mimeType: string }>>(new Map())
   const [answers, setAnswers] = useState<Answer[]>([])
   const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false)
   const [progress, setProgress] = useState(0) // 進捗（0-100）
@@ -67,7 +68,41 @@ export default function TestSwipePage() {
       }
 
       setSessionId(json.sessionId)
-      setQuestionQueue(json.questions || [])
+      const questions = json.questions || []
+      setQuestionQueue(questions)
+      
+      // 画像を並列で取得（非同期、ブロッキングしない）
+      Promise.all(
+        questions.map(async (q: Question) => {
+          try {
+            const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(q.category)}&count=1`)
+            if (!imgRes.ok) {
+              console.warn(`[画像取得失敗] category: ${q.category}, status: ${imgRes.status}`)
+              return
+            }
+            const imgJson = await imgRes.json()
+            if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
+              setQuestionImages((prev) => {
+                const newMap = new Map(prev)
+                newMap.set(q.id, {
+                  imageBase64: imgJson.images[0].imageBase64,
+                  mimeType: imgJson.images[0].mimeType || 'image/png',
+                })
+                return newMap
+              })
+            } else {
+              console.warn(`[画像データなし] category: ${q.category}`, imgJson)
+            }
+          } catch (e) {
+            console.warn(`[画像取得エラー] category: ${q.category}`, e)
+            // 画像取得失敗は無視（エラーログのみ）
+          }
+        })
+      ).catch((e) => {
+        console.warn('[画像取得一括エラー]', e)
+        // エラーは無視
+      })
+      
       setStep('swipe')
     } catch (e: any) {
       setError(e.message || 'エラーが発生しました')
@@ -119,6 +154,38 @@ export default function TestSwipePage() {
       } else if (json.questions && Array.isArray(json.questions)) {
         // 新しい質問をキューに追加
         setQuestionQueue((prev) => [...prev, ...json.questions])
+        
+        // 画像を並列で取得（非同期、ブロッキングしない）
+        Promise.all(
+          json.questions.map(async (q: Question) => {
+            try {
+              const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(q.category)}&count=1`)
+              if (!imgRes.ok) {
+                console.warn(`[画像取得失敗] category: ${q.category}, status: ${imgRes.status}`)
+                return
+              }
+              const imgJson = await imgRes.json()
+              if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
+                setQuestionImages((prev) => {
+                  const newMap = new Map(prev)
+                  newMap.set(q.id, {
+                    imageBase64: imgJson.images[0].imageBase64,
+                    mimeType: imgJson.images[0].mimeType || 'image/png',
+                  })
+                  return newMap
+                })
+              } else {
+                console.warn(`[画像データなし] category: ${q.category}`, imgJson)
+              }
+            } catch (e) {
+              console.warn(`[画像取得エラー] category: ${q.category}`, e)
+              // 画像取得失敗は無視（エラーログのみ）
+            }
+          })
+        ).catch((e) => {
+          console.warn('[画像取得一括エラー]', e)
+          // エラーは無視
+        })
       }
     } catch (e: any) {
       setError(e.message || 'エラーが発生しました')
@@ -273,6 +340,7 @@ export default function TestSwipePage() {
                     onSwipe={(decision) => handleSwipe(decision, question)}
                     index={index}
                     total={questionQueue.length}
+                    questionImage={questionImages.get(question.id)}
                   />
                 ))
               ) : (
@@ -311,31 +379,51 @@ export default function TestSwipePage() {
           </div>
         )}
 
-        {/* ステップ3: 最終確認 */}
+        {/* ステップ3: 最終確認（リッチな完了UI） */}
         {step === 'confirm' && finalData && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl shadow-xl p-8"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-gradient-to-br from-emerald-50 via-white to-teal-50 rounded-3xl shadow-2xl p-8 border-2 border-emerald-100"
           >
-            {/* 完了時の画像表示 */}
+            {/* 完了時のリッチな画像表示 */}
             {celebrationImage && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="mb-6 rounded-xl overflow-hidden"
+                initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+                className="mb-8 rounded-2xl overflow-hidden shadow-2xl"
               >
                 <img
                   src={`data:${celebrationImage.mimeType};base64,${celebrationImage.imageBase64}`}
-                  alt="ありがとうございました"
-                  className="w-full h-auto rounded-xl shadow-lg"
+                  alt="完成しました"
+                  className="w-full h-auto rounded-2xl"
                 />
               </motion.div>
             )}
             
-            <h2 className="text-2xl font-black text-gray-900 mb-6">最終確認</h2>
+            {/* 完了メッセージ */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-center mb-8"
+            >
+              <h2 className="text-4xl font-black text-gray-900 mb-3 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                完成しました！
+              </h2>
+              <p className="text-xl font-bold text-gray-700 mb-2">ありがとうございました</p>
+              <p className="text-sm text-gray-600">質問へのご回答、お疲れ様でした</p>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <h3 className="text-xl font-black text-gray-900 mb-6">最終確認</h3>
 
-            <div className="space-y-6 mb-8">
+              <div className="space-y-6 mb-8">
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">記事タイトル</label>
                 <input
@@ -401,6 +489,7 @@ export default function TestSwipePage() {
                 )}
               </button>
             </div>
+            </motion.div>
           </motion.div>
         )}
       </div>
