@@ -170,26 +170,6 @@ export default function TestSwipePage() {
         ).catch(() => {
           // エラーは無視
         })
-        
-        // 各質問の画像を取得
-        for (const q of json.questions) {
-          try {
-            const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(q.category)}&count=1`)
-            const imgJson = await imgRes.json()
-            if (imgJson.success && imgJson.images?.[0]) {
-              setQuestionImages((prev) => {
-                const newMap = new Map(prev)
-                newMap.set(q.id, {
-                  imageBase64: imgJson.images[0].imageBase64,
-                  mimeType: imgJson.images[0].mimeType,
-                })
-                return newMap
-              })
-            }
-          } catch (e) {
-            // 画像取得失敗は無視
-          }
-        }
       }
     } catch (e: any) {
       setError(e.message || 'エラーが発生しました')
