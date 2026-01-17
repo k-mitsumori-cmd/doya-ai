@@ -38,23 +38,35 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 初期質問をAIで生成
+    // 初期質問を3-4問まとめてAIで生成
     const prompt = `あなたはSEO記事作成のための質問を生成するAIです。
-入力されたキーワードを分析し、記事を作成するために必要な情報を収集するための最初の質問を1つ生成してください。
+入力されたキーワードを分析し、記事を作成するために必要な情報を収集するための最初の質問を3-4問まとめて生成してください。
 
 入力キーワード: ${keywords.join(', ')}
 
 要件:
 - 質問はYes/Noで答えられる形式にしてください
+- 極力短く、はっきり分かりやすい質問にしてください（長文禁止）
 - 記事の種類、ターゲット読者、記事の方向性などに関連する質問にしてください
-- 具体的で明確な質問にしてください
+- 各質問は独立して答えられるようにしてください
 - 日本語で質問してください
 
 出力形式:
 {
-  "question": "質問文",
-  "description": "質問の説明（任意）",
-  "category": "質問のカテゴリ（例: 記事タイプ、ターゲット、コンテンツ）"
+  "questions": [
+    {
+      "question": "短い質問文",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文",
+      "category": "質問のカテゴリ"
+    }
+  ]
 }
 
 JSONのみを出力してください。`
@@ -80,23 +92,32 @@ JSONのみを出力してください。`
     } catch (e) {
       // フォールバック: デフォルトの質問を生成
       questionData = {
-        question: `「${keywords[0]}」について比較記事にしますか？`,
-        description: '複数のサービスやツールを比較する形式の記事を作成する場合、右にスワイプしてください。',
-        category: '記事タイプ',
+        questions: [
+          { question: `「${keywords[0]}」について比較記事にしますか？`, category: '記事タイプ' },
+          { question: `初心者向けに説明しますか？`, category: 'ターゲット' },
+          { question: `導入事例を含めますか？`, category: 'コンテンツ' },
+        ],
       }
     }
 
-    const question = {
-      id: uuidv4(),
-      question: questionData.question || `「${keywords[0]}」について比較記事にしますか？`,
-      description: questionData.description,
-      category: questionData.category || '記事タイプ',
-    }
+    const questions = Array.isArray(questionData.questions)
+      ? questionData.questions.map((q: any) => ({
+          id: uuidv4(),
+          question: q.question || `「${keywords[0]}」について比較記事にしますか？`,
+          category: q.category || '記事タイプ',
+        }))
+      : [
+          {
+            id: uuidv4(),
+            question: `「${keywords[0]}」について比較記事にしますか？`,
+            category: '記事タイプ',
+          },
+        ]
 
     return NextResponse.json({
       success: true,
       sessionId,
-      question,
+      questions,
       guestId: session?.user?.id ? undefined : guestId,
     })
   } catch (error: any) {

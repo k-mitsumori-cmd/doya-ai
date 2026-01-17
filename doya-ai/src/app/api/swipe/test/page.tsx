@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { TinderSwipeCard, SwipeDecision } from '@/components/seo/TinderSwipeCard'
+import { SwipeCard, SwipeDecision } from '@/components/seo/SwipeCard'
 import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, X } from 'lucide-react'
 
 type Step = 'keyword' | 'swipe' | 'confirm' | 'generating'
@@ -26,10 +26,9 @@ export default function TestSwipePage() {
   const [step, setStep] = useState<Step>('keyword')
   const [keywords, setKeywords] = useState('')
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const [questionQueue, setQuestionQueue] = useState<Question[]>([])
+  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null)
   const [answers, setAnswers] = useState<Answer[]>([])
   const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false)
-  const [progress, setProgress] = useState(0) // 進捗（0-100）
   const [finalData, setFinalData] = useState<{
     title: string
     targetChars: number
@@ -62,7 +61,7 @@ export default function TestSwipePage() {
       }
 
       setSessionId(json.sessionId)
-      setQuestionQueue(json.questions || [])
+      setCurrentQuestion(json.question)
       setStep('swipe')
     } catch (e: any) {
       setError(e.message || 'エラーが発生しました')
@@ -71,10 +70,20 @@ export default function TestSwipePage() {
     }
   }
 
-  // 次の質問バッチを生成
-  const loadNextQuestions = useCallback(async () => {
-    if (!sessionId || isGeneratingQuestion) return
+  // スワイプ処理
+  const handleSwipe = async (decision: SwipeDecision) => {
+    if (!currentQuestion || !sessionId || decision === 'hold') return
 
+    const answer: Answer = {
+      questionId: currentQuestion.id,
+      question: currentQuestion.question,
+      answer: decision === 'yes' ? 'yes' : 'no',
+    }
+
+    const newAnswers = [...answers, answer]
+    setAnswers(newAnswers)
+
+    // 次の質問を生成
     setIsGeneratingQuestion(true)
     try {
       const res = await fetch('/api/swipe/test/question', {
@@ -82,7 +91,7 @@ export default function TestSwipePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          answers,
+          answers: newAnswers,
         }),
       })
 
@@ -96,51 +105,15 @@ export default function TestSwipePage() {
         // 質問が完了したら最終確認へ
         setFinalData(json.finalData)
         setStep('confirm')
-      } else if (json.questions && Array.isArray(json.questions)) {
-        // 新しい質問をキューに追加
-        setQuestionQueue((prev) => [...prev, ...json.questions])
+      } else {
+        setCurrentQuestion(json.question)
       }
     } catch (e: any) {
       setError(e.message || 'エラーが発生しました')
     } finally {
       setIsGeneratingQuestion(false)
     }
-  }, [sessionId, answers, isGeneratingQuestion])
-
-  // スワイプ処理
-  const handleSwipe = async (decision: SwipeDecision, question: Question) => {
-    if (!question || !sessionId || decision === 'hold') return
-
-    const answer: Answer = {
-      questionId: question.id,
-      question: question.question,
-      answer: decision === 'yes' ? 'yes' : 'no',
-    }
-
-    const newAnswers = [...answers, answer]
-    setAnswers(newAnswers)
-
-    // 現在の質問をキューから削除
-    setQuestionQueue((prev) => prev.filter((q) => q.id !== question.id))
-
-    // 進捗を更新（完了まで100%に到達しないように、適度な進捗を表示）
-    // 完了フラグが出るまで実際の進捗は不明なので、回答数に基づいて進捗を更新
-    // 意図が違った場合は戻す機能は後で実装
-    const estimatedProgress = Math.min(95, (newAnswers.length / Math.max(1, newAnswers.length + 3)) * 100)
-    setProgress(estimatedProgress)
-
-    // 残り1-2枚になったら次のバッチを生成
-    if (questionQueue.length <= 2) {
-      loadNextQuestions()
-    }
   }
-
-  // 初期ロード時にも次のバッチを生成
-  useEffect(() => {
-    if (step === 'swipe' && questionQueue.length <= 1 && !isGeneratingQuestion) {
-      loadNextQuestions()
-    }
-  }, [step, questionQueue.length, isGeneratingQuestion, loadNextQuestions])
 
   // 最終確認で記事生成
   const handleGenerate = async () => {
@@ -231,59 +204,35 @@ export default function TestSwipePage() {
         {/* ステップ2: スワイプ */}
         {step === 'swipe' && (
           <div className="relative">
-            {/* カードスタック */}
-            <div className="relative h-[600px] mb-8">
-              {questionQueue.length > 0 ? (
-                questionQueue.slice(0, 4).map((question, index) => (
-                  <TinderSwipeCard
-                    key={question.id}
-                    question={question}
-                    onSwipe={(decision) => handleSwipe(decision, question)}
-                    index={index}
-                    total={questionQueue.length}
-                  />
-                ))
-              ) : (
-                <div className="bg-white rounded-3xl shadow-2xl p-12 text-center h-full flex items-center justify-center">
-                  {isGeneratingQuestion ? (
-                    <>
-                      <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
-                      <p className="text-gray-600 font-bold">AIが次の質問を考えています...</p>
-                    </>
-                  ) : (
-                    <p className="text-gray-400 font-bold">読み込み中...</p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* 進捗バー（下部） */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 p-4">
-              <div className="max-w-4xl mx-auto">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-black text-gray-700">
-                    回答済み: {answers.length}問
-                  </span>
-                  <span className="text-sm font-black text-gray-700">
-                    残り: {questionQueue.length}問
-                  </span>
-                </div>
-                <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress}%` }}
-                    transition={{ duration: 0.3, ease: 'easeOut' }}
-                  />
-                </div>
+            <div className="bg-white rounded-2xl shadow-xl p-8 mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-black text-gray-900">質問 {answers.length + 1}</h2>
                 {isGeneratingQuestion && (
-                  <div className="flex items-center justify-center gap-2 mt-2 text-xs text-gray-500">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    <span>次の質問を生成中...</span>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm font-bold">次の質問を生成中...</span>
                   </div>
                 )}
               </div>
             </div>
+
+            {currentQuestion && !isGeneratingQuestion && (
+              <div className="relative h-[600px]">
+                <SwipeCard
+                  question={currentQuestion}
+                  onSwipe={handleSwipe}
+                  index={0}
+                  total={1}
+                />
+              </div>
+            )}
+
+            {isGeneratingQuestion && (
+              <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+                <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
+                <p className="text-gray-600 font-bold">AIが次の質問を考えています...</p>
+              </div>
+            )}
           </div>
         )}
 
