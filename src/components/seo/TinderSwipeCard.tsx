@@ -77,7 +77,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
       exit={{ scale: 0.8, opacity: 0, x: index % 2 === 0 ? 300 : -300 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
-      <div className="bg-gradient-to-br from-white via-emerald-50/30 to-teal-50/30 rounded-3xl shadow-2xl p-12 border-2 border-emerald-100 relative overflow-hidden h-[650px] flex flex-col backdrop-blur-sm">
+      <div className="bg-gradient-to-br from-white via-emerald-50 to-teal-50 rounded-3xl shadow-2xl p-12 border-2 border-emerald-100 relative overflow-hidden h-[650px] flex flex-col">
         {/* LIKE/NOPE オーバーレイ */}
         {index === 0 && (
           <>
@@ -110,41 +110,48 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
         </div>
 
         {/* 質問画像 */}
-        {questionImage && index === 0 && (
-          <div className="mb-6 rounded-2xl overflow-hidden shadow-lg">
+        {questionImage && questionImage.imageBase64 && index === 0 && (
+          <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-white">
             <img
               src={`data:${questionImage.mimeType};base64,${questionImage.imageBase64}`}
               alt={question.category}
               className="w-full h-48 object-cover"
               loading="eager"
               decoding="async"
+              onError={(e) => {
+                // 画像読み込みエラー時は非表示にする
+                const target = e.target as HTMLImageElement
+                target.style.display = 'none'
+              }}
             />
           </div>
         )}
-        {/* 画像ローディング中のプレースホルダー */}
-        {!questionImage && index === 0 && (
-          <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-100 to-teal-100 h-48 flex items-center justify-center">
-            <div className="text-emerald-600 text-sm font-bold">画像読み込み中...</div>
+        {/* 画像ローディング中のプレースホルダー（画像がない場合のみ表示） */}
+        {(!questionImage || !questionImage.imageBase64) && index === 0 && (
+          <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-100 to-teal-100 h-48 flex items-center justify-center border-2 border-emerald-200">
+            <div className="text-emerald-700 text-sm font-bold">画像を生成中...</div>
           </div>
         )}
 
         {/* 質問 */}
         <div className="flex-1 flex items-center justify-center px-6">
-          <h2 className="text-4xl font-black text-gray-900 leading-relaxed text-center" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', lineHeight: '1.6' }}>
-            {question.question.split(/([。、？])/).map((part, i, arr) => {
-              if (!part) return null
-              // 「。」「、」「？」の後で改行
-              if (['。', '？'].includes(part) && i < arr.length - 1) {
-                return (
-                  <span key={i}>
-                    {part}
-                    <br />
-                  </span>
-                )
-              }
-              return <span key={i}>{part}</span>
-            })}
-          </h2>
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-emerald-100">
+            <h2 className="text-4xl font-black text-gray-900 leading-relaxed text-center" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word', lineHeight: '1.6', textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+              {question.question.split(/([。、？])/).map((part, i, arr) => {
+                if (!part) return null
+                // 「。」「、」「？」の後で改行
+                if (['。', '？'].includes(part) && i < arr.length - 1) {
+                  return (
+                    <span key={i}>
+                      {part}
+                      <br />
+                    </span>
+                  )
+                }
+                return <span key={i}>{part}</span>
+              })}
+            </h2>
+          </div>
         </div>
 
         {/* YES/NOボタン */}

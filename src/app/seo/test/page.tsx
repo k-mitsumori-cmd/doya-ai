@@ -76,22 +76,30 @@ export default function TestSwipePage() {
         questions.map(async (q: Question) => {
           try {
             const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(q.category)}&count=1`)
+            if (!imgRes.ok) {
+              console.warn(`[画像取得失敗] category: ${q.category}, status: ${imgRes.status}`)
+              return
+            }
             const imgJson = await imgRes.json()
-            if (imgJson.success && imgJson.images?.[0]) {
+            if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
               setQuestionImages((prev) => {
                 const newMap = new Map(prev)
                 newMap.set(q.id, {
                   imageBase64: imgJson.images[0].imageBase64,
-                  mimeType: imgJson.images[0].mimeType,
+                  mimeType: imgJson.images[0].mimeType || 'image/png',
                 })
                 return newMap
               })
+            } else {
+              console.warn(`[画像データなし] category: ${q.category}`, imgJson)
             }
           } catch (e) {
-            // 画像取得失敗は無視
+            console.warn(`[画像取得エラー] category: ${q.category}`, e)
+            // 画像取得失敗は無視（エラーログのみ）
           }
         })
-      ).catch(() => {
+      ).catch((e) => {
+        console.warn('[画像取得一括エラー]', e)
         // エラーは無視
       })
       
@@ -152,22 +160,30 @@ export default function TestSwipePage() {
           json.questions.map(async (q: Question) => {
             try {
               const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(q.category)}&count=1`)
+              if (!imgRes.ok) {
+                console.warn(`[画像取得失敗] category: ${q.category}, status: ${imgRes.status}`)
+                return
+              }
               const imgJson = await imgRes.json()
-              if (imgJson.success && imgJson.images?.[0]) {
+              if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
                 setQuestionImages((prev) => {
                   const newMap = new Map(prev)
                   newMap.set(q.id, {
                     imageBase64: imgJson.images[0].imageBase64,
-                    mimeType: imgJson.images[0].mimeType,
+                    mimeType: imgJson.images[0].mimeType || 'image/png',
                   })
                   return newMap
                 })
+              } else {
+                console.warn(`[画像データなし] category: ${q.category}`, imgJson)
               }
             } catch (e) {
-              // 画像取得失敗は無視
+              console.warn(`[画像取得エラー] category: ${q.category}`, e)
+              // 画像取得失敗は無視（エラーログのみ）
             }
           })
-        ).catch(() => {
+        ).catch((e) => {
+          console.warn('[画像取得一括エラー]', e)
           // エラーは無視
         })
       }
