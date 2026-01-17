@@ -2399,13 +2399,73 @@ async function ensureOutlineAndSections(jobId: string) {
   })
   await p.seoArticle.update({ where: { id: article.id }, data: { status: 'RUNNING' } })
 
-  // 全記事: 参考URLがある場合は、1回のadvanceで最大1件だけ解析してseoReferenceへ保存（タイムアウト対策）
+  // 比較記事の場合: 全ての参考URLを解析してからアウトラインを生成
+  // 通常記事の場合: 1件だけ解析（タイムアウト対策）
+  const maxUrlsToResearch = isComparison ? 10 : 1
   try {
     await p.seoJob.update({
       where: { id: jobId },
       data: { step: isComparison ? 'cmp_extract' : job.step, progress: Math.max(12, Number(job.progress || 0)), status: 'running' },
     })
-    await progressiveResearchFromReferenceUrls(article, { maxUrls: 1, jobId })
+    await progressiveResearchFromReferenceUrls(article, { maxUrls: maxUrlsToResearch, jobId })
+    
+    // 比較記事の場合、調査結果を記事に反映
+    if (isComparison) {
+      // 調査結果から比較候補を更新
+      const updatedArticle = await p.seoArticle.findUnique({
+        where: { id: article.id },
+        include: { references: true },
+      })
+      if (updatedArticle) {
+        // 調査結果から新しい候補を抽出して追加
+        const existingCandidates = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
+        const existingNames = existingCandidates.map((c: any) => String(c?.name || '').toLowerCase().trim())
+        
+        // 参照から新しい候補を抽出
+        const newCandidates: any[] = []
+        for (const ref of updatedArticle.references || []) {
+          const extracted = (ref as any)?.extracted
+          if (extracted && Array.isArray(extracted.candidates)) {
+            for (const c of extracted.candidates) {
+              const name = String(c?.name || '').toLowerCase().trim()
+              if (name && !existingNames.includes(name) && !newCandidates.some((nc: any) => String(nc?.name || '').toLowerCase().trim() === name)) {
+                newCandidates.push(c)
+                existingNames.push(name)
+              }
+            }
+          }
+        }
+        
+        if (newCandidates.length > 0) {
+          const mergedCandidates = [...existingCandidates, ...newCandidates]
+          await p.seoArticle.update({
+            where: { id: article.id },
+            data: { comparisonCandidates: mergedCandidates },
+          })
+          article.comparisonCandidates = mergedCandidates
+          
+          await pushResearchEvent(jobId, {
+            at: Date.now(),
+            kind: 'info',
+            title: `調査から${newCandidates.length}件の新しい候補を追加`,
+            detail: `競合記事の調査から新しいサービス候補を抽出しました: ${newCandidates.map((c: any) => c?.name).filter(Boolean).join(', ')}`,
+          })
+          
+          // タイトルの「○選」を更新
+          const actualCount = uniqCandidatesByName(mergedCandidates).length
+          if (actualCount > 0) {
+            const updatedTitle = updateTitleWithActualCount(article.title, actualCount)
+            if (updatedTitle !== article.title) {
+              await p.seoArticle.update({
+                where: { id: article.id },
+                data: { title: updatedTitle },
+              })
+              article.title = updatedTitle
+            }
+          }
+        }
+      }
+    }
   } catch {
     // ignore（ネットワーク不調でも本文生成は継続）
   }
@@ -2419,6 +2479,7 @@ async function ensureOutlineAndSections(jobId: string) {
     outlineMd = String(article.outline || '')
     outline = ensureMinSections(parseOutlineFromMarkdown(outlineMd, target), target)
   } else {
+    // 調査結果を含むリサーチコンテキストを構築
     const researchContext = await buildResearchContext(article.id)
     outline = await generateOutline(article, researchContext)
     outlineMd = toOutlineMarkdown(outline)
@@ -2569,7 +2630,7 @@ async function generateSection(jobId: string) {
         coverageNote ? `\n${coverageNote}\n` : '',
         comparisonCandidates.length
           ? comparisonCandidates
-              .slice(0, desiredCompanies ? Math.min(desiredCompanies, 60) : 60)
+              // 全サービスを盛り込む（「○選」の上限は撤廃）
               .map((c, i) => {
                 const name = String(c?.name || '').trim()
                 const url = normalizeUrlMaybe(c?.websiteUrl)

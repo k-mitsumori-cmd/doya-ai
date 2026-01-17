@@ -94,62 +94,6 @@ function mdCharCount(s: string): number {
   return (s || '').replace(/\r\n/g, '\n').length
 }
 
-function mdHasUnclosedCodeFence(md: string): boolean {
-  const s = String(md || '')
-  const n = (s.match(/```/g) || []).length
-  return n % 2 === 1
-}
-
-function mdLooksTruncated(md: string): boolean {
-  const s = String(md || '').replace(/\r\n/g, '\n').trim()
-  if (!s) return false
-  if (s.includes('...(truncated)')) return true
-  if (mdHasUnclosedCodeFence(s)) return true
-
-  const tail = s.slice(-220)
-  // 途中で切れた時にありがちな終端記号
-  if (/[、・,:：（(「『【\[\/]\s*$/.test(tail)) return true
-  // 省略記号/執筆中っぽい文言
-  if (/(…|…\s*$|（執筆中）|続き|途中で|to be continued)/i.test(tail)) return true
-
-  // 末尾が文として閉じていない（ざっくり）
-  const last = s.slice(-1)
-  const okEnd = /[。．.!?！？）」』】\]]/.test(last)
-  return !okEnd
-}
-
-function mdHasSummarySection(md: string): boolean {
-  return /^##\s*(まとめ|要約|Summary)\b/m.test(String(md || ''))
-}
-
-async function generateSummarySection(args: { article: any; context: string }): Promise<string> {
-  const a = args.article
-  const prompt = [
-    'You are a Japanese business editor.',
-    'Write the FINAL section of the article.',
-    'Output ONLY Markdown and start with "## まとめ".',
-    NO_AI_MARKDOWN_RULES,
-    '',
-    `Title: ${String(a.title || '')}`,
-    `Keywords: ${((a.keywords as any) || []).join(', ')}`,
-    `Tone: ${String(a.tone || '')}`,
-    '',
-    'Rules:',
-    '- Summarize decisions/steps/checkpoints in a business-like way.',
-    '- End with a clear closing sentence (do not cut off).',
-    '',
-    'Context (truncated):',
-    clampText(args.context, 9000),
-  ].join('\n')
-  const out = await geminiGenerateText({
-    model: GEMINI_TEXT_MODEL_DEFAULT,
-    parts: [{ text: prompt }],
-    generationConfig: { temperature: 0.35, maxOutputTokens: 2200 },
-  })
-  const s = out?.trim() ? sanitizeAiMarkdown(out.trim()) : ''
-  return normalizeH2Heading(s, 'まとめ')
-}
-
 async function generateTopTables(article: any, merged: string): Promise<string> {
   // 短い記事ほど「冒頭に表」が効く（表でスキャン→本文を読ませる）
   const target = Math.max(3000, Number(article?.targetChars || 10000))
@@ -230,11 +174,29 @@ function sanitizeAiMarkdown(md: string): string {
   return s
 }
 
+function truncateMarkdownByParagraph(md: string, maxChars: number): string {
+  const max = Math.max(500, Number(maxChars || 0))
+  const chunks = String(md || '').replace(/\r\n/g, '\n').split(/\n{2,}/g)
+  const out: string[] = []
+  let cur = 0
+  for (const c of chunks) {
+    const t = c.trim()
+    if (!t) continue
+    const nextLen = cur + t.length + (out.length ? 2 : 0)
+    if (nextLen > max) break
+    out.push(t)
+    cur = nextLen
+  }
+  const trimmed = out.join('\n\n').trim()
+  return trimmed || String(md || '').slice(0, max).trim()
+}
+
 const NO_AI_MARKDOWN_RULES = [
   'Important formatting rules (must follow):',
   '- Do NOT use Markdown emphasis markers: do not output "**", "*", "__", "_".',
   '- Do NOT use checklist notation: do not output "- [ ]" or "- [x]". Use normal bullet/numbered lists instead.',
   '- Do NOT wrap labels like Q/A with bold. Use plain "Q:" / "A:".',
+  '- You can use bullet lists ("- " or "* ") and numbered lists ("1. " "2. ") when appropriate for readability.',
 ].join('\n')
 
 function normalizeH2Heading(md: string, fallback: string): string {
@@ -1393,15 +1355,30 @@ async function enrichCandidatesWithDetails(
         generationConfig: { temperature: 0.2, maxOutputTokens: 500 },
       })
 
-      enriched.push({
+      const enrichedCandidate = {
         ...c,
         pricing: result?.pricing || c.pricing || '要問い合わせ',
         features: Array.isArray(result?.features) ? result.features.slice(0, 5) : c.features,
         description: result?.description || c.description || c.notes,
         websiteUrl: normalizeUrlMaybe(result?.officialUrl) || c.websiteUrl,
         enriched: true,
-      })
+      }
+      enriched.push(enrichedCandidate)
       detailCount++
+
+      // 取得した情報をイベントで通知
+      const featuresText = Array.isArray(enrichedCandidate.features) && enrichedCandidate.features.length > 0
+        ? enrichedCandidate.features.slice(0, 2).join('、')
+        : ''
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'success',
+        title: `✅ ${c.name} の情報を取得`,
+        detail: [
+          enrichedCandidate.pricing ? `料金: ${enrichedCandidate.pricing}` : '',
+          featuresText ? `特徴: ${featuresText}` : '',
+        ].filter(Boolean).join(' / ') || '詳細情報を抽出しました',
+      })
     } catch {
       enriched.push(c)
     }
@@ -1743,7 +1720,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
       const maxStart = desired >= 40 ? 100 : desired >= 20 ? 60 : 30
       const organicPool: { title: string; url: string; snippet?: string }[] = []
 
-      for (let start = 0; start < maxStart; start += 10) {
+      for (let start = 0; start < maxStart && uniqCandidatesByName(collected).length < desired; start += 10) {
         let found: { organic: { title: string; url: string; snippet?: string }[] } | null = null
         try {
           found = await serpapiSearchGoogle({ query: q, gl, hl, num: 10, start })
@@ -1785,7 +1762,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   let merged = uniqCandidatesByName(collected)
 
   // ========= 最終フォールバック: 検索結果から候補が得られなかった場合はGemini知識から生成 =========
-  if (merged.length < Math.max(3, desired)) {
+  if (merged.length < Math.max(3, Math.ceil(desired * 0.3))) {
     await pushResearchEvent(jobId, {
       at: Date.now(),
       kind: 'warn',
@@ -1855,11 +1832,18 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
   })
   merged = await enrichCandidatesWithDetails(merged, jobId)
 
+  // 詳細情報（料金・特徴）が取得できた件数をカウント
+  const enrichedCount = merged.filter((c) => c?.enriched || c?.pricing).length
+  const withUrlCount = merged.filter((c) => c?.websiteUrl).length
   await pushResearchEvent(jobId, {
     at: Date.now(),
     kind: 'candidates',
-    title: `候補を確定しました（${merged.length}/${desired}社）`,
-    detail: merged.slice(0, 8).map((c) => String(c?.name || '').trim()).filter(Boolean).join(' / '),
+    title: `🎯 候補を確定（${merged.length}/${desired}社）`,
+    detail: [
+      `料金情報: ${enrichedCount}社`,
+      `公式URL: ${withUrlCount}社`,
+      merged.slice(0, 5).map((c) => String(c?.name || '').trim()).filter(Boolean).join('、'),
+    ].join(' / '),
   })
   await setResearchStats(jobId, { candidates: merged.length, candidatesTarget: desired })
 
@@ -2118,6 +2102,9 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         '- 公式サイト・一次情報を前提に調査した内容のみを記載する',
         '- 不明な情報は推測しない（「公式に明記なし」「要問い合わせ」「非公開」と明示）',
         '',
+        'Required structure (must appear in outline):',
+        '- 導入（比較が必要な理由/失敗例）',
+        `- 比較対象サービス一覧（表：サービス名/特徴/料金/向いている人/公式URL）※候補が不足する場合は不足注記を入れ、調査できた範囲（M社）で比較する`,
         '★★★ CRITICAL: 網羅性（全ツール紹介）を最優先 ★★★',
         '比較対象の全サービスを、必ず本文内で紹介してください（短くてもOK）。',
         'IMPORTANT:',
@@ -2141,14 +2128,6 @@ async function generateOutline(article: any, researchContext: string): Promise<S
         '  - 選び方（比較軸）',
         '  - 厳選3社（結論ファースト）',
         '  - 全社比較表（一覧）→ 各社特徴（全社分）',
-        '',
-        'Required structure (must appear in outline):',
-        '- 導入（比較が必要な理由/失敗例）',
-        `- 比較対象サービス一覧（表：サービス名/特徴/料金/向いている人/公式URL）※候補が不足する場合は不足注記を入れ、調査できた範囲（M社）で比較する`,
-        '',
-        '★ 各ツール紹介（必須）:',
-        '- 「各ツール紹介」セクション内で、候補リストの全ツールを漏れなく紹介する（H3推奨）',
-        '',
         `- サービス比較表（横並び：機能/価格帯/特徴/サポートなど）※候補が不足する場合は不足注記を入れ、調査できた範囲（M社）で比較する`,
         '- タイプ別おすすめ（初心者/コスト/高機能/中小/大企業）',
         '- まとめ（選び方/チェックポイント/結論）',
@@ -2254,8 +2233,7 @@ async function generateOutline(article: any, researchContext: string): Promise<S
     `- sections: exactly ${minSections} items (H2).`,
     '- Each section: {h2: string, intentTag: string, plannedChars: number (1800-3200), h3: string[], h4: {}}',
     '- Keep h4 empty ({}) to reduce JSON size. Details will be generated per section.',
-    '- intentTag: 定義/比較/手順/事例/注意点/FAQ/用語/サービス詳細 etc.',
-    '- For comparison articles: include ONE section with intentTag "サービス詳細" (or "ツール紹介") that covers ALL candidates.',
+    '- intentTag: 定義/比較/手順/事例/注意点/FAQ/用語 etc.',
     '- faq: array of 5-10 question strings.',
     '- glossary: array of 5-10 term strings.',
     '',
@@ -2421,13 +2399,73 @@ async function ensureOutlineAndSections(jobId: string) {
   })
   await p.seoArticle.update({ where: { id: article.id }, data: { status: 'RUNNING' } })
 
-  // 全記事: 参考URLがある場合は、1回のadvanceで最大1件だけ解析してseoReferenceへ保存（タイムアウト対策）
+  // 比較記事の場合: 全ての参考URLを解析してからアウトラインを生成
+  // 通常記事の場合: 1件だけ解析（タイムアウト対策）
+  const maxUrlsToResearch = isComparison ? 10 : 1
   try {
     await p.seoJob.update({
       where: { id: jobId },
       data: { step: isComparison ? 'cmp_extract' : job.step, progress: Math.max(12, Number(job.progress || 0)), status: 'running' },
     })
-    await progressiveResearchFromReferenceUrls(article, { maxUrls: 1, jobId })
+    await progressiveResearchFromReferenceUrls(article, { maxUrls: maxUrlsToResearch, jobId })
+    
+    // 比較記事の場合、調査結果を記事に反映
+    if (isComparison) {
+      // 調査結果から比較候補を更新
+      const updatedArticle = await p.seoArticle.findUnique({
+        where: { id: article.id },
+        include: { references: true },
+      })
+      if (updatedArticle) {
+        // 調査結果から新しい候補を抽出して追加
+        const existingCandidates = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
+        const existingNames = existingCandidates.map((c: any) => String(c?.name || '').toLowerCase().trim())
+        
+        // 参照から新しい候補を抽出
+        const newCandidates: any[] = []
+        for (const ref of updatedArticle.references || []) {
+          const extracted = (ref as any)?.extracted
+          if (extracted && Array.isArray(extracted.candidates)) {
+            for (const c of extracted.candidates) {
+              const name = String(c?.name || '').toLowerCase().trim()
+              if (name && !existingNames.includes(name) && !newCandidates.some((nc: any) => String(nc?.name || '').toLowerCase().trim() === name)) {
+                newCandidates.push(c)
+                existingNames.push(name)
+              }
+            }
+          }
+        }
+        
+        if (newCandidates.length > 0) {
+          const mergedCandidates = [...existingCandidates, ...newCandidates]
+          await p.seoArticle.update({
+            where: { id: article.id },
+            data: { comparisonCandidates: mergedCandidates },
+          })
+          article.comparisonCandidates = mergedCandidates
+          
+          await pushResearchEvent(jobId, {
+            at: Date.now(),
+            kind: 'info',
+            title: `調査から${newCandidates.length}件の新しい候補を追加`,
+            detail: `競合記事の調査から新しいサービス候補を抽出しました: ${newCandidates.map((c: any) => c?.name).filter(Boolean).join(', ')}`,
+          })
+          
+          // タイトルの「○選」を更新
+          const actualCount = uniqCandidatesByName(mergedCandidates).length
+          if (actualCount > 0) {
+            const updatedTitle = updateTitleWithActualCount(article.title, actualCount)
+            if (updatedTitle !== article.title) {
+              await p.seoArticle.update({
+                where: { id: article.id },
+                data: { title: updatedTitle },
+              })
+              article.title = updatedTitle
+            }
+          }
+        }
+      }
+    }
   } catch {
     // ignore（ネットワーク不調でも本文生成は継続）
   }
@@ -2441,6 +2479,7 @@ async function ensureOutlineAndSections(jobId: string) {
     outlineMd = String(article.outline || '')
     outline = ensureMinSections(parseOutlineFromMarkdown(outlineMd, target), target)
   } else {
+    // 調査結果を含むリサーチコンテキストを構築
     const researchContext = await buildResearchContext(article.id)
     outline = await generateOutline(article, researchContext)
     outlineMd = toOutlineMarkdown(outline)
@@ -2723,7 +2762,6 @@ async function generateSection(jobId: string) {
       })
       if (out && out.trim()) raw = out.trim()
       if (mdCharCount(raw) >= minSectionChars) break
-      // 空/短文の場合は次のattemptへ
       await new Promise((r) => setTimeout(r, 600 + attempt * 800))
     } catch {
       await new Promise((r) => setTimeout(r, 600 + attempt * 800))
@@ -2732,7 +2770,8 @@ async function generateSection(jobId: string) {
 
   if (!raw || mdCharCount(raw) < 120) {
     // どうしても生成できない場合のフォールバック（止めずに完走させる）
-    raw = `## ${String(next.headingPath || `セクション${next.index + 1}`).trim()}\n\n` +
+    raw =
+      `## ${String(next.headingPath || `セクション${next.index + 1}`).trim()}\n\n` +
       `このセクションは生成が不安定だったため、最低限のたたき台を出力します。必要に応じて「本文編集」で追記してください。\n\n` +
       `### ポイント\n- 読者が知りたい結論（要点）\n- 選び方/判断基準（チェックリスト）\n- よくある失敗と対策\n\n` +
       `### チェックリスト\n- 目的（何を達成したいか）\n- 前提条件（予算/体制/期間）\n- 比較軸（機能/料金/運用/サポート）\n\n` +
@@ -3003,27 +3042,26 @@ async function integrate(jobId: string) {
   const sections = job.sections
   const memo = article.memo?.content
 
-  // 全てのセクションが生成済み（reviewed）かつ content が存在することを確認（途中で完成扱いになるのを防ぐ）
-  const incompleteSections = sections.filter((s: any) => s.status !== 'reviewed' || !s.content || !String(s.content).trim())
+  // 全てのセクションが生成済み（reviewed）であることを確認（記事が途中で終わるのを防ぐ）
+  const incompleteSections = sections.filter((s: any) => s.status !== 'reviewed' || !s.content || !s.content.trim())
   if (incompleteSections.length > 0) {
     const missingIndices = incompleteSections.map((s: any) => s.index).join(', ')
     throw new Error(
-      `統合前に全てのセクションを生成する必要があります。未生成/空セクション: ${missingIndices} (全${sections.length}セクション中${incompleteSections.length}件未完成)`
+      `統合前に全てのセクションを生成する必要があります。未生成セクション: ${missingIndices} (全${sections.length}セクション中${incompleteSections.length}件未完成)`
     )
   }
 
+  // reviewed かつ content が存在するセクションのみを統合（記事が途中で終わるのを防ぐ）
   const mergedSections = sections
-    .filter((s: any) => s.status === 'reviewed' && s.content && String(s.content).trim())
+    .filter((s: any) => s.status === 'reviewed' && s.content && s.content.trim())
     .map((s: any) => normalizeH2Heading(s.content || '', s.headingPath || `section_${s.index}`))
     .filter(Boolean)
     .join('\n\n')
 
+  // セクションが1つも統合されない場合はエラー
   if (!mergedSections || !mergedSections.trim()) {
     throw new Error('統合するセクションがありません。全てのセクションが生成済みであることを確認してください。')
   }
-
-  // 原則: 50,000字以内に収める（ただし“途中で切れる”ことは最優先で回避）
-  const HARD_SOFT_CAP = 50000
 
   // まずは“セクション結合”で文字数を担保（ここで短くしない）
   const parts: string[] = [`# ${article.title}`]
@@ -3044,11 +3082,11 @@ async function integrate(jobId: string) {
 
   // 短い記事ほど、冒頭に表を置く（読者のスキャン性を最大化）
   const topTables = await generateTopTables(article, mergedSections)
-  const topTablesIdx = topTables ? (parts.push(topTables), parts.length - 1) : -1
+  if (topTables) parts.push(topTables)
 
   // LLMOの追加ブロック（短くてもOK、品質補助＆文字数補助）
   const llmoBlocks = await generateLlmoBlocks(article, mergedSections)
-  const llmoBlocksIdx = llmoBlocks ? (parts.push(llmoBlocks), parts.length - 1) : -1
+  if (llmoBlocks) parts.push(llmoBlocks)
 
   if (memo) {
     parts.push('<!-- リライト用メモ（次回改善用） -->')
@@ -3074,8 +3112,7 @@ async function integrate(jobId: string) {
     }
   }
 
-  // 引用元（参考URL）: 「## まとめ」内のH3として末尾に含める（記事が“まとめ”で終わるようにする）
-  let refsAppend = ''
+  // 引用元（参考URL）を記事末尾に明示（実在サービス・一次情報の担保）
   try {
     const refs = await p.seoReference.findMany({
       where: { articleId: article.id },
@@ -3091,38 +3128,29 @@ async function integrate(jobId: string) {
       ])
     ).slice(0, 25)
     if (mergedUrls.length) {
-      const lines = [
-        '### 参考文献（引用元）',
-        '※ 本文は引用元の内容をそのまま転載せず、要点を言い換えて整理しています。',
-        ...mergedUrls.map((u) => `- ${u}`),
-      ]
-      refsAppend = lines.join('\n')
+      parts.push('')
+      parts.push('## 参考文献（引用元）')
+      parts.push('※ 本文は引用元の内容をそのまま転載せず、要点を言い換えて整理しています。')
+      for (const u of mergedUrls) parts.push(`- ${u}`)
     }
   } catch {
-    refsAppend = ''
+    // ignore
   }
 
-  // 目標文字数に足りない場合は、追補セクションを自動生成して埋める（最大5回）
-  // ただし、原則 50,000字以内に収めるため、追補には字数バジェットを適用する
+  // 目標文字数に足りない場合は、追補セクションを自動生成して埋める
+  // NOTE: 大記事（例: 50,000字）でも途中でDONEにならないよう、目標に応じて追補回数/追補量を増やす
   const target = Math.max(3000, Number(article.targetChars || 10000))
-  const softCap = Math.min(HARD_SOFT_CAP, target)
-  // まとめ + 参考文献（H3）ぶんを確保（概算）
-  const reserveForEnding = 2600 + (refsAppend ? 1500 : 0)
   const maxExtraIterations =
     target >= 40000 ? 14 : target >= 30000 ? 12 : target >= 20000 ? 10 : target >= 12000 ? 7 : target < 10000 ? 2 : 5
-  const extraSections: string[] = []
   for (let i = 0; i < maxExtraIterations; i++) {
     const cur = mdCharCount(parts.join('\n\n'))
-    // 原則 50,000字以内: 追補は softCap の範囲で止める
-    if (cur >= Math.max(0, softCap - reserveForEnding)) break
-    if (cur >= target) break // 目標超過は許容、ただし不足は埋める
-    const remainingBudget = Math.max(0, softCap - reserveForEnding - cur)
-    const need = Math.min(Math.round(target - cur), remainingBudget)
-    if (need <= 0) break
+    if (cur >= target * 0.90) break // 90%以上あればOK（小さい記事向けに緩和）
+    const needTotal = Math.max(0, Math.round(target * 0.95 - cur))
     const remainingIters = Math.max(1, maxExtraIterations - i)
+    // 1回の追補目安（大記事は大きめに。小記事は従来通り）
     const perTarget = target >= 20000
-      ? Math.min(12000, Math.max(4500, Math.round(need / remainingIters)))
-      : Math.min(3500, Math.max(600, need))
+      ? Math.min(12000, Math.max(4500, Math.round(needTotal / remainingIters)))
+      : Math.min(3500, Math.max(600, needTotal))
     const addPrompt = [
       'You are a Japanese SEO writer.',
       'Write an additional section to improve completeness and meet the target length.',
@@ -3148,129 +3176,157 @@ async function integrate(jobId: string) {
         generationConfig: { temperature: 0.6, maxOutputTokens: 6500 },
       })
       if (extra && extra.trim()) {
-        const trimmed = extra.trim()
-        parts.push(trimmed)
-        extraSections.push(trimmed)
+        parts.push(extra.trim())
       } else {
         // 空出力でも止めずに最低限の追補を入れて前進させる
-        const fb = [
-          '## 補足：実務で失敗しないためのチェックリスト',
-          '',
-          '（自動追補が空出力だったため、最低限の追補を挿入しています。必要に応じて追記してください。）',
-          '',
-          '### チェックリスト',
-          '- 目的（何を達成したいか）を1文で定義する',
-          '- 前提条件（予算/体制/期限/必須機能）を整理する',
-          '- 比較軸（料金/機能/運用/サポート/セキュリティ）を決める',
-          '- 公式情報（仕様/料金/制限）を一次情報で確認する',
-          '- 無料トライアルで検証し、導入後の運用フローを決める',
-        ].join('\n')
-        parts.push(fb)
-        extraSections.push(fb)
+        parts.push(
+          [
+            '## 補足：実務で失敗しないためのチェックリスト',
+            '',
+            '（自動追補が空出力だったため、最低限の追補を挿入しています。必要に応じて追記してください。）',
+            '',
+            '### チェックリスト',
+            '- 目的（何を達成したいか）を1文で定義する',
+            '- 前提条件（予算/体制/期限/必須機能）を整理する',
+            '- 比較軸（料金/機能/運用/サポート/セキュリティ）を決める',
+            '- 公式情報（仕様/料金/制限）を一次情報で確認する',
+            '- 無料トライアルで検証し、導入後の運用フローを決める',
+          ].join('\n')
+        )
       }
     } catch (e: any) {
+      // 失敗しても止めず、次の追補で再試行（Vercel ProのmaxDurationで回し切る）
       await pushResearchEvent(jobId, {
         at: Date.now(),
         kind: 'warn',
         title: '追補セクション生成に失敗（継続します）',
         detail: e?.message || 'unknown error',
       })
-      const fb = [
-        '## 補足：補足解説（自動生成のフォールバック）',
-        '',
-        'このパートは生成が不安定だったため、最低限の追補を挿入しています。必要に応じて「本文編集」で追記してください。',
-        '',
-        '### 追加で書くと強い観点',
-        '- 具体例（良い例/悪い例）',
-        '- よくある失敗と回避策',
-        '- 判断基準（迷った時の見分け方）',
-      ].join('\n')
-      parts.push(fb)
-      extraSections.push(fb)
+      // フォールバックで前進させる
+      parts.push(
+        [
+          '## 補足：補足解説（自動生成のフォールバック）',
+          '',
+          'このパートは生成が不安定だったため、最低限の追補を挿入しています。必要に応じて「本文編集」で追記してください。',
+          '',
+          '### 追加で書くと強い観点',
+          '- 具体例（良い例/悪い例）',
+          '- よくある失敗と回避策',
+          '- 判断基準（迷った時の見分け方）',
+        ].join('\n')
+      )
     }
   }
 
-  // 必ず「まとめ」で終わる
-  if (!mdHasSummarySection(parts.join('\n\n'))) {
+  // 記事が途中で終わらないよう、必ず「まとめ」セクションを追加
+  const hasSummary = parts.some((p) => /^##\s+(まとめ|結論|まとめと今後のアクション)/i.test(p))
+  if (!hasSummary) {
     try {
-      const summary = await generateSummarySection({ article, context: parts.join('\n\n') })
-      if (summary.trim()) parts.push(summary.trim())
-    } catch {
-      // 最低限のまとめ（生成失敗しても“途中で終わる”のを防ぐ）
-      parts.push('## まとめ\n\n- （要点）\n- （次のアクション）\n\n最後までお読みいただきありがとうございました。')
+      const summaryPrompt = [
+        'You are a Japanese SEO writer.',
+        'Write a concise summary section (まとめ) that concludes the article.',
+        'The summary should:',
+        '- Recap the main points discussed in the article',
+        '- Provide actionable next steps or recommendations',
+        '- End with an encouraging message for the reader',
+        'Return Markdown only. Start with "## まとめ".',
+        NO_AI_MARKDOWN_RULES,
+        '',
+        `Article title: ${article.title}`,
+        `Keywords: ${((article.keywords as any) || []).join(', ')}`,
+        `Tone: ${article.tone}`,
+        '',
+        'Article content (truncated):',
+        clampText(parts.join('\n\n'), 12000),
+      ]
+        .filter(Boolean)
+        .join('\n')
+
+      const summary = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: summaryPrompt }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 2000 },
+      })
+      if (summary && summary.trim()) {
+        parts.push('')
+        parts.push(sanitizeAiMarkdown(summary.trim()))
+      } else {
+        // フォールバック: シンプルなまとめを追加
+        parts.push('')
+        parts.push('## まとめ')
+        parts.push('')
+        parts.push(
+          `本記事では、${article.title}について解説しました。記事の内容を参考に、ぜひ実践してみてください。`
+        )
+      }
+    } catch (summaryErr: any) {
+      // エラー時もフォールバックでまとめを追加（記事が途中で終わるのを防ぐ）
+      console.warn('[seo integrate] summary generation failed:', summaryErr?.message)
+      parts.push('')
+      parts.push('## まとめ')
+      parts.push('')
+      parts.push(
+        `本記事では、${article.title}について解説しました。記事の内容を参考に、ぜひ実践してみてください。`
+      )
     }
-  }
-  if (refsAppend) {
-    // まとめセクションの末尾に出典を“含める”
-    parts.push(refsAppend)
   }
 
   let finalMarkdown = parts.join('\n\n')
 
-  // 原則 50,000字以内: 超過している場合は、影響の小さい順に削って収める
-  // - 追補（自動追加セクション）→ LLMOブロック → 冒頭表 の順で削る
-  const removeAt = (idx: number) => {
-    if (idx < 0 || idx >= parts.length) return
-    parts.splice(idx, 1)
-  }
-  if (softCap > 0) {
-    while (mdCharCount(finalMarkdown) > softCap + 200) {
-      let removed = false
-      const lastExtra = extraSections.pop()
-      if (lastExtra) {
-        const pos = parts.lastIndexOf(lastExtra)
-        if (pos >= 0) {
-          parts.splice(pos, 1)
-          removed = true
-        }
-      }
-      if (!removed && llmoBlocksIdx >= 0 && parts[llmoBlocksIdx]) {
-        removeAt(llmoBlocksIdx)
-        removed = true
-      }
-      if (!removed && topTablesIdx >= 0 && parts[topTablesIdx]) {
-        removeAt(topTablesIdx)
-        removed = true
-      }
-      if (!removed) break
-      finalMarkdown = parts.join('\n\n')
-    }
-  }
+  // 文字数制御（方針: 上限は制限しない / 下限は厳しめ）
+  // - 上限: 制限なし（無理に短くしない。長くても品質を優先）
+  // - 下限: 目標を大きく下回る短文（例: 3000字→1000字）を絶対に作らない
+  const minAllowed = Math.round(target * 0.85)
 
-  // 途中で切れている場合は「続き」を追記して完結させる（最大2回）
-  for (let i = 0; i < 2; i++) {
-    if (!mdLooksTruncated(finalMarkdown)) break
-    const contPrompt = [
-      'You are a Japanese business writer.',
-      'Task: Continue the article from EXACTLY where it ends.',
-      'Output ONLY the continuation in Markdown. Do NOT repeat previous text.',
-      'CRITICAL: Finish any unfinished sentence/paragraph/table and end with a complete closing sentence.',
-      'If the article does not end with "## まとめ", append/complete that section at the end.',
-      NO_AI_MARKDOWN_RULES,
-      '',
-      `Title: ${String(article.title || '')}`,
-      `Tone: ${String(article.tone || '')}`,
-      '',
-      'Last part of article (tail):',
-      clampText(finalMarkdown.slice(-9000), 9000),
-    ].join('\n')
-    try {
-      const cont = await geminiGenerateText({
-        model: GEMINI_TEXT_MODEL_DEFAULT,
-        parts: [{ text: contPrompt }],
-        generationConfig: { temperature: 0.35, maxOutputTokens: 6500 },
+  // 上限超過時の短縮処理は削除（無理に短くすると記事がおかしくなるため）
+  // 文字数が長くても、品質を優先してそのまま使用する
+
+  // もし短すぎる場合は、統合の最終段で追加セクションを生成して底上げする
+  try {
+    const maxBottomUp = target >= 20000 ? 10 : 3
+    for (let i = 0; i < maxBottomUp; i++) {
+      const cur = mdCharCount(finalMarkdown)
+      if (cur >= minAllowed) break
+      const need = Math.round(minAllowed - cur)
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'warn',
+        title: '本文が短すぎるため追記で補います',
+        detail: `${cur.toLocaleString()}字 → 最低${minAllowed.toLocaleString()}字へ（+${need.toLocaleString()}字目安）`,
       })
-      const add = cont?.trim() ? sanitizeAiMarkdown(cont.trim()) : ''
-      if (!add) break
-      finalMarkdown = `${finalMarkdown.trim()}\n\n${add}\n`
-    } catch {
-      break
-    }
-  }
 
-  // 最終的にまとめが無い/崩れた場合も保険で付与
-  if (!mdHasSummarySection(finalMarkdown)) {
-    finalMarkdown = `${finalMarkdown.trim()}\n\n## まとめ\n\n最後までお読みいただきありがとうございました。\n`
+      const addPrompt = [
+        'You are a Japanese SEO writer.',
+        'Write ONE additional section to improve completeness.',
+        'Do NOT copy from sources; add originality (experience, tradeoffs, failure cases, checklists).',
+        'Return Markdown only and start with "## ".',
+        '',
+        `Article title: ${article.title}`,
+        `Keywords: ${((article.keywords as any) || []).join(', ')}`,
+        `Tone: ${article.tone}`,
+        memo ? `User notes (preferences/constraints):\n${clampText(memo, 900)}` : '',
+        '',
+        `Target chars for this additional section: ~${Math.min(12000, Math.max(2500, need))}`,
+        '',
+        'Context (truncated):',
+        clampText(finalMarkdown, 9000),
+      ]
+        .filter(Boolean)
+        .join('\n')
+
+      try {
+        const extra = await geminiGenerateText({
+          model: GEMINI_TEXT_MODEL_DEFAULT,
+          parts: [{ text: addPrompt }],
+          generationConfig: { temperature: 0.6, maxOutputTokens: 4500 },
+        })
+        if (extra && extra.trim()) finalMarkdown = `${finalMarkdown.trim()}\n\n${extra.trim()}`
+      } catch {
+        break
+      }
+    }
+  } catch {
+    // ignore
   }
 
   // 比較記事: 候補0件で本文を完成させない（「比較になってない」記事を防ぐ）
@@ -3727,25 +3783,60 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
   try {
     await ensureOutlineAndSections(jobId)
 
-    const afterOutline = await p.seoJob.findUnique({
-      where: { id: jobId },
-      include: { sections: true },
-    })
-    // NOTE: statusだけでなく content も必須。空contentでreviewedになっていると「途中までで完成」になるため。
-    const remaining = (afterOutline?.sections || []).some((s: any) => s.status !== 'reviewed' || !s.content || !String(s.content).trim())
+    // 全てのセクションが生成されるまで繰り返し実行（記事が途中で終わるのを防ぐ）
+    let maxIterations = 50 // 無限ループ防止
+    let iteration = 0
+    while (iteration < maxIterations) {
+      const currentJob = await p.seoJob.findUnique({
+        where: { id: jobId },
+        include: { sections: true },
+      })
+      if (!currentJob) throw new Error('job not found')
 
-    if (remaining) {
+      const remaining = (currentJob.sections || []).filter(
+        (s: any) => s.status !== 'reviewed' || !s.content || !s.content.trim()
+      )
+
+      if (remaining.length === 0) {
+        // 全てのセクションが生成済み
+        break
+      }
+
+      // 未生成のセクションを1つ生成
       try {
         await generateSection(jobId)
-      } catch (e: any) {
+      } catch (sectionErr: any) {
+        // セクション生成エラーでも、次のセクションを試みる（ただし、連続エラーは避ける）
+        console.error(`[seo generateSection] failed for job ${jobId}:`, sectionErr?.message)
         // エラーは極力起こさず、完走を優先（ログだけ残して継続）
         await pushResearchEvent(jobId, {
           at: Date.now(),
           kind: 'warn',
-          title: 'セクション生成に失敗しました（自動で再試行します）',
-          detail: e?.message || 'unknown error',
+          title: 'セクション生成に失敗しました（自動で継続）',
+          detail: sectionErr?.message || 'unknown error',
         })
       }
+
+      iteration++
+    }
+
+    // 最終チェック: 全てのセクションが生成済みか確認
+    const finalCheck = await p.seoJob.findUnique({
+      where: { id: jobId },
+      include: { sections: true },
+    })
+    const stillRemaining = (finalCheck?.sections || []).filter(
+      (s: any) => s.status !== 'reviewed' || !s.content || !s.content.trim()
+    )
+
+    if (stillRemaining.length > 0) {
+      // 未生成が残るなら統合しない（途中で完成扱いにしない）
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'warn',
+        title: '未生成セクションが残っているため、次回も生成を継続します',
+        detail: `未生成/空セクション: ${stillRemaining.map((s: any) => s.index).join(', ')}`,
+      })
       return { jobId }
     }
 
