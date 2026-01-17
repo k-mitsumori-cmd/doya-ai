@@ -404,6 +404,20 @@ model SwipeCelebrationImage {
   @@index([category])
 }
 
+model SwipeQuestionImage {
+  id        String   @id @default(cuid())
+  category  String   // カテゴリ（例: "記事の方向性", "記事タイプ", "ターゲット読者"など）
+  prompt    String   @db.Text // 生成時のプロンプト
+  imageBase64 String @db.Text // base64エンコードされた画像データ
+  mimeType  String   @default("image/png")
+  width     Int?
+  height    Int?
+  
+  createdAt DateTime @default(now())
+
+  @@index([category])
+}
+
 model SeoJob {
   id        String     @id @default(cuid())
   articleId String
