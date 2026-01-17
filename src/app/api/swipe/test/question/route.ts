@@ -50,11 +50,57 @@ export async function POST(req: NextRequest) {
     // これまでの回答を整理
     const answersText = answers.map((a: any) => `Q: ${a.question}\nA: ${a.answer === 'yes' ? 'はい' : 'いいえ'}`).join('\n\n')
 
+    // キーワードの関連キーワードを調査（必要に応じて）
+    const keywordParts = swipeSession.mainKeyword.split(',').map((k: string) => k.trim())
+    let relatedKeywordsText = ''
+    
+    // 回答数が少ない場合（初期段階）は関連キーワードを調査
+    if (answers.length < 10) {
+      try {
+        const keywordAnalysisPrompt = `あなたはSEOキーワード分析の専門家です。
+以下のキーワードについて、関連キーワードや派生キーワードを分析してください。
+
+主キーワード: ${keywordParts.join(', ')}
+
+要件:
+- 主キーワードに関連するキーワードを5-10個抽出してください
+- 関連キーワードには、類義語、上位概念、下位概念、関連語などを含めてください
+
+出力形式:
+{
+  "relatedKeywords": ["関連キーワード1", "関連キーワード2", ...]
+}
+
+JSONのみを出力してください。`
+
+        const analysisResponse = await geminiGenerateText({
+          model: GEMINI_TEXT_MODEL_DEFAULT,
+          parts: [{ text: keywordAnalysisPrompt }],
+          generationConfig: {
+            maxOutputTokens: 500,
+            temperature: 0.7,
+          },
+        })
+        
+        const analysisMatch = analysisResponse.match(/\{[\s\S]*\}/)
+        if (analysisMatch) {
+          const analysisData = JSON.parse(analysisMatch[0])
+          const relatedKeywords = Array.isArray(analysisData.relatedKeywords) ? analysisData.relatedKeywords : []
+          if (relatedKeywords.length > 0) {
+            relatedKeywordsText = `\n関連キーワード: ${relatedKeywords.join(', ')}`
+          }
+        }
+      } catch (e) {
+        console.warn('[keyword analysis] error:', e)
+        // エラー時は無視
+      }
+    }
+
     // 次の質問を3-4問まとめて生成するか、完了判定を行う
     const prompt = `あなたはSEO記事作成のための質問を生成するAIです。
 これまでの回答を分析し、記事を作成するために必要な情報が揃っているか判断してください。
 
-主キーワード: ${swipeSession.mainKeyword}
+主キーワード: ${swipeSession.mainKeyword}${relatedKeywordsText}
 
 これまでの回答:
 ${answersText}
@@ -62,6 +108,7 @@ ${answersText}
 要件:
 1. まだ必要な情報がある場合は、次の質問を3-4問まとめて生成してください
    - 質問はYes/Noで答えられる形式にしてください
+   - 「このキーワードは狙いますか？」「この関連キーワードも含めますか？」のような形で、キーワードや関連キーワードを具体的に質問に含めてください
    - 極力短く、はっきり分かりやすい質問にしてください（30文字以内を推奨）
    - 長文は禁止。1文で簡潔に表現してください
    - 記事の種類、ターゲット読者、関連キーワード、記事の方向性などに関連する質問にしてください
