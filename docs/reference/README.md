@@ -5,34 +5,6 @@
 ## 📖 メインドキュメント
 
 **👉 [DEVELOPMENT_REFERENCE.md](./DEVELOPMENT_REFERENCE.md)** - **完全開発ガイド（統合版）**
-<<<<<<< HEAD
-=======
-
-全ての開発情報を1つのドキュメントにまとめた統合版です。以下の内容が含まれています：
-
-- ✅ 新サービス追加手順
-- ✅ 実装パターン集（API、ファイルアップロード、GCS、プラン管理など）
-- ✅ デザインシステム・UIガイドライン
-- ✅ サイドバー実装パターン
-- ✅ サービス分離ルール
-- ✅ アニメーション仕様
-- ✅ ベータ版サービス管理
-- ✅ デプロイ手順・トラブルシューティング
-
-## 📁 個別ドキュメント（参考用）
-
-以下のドキュメントは参考用として残していますが、メインの情報は上記の統合ドキュメントを参照してください。
-
-| ファイル | 内容 | 状態 |
-|----------|------|------|
-| [development-guide.md](./development-guide.md) | 開発ガイド（個別版） | 統合済み |
-| [implementation-patterns.md](./implementation-patterns.md) | 実装パターン集（個別版） | 統合済み |
-| [design-system.md](./design-system.md) | デザインシステム（個別版） | 統合済み |
-| [sidebar-pattern.md](./sidebar-pattern.md) | サイドバー実装パターン（個別版） | 統合済み |
-| [service-isolation.md](./service-isolation.md) | サービス分離ルール（個別版） | 統合済み |
-| [animation-spec.md](./animation-spec.md) | アニメーション仕様（個別版） | 統合済み |
-| [beta-services.md](./beta-services.md) | ベータ版サービス管理（個別版） | 統合済み |
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
 
 全ての開発情報を1つのドキュメントにまとめた統合版です。以下の内容が含まれています：
 
@@ -141,12 +113,14 @@
 - [ ] サービス分離ルールを遵守することを理解した
 
 **詳細なチェックリスト**: [新サービス開発 完全チェックリスト](./development-guide.md#新サービス開発-完全チェックリスト)
-=======
-# 7. デプロイ（変更を反映）
-#    → development-guide.md の「デプロイ手順」を参照
 
-```
->>>>>>> d95c3593108505b4f8da75e5f5c92339c7648b3f
+### Step 4: デプロイ（変更を反映）
+
+**👉 [development-guide.md](./development-guide.md#デプロイ手順) の「デプロイ手順」を参照**
+
+変更を本番環境に反映する方法：
+- `git push origin main` でVercelが自動デプロイ
+- Vercelダッシュボードでビルドログを確認
 
 ## 原則
 
