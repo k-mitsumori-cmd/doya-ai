@@ -116,7 +116,15 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
               src={`data:${questionImage.mimeType};base64,${questionImage.imageBase64}`}
               alt={question.category}
               className="w-full h-48 object-cover"
+              loading="eager"
+              decoding="async"
             />
+          </div>
+        )}
+        {/* 画像ローディング中のプレースホルダー */}
+        {!questionImage && index === 0 && (
+          <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-100 to-teal-100 h-48 flex items-center justify-center">
+            <div className="text-emerald-600 text-sm font-bold">画像読み込み中...</div>
           </div>
         )}
 
