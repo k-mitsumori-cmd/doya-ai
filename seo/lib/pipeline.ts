@@ -2472,10 +2472,35 @@ async function ensureOutlineAndSections(jobId: string) {
     // ignore
   }
 
-  // 全記事: 参照URLが未入力なら、SerpAPIで参考URLを自動収集（キーがある場合のみ）
-  // → 最新情報・事例・ハウツー・料金など多角的に収集
+  // 全記事: キーワードから競合記事を積極的に収集（SEO最適化のため）
+  // → 最新情報・事例・ハウツー・料金など多角的に収集して、SEOで勝てる記事を作る
   try {
+    await p.seoJob.update({
+      where: { id: jobId },
+      data: { step: isComparison ? 'cmp_research' : 'research', progress: Math.max(8, Number(job.progress || 0)), status: 'running' },
+    })
+    await pushResearchEvent(jobId, {
+      at: Date.now(),
+      kind: 'search',
+      title: 'キーワードから競合記事を収集中…',
+      detail: `SEOで勝てる記事を作るため、競合記事を分析します`,
+    })
     await maybeDiscoverReferenceUrls(article, jobId)
+    
+    // 収集完了を確認
+    const updatedArticle = await p.seoArticle.findUnique({
+      where: { id: article.id },
+    })
+    if (updatedArticle) {
+      const refUrls = Array.isArray(updatedArticle.referenceUrls) ? updatedArticle.referenceUrls : []
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'discover',
+        title: `競合記事収集完了（${refUrls.length}件）`,
+        detail: `競合記事の収集が完了しました。これから記事構成を生成します。`,
+      })
+      article.referenceUrls = refUrls
+    }
   } catch {
     // ignore
   }
