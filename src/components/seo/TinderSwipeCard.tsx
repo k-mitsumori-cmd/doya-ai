@@ -46,18 +46,27 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
       setIsSwiping(true)
       const direction = info.offset.x > 0 || velocity > 0 ? 'yes' : 'no'
       
-      // スワイプアニメーション
-      await controls.start({
-        x: direction === 'yes' ? 500 : -500,
-        rotate: direction === 'yes' ? 35 : -35,
-        opacity: 0,
-        transition: { duration: 0.4, ease: 'easeInOut' },
-      })
-      
-      // アニメーション完了後にコールバックを呼び出す
-      setTimeout(() => {
+      try {
+        // スワイプアニメーション（確実に表示されるように）
+        await controls.start({
+          x: direction === 'yes' ? 500 : -500,
+          rotate: direction === 'yes' ? 35 : -35,
+          opacity: 0,
+          scale: 0.8,
+          transition: { duration: 0.4, ease: 'easeInOut' },
+        })
+        
+        // アニメーション完了後にコールバックを呼び出す
+        setTimeout(() => {
+          onSwipe(direction)
+          setIsSwiping(false) // リセット
+        }, 100)
+      } catch (error) {
+        console.error('Swipe animation error:', error)
+        // エラー時もコールバックを呼び出す
         onSwipe(direction)
-      }, 100)
+        setIsSwiping(false)
+      }
     } else if (Math.abs(info.offset.y) > threshold || Math.abs(info.velocity.y) > 600) {
       if (info.offset.y > 0) {
         onSwipe('hold')
@@ -76,18 +85,27 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
     setIsSwiping(true)
     const direction = decision === 'yes' ? 1 : -1
     
-    // スワイプアニメーション
-    await controls.start({
-      x: direction * 500,
-      rotate: direction * 35,
-      opacity: 0,
-      transition: { duration: 0.4, ease: 'easeInOut' },
-    })
-    
-    // アニメーション完了後にコールバックを呼び出す
-    setTimeout(() => {
+    // スワイプアニメーション（確実に表示されるように）
+    try {
+      await controls.start({
+        x: direction * 500,
+        rotate: direction * 35,
+        opacity: 0,
+        scale: 0.8,
+        transition: { duration: 0.4, ease: 'easeInOut' },
+      })
+      
+      // アニメーション完了後にコールバックを呼び出す
+      setTimeout(() => {
+        onSwipe(decision)
+        setIsSwiping(false) // リセット
+      }, 100)
+    } catch (error) {
+      console.error('Swipe animation error:', error)
+      // エラー時もコールバックを呼び出す
       onSwipe(decision)
-    }, 100)
+      setIsSwiping(false)
+    }
   }
 
   if (index >= 4) return null // 4枚目以降は非表示

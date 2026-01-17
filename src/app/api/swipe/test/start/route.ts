@@ -40,14 +40,16 @@ export async function POST(req: NextRequest) {
 
     // キーワードの関連キーワードを調査して質問を生成
     const keywordAnalysisPrompt = `あなたはSEOキーワード分析の専門家です。
-以下のキーワードについて、関連キーワードや派生キーワードを分析してください。
+以下のキーワードについて、関連キーワードや派生キーワードを詳細に分析してください。
 
 主キーワード: ${keywords.join(', ')}
 
 要件:
-- 主キーワードに関連するキーワードを5-10個抽出してください
-- 関連キーワードには、類義語、上位概念、下位概念、関連語などを含めてください
+- 主キーワードに関連するキーワードを10-20個抽出してください
+- 関連キーワードには、類義語、上位概念、下位概念、関連語、派生語、競合キーワードなどを含めてください
 - 各関連キーワードについて、主キーワードとの関係性を簡潔に説明してください
+- 特に「このキーワードは狙いますか？」という質問で使えるような具体的なキーワードを抽出してください
+- 記事作成時に一緒に狙えるキーワード（狙い手キーワード）も含めてください
 
 出力形式:
 {
@@ -58,6 +60,12 @@ export async function POST(req: NextRequest) {
     },
     {
       "keyword": "関連キーワード2",
+      "relationship": "関係性の説明"
+    }
+  ],
+  "targetKeywords": [
+    {
+      "keyword": "狙い手キーワード1",
       "relationship": "関係性の説明"
     }
   ]
@@ -80,6 +88,10 @@ JSONのみを出力してください。`
       if (analysisMatch) {
         const analysisData = JSON.parse(analysisMatch[0])
         relatedKeywords = Array.isArray(analysisData.relatedKeywords) ? analysisData.relatedKeywords : []
+        // 狙い手キーワードも追加
+        if (Array.isArray(analysisData.targetKeywords)) {
+          relatedKeywords = [...relatedKeywords, ...analysisData.targetKeywords]
+        }
       }
     } catch (e) {
       console.warn('[keyword analysis] error:', e)
@@ -88,7 +100,7 @@ JSONのみを出力してください。`
 
     // 初期質問を3-4問まとめてAIで生成
     const relatedKeywordsText = relatedKeywords.length > 0
-      ? `\n関連キーワード:\n${relatedKeywords.map((k: any) => `- ${k.keyword} (${k.relationship || ''})`).join('\n')}`
+      ? `\n関連キーワード・狙い手キーワード:\n${relatedKeywords.map((k: any) => `- ${k.keyword} (${k.relationship || ''})`).join('\n')}`
       : ''
     
     const prompt = `あなたはSEO記事作成のための質問を生成するAIです。
