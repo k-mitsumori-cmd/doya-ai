@@ -2481,71 +2481,80 @@ async function ensureOutlineAndSections(jobId: string) {
   const maxUrlsToResearch = isComparison 
     ? Math.max(10, Math.ceil(targetCountFromTitle / 3)) // 30選なら10件、50選なら17件
     : 1
-  try {
+  
+  // 比較記事の場合: 全てのサービス抽出が完了してから記事構成を開始
+  if (isComparison) {
     await p.seoJob.update({
       where: { id: jobId },
-      data: { step: isComparison ? 'cmp_extract' : job.step, progress: Math.max(12, Number(job.progress || 0)), status: 'running' },
+      data: { step: 'cmp_extract', progress: Math.max(12, Number(job.progress || 0)), status: 'running' },
     })
+    
+    // 参考URLを解析してサービスを抽出
     await progressiveResearchFromReferenceUrls(article, { maxUrls: maxUrlsToResearch, jobId })
     
-    // 比較記事の場合、調査結果を記事に反映
-    if (isComparison) {
-      // 調査結果から比較候補を更新
-      const updatedArticle = await p.seoArticle.findUnique({
-        where: { id: article.id },
-        include: { references: true },
-      })
-      if (updatedArticle) {
-        // 調査結果から新しい候補を抽出して追加
-        const existingCandidates = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
-        const existingNames = existingCandidates.map((c: any) => String(c?.name || '').toLowerCase().trim())
-        
-        // 参照から新しい候補を抽出
-        const newCandidates: any[] = []
-        for (const ref of updatedArticle.references || []) {
-          const extracted = (ref as any)?.extracted
-          if (extracted && Array.isArray(extracted.candidates)) {
-            for (const c of extracted.candidates) {
-              const name = String(c?.name || '').toLowerCase().trim()
-              if (name && !existingNames.includes(name) && !newCandidates.some((nc: any) => String(nc?.name || '').toLowerCase().trim() === name)) {
-                newCandidates.push(c)
-                existingNames.push(name)
-              }
+    // 調査結果から比較候補を更新（全てのサービス抽出を完了）
+    const updatedArticle = await p.seoArticle.findUnique({
+      where: { id: article.id },
+      include: { references: true },
+    })
+    if (updatedArticle) {
+      // 調査結果から新しい候補を抽出して追加
+      const existingCandidates = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
+      const existingNames = existingCandidates.map((c: any) => String(c?.name || '').toLowerCase().trim())
+      
+      // 参照から新しい候補を抽出
+      const newCandidates: any[] = []
+      for (const ref of updatedArticle.references || []) {
+        const extracted = (ref as any)?.extracted
+        if (extracted && Array.isArray(extracted.candidates)) {
+          for (const c of extracted.candidates) {
+            const name = String(c?.name || '').toLowerCase().trim()
+            if (name && !existingNames.includes(name) && !newCandidates.some((nc: any) => String(nc?.name || '').toLowerCase().trim() === name)) {
+              newCandidates.push(c)
+              existingNames.push(name)
             }
           }
         }
-        
-        if (newCandidates.length > 0) {
-          const mergedCandidates = [...existingCandidates, ...newCandidates]
-          await p.seoArticle.update({
-            where: { id: article.id },
-            data: { comparisonCandidates: mergedCandidates },
-          })
-          article.comparisonCandidates = mergedCandidates
-          
-          await pushResearchEvent(jobId, {
-            at: Date.now(),
-            kind: 'info',
-            title: `調査から${newCandidates.length}件の新しい候補を追加`,
-            detail: `競合記事の調査から新しいサービス候補を抽出しました: ${newCandidates.map((c: any) => c?.name).filter(Boolean).join(', ')}`,
-          })
-          
-          // タイトルで指定された「○選」の数と収集したサービス数をログに出力（タイトルは変更しない）
-          const actualCount = uniqCandidatesByName(mergedCandidates).length
-          const targetCountFromTitle = extractTargetCountFromTitle(article.title)
-          if (actualCount > 0 && targetCountFromTitle > 0 && actualCount < targetCountFromTitle) {
-            await pushResearchEvent(jobId, {
-              at: Date.now(),
-              kind: 'info',
-              title: `追加収集で${actualCount}社に到達`,
-              detail: `タイトル「${article.title}」で指定された${targetCountFromTitle}社に向けて収集を継続中`,
-            })
-          }
-        }
       }
+      
+      if (newCandidates.length > 0) {
+        const mergedCandidates = [...existingCandidates, ...newCandidates]
+        await p.seoArticle.update({
+          where: { id: article.id },
+          data: { comparisonCandidates: mergedCandidates },
+        })
+        article.comparisonCandidates = mergedCandidates
+        
+        await pushResearchEvent(jobId, {
+          at: Date.now(),
+          kind: 'info',
+          title: `調査から${newCandidates.length}件の新しい候補を追加`,
+          detail: `競合記事の調査から新しいサービス候補を抽出しました: ${newCandidates.map((c: any) => c?.name).filter(Boolean).join(', ')}`,
+        })
+      }
+      
+      // 最終的なサービス数を確認
+      const finalCandidates = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
+      const finalCount = uniqCandidatesByName(finalCandidates).length
+      
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'discover',
+        title: `サービス抽出完了（${finalCount}社）`,
+        detail: `全てのサービス抽出が完了しました。これから記事構成を生成します。`,
+      })
     }
-  } catch {
-    // ignore（ネットワーク不調でも本文生成は継続）
+  } else {
+    // 通常記事の場合: 1件だけ解析（タイムアウト対策）
+    try {
+      await p.seoJob.update({
+        where: { id: jobId },
+        data: { step: job.step, progress: Math.max(12, Number(job.progress || 0)), status: 'running' },
+      })
+      await progressiveResearchFromReferenceUrls(article, { maxUrls: 1, jobId })
+    } catch {
+      // ignore（ネットワーク不調でも本文生成は継続）
+    }
   }
 
   // 目標文字数（最低3000字）
