@@ -222,11 +222,11 @@ function LpSitePageInner() {
         try {
           // 同期方式でワイヤーフレーム生成を実行
           console.log('[LP-SITE] ワイヤーフレーム生成を開始（同期方式）')
-          const step3Response = await fetch('/api/lp-site/generate-step', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ step: 'wireframe-generation', product_info: productInfo, sections }),
-          })
+        const step3Response = await fetch('/api/lp-site/generate-step', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 'wireframe-generation', product_info: productInfo, sections }),
+        })
           
           // 進捗更新をクリア
           clearInterval(progressInterval)
@@ -238,7 +238,7 @@ function LpSitePageInner() {
             throw new Error(errorMessage)
           }
           
-          const step3Data = await step3Response.json()
+        const step3Data = await step3Response.json()
           wireframes = step3Data.wireframes || []
           
           // ワイヤーフレームが生成されていない場合（空配列）はエラー
@@ -252,7 +252,7 @@ function LpSitePageInner() {
           }
           
           console.log(`[LP-SITE] ワイヤーフレーム生成完了: ${wireframes.length}セクション`)
-          updateProgress(60) // Step 3完了
+        updateProgress(60) // Step 3完了
           setStageText('ワイヤーフレーム生成完了！')
         } catch (error: any) {
           // エラー時もクリア
@@ -355,7 +355,7 @@ function LpSitePageInner() {
                       duration: 3000,
                       icon: '🔄',
                     })
-                  } else {
+              } else {
                     // 最初の試行時のみ、静かに進捗を通知
                     if (index === 0) {
                       toast.info(`画像を生成中... (${index + 1}/${totalSections})`, {
@@ -373,8 +373,8 @@ function LpSitePageInner() {
                   
                   try {
                     const fetchPromise = fetch('/api/lp-site/regenerate-section', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
                         section,
                         product_info: productInfo,
@@ -777,7 +777,7 @@ function LpSitePageInner() {
               
               // 完了処理
               setIsGeneratingImages(false)
-              setImageProgress(100)
+            setImageProgress(100)
               setStageText(finalFailedCount > 0 ? '完了（一部画像未生成）' : '完了！')
               setSectionProgress({})
               setGeneratingSections(new Set())
@@ -1016,7 +1016,7 @@ function LpSitePageInner() {
       } else {
         // 結果がない場合は、状態をリセット
         setPartialResult(null)
-        setProgress(0)
+      setProgress(0)
         setImageProgress(0)
         setSectionProgress({})
         setGeneratingSections(new Set())
@@ -1038,7 +1038,7 @@ function LpSitePageInner() {
     if (!result) return
 
     // セクションを取得
-    const section = result.sections.find(s => s.section_id === sectionId)
+      const section = result.sections.find(s => s.section_id === sectionId)
     if (!section) {
       toast.error('セクションが見つかりません', { icon: '❌' })
       return
@@ -1442,12 +1442,12 @@ function LpSitePageInner() {
   return (
     <LpSiteAppLayout>
       {/* 生成中オーバーレイ（ワイヤーフレーム生成中のみ表示） */}
-      <LpGenerationOverlay
-        open={isGenerating}
-        progress={progress}
-        stageText={stageText}
-        mood={mood}
-        steps={steps}
+            <LpGenerationOverlay
+              open={isGenerating}
+              progress={progress}
+              stageText={stageText}
+              mood={mood}
+              steps={steps}
         allowBackgroundView={false}
         productInfo={partialResult?.product_info}
         sections={partialResult?.sections}
@@ -1659,8 +1659,8 @@ function LpSitePageInner() {
             >
               <details className="group">
                 <summary className="cursor-pointer list-none">
-                  <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-                    <Layout className="w-4 h-4 text-teal-600" />
+              <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                <Layout className="w-4 h-4 text-teal-600" />
                     LPタイプ（詳細設定）
                     <span className="ml-auto text-xs text-slate-500 font-normal">
                       {lpType === 'saas' && 'SaaS'}
@@ -1672,7 +1672,7 @@ function LpSitePageInner() {
                       {lpType === 'healthcare' && '医療'}
                       {lpType === 'finance' && '金融'}
                     </span>
-                  </label>
+              </label>
                 </summary>
                 <div className="mt-3 p-4 bg-slate-50 rounded-xl border border-slate-200">
                   <p className="text-xs text-slate-600 mb-3">
@@ -1692,7 +1692,7 @@ function LpSitePageInner() {
                     <option value="healthcare">医療</option>
                     <option value="finance">金融</option>
                   </select>
-                </div>
+              </div>
               </details>
             </motion.div>
 
@@ -1732,8 +1732,8 @@ function LpSitePageInner() {
                 )}
               </motion.button>
             </motion.div>
-            </div>
-          </motion.div>
+                </div>
+              </motion.div>
       </div>
     </LpSiteAppLayout>
   )

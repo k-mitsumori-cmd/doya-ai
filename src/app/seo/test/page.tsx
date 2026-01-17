@@ -76,18 +76,18 @@ export default function TestSwipePage() {
       const categoryImageMap = new Map<string, { imageBase64: string; mimeType: string }>()
       
       Promise.all(
-        Array.from(new Set(questions.map(q => q.category))).map(async (category) => {
+        Array.from(new Set(questions.map((q: Question) => q.category))).map(async (category: string) => {
           try {
-            const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(category)}&count=1`)
+            const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(String(category))}&count=1`)
             if (!imgRes.ok) {
               console.warn(`[画像取得失敗] category: ${category}, status: ${imgRes.status}`)
               return
             }
-            const imgJson = await imgRes.json()
+            const imgJson = await imgRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
             if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
-              categoryImageMap.set(category, {
-                imageBase64: imgJson.images[0].imageBase64,
-                mimeType: imgJson.images[0].mimeType || 'image/png',
+              categoryImageMap.set(String(category), {
+                imageBase64: String(imgJson.images[0].imageBase64),
+                mimeType: String(imgJson.images[0].mimeType || 'image/png'),
               })
             } else {
               console.warn(`[画像データなし] category: ${category}`, imgJson)
@@ -101,7 +101,7 @@ export default function TestSwipePage() {
         // カテゴリごとの画像を質問に割り当て
         setQuestionImages((prev) => {
           const newMap = new Map(prev)
-          questions.forEach((q) => {
+          questions.forEach((q: Question) => {
             const categoryImage = categoryImageMap.get(q.category)
             if (categoryImage) {
               newMap.set(q.id, categoryImage)
@@ -170,20 +170,21 @@ export default function TestSwipePage() {
         // 画像を並列で取得（非同期、ブロッキングしない）
         // カテゴリごとに画像を取得し、同じカテゴリの質問には同じ画像を使用
         const categoryImageMap = new Map<string, { imageBase64: string; mimeType: string }>()
+        const newQuestions = json.questions as Question[]
         
         Promise.all(
-          Array.from(new Set(json.questions.map((q: Question) => q.category))).map(async (category) => {
+          Array.from(new Set(newQuestions.map((q: Question) => q.category))).map(async (category: string) => {
             try {
-              const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(category)}&count=1`)
+              const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(String(category))}&count=1`)
               if (!imgRes.ok) {
                 console.warn(`[画像取得失敗] category: ${category}, status: ${imgRes.status}`)
                 return
               }
-              const imgJson = await imgRes.json()
+              const imgJson = await imgRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
               if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
-                categoryImageMap.set(category, {
-                  imageBase64: imgJson.images[0].imageBase64,
-                  mimeType: imgJson.images[0].mimeType || 'image/png',
+                categoryImageMap.set(String(category), {
+                  imageBase64: String(imgJson.images[0].imageBase64),
+                  mimeType: String(imgJson.images[0].mimeType || 'image/png'),
                 })
               } else {
                 console.warn(`[画像データなし] category: ${category}`, imgJson)
@@ -197,7 +198,7 @@ export default function TestSwipePage() {
           // カテゴリごとの画像を質問に割り当て
           setQuestionImages((prev) => {
             const newMap = new Map(prev)
-            json.questions.forEach((q: Question) => {
+            newQuestions.forEach((q: Question) => {
               const categoryImage = categoryImageMap.get(q.category)
               if (categoryImage) {
                 newMap.set(q.id, categoryImage)

@@ -76,18 +76,18 @@ export default function TestSwipePage() {
       const categoryImageMap = new Map<string, { imageBase64: string; mimeType: string }>()
       
       Promise.all(
-        Array.from(new Set(questions.map(q => q.category))).map(async (category) => {
+        Array.from(new Set(questions.map((q: Question) => q.category))).map(async (category: string) => {
           try {
-            const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(category)}&count=1`)
+            const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(String(category))}&count=1`)
             if (!imgRes.ok) {
               console.warn(`[画像取得失敗] category: ${category}, status: ${imgRes.status}`)
               return
             }
-            const imgJson = await imgRes.json()
+            const imgJson = await imgRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
             if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
-              categoryImageMap.set(category, {
-                imageBase64: imgJson.images[0].imageBase64,
-                mimeType: imgJson.images[0].mimeType || 'image/png',
+              categoryImageMap.set(String(category), {
+                imageBase64: String(imgJson.images[0].imageBase64),
+                mimeType: String(imgJson.images[0].mimeType || 'image/png'),
               })
             } else {
               console.warn(`[画像データなし] category: ${category}`, imgJson)
@@ -101,7 +101,7 @@ export default function TestSwipePage() {
         // カテゴリごとの画像を質問に割り当て
         setQuestionImages((prev) => {
           const newMap = new Map(prev)
-          questions.forEach((q) => {
+          questions.forEach((q: Question) => {
             const categoryImage = categoryImageMap.get(q.category)
             if (categoryImage) {
               newMap.set(q.id, categoryImage)
@@ -122,8 +122,8 @@ export default function TestSwipePage() {
     }
   }
 
-  // 次の質問バッチを生成
-  const loadNextQuestions = useCallback(async () => {
+  // 次の質問バッチを生成（リトライ機能付き）
+  const loadNextQuestions = useCallback(async (retryCount = 0) => {
     if (!sessionId || isGeneratingQuestion) return
 
     setIsGeneratingQuestion(true)
@@ -141,6 +141,12 @@ export default function TestSwipePage() {
       const json = await res.json().catch(() => ({}))
 
       if (!res.ok || json?.error) {
+        // リトライ（最大3回）
+        if (retryCount < 3) {
+          console.warn(`[質問生成リトライ] 試行回数: ${retryCount + 1}`)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))) // 指数バックオフ
+          return loadNextQuestions(retryCount + 1)
+        }
         throw new Error(json?.error || '質問生成に失敗しました')
       }
 
@@ -163,27 +169,28 @@ export default function TestSwipePage() {
         }
         
         setStep('confirm')
-      } else if (json.questions && Array.isArray(json.questions)) {
+      } else if (json.questions && Array.isArray(json.questions) && json.questions.length > 0) {
         // 新しい質問をキューに追加
         setQuestionQueue((prev) => [...prev, ...json.questions])
         
         // 画像を並列で取得（非同期、ブロッキングしない）
         // カテゴリごとに画像を取得し、同じカテゴリの質問には同じ画像を使用
         const categoryImageMap = new Map<string, { imageBase64: string; mimeType: string }>()
+        const newQuestions = json.questions as Question[]
         
         Promise.all(
-          Array.from(new Set(json.questions.map((q: Question) => q.category))).map(async (category) => {
+          Array.from(new Set(newQuestions.map((q: Question) => q.category))).map(async (category: string) => {
             try {
-              const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(category)}&count=1`)
+              const imgRes = await fetch(`/api/swipe/question-images?category=${encodeURIComponent(String(category))}&count=1`)
               if (!imgRes.ok) {
                 console.warn(`[画像取得失敗] category: ${category}, status: ${imgRes.status}`)
                 return
               }
-              const imgJson = await imgRes.json()
+              const imgJson = await imgRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
               if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
-                categoryImageMap.set(category, {
-                  imageBase64: imgJson.images[0].imageBase64,
-                  mimeType: imgJson.images[0].mimeType || 'image/png',
+                categoryImageMap.set(String(category), {
+                  imageBase64: String(imgJson.images[0].imageBase64),
+                  mimeType: String(imgJson.images[0].mimeType || 'image/png'),
                 })
               } else {
                 console.warn(`[画像データなし] category: ${category}`, imgJson)
@@ -197,7 +204,7 @@ export default function TestSwipePage() {
           // カテゴリごとの画像を質問に割り当て
           setQuestionImages((prev) => {
             const newMap = new Map(prev)
-            json.questions.forEach((q: Question) => {
+            newQuestions.forEach((q: Question) => {
               const categoryImage = categoryImageMap.get(q.category)
               if (categoryImage) {
                 newMap.set(q.id, categoryImage)
@@ -209,13 +216,30 @@ export default function TestSwipePage() {
           console.warn('[画像取得一括エラー]', e)
           // エラーは無視
         })
+      } else {
+        // 質問が空の場合はリトライ
+        if (retryCount < 3) {
+          console.warn(`[質問が空] リトライ: ${retryCount + 1}`)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
+          return loadNextQuestions(retryCount + 1)
+        }
+        throw new Error('質問が生成されませんでした')
       }
     } catch (e: any) {
+      console.error('[loadNextQuestions] error:', e)
       setError(e.message || 'エラーが発生しました')
+      // エラー時も質問キューが空でない場合は続行
+      if (questionQueue.length === 0) {
+        // 質問キューが空の場合はリトライ
+        if (retryCount < 3) {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          return loadNextQuestions(retryCount + 1)
+        }
+      }
     } finally {
       setIsGeneratingQuestion(false)
     }
-  }, [sessionId, answers, isGeneratingQuestion])
+  }, [sessionId, answers, isGeneratingQuestion, questionQueue.length])
 
   // スワイプ処理
   const handleSwipe = async (decision: SwipeDecision, question: Question) => {
@@ -240,7 +264,7 @@ export default function TestSwipePage() {
       setProgress(estimatedProgress)
 
       // 残り1-2枚になったら次のバッチを生成
-      if (questionQueue.length <= 2) {
+      if (questionQueue.length <= 2 && !isGeneratingQuestion) {
         await loadNextQuestions()
       }
     } catch (e: any) {
@@ -251,10 +275,10 @@ export default function TestSwipePage() {
 
   // 初期ロード時にも次のバッチを生成
   useEffect(() => {
-    if (step === 'swipe' && questionQueue.length <= 1 && !isGeneratingQuestion) {
+    if (step === 'swipe' && questionQueue.length <= 1 && !isGeneratingQuestion && sessionId) {
       loadNextQuestions()
     }
-  }, [step, questionQueue.length, isGeneratingQuestion, loadNextQuestions])
+  }, [step, questionQueue.length, isGeneratingQuestion, sessionId, loadNextQuestions])
 
   // 最終確認で記事生成
   const handleGenerate = async () => {
@@ -346,7 +370,7 @@ export default function TestSwipePage() {
         {step === 'swipe' && (
           <div className="relative ml-0 sm:ml-64">
             {/* 背景の操作説明 */}
-            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-8 opacity-20">
+            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-8 opacity-30">
               <div className="text-left">
                 <p className="text-7xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">NO</p>
                 <p className="text-sm font-black text-red-500 mt-2">左にスワイプ</p>

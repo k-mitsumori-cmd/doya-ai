@@ -55,20 +55,23 @@ export async function POST(req: NextRequest) {
     let relatedKeywordsText = ''
     
     // 回答数が少ない場合（初期段階）は関連キーワードを調査
-    if (answers.length < 10) {
+    if (answers.length < 15) {
       try {
         const keywordAnalysisPrompt = `あなたはSEOキーワード分析の専門家です。
-以下のキーワードについて、関連キーワードや派生キーワードを分析してください。
+以下のキーワードについて、関連キーワードや派生キーワードを詳細に分析してください。
 
 主キーワード: ${keywordParts.join(', ')}
 
 要件:
-- 主キーワードに関連するキーワードを5-10個抽出してください
-- 関連キーワードには、類義語、上位概念、下位概念、関連語などを含めてください
+- 主キーワードに関連するキーワードを10-20個抽出してください
+- 関連キーワードには、類義語、上位概念、下位概念、関連語、派生語、競合キーワードなどを含めてください
+- 特に「このキーワードは狙いますか？」という質問で使えるような具体的なキーワードを抽出してください
+- 記事作成時に一緒に狙えるキーワードも含めてください
 
 出力形式:
 {
-  "relatedKeywords": ["関連キーワード1", "関連キーワード2", ...]
+  "relatedKeywords": ["関連キーワード1", "関連キーワード2", ...],
+  "targetKeywords": ["狙い手キーワード1", "狙い手キーワード2", ...]
 }
 
 JSONのみを出力してください。`
@@ -77,7 +80,7 @@ JSONのみを出力してください。`
           model: GEMINI_TEXT_MODEL_DEFAULT,
           parts: [{ text: keywordAnalysisPrompt }],
           generationConfig: {
-            maxOutputTokens: 500,
+            maxOutputTokens: 1000,
             temperature: 0.7,
           },
         })
@@ -86,8 +89,10 @@ JSONのみを出力してください。`
         if (analysisMatch) {
           const analysisData = JSON.parse(analysisMatch[0])
           const relatedKeywords = Array.isArray(analysisData.relatedKeywords) ? analysisData.relatedKeywords : []
-          if (relatedKeywords.length > 0) {
-            relatedKeywordsText = `\n関連キーワード: ${relatedKeywords.join(', ')}`
+          const targetKeywords = Array.isArray(analysisData.targetKeywords) ? analysisData.targetKeywords : []
+          const allKeywords = [...relatedKeywords, ...targetKeywords]
+          if (allKeywords.length > 0) {
+            relatedKeywordsText = `\n関連キーワード・狙い手キーワード: ${allKeywords.join(', ')}`
           }
         }
       } catch (e) {
@@ -159,24 +164,56 @@ JSONのみを出力してください。`
       },
     })
 
-    // JSONをパース
+    // JSONをパース（リトライ機能付き）
     let result: any
-    try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('JSON not found')
-      }
-    } catch (e) {
-      // フォールバック: デフォルトで完了
-      const keywordParts = swipeSession.mainKeyword.split(',').map((k: string) => k.trim())
-      result = {
-        done: true,
-        finalData: {
-          title: `「${keywordParts[0]}」完全ガイド【2026年最新版】`,
-          targetChars: 4000,
-        },
+    let parseAttempts = 0
+    const maxParseAttempts = 3
+    
+    while (parseAttempts < maxParseAttempts) {
+      try {
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
+        if (jsonMatch) {
+          result = JSON.parse(jsonMatch[0])
+          // バリデーション: questionsが配列で、少なくとも1つはあること
+          if (!result.done && (!Array.isArray(result.questions) || result.questions.length === 0)) {
+            throw new Error('Invalid questions array')
+          }
+          break // 成功したらループを抜ける
+        } else {
+          throw new Error('JSON not found')
+        }
+      } catch (e) {
+        parseAttempts++
+        if (parseAttempts >= maxParseAttempts) {
+          // 最終的にパースに失敗した場合は、質問を再生成するか、デフォルトの質問を返す
+          console.warn('[JSON parse failed] Attempting to generate fallback questions')
+          
+          // フォールバック: デフォルトの質問を生成
+          const keywordParts = swipeSession.mainKeyword.split(',').map((k: string) => k.trim())
+          if (answers.length < 30) {
+            // まだ質問が続く場合はデフォルトの質問を返す
+            result = {
+              done: false,
+              questions: [
+                { question: `「${keywordParts[0]}」について詳しく説明しますか？`, category: '記事の方向性' },
+                { question: `初心者向けの内容にしますか？`, category: 'ターゲット読者' },
+                { question: `比較記事の形式にしますか？`, category: '記事タイプ' },
+              ],
+            }
+          } else {
+            // 30問に達した場合は完了
+            result = {
+              done: true,
+              finalData: {
+                title: `「${keywordParts[0]}」完全ガイド【2026年最新版】`,
+                targetChars: 4000,
+              },
+            }
+          }
+          break
+        }
+        // リトライ前に少し待つ
+        await new Promise(resolve => setTimeout(resolve, 500))
       }
     }
 
@@ -223,17 +260,24 @@ ${answersText}
       })
     } else {
       // 次の質問を3-4問まとめて生成
-      const questions = Array.isArray(result.questions) 
+      const questions = Array.isArray(result.questions) && result.questions.length > 0
         ? result.questions.map((q: any) => ({
             id: uuidv4(),
-            question: q.question || 'この内容で進めますか？',
-            category: q.category || '確認',
-          }))
-        : [{
-            id: uuidv4(),
-            question: 'この内容で進めますか？',
-            category: '確認',
-          }]
+            question: String(q.question || 'この内容で進めますか？').trim(),
+            category: String(q.category || '確認').trim(),
+          })).filter((q: any) => q.question.length > 0) // 空の質問を除外
+        : [
+            {
+              id: uuidv4(),
+              question: 'この内容で進めますか？',
+              category: '確認',
+            },
+          ]
+
+      // 質問が空の場合はエラー
+      if (questions.length === 0) {
+        throw new Error('質問が生成されませんでした')
+      }
 
       return NextResponse.json({
         success: true,
