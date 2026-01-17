@@ -2557,6 +2557,26 @@ async function ensureOutlineAndSections(jobId: string) {
     }
   }
 
+  // 比較記事の場合: サービス抽出完了を確認してから記事構成を開始
+  if (isComparison) {
+    // 最終的な候補数を確認
+    const finalArticle = await p.seoArticle.findUnique({
+      where: { id: article.id },
+    })
+    if (finalArticle) {
+      const finalCandidates = Array.isArray(finalArticle.comparisonCandidates) ? finalArticle.comparisonCandidates : []
+      const finalCount = uniqCandidatesByName(finalCandidates).length
+      article.comparisonCandidates = finalCandidates
+      
+      await pushResearchEvent(jobId, {
+        at: Date.now(),
+        kind: 'info',
+        title: `記事構成生成を開始（${finalCount}社のサービスで構成）`,
+        detail: `全てのサービス抽出が完了しました。${finalCount}社のサービスを含む記事構成を生成します。`,
+      })
+    }
+  }
+
   // 目標文字数（最低3000字）
   const target = Math.max(3000, Number(article.targetChars || 10000))
   let outline: SeoOutline
