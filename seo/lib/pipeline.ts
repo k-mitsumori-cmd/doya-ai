@@ -2921,7 +2921,9 @@ async function generateSection(jobId: string) {
     '- Include concrete steps / decision criteria / examples where appropriate.',
     '- CRITICAL: Avoid repeating content from earlier sections. Each section must be unique.',
     '- CRITICAL: Before writing, check if similar content was already covered in previous sections.',
+    '- CRITICAL: Do NOT repeat the same information, examples, or explanations that appeared in previous sections.',
     '- If a topic overlaps with a previous section, either merge it or find a different angle.',
+    '- SEO optimization: Ensure each section adds unique value that competitors do not have.',
     '',
     researchContext,
   ]
