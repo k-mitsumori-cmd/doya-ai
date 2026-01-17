@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
-import { geminiGenerateText } from '@seo/lib/gemini'
+import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { v4 as uuidv4 } from 'uuid'
 
 /**
@@ -59,9 +59,13 @@ export async function POST(req: NextRequest) {
 
 JSONのみを出力してください。`
 
-    const aiResponse = await geminiGenerateText(prompt, {
-      maxTokens: 500,
-      temperature: 0.7,
+    const aiResponse = await geminiGenerateText({
+      model: GEMINI_TEXT_MODEL_DEFAULT,
+      parts: [{ text: prompt }],
+      generationConfig: {
+        maxOutputTokens: 500,
+        temperature: 0.7,
+      },
     })
 
     // JSONをパース
