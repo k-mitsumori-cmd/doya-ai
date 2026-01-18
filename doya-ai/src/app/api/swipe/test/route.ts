@@ -29,6 +29,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
+    const currentYear = new Date().getFullYear()
+    const normalizeTitleYear = (title: string) => {
+      const t = String(title || '').trim()
+      if (!t) return t
+      return t
+        .replace(/【20\d{2}年(最新|最新版)】/g, `【${currentYear}年最新版】`)
+        .replace(/20\d{2}年(最新|最新版)/g, `${currentYear}年最新版`)
+        .replace(/20\d{2}年/g, `${currentYear}年`)
+    }
+
     // これまでの回答を整理
     const answersText = answers.map((a: any) => `Q: ${a.question}\nA: ${a.answer === 'yes' ? 'はい' : 'いいえ'}`).join('\n\n')
 
@@ -107,7 +117,7 @@ JSONのみを出力してください。`
       result = {
         done: true,
         finalData: {
-          title: `「${keywordParts[0]}」完全ガイド【2026年最新版】`,
+          title: normalizeTitleYear(`「${keywordParts[0]}」完全ガイド【${currentYear}年最新版】`),
           targetChars: 4000,
         },
       }
@@ -118,14 +128,18 @@ JSONのみを出力してください。`
       return NextResponse.json({
         success: true,
         done: true,
-        finalData: result.finalData,
+        finalData: {
+          ...result.finalData,
+          title: normalizeTitleYear(String(result?.finalData?.title || '')),
+          targetChars: Number(result?.finalData?.targetChars || 4000),
+        },
       })
     } else {
       // 次の質問を3-4問まとめて生成
       const questions = Array.isArray(result.questions) 
         ? result.questions.map((q: any) => ({
             id: uuidv4(),
-            question: q.question || 'この内容で進めますか？',
+            question: String(q.question || 'この内容で進めますか？').replace(/\s*\n+\s*/g, '').trim(),
             category: q.category || '確認',
           }))
         : [{

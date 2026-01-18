@@ -29,6 +29,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
 
+    const currentYear = new Date().getFullYear()
+    const normalizeTitleYear = (title: string) => {
+      const t = String(title || '').trim()
+      if (!t) return t
+      return t
+        .replace(/【20\d{2}年(最新|最新版)】/g, `【${currentYear}年最新版】`)
+        .replace(/20\d{2}年(最新|最新版)/g, `${currentYear}年最新版`)
+        .replace(/20\d{2}年/g, `${currentYear}年`)
+    }
+
     // 最大30問まで（30問に達したら完了）
     if (answers.length >= 30) {
       // 完了判定へ進む
@@ -36,7 +46,7 @@ export async function POST(req: NextRequest) {
       const result = {
         done: true,
         finalData: {
-          title: `「${keywordParts[0]}」完全ガイド【2026年最新版】`,
+          title: normalizeTitleYear(`「${keywordParts[0]}」完全ガイド【${currentYear}年最新版】`),
           targetChars: 4000,
         },
       }
@@ -114,10 +124,11 @@ ${answersText}
    - 記事の種類、ターゲット読者、関連キーワード、記事の方向性などに関連する質問にしてください
    - 各質問は独立して答えられるようにしてください
    - 日本語で質問してください
-   - 適切な位置で改行ができるよう、自然な区切りを意識してください
+   - 改行は禁止です（質問文に改行を含めないでください）
 
 2. 必要な情報が揃った場合は、記事のタイトルと目標文字数を提案してください
    - タイトルはSEOとCTRを意識した魅力的なタイトルにしてください
+   - タイトルの年号は必ず${currentYear}年にしてください（例: 【${currentYear}年最新版】）
    - 目標文字数は2,000、4,000、6,000、8,000、10,000のいずれかにしてください
 
 出力形式（質問を生成する場合）:
@@ -174,7 +185,7 @@ JSONのみを出力してください。`
       result = {
         done: true,
         finalData: {
-          title: `「${keywordParts[0]}」完全ガイド【2026年最新版】`,
+          title: normalizeTitleYear(`「${keywordParts[0]}」完全ガイド【${currentYear}年最新版】`),
           targetChars: 4000,
         },
       }
@@ -218,6 +229,8 @@ ${answersText}
         done: true,
         finalData: {
           ...result.finalData,
+          title: normalizeTitleYear(String(result?.finalData?.title || '')),
+          targetChars: Number(result?.finalData?.targetChars || 4000),
           summary,
         },
       })
@@ -226,7 +239,7 @@ ${answersText}
       const questions = Array.isArray(result.questions) 
         ? result.questions.map((q: any) => ({
             id: uuidv4(),
-            question: q.question || 'この内容で進めますか？',
+            question: String(q.question || 'この内容で進めますか？').replace(/\s*\n+\s*/g, '').trim(),
             category: q.category || '確認',
           }))
         : [{

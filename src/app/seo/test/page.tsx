@@ -40,6 +40,7 @@ export default function TestSwipePage() {
     targetChars: number
     summary?: string
   } | null>(null)
+  const [primaryInfoText, setPrimaryInfoText] = useState('')
   const [celebrationImage, setCelebrationImage] = useState<{
     imageBase64: string
     mimeType: string
@@ -47,13 +48,71 @@ export default function TestSwipePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const thinkingMessages = useMemo(
+    () => [
+      '回答ありがとう。次に聞くべき質問を選んでいます…',
+      'いまの回答を要約して、記事の方向性を整えています…',
+      '読者が迷いやすいポイントを洗い出しています…',
+      '検索意図にズレがないかチェック中…',
+      '次の質問を作成中。もうすぐ表示します…',
+    ],
+    []
+  )
+  const [thinkingIdx, setThinkingIdx] = useState(0)
+  const showThinking = step === 'swipe' && (isGeneratingQuestion || isTransitioningQuestion || loading)
+
+  useEffect(() => {
+    if (!showThinking) return
+    setThinkingIdx(0)
+    const t = window.setInterval(() => setThinkingIdx((i) => i + 1), 1800)
+    return () => window.clearInterval(t)
+  }, [showThinking])
+
+  const recommendedTargetChars = useMemo(() => {
+    const kwCount = keywords.split(',').map((k) => k.trim()).filter(Boolean).length
+    const yesCount = answers.filter((a) => a.answer === 'yes').length
+    // 雑に「情報量が多そう」な時は長めに寄せる
+    if (kwCount >= 3) return 10000
+    if (kwCount === 2) return 8000
+    if (yesCount >= 18) return 8000
+    if (yesCount >= 10) return 6000
+    return 4000
+  }, [answers, keywords])
+
+  const charPresets = useMemo(
+    () => [
+      { value: recommendedTargetChars, label: 'おすすめ', desc: `${recommendedTargetChars.toLocaleString()}字（推定）` },
+      { value: 2000, label: '2,000字', desc: '短め' },
+      { value: 4000, label: '4,000字', desc: '標準' },
+      { value: 6000, label: '6,000字', desc: 'しっかり' },
+      { value: 8000, label: '8,000字', desc: '濃いめ' },
+      { value: 10000, label: '10,000字', desc: '網羅' },
+    ],
+    [recommendedTargetChars]
+  )
+
   const summaryMarkdown = useMemo(() => {
-    const s = String(finalData?.summary || '').trim()
+    let s = String(finalData?.summary || '').replace(/\r\n/g, '\n').trim()
     if (!s) return ''
-    // プレビューと同じ見た目で読みやすくするため、最低限の見出しを補う
-    // （既にMarkdown見出しが入っている場合はそのまま）
-    if (/^#{1,6}\s/m.test(s)) return s
-    return `## 質問回答から得た情報と記事の方向性\n\n${s}`
+
+    // 箇条書きをMarkdownに寄せる
+    s = s.replace(/^・\s*/gm, '- ')
+    s = s.replace(/^[＊*]\s*/gm, '- ')
+
+    // Q/A表記を読みやすく
+    s = s.replace(/^Q:\s*(.+)$/gm, '- **Q**: $1')
+    s = s.replace(/^A:\s*(.+)$/gm, '  - **A**: $1')
+    s = s.replace(/\n(- \*\*Q\*\*:[^\n]+)\n(  - \*\*A\*\*:[^\n]+)/g, '\n\n$1\n$2')
+
+    // 段落が詰まりすぎる場合に少し空行を補う
+    s = s.replace(/\n{3,}/g, '\n\n')
+    s = s.replace(/\n(- )/g, '\n\n$1')
+
+    // 見出しが無い場合は付与
+    if (!/^#{1,6}\s/m.test(s)) {
+      s = `## 質問回答から得た情報と記事の方向性\n\n${s}`
+    }
+    return s
   }, [finalData?.summary])
 
   const bgOrbs = useMemo(() => {
@@ -74,8 +133,13 @@ export default function TestSwipePage() {
       return
     }
 
+    // クリック直後から「何もない時間」を作らない
     setLoading(true)
     setError(null)
+    setQuestionQueue([])
+    setQuestionImages(new Map())
+    setIsTransitioningQuestion(true)
+    setStep('swipe')
 
     try {
       const res = await fetch('/api/swipe/test/start', {
@@ -174,9 +238,11 @@ export default function TestSwipePage() {
         // エラーは無視
       })
       
-      setStep('swipe')
+      // 質問が来たら、ローディングはuseEffectで自動的に消える
     } catch (e: any) {
       setError(e.message || 'エラーが発生しました')
+      setStep('keyword')
+      setIsTransitioningQuestion(false)
     } finally {
       setLoading(false)
     }
@@ -410,6 +476,7 @@ export default function TestSwipePage() {
           sessionId,
           finalData,
           answers,
+          primaryInfoText,
         }),
       })
 
@@ -521,7 +588,7 @@ export default function TestSwipePage() {
                 <div className="relative h-[780px] mb-8 z-10 flex items-center justify-center">
                   {/* 生成中オーバーレイ（カードの上で“考え中”を演出） */}
                   <AnimatePresence>
-                    {(isGeneratingQuestion || isTransitioningQuestion) && (
+                    {showThinking && (
                       <motion.div
                         className="absolute inset-0 z-30 flex items-center justify-center"
                         initial={{ opacity: 0 }}
@@ -542,9 +609,9 @@ export default function TestSwipePage() {
                               <Loader2 className="w-6 h-6 text-white animate-spin" />
                             </div>
                             <div>
-                              <p className="text-gray-900 font-black text-lg">次の質問を準備中…</p>
+                              <p className="text-gray-900 font-black text-lg">次の質問を考えています…</p>
                               <p className="text-gray-700 font-bold text-sm mt-1">
-                                ワクワク演出中。少しだけ待ってね
+                                {thinkingMessages[thinkingIdx % thinkingMessages.length]}
                               </p>
                             </div>
                           </div>
@@ -680,17 +747,29 @@ export default function TestSwipePage() {
 
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">文字数</label>
-                <select
-                  value={finalData.targetChars}
-                  onChange={(e) => setFinalData({ ...finalData, targetChars: Number(e.target.value) })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none font-bold text-gray-900"
-                >
-                  <option value={2000}>約2,000文字</option>
-                  <option value={4000}>約4,000文字</option>
-                  <option value={6000}>約6,000文字</option>
-                  <option value={8000}>約8,000文字</option>
-                  <option value={10000}>約10,000文字</option>
-                </select>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {charPresets.map((p) => {
+                    const selected = finalData.targetChars === p.value
+                    return (
+                      <button
+                        key={`${p.label}-${p.value}`}
+                        type="button"
+                        onClick={() => setFinalData({ ...finalData, targetChars: p.value })}
+                        className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                          selected ? 'border-emerald-500 bg-emerald-50' : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className={`text-sm font-black ${selected ? 'text-emerald-700' : 'text-gray-800'}`}>
+                            {p.label}
+                          </p>
+                          <span className="text-[10px] font-black text-gray-400">{p.value.toLocaleString()}字</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-gray-500 mt-1">{p.desc}</p>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {finalData.summary && (
@@ -709,6 +788,39 @@ export default function TestSwipePage() {
                   </div>
                 </div>
               )}
+
+              {/* 一次情報（経験・訴求ポイント） */}
+              <div className="rounded-3xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-blue-50 to-white p-6 shadow-lg shadow-indigo-500/10">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black tracking-widest">
+                        重要
+                      </span>
+                      <label className="text-xs font-black text-blue-800 uppercase tracking-widest">
+                        一次情報（経験・訴求ポイント）
+                      </label>
+                    </div>
+                    <p className="mt-1 text-xs font-bold text-blue-700">
+                      ここが入るほど「あなたにしか書けない記事」になり、差別化できます。
+                    </p>
+                  </div>
+                  <div className="text-[10px] font-black text-blue-700/80 bg-white/70 border border-blue-100 px-3 py-2 rounded-2xl">
+                    例：実体験 / 数字 / 失敗談 / 現場の工夫 / 比較の結論
+                  </div>
+                </div>
+
+                <textarea
+                  value={primaryInfoText}
+                  onChange={(e) => setPrimaryInfoText(e.target.value)}
+                  placeholder="例：実体験、現場の失敗談、数字、独自の主張、比較の結論、読者に必ず伝えたいこと…"
+                  rows={5}
+                  className="mt-4 w-full px-5 py-4 rounded-2xl bg-white border-2 border-indigo-200 text-slate-900 font-bold text-sm placeholder:text-slate-300 focus:outline-none focus:border-indigo-600 focus:ring-4 focus:ring-indigo-200/40 transition-all resize-none"
+                />
+                <p className="mt-2 text-xs font-bold text-indigo-700">
+                  ✨ 入力した一次情報は本文生成に反映されます
+                </p>
+              </div>
             </div>
 
             <div className="flex gap-4">

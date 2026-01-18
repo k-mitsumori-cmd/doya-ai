@@ -116,7 +116,7 @@ JSONのみを出力してください。`
 - 記事の種類、ターゲット読者、記事の方向性、関連キーワードの扱いなどに関連する質問にしてください
 - 各質問は独立して答えられるようにしてください
 - 日本語で質問してください
-- 適切な位置で改行ができるよう、自然な区切りを意識してください
+- 改行は禁止です（質問文に改行を含めないでください）
 
 出力形式:
 {
@@ -170,7 +170,7 @@ JSONのみを出力してください。`
     const questions = Array.isArray(questionData.questions)
       ? questionData.questions.map((q: any) => ({
           id: uuidv4(),
-          question: q.question || `「${keywords[0]}」について比較記事にしますか？`,
+          question: String(q.question || `「${keywords[0]}」について比較記事にしますか？`).replace(/\s*\n+\s*/g, ''),
           category: q.category || '記事タイプ',
         }))
       : [
