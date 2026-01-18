@@ -27,7 +27,9 @@ export default function TestSwipePage() {
   const [keywords, setKeywords] = useState('')
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [questionQueue, setQuestionQueue] = useState<Question[]>([])
-  const [questionImages, setQuestionImages] = useState<Map<string, { imageBase64: string; mimeType: string }>>(new Map())
+  const [questionImages, setQuestionImages] = useState<
+    Map<string, { imageBase64?: string; mimeType?: string; url?: string }>
+  >(new Map())
   const [answers, setAnswers] = useState<Answer[]>([])
   const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false)
   const [progress, setProgress] = useState(0) // 進捗（0-100）
@@ -73,10 +75,11 @@ export default function TestSwipePage() {
       
       // 画像を並列で取得（非同期、ブロッキングしない）
       // カテゴリごとに画像を取得し、同じカテゴリの質問には同じ画像を使用
-      const categoryImageMap = new Map<string, { imageBase64: string; mimeType: string }>()
+      const categoryImageMap = new Map<string, { imageBase64?: string; mimeType?: string; url?: string }>()
       
+      const categories = Array.from(new Set(questions.map((q: Question) => String(q.category))))
       Promise.all(
-        Array.from(new Set(questions.map((q: Question) => q.category))).map(async (category: string) => {
+        categories.map(async (category) => {
           // リトライ機能付きで画像を取得
           let retryCount = 0
           const maxRetries = 3
@@ -87,11 +90,16 @@ export default function TestSwipePage() {
               if (!imgRes.ok) {
                 throw new Error(`HTTP ${imgRes.status}`)
               }
-              const imgJson = await imgRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
-              if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
+              const imgJson = await imgRes.json() as {
+                success?: boolean
+                images?: Array<{ imageBase64?: string; mimeType?: string; url?: string }>
+              }
+              const first = imgJson.images?.[0]
+              if (imgJson.success && first && (first.imageBase64 || first.url)) {
                 categoryImageMap.set(String(category), {
-                  imageBase64: String(imgJson.images[0].imageBase64),
-                  mimeType: String(imgJson.images[0].mimeType || 'image/png'),
+                  imageBase64: first.imageBase64 ? String(first.imageBase64) : undefined,
+                  url: first.url ? String(first.url) : undefined,
+                  mimeType: String(first.mimeType || 'image/png'),
                 })
                 return // 成功したら終了
               } else {
@@ -105,11 +113,16 @@ export default function TestSwipePage() {
                 try {
                   const defaultRes = await fetch(`/api/swipe/question-images?category=確認&count=1`)
                   if (defaultRes.ok) {
-                    const defaultJson = await defaultRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
-                    if (defaultJson.success && defaultJson.images?.[0] && defaultJson.images[0].imageBase64) {
+                    const defaultJson = await defaultRes.json() as {
+                      success?: boolean
+                      images?: Array<{ imageBase64?: string; mimeType?: string; url?: string }>
+                    }
+                    const first = defaultJson.images?.[0]
+                    if (defaultJson.success && first && (first.imageBase64 || first.url)) {
                       categoryImageMap.set(String(category), {
-                        imageBase64: String(defaultJson.images[0].imageBase64),
-                        mimeType: String(defaultJson.images[0].mimeType || 'image/png'),
+                        imageBase64: first.imageBase64 ? String(first.imageBase64) : undefined,
+                        url: first.url ? String(first.url) : undefined,
+                        mimeType: String(first.mimeType || 'image/png'),
                       })
                     }
                   }
@@ -201,11 +214,12 @@ export default function TestSwipePage() {
         
         // 画像を並列で取得（非同期、ブロッキングしない）
         // カテゴリごとに画像を取得し、同じカテゴリの質問には同じ画像を使用
-        const categoryImageMap = new Map<string, { imageBase64: string; mimeType: string }>()
+        const categoryImageMap = new Map<string, { imageBase64?: string; mimeType?: string; url?: string }>()
         const newQuestions = json.questions as Question[]
         
+        const categories = Array.from(new Set(newQuestions.map((q: Question) => String(q.category))))
         Promise.all(
-          Array.from(new Set(newQuestions.map((q: Question) => q.category))).map(async (category: string) => {
+          categories.map(async (category) => {
             // リトライ機能付きで画像を取得
             let retryCount = 0
             const maxRetries = 3
@@ -216,11 +230,16 @@ export default function TestSwipePage() {
                 if (!imgRes.ok) {
                   throw new Error(`HTTP ${imgRes.status}`)
                 }
-                const imgJson = await imgRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
-                if (imgJson.success && imgJson.images?.[0] && imgJson.images[0].imageBase64) {
+                const imgJson = await imgRes.json() as {
+                  success?: boolean
+                  images?: Array<{ imageBase64?: string; mimeType?: string; url?: string }>
+                }
+                const first = imgJson.images?.[0]
+                if (imgJson.success && first && (first.imageBase64 || first.url)) {
                   categoryImageMap.set(String(category), {
-                    imageBase64: String(imgJson.images[0].imageBase64),
-                    mimeType: String(imgJson.images[0].mimeType || 'image/png'),
+                    imageBase64: first.imageBase64 ? String(first.imageBase64) : undefined,
+                    url: first.url ? String(first.url) : undefined,
+                    mimeType: String(first.mimeType || 'image/png'),
                   })
                   return // 成功したら終了
                 } else {
@@ -234,11 +253,16 @@ export default function TestSwipePage() {
                   try {
                     const defaultRes = await fetch(`/api/swipe/question-images?category=確認&count=1`)
                     if (defaultRes.ok) {
-                      const defaultJson = await defaultRes.json() as { success?: boolean; images?: Array<{ imageBase64?: string; mimeType?: string }> }
-                      if (defaultJson.success && defaultJson.images?.[0] && defaultJson.images[0].imageBase64) {
+                      const defaultJson = await defaultRes.json() as {
+                        success?: boolean
+                        images?: Array<{ imageBase64?: string; mimeType?: string; url?: string }>
+                      }
+                      const first = defaultJson.images?.[0]
+                      if (defaultJson.success && first && (first.imageBase64 || first.url)) {
                         categoryImageMap.set(String(category), {
-                          imageBase64: String(defaultJson.images[0].imageBase64),
-                          mimeType: String(defaultJson.images[0].mimeType || 'image/png'),
+                          imageBase64: first.imageBase64 ? String(first.imageBase64) : undefined,
+                          url: first.url ? String(first.url) : undefined,
+                          mimeType: String(first.mimeType || 'image/png'),
                         })
                       }
                     }
@@ -420,44 +444,61 @@ export default function TestSwipePage() {
 
         {/* ステップ2: スワイプ */}
         {step === 'swipe' && (
-          <div className="relative ml-0 sm:ml-64">
-            {/* 背景の操作説明 */}
-            <div className="absolute inset-0 pointer-events-none z-0 flex items-center justify-between px-2 md:px-4 opacity-60">
-              <div className="text-left -ml-12 md:-ml-24 lg:-ml-32">
-                <p className="text-6xl md:text-8xl lg:text-9xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">NO</p>
-                <p className="text-xs md:text-sm font-black text-red-500 mt-2">左にスワイプ</p>
+          <div className="relative">
+            <div className="grid grid-cols-12 gap-6 items-center">
+              {/* NO領域（固定・重なりなし） */}
+              <div className="hidden xl:flex col-span-2 items-center justify-center">
+                <div className="w-full rounded-2xl border border-red-100 bg-white/70 backdrop-blur-sm shadow-sm p-4">
+                  <div className="text-center">
+                    <div className="text-5xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">
+                      NO
+                    </div>
+                    <div className="mt-2 text-xs font-black text-red-600">左にスワイプ</div>
+                  </div>
+                </div>
               </div>
-              <div className="text-right -mr-12 md:-mr-24 lg:-mr-32">
-                <p className="text-6xl md:text-8xl lg:text-9xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent leading-none">YES</p>
-                <p className="text-xs md:text-sm font-black text-emerald-500 mt-2">右にスワイプ</p>
-              </div>
-            </div>
 
-            {/* カードスタック */}
-            <div className="relative h-[700px] mb-8 z-10 flex items-center justify-center">
-              {questionQueue.length > 0 ? (
-                questionQueue.slice(0, 4).map((question, index) => (
-                  <TinderSwipeCard
-                    key={question.id}
-                    question={question}
-                    onSwipe={(decision) => handleSwipe(decision, question)}
-                    index={index}
-                    total={questionQueue.length}
-                    questionImage={questionImages.get(question.id)}
-                  />
-                ))
-              ) : (
-                <div className="bg-white rounded-3xl shadow-2xl p-12 text-center h-full flex items-center justify-center">
-                  {isGeneratingQuestion ? (
-                    <>
-                      <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
-                      <p className="text-gray-600 font-bold">AIが次の質問を考えています...</p>
-                    </>
+              {/* カード領域 */}
+              <div className="col-span-12 xl:col-span-8">
+                <div className="relative h-[760px] mb-8 z-10 flex items-center justify-center">
+                  {questionQueue.length > 0 ? (
+                    questionQueue.slice(0, 3).map((question, index) => (
+                      <TinderSwipeCard
+                        key={question.id}
+                        question={question}
+                        onSwipe={(decision) => handleSwipe(decision, question)}
+                        index={index}
+                        total={questionQueue.length}
+                        questionImage={questionImages.get(question.id)}
+                      />
+                    ))
                   ) : (
-                    <p className="text-gray-400 font-bold">読み込み中...</p>
+                    <div className="bg-white rounded-3xl shadow-2xl p-12 text-center h-full w-full flex items-center justify-center">
+                      {isGeneratingQuestion ? (
+                        <div>
+                          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
+                          <p className="text-gray-700 font-black">AIが次の質問を考えています...</p>
+                          <p className="text-gray-500 text-sm font-bold mt-2">数秒かかることがあります</p>
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 font-bold">読み込み中...</p>
+                      )}
+                    </div>
                   )}
                 </div>
-              )}
+              </div>
+
+              {/* YES領域（固定・重なりなし） */}
+              <div className="hidden xl:flex col-span-2 items-center justify-center">
+                <div className="w-full rounded-2xl border border-emerald-100 bg-white/70 backdrop-blur-sm shadow-sm p-4">
+                  <div className="text-center">
+                    <div className="text-5xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent leading-none">
+                      YES
+                    </div>
+                    <div className="mt-2 text-xs font-black text-emerald-600">右にスワイプ</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* 進捗バー（下部） */}
