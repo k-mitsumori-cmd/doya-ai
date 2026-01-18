@@ -16,8 +16,9 @@ interface TinderSwipeCardProps {
   index: number
   total: number
   questionImage?: {
-    imageBase64: string
-    mimeType: string
+    imageBase64?: string
+    mimeType?: string
+    url?: string
   }
 }
 
@@ -108,18 +109,26 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
     }
   }
 
-  if (index >= 4) return null // 4枚目以降は非表示
+  if (index >= 3) return null // 3枚目以降は非表示（重なりを減らす）
+
+  const imageSrc =
+    questionImage?.imageBase64
+      ? `data:${questionImage.mimeType || 'image/png'};base64,${questionImage.imageBase64}`
+      : questionImage?.url
+
+  const stackYOffset = index * 18
 
   return (
     <motion.div
-      className="absolute w-full max-w-4xl mx-auto cursor-grab active:cursor-grabbing"
+      className="absolute w-full max-w-4xl mx-auto cursor-grab active:cursor-grabbing will-change-transform"
       style={{
-        x: isSwiping ? undefined : x,
-        y: isSwiping ? undefined : y,
-        rotate: isSwiping ? undefined : rotate,
-        opacity: isSwiping ? undefined : (index === 0 ? opacity : Math.max(0.4, 1 - index * 0.2)),
+        x: index === 0 ? (isSwiping ? undefined : x) : 0,
+        y: index === 0 ? (isSwiping ? undefined : y) : stackYOffset,
+        rotate: index === 0 ? (isSwiping ? undefined : rotate) : 0,
+        opacity: isSwiping ? undefined : (index === 0 ? opacity : Math.max(0.25, 1 - index * 0.18)),
         zIndex: total - index,
-        scale: index === 0 ? scale : 1 - index * 0.05,
+        scale: index === 0 ? scale : 1 - index * 0.04,
+        pointerEvents: index === 0 ? 'auto' : 'none',
       }}
       animate={isSwiping ? controls : undefined}
       drag={!isSwiping}
@@ -166,10 +175,10 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
         {/* 質問画像 */}
         {index === 0 && (
           <>
-            {questionImage?.imageBase64 ? (
+            {imageSrc ? (
               <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-white">
                 <img
-                  src={`data:${questionImage.mimeType || 'image/png'};base64,${questionImage.imageBase64}`}
+                  src={imageSrc}
                   alt={question.category}
                   className="w-full h-48 object-cover"
                   loading="eager"
@@ -188,7 +197,10 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
               </div>
             ) : (
               <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-100 to-teal-100 h-48 flex items-center justify-center border-2 border-emerald-200">
-                <div className="text-emerald-700 text-sm font-bold">画像を読み込み中...</div>
+                <div className="text-center">
+                  <div className="text-emerald-800 text-sm font-black">画像がありません</div>
+                  <div className="text-emerald-700 text-xs font-bold mt-1">（サーバー未登録）</div>
+                </div>
               </div>
             )}
           </>
