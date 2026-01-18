@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useMemo, useState, useRef } from 'react'
 import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'framer-motion'
 import { Heart, X } from 'lucide-react'
 
@@ -94,13 +94,14 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
       playSwipeSfx(direction)
       
       try {
-        // スワイプアニメーション（確実に表示されるように）
+        // スワイプアニメーション（どっちに飛んだか分かるように“転がる”）
         await controls.start({
-          x: direction === 'yes' ? 500 : -500,
-          rotate: direction === 'yes' ? 35 : -35,
+          x: direction === 'yes' ? 820 : -820,
+          y: 70,
+          rotate: direction === 'yes' ? 55 : -55,
           opacity: 0,
-          scale: 0.8,
-          transition: { duration: 0.4, ease: 'easeInOut' },
+          scale: 0.85,
+          transition: { type: 'spring', stiffness: 260, damping: 18, mass: 0.9 },
         })
         
         // アニメーション完了後にコールバックを呼び出す
@@ -132,17 +133,19 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
     setIsSwiping(true)
     const direction = decision === 'yes' ? 1 : -1
     // ボタン押下でもオーバーレイが出るようにxを事前に振る
-    x.set(direction * 320)
+    x.set(direction * 240)
+    y.set(0)
     playSwipeSfx(decision)
     
-    // スワイプアニメーション（確実に表示されるように）
+    // スワイプアニメーション（どっちに飛んだか分かるように“転がる”）
     try {
       await controls.start({
-        x: direction * 500,
-        rotate: direction * 35,
+        x: direction * 820,
+        y: 70,
+        rotate: direction * 55,
         opacity: 0,
-        scale: 0.8,
-        transition: { duration: 0.4, ease: 'easeInOut' },
+        scale: 0.85,
+        transition: { type: 'spring', stiffness: 260, damping: 18, mass: 0.9 },
       })
       
       // アニメーション完了後にコールバックを呼び出す
@@ -159,6 +162,10 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
   }
 
   if (index >= 3) return null // 3枚目以降は非表示（重なりを減らす）
+
+  const normalizedQuestion = useMemo(() => {
+    return String(question.question || '').replace(/\s*\n+\s*/g, '')
+  }, [question.question])
 
   const imageSrc =
     questionImage?.imageBase64
@@ -225,13 +232,10 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
           </>
         )}
 
-        {/* カテゴリタグ */}
-        <div className="mb-4 flex items-center justify-between">
-          <span className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm text-emerald-800 text-xs font-black rounded-full tracking-wider border border-white shadow-sm">
+        {/* カテゴリタグ（左上を少し大きく） */}
+        <div className="mb-5">
+          <span className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/85 backdrop-blur-sm text-emerald-900 text-sm md:text-base font-black rounded-full tracking-wide border border-white shadow-sm">
             {question.category}
-          </span>
-          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black text-sky-900 bg-sky-100 border border-sky-200">
-            ★ RARE
           </span>
         </div>
 
@@ -281,7 +285,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
                 textShadow: '0 1px 2px rgba(0,0,0,0.1)',
               }}
             >
-              {question.question}
+              {normalizedQuestion}
             </h2>
           </div>
         </div>

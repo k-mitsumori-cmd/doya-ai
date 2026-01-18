@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const body = await req.json().catch(() => ({}))
-    const { sessionId, finalData, answers } = body
+    const { sessionId, finalData, answers, primaryInfoText } = body
 
     if (!sessionId || !finalData || !answers) {
       return NextResponse.json({ error: 'sessionId, finalData, and answers are required' }, { status: 400 })
@@ -23,6 +23,16 @@ export async function POST(req: NextRequest) {
 
     if (!swipeSession) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    }
+
+    const currentYear = new Date().getFullYear()
+    const normalizeTitleYear = (title: string) => {
+      const t = String(title || '').trim()
+      if (!t) return t
+      return t
+        .replace(/【20\d{2}年(最新|最新版)】/g, `【${currentYear}年最新版】`)
+        .replace(/20\d{2}年(最新|最新版)/g, `${currentYear}年最新版`)
+        .replace(/20\d{2}年/g, `${currentYear}年`)
     }
 
     // 回答から記事の種類などを推測
@@ -38,16 +48,23 @@ export async function POST(req: NextRequest) {
     // キーワードを抽出
     const keywords = swipeSession.mainKeyword.split(',').map((k: string) => k.trim())
 
+    const primary = String(primaryInfoText || '').trim()
+    const summary = String(finalData?.summary || '').trim()
+    const requestText = [primary ? `【一次情報（必ず反映）】\n${primary}` : '', summary ? `【質問回答から得た方向性】\n${summary}` : '']
+      .filter(Boolean)
+      .join('\n\n')
+
     // 記事を作成
     const article = await prisma.seoArticle.create({
       data: {
-        title: finalData.title,
+        title: normalizeTitleYear(finalData.title),
         keywords,
         targetChars: finalData.targetChars,
         mode: articleType === 'comparison' ? 'comparison_research' : 'standard',
         userId: session?.user?.id || null,
         guestId: session?.user?.id ? null : swipeSession.guestId || null,
-        status: 'DRAFT',
+        status: 'RUNNING',
+        requestText: requestText || null,
       },
     })
 
@@ -66,6 +83,7 @@ export async function POST(req: NextRequest) {
       where: { sessionId },
       data: {
         finalConditions: { targetChars: finalData.targetChars, articleType },
+        primaryInfo: primary ? ({ experience: primary } as any) : undefined,
         generatedArticleId: article.id,
         swipes: answers.map((a: any) => ({
           questionId: a.questionId,
