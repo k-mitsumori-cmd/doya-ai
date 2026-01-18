@@ -46,6 +46,15 @@ export default function TestSwipePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const bgOrbs = useMemo(() => {
+    return [
+      { x: '8%', y: '18%', size: 280, c: 'from-emerald-200/55 to-teal-200/10', d: 10 },
+      { x: '88%', y: '12%', size: 220, c: 'from-sky-200/55 to-indigo-200/10', d: 12 },
+      { x: '86%', y: '78%', size: 300, c: 'from-rose-200/45 to-orange-200/10', d: 11 },
+      { x: '18%', y: '84%', size: 240, c: 'from-amber-200/45 to-lime-200/10', d: 13 },
+    ] as const
+  }, [])
+
   // セッション開始
   const handleStart = async () => {
     const keywordList = keywords.split(',').map(k => k.trim()).filter(Boolean)
@@ -407,12 +416,30 @@ export default function TestSwipePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-      <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-emerald-50 via-sky-50 to-teal-50">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(16,185,129,0.18),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.16),transparent_40%),radial-gradient(circle_at_85%_80%,rgba(244,63,94,0.14),transparent_45%),radial-gradient(circle_at_15%_85%,rgba(245,158,11,0.12),transparent_40%)]" />
+        <div className="absolute inset-0 opacity-[0.12] bg-[linear-gradient(90deg,rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.04)_1px,transparent_1px)] bg-[size:22px_22px]" />
+        {bgOrbs.map((o, idx) => (
+          <motion.div
+            key={idx}
+            className={`absolute rounded-full blur-3xl bg-gradient-to-br ${o.c}`}
+            style={{ left: o.x, top: o.y, width: o.size, height: o.size }}
+            animate={{ y: [0, -14, 0], x: [0, 10, 0] }}
+            transition={{ duration: o.d, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        ))}
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-8 relative">
         {/* ヘッダー */}
         <div className="mb-8">
-          <h1 className="text-3xl font-black text-gray-900 mb-2">スワイプ記事作成（テスト版）</h1>
-          <p className="text-gray-600">AIが動的に質問を生成します。Yes/Noでスワイプして回答してください。</p>
+          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-2 tracking-tight">
+            スワイプ記事作成 <span className="text-sm align-top font-black text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full ml-2">TEST</span>
+          </h1>
+          <p className="text-gray-700 font-bold">
+            カードをめくって答える感覚で進めます。右=YES、左=NO。
+          </p>
         </div>
 
         {/* エラー表示 */}
@@ -478,7 +505,56 @@ export default function TestSwipePage() {
 
               {/* カード領域 */}
               <div className="col-span-12 xl:col-span-8">
-                <div className="relative h-[760px] mb-8 z-10 flex items-center justify-center">
+                <div className="relative h-[780px] mb-8 z-10 flex items-center justify-center">
+                  <AnimatePresence>
+                    {(isGeneratingQuestion || isTransitioningQuestion) && (
+                      <motion.div
+                        className="absolute inset-0 z-30 flex items-center justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        <div className="absolute inset-0 bg-white/35 backdrop-blur-sm" />
+                        <motion.div
+                          initial={{ scale: 0.98, y: 8, opacity: 0 }}
+                          animate={{ scale: 1, y: 0, opacity: 1 }}
+                          exit={{ scale: 0.98, y: 8, opacity: 0 }}
+                          className="relative w-[min(560px,92%)] rounded-3xl border border-white/70 bg-gradient-to-br from-white/85 to-white/55 shadow-[0_30px_80px_rgba(0,0,0,0.12)] p-8 overflow-hidden"
+                        >
+                          <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-emerald-200/30 blur-3xl" />
+                          <div className="absolute -bottom-24 -left-24 w-64 h-64 rounded-full bg-sky-200/30 blur-3xl" />
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+                              <Loader2 className="w-6 h-6 text-white animate-spin" />
+                            </div>
+                            <div>
+                              <p className="text-gray-900 font-black text-lg">次の質問を準備中…</p>
+                              <p className="text-gray-700 font-bold text-sm mt-1">
+                                ワクワク演出中。少しだけ待ってね
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-6">
+                            <div className="h-3 rounded-full bg-gray-200/70 overflow-hidden">
+                              <motion.div
+                                className="h-full bg-gradient-to-r from-emerald-500 via-sky-500 to-teal-500"
+                                initial={{ x: '-40%' }}
+                                animate={{ x: ['-40%', '110%'] }}
+                                transition={{ duration: 1.15, repeat: Infinity, ease: 'easeInOut' }}
+                                style={{ width: '45%' }}
+                              />
+                            </div>
+                            <div className="mt-3 flex items-center justify-between text-xs font-black text-gray-600">
+                              <span>Thinking</span>
+                              <span>Loading</span>
+                              <span>Ready</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   {questionQueue.length > 0 ? (
                     questionQueue.slice(0, 3).map((question, index) => (
                       <TinderSwipeCard
@@ -492,15 +568,7 @@ export default function TestSwipePage() {
                     ))
                   ) : (
                     <div className="bg-white rounded-3xl shadow-2xl p-12 text-center h-full w-full flex items-center justify-center">
-                      {isGeneratingQuestion || isTransitioningQuestion ? (
-                        <div>
-                          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
-                          <p className="text-gray-800 font-black text-lg">次の質問を考えています...</p>
-                          <p className="text-gray-500 text-sm font-bold mt-2">読み込み中（しばらくお待ちください）</p>
-                        </div>
-                      ) : (
-                        <p className="text-gray-400 font-bold">読み込み中...</p>
-                      )}
+                      <p className="text-gray-500 font-black">準備中…</p>
                     </div>
                   )}
                 </div>
@@ -520,11 +588,11 @@ export default function TestSwipePage() {
             </div>
 
             {/* 進捗バー（下部） */}
-            <div className="fixed bottom-0 left-0 sm:left-64 right-0 bg-white border-t border-gray-200 shadow-lg z-50 p-6">
+            <div className="fixed bottom-0 left-0 sm:left-64 right-0 bg-white/85 backdrop-blur-md border-t border-gray-200 shadow-lg z-50 p-5">
               <div className="max-w-5xl mx-auto">
-                <div className="w-full h-6 bg-gray-100 rounded-full overflow-hidden shadow-inner">
+                <div className="w-full h-7 bg-gray-100 rounded-full overflow-hidden shadow-inner border border-white">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-lg"
+                    className="h-full bg-gradient-to-r from-emerald-500 via-sky-500 to-teal-500 rounded-full shadow-lg"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}

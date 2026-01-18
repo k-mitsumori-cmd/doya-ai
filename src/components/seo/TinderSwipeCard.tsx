@@ -189,7 +189,19 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
       exit={{ scale: 0.8, opacity: 0, x: index % 2 === 0 ? 300 : -300 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     >
-      <div className="bg-gradient-to-br from-white via-emerald-50 to-teal-50 rounded-3xl shadow-2xl p-8 md:p-12 border-2 border-emerald-100 relative overflow-hidden h-[650px] flex flex-col">
+      {/* TCGカード風の多重枠 + ハイライト */}
+      <div className="relative rounded-[32px] p-[3px] bg-gradient-to-br from-white/90 via-emerald-200/70 to-sky-200/60 shadow-[0_40px_100px_rgba(0,0,0,0.16)]">
+        <div className="relative rounded-[30px] p-[2px] bg-gradient-to-br from-emerald-400/60 via-teal-300/40 to-sky-300/50">
+          <div className="relative bg-gradient-to-br from-white via-emerald-50 to-sky-50 rounded-[28px] shadow-2xl p-8 md:p-12 border border-white/70 overflow-hidden h-[650px] flex flex-col">
+            {/* shine */}
+            <motion.div
+              className="absolute -left-24 -top-24 w-64 h-64 rotate-12 bg-white/35 blur-2xl"
+              animate={{ x: [0, 460, 0], y: [0, 120, 0], opacity: [0.35, 0.15, 0.35] }}
+              transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <div className="absolute inset-0 opacity-[0.10] bg-[radial-gradient(circle_at_20%_20%,rgba(59,130,246,0.35),transparent_40%),radial-gradient(circle_at_80%_30%,rgba(16,185,129,0.35),transparent_40%),radial-gradient(circle_at_40%_90%,rgba(245,158,11,0.25),transparent_40%)]" />
+            <div className="absolute inset-0 opacity-[0.08] bg-[linear-gradient(90deg,rgba(0,0,0,0.06)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.06)_1px,transparent_1px)] bg-[size:18px_18px]" />
+
         {/* LIKE/NOPE オーバーレイ */}
         {index === 0 && (
           <>
@@ -215,9 +227,12 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
         )}
 
         {/* カテゴリタグ */}
-        <div className="mb-4">
-          <span className="inline-block px-3 py-1 bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 text-xs font-black rounded-full uppercase tracking-wider">
+        <div className="mb-4 flex items-center justify-between">
+          <span className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm text-emerald-800 text-xs font-black rounded-full tracking-wider border border-white shadow-sm">
             {question.category}
+          </span>
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black text-sky-900 bg-sky-100 border border-sky-200">
+            ★ RARE
           </span>
         </div>
 
@@ -225,11 +240,11 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
         {index === 0 && (
           <>
             {imageSrc ? (
-              <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-white">
+              <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-white border border-white/70">
                 <img
                   src={imageSrc}
                   alt={question.category}
-                  className="w-full h-48 object-cover"
+                  className="w-full h-52 object-cover"
                   loading="eager"
                   decoding="async"
                   onLoad={() => {
@@ -245,7 +260,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
                 />
               </div>
             ) : (
-              <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-100 to-teal-100 h-48 flex items-center justify-center border-2 border-emerald-200">
+              <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-100 to-sky-100 h-52 flex items-center justify-center border border-white/70">
                 <div className="text-center">
                   <div className="text-emerald-800 text-sm font-black">画像がありません</div>
                   <div className="text-emerald-700 text-xs font-bold mt-1">（サーバー未登録）</div>
@@ -278,21 +293,23 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
             <button
               onClick={() => handleButtonClick('no')}
               disabled={isSwiping}
-              className="group relative w-24 h-24 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center border-4 border-red-500 hover:from-red-500 hover:to-red-700 hover:scale-110 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-24 h-24 rounded-2xl bg-gradient-to-br from-red-400 to-rose-600 flex items-center justify-center border border-white/70 hover:from-red-500 hover:to-rose-700 hover:scale-110 transition-all shadow-[0_18px_40px_rgba(244,63,94,0.35)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <X className="w-12 h-12 text-white" />
-              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs font-black text-red-600 whitespace-nowrap">NO</span>
+              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs font-black text-red-700 whitespace-nowrap">NO</span>
             </button>
             <button
               onClick={() => handleButtonClick('yes')}
               disabled={isSwiping}
-              className="group relative w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center border-4 border-emerald-500 hover:from-emerald-500 hover:to-emerald-700 hover:scale-110 transition-all shadow-xl active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-24 h-24 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center border border-white/70 hover:from-emerald-500 hover:to-teal-700 hover:scale-110 transition-all shadow-[0_18px_40px_rgba(16,185,129,0.32)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Heart className="w-12 h-12 text-white fill-white" />
-              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs font-black text-emerald-600 whitespace-nowrap">YES</span>
+              <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-xs font-black text-emerald-700 whitespace-nowrap">YES</span>
             </button>
           </div>
         )}
+          </div>
+        </div>
       </div>
     </motion.div>
   )
