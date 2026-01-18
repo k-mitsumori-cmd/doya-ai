@@ -37,6 +37,51 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
   
   const controls = useAnimation()
 
+  const playSwipeSfx = (decision: 'yes' | 'no') => {
+    try {
+      const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
+      if (!Ctx) return
+      const ctx = new Ctx()
+      const now = ctx.currentTime
+
+      // whoosh (noise)
+      const bufferSize = Math.floor(ctx.sampleRate * 0.12)
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate)
+      const data = buffer.getChannelData(0)
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize)
+      const noise = ctx.createBufferSource()
+      noise.buffer = buffer
+      const noiseFilter = ctx.createBiquadFilter()
+      noiseFilter.type = 'highpass'
+      noiseFilter.frequency.setValueAtTime(800, now)
+      const noiseGain = ctx.createGain()
+      noiseGain.gain.setValueAtTime(0.0001, now)
+      noiseGain.gain.exponentialRampToValueAtTime(0.4, now + 0.02)
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12)
+      noise.connect(noiseFilter).connect(noiseGain).connect(ctx.destination)
+      noise.start(now)
+      noise.stop(now + 0.13)
+
+      // sparkle (osc)
+      const osc = ctx.createOscillator()
+      const g = ctx.createGain()
+      osc.type = 'triangle'
+      const base = decision === 'yes' ? 660 : 220
+      osc.frequency.setValueAtTime(base, now)
+      osc.frequency.exponentialRampToValueAtTime(base * 1.8, now + 0.08)
+      g.gain.setValueAtTime(0.0001, now)
+      g.gain.exponentialRampToValueAtTime(0.25, now + 0.01)
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12)
+      osc.connect(g).connect(ctx.destination)
+      osc.start(now)
+      osc.stop(now + 0.13)
+
+      setTimeout(() => ctx.close?.(), 250)
+    } catch {
+      // ignore
+    }
+  }
+
   const handleDragEnd = async (_: any, info: PanInfo) => {
     if (isSwiping) return
     
@@ -46,6 +91,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
     if (Math.abs(info.offset.x) > threshold || Math.abs(velocity) > 600) {
       setIsSwiping(true)
       const direction = info.offset.x > 0 || velocity > 0 ? 'yes' : 'no'
+      playSwipeSfx(direction)
       
       try {
         // スワイプアニメーション（確実に表示されるように）
@@ -85,6 +131,9 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
     
     setIsSwiping(true)
     const direction = decision === 'yes' ? 1 : -1
+    // ボタン押下でもオーバーレイが出るようにxを事前に振る
+    x.set(direction * 320)
+    playSwipeSfx(decision)
     
     // スワイプアニメーション（確実に表示されるように）
     try {

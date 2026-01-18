@@ -32,6 +32,7 @@ export default function TestSwipePage() {
   >(new Map())
   const [answers, setAnswers] = useState<Answer[]>([])
   const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false)
+  const [isTransitioningQuestion, setIsTransitioningQuestion] = useState(false)
   const [progress, setProgress] = useState(0) // 進捗（0-100）
   const [finalData, setFinalData] = useState<{
     title: string
@@ -166,6 +167,7 @@ export default function TestSwipePage() {
     if (!sessionId || isGeneratingQuestion) return
 
     setIsGeneratingQuestion(true)
+    setIsTransitioningQuestion(true)
     setError(null) // エラーをクリア
     try {
       const res = await fetch('/api/swipe/test/question', {
@@ -317,6 +319,14 @@ export default function TestSwipePage() {
     }
   }, [sessionId, answers, isGeneratingQuestion, questionQueue.length])
 
+  // 「考え中」表示は、次の質問がキューに入ってから消す（ラグ防止）
+  useEffect(() => {
+    if (isTransitioningQuestion && questionQueue.length > 0) {
+      const id = requestAnimationFrame(() => setIsTransitioningQuestion(false))
+      return () => cancelAnimationFrame(id)
+    }
+  }, [isTransitioningQuestion, questionQueue.length])
+
   // スワイプ処理
   const handleSwipe = async (decision: SwipeDecision, question: Question) => {
     if (!question || !sessionId || decision === 'hold') return
@@ -331,6 +341,14 @@ export default function TestSwipePage() {
       const newAnswers = [...answers, answer]
       setAnswers(newAnswers)
 
+      // 次の質問生成が必要かを先に判定（setStateの非同期でラグらないように）
+      const remaining = Math.max(0, questionQueue.length - 1)
+      const shouldGenerateNext = remaining <= 2 && !isGeneratingQuestion
+      if (shouldGenerateNext) {
+        setIsTransitioningQuestion(true)
+        setIsGeneratingQuestion(true)
+      }
+
       // 現在の質問をキューから削除
       setQuestionQueue((prev) => prev.filter((q) => q.id !== question.id))
 
@@ -340,7 +358,7 @@ export default function TestSwipePage() {
       setProgress(estimatedProgress)
 
       // 残り1-2枚になったら次のバッチを生成
-      if (questionQueue.length <= 2 && !isGeneratingQuestion) {
+      if (shouldGenerateNext) {
         await loadNextQuestions()
       }
     } catch (e: any) {
@@ -474,11 +492,11 @@ export default function TestSwipePage() {
                     ))
                   ) : (
                     <div className="bg-white rounded-3xl shadow-2xl p-12 text-center h-full w-full flex items-center justify-center">
-                      {isGeneratingQuestion ? (
+                      {isGeneratingQuestion || isTransitioningQuestion ? (
                         <div>
                           <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
-                          <p className="text-gray-700 font-black">AIが次の質問を考えています...</p>
-                          <p className="text-gray-500 text-sm font-bold mt-2">数秒かかることがあります</p>
+                          <p className="text-gray-800 font-black text-lg">次の質問を考えています...</p>
+                          <p className="text-gray-500 text-sm font-bold mt-2">読み込み中（しばらくお待ちください）</p>
                         </div>
                       ) : (
                         <p className="text-gray-400 font-bold">読み込み中...</p>

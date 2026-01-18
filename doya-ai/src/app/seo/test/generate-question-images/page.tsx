@@ -72,9 +72,7 @@ export default function GenerateQuestionImagesPage() {
 
         <div className="space-y-6 mb-8">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              生成枚数
-            </label>
+            <label className="block text-sm font-bold text-gray-700 mb-2">生成枚数</label>
             <input
               type="number"
               min="1"
@@ -91,17 +89,13 @@ export default function GenerateQuestionImagesPage() {
           {result && (
             <div
               className={`p-4 rounded-xl ${
-                result.success
-                  ? 'bg-emerald-50 border-2 border-emerald-200'
-                  : 'bg-red-50 border-2 border-red-200'
+                result.success ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'
               }`}
             >
               {result.success ? (
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  <span className="font-bold text-emerald-700">
-                    {result.generated}枚の画像を生成しました！
-                  </span>
+                  <span className="font-bold text-emerald-700">{result.generated}枚の画像を生成しました！</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -129,7 +123,9 @@ export default function GenerateQuestionImagesPage() {
             {clearResult && (
               <div
                 className={`mt-3 p-4 rounded-xl ${
-                  clearResult.success ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'
+                  clearResult.success
+                    ? 'bg-emerald-50 border-2 border-emerald-200'
+                    : 'bg-red-50 border-2 border-red-200'
                 }`}
               >
                 {clearResult.success ? (
@@ -173,3 +169,4 @@ export default function GenerateQuestionImagesPage() {
     </div>
   )
 }
+
