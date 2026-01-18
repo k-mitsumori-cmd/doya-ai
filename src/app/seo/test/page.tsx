@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TinderSwipeCard, SwipeDecision } from '@/components/seo/TinderSwipeCard'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
-import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, X } from 'lucide-react'
+import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, X, Lock } from 'lucide-react'
 
 type Step = 'keyword' | 'swipe' | 'confirm' | 'generating'
 
@@ -22,8 +24,17 @@ interface Answer {
   answer: 'yes' | 'no'
 }
 
+// プラン別文字数上限
+const CHAR_LIMITS: Record<string, number> = {
+  GUEST: 5000,
+  FREE: 10000,
+  PRO: 20000,
+  ENTERPRISE: 50000,
+}
+
 export default function TestSwipePage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [step, setStep] = useState<Step>('keyword')
   const [keywords, setKeywords] = useState('')
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -47,6 +58,15 @@ export default function TestSwipePage() {
   } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // ユーザープラン情報
+  const userPlan = useMemo(() => {
+    const user: any = session?.user || null
+    const plan = user?.seoPlan || user?.plan || (user ? 'FREE' : 'GUEST')
+    return String(plan).toUpperCase() as 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE'
+  }, [session])
+  const charLimit = useMemo(() => CHAR_LIMITS[userPlan] || 10000, [userPlan])
+  const isLoggedIn = !!session?.user
 
   const thinkingMessages = useMemo(
     () => [
@@ -279,7 +299,12 @@ export default function TestSwipePage() {
 
       if (json.done) {
         // 質問が完了したら最終確認へ
-        setFinalData(json.finalData)
+        // プラン上限を超えている場合は上限に調整
+        const adjustedFinalData = {
+          ...json.finalData,
+          targetChars: Math.min(json.finalData.targetChars || 4000, charLimit),
+        }
+        setFinalData(adjustedFinalData)
         
         // 完了時の画像を取得
         try {
@@ -746,29 +771,89 @@ export default function TestSwipePage() {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">文字数</label>
+                <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
+                  文字数目安
+                  <span className="ml-2 text-[10px] font-bold text-gray-400 normal-case">
+                    ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'PRO' ? 'プロ' : 'エンタープライズ'}プラン: 最大{charLimit.toLocaleString()}字)
+                  </span>
+                </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {charPresets.map((p) => {
                     const selected = finalData.targetChars === p.value
+                    const locked = p.value > charLimit
+                    const requiredPlan: 'ENTERPRISE' | 'PRO' | 'FREE' | 'GUEST' =
+                      p.value >= 50000
+                        ? 'ENTERPRISE'
+                        : p.value > 20000
+                          ? 'ENTERPRISE'
+                          : p.value > 10000
+                            ? 'PRO'
+                            : p.value > 5000
+                              ? 'FREE'
+                              : 'GUEST'
+                    const requiredLabel =
+                      requiredPlan === 'ENTERPRISE'
+                        ? 'Enterpriseが必要'
+                        : requiredPlan === 'PRO'
+                          ? 'PROが必要'
+                          : requiredPlan === 'FREE'
+                            ? 'ログインが必要'
+                            : 'ゲストOK'
+                    const hint = locked ? `${requiredLabel}（クリックでアップグレード）` : `${p.value.toLocaleString()}字を選択`
+
                     return (
                       <button
                         key={`${p.label}-${p.value}`}
                         type="button"
-                        onClick={() => setFinalData({ ...finalData, targetChars: p.value })}
-                        className={`p-4 rounded-2xl border-2 text-left transition-all ${
-                          selected ? 'border-emerald-500 bg-emerald-50' : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+                        onClick={() => {
+                          if (locked) {
+                            window.location.href = isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'
+                            return
+                          }
+                          setFinalData({ ...finalData, targetChars: p.value })
+                        }}
+                        title={hint}
+                        className={`relative p-3 rounded-xl border-2 text-center transition-all overflow-hidden ${
+                          selected
+                            ? 'border-emerald-500 bg-emerald-50'
+                            : locked
+                              ? 'border-gray-100 bg-gray-50 opacity-80 hover:border-emerald-200 hover:bg-emerald-50/30 cursor-pointer'
+                              : 'border-gray-100 bg-gray-50 hover:border-gray-200'
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <p className={`text-sm font-black ${selected ? 'text-emerald-700' : 'text-gray-800'}`}>
-                            {p.label}
+                        {locked && (
+                          <div className="absolute inset-0 pointer-events-none">
+                            <div className="absolute inset-0 bg-white/35" />
+                            <div className="absolute right-2 top-2 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-900/85 text-white text-[9px] font-black shadow">
+                              <Lock className="w-3 h-3" />
+                              {requiredPlan === 'ENTERPRISE' ? 'Enterprise' : requiredPlan === 'PRO' ? 'PRO' : requiredPlan === 'FREE' ? 'LOGIN' : 'GUEST'}
+                            </div>
+                          </div>
+                        )}
+                        <p className={`text-sm font-black ${selected ? 'text-emerald-600' : 'text-gray-700'}`}>
+                          {p.label}
+                        </p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{p.desc}</p>
+                        {locked && (
+                          <p className="text-[10px] font-black text-gray-500 mt-1">
+                            {requiredLabel}
                           </p>
-                          <span className="text-[10px] font-black text-gray-400">{p.value.toLocaleString()}字</span>
-                        </div>
-                        <p className="text-[10px] font-bold text-gray-500 mt-1">{p.desc}</p>
+                        )}
                       </button>
                     )
                   })}
+                  {/* プランアップグレード誘導 */}
+                  {userPlan !== 'ENTERPRISE' && (
+                    <Link href="/seo/pricing" className="block">
+                      <div className="p-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 text-center hover:border-emerald-300 hover:bg-emerald-50/30 transition-all cursor-pointer">
+                        <div className="flex items-center justify-center gap-1 text-sm font-black text-gray-400">
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>もっと長く</span>
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-0.5">プランをアップグレード</p>
+                      </div>
+                    </Link>
+                  )}
                 </div>
               </div>
 
