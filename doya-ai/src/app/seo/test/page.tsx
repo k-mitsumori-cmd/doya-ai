@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TinderSwipeCard, SwipeDecision } from '@/components/seo/TinderSwipeCard'
+import { MarkdownPreview } from '@seo/components/MarkdownPreview'
 import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, X } from 'lucide-react'
 
 type Step = 'keyword' | 'swipe' | 'confirm' | 'generating'
@@ -45,6 +46,13 @@ export default function TestSwipePage() {
   } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const summaryMarkdown = useMemo(() => {
+    const s = String(finalData?.summary || '').trim()
+    if (!s) return ''
+    if (/^#{1,6}\s/m.test(s)) return s
+    return `## 質問回答から得た情報と記事の方向性\n\n${s}`
+  }, [finalData?.summary])
 
   const bgOrbs = useMemo(() => {
     return [
@@ -684,10 +692,14 @@ export default function TestSwipePage() {
                   <label className="block text-sm font-bold text-gray-700 mb-2">
                     質問回答から得た情報と記事の方向性
                   </label>
-                  <div className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl bg-gray-50">
-                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                      {finalData.summary}
-                    </p>
+                  <div className="w-full border border-white/70 rounded-2xl bg-white/85 backdrop-blur-sm shadow-[0_18px_50px_rgba(0,0,0,0.10)] overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
+                      <div className="text-xs font-black text-gray-700 tracking-wider">プレビュー</div>
+                      <div className="text-[11px] font-bold text-gray-500">読みやすい表示に整形しました</div>
+                    </div>
+                    <div className="px-5 py-5 max-h-[420px] overflow-auto">
+                      <MarkdownPreview markdown={summaryMarkdown} />
+                    </div>
                   </div>
                 </div>
               )}
