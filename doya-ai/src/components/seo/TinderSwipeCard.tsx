@@ -2,9 +2,70 @@
 
 import { useMemo, useState, useRef } from 'react'
 import { motion, useMotionValue, useTransform, PanInfo, useAnimation } from 'framer-motion'
-import { Heart, X } from 'lucide-react'
+import { Heart, X, FileText, Target, Search, Users, FileCheck, Compass, BarChart3, Lightbulb, CheckCircle } from 'lucide-react'
 
 export type SwipeDecision = 'yes' | 'no' | 'hold'
+
+// カテゴリに応じたアイコンとグラデーションを返す
+function getCategoryVisual(category: string): { icon: React.ReactNode; gradient: string; bgPattern: string } {
+  const cat = String(category || '').toLowerCase()
+  
+  if (cat.includes('記事の種類') || cat.includes('記事タイプ') || cat.includes('タイプ')) {
+    return {
+      icon: <FileText className="w-16 h-16 text-blue-600" strokeWidth={1.5} />,
+      gradient: 'from-blue-100 via-indigo-50 to-sky-100',
+      bgPattern: 'radial-gradient(circle at 30% 20%, rgba(59,130,246,0.15), transparent 50%), radial-gradient(circle at 70% 80%, rgba(99,102,241,0.12), transparent 50%)',
+    }
+  }
+  if (cat.includes('方向性') || cat.includes('戦略')) {
+    return {
+      icon: <Compass className="w-16 h-16 text-emerald-600" strokeWidth={1.5} />,
+      gradient: 'from-emerald-100 via-teal-50 to-cyan-100',
+      bgPattern: 'radial-gradient(circle at 25% 25%, rgba(16,185,129,0.15), transparent 50%), radial-gradient(circle at 75% 75%, rgba(20,184,166,0.12), transparent 50%)',
+    }
+  }
+  if (cat.includes('キーワード') || cat.includes('検索')) {
+    return {
+      icon: <Search className="w-16 h-16 text-violet-600" strokeWidth={1.5} />,
+      gradient: 'from-violet-100 via-purple-50 to-fuchsia-100',
+      bgPattern: 'radial-gradient(circle at 20% 30%, rgba(139,92,246,0.15), transparent 50%), radial-gradient(circle at 80% 70%, rgba(192,132,252,0.12), transparent 50%)',
+    }
+  }
+  if (cat.includes('ターゲット') || cat.includes('読者') || cat.includes('ペルソナ')) {
+    return {
+      icon: <Users className="w-16 h-16 text-orange-600" strokeWidth={1.5} />,
+      gradient: 'from-orange-100 via-amber-50 to-yellow-100',
+      bgPattern: 'radial-gradient(circle at 30% 70%, rgba(249,115,22,0.15), transparent 50%), radial-gradient(circle at 70% 30%, rgba(251,191,36,0.12), transparent 50%)',
+    }
+  }
+  if (cat.includes('長さ') || cat.includes('文字数') || cat.includes('ボリューム')) {
+    return {
+      icon: <BarChart3 className="w-16 h-16 text-cyan-600" strokeWidth={1.5} />,
+      gradient: 'from-cyan-100 via-sky-50 to-blue-100',
+      bgPattern: 'radial-gradient(circle at 25% 75%, rgba(6,182,212,0.15), transparent 50%), radial-gradient(circle at 75% 25%, rgba(14,165,233,0.12), transparent 50%)',
+    }
+  }
+  if (cat.includes('確認') || cat.includes('チェック')) {
+    return {
+      icon: <CheckCircle className="w-16 h-16 text-green-600" strokeWidth={1.5} />,
+      gradient: 'from-green-100 via-emerald-50 to-teal-100',
+      bgPattern: 'radial-gradient(circle at 50% 30%, rgba(34,197,94,0.15), transparent 50%), radial-gradient(circle at 50% 70%, rgba(16,185,129,0.12), transparent 50%)',
+    }
+  }
+  if (cat.includes('コンテンツ') || cat.includes('内容')) {
+    return {
+      icon: <Lightbulb className="w-16 h-16 text-amber-600" strokeWidth={1.5} />,
+      gradient: 'from-amber-100 via-yellow-50 to-orange-100',
+      bgPattern: 'radial-gradient(circle at 40% 40%, rgba(245,158,11,0.15), transparent 50%), radial-gradient(circle at 60% 60%, rgba(251,191,36,0.12), transparent 50%)',
+    }
+  }
+  // デフォルト
+  return {
+    icon: <Target className="w-16 h-16 text-rose-600" strokeWidth={1.5} />,
+    gradient: 'from-rose-100 via-pink-50 to-red-100',
+    bgPattern: 'radial-gradient(circle at 30% 30%, rgba(244,63,94,0.15), transparent 50%), radial-gradient(circle at 70% 70%, rgba(251,113,133,0.12), transparent 50%)',
+  }
+}
 
 interface TinderSwipeCardProps {
   question: {
@@ -94,7 +155,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
       playSwipeSfx(direction)
       
       try {
-        // スワイプアニメーション（どっちに飛んだか分かるように“転がる”）
+        // スワイプアニメーション（どっちに飛んだか分かるように"転がる"）
         await controls.start({
           x: direction === 'yes' ? 820 : -820,
           y: 70,
@@ -137,7 +198,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
     y.set(0)
     playSwipeSfx(decision)
     
-    // スワイプアニメーション（どっちに飛んだか分かるように“転がる”）
+    // スワイプアニメーション（どっちに飛んだか分かるように"転がる"）
     try {
       await controls.start({
         x: direction * 820,
@@ -171,6 +232,9 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
     questionImage?.imageBase64
       ? `data:${questionImage.mimeType || 'image/png'};base64,${questionImage.imageBase64}`
       : questionImage?.url
+
+  // カテゴリに応じたビジュアル（画像がない場合のフォールバック）
+  const categoryVisual = useMemo(() => getCategoryVisual(question.category), [question.category])
 
   const stackYOffset = index * 18
 
@@ -239,38 +303,57 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
           </span>
         </div>
 
-        {/* 質問画像 */}
+        {/* 質問画像 or カテゴリアイコン（常に表示） */}
         {index === 0 && (
-          <>
+          <div className="mb-6 rounded-2xl overflow-hidden shadow-lg border border-white/70 h-44 relative">
             {imageSrc ? (
-              <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-white border border-white/70">
-                <img
-                  src={imageSrc}
-                  alt={question.category}
-                  className="w-full h-52 object-cover"
-                  loading="eager"
-                  decoding="async"
-                  onLoad={() => {
-                    // 画像読み込み成功をログに記録
-                    console.log(`[画像読み込み成功] category: ${question.category}`)
-                  }}
-                  onError={(e) => {
-                    // 画像読み込みエラー時は再取得を試みる
-                    console.error(`[画像読み込みエラー] category: ${question.category}`, e)
-                    const target = e.target as HTMLImageElement
-                    // エラー時は親要素を更新せず、そのまま表示（フォールバック画像は表示しない）
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="mb-6 rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-emerald-100 to-sky-100 h-52 flex items-center justify-center border border-white/70">
-                <div className="text-center">
-                  <div className="text-emerald-800 text-sm font-black">画像がありません</div>
-                  <div className="text-emerald-700 text-xs font-bold mt-1">（サーバー未登録）</div>
-                </div>
-              </div>
-            )}
-          </>
+              <img
+                src={imageSrc}
+                alt={question.category}
+                className="w-full h-full object-cover"
+                loading="eager"
+                decoding="async"
+                onLoad={() => {
+                  console.log(`[画像読み込み成功] category: ${question.category}`)
+                }}
+                onError={(e) => {
+                  // 画像読み込みエラー時はフォールバックアイコンを表示
+                  console.warn(`[画像読み込みエラー] category: ${question.category}`, e)
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
+                  // 親要素にフォールバッククラスを追加
+                  const parent = target.parentElement
+                  if (parent) {
+                    parent.classList.add('show-fallback')
+                  }
+                }}
+              />
+            ) : null}
+            {/* フォールバック: カテゴリに応じたアイコン表示（画像がない場合 or 読み込みエラー時） */}
+            <div 
+              className={`absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br ${categoryVisual.gradient} ${imageSrc ? 'opacity-0 pointer-events-none' : ''}`}
+              style={{ 
+                background: imageSrc ? undefined : categoryVisual.bgPattern,
+              }}
+            >
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+                className="p-4 rounded-full bg-white/60 backdrop-blur-sm shadow-lg"
+              >
+                {categoryVisual.icon}
+              </motion.div>
+              <motion.p
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="mt-3 text-sm font-black text-gray-700/80"
+              >
+                {question.category}
+              </motion.p>
+            </div>
+          </div>
         )}
 
         {/* 質問 */}
