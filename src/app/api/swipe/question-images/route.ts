@@ -82,17 +82,12 @@ export async function GET(req: NextRequest) {
         })
       : []
 
-    // DBに画像がない場合は、public の静的画像へフォールバック（無限ローディング防止）
+    // DBに画像がない場合は空を返す（既存の画像は使わない）
     if (selected.length === 0) {
-      const urls = pickFallbackUrls(category, count)
+      console.warn(`[question-images] No images found for category: ${category}`)
       return NextResponse.json({
         success: true,
-        images: urls.map((url, idx) => ({
-          id: `fallback:${category}:${idx}`,
-          category,
-          url,
-          mimeType: 'image/png',
-        })),
+        images: [], // フォールバック画像は使わない
       })
     }
 
