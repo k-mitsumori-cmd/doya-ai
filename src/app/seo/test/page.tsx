@@ -687,20 +687,20 @@ export default function TestSwipePage() {
             </div>
 
             {/* 進捗バー（下部） */}
-            <div className="fixed bottom-0 left-0 sm:left-64 right-0 bg-white/85 backdrop-blur-md border-t border-gray-200 shadow-lg z-50 p-5">
+            <div className="fixed bottom-0 left-0 sm:left-64 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-700/50 shadow-lg z-50 p-4 sm:p-5">
               <div className="max-w-5xl mx-auto">
-                <div className="w-full h-7 bg-gray-100 rounded-full overflow-hidden shadow-inner border border-white">
+                <div className="w-full h-6 sm:h-7 bg-slate-800/50 rounded-full overflow-hidden shadow-inner border border-slate-700/30">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-emerald-500 via-sky-500 to-teal-500 rounded-full shadow-lg"
+                    className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-full shadow-lg"
                     initial={{ width: 0 }}
                     animate={{ width: `${progress}%` }}
                     transition={{ duration: 0.3, ease: 'easeOut' }}
                   />
                 </div>
                 {isGeneratingQuestion && (
-                  <div className="flex items-center justify-center gap-2 mt-3 text-sm text-gray-500">
+                  <div className="flex items-center justify-center gap-2 mt-3 text-sm text-slate-300">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="font-bold">次の質問を生成中...</span>
+                    <span className="font-medium">次の質問を生成中...</span>
                   </div>
                 )}
               </div>
