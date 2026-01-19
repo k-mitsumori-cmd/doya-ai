@@ -607,7 +607,7 @@ export default function TestSwipePage() {
 
               {/* カード領域 */}
               <div className="col-span-12 xl:col-span-8">
-                <div className="relative h-[680px] sm:h-[720px] mb-8 z-10 flex items-start justify-center pt-4 sm:pt-8">
+                <div className="relative h-[520px] sm:h-[600px] md:h-[680px] mb-20 sm:mb-8 z-10 flex items-start justify-center pt-2 sm:pt-4">
                   {/* 生成中オーバーレイ（カードの上で"考え中"を演出） */}
                   <AnimatePresence>
                     {showThinking && (
@@ -622,24 +622,24 @@ export default function TestSwipePage() {
                           initial={{ scale: 0.95, y: 20, opacity: 0 }}
                           animate={{ scale: 1, y: 0, opacity: 1 }}
                           exit={{ scale: 0.95, y: 20, opacity: 0 }}
-                          className="relative w-[min(480px,90%)] rounded-3xl bg-white shadow-[0_30px_80px_rgba(0,0,0,0.3)] p-6 sm:p-8 overflow-hidden"
+                          className="relative w-[min(360px,88%)] sm:w-[min(440px,90%)] rounded-2xl sm:rounded-3xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-4 sm:p-6 overflow-hidden"
                         >
                           {/* 上部アクセント */}
                           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
                           
-                          <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                              <Loader2 className="w-7 h-7 text-white animate-spin" />
+                          <div className="flex items-center gap-3 sm:gap-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                              <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 text-white animate-spin" />
                             </div>
-                            <div>
-                              <p className="text-slate-900 font-bold text-lg">次の質問を考えています…</p>
-                              <p className="text-slate-600 font-medium text-sm mt-1">
+                            <div className="min-w-0">
+                              <p className="text-slate-900 font-bold text-sm sm:text-base">次の質問を考えています…</p>
+                              <p className="text-slate-600 font-medium text-xs sm:text-sm mt-0.5 sm:mt-1 truncate">
                                 {thinkingMessages[thinkingIdx % thinkingMessages.length]}
                               </p>
                             </div>
                           </div>
-                          <div className="mt-6">
-                            <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="mt-4 sm:mt-5">
+                            <div className="h-2 sm:h-2.5 rounded-full bg-slate-100 overflow-hidden">
                               <motion.div
                                 className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"
                                 initial={{ x: '-40%' }}
@@ -664,8 +664,8 @@ export default function TestSwipePage() {
                       questionImage={questionImages.get(questionQueue[0].id)}
                     />
                   ) : (
-                    <div className="bg-white rounded-3xl shadow-2xl p-12 text-center flex items-center justify-center">
-                      <p className="text-slate-500 font-bold">準備中…</p>
+                    <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-8 sm:p-12 text-center flex items-center justify-center">
+                      <p className="text-slate-500 font-bold text-sm sm:text-base">準備中…</p>
                     </div>
                   )}
                 </div>
@@ -683,9 +683,9 @@ export default function TestSwipePage() {
             </div>
 
             {/* 進捗バー（下部） */}
-            <div className="fixed bottom-0 left-0 sm:left-64 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-700/50 shadow-lg z-50 p-4 sm:p-5">
+            <div className="fixed bottom-0 left-0 sm:left-64 right-0 bg-slate-900/95 backdrop-blur-md border-t border-slate-700/50 shadow-lg z-50 p-3 sm:p-4">
               <div className="max-w-5xl mx-auto">
-                <div className="w-full h-6 sm:h-7 bg-slate-800/50 rounded-full overflow-hidden shadow-inner border border-slate-700/30">
+                <div className="w-full h-4 sm:h-6 bg-slate-800/50 rounded-full overflow-hidden shadow-inner border border-slate-700/30">
                   <motion.div
                     className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600 rounded-full shadow-lg"
                     initial={{ width: 0 }}
@@ -694,8 +694,8 @@ export default function TestSwipePage() {
                   />
                 </div>
                 {isGeneratingQuestion && (
-                  <div className="flex items-center justify-center gap-2 mt-3 text-sm text-slate-300">
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                  <div className="flex items-center justify-center gap-2 mt-2 sm:mt-3 text-xs sm:text-sm text-slate-300">
+                    <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                     <span className="font-medium">次の質問を生成中...</span>
                   </div>
                 )}
