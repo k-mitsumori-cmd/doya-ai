@@ -181,8 +181,8 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     }
   }
   
-  // スワイプアニメーションを実行
-  const performSwipeAnimation = async (decision: 'yes' | 'no') => {
+  // スワイプアニメーションを実行（即座にコールバック）
+  const performSwipeAnimation = (decision: 'yes' | 'no') => {
     if (isSwiping || isExiting) return
     
     setIsSwiping(true)
@@ -191,26 +191,25 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     
     const direction = decision === 'yes' ? 1 : -1
     
-    // 滑らかなスワイプアニメーション（上方向に流れる）
-    await controls.start({
-      x: direction * 1000,
-      y: -200,
-      rotate: direction * 20,
+    // アニメーション開始（awaitしない）
+    controls.start({
+      x: direction * 800,
+      y: -100,
+      rotate: direction * 15,
       opacity: 0,
-      scale: 0.8,
+      scale: 0.85,
       transition: { 
-        duration: 0.6,
-        ease: [0.32, 0, 0.67, 0],
+        duration: 0.35,
+        ease: [0.4, 0, 1, 1],
       },
     })
     
-    // 完了後にコールバック
+    // 即座にコールバック（アニメーション完了を待たない）
     onSwipe(decision)
-    setIsSwiping(false)
   }
   
   // ボタンクリック時
-  const handleButtonClick = async (decision: 'yes' | 'no') => {
+  const handleButtonClick = (decision: 'yes' | 'no') => {
     if (isSwiping || isExiting || index !== 0) return
     
     setIsSwiping(true)
@@ -219,29 +218,21 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     
     const direction = decision === 'yes' ? 1 : -1
     
-    // まずオーバーレイを見せるために少し傾ける
-    await controls.start({
-      x: direction * 80,
-      rotate: direction * 8,
-      transition: { duration: 0.12, ease: 'easeOut' },
-    })
-    
-    // そして滑らかに飛んでいく
-    await controls.start({
-      x: direction * 1000,
-      y: -200,
-      rotate: direction * 20,
+    // アニメーション開始（awaitしない）
+    controls.start({
+      x: direction * 800,
+      y: -100,
+      rotate: direction * 15,
       opacity: 0,
-      scale: 0.8,
+      scale: 0.85,
       transition: { 
-        duration: 0.5,
-        ease: [0.32, 0, 0.67, 0],
+        duration: 0.35,
+        ease: [0.4, 0, 1, 1],
       },
     })
     
-    // 完了後にコールバック
+    // 即座にコールバック（アニメーション完了を待たない）
     onSwipe(decision)
-    setIsSwiping(false)
   }
 
   // 1枚目のみ表示（重なりを完全に排除）
