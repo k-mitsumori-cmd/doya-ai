@@ -191,23 +191,23 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     
     const direction = decision === 'yes' ? 1 : -1
     
-    // アニメーション開始
+    // アニメーション開始（より明確な動き）
     controls.start({
-      x: direction * 600,
-      y: -80,
-      rotate: direction * 12,
+      x: direction * 700,
+      y: -100,
+      rotate: direction * 15,
       opacity: 0,
-      scale: 0.9,
+      scale: 0.85,
       transition: { 
-        duration: 0.25,
-        ease: 'easeOut',
+        duration: 0.3,
+        ease: [0.4, 0, 0.2, 1],
       },
     })
     
     // 短い遅延後にコールバック（アニメーションを少し見せてから次へ）
     setTimeout(() => {
       onSwipe(decision)
-    }, 150)
+    }, 200)
   }
   
   // ボタンクリック時
@@ -220,23 +220,30 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     
     const direction = decision === 'yes' ? 1 : -1
     
-    // アニメーション開始
+    // まず少し傾けてオーバーレイを見せる
     controls.start({
-      x: direction * 600,
-      y: -80,
-      rotate: direction * 12,
-      opacity: 0,
-      scale: 0.9,
-      transition: { 
-        duration: 0.25,
-        ease: 'easeOut',
-      },
+      x: direction * 50,
+      rotate: direction * 5,
+      transition: { duration: 0.1, ease: 'easeOut' },
+    }).then(() => {
+      // そして飛んでいく
+      controls.start({
+        x: direction * 700,
+        y: -100,
+        rotate: direction * 15,
+        opacity: 0,
+        scale: 0.85,
+        transition: { 
+          duration: 0.3,
+          ease: [0.4, 0, 0.2, 1],
+        },
+      })
     })
     
     // 短い遅延後にコールバック（アニメーションを少し見せてから次へ）
     setTimeout(() => {
       onSwipe(decision)
-    }, 150)
+    }, 200)
   }
 
   // 1枚目のみ表示（重なりを完全に排除）
@@ -253,18 +260,19 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     <motion.div
       className="absolute inset-x-0 top-0 w-full max-w-xl sm:max-w-2xl mx-auto cursor-grab active:cursor-grabbing px-4"
       style={{
-        x,
-        y,
-        rotate,
+        // isSwiping中はstyleのx/y/rotateを無効化してanimateに任せる
+        x: !isSwiping ? x : undefined,
+        y: !isSwiping ? y : undefined,
+        rotate: !isSwiping ? rotate : undefined,
         zIndex: 10,
       }}
-      animate={isSwiping ? controls : { opacity: 1, scale: 1, y: 0 }}
+      animate={isSwiping ? controls : { opacity: 1, scale: 1 }}
       drag={!isSwiping && !isExiting}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.9}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
-      initial={{ opacity: 1, scale: 1, y: 0 }}
+      initial={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.15 }}
     >
       {/* カード本体（リッチなデザイン） */}
