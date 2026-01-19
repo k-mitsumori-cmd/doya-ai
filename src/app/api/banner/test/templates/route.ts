@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateBanners } from '@/lib/nanobanner'
+import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
 
 // 大量のプロンプトパターンを定義（デザイン要素のみ、テキスト内容は反映しない）
-const BANNER_TEMPLATE_PROMPTS = [
+export const BANNER_TEMPLATE_PROMPTS = [
   // ビジネス/ブランディング系デザイン（tomorrowgate風）
   {
     id: 'brand-001',
@@ -672,7 +673,7 @@ const BANNER_TEMPLATE_PROMPTS = [
 ]
 
 // さらにバリエーションを追加（デザインパターンの組み合わせ）
-const generateMoreVariations = () => {
+export const generateMoreVariations = () => {
   const variations: typeof BANNER_TEMPLATE_PROMPTS = []
   
   // デザインパターンの組み合わせ
@@ -788,21 +789,41 @@ const generateMoreVariations = () => {
   return variations
 }
 
-// GET: テンプレート一覧を取得
+// GET: テンプレート一覧を取得（DBから画像URLを取得）
 export async function GET(request: NextRequest) {
   try {
     const allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
     
-    // 実際の画像URLを取得（既に生成済みの場合）
-    // TODO: データベースから取得する実装に変更
+    // DBから既存のテンプレート情報を取得
+    const dbTemplates = await prisma.bannerTemplate.findMany({
+      where: { isActive: true },
+    })
+    
+    // templateIdをキーにしたマップを作成
+    const dbTemplateMap = new Map(
+      dbTemplates.map((t) => [t.templateId, t])
+    )
+    
+    // フロントエンド用のテンプレート配列を作成
+    const templates = allTemplates.map((t) => {
+      const dbTemplate = dbTemplateMap.get(t.id)
+      return {
+        ...t,
+        imageUrl: dbTemplate?.imageUrl || null,
+        previewUrl: dbTemplate?.previewUrl || null,
+        isFeatured: dbTemplate?.isFeatured || false,
+      }
+    })
+    
+    // featuredTemplateを取得
+    const featuredTemplate = dbTemplates.find((t) => t.isFeatured) || dbTemplates[0]
+    const featuredTemplateId = featuredTemplate?.templateId || null
     
     return NextResponse.json({
-      templates: allTemplates.map((t) => ({
-        ...t,
-        imageUrl: null, // 後で実装
-        previewUrl: null,
-      })),
-      count: allTemplates.length,
+      templates,
+      featuredTemplateId,
+      count: templates.length,
+      generatedCount: dbTemplates.length, // 画像が生成済みの数
     })
   } catch (err: any) {
     console.error('Get templates error:', err)

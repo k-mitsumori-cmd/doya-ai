@@ -873,3 +873,33 @@ model StrategyProject {
   @@index([status, createdAt])
   @@map("strategy_project")
 }
+
+// ============================================
+// ドヤバナーAI - テンプレート管理
+// ============================================
+
+model BannerTemplate {
+  id        String   @id @default(cuid())
+  templateId String  @unique // 'brand-001', 'ux-001' など（コード内のID）
+  industry  String
+  category  String   // 'it', 'recruit', 'ec', 'beauty' など
+  prompt    String   @db.Text // デザイン要素のみのプロンプト
+  size      String   @default("1200x628")
+  
+  // 画像URL（生成済みの場合）
+  imageUrl  String?  // ヒーロー画像として表示するURL
+  previewUrl String? // サムネイル用（オプション）
+  
+  // フラグ
+  isFeatured Boolean @default(false) // 初期表示用のヒーロー画像として使用
+  isActive   Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([industry])
+  @@index([category])
+  @@index([isFeatured])
+  @@index([isActive])
+  @@map("banner_template")
+}

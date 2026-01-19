@@ -15,6 +15,7 @@ type BannerTemplate = {
   size: string
   imageUrl: string | null
   previewUrl: string | null
+  isFeatured?: boolean
 }
 
 type GeneratedBanner = {
@@ -59,7 +60,16 @@ function BannerTestPageInner() {
         const data = await res.json()
         if (data.templates) {
           setTemplates(data.templates)
-          if (data.templates.length > 0) {
+          
+          // featuredTemplateを優先的に選択、なければ最初のテンプレート
+          if (data.featuredTemplateId) {
+            const featured = data.templates.find((t: BannerTemplate) => t.id === data.featuredTemplateId)
+            if (featured) {
+              setSelectedTemplate(featured)
+            } else if (data.templates.length > 0) {
+              setSelectedTemplate(data.templates[0])
+            }
+          } else if (data.templates.length > 0) {
             setSelectedTemplate(data.templates[0])
           }
         }
