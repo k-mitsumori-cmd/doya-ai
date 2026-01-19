@@ -181,7 +181,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     }
   }
   
-  // スワイプアニメーションを実行（即座にコールバック）
+  // スワイプアニメーションを実行
   const performSwipeAnimation = (decision: 'yes' | 'no') => {
     if (isSwiping || isExiting) return
     
@@ -191,21 +191,23 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     
     const direction = decision === 'yes' ? 1 : -1
     
-    // アニメーション開始（awaitしない）
+    // アニメーション開始
     controls.start({
-      x: direction * 800,
-      y: -100,
-      rotate: direction * 15,
+      x: direction * 600,
+      y: -80,
+      rotate: direction * 12,
       opacity: 0,
-      scale: 0.85,
+      scale: 0.9,
       transition: { 
-        duration: 0.35,
-        ease: [0.4, 0, 1, 1],
+        duration: 0.25,
+        ease: 'easeOut',
       },
     })
     
-    // 即座にコールバック（アニメーション完了を待たない）
-    onSwipe(decision)
+    // 短い遅延後にコールバック（アニメーションを少し見せてから次へ）
+    setTimeout(() => {
+      onSwipe(decision)
+    }, 150)
   }
   
   // ボタンクリック時
@@ -218,21 +220,23 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     
     const direction = decision === 'yes' ? 1 : -1
     
-    // アニメーション開始（awaitしない）
+    // アニメーション開始
     controls.start({
-      x: direction * 800,
-      y: -100,
-      rotate: direction * 15,
+      x: direction * 600,
+      y: -80,
+      rotate: direction * 12,
       opacity: 0,
-      scale: 0.85,
+      scale: 0.9,
       transition: { 
-        duration: 0.35,
-        ease: [0.4, 0, 1, 1],
+        duration: 0.25,
+        ease: 'easeOut',
       },
     })
     
-    // 即座にコールバック（アニメーション完了を待たない）
-    onSwipe(decision)
+    // 短い遅延後にコールバック（アニメーションを少し見せてから次へ）
+    setTimeout(() => {
+      onSwipe(decision)
+    }, 150)
   }
 
   // 1枚目のみ表示（重なりを完全に排除）
