@@ -107,6 +107,10 @@ export default function TestSwipePage() {
       { value: 6000, label: '6,000字', desc: 'しっかり' },
       { value: 8000, label: '8,000字', desc: '濃いめ' },
       { value: 10000, label: '10,000字', desc: '網羅' },
+      { value: 20000, label: '20,000字', desc: '詳細' },
+      { value: 30000, label: '30,000字', desc: '充実' },
+      { value: 40000, label: '40,000字', desc: '徹底' },
+      { value: 50000, label: '50,000字', desc: '完全版' },
     ],
     [recommendedTargetChars]
   )
@@ -563,7 +567,7 @@ export default function TestSwipePage() {
               <textarea
                 value={keywords}
                 onChange={(e) => setKeywords(e.target.value)}
-                placeholder="例: AIライティングツール, 記事作成ツール, コンテンツマーケティング"
+                placeholder="例: SEO対策, マーケティング戦略, おすすめ化粧品, 通信料金比較, AIライティングツール, 記事作成ツール, コンテンツマーケティング, 転職サイト比較, 投資信託ランキング, ダイエット方法"
                 className="w-full h-32 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none font-bold text-gray-900 resize-none"
               />
             </div>
@@ -762,7 +766,7 @@ export default function TestSwipePage() {
                     ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'PRO' ? 'プロ' : 'エンタープライズ'}プラン: 最大{charLimit.toLocaleString()}字)
                   </span>
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                   {charPresets.map((p) => {
                     const selected = finalData.targetChars === p.value
                     const locked = p.value > charLimit
