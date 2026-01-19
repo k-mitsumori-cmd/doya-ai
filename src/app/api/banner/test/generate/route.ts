@@ -12,6 +12,7 @@ type TestGenerateRequest = {
   subTitle?: string
   accentText?: string
   count?: number
+  basePrompt?: string // テンプレートのベースプロンプト
 }
 
 // テンプレート別のプロンプト生成（ユーザー例を参考に拡張可能）
@@ -23,9 +24,44 @@ function buildTestBannerPrompt(params: {
   subTitle?: string
   accentText?: string
   variationIndex: number
+  basePrompt?: string // テンプレートのベースプロンプト
 }): string {
-  const { template, size, industry, mainTitle, subTitle, accentText, variationIndex } = params
+  const { template, size, industry, mainTitle, subTitle, accentText, variationIndex, basePrompt } = params
   const [width, height] = size.split('x')
+  
+  // basePromptがある場合は、それをベースにカスタマイズ
+  if (basePrompt) {
+    const variationHints = [
+      'Layout: split-screen with large headline on left, visual elements on right.',
+      'Layout: centered composition with large title at center-top.',
+      'Layout: diagonal dynamic composition with headline angled.',
+      'Layout: minimal with lots of whitespace, headline in upper-left.',
+      'Layout: grid pattern with multiple small UI elements.',
+      'Layout: hero section style with massive title.',
+      'Layout: card-based with rounded corners.',
+      'Layout: asymmetric with headline offset to left.',
+      'Layout: full-width banner with title spanning entire width.',
+      'Layout: magazine-style with clear hierarchy.',
+    ]
+    const variationHint = variationHints[variationIndex % variationHints.length] || variationHints[0]
+    
+    return `
+${basePrompt}
+
+カスタマイズ内容：
+・メインタイトル：「${mainTitle}」
+${subTitle ? `・サブタイトル：「${subTitle}」` : ''}
+${accentText ? `・アクセントテキスト：「${accentText}」` : ''}
+
+構図バリエーション：
+${variationHint}
+
+出力サイズ：
+・正確に ${width}×${height} px
+・エッジまで埋める（レターボックスなし）
+・日本語テキストは必ず可読性を確保
+`.trim()
+  }
 
   // テンプレート別のスタイル調整
   const templateStyles: Record<string, { tone: string; colors: string; elements: string }> = {
@@ -134,6 +170,7 @@ export async function POST(request: NextRequest) {
       subTitle = '',
       accentText = '',
       count = 10,
+      basePrompt,
     } = body
 
     if (!mainTitle.trim()) {
@@ -163,6 +200,7 @@ export async function POST(request: NextRequest) {
         subTitle,
         accentText,
         variationIndex: i,
+        basePrompt,
       })
       prompts.push(prompt)
     }
