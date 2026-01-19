@@ -21,7 +21,31 @@ npx prisma db push
 
 ### 2. 一括生成の実行
 
-#### 方法A: 全テンプレートを一括生成（推奨）
+#### 方法A: ローカル環境で実行（推奨・長時間実行可能）
+
+全テンプレート（約330個）を生成する場合、約2.75時間かかります。
+Vercelのタイムアウト制限（最大600秒）を回避するため、ローカル環境で実行することを推奨します。
+
+```bash
+cd doya-ai
+
+# 環境変数を設定（.envファイルに記載されている場合は不要）
+export DATABASE_URL="postgresql://..."
+export NANOBANNER_API_KEY="..."
+
+# スクリプトを実行
+node scripts/local-bootstrap.mjs
+```
+
+**注意事項:**
+- 全テンプレート（約330個）を生成するには約2.75時間かかります
+- 1テンプレートあたり約30秒待機します（レート制限対策）
+- 既に画像があるテンプレートは自動的にスキップされます
+- 最初のテンプレートが自動的に `isFeatured: true` に設定されます
+
+#### 方法B: API経由で実行（小規模な生成向け）
+
+Vercelのタイムアウト制限（最大600秒 = 10分）があるため、約20個以下のテンプレート生成に適しています。
 
 ```bash
 curl -X POST https://doya-ai.surisuta.jp/api/banner/test/templates/bootstrap \
@@ -33,7 +57,7 @@ curl -X POST https://doya-ai.surisuta.jp/api/banner/test/templates/bootstrap \
   }'
 ```
 
-#### 方法B: 特定のテンプレートのみ生成
+#### 方法C: 特定のテンプレートのみ生成
 
 ```bash
 curl -X POST https://doya-ai.surisuta.jp/api/banner/test/templates/bootstrap \
@@ -46,7 +70,7 @@ curl -X POST https://doya-ai.surisuta.jp/api/banner/test/templates/bootstrap \
   }'
 ```
 
-#### 方法C: ブラウザから実行
+#### 方法D: ブラウザから実行
 
 開発環境で実行する場合：
 
@@ -76,8 +100,9 @@ fetch('/api/banner/test/templates/bootstrap', {
 
 ## 生成時間の目安
 
-- 全テンプレート（約330個）: 約10-15分
-- 1テンプレートあたり: 約2-3秒（レート制限のため2秒待機）
+- 全テンプレート（約330個）: 約2.75時間（1テンプレートあたり約30秒待機）
+- 1テンプレートあたり: 約30秒（レート制限対策のため30秒待機）
+- 小規模な生成（約20個以下）: API経由でも実行可能（Vercelタイムアウト内）
 
 ## 確認方法
 
