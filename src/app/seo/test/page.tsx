@@ -543,8 +543,8 @@ export default function TestSwipePage() {
       <div className="max-w-6xl mx-auto px-4 py-8 relative">
         {/* ヘッダー */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-2 tracking-tight">
-            スワイプ記事作成 <span className="text-sm align-top font-black text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full ml-2">TEST</span>
+          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-2 tracking-tight flex items-center gap-2">
+            スワイプ記事作成 <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">TEST</span>
           </h1>
           <p className="text-gray-700 font-bold">
             カードをめくって答える感覚で進めます。右=YES、左=NO。

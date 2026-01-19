@@ -251,16 +251,26 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
   return (
     <motion.div
       className="absolute w-full max-w-4xl mx-auto cursor-grab active:cursor-grabbing will-change-transform"
-      style={{
-        x: index === 0 ? (isSwiping ? undefined : x) : 0,
-        y: index === 0 ? (isSwiping ? undefined : y) : stackYOffset,
-        rotate: index === 0 ? (isSwiping ? undefined : rotate) : 0,
-        opacity: isSwiping ? undefined : (index === 0 ? opacity : Math.max(0.25, 1 - index * 0.18)),
-        zIndex: total - index,
-        scale: index === 0 ? scale : 1 - index * 0.04,
-        pointerEvents: index === 0 ? 'auto' : 'none',
-      }}
-      animate={isSwiping ? controls : undefined}
+      style={
+        isSwiping && index === 0
+          ? {
+              // アニメーション中はstyleのx/y/rotateを削除し、animateのみで制御
+              opacity: undefined,
+              zIndex: total - index,
+              scale: undefined,
+              pointerEvents: 'none',
+            }
+          : {
+              x: index === 0 ? x : 0,
+              y: index === 0 ? y : stackYOffset,
+              rotate: index === 0 ? rotate : 0,
+              opacity: index === 0 ? opacity : Math.max(0.25, 1 - index * 0.18),
+              zIndex: total - index,
+              scale: index === 0 ? scale : 1 - index * 0.04,
+              pointerEvents: index === 0 ? 'auto' : 'none',
+            }
+      }
+      animate={isSwiping && index === 0 ? controls : undefined}
       drag={!isSwiping}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.15}
