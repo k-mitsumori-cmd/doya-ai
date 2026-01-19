@@ -108,9 +108,10 @@ export async function POST(request: NextRequest) {
 
         console.log(`[Bootstrap] 成功: ${template.id}`)
 
-        // レート制限を避けるため、少し待機
+        // レート制限を避けるため、少し待機（1テンプレートあたり約30秒）
         if (i < templatesToGenerate.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 2000)) // 2秒待機
+          console.log(`[Bootstrap] 待機中... (${i + 1}/${templatesToGenerate.length}完了)`)
+          await new Promise((resolve) => setTimeout(resolve, 30000)) // 30秒待機
         }
       } catch (err: any) {
         console.error(`[Bootstrap] エラー (${template.id}):`, err)
