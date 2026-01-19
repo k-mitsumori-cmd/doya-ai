@@ -593,12 +593,10 @@ export default function TestSwipePage() {
             <div className="grid grid-cols-12 gap-6 items-center">
               {/* NO領域（固定・重なりなし） */}
               <div className="hidden xl:flex col-span-2 items-center justify-center">
-                <div className="w-full rounded-2xl border border-red-100 bg-white/70 backdrop-blur-sm shadow-sm p-4">
+                <div className="w-full rounded-2xl border border-slate-700/30 bg-white/10 backdrop-blur-sm shadow-sm p-4">
                   <div className="text-center">
-                    <div className="text-5xl font-black bg-gradient-to-br from-red-400 to-red-600 bg-clip-text text-transparent leading-none">
-                      NO
-                    </div>
-                    <div className="mt-2 text-xs font-black text-red-600">左にスワイプ</div>
+                    <div className="text-5xl font-bold text-white leading-none">NO</div>
+                    <div className="mt-2 text-xs font-medium text-slate-300">左にスワイプ</div>
                   </div>
                 </div>
               </div>
@@ -679,12 +677,10 @@ export default function TestSwipePage() {
 
               {/* YES領域（固定・重なりなし） */}
               <div className="hidden xl:flex col-span-2 items-center justify-center">
-                <div className="w-full rounded-2xl border border-emerald-100 bg-white/70 backdrop-blur-sm shadow-sm p-4">
+                <div className="w-full rounded-2xl border border-slate-700/30 bg-white/10 backdrop-blur-sm shadow-sm p-4">
                   <div className="text-center">
-                    <div className="text-5xl font-black bg-gradient-to-br from-emerald-400 to-emerald-600 bg-clip-text text-transparent leading-none">
-                      YES
-                    </div>
-                    <div className="mt-2 text-xs font-black text-emerald-600">右にスワイプ</div>
+                    <div className="text-5xl font-bold text-white leading-none">YES</div>
+                    <div className="mt-2 text-xs font-medium text-slate-300">右にスワイプ</div>
                   </div>
                 </div>
               </div>
