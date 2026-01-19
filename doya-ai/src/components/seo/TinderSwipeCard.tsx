@@ -170,7 +170,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     }
   }
   
-  // スワイプアニメーションを実行
+  // スワイプアニメーションを実行（滑らかに横移動）
   const performSwipeAnimation = async (decision: 'yes' | 'no') => {
     if (isSwiping) return
     
@@ -179,16 +179,19 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     
     const direction = decision === 'yes' ? 1 : -1
     
-    // 派手なスワイプアニメーション
+    // 滑らかなスワイプアニメーション（ゆっくり横に流れる）
     await controls.start({
-      x: direction * 1500,
-      y: -200,
-      rotate: direction * 45,
+      x: direction * 800,
+      y: 50,
+      rotate: direction * 15,
       opacity: 0,
-      scale: 0.5,
+      scale: 0.9,
       transition: { 
-        duration: 0.5,
-        ease: [0.32, 0, 0.67, 0],
+        duration: 0.8,
+        ease: [0.25, 0.1, 0.25, 1], // cubic-bezier for smooth motion
+        x: { duration: 0.8, ease: [0.4, 0, 0.2, 1] },
+        rotate: { duration: 0.6, ease: 'easeOut' },
+        opacity: { duration: 0.5, delay: 0.3 },
       },
     })
     
@@ -201,13 +204,35 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
   const handleButtonClick = async (decision: 'yes' | 'no') => {
     if (isSwiping || index !== 0) return
     
-    // まずxを動かしてオーバーレイを見せる
-    const direction = decision === 'yes' ? 1 : -1
-    x.set(direction * 200)
+    setIsSwiping(true)
+    playSwipeSfx(decision)
     
-    // 少し待ってからアニメーション
-    await new Promise(r => setTimeout(r, 100))
-    await performSwipeAnimation(decision)
+    const direction = decision === 'yes' ? 1 : -1
+    
+    // まずオーバーレイを見せるために少し傾ける
+    await controls.start({
+      x: direction * 100,
+      rotate: direction * 5,
+      transition: { duration: 0.15, ease: 'easeOut' },
+    })
+    
+    // そして滑らかに飛んでいく
+    await controls.start({
+      x: direction * 800,
+      y: 50,
+      rotate: direction * 15,
+      opacity: 0,
+      scale: 0.9,
+      transition: { 
+        duration: 0.7,
+        ease: [0.4, 0, 0.2, 1],
+        opacity: { duration: 0.4, delay: 0.3 },
+      },
+    })
+    
+    // 完了後にコールバック
+    onSwipe(decision)
+    setIsSwiping(false)
   }
 
   if (index >= 3) return null
