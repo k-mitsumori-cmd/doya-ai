@@ -121,7 +121,8 @@
 **👉 [development-guide.md](./development-guide.md#デプロイ手順) の「デプロイ手順」を参照**
 
 変更を本番環境に反映する方法：
-- `git push origin main` でVercelが自動デプロイ
+- `git push vercel main` でVercelが自動デプロイ（**重要**: `vercel`リモートにプッシュ）
+- `doya-ai`ディレクトリとルートディレクトリの両方に変更がある場合は、両方を反映してからプッシュ
 - Vercelダッシュボードでビルドログを確認
 
 ## 原則
@@ -137,7 +138,8 @@
 変更を本番環境に反映する方法：
 
 - **詳細**: [development-guide.md](./development-guide.md#デプロイ手順) の「デプロイ手順」セクション
-- **手順**: `git push origin main` でVercelが自動デプロイ
+- **手順**: `git push vercel main` でVercelが自動デプロイ（**重要**: `vercel`リモートにプッシュ）
+- **注意**: `origin`リモートにプッシュしてもVercelには反映されません。必ず`vercel`リモートにプッシュしてください
 - **確認**: Vercelダッシュボードでビルドログを確認
 
 ---
