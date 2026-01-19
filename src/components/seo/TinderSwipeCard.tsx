@@ -199,7 +199,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
       opacity: 0,
       scale: 0.85,
       transition: { 
-        duration: 0.3,
+        duration: 0.4,
         ease: [0.4, 0, 0.2, 1],
       },
     })
@@ -207,7 +207,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     // 短い遅延後にコールバック（アニメーションを少し見せてから次へ）
     setTimeout(() => {
       onSwipe(decision)
-    }, 200)
+    }, 250)
   }
   
   // ボタンクリック時
@@ -234,7 +234,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
         opacity: 0,
         scale: 0.85,
         transition: { 
-          duration: 0.3,
+          duration: 0.4,
           ease: [0.4, 0, 0.2, 1],
         },
       })
@@ -243,7 +243,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     // 短い遅延後にコールバック（アニメーションを少し見せてから次へ）
     setTimeout(() => {
       onSwipe(decision)
-    }, 200)
+    }, 250)
   }
 
   // 1枚目のみ表示（重なりを完全に排除）
