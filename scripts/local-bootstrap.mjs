@@ -21,10 +21,6 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 const DELAY_BETWEEN_REQUESTS = 1000 // APIリクエスト間の待機時間（1秒）
 
-const prisma = new PrismaClient()
-
-const DELAY_BETWEEN_TEMPLATES = 30000 // 30秒待機（レート制限対策）
-
 async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -55,21 +51,8 @@ async function callBootstrapAPI() {
       throw new Error(`HTTP ${response.status}: ${errorText}`)
     }
 
-    // レスポンスをストリーミングで読み込む（長時間実行のため）
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      // バッファに完全なJSONが含まれているかチェック
-      // 実際には、APIは最後に一度だけJSONを返すので、この処理は簡略化できます
-    }
-
-    const result = JSON.parse(buffer)
+    // レスポンスを読み込む
+    const result = await response.json()
     
     console.log('\n=== 生成完了 ===')
     console.log(`生成: ${result.generated || 0}個`)
@@ -93,11 +76,18 @@ async function callBootstrapAPI() {
 
 async function main() {
   console.log('=== バナー テンプレート一括生成スクリプト（API経由） ===\n')
+  console.log(`API URL: ${API_BASE_URL}`)
   
   // 環境変数の確認
-  if (!process.env.DATABASE_URL && !API_BASE_URL.includes('localhost')) {
-    console.warn('警告: DATABASE_URL環境変数が設定されていません')
-    console.warn('本番環境で実行する場合は、APIエンドポイントが正しく動作することを確認してください')
+  if (API_BASE_URL.includes('localhost')) {
+    console.warn('\n⚠️  ローカル環境で実行する場合:')
+    console.warn('  1. .env.local ファイルを作成してください')
+    console.warn('  2. DATABASE_URL と GOOGLE_GENAI_API_KEY を設定してください')
+    console.warn('  3. ローカルサーバーを起動してください: npm run dev\n')
+  } else {
+    console.log('本番環境のAPIエンドポイントを使用します')
+    console.log('注意: Vercelのタイムアウト制限（最大600秒）があるため、')
+    console.log('全テンプレート（約330個）の生成は一度には完了しません。\n')
   }
 
   try {
@@ -105,6 +95,15 @@ async function main() {
     console.log('\n✓ 一括生成が完了しました')
   } catch (error) {
     console.error('\n✗ 一括生成に失敗しました')
+    console.error('\n解決方法:')
+    if (API_BASE_URL.includes('localhost')) {
+      console.error('  1. .env.local ファイルに DATABASE_URL を設定してください')
+      console.error('  2. ローカルサーバーが起動していることを確認してください')
+      console.error('  3. サーバーログでエラー詳細を確認してください')
+    } else {
+      console.error('  1. 本番環境のAPIエンドポイントが正しく動作しているか確認してください')
+      console.error('  2. 環境変数（DATABASE_URL, GOOGLE_GENAI_API_KEY）が設定されているか確認してください')
+    }
     process.exit(1)
   }
 }
