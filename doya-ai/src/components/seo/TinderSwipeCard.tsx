@@ -155,21 +155,25 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
       playSwipeSfx(direction)
       
       try {
-        // スワイプアニメーション（どっちに飛んだか分かるように"転がる"）
+        // 派手なスワイプアニメーション（くるくる回転しながら飛んでいく）
         await controls.start({
-          x: direction === 'yes' ? 820 : -820,
-          y: 70,
-          rotate: direction === 'yes' ? 55 : -55,
+          x: direction === 'yes' ? 1200 : -1200,
+          y: -150,
+          rotate: direction === 'yes' ? 180 : -180,
           opacity: 0,
-          scale: 0.85,
-          transition: { type: 'spring', stiffness: 260, damping: 18, mass: 0.9 },
+          scale: 0.3,
+          transition: { 
+            duration: 0.6,
+            ease: [0.25, 0.46, 0.45, 0.94],
+            rotate: { duration: 0.6, ease: 'easeOut' },
+          },
         })
         
         // アニメーション完了後にコールバックを呼び出す
         setTimeout(() => {
           onSwipe(direction)
           setIsSwiping(false) // リセット
-        }, 100)
+        }, 50)
       } catch (error) {
         console.error('Swipe animation error:', error)
         // エラー時もコールバックを呼び出す
@@ -187,33 +191,38 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
     }
   }
   
-  // ボタンクリック時のスワイプアニメーション
+  // ボタンクリック時のスワイプアニメーション（超派手版）
   const handleButtonClick = async (decision: 'yes' | 'no') => {
     if (isSwiping || index !== 0) return
     
     setIsSwiping(true)
     const direction = decision === 'yes' ? 1 : -1
+    
     // ボタン押下でもオーバーレイが出るようにxを事前に振る
-    x.set(direction * 240)
+    x.set(direction * 300)
     y.set(0)
     playSwipeSfx(decision)
     
-    // スワイプアニメーション（どっちに飛んだか分かるように"転がる"）
+    // 派手なスワイプアニメーション（くるくる回転しながら飛んでいく）
     try {
       await controls.start({
-        x: direction * 820,
-        y: 70,
-        rotate: direction * 55,
+        x: direction * 1200,
+        y: -150,
+        rotate: direction * 180,
         opacity: 0,
-        scale: 0.85,
-        transition: { type: 'spring', stiffness: 260, damping: 18, mass: 0.9 },
+        scale: 0.3,
+        transition: { 
+          duration: 0.6,
+          ease: [0.25, 0.46, 0.45, 0.94],
+          rotate: { duration: 0.6, ease: 'easeOut' },
+        },
       })
       
       // アニメーション完了後にコールバックを呼び出す
       setTimeout(() => {
         onSwipe(decision)
         setIsSwiping(false) // リセット
-      }, 100)
+      }, 50)
     } catch (error) {
       console.error('Swipe animation error:', error)
       // エラー時もコールバックを呼び出す

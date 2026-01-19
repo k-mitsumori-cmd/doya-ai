@@ -507,16 +507,21 @@ export default function TestSwipePage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-emerald-50 via-sky-50 to-teal-50">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(16,185,129,0.18),transparent_35%),radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.16),transparent_40%),radial-gradient(circle_at_85%_80%,rgba(244,63,94,0.14),transparent_45%),radial-gradient(circle_at_15%_85%,rgba(245,158,11,0.12),transparent_40%)]" />
-        <div className="absolute inset-0 opacity-[0.12] bg-[linear-gradient(90deg,rgba(0,0,0,0.04)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.04)_1px,transparent_1px)] bg-[size:22px_22px]" />
+    <div className="min-h-screen relative overflow-hidden">
+      {/* カラフルなグラデーション背景（全面） */}
+      <div className="fixed inset-0 bg-gradient-to-br from-emerald-100 via-sky-100 via-50% to-rose-100" />
+      <div className="fixed inset-0 bg-gradient-to-tr from-amber-50/60 via-transparent to-violet-100/50" />
+      
+      {/* TCGっぽい背景（光・オーブ・パターン） */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(16,185,129,0.25),transparent_40%),radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.22),transparent_45%),radial-gradient(circle_at_85%_80%,rgba(244,63,94,0.20),transparent_50%),radial-gradient(circle_at_15%_85%,rgba(245,158,11,0.18),transparent_45%),radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.12),transparent_60%)]" />
+        <div className="absolute inset-0 opacity-[0.08] bg-[linear-gradient(90deg,rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.03)_1px,transparent_1px)] bg-[size:28px_28px]" />
         {bgOrbs.map((o, idx) => (
           <motion.div
             key={idx}
             className={`absolute rounded-full blur-3xl bg-gradient-to-br ${o.c}`}
             style={{ left: o.x, top: o.y, width: o.size, height: o.size }}
-            animate={{ y: [0, -14, 0], x: [0, 10, 0] }}
+            animate={{ y: [0, -20, 0], x: [0, 15, 0] }}
             transition={{ duration: o.d, repeat: Infinity, ease: 'easeInOut' }}
           />
         ))}
