@@ -1,8 +1,8 @@
 'use client'
 
-import { Suspense, useState, useMemo, useEffect } from 'react'
+import { Suspense, useState, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, Loader2, Download, X, Check, Image as ImageIcon, Layers, Palette, Type, FileText } from 'lucide-react'
+import { Sparkles, Loader2, Download, Check, Image as ImageIcon, Layers, Palette, FileText } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'

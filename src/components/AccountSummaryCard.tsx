@@ -78,11 +78,3 @@ export function AccountSummaryCard({
     </section>
   )
 }
-
-
-<<<<<<< HEAD
-=======
-
->>>>>>> persona-fix
-
-

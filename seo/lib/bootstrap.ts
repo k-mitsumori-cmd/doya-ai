@@ -58,9 +58,9 @@ export async function ensureSeoSchema(): Promise<void> {
         "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
-    `)
+    `))
 
-    await prisma.$executeRawUnsafe(`
+    await executeWithRetry(() => prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "SeoJob" (
         "id" TEXT PRIMARY KEY,
         "articleId" TEXT NOT NULL,
