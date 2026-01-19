@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Presentation, Sparkles, Zap, FileSliders, Users, Briefcase, Video, FileText } from 'lucide-react'
+import { Presentation, Sparkles, Zap, SlidersHorizontal, Users, Briefcase, Video, FileText } from 'lucide-react'
 
 const fadeUp = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }
 
@@ -141,7 +141,7 @@ const useCases = [
 ]
 
 const steps = [
-  { icon: FileSliders, title: 'テーマ入力', desc: '資料の目的とトピックを入力' },
+  { icon: SlidersHorizontal, title: 'テーマ入力', desc: '資料の目的とトピックを入力' },
   { icon: Sparkles, title: 'AI生成', desc: 'GeminiがスライドをJSON構成' },
   { icon: Presentation, title: 'Google Slides', desc: 'ワンクリックでスライドに変換' },
 ]
