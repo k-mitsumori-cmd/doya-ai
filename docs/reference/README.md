@@ -30,6 +30,7 @@
 | [service-isolation.md](./service-isolation.md) | サービス分離ルール（個別版） | 統合済み |
 | [animation-spec.md](./animation-spec.md) | アニメーション仕様（個別版） | 統合済み |
 | [beta-services.md](./beta-services.md) | ベータ版サービス管理（個別版） | 統合済み |
+| [swipe-feature-spec.md](./swipe-feature-spec.md) | スワイプ機能仕様書 | 新規 |
 
 ## 🚀 開発開始時の流れ
 
@@ -95,6 +96,7 @@
 | レスポンシブレイアウト | モバイル・デスクトップ対応 | [共通項目・必須実装の確認](./development-guide.md#レスポンシブレイアウトパターン) |
 | API実装 | APIエンドポイント | [実装パターン集](./implementation-patterns.md#api実装パターン) |
 | ファイルアップロード | ファイル処理 | [ファイルアップロードパターン](./implementation-patterns.md#ファイルアップロードパターン) |
+| スワイプ機能 | カードスワイプUI | [スワイプ機能仕様書](./swipe-feature-spec.md) |
 
 ---
 
