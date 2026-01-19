@@ -3280,20 +3280,56 @@ const plan = subscription?.plan || userPlan || 'FREE'
 
 ### デプロイ方法
 
-#### 方法1: Git Push（推奨）
+#### 方法1: Vercelリモートへのプッシュ（推奨・実際の運用方法）
+
+**このプロジェクトでは、`vercel`リモートにプッシュすることでVercelに反映されます。**
 
 ```bash
 # 1. 変更をコミット
 git add -A
 git commit -m "feat: 新機能追加"
 
-# 2. doya-aiブランチにプッシュ（重要！）
-git push origin doya-ai
-# または
-git push origin main  # mainブランチがdoya-aiリポジトリと連携している場合
+# 2. doya-aiディレクトリに変更を反映（必要に応じて）
+# ルートディレクトリとdoya-aiディレクトリが分かれている場合
+cp src/app/seo/swipe/page.tsx doya-ai/src/app/seo/swipe/page.tsx
+cp src/components/seo/TinderSwipeCard.tsx doya-ai/src/components/seo/TinderSwipeCard.tsx
+
+# 3. 変更をコミット
+git add -A
+git commit -m "fix: doya-aiディレクトリに変更を反映"
+
+# 4. vercelリモートにプッシュ（重要！）
+git push vercel main
 ```
 
-**重要**: `doya-ai`ブランチ/リポジトリにプッシュすることで、Vercelが自動的にデプロイを開始します。
+**重要**: 
+- `vercel`リモートにプッシュすることで、Vercelが自動的にデプロイを開始します
+- `origin`リモートにプッシュしてもVercelには反映されません
+- `doya-ai`ディレクトリとルートディレクトリの両方に変更がある場合は、両方を反映してからプッシュしてください
+
+**リモート確認方法**:
+```bash
+# 現在のリモートを確認
+git remote -v
+
+# vercelリモートが設定されていない場合、追加
+git remote add vercel https://github.com/k-mitsumori-cmd/doya-ai.git
+# または
+git remote add vercel git@github.com:k-mitsumori-cmd/doya-ai.git
+```
+
+#### 方法2: Originリモートへのプッシュ（通常のGit Push）
+
+```bash
+# 1. 変更をコミット
+git add -A
+git commit -m "feat: 新機能追加"
+
+# 2. originリモートにプッシュ
+git push origin main
+```
+
+**注意**: `origin`リモートにプッシュしても、Vercelが監視しているリポジトリ（`vercel`リモート）に反映されない場合は、Vercelには反映されません。必ず`vercel`リモートにプッシュしてください。
 
 #### 方法2: Subtree Push（サブディレクトリのみ）
 
@@ -3326,22 +3362,41 @@ git remote add vercel git@vercel.com:your-project.git
 
 プッシュ後、以下を確認してください：
 
-1. **GitHub/Gitリポジトリ**: `doya-ai`ブランチ/リポジトリに変更がプッシュされているか確認
+1. **Gitリポジトリ**: `vercel`リモートに変更がプッシュされているか確認
+   ```bash
+   git log vercel/main --oneline -5  # 最新5件のコミットを確認
+   ```
+
 2. **Vercelダッシュボード**: デプロイが開始されているか確認
    - [Vercel Dashboard](https://vercel.com/dashboard) にアクセス
    - プロジェクトを選択
    - 「Deployments」タブでデプロイ状況を確認
+   - 最新のデプロイが「Building」または「Ready」になっているか確認
+
+3. **ビルドログ**: エラーがないか確認
+   - Vercelダッシュボードの「Deployments」→ 最新のデプロイをクリック
+   - 「Build Logs」タブでビルドログを確認
+   - エラーや警告がないか確認
 
 ### よくあるミス
 
-- ❌ **ミス**: 変更をコミットしたが、`doya-ai`ブランチ/リポジトリにプッシュしていない
-- ✅ **正解**: 必ず`doya-ai`ブランチ/リポジトリにプッシュする
+- ❌ **ミス**: `origin`リモートにプッシュしたが、Vercelに反映されない
+- ✅ **正解**: `vercel`リモートにプッシュする必要があります。`git push vercel main` を使用してください
+
+- ❌ **ミス**: ルートディレクトリの変更をコミットしたが、`doya-ai`ディレクトリに反映していない
+- ✅ **正解**: ルートと`doya-ai`ディレクトリが分かれている場合、両方に変更を反映してからプッシュしてください
+
+- ❌ **ミス**: 変更をコミットしたが、`vercel`リモートにプッシュしていない
+- ✅ **正解**: 必ず`git push vercel main`で`vercel`リモートにプッシュしてください
 
 - ❌ **ミス**: 他のブランチ（例: `develop`, `feature/xxx`）にプッシュして、Vercelに反映されないと思っている
-- ✅ **正解**: Vercelに反映するには、`doya-ai`ブランチ/リポジトリにプッシュする必要がある
+- ✅ **正解**: Vercelに反映するには、`vercel`リモートの`main`ブランチにプッシュする必要があります
 
 - ❌ **ミス**: ローカルで変更したが、コミット・プッシュを忘れている
-- ✅ **正解**: 変更をコミットしてから、`doya-ai`ブランチ/リポジトリにプッシュする
+- ✅ **正解**: 変更をコミットしてから、`vercel`リモートにプッシュしてください
+
+- ❌ **ミス**: `vercel`リモートが設定されていない
+- ✅ **正解**: `git remote -v`で確認し、設定されていない場合は`git remote add vercel <URL>`で追加してください
 
 ### デプロイ後の確認
 
