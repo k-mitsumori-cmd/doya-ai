@@ -195,6 +195,10 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
       },
     })
     
+    // アニメーションが完全に終わるまで待つ（opacityのdelay + duration = 0.3 + 0.5 = 0.8秒）
+    // さらに少し余裕を持たせて1秒待機
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
     // 完了後にコールバック
     onSwipe(decision)
     setIsSwiping(false)
@@ -229,6 +233,10 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
         opacity: { duration: 0.4, delay: 0.3 },
       },
     })
+    
+    // アニメーションが完全に終わるまで待つ（0.15 + 0.3 + 0.4 = 0.85秒）
+    // さらに少し余裕を持たせて1秒待機
+    await new Promise(resolve => setTimeout(resolve, 1000))
     
     // 完了後にコールバック
     onSwipe(decision)

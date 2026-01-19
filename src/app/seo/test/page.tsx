@@ -666,16 +666,18 @@ export default function TestSwipePage() {
                   </AnimatePresence>
 
                   {questionQueue.length > 0 ? (
-                    questionQueue.slice(0, 3).map((question, index) => (
-                      <TinderSwipeCard
-                        key={question.id}
-                        question={question}
-                        onSwipe={(decision) => handleSwipe(decision, question)}
-                        index={index}
-                        total={questionQueue.length}
-                        questionImage={questionImages.get(question.id)}
-                      />
-                    ))
+                    <AnimatePresence mode="wait">
+                      {questionQueue.slice(0, 3).map((question, index) => (
+                        <TinderSwipeCard
+                          key={question.id}
+                          question={question}
+                          onSwipe={(decision) => handleSwipe(decision, question)}
+                          index={index}
+                          total={questionQueue.length}
+                          questionImage={questionImages.get(question.id)}
+                        />
+                      ))}
+                    </AnimatePresence>
                   ) : (
                     <div className="bg-white rounded-3xl shadow-2xl p-12 text-center h-full w-full flex items-center justify-center">
                       <p className="text-gray-500 font-black">準備中…</p>
