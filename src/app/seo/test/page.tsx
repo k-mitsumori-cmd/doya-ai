@@ -603,8 +603,8 @@ export default function TestSwipePage() {
 
               {/* カード領域 */}
               <div className="col-span-12 xl:col-span-8">
-                <div className="relative h-[780px] mb-8 z-10 flex items-center justify-center">
-                  {/* 生成中オーバーレイ（カードの上で“考え中”を演出） */}
+                <div className="relative h-[680px] sm:h-[720px] mb-8 z-10 flex items-start justify-center pt-4 sm:pt-8">
+                  {/* 生成中オーバーレイ（カードの上で"考え中"を演出） */}
                   <AnimatePresence>
                     {showThinking && (
                       <motion.div
@@ -613,40 +613,36 @@ export default function TestSwipePage() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                       >
-                        <div className="absolute inset-0 bg-white/35 backdrop-blur-sm" />
+                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
                         <motion.div
-                          initial={{ scale: 0.98, y: 8, opacity: 0 }}
+                          initial={{ scale: 0.95, y: 20, opacity: 0 }}
                           animate={{ scale: 1, y: 0, opacity: 1 }}
-                          exit={{ scale: 0.98, y: 8, opacity: 0 }}
-                          className="relative w-[min(560px,92%)] rounded-3xl border border-white/70 bg-gradient-to-br from-white/85 to-white/55 shadow-[0_30px_80px_rgba(0,0,0,0.12)] p-8 overflow-hidden"
+                          exit={{ scale: 0.95, y: 20, opacity: 0 }}
+                          className="relative w-[min(480px,90%)] rounded-3xl bg-white shadow-[0_30px_80px_rgba(0,0,0,0.3)] p-6 sm:p-8 overflow-hidden"
                         >
-                          <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-emerald-200/30 blur-3xl" />
-                          <div className="absolute -bottom-24 -left-24 w-64 h-64 rounded-full bg-sky-200/30 blur-3xl" />
+                          {/* 上部アクセント */}
+                          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500" />
+                          
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
-                              <Loader2 className="w-6 h-6 text-white animate-spin" />
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                              <Loader2 className="w-7 h-7 text-white animate-spin" />
                             </div>
                             <div>
-                              <p className="text-gray-900 font-black text-lg">次の質問を考えています…</p>
-                              <p className="text-gray-700 font-bold text-sm mt-1">
+                              <p className="text-slate-900 font-bold text-lg">次の質問を考えています…</p>
+                              <p className="text-slate-600 font-medium text-sm mt-1">
                                 {thinkingMessages[thinkingIdx % thinkingMessages.length]}
                               </p>
                             </div>
                           </div>
                           <div className="mt-6">
-                            <div className="h-3 rounded-full bg-gray-200/70 overflow-hidden">
+                            <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
                               <motion.div
-                                className="h-full bg-gradient-to-r from-emerald-500 via-sky-500 to-teal-500"
+                                className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"
                                 initial={{ x: '-40%' }}
                                 animate={{ x: ['-40%', '110%'] }}
-                                transition={{ duration: 1.15, repeat: Infinity, ease: 'easeInOut' }}
+                                transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
                                 style={{ width: '45%' }}
                               />
-                            </div>
-                            <div className="mt-3 flex items-center justify-between text-xs font-black text-gray-600">
-                              <span>Thinking</span>
-                              <span>Loading</span>
-                              <span>Ready</span>
                             </div>
                           </div>
                         </motion.div>
@@ -655,21 +651,20 @@ export default function TestSwipePage() {
                   </AnimatePresence>
 
                   {questionQueue.length > 0 ? (
-                    <AnimatePresence>
-                      {questionQueue.slice(0, 3).map((question, index) => (
-                        <TinderSwipeCard
-                          key={question.id}
-                          question={question}
-                          onSwipe={(decision) => handleSwipe(decision, question)}
-                          index={index}
-                          total={questionQueue.length}
-                          questionImage={questionImages.get(question.id)}
-                        />
-                      ))}
+                    <AnimatePresence mode="wait">
+                      {/* 1枚目のカードのみ表示 */}
+                      <TinderSwipeCard
+                        key={questionQueue[0].id}
+                        question={questionQueue[0]}
+                        onSwipe={(decision) => handleSwipe(decision, questionQueue[0])}
+                        index={0}
+                        total={questionQueue.length}
+                        questionImage={questionImages.get(questionQueue[0].id)}
+                      />
                     </AnimatePresence>
                   ) : (
-                    <div className="bg-white rounded-3xl shadow-2xl p-12 text-center h-full w-full flex items-center justify-center">
-                      <p className="text-gray-500 font-black">準備中…</p>
+                    <div className="bg-white rounded-3xl shadow-2xl p-12 text-center flex items-center justify-center">
+                      <p className="text-slate-500 font-bold">準備中…</p>
                     </div>
                   )}
                 </div>
