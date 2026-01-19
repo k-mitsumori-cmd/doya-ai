@@ -202,125 +202,133 @@ function BannerTestPageInner() {
       </AnimatePresence>
 
       {/* メインコンテンツ */}
-      <main className="flex-1 ml-0 md:ml-[240px] min-h-screen">
+      <main className="flex-1 ml-0 md:ml-[240px] min-h-screen bg-black">
         {/* Netflix風のメインコンテンツ */}
         <div className="relative">
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート） */}
-          {(selectedBanner || selectedTemplate) && (
-            <div className="relative h-[60vh] md:h-[80vh] w-full overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent z-10" />
-              {selectedBanner ? (
-                <img
-                  src={selectedBanner.imageUrl}
-                  alt="Selected banner"
-                  className="w-full h-full object-cover"
-                />
-              ) : selectedTemplate?.imageUrl ? (
-                <img
-                  src={selectedTemplate.imageUrl}
-                  alt={selectedTemplate.prompt}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
-                  <div className="text-center">
-                    <Sparkles className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-                    <p className="text-gray-400 text-lg">{selectedTemplate?.prompt || 'テンプレートを選択してください'}</p>
-                  </div>
+          <div className="relative h-[70vh] md:h-[85vh] w-full overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-black/50 z-10" />
+            {selectedBanner ? (
+              <img
+                src={selectedBanner.imageUrl}
+                alt="Selected banner"
+                className="w-full h-full object-cover"
+              />
+            ) : selectedTemplate?.imageUrl ? (
+              <img
+                src={selectedTemplate.imageUrl}
+                alt={selectedTemplate.prompt}
+                className="w-full h-full object-cover"
+              />
+            ) : templates.length > 0 && templates[0]?.imageUrl ? (
+              <img
+                src={templates[0].imageUrl}
+                alt="Featured template"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
+                <div className="text-center">
+                  <Sparkles className="w-20 h-20 mx-auto mb-6 text-gray-400 animate-pulse" />
+                  <p className="text-gray-400 text-xl">テンプレートを読み込み中...</p>
                 </div>
-              )}
-              
-              {/* オーバーレイ情報 */}
-              <div className="absolute bottom-0 left-0 right-0 p-8 md:p-16 z-20">
-                <h1 className="text-4xl md:text-6xl font-black mb-4 drop-shadow-2xl">
+              </div>
+            )}
+            
+            {/* オーバーレイ情報（Netflix風） */}
+            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 lg:p-16 z-20">
+              <div className="max-w-6xl mx-auto">
+                <h1 className="text-3xl md:text-5xl lg:text-7xl font-black mb-4 drop-shadow-2xl leading-tight">
                   {selectedBanner 
                     ? mainTitle || '生成されたバナー'
-                    : selectedTemplate?.prompt.split('、')[0] || selectedTemplate?.prompt || 'テンプレートを選択'
+                    : selectedTemplate?.prompt.split('、')[0] || selectedTemplate?.prompt || 'バナーテンプレート'
                   }
                 </h1>
-                <p className="text-lg md:text-xl text-gray-300 mb-2 max-w-2xl drop-shadow-lg">
+                <p className="text-base md:text-lg lg:text-xl text-gray-300 mb-4 max-w-3xl drop-shadow-lg line-clamp-2">
                   {selectedBanner 
                     ? subTitle || selectedBanner.prompt
-                    : selectedTemplate?.industry || ''
+                    : selectedTemplate?.industry || '様々なスタイルのバナーテンプレートから選択'
                   }
                 </p>
-                {selectedBanner && accentText && (
-                  <p className="text-base md:text-lg text-gray-400 mb-6 max-w-2xl drop-shadow-lg">
-                    {accentText}
+                {!selectedBanner && selectedTemplate && (
+                  <p className="text-sm md:text-base text-gray-400 mb-6 max-w-3xl drop-shadow-lg line-clamp-2">
+                    {selectedTemplate.prompt}
                   </p>
                 )}
-                {!selectedBanner && (
-                  <p className="text-base md:text-lg text-gray-400 mb-6 max-w-2xl drop-shadow-lg">
-                    {selectedTemplate?.prompt || ''}
-                  </p>
-                )}
-                <div className="flex gap-4 flex-wrap">
-                  {!selectedBanner && (
+                <div className="flex gap-3 md:gap-4 flex-wrap">
+                  {!selectedBanner && selectedTemplate && (
                     <button
                       onClick={handleGenerate}
                       disabled={isGenerating}
-                      className="px-8 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2 disabled:opacity-50"
+                      className="px-6 md:px-8 py-2.5 md:py-3.5 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-2 disabled:opacity-50 text-sm md:text-base shadow-lg hover:shadow-xl"
                     >
-                      <Play className="w-5 h-5" />
+                      <Play className="w-4 h-4 md:w-5 md:h-5 fill-current" />
                       {isGenerating ? '生成中...' : 'このスタイルで生成'}
                     </button>
                   )}
                   {selectedBanner && (
-                    <button
-                      onClick={() => handleDownload(selectedBanner)}
-                      className="px-8 py-3 bg-white text-black font-bold rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
-                    >
-                      <Download className="w-5 h-5" />
-                      ダウンロード
-                    </button>
+                    <>
+                      <button
+                        onClick={() => handleDownload(selectedBanner)}
+                        className="px-6 md:px-8 py-2.5 md:py-3.5 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-2 text-sm md:text-base shadow-lg hover:shadow-xl"
+                      >
+                        <Download className="w-4 h-4 md:w-5 md:h-5" />
+                        ダウンロード
+                      </button>
+                      <button 
+                        onClick={() => setSelectedBanner(null)}
+                        className="px-6 md:px-8 py-2.5 md:py-3.5 bg-gray-600/80 text-white font-bold rounded-md hover:bg-gray-600 transition-all flex items-center gap-2 text-sm md:text-base backdrop-blur-sm"
+                      >
+                        <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
+                        テンプレートに戻る
+                      </button>
+                    </>
                   )}
-                  <button 
-                    onClick={() => setSelectedBanner(null)}
-                    className="px-8 py-3 bg-gray-600/70 text-white font-bold rounded-lg hover:bg-gray-600/90 transition-colors flex items-center gap-2 backdrop-blur-sm"
-                  >
-                    <Info className="w-5 h-5" />
-                    {selectedBanner ? 'テンプレートに戻る' : '詳細を見る'}
-                  </button>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
           {/* テンプレート一覧（Netflix風の横スクロール） */}
-          <div className="px-4 md:px-8 py-8 space-y-8">
+          <div className="px-4 md:px-8 lg:px-12 -mt-20 md:-mt-32 relative z-30 space-y-6 md:space-y-8">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
               </div>
             ) : (
               Object.entries(templatesByIndustry).map(([industryName, industryTemplates]) => (
-                <div key={industryName} className="space-y-4">
-                  <h2 className="text-2xl font-bold px-2">{industryName}</h2>
+                <div key={industryName} className="space-y-3 md:space-y-4">
+                  <h2 className="text-xl md:text-2xl lg:text-3xl font-bold px-2 md:px-4 text-white">
+                    {industryName}
+                  </h2>
                   <div className="relative group">
                     {/* 左スクロールボタン */}
                     <button
                       onClick={() => scroll('left', industryName)}
-                      className="absolute left-0 top-0 bottom-0 z-10 w-12 bg-black/50 hover:bg-black/70 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100"
+                      className="absolute left-0 top-0 bottom-0 z-10 w-10 md:w-14 bg-gradient-to-r from-black via-black/80 to-transparent hover:from-black/90 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
                     >
-                      <ChevronLeft className="w-8 h-8" />
+                      <ChevronLeft className="w-6 h-6 md:w-8 md:h-8 text-white" />
                     </button>
                     
                     {/* 横スクロールコンテナ */}
                     <div
                       ref={(el) => (scrollRefs.current[industryName] = el)}
-                      className="flex gap-4 overflow-x-auto scrollbar-hide px-12 py-4"
+                      className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-10 md:px-14 py-2 md:py-4"
                       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
                       {industryTemplates.map((template) => (
                         <motion.div
                           key={template.id}
-                          whileHover={{ scale: 1.05, y: -8 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setSelectedTemplate(template)}
-                          className={`flex-shrink-0 w-64 h-36 md:w-80 md:h-44 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                          whileHover={{ scale: 1.08, y: -12, zIndex: 10 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => {
+                            setSelectedTemplate(template)
+                            setSelectedBanner(null)
+                          }}
+                          className={`flex-shrink-0 w-48 h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 ${
                             selectedTemplate?.id === template.id
-                              ? 'ring-4 ring-white scale-105'
-                              : 'ring-2 ring-gray-700 hover:ring-gray-500'
+                              ? 'ring-3 ring-white scale-105 shadow-2xl'
+                              : 'ring-1 ring-gray-800 hover:ring-gray-600'
                           }`}
                         >
                           {template.imageUrl ? (
@@ -330,20 +338,20 @@ function BannerTestPageInner() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
+                            <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex flex-col items-center justify-center p-3 md:p-4 relative overflow-hidden">
                               <div className="absolute inset-0 opacity-20">
                                 <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20" />
                               </div>
-                              <Sparkles className="w-12 h-12 text-gray-400 mb-2 relative z-10" />
-                              <p className="text-xs text-gray-500 text-center relative z-10 line-clamp-2">
+                              <Sparkles className="w-8 h-8 md:w-12 md:h-12 text-gray-400 mb-2 relative z-10" />
+                              <p className="text-xs md:text-sm text-gray-500 text-center relative z-10 line-clamp-2 px-2">
                                 {template.prompt.split('、')[0] || template.industry}
                               </p>
                             </div>
                           )}
                           {selectedTemplate?.id === template.id && (
-                            <div className="absolute inset-0 bg-white/10 flex items-center justify-center">
-                              <div className="bg-black/70 px-4 py-2 rounded-lg">
-                                <p className="text-sm font-bold">選択中</p>
+                            <div className="absolute inset-0 bg-white/5 flex items-center justify-center backdrop-blur-sm">
+                              <div className="bg-black/80 px-3 py-1.5 md:px-4 md:py-2 rounded-md">
+                                <p className="text-xs md:text-sm font-bold text-white">選択中</p>
                               </div>
                             </div>
                           )}
@@ -354,9 +362,9 @@ function BannerTestPageInner() {
                     {/* 右スクロールボタン */}
                     <button
                       onClick={() => scroll('right', industryName)}
-                      className="absolute right-0 top-0 bottom-0 z-10 w-12 bg-black/50 hover:bg-black/70 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100"
+                      className="absolute right-0 top-0 bottom-0 z-10 w-10 md:w-14 bg-gradient-to-l from-black via-black/80 to-transparent hover:from-black/90 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
                     >
-                      <ChevronRight className="w-8 h-8" />
+                      <ChevronRight className="w-6 h-6 md:w-8 md:h-8 text-white" />
                     </button>
                   </div>
                 </div>
@@ -366,10 +374,10 @@ function BannerTestPageInner() {
 
           {/* 生成フォーム（選択されたテンプレートに基づく、バナー選択時は非表示） */}
           {selectedTemplate && !selectedBanner && (
-            <div className="px-4 md:px-8 py-8 bg-gray-900/50 backdrop-blur-sm">
-              <div className="max-w-4xl mx-auto">
-                <h2 className="text-2xl font-bold mb-6">バナー情報を入力</h2>
-                <div className="bg-gray-900/80 rounded-2xl p-6 space-y-6">
+            <div className="px-4 md:px-8 lg:px-12 py-8 md:py-12 bg-black/95 backdrop-blur-sm">
+              <div className="max-w-5xl mx-auto">
+                <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-white">バナー情報を入力</h2>
+                <div className="bg-gray-900/90 rounded-xl md:rounded-2xl p-6 md:p-8 space-y-6 border border-gray-800">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-bold mb-2">サイズ</label>
@@ -454,8 +462,8 @@ function BannerTestPageInner() {
 
           {/* 生成されたバナー一覧（Netflix風の横スクロール） */}
           {generatedBanners.length > 0 && (
-            <div className="px-4 md:px-8 py-8 space-y-4">
-              <h2 className="text-2xl font-bold px-2">生成されたバナー</h2>
+            <div className="px-4 md:px-8 lg:px-12 py-8 md:py-12 space-y-4 md:space-y-6">
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold px-2 md:px-4 text-white">生成されたバナー</h2>
               <div className="relative group">
                 {/* 左スクロールボタン */}
                 <button
@@ -465,27 +473,27 @@ function BannerTestPageInner() {
                       container.scrollBy({ left: -400, behavior: 'smooth' })
                     }
                   }}
-                  className="absolute left-0 top-0 bottom-0 z-10 w-12 bg-black/50 hover:bg-black/70 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100"
+                  className="absolute left-0 top-0 bottom-0 z-10 w-10 md:w-14 bg-gradient-to-r from-black via-black/80 to-transparent hover:from-black/90 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
                 >
-                  <ChevronLeft className="w-8 h-8" />
+                  <ChevronLeft className="w-6 h-6 md:w-8 md:h-8 text-white" />
                 </button>
                 
                 {/* 横スクロールコンテナ */}
                 <div
                   ref={(el) => (scrollRefs.current['generated'] = el)}
-                  className="flex gap-4 overflow-x-auto scrollbar-hide px-12 py-4"
+                  className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-10 md:px-14 py-2 md:py-4"
                   style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                   {generatedBanners.map((banner) => (
                     <motion.div
                       key={banner.id}
-                      whileHover={{ scale: 1.05, y: -8 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: 1.08, y: -12, zIndex: 10 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setSelectedBanner(banner)}
-                      className={`flex-shrink-0 w-64 h-36 md:w-80 md:h-44 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                      className={`flex-shrink-0 w-48 h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 ${
                         selectedBanner?.id === banner.id
-                          ? 'ring-4 ring-white scale-105'
-                          : 'ring-2 ring-gray-700 hover:ring-gray-500'
+                          ? 'ring-3 ring-white scale-105 shadow-2xl'
+                          : 'ring-1 ring-gray-800 hover:ring-gray-600'
                       }`}
                     >
                       <img
@@ -494,9 +502,9 @@ function BannerTestPageInner() {
                         className="w-full h-full object-cover"
                       />
                       {selectedBanner?.id === banner.id && (
-                        <div className="absolute inset-0 bg-white/10 flex items-center justify-center">
-                          <div className="bg-black/70 px-4 py-2 rounded-lg">
-                            <p className="text-sm font-bold">選択中</p>
+                        <div className="absolute inset-0 bg-white/5 flex items-center justify-center backdrop-blur-sm">
+                          <div className="bg-black/80 px-3 py-1.5 md:px-4 md:py-2 rounded-md">
+                            <p className="text-xs md:text-sm font-bold text-white">選択中</p>
                           </div>
                         </div>
                       )}
@@ -512,9 +520,9 @@ function BannerTestPageInner() {
                       container.scrollBy({ left: 400, behavior: 'smooth' })
                     }
                   }}
-                  className="absolute right-0 top-0 bottom-0 z-10 w-12 bg-black/50 hover:bg-black/70 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100"
+                  className="absolute right-0 top-0 bottom-0 z-10 w-10 md:w-14 bg-gradient-to-l from-black via-black/80 to-transparent hover:from-black/90 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
                 >
-                  <ChevronRight className="w-8 h-8" />
+                  <ChevronRight className="w-6 h-6 md:w-8 md:h-8 text-white" />
                 </button>
               </div>
             </div>

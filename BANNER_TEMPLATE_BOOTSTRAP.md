@@ -37,6 +37,21 @@ export NANOBANNER_API_KEY="..."
 node scripts/local-bootstrap.mjs
 ```
 
+#### 方法A-2: ローカル環境で 50件ずつバッチ生成（推奨）
+
+1テンプレートあたり約30秒待機するため、50件で約25分かかります。全体は約7バッチ想定です。  
+途中で止まっても `scripts/.bootstrap-progress.json` により **続きから再開**できます。
+
+```bash
+cd doya-ai
+
+# 1) ローカルサーバーを起動（別ターミナル）
+npm run dev
+
+# 2) 50件ずつバッチ実行
+node scripts/batch-bootstrap-50.mjs
+```
+
 **注意事項:**
 - 全テンプレート（約330個）を生成するには約2.75時間かかります
 - 1テンプレートあたり約30秒待機します（レート制限対策）
