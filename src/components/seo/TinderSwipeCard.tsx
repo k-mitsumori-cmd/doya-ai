@@ -254,15 +254,14 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
         rotate,
         zIndex: 10,
       }}
-      animate={isSwiping ? controls : undefined}
+      animate={isSwiping ? controls : { opacity: 1, scale: 1, y: 0 }}
       drag={!isSwiping && !isExiting}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.9}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
-      initial={{ opacity: 0, scale: 0.9, y: 30 }}
-      exit={{ opacity: 0, scale: 0.8, y: -100 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      initial={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: 0.15 }}
     >
       {/* カード本体（リッチなデザイン） */}
       <div className="relative rounded-3xl bg-white overflow-hidden shadow-[0_25px_80px_-12px_rgba(0,0,0,0.25)]">
