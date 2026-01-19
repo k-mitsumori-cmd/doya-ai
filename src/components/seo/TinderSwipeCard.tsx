@@ -179,25 +179,25 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     
     const direction = decision === 'yes' ? 1 : -1
     
-    // 滑らかなスワイプアニメーション（ゆっくり横に流れる）
+    // 滑らかなスワイプアニメーション（上方向に流れる）
     await controls.start({
       x: direction * 800,
-      y: 50,
+      y: -150, // 上方向に
       rotate: direction * 15,
       opacity: 0,
       scale: 0.9,
       transition: { 
-        duration: 0.8,
-        ease: [0.25, 0.1, 0.25, 1], // cubic-bezier for smooth motion
-        x: { duration: 0.8, ease: [0.4, 0, 0.2, 1] },
-        rotate: { duration: 0.6, ease: 'easeOut' },
-        opacity: { duration: 0.5, delay: 0.3 },
+        duration: 0.9,
+        ease: [0.25, 0.1, 0.25, 1],
+        x: { duration: 0.9, ease: [0.4, 0, 0.2, 1] },
+        y: { duration: 0.9, ease: [0.4, 0, 0.2, 1] },
+        rotate: { duration: 0.7, ease: 'easeOut' },
+        opacity: { duration: 0.6, delay: 0.3 },
       },
     })
     
-    // アニメーションが完全に終わるまで待つ（opacityのdelay + duration = 0.3 + 0.5 = 0.8秒）
-    // さらに少し余裕を持たせて1秒待機
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // アニメーションが完全に終わるまで待つ（0.3 + 0.6 = 0.9秒、さらに余裕を持たせて1.2秒待機）
+    await new Promise(resolve => setTimeout(resolve, 1200))
     
     // 完了後にコールバック
     onSwipe(decision)
@@ -220,23 +220,25 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
       transition: { duration: 0.15, ease: 'easeOut' },
     })
     
-    // そして滑らかに飛んでいく
+    // そして滑らかに上方向に飛んでいく
     await controls.start({
       x: direction * 800,
-      y: 50,
+      y: -150, // 上方向に
       rotate: direction * 15,
       opacity: 0,
       scale: 0.9,
       transition: { 
-        duration: 0.7,
+        duration: 0.8,
         ease: [0.4, 0, 0.2, 1],
-        opacity: { duration: 0.4, delay: 0.3 },
+        x: { duration: 0.8, ease: [0.4, 0, 0.2, 1] },
+        y: { duration: 0.8, ease: [0.4, 0, 0.2, 1] },
+        opacity: { duration: 0.5, delay: 0.3 },
       },
     })
     
-    // アニメーションが完全に終わるまで待つ（0.15 + 0.3 + 0.4 = 0.85秒）
-    // さらに少し余裕を持たせて1秒待機
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // アニメーションが完全に終わるまで待つ（0.15 + 0.3 + 0.5 = 0.95秒）
+    // さらに余裕を持たせて1.2秒待機
+    await new Promise(resolve => setTimeout(resolve, 1200))
     
     // 完了後にコールバック
     onSwipe(decision)
@@ -256,7 +258,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
 
   return (
     <motion.div
-      className="absolute w-full max-w-3xl mx-auto cursor-grab active:cursor-grabbing"
+      className="absolute w-full max-w-2xl sm:max-w-3xl mx-auto cursor-grab active:cursor-grabbing px-4"
       style={{
         x: index === 0 ? x : 0,
         y: index === 0 ? y : stackYOffset,
@@ -272,9 +274,10 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
       dragElastic={0.9}
       onDragEnd={handleDragEnd}
       whileTap={{ cursor: 'grabbing' }}
+      exit={{ opacity: 0, scale: 0.9 }}
     >
-      {/* カード本体 */}
-      <div className="relative rounded-3xl bg-gradient-to-br from-white via-gray-50 to-white shadow-2xl border border-gray-100 overflow-hidden">
+      {/* カード本体（Skyscanner風の高級感のあるデザイン） */}
+      <div className="relative rounded-2xl sm:rounded-3xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-gray-200/50 overflow-hidden">
         
         {/* LIKE/NOPE オーバーレイ */}
         {index === 0 && (
@@ -300,26 +303,26 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
           </>
         )}
 
-        <div className="p-6 md:p-8">
+        <div className="p-4 sm:p-6 md:p-8">
           {/* カテゴリタグ */}
-          <div className="mb-4">
-            <span className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-800 text-sm font-bold rounded-full">
+          <div className="mb-3 sm:mb-4">
+            <span className="inline-flex items-center px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-100 text-slate-700 text-xs sm:text-sm font-semibold rounded-full">
               {question.category}
             </span>
           </div>
 
           {/* カテゴリアイコン（常に表示） */}
-          <div className={`mb-6 rounded-2xl bg-gradient-to-br ${categoryVisual.gradient} h-32 flex items-center justify-center`}>
-            <div className="p-4 rounded-full bg-white/70 shadow-lg">
+          <div className={`mb-4 sm:mb-6 rounded-xl sm:rounded-2xl bg-gradient-to-br ${categoryVisual.gradient} h-24 sm:h-32 flex items-center justify-center px-4`}>
+            <div className="p-3 sm:p-4 rounded-full bg-white/90 shadow-lg">
               {categoryVisual.icon}
             </div>
-            <span className="ml-4 text-lg font-bold text-gray-700">{categoryVisual.label}</span>
+            <span className="ml-3 sm:ml-4 text-base sm:text-lg font-semibold text-slate-700">{categoryVisual.label}</span>
           </div>
 
           {/* 質問 */}
-          <div className="bg-white rounded-2xl p-6 shadow-inner border border-gray-100 min-h-[120px] flex items-center justify-center">
+          <div className="bg-slate-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-slate-200/50 min-h-[100px] sm:min-h-[120px] flex items-center justify-center">
             <h2 
-              className="text-xl md:text-2xl font-bold text-gray-900 text-center leading-relaxed"
+              className="text-lg sm:text-xl md:text-2xl font-semibold text-slate-900 text-center leading-relaxed"
               style={{ wordBreak: 'keep-all' }}
             >
               {normalizedQuestion}
@@ -328,20 +331,20 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
 
           {/* YES/NOボタン */}
           {index === 0 && (
-            <div className="flex items-center justify-center gap-6 mt-6">
+            <div className="flex items-center justify-center gap-4 sm:gap-6 mt-4 sm:mt-6">
               <button
                 onClick={() => handleButtonClick('no')}
                 disabled={isSwiping}
-                className="w-20 h-20 rounded-full bg-gradient-to-br from-red-400 to-rose-600 flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform disabled:opacity-50"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform disabled:opacity-50"
               >
-                <X className="w-10 h-10 text-white" strokeWidth={3} />
+                <X className="w-8 h-8 sm:w-10 sm:h-10 text-white" strokeWidth={3} />
               </button>
               <button
                 onClick={() => handleButtonClick('yes')}
                 disabled={isSwiping}
-                className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform disabled:opacity-50"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-lg hover:scale-110 active:scale-95 transition-transform disabled:opacity-50"
               >
-                <Heart className="w-10 h-10 text-white fill-white" strokeWidth={2} />
+                <Heart className="w-8 h-8 sm:w-10 sm:h-10 text-white fill-white" strokeWidth={2} />
               </button>
             </div>
           )}

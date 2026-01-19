@@ -521,32 +521,23 @@ export default function TestSwipePage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* カラフルなグラデーション背景（全面） */}
-      <div className="fixed inset-0 bg-gradient-to-br from-emerald-100 via-sky-100 via-50% to-rose-100" />
-      <div className="fixed inset-0 bg-gradient-to-tr from-amber-50/60 via-transparent to-violet-100/50" />
+      {/* Skyscanner風のダークブルー背景（高級感・信頼感） */}
+      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-900/30 via-transparent to-transparent" />
+      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-indigo-900/30 via-transparent to-transparent" />
       
-      {/* TCGっぽい背景（光・オーブ・パターン） */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(16,185,129,0.25),transparent_40%),radial-gradient(circle_at_80%_10%,rgba(59,130,246,0.22),transparent_45%),radial-gradient(circle_at_85%_80%,rgba(244,63,94,0.20),transparent_50%),radial-gradient(circle_at_15%_85%,rgba(245,158,11,0.18),transparent_45%),radial-gradient(circle_at_50%_50%,rgba(139,92,246,0.12),transparent_60%)]" />
-        <div className="absolute inset-0 opacity-[0.08] bg-[linear-gradient(90deg,rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(rgba(0,0,0,0.03)_1px,transparent_1px)] bg-[size:28px_28px]" />
-        {bgOrbs.map((o, idx) => (
-          <motion.div
-            key={idx}
-            className={`absolute rounded-full blur-3xl bg-gradient-to-br ${o.c}`}
-            style={{ left: o.x, top: o.y, width: o.size, height: o.size }}
-            animate={{ y: [0, -20, 0], x: [0, 15, 0] }}
-            transition={{ duration: o.d, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        ))}
+      {/* 微細なパターン */}
+      <div className="fixed inset-0 pointer-events-none opacity-5">
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px),linear-gradient(rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:20px_20px]" />
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-8 relative">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 relative">
         {/* ヘッダー */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-2 tracking-tight flex items-center gap-2">
-            スワイプ記事作成 <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full">TEST</span>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 tracking-tight flex items-center gap-2">
+            スワイプ記事作成 <span className="text-xs font-semibold text-blue-300 bg-blue-900/50 px-2 py-1 rounded-full border border-blue-700/50">TEST</span>
           </h1>
-          <p className="text-gray-700 font-bold">
+          <p className="text-blue-100 font-medium text-sm sm:text-base">
             カードをめくって答える感覚で進めます。右=YES、左=NO。
           </p>
         </div>
@@ -666,7 +657,7 @@ export default function TestSwipePage() {
                   </AnimatePresence>
 
                   {questionQueue.length > 0 ? (
-                    <AnimatePresence mode="wait">
+                    <AnimatePresence>
                       {questionQueue.slice(0, 3).map((question, index) => (
                         <TinderSwipeCard
                           key={question.id}
