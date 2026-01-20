@@ -794,10 +794,21 @@ export async function GET(request: NextRequest) {
   try {
     const allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
     
-    // DBから既存のテンプレート情報を取得
-    const dbTemplates = await prisma.bannerTemplate.findMany({
-      where: { isActive: true },
-    })
+    // DBから既存のテンプレート情報を取得（テーブルが存在しない場合は空配列）
+    let dbTemplates: any[] = []
+    try {
+      dbTemplates = await prisma.bannerTemplate.findMany({
+        where: { isActive: true },
+      })
+    } catch (dbError: any) {
+      // テーブルが存在しない場合（P2021）は空配列で続行
+      if (dbError?.code === 'P2021') {
+        console.warn('BannerTemplate table not found, returning templates without images')
+        dbTemplates = []
+      } else {
+        throw dbError
+      }
+    }
     
     // templateIdをキーにしたマップを作成
     const dbTemplateMap = new Map(
