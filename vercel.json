@@ -1,3 +1,4 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "buildCommand": "prisma generate && node ./scripts/db-push-if-db-url.mjs && next build"
 }
