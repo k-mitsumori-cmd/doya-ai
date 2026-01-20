@@ -75,6 +75,8 @@ export default async function OpenGraphImage() {
               boxShadow: '0 25px 60px rgba(0,0,0,0.18)',
               position: 'relative',
               overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             <div
