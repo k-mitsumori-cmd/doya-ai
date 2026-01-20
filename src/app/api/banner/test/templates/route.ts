@@ -844,16 +844,19 @@ export async function GET(request: NextRequest) {
     // DBから既存のテンプレート情報を取得（テーブルが存在しない場合は空配列）
     let dbTemplates: any[] = []
     try {
+      // isActiveフィルターを削除してすべてのテンプレートを取得
       dbTemplates = await prisma.bannerTemplate.findMany({
-        where: { isActive: true },
+        // where: { isActive: true }, // フィルターを削除
       })
     } catch (dbError: any) {
       // テーブルが存在しない場合（P2021）は空配列で続行
       if (dbError?.code === 'P2021') {
-        console.warn('BannerTemplate table not found, returning templates without images')
+        console.warn('[Templates API] BannerTemplate table not found, returning templates without images')
         dbTemplates = []
       } else {
-        throw dbError
+        console.error('[Templates API] Database error:', dbError)
+        // エラーを再スローせず、空配列で続行（フォールバック画像を使用）
+        dbTemplates = []
       }
     }
     
@@ -866,10 +869,19 @@ export async function GET(request: NextRequest) {
     const templates = allTemplates.map((t) => {
       const dbTemplate = dbTemplateMap.get(t.id)
       const fallbackImage = getFallbackImageUrl(t.category, t.industry)
+      
+      // DBに画像URLがある場合はそれを使用、なければフォールバック
+      // data:image/png;base64... のようなbase64データも有効な画像URLとして扱う
+      const imageUrl = dbTemplate?.imageUrl && 
+        !dbTemplate.imageUrl.startsWith('/banner-samples/') && 
+        !dbTemplate.imageUrl.startsWith('data:') 
+        ? dbTemplate.imageUrl 
+        : (dbTemplate?.imageUrl || fallbackImage)
+      
       return {
         ...t,
-        imageUrl: dbTemplate?.imageUrl || fallbackImage,
-        previewUrl: dbTemplate?.previewUrl || fallbackImage,
+        imageUrl,
+        previewUrl: dbTemplate?.previewUrl || imageUrl,
         isFeatured: dbTemplate?.isFeatured || false,
       }
     })
@@ -885,8 +897,15 @@ export async function GET(request: NextRequest) {
       generatedCount: dbTemplates.length, // 画像が生成済みの数
     })
   } catch (err: any) {
-    console.error('Get templates error:', err)
-    return NextResponse.json({ error: err.message || '取得に失敗しました' }, { status: 500 })
+    console.error('[Templates API] Get templates error:', err)
+    console.error('[Templates API] Error stack:', err.stack)
+    return NextResponse.json(
+      { 
+        error: err.message || '取得に失敗しました',
+        details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      }, 
+      { status: 500 }
+    )
   }
 }
 
