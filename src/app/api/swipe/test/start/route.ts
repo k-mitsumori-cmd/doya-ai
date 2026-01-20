@@ -138,8 +138,10 @@ JSONのみを出力してください。`
 
 JSONのみを出力してください。`
 
-    // 質問生成（エラー時はフォールバック）
+    // 質問生成（エラー時はエラーを返す）
     let questionData: any
+    let aiGenerationError: string | null = null
+    
     try {
       const aiResponse = await geminiGenerateText({
         model: GEMINI_TEXT_MODEL_DEFAULT,
@@ -150,24 +152,35 @@ JSONのみを出力してください。`
         },
       })
 
+      // AIレスポンスが空の場合はエラー
+      if (!aiResponse || aiResponse.trim() === '') {
+        throw new Error('AI質問生成が空のレスポンスを返しました')
+      }
+
       // JSONをパース
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         questionData = JSON.parse(jsonMatch[0])
+        // questionsが空配列または存在しない場合もエラー
+        if (!questionData.questions || !Array.isArray(questionData.questions) || questionData.questions.length === 0) {
+          throw new Error('AI質問生成が有効な質問を生成できませんでした')
+        }
       } else {
-        throw new Error('JSON not found')
+        throw new Error('AI質問生成のレスポンスからJSONを抽出できませんでした')
       }
     } catch (e: any) {
-      console.warn('[swipe/test/start] AI question generation failed, using fallback:', e?.message)
-      // フォールバック: デフォルトの質問を生成
-      questionData = {
-        questions: [
-          { question: `「${keywords[0]}」について比較記事にしますか？`, category: '記事タイプ' },
-          { question: `初心者向けに説明しますか？`, category: 'ターゲット' },
-          { question: `導入事例を含めますか？`, category: 'コンテンツ' },
-          { question: `具体的な数字やデータを含めますか？`, category: 'コンテンツ' },
-        ],
-      }
+      console.error('[swipe/test/start] AI question generation failed:', e?.message)
+      aiGenerationError = e?.message || 'AI質問生成に失敗しました'
+      
+      // エラーをクライアントに返す
+      return NextResponse.json(
+        { 
+          error: 'AI質問生成に失敗しました', 
+          details: aiGenerationError,
+          sessionId, // セッションIDは返す（リトライ用）
+        }, 
+        { status: 500 }
+      )
     }
 
     const questions = Array.isArray(questionData.questions)

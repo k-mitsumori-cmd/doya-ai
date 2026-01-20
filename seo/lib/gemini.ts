@@ -266,9 +266,11 @@ function closeIncompleteJson(input: string): string {
   return s
 }
 
-// レート制限時のフォールバックモデル
+// 空のテキストやエラー時のフォールバックモデル（順番に試行）
 const FALLBACK_MODELS: string[] = [
-  // フォールバックなし（gemini-3-proのみを使用）
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
 ]
 
 // レート制限(429)やサーバーエラー(5xx)時にリトライ
@@ -363,15 +365,18 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
       const parts = json?.candidates?.[0]?.content?.parts
       const text = joinPartsText(parts)
       
-      // 空のテキストが返された場合は次のモデルを試す（または ChatGPT フォールバック）
+      // 空のテキストが返された場合は次のモデルを試す
       if (!text) {
-        console.warn(`[Gemini] Model ${model} returned empty text, trying fallback...`)
-        // フォールバックモデルがある場合は次を試す
-        if (model !== modelsToTry[modelsToTry.length - 1]) {
+        console.warn(`[Gemini] Model ${model} returned empty text`)
+        // まだ試していないフォールバックモデルがあれば次を試す
+        const currentIndex = modelsToTry.indexOf(model)
+        if (currentIndex < modelsToTry.length - 1) {
+          console.log(`[Gemini] Trying next model: ${modelsToTry[currentIndex + 1]}`)
           continue
         }
-        // 最後のモデルでも空の場合は ChatGPT フォールバックへ
-        throw new Error('Gemini が空のテキストを返しました')
+        // すべてのGeminiモデルで空の場合は ChatGPT フォールバックへ
+        console.log('[Gemini] All models returned empty, falling back to ChatGPT...')
+        break // ループを抜けてChatGPTフォールバックへ
       }
       
       if (model === 'gemini-3-pro-preview' || model === 'gemini-3-pro') {
