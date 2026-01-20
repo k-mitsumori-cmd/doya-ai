@@ -790,6 +790,53 @@ export const generateMoreVariations = () => {
 }
 
 // GET: テンプレート一覧を取得（DBから画像URLを取得）
+// カテゴリに基づいてフォールバック画像を取得
+function getFallbackImageUrl(category: string, industry: string): string {
+  // カテゴリベースのマッピング
+  const categoryImageMap: { [key: string]: string } = {
+    'it': '/banner-samples/cat-it.png',
+    'recruit': '/banner-samples/cat-marketing.png',
+    'ec': '/banner-samples/cat-ec.png',
+    'beauty': '/banner-samples/cat-beauty.png',
+  }
+  
+  // 業種名ベースのマッピング（より具体的）
+  const industryImageMap: { [key: string]: string } = {
+    'ビジネス / ブランディング': '/banner-samples/cat-marketing.png',
+    'UX / デザイン / テクノロジー': '/banner-samples/cat-it.png',
+    'Web / IT / スクール / 教育': '/banner-samples/cat-education.png',
+    '転職・採用・人材': '/banner-samples/cat-marketing.png',
+    'SaaS / BtoBサービス': '/banner-samples/cat-it.png',
+    'かわいい / ポップ': '/banner-samples/cat-beauty.png',
+    'かっこいい / スタイリッシュ': '/banner-samples/cat-it.png',
+    '高級感 / きれいめ': '/banner-samples/cat-beauty.png',
+    'ナチュラル / 爽やか': '/banner-samples/cat-health.png',
+    'カジュアル / 親しみやすい': '/banner-samples/cat-food.png',
+    'にぎやか / ポップ': '/banner-samples/cat-ec.png',
+    'イラスト / アート': '/banner-samples/cat-beauty.png',
+    '人物写真 / ポートレート': '/banner-samples/cat-marketing.png',
+    '切り抜き / シルエット': '/banner-samples/cat-ec.png',
+    '和風 / ジャパニーズ': '/banner-samples/cat-food.png',
+    'ネオン / サイバー': '/banner-samples/cat-it.png',
+    'レトロ / エスニック': '/banner-samples/cat-food.png',
+    '文字組み / タイポグラフィ': '/banner-samples/cat-marketing.png',
+    'セール / キャンペーン': '/banner-samples/cat-ec.png',
+    '季節感 / イベント': '/banner-samples/cat-ec.png',
+    '写真ベース / ビジュアル重視': '/banner-samples/cat-marketing.png',
+    'グラデーション / カラー重視': '/banner-samples/cat-it.png',
+    'ミニマル / シンプル': '/banner-samples/cat-marketing.png',
+    '抽象 / パターン': '/banner-samples/cat-it.png',
+    'データ可視化 / 図解': '/banner-samples/cat-finance.png',
+    'UI要素 / スクリーンショット': '/banner-samples/cat-it.png',
+    '分割レイアウト': '/banner-samples/cat-marketing.png',
+    'オーバーレイ / フィルター': '/banner-samples/cat-beauty.png',
+    'ビズリーチ風 / プロフェッショナル': '/banner-samples/cat-marketing.png',
+  }
+  
+  // 業種名でマッチ → カテゴリでマッチ → デフォルト
+  return industryImageMap[industry] || categoryImageMap[category] || '/banner-samples/cat-it.png'
+}
+
 export async function GET(request: NextRequest) {
   try {
     const allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
@@ -815,20 +862,21 @@ export async function GET(request: NextRequest) {
       dbTemplates.map((t) => [t.templateId, t])
     )
     
-    // フロントエンド用のテンプレート配列を作成
+    // フロントエンド用のテンプレート配列を作成（DBに画像がない場合はフォールバック画像を使用）
     const templates = allTemplates.map((t) => {
       const dbTemplate = dbTemplateMap.get(t.id)
+      const fallbackImage = getFallbackImageUrl(t.category, t.industry)
       return {
         ...t,
-        imageUrl: dbTemplate?.imageUrl || null,
-        previewUrl: dbTemplate?.previewUrl || null,
+        imageUrl: dbTemplate?.imageUrl || fallbackImage,
+        previewUrl: dbTemplate?.previewUrl || fallbackImage,
         isFeatured: dbTemplate?.isFeatured || false,
       }
     })
     
     // featuredTemplateを取得
     const featuredTemplate = dbTemplates.find((t) => t.isFeatured) || dbTemplates[0]
-    const featuredTemplateId = featuredTemplate?.templateId || null
+    const featuredTemplateId = featuredTemplate?.templateId || templates[0]?.id || null
     
     return NextResponse.json({
       templates,
