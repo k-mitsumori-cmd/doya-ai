@@ -362,7 +362,17 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
       const json = await res.json()
       const parts = json?.candidates?.[0]?.content?.parts
       const text = joinPartsText(parts)
-      if (!text) throw new Error('Gemini が空のテキストを返しました')
+      
+      // 空のテキストが返された場合は次のモデルを試す（または ChatGPT フォールバック）
+      if (!text) {
+        console.warn(`[Gemini] Model ${model} returned empty text, trying fallback...`)
+        // フォールバックモデルがある場合は次を試す
+        if (model !== modelsToTry[modelsToTry.length - 1]) {
+          continue
+        }
+        // 最後のモデルでも空の場合は ChatGPT フォールバックへ
+        throw new Error('Gemini が空のテキストを返しました')
+      }
       
       if (model === 'gemini-3-pro-preview' || model === 'gemini-3-pro') {
         console.log(`[Gemini] ✅ ${model} is working correctly`)

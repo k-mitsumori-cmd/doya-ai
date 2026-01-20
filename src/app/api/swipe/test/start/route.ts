@@ -138,31 +138,34 @@ JSONのみを出力してください。`
 
 JSONのみを出力してください。`
 
-    const aiResponse = await geminiGenerateText({
-      model: GEMINI_TEXT_MODEL_DEFAULT,
-      parts: [{ text: prompt }],
-      generationConfig: {
-        maxOutputTokens: 500,
-        temperature: 0.7,
-      },
-    })
-
-    // JSONをパース
+    // 質問生成（エラー時はフォールバック）
     let questionData: any
     try {
+      const aiResponse = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: prompt }],
+        generationConfig: {
+          maxOutputTokens: 500,
+          temperature: 0.7,
+        },
+      })
+
+      // JSONをパース
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         questionData = JSON.parse(jsonMatch[0])
       } else {
         throw new Error('JSON not found')
       }
-    } catch (e) {
+    } catch (e: any) {
+      console.warn('[swipe/test/start] AI question generation failed, using fallback:', e?.message)
       // フォールバック: デフォルトの質問を生成
       questionData = {
         questions: [
           { question: `「${keywords[0]}」について比較記事にしますか？`, category: '記事タイプ' },
           { question: `初心者向けに説明しますか？`, category: 'ターゲット' },
           { question: `導入事例を含めますか？`, category: 'コンテンツ' },
+          { question: `具体的な数字やデータを含めますか？`, category: 'コンテンツ' },
         ],
       }
     }
