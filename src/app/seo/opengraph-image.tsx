@@ -39,14 +39,13 @@ export default async function OpenGraphImage() {
           <div
             style={{
               marginTop: 26,
-              display: 'inline-flex',
+              display: 'flex',
               alignItems: 'center',
               gap: 10,
               padding: '12px 18px',
               borderRadius: 14,
               background: 'rgba(255,255,255,0.14)',
               border: '1px solid rgba(255,255,255,0.22)',
-              width: 'fit-content',
               fontSize: 18,
               fontWeight: 900,
             }}

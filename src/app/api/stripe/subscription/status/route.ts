@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { stripe, getPlanIdFromStripePriceId } from '@/lib/stripe'
 
+export const dynamic = 'force-dynamic'
+
 // ========================================
 // サブスク状態取得（解約予約中の停止日時表示用）
 // ========================================
