@@ -55,6 +55,11 @@ function BannerTestPageInner() {
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   
+  // タッチスワイプ用の状態
+  const touchStartX = useRef<{ [key: string]: number }>({})
+  const touchCurrentX = useRef<{ [key: string]: number }>({})
+  const isDragging = useRef<{ [key: string]: boolean }>({})
+  
   // 各カテゴリごとの表示数を管理（初期は4枚、スクロール時に追加）
   const [visibleCounts, setVisibleCounts] = useState<{ [key: string]: number }>({})
   const INITIAL_VISIBLE_COUNT = 4 // 初期表示数
@@ -258,6 +263,86 @@ function BannerTestPageInner() {
       })
     }
   }
+  
+  // タッチスワイプハンドラ（Netflix風のスムーズなスワイプ）
+  const handleTouchStart = useCallback((e: React.TouchEvent, category: string) => {
+    touchStartX.current[category] = e.touches[0].clientX
+    touchCurrentX.current[category] = e.touches[0].clientX
+    isDragging.current[category] = true
+  }, [])
+  
+  const handleTouchMove = useCallback((e: React.TouchEvent, category: string) => {
+    if (!isDragging.current[category]) return
+    touchCurrentX.current[category] = e.touches[0].clientX
+    
+    const container = scrollRefs.current[category]
+    if (container) {
+      const diff = touchStartX.current[category] - touchCurrentX.current[category]
+      // リアルタイムでスクロール位置を更新（スムーズな追従）
+      container.scrollLeft += diff * 0.5
+      touchStartX.current[category] = touchCurrentX.current[category]
+    }
+  }, [])
+  
+  const handleTouchEnd = useCallback((e: React.TouchEvent, category: string) => {
+    if (!isDragging.current[category]) return
+    isDragging.current[category] = false
+    
+    const container = scrollRefs.current[category]
+    if (container) {
+      // スワイプの勢いを計算してスムーズにスクロール
+      const diff = touchStartX.current[category] - touchCurrentX.current[category]
+      if (Math.abs(diff) > 50) {
+        // 大きなスワイプの場合、カード1枚分スクロール
+        const cardWidth = window.innerWidth < 768 ? 200 : 320
+        container.scrollBy({
+          left: diff > 0 ? cardWidth : -cardWidth,
+          behavior: 'smooth',
+        })
+      }
+    }
+  }, [])
+  
+  // マウスドラッグハンドラ（デスクトップ用）
+  const handleMouseDown = useCallback((e: React.MouseEvent, category: string) => {
+    touchStartX.current[category] = e.clientX
+    touchCurrentX.current[category] = e.clientX
+    isDragging.current[category] = true
+    
+    const container = scrollRefs.current[category]
+    if (container) {
+      container.style.cursor = 'grabbing'
+      container.style.userSelect = 'none'
+    }
+  }, [])
+  
+  const handleMouseMove = useCallback((e: React.MouseEvent, category: string) => {
+    if (!isDragging.current[category]) return
+    e.preventDefault()
+    
+    touchCurrentX.current[category] = e.clientX
+    const container = scrollRefs.current[category]
+    if (container) {
+      const diff = touchStartX.current[category] - touchCurrentX.current[category]
+      container.scrollLeft += diff
+      touchStartX.current[category] = touchCurrentX.current[category]
+    }
+  }, [])
+  
+  const handleMouseUp = useCallback((category: string) => {
+    isDragging.current[category] = false
+    const container = scrollRefs.current[category]
+    if (container) {
+      container.style.cursor = 'grab'
+      container.style.userSelect = ''
+    }
+  }, [])
+  
+  const handleMouseLeave = useCallback((category: string) => {
+    if (isDragging.current[category]) {
+      handleMouseUp(category)
+    }
+  }, [handleMouseUp])
 
   // バナー生成
   const handleGenerate = async () => {
@@ -492,11 +577,18 @@ function BannerTestPageInner() {
                         <ChevronLeft className="w-6 h-6 md:w-8 md:h-8 text-white" />
                       </button>
                       
-                      {/* 横スクロールコンテナ */}
+                      {/* 横スクロールコンテナ（タッチ/マウススワイプ対応） */}
                       <div
                         ref={(el) => { scrollRefs.current[categoryName] = el }}
-                        className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-10 md:px-14 py-2 md:py-4"
+                        className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-10 md:px-14 py-2 md:py-4 cursor-grab active:cursor-grabbing select-none"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        onTouchStart={(e) => handleTouchStart(e, categoryName)}
+                        onTouchMove={(e) => handleTouchMove(e, categoryName)}
+                        onTouchEnd={(e) => handleTouchEnd(e, categoryName)}
+                        onMouseDown={(e) => handleMouseDown(e, categoryName)}
+                        onMouseMove={(e) => handleMouseMove(e, categoryName)}
+                        onMouseUp={() => handleMouseUp(categoryName)}
+                        onMouseLeave={() => handleMouseLeave(categoryName)}
                       >
                         {categoryTemplates.map((template) => {
                           const hasError = imageErrors.has(template.id)
