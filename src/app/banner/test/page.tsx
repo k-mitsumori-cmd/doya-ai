@@ -17,6 +17,8 @@ type BannerTemplate = {
   imageUrl: string | null
   previewUrl: string | null
   isFeatured?: boolean
+  displayTitle?: string // 日本語の短いタイトル
+  name?: string // プロンプト名
 }
 
 type GeneratedBanner = {
@@ -398,21 +400,27 @@ function BannerTestPageInner() {
             {/* オーバーレイ情報（Netflix風） */}
             <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 lg:p-16 z-20">
               <div className="max-w-6xl mx-auto">
-                <h1 className="text-3xl md:text-5xl lg:text-7xl font-black mb-4 drop-shadow-2xl leading-tight">
+                {/* メインタイトル：日本語の短いタイトルを優先表示 */}
+                <h1 className="text-3xl md:text-5xl lg:text-6xl font-black mb-3 drop-shadow-2xl leading-tight">
                   {selectedBanner 
                     ? serviceName || '生成されたバナー'
-                    : selectedTemplate?.prompt.split('、')[0] || selectedTemplate?.prompt || 'バナーテンプレート'
+                    : selectedTemplate?.displayTitle || selectedTemplate?.name || selectedTemplate?.industry || 'バナーテンプレート'
                   }
                 </h1>
-                <p className="text-base md:text-lg lg:text-xl text-gray-300 mb-4 max-w-3xl drop-shadow-lg line-clamp-2">
+                {/* サブタイトル：ジャンル名 */}
+                <p className="text-lg md:text-xl lg:text-2xl text-gray-200 mb-2 drop-shadow-lg font-medium">
                   {selectedBanner 
-                    ? (tone ? `トーン: ${tone}` : '') || selectedBanner.prompt
-                    : selectedTemplate?.industry || '様々なスタイルのバナーテンプレートから選択'
+                    ? (tone ? `トーン: ${tone}` : '')
+                    : selectedTemplate?.industry || ''
                   }
                 </p>
+                {/* 説明文：プロンプトの一部を表示（短く） */}
                 {!selectedBanner && selectedTemplate && (
-                  <p className="text-sm md:text-base text-gray-400 mb-6 max-w-3xl drop-shadow-lg line-clamp-2">
-                    {selectedTemplate.prompt}
+                  <p className="text-sm md:text-base text-gray-400 mb-6 max-w-2xl drop-shadow-lg line-clamp-1">
+                    {selectedTemplate.prompt.length > 80 
+                      ? selectedTemplate.prompt.substring(0, 80) + '...'
+                      : selectedTemplate.prompt
+                    }
                   </p>
                 )}
                 <div className="flex gap-3 md:gap-4 flex-wrap">

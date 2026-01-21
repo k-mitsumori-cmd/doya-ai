@@ -887,6 +887,8 @@ export async function GET(request: NextRequest) {
           category: p.category,
           prompt: p.fullPrompt,
           size: '1200x628',
+          displayTitle: p.displayTitle || p.name, // 日本語の短いタイトル
+          name: p.name, // プロンプト名
         }))
       } catch (templateError: any) {
         console.error('[Templates API] Template generation error:', templateError)
@@ -926,6 +928,20 @@ export async function GET(request: NextRequest) {
           }
         }
         
+        // V2プロンプトからdisplayTitleを取得
+        let displayTitle = ''
+        let name = ''
+        try {
+          const { BANNER_PROMPTS_V2 } = await import('@/lib/banner-prompts-v2')
+          const v2Prompt = BANNER_PROMPTS_V2.find(p => p.id === t.templateId)
+          if (v2Prompt) {
+            displayTitle = v2Prompt.displayTitle || v2Prompt.name || ''
+            name = v2Prompt.name || ''
+          }
+        } catch (e) {
+          // V2プロンプトが見つからない場合は空文字
+        }
+        
         return {
           id: t.templateId,
           industry: t.industry,
@@ -936,6 +952,8 @@ export async function GET(request: NextRequest) {
           previewUrl: imageUrl, // 同じURLを使用
           isFeatured: t.isFeatured || false,
           hasGeneratedImage,
+          displayTitle, // 日本語の短いタイトル
+          name, // プロンプト名
         }
       })
       

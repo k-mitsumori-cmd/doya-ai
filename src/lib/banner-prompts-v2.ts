@@ -18,6 +18,7 @@ export interface BannerPromptV2 {
   genre: string // ジャンル名（日本語）
   category: string // カテゴリコード（it, recruit, ec, beauty, etc.）
   name: string // プロンプト名
+  displayTitle: string // 表示用の短い日本語タイトル
   prompt: {
     composition: string // 構図
     subject: string // 被写体
@@ -59,6 +60,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ファッション・アパレル',
     category: 'ec',
     name: 'ミニマルモノトーン',
+    displayTitle: '洗練モノトーン',
     prompt: {
       composition: '左右非対称の分割レイアウト、左1/3にテキスト、右2/3に商品',
       subject: 'ハイエンドファッションアイテム、シンプルな背景に浮かぶ商品',
@@ -74,6 +76,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ファッション・アパレル',
     category: 'ec',
     name: 'カジュアルポップ',
+    displayTitle: 'ポップカジュアル',
     prompt: {
       composition: '中央配置、商品を囲むように装飾要素',
       subject: 'カジュアルウェア、動きのあるポーズの人物シルエット',
@@ -89,6 +92,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ファッション・アパレル',
     category: 'ec',
     name: 'エレガントベージュ',
+    displayTitle: '上品ベージュ',
     prompt: {
       composition: '上下分割、上部に写真、下部にテキストエリア',
       subject: 'エレガントなドレスやコート、柔らかい光の中の商品',
@@ -104,6 +108,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ファッション・アパレル',
     category: 'ec',
     name: 'ストリートダーク',
+    displayTitle: 'ストリート',
     prompt: {
       composition: '斜めの分割線、ダイナミックな構図',
       subject: 'ストリートファッション、都市の背景、グラフィティ要素',
@@ -119,6 +124,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ファッション・アパレル',
     category: 'ec',
     name: 'シーズナルパステル',
+    displayTitle: '季節パステル',
     prompt: {
       composition: 'グリッドレイアウト、複数商品の配置',
       subject: '季節のファッションアイテム、花や植物のアクセント',
@@ -138,6 +144,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '美容・コスメ',
     category: 'beauty',
     name: 'ラグジュアリーゴールド',
+    displayTitle: '高級ゴールド',
     prompt: {
       composition: '中央に商品、周囲にゴールドの装飾',
       subject: '高級コスメボトル、光沢のある質感',
@@ -153,6 +160,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '美容・コスメ',
     category: 'beauty',
     name: 'ナチュラルオーガニック',
+    displayTitle: 'ナチュラル',
     prompt: {
       composition: '左右対称、商品を中心に植物で囲む',
       subject: 'オーガニックコスメ、ハーブや植物の素材',
@@ -168,6 +176,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '美容・コスメ',
     category: 'beauty',
     name: 'ピンクグラデーション',
+    displayTitle: 'ピンクグラデ',
     prompt: {
       composition: '斜めのグラデーション背景、商品を浮かせて配置',
       subject: 'リップやチーク、ピンク系コスメ',
@@ -183,6 +192,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '美容・コスメ',
     category: 'beauty',
     name: 'クリニカルホワイト',
+    displayTitle: 'クリニカル',
     prompt: {
       composition: 'クリーンな白背景、商品を整然と配置',
       subject: 'スキンケア製品、清潔感のあるパッケージ',
@@ -198,6 +208,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '美容・コスメ',
     category: 'beauty',
     name: 'アートメイク',
+    displayTitle: 'アートメイク',
     prompt: {
       composition: '大胆な色面分割、アーティスティックな構図',
       subject: 'カラフルなメイクアップ製品、アイシャドウパレット',
@@ -217,6 +228,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '飲料・食品',
     category: 'ec',
     name: 'シズル感フード',
+    displayTitle: 'シズル感',
     prompt: {
       composition: '商品を大きく中央に、湯気や水滴の演出',
       subject: '美味しそうな料理、新鮮な食材',
@@ -232,6 +244,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '飲料・食品',
     category: 'ec',
     name: 'カフェスタイル',
+    displayTitle: 'カフェ風',
     prompt: {
       composition: '俯瞰アングル、テーブルセッティング風',
       subject: 'コーヒーやスイーツ、カフェの雰囲気',
@@ -247,6 +260,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '飲料・食品',
     category: 'ec',
     name: 'フレッシュグリーン',
+    displayTitle: 'フレッシュ',
     prompt: {
       composition: '斜めの構図、野菜や果物を散りばめる',
       subject: '新鮮な野菜、フルーツ、ヘルシーフード',
@@ -262,6 +276,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '飲料・食品',
     category: 'ec',
     name: '和食モダン',
+    displayTitle: '和モダン',
     prompt: {
       composition: '余白を活かした和の構図、非対称バランス',
       subject: '和食、日本料理、器の美しさ',
@@ -277,6 +292,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '飲料・食品',
     category: 'ec',
     name: 'ポップスイーツ',
+    displayTitle: 'スイーツ',
     prompt: {
       composition: 'カラフルな背景、スイーツを浮かせて配置',
       subject: 'カラフルなスイーツ、キャンディ、アイスクリーム',
@@ -296,6 +312,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'IT・テクノロジー',
     category: 'it',
     name: 'サイバーネオン',
+    displayTitle: 'サイバー',
     prompt: {
       composition: 'ダーク背景にネオンラインが走る構図',
       subject: 'デジタルインターフェース、回路パターン',
@@ -311,6 +328,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'IT・テクノロジー',
     category: 'it',
     name: 'クリーンテック',
+    displayTitle: 'クリーン',
     prompt: {
       composition: '白背景にクリーンなUI要素を配置',
       subject: 'モダンなUIコンポーネント、デバイスモックアップ',
@@ -326,6 +344,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'IT・テクノロジー',
     category: 'it',
     name: 'グラデーションテック',
+    displayTitle: 'グラデ',
     prompt: {
       composition: '大胆なグラデーション背景、中央にメッセージ',
       subject: '抽象的な3D形状、浮遊するオブジェクト',
@@ -341,6 +360,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'IT・テクノロジー',
     category: 'it',
     name: 'データビジュアル',
+    displayTitle: 'データ',
     prompt: {
       composition: 'ダッシュボード風のレイアウト、グラフやチャート',
       subject: 'データビジュアライゼーション、分析画面',
@@ -356,6 +376,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'IT・テクノロジー',
     category: 'it',
     name: 'AIイノベーション',
+    displayTitle: 'AI',
     prompt: {
       composition: '中央にAI/ロボットのビジュアル、周囲にデータフロー',
       subject: 'AI、機械学習、ニューラルネットワーク',
@@ -375,6 +396,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ビジネス・SaaS',
     category: 'it',
     name: 'コーポレートブルー',
+    displayTitle: 'コーポレート',
     prompt: {
       composition: '左側にテキスト、右側にビジュアル',
       subject: 'ビジネスパーソン、オフィス環境',
@@ -390,6 +412,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ビジネス・SaaS',
     category: 'it',
     name: 'スタートアップモダン',
+    displayTitle: 'スタートアップ',
     prompt: {
       composition: '大胆なタイポグラフィ中心、ミニマルな背景',
       subject: 'プロダクトUI、チームワーク',
@@ -405,6 +428,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ビジネス・SaaS',
     category: 'it',
     name: 'エンタープライズ',
+    displayTitle: 'エンプラ',
     prompt: {
       composition: '整然としたグリッドレイアウト、情報の階層化',
       subject: 'エンタープライズソリューション、セキュリティ',
@@ -420,6 +444,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ビジネス・SaaS',
     category: 'it',
     name: 'グロースハック',
+    displayTitle: 'グロース',
     prompt: {
       composition: '上昇するグラフやチャートを背景に',
       subject: '成長、スケール、データ分析',
@@ -435,6 +460,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ビジネス・SaaS',
     category: 'it',
     name: 'コラボレーション',
+    displayTitle: 'コラボ',
     prompt: {
       composition: '複数の人物やアイコンが繋がるビジュアル',
       subject: 'チームワーク、コミュニケーション、リモートワーク',
@@ -454,6 +480,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '転職・採用・人材',
     category: 'recruit',
     name: 'キャリアアップ',
+    displayTitle: 'キャリア',
     prompt: {
       composition: '上昇するビジュアル、ステップアップのイメージ',
       subject: 'ビジネスパーソン、階段、成長',
@@ -469,6 +496,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '転職・採用・人材',
     category: 'recruit',
     name: 'ダイバーシティ',
+    displayTitle: '多様性',
     prompt: {
       composition: '多様な人物のシルエットやイラスト',
       subject: '多様性、インクルージョン、チーム',
@@ -484,6 +512,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '転職・採用・人材',
     category: 'recruit',
     name: 'テックリクルート',
+    displayTitle: 'テック採用',
     prompt: {
       composition: 'コードやテクノロジー要素を背景に',
       subject: 'エンジニア、開発環境、コード',
@@ -499,6 +528,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '転職・採用・人材',
     category: 'recruit',
     name: 'ワークライフバランス',
+    displayTitle: 'WLB',
     prompt: {
       composition: '仕事とプライベートの両方を表現',
       subject: 'リモートワーク、家族、趣味',
@@ -514,6 +544,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '転職・採用・人材',
     category: 'recruit',
     name: 'ミッションドリブン',
+    displayTitle: 'ミッション',
     prompt: {
       composition: '大きなビジョンステートメント、背景に活動写真',
       subject: '社会貢献、ミッション、パーパス',
@@ -533,6 +564,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '教育・学習・セミナー',
     category: 'it',
     name: 'オンラインラーニング',
+    displayTitle: 'オンライン',
     prompt: {
       composition: 'デバイスと学習コンテンツを組み合わせ',
       subject: 'オンライン学習、動画、インタラクティブ',
@@ -548,6 +580,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '教育・学習・セミナー',
     category: 'it',
     name: 'アカデミック',
+    displayTitle: '学術',
     prompt: {
       composition: '本や学術的なモチーフを配置',
       subject: '書籍、卒業帽、証明書',
@@ -563,6 +596,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '教育・学習・セミナー',
     category: 'it',
     name: 'スキルアップ',
+    displayTitle: 'スキル',
     prompt: {
       composition: 'スキルバーやレベルアップのビジュアル',
       subject: 'スキル習得、成長、達成',
@@ -578,6 +612,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '教育・学習・セミナー',
     category: 'it',
     name: 'ウェビナー',
+    displayTitle: 'ウェビナー',
     prompt: {
       composition: 'スピーカーと参加者のビジュアル',
       subject: 'ウェビナー、オンラインセミナー、ライブ配信',
@@ -593,6 +628,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '教育・学習・セミナー',
     category: 'it',
     name: 'キッズラーニング',
+    displayTitle: 'キッズ',
     prompt: {
       composition: 'カラフルで楽しい構図、イラスト中心',
       subject: '子供向け学習、遊びながら学ぶ',
@@ -612,6 +648,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '旅行・観光',
     category: 'ec',
     name: 'リゾートパラダイス',
+    displayTitle: 'リゾート',
     prompt: {
       composition: '美しい風景写真を全面に、テキストオーバーレイ',
       subject: 'ビーチ、海、リゾート',
@@ -627,6 +664,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '旅行・観光',
     category: 'ec',
     name: 'アドベンチャー',
+    displayTitle: '冒険',
     prompt: {
       composition: 'ダイナミックな構図、アクションショット',
       subject: '冒険、アウトドア、自然',
@@ -642,6 +680,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '旅行・観光',
     category: 'ec',
     name: 'シティトリップ',
+    displayTitle: 'シティ',
     prompt: {
       composition: '都市のスカイライン、ランドマーク',
       subject: '都市観光、建築、ナイトビュー',
@@ -657,6 +696,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '旅行・観光',
     category: 'ec',
     name: '日本旅行',
+    displayTitle: '日本旅行',
     prompt: {
       composition: '和のモチーフ、伝統と現代の融合',
       subject: '日本観光、神社、桜',
@@ -672,6 +712,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '旅行・観光',
     category: 'ec',
     name: 'ラグジュアリートラベル',
+    displayTitle: '高級旅行',
     prompt: {
       composition: '高級感のある構図、余白を活かす',
       subject: '高級ホテル、ファーストクラス、VIP',
@@ -691,6 +732,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '高級・ラグジュアリー',
     category: 'beauty',
     name: 'ブラックゴールド',
+    displayTitle: '黒金',
     prompt: {
       composition: 'ダーク背景にゴールドのアクセント',
       subject: '高級品、ジュエリー、時計',
@@ -706,6 +748,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '高級・ラグジュアリー',
     category: 'beauty',
     name: 'ホワイトエレガンス',
+    displayTitle: '白エレガンス',
     prompt: {
       composition: '白を基調とした上品な構図',
       subject: '白い花、パール、シルク',
@@ -721,6 +764,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '高級・ラグジュアリー',
     category: 'beauty',
     name: 'ディープネイビー',
+    displayTitle: 'ネイビー',
     prompt: {
       composition: '深いネイビーを基調、シルバーアクセント',
       subject: '高級車、ヨット、邸宅',
@@ -736,6 +780,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '高級・ラグジュアリー',
     category: 'beauty',
     name: 'ローズゴールド',
+    displayTitle: 'ローズ',
     prompt: {
       composition: 'ピンクゴールドのグラデーション',
       subject: 'ジュエリー、香水、コスメ',
@@ -751,6 +796,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: '高級・ラグジュアリー',
     category: 'beauty',
     name: 'マーブルテクスチャ',
+    displayTitle: 'マーブル',
     prompt: {
       composition: '大理石のテクスチャを背景に',
       subject: '高級インテリア、アート、彫刻',
@@ -770,6 +816,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ナチュラル・オーガニック',
     category: 'beauty',
     name: 'ボタニカル',
+    displayTitle: 'ボタニカル',
     prompt: {
       composition: '植物で囲むフレーム構図',
       subject: '植物、ハーブ、自然素材',
@@ -785,6 +832,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ナチュラル・オーガニック',
     category: 'beauty',
     name: 'アースカラー',
+    displayTitle: 'アース',
     prompt: {
       composition: '自然な質感のテクスチャ背景',
       subject: '土、木、石などの自然素材',
@@ -800,6 +848,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ナチュラル・オーガニック',
     category: 'beauty',
     name: 'クリーンミニマル',
+    displayTitle: 'ミニマル',
     prompt: {
       composition: '余白を活かしたミニマルな構図',
       subject: 'シンプルな自然素材、一輪の花',
@@ -815,6 +864,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ナチュラル・オーガニック',
     category: 'beauty',
     name: 'サステナブル',
+    displayTitle: 'サステナ',
     prompt: {
       composition: 'リサイクルや環境をテーマにした構図',
       subject: 'エコ素材、リサイクル、地球',
@@ -830,6 +880,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     genre: 'ナチュラル・オーガニック',
     category: 'beauty',
     name: 'ハーバルグリーン',
+    displayTitle: 'ハーバル',
     prompt: {
       composition: 'ハーブや薬草を散りばめた構図',
       subject: 'ハーブ、薬草、アロマ',
