@@ -360,7 +360,8 @@ function BannerTestPageInner() {
         <div className="relative">
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート） */}
           <div className="relative h-[70vh] md:h-[85vh] w-full overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/90 to-black/50 z-10" />
+            {/* グラデーション: 下は黒、上は明るく */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
             {selectedBanner ? (
               <img
                 src={selectedBanner.imageUrl}
@@ -414,14 +415,20 @@ function BannerTestPageInner() {
                     : selectedTemplate?.industry || ''
                   }
                 </p>
-                {/* 説明文：プロンプトの一部を表示（短く） */}
+                {/* プロンプト表示：アイコン付きで分かりやすく */}
                 {!selectedBanner && selectedTemplate && (
-                  <p className="text-sm md:text-base text-gray-400 mb-6 max-w-2xl drop-shadow-lg line-clamp-1">
-                    {selectedTemplate.prompt.length > 80 
-                      ? selectedTemplate.prompt.substring(0, 80) + '...'
-                      : selectedTemplate.prompt
-                    }
-                  </p>
+                  <div className="flex items-start gap-2 mb-6 max-w-3xl">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 shrink-0">
+                      <Sparkles className="w-4 h-4 text-yellow-400" />
+                      <span className="text-xs md:text-sm text-white/80 font-medium">AIプロンプト</span>
+                    </div>
+                    <p className="text-sm md:text-base text-gray-300 drop-shadow-lg line-clamp-2 leading-relaxed">
+                      {selectedTemplate.prompt.length > 120 
+                        ? selectedTemplate.prompt.substring(0, 120) + '...'
+                        : selectedTemplate.prompt
+                      }
+                    </p>
+                  </div>
                 )}
                 <div className="flex gap-3 md:gap-4 flex-wrap">
                   {!selectedBanner && selectedTemplate && (
