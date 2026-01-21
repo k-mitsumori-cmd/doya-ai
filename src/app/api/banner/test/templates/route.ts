@@ -951,28 +951,18 @@ export async function GET(request: NextRequest) {
       })
     }
     
-    // DBにデータがない場合は静的定義を使用
-    const dbTemplateMap = new Map(
-      dbTemplates.map((t) => [t.templateId, t])
-    )
-    
+    // DBにデータがない場合でも、V2プロンプトのIDに基づいて画像APIのURLを返す
+    // 画像APIがDBから画像を取得するため、DBに画像があれば表示される
     const templates = allTemplates.map((t) => {
-      const dbTemplate = dbTemplateMap.get(t.id)
-      const fallbackImage = getFallbackImageUrl(t.category, t.industry)
-      
-      let imageUrl = fallbackImage
-      if (dbTemplate?.imageUrl) {
-        const url = dbTemplate.imageUrl
-        if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('data:image/') || url.startsWith('/')) {
-          imageUrl = url
-        }
-      }
+      // 常に画像APIのURLを使用（画像APIがDBから画像を取得する）
+      const imageApiUrl = `/api/banner/test/image/${t.id}`
       
       return {
         ...t,
-        imageUrl,
-        previewUrl: dbTemplate?.previewUrl || imageUrl,
-        isFeatured: dbTemplate?.isFeatured || false,
+        imageUrl: imageApiUrl,
+        previewUrl: imageApiUrl,
+        isFeatured: false,
+        hasGeneratedImage: true, // 画像APIが存在確認を行う
       }
     })
     

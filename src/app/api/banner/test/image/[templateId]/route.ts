@@ -14,17 +14,38 @@ const FALLBACK_IMAGES: Record<string, string> = {
   default: '/banner-samples/cat-it.png',
 }
 
+// templateIdからカテゴリを推測
+function getCategoryFromTemplateId(templateId: string): string {
+  const prefix = templateId.split('-')[0]
+  const categoryMap: Record<string, string> = {
+    fashion: 'ec',
+    beauty: 'beauty',
+    food: 'ec',
+    it: 'it',
+    business: 'it',
+    recruit: 'recruit',
+    education: 'it',
+    travel: 'ec',
+    luxury: 'beauty',
+    natural: 'beauty',
+  }
+  return categoryMap[prefix] || 'default'
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { templateId: string } }
 ) {
+  const { templateId } = params
+  
+  if (!templateId) {
+    return NextResponse.json({ error: 'templateId is required' }, { status: 400 })
+  }
+  
+  // templateIdからカテゴリを推測（DBエラー時のフォールバック用）
+  const inferredCategory = getCategoryFromTemplateId(templateId)
+  
   try {
-    const { templateId } = params
-    
-    if (!templateId) {
-      return NextResponse.json({ error: 'templateId is required' }, { status: 400 })
-    }
-    
     // DBから画像を取得
     const template = await prisma.bannerTemplate.findUnique({
       where: { templateId },
@@ -33,7 +54,7 @@ export async function GET(
     
     // DBに画像がない場合はフォールバック画像にリダイレクト
     if (!template?.imageUrl) {
-      const category = template?.category || 'default'
+      const category = template?.category || inferredCategory
       const fallbackUrl = FALLBACK_IMAGES[category] || FALLBACK_IMAGES.default
       return NextResponse.redirect(new URL(fallbackUrl, request.url))
     }
@@ -42,7 +63,7 @@ export async function GET(
     
     // エラープレースホルダーの場合はフォールバック画像にリダイレクト
     if (imageUrl.includes('placehold.co') && imageUrl.includes('Error')) {
-      const category = template?.category || 'default'
+      const category = template?.category || inferredCategory
       const fallbackUrl = FALLBACK_IMAGES[category] || FALLBACK_IMAGES.default
       return NextResponse.redirect(new URL(fallbackUrl, request.url))
     }
@@ -78,7 +99,9 @@ export async function GET(
     
     return NextResponse.json({ error: 'Invalid image URL' }, { status: 400 })
   } catch (err: any) {
+    // DBエラーの場合はフォールバック画像にリダイレクト
     console.error('[Image API] Error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    const fallbackUrl = FALLBACK_IMAGES[inferredCategory] || FALLBACK_IMAGES.default
+    return NextResponse.redirect(new URL(fallbackUrl, request.url))
   }
 }
