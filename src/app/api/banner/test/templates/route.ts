@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateBanners } from '@/lib/nanobanner'
+import { PrismaClient } from '@prisma/client'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
 export const dynamic = 'force-dynamic'
 
-// Prismaを遅延インポート（接続プールエラー回避）
-async function getPrisma() {
-  const { prisma } = await import('@/lib/prisma')
-  return prisma
+// Prismaクライアントを直接インスタンス化（接続プールエラー回避）
+// グローバルシングルトンは使用せず、リクエストごとに新しい接続を作成
+async function getPrismaClient() {
+  try {
+    const prisma = new PrismaClient({
+      log: ['error'],
+    })
+    return prisma
+  } catch (e) {
+    console.error('[Templates API] Failed to create Prisma client:', e)
+    return null
+  }
 }
 
 // 大量のプロンプトパターンを定義（デザイン要素のみ、テキスト内容は反映しない）
@@ -844,17 +853,21 @@ function getFallbackImageUrl(category: string, industry: string): string {
 }
 
 export async function GET(request: NextRequest) {
+  let prisma: PrismaClient | null = null
+  
   try {
     const allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
     
     // DBから既存のテンプレート情報を取得（テーブルが存在しない場合は空配列）
     let dbTemplates: any[] = []
     try {
-      const prisma = await getPrisma()
-      // isActiveフィルターを削除してすべてのテンプレートを取得
-      dbTemplates = await prisma.bannerTemplate.findMany({
-        // where: { isActive: true }, // フィルターを削除
-      })
+      prisma = await getPrismaClient()
+      if (prisma) {
+        // isActiveフィルターを削除してすべてのテンプレートを取得
+        dbTemplates = await prisma.bannerTemplate.findMany({
+          // where: { isActive: true }, // フィルターを削除
+        })
+      }
     } catch (dbError: any) {
       // テーブルが存在しない場合（P2021）は空配列で続行
       // 接続プールエラー（MaxClientsInSessionMode）も空配列で続行
@@ -922,6 +935,15 @@ export async function GET(request: NextRequest) {
       }, 
       { status: 500 }
     )
+  } finally {
+    // Prisma接続を明示的に切断
+    if (prisma) {
+      try {
+        await prisma.$disconnect()
+      } catch (e) {
+        // 切断エラーは無視
+      }
+    }
   }
 }
 
