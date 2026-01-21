@@ -878,15 +878,20 @@ export async function GET(request: NextRequest) {
         size: t.size || '1200x628',
       }))
     } else {
-      // DBにデータがない場合は静的定義を使用
+      // DBにデータがない場合はV2プロンプトを使用
       try {
-        allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
+        const { BANNER_PROMPTS_V2 } = await import('@/lib/banner-prompts-v2')
+        allTemplates = BANNER_PROMPTS_V2.map(p => ({
+          id: p.id,
+          industry: p.genre,
+          category: p.category,
+          prompt: p.fullPrompt,
+          size: '1200x628',
+        }))
       } catch (templateError: any) {
         console.error('[Templates API] Template generation error:', templateError)
-        return NextResponse.json(
-          { error: 'テンプレート定義の生成に失敗しました', details: templateError.message },
-          { status: 500 }
-        )
+        // フォールバック: 旧プロンプトを使用
+        allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
       }
     }
     
