@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateBanners } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
+
+// generateBannersはPOSTでのみ使用するため、動的インポートに変更
+// これによりGETリクエスト時のsharpインポートエラーを回避
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -929,6 +931,9 @@ export async function GET(request: NextRequest) {
 // POST: テンプレートのバナーを生成（初期データ生成用）
 export async function POST(request: NextRequest) {
   try {
+    // 動的インポート（sharpの初期化エラーを回避）
+    const { generateBanners } = await import('@/lib/nanobanner')
+    
     const body = await request.json()
     const { templateIds, generateAll = false } = body
 
