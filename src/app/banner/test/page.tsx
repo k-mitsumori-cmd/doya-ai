@@ -58,6 +58,9 @@ function BannerTestPageInner() {
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   
+  // スクロール位置の状態（左右矢印の表示制御用）
+  const [scrollPositions, setScrollPositions] = useState<{ [key: string]: { canScrollLeft: boolean; canScrollRight: boolean } }>({})
+  
   // タッチスワイプ用の状態
   const touchStartX = useRef<{ [key: string]: number }>({})
   const touchCurrentX = useRef<{ [key: string]: number }>({})
@@ -255,17 +258,54 @@ function BannerTestPageInner() {
     })
   }, [totalTemplatesByCategory])
 
-  // 横スクロール関数
-  const scroll = (direction: 'left' | 'right', industry: string) => {
-    const container = scrollRefs.current[industry]
+  // スクロール位置を更新する関数
+  const updateScrollPosition = useCallback((category: string) => {
+    const container = scrollRefs.current[category]
     if (container) {
-      const scrollAmount = 400
+      const canScrollLeft = container.scrollLeft > 10
+      const canScrollRight = container.scrollLeft < container.scrollWidth - container.clientWidth - 10
+      setScrollPositions(prev => ({
+        ...prev,
+        [category]: { canScrollLeft, canScrollRight }
+      }))
+    }
+  }, [])
+  
+  // 横スクロール関数（改良版：カード単位でスクロール）
+  const scroll = (direction: 'left' | 'right', category: string) => {
+    const container = scrollRefs.current[category]
+    if (container) {
+      // カード幅 + gap を考慮したスクロール量
+      const cardWidth = window.innerWidth < 768 ? 200 : window.innerWidth < 1024 ? 272 : 336
+      const scrollAmount = cardWidth * 2 // 2枚分スクロール
+      
       container.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth',
       })
+      
+      // スクロール後に位置を更新
+      setTimeout(() => updateScrollPosition(category), 400)
     }
   }
+  
+  // スクロールイベントハンドラ
+  const handleScroll = useCallback((category: string) => {
+    updateScrollPosition(category)
+  }, [updateScrollPosition])
+  
+  // 初期スクロール位置を設定
+  useEffect(() => {
+    if (!isLoadingTemplates && templates.length > 0) {
+      // 少し遅延させてDOMが完全にレンダリングされてから実行
+      const timer = setTimeout(() => {
+        Object.keys(templatesByCategory).forEach(category => {
+          updateScrollPosition(category)
+        })
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isLoadingTemplates, templates, templatesByCategory, updateScrollPosition])
   
   // タッチスワイプハンドラ（Netflix風のスムーズなスワイプ）
   const handleTouchStart = useCallback((e: React.TouchEvent, category: string) => {
@@ -603,20 +643,32 @@ function BannerTestPageInner() {
                     <h2 className="text-xl md:text-2xl lg:text-3xl font-bold px-2 md:px-4 text-white">
                       ▶ {categoryName}
                     </h2>
-                    <div className="relative group">
-                      {/* 左スクロールボタン */}
+                    <div className="relative group/scroll">
+                      {/* 左スクロールボタン（スクロール可能な場合のみ表示） */}
                       <button
                         onClick={() => scroll('left', categoryName)}
-                        className="absolute left-0 top-0 bottom-0 z-10 w-10 md:w-14 bg-gradient-to-r from-black via-black/80 to-transparent hover:from-black/90 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                        className={`absolute left-0 top-0 bottom-0 z-20 w-12 md:w-16 bg-gradient-to-r from-black via-black/90 to-transparent flex items-center justify-center transition-all duration-300 ${
+                          scrollPositions[categoryName]?.canScrollLeft
+                            ? 'opacity-0 group-hover/scroll:opacity-100 hover:from-black'
+                            : 'opacity-0 pointer-events-none'
+                        }`}
+                        aria-label="左にスクロール"
                       >
-                        <ChevronLeft className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110">
+                          <ChevronLeft className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                        </div>
                       </button>
                       
                       {/* 横スクロールコンテナ（タッチ/マウススワイプ対応） */}
                       <div
                         ref={(el) => { scrollRefs.current[categoryName] = el }}
-                        className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-10 md:px-14 py-2 md:py-4 cursor-grab active:cursor-grabbing select-none"
-                        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                        className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-12 md:px-16 py-2 md:py-4 cursor-grab active:cursor-grabbing select-none scroll-smooth"
+                        style={{ 
+                          scrollbarWidth: 'none', 
+                          msOverflowStyle: 'none',
+                          WebkitOverflowScrolling: 'touch'
+                        }}
+                        onScroll={() => handleScroll(categoryName)}
                         onTouchStart={(e) => handleTouchStart(e, categoryName)}
                         onTouchMove={(e) => handleTouchMove(e, categoryName)}
                         onTouchEnd={(e) => handleTouchEnd(e, categoryName)}
@@ -736,12 +788,19 @@ function BannerTestPageInner() {
                         })()}
                       </div>
 
-                      {/* 右スクロールボタン */}
+                      {/* 右スクロールボタン（スクロール可能な場合のみ表示） */}
                       <button
                         onClick={() => scroll('right', categoryName)}
-                        className="absolute right-0 top-0 bottom-0 z-10 w-10 md:w-14 bg-gradient-to-l from-black via-black/80 to-transparent hover:from-black/90 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
+                        className={`absolute right-0 top-0 bottom-0 z-20 w-12 md:w-16 bg-gradient-to-l from-black via-black/90 to-transparent flex items-center justify-center transition-all duration-300 ${
+                          scrollPositions[categoryName]?.canScrollRight
+                            ? 'opacity-0 group-hover/scroll:opacity-100 hover:from-black'
+                            : 'opacity-0 pointer-events-none'
+                        }`}
+                        aria-label="右にスクロール"
                       >
-                        <ChevronRight className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110">
+                          <ChevronRight className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                        </div>
                       </button>
                     </div>
                   </div>
