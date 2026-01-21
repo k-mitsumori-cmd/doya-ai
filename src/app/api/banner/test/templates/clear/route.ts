@@ -7,9 +7,10 @@ export const dynamic = 'force-dynamic'
 // DELETE: 全ての生成済みテンプレート画像を削除
 export async function DELETE(request: NextRequest) {
   try {
-    // 認証チェック（本番環境では必要）
+    // 認証チェック（ADMIN_SECRETが設定されている場合のみ）
     const authHeader = request.headers.get('authorization')
-    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.ADMIN_SECRET}`) {
+    const adminSecret = process.env.ADMIN_SECRET
+    if (adminSecret && authHeader !== `Bearer ${adminSecret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
