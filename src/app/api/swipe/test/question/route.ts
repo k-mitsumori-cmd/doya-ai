@@ -277,7 +277,8 @@ JSONのみを出力してください。`
 
     if (result.done || answers.length >= 30) {
       // 完了（30問に達した場合も完了）
-      // 質問回答から要約を生成
+      
+      // 1. 質問回答から要約を生成
       const summaryPrompt = `あなたはSEO記事作成のための質問回答を分析するAIです。
 以下の質問と回答から、記事の方向性・内容・ターゲットなどを要約してください。
 
@@ -308,14 +309,106 @@ ${answersText}
         summary = '質問回答を分析した結果、記事の方向性を決定しました。'
       }
 
+      // 2. タイトル候補6種類を生成
+      const titlePrompt = `あなたはSEO記事のタイトル作成の専門家です。
+以下の情報を元に、魅力的な記事タイトルを6種類提案してください。
+
+主キーワード: ${swipeSession.mainKeyword}
+
+質問と回答の要約:
+${summary}
+
+要件:
+- SEOに最適化されたタイトルを6種類生成してください
+- 各タイトルは異なるアプローチで作成してください：
+  1. キーワード＋目的別おすすめ系（例：「〇〇比較｜目的別おすすめ＆導入前の注意点」）
+  2. 年度＋選び方ガイド系（例：「失敗しない！〇〇【${currentYear}年版】選び方ガイド」）
+  3. プロ解説系（例：「プロが解説｜〇〇で見るべきポイント」）
+  4. 初心者向け系（例：「〇〇：初心者向け｜無料から始める活用術」）
+  5. 落とし穴・注意点系（例：「〇〇｜導入前に知っておくべき落とし穴」）
+  6. 事例集・活用系（例：「目的別で選ぶ！〇〇＆活用事例集」）
+- タイトルは30〜60文字程度にしてください
+- 主キーワードを必ず含めてください
+- 日本語で記述してください
+
+出力形式:
+{
+  "titles": [
+    "タイトル1",
+    "タイトル2",
+    "タイトル3",
+    "タイトル4",
+    "タイトル5",
+    "タイトル6"
+  ]
+}
+
+JSONのみを出力してください。`
+
+      let titleCandidates: string[] = []
+      try {
+        const titleResponse = await geminiGenerateText({
+          model: CARD_GENERATION_MODEL,
+          parts: [{ text: titlePrompt }],
+          generationConfig: {
+            maxOutputTokens: 1000,
+            temperature: 0.8,
+          },
+        })
+        
+        const titleJsonMatch = titleResponse.match(/\{[\s\S]*\}/)
+        if (titleJsonMatch) {
+          const titleResult = JSON.parse(titleJsonMatch[0])
+          if (Array.isArray(titleResult.titles)) {
+            titleCandidates = titleResult.titles.map((t: string) => normalizeTitleYear(String(t).trim())).filter((t: string) => t.length > 0)
+          }
+        }
+      } catch (e) {
+        console.warn('[タイトル候補生成失敗]', e)
+      }
+      
+      // タイトル候補が6個未満の場合はデフォルトを追加
+      const defaultTitle = normalizeTitleYear(String(result?.finalData?.title || `「${keywordParts[0]}」完全ガイド【${currentYear}年最新版】`))
+      if (titleCandidates.length === 0) {
+        titleCandidates = [
+          defaultTitle,
+          normalizeTitleYear(`${keywordParts[0]}比較｜目的別おすすめ＆導入前の注意点`),
+          normalizeTitleYear(`失敗しない！${keywordParts[0]}【${currentYear}年版】選び方ガイド`),
+          normalizeTitleYear(`プロが解説｜${keywordParts[0]}で見るべきポイント`),
+          normalizeTitleYear(`${keywordParts[0]}：初心者向け｜無料から始める活用術`),
+          normalizeTitleYear(`${keywordParts[0]}｜導入前に知っておくべき落とし穴`),
+        ]
+      }
+      while (titleCandidates.length < 6) {
+        titleCandidates.push(defaultTitle)
+      }
+
+      // 3. 回答の要約（カテゴリ別）を生成
+      const answersByCategory: Record<string, { question: string; answer: string }[]> = {}
+      answers.forEach((a: any) => {
+        const category = a.category || '一般'
+        if (!answersByCategory[category]) {
+          answersByCategory[category] = []
+        }
+        answersByCategory[category].push({
+          question: a.question,
+          answer: a.answer === 'yes' ? 'はい' : 'いいえ',
+        })
+      })
+
       return NextResponse.json({
         success: true,
         done: true,
         finalData: {
           ...result.finalData,
-          title: normalizeTitleYear(String(result?.finalData?.title || '')),
+          title: titleCandidates[0], // デフォルトは最初のタイトル
+          titleCandidates, // 6種類のタイトル候補
           targetChars: Number(result?.finalData?.targetChars || 4000),
           summary,
+          answersByCategory, // カテゴリ別の回答要約
+          totalAnswers: answers.length,
+          yesCount: answers.filter((a: any) => a.answer === 'yes').length,
+          noCount: answers.filter((a: any) => a.answer === 'no').length,
         },
       })
     } else {

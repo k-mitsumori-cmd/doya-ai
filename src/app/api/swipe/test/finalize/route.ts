@@ -50,7 +50,24 @@ export async function POST(req: NextRequest) {
 
     const primary = String(primaryInfoText || '').trim()
     const summary = String(finalData?.summary || '').trim()
-    const requestText = [primary ? `【一次情報（必ず反映）】\n${primary}` : '', summary ? `【質問回答から得た方向性】\n${summary}` : '']
+    
+    // 回答をカテゴリ別に整理して記事生成に反映
+    const answersByCategory: Record<string, string[]> = {}
+    answers.forEach((a: any) => {
+      const cat = a.category || '一般'
+      if (!answersByCategory[cat]) answersByCategory[cat] = []
+      answersByCategory[cat].push(`${a.question}: ${a.answer === 'yes' ? 'はい' : 'いいえ'}`)
+    })
+    
+    const answersText = Object.entries(answersByCategory)
+      .map(([cat, items]) => `【${cat}】\n${items.join('\n')}`)
+      .join('\n\n')
+    
+    const requestText = [
+      primary ? `【一次情報（必ず反映）】\n${primary}` : '',
+      summary ? `【質問回答から得た方向性】\n${summary}` : '',
+      answersText ? `【スワイプ回答詳細】\n${answersText}` : '',
+    ]
       .filter(Boolean)
       .join('\n\n')
 
@@ -82,14 +99,19 @@ export async function POST(req: NextRequest) {
     await prisma.swipeSession.update({
       where: { sessionId },
       data: {
-        finalConditions: { targetChars: finalData.targetChars, articleType },
+        finalConditions: { 
+          targetChars: finalData.targetChars, 
+          articleType,
+          selectedTitle: finalData.title,
+          titleCandidates: finalData.titleCandidates || [],
+        },
         primaryInfo: primary ? ({ experience: primary } as any) : undefined,
         generatedArticleId: article.id,
         swipes: answers.map((a: any) => ({
           questionId: a.questionId,
           question: a.question,
           answer: a.answer,
-          category: 'test',
+          category: a.category || '一般',
         })),
       },
     })

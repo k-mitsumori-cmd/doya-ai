@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TinderSwipeCard, SwipeDecision } from '@/components/seo/TinderSwipeCard'
 import { MarkdownPreview } from '@seo/components/MarkdownPreview'
-import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, X, Lock } from 'lucide-react'
+import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, X, Lock, Check, RefreshCw, ThumbsUp, ThumbsDown, Sparkles } from 'lucide-react'
 
 type Step = 'keyword' | 'swipe' | 'confirm' | 'generating'
 
@@ -22,6 +22,7 @@ interface Answer {
   questionId: string
   question: string
   answer: 'yes' | 'no'
+  category?: string
 }
 
 // プラン別文字数上限
@@ -48,9 +49,16 @@ export default function SwipeArticlePage() {
   const [progress, setProgress] = useState(0) // 進捗（0-100）
   const [finalData, setFinalData] = useState<{
     title: string
+    titleCandidates?: string[]
     targetChars: number
     summary?: string
+    answersByCategory?: Record<string, { question: string; answer: string }[]>
+    totalAnswers?: number
+    yesCount?: number
+    noCount?: number
   } | null>(null)
+  const [selectedTitleIndex, setSelectedTitleIndex] = useState(0)
+  const [isGeneratingTitles, setIsGeneratingTitles] = useState(false)
   const [primaryInfoText, setPrimaryInfoText] = useState('')
   const [celebrationImage, setCelebrationImage] = useState<{
     imageBase64: string
@@ -452,6 +460,7 @@ export default function SwipeArticlePage() {
         questionId: question.id,
         question: question.question,
         answer: decision === 'yes' ? 'yes' : 'no',
+        category: question.category,
       }
 
       const newAnswers = [...answers, answer]
@@ -740,6 +749,82 @@ export default function SwipeArticlePage() {
               <p className="text-xl font-bold text-gray-700 mb-2">ありがとうございました</p>
               <p className="text-sm text-gray-600">質問へのご回答、お疲れ様でした</p>
             </motion.div>
+
+            {/* 回答の要約プレビュー */}
+            {answers.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                className="mb-8"
+              >
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-lg overflow-hidden">
+                  <div className="px-5 py-4 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-indigo-600" />
+                        <h4 className="text-sm font-black text-gray-800">あなたの回答サマリー</h4>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs font-bold">
+                        <span className="flex items-center gap-1 text-emerald-600">
+                          <ThumbsUp className="w-4 h-4" />
+                          {finalData.yesCount || answers.filter(a => a.answer === 'yes').length}件
+                        </span>
+                        <span className="flex items-center gap-1 text-rose-500">
+                          <ThumbsDown className="w-4 h-4" />
+                          {finalData.noCount || answers.filter(a => a.answer === 'no').length}件
+                        </span>
+                        <span className="text-gray-500">
+                          計{finalData.totalAnswers || answers.length}問
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-5 max-h-[300px] overflow-auto">
+                    {/* カテゴリ別に回答を表示 */}
+                    {(() => {
+                      const categories = new Map<string, Answer[]>()
+                      answers.forEach(a => {
+                        const cat = a.category || '一般'
+                        if (!categories.has(cat)) categories.set(cat, [])
+                        categories.get(cat)!.push(a)
+                      })
+                      return Array.from(categories.entries()).map(([category, catAnswers]) => (
+                        <div key={category} className="mb-4 last:mb-0">
+                          <h5 className="text-xs font-black text-indigo-600 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                            {category}
+                          </h5>
+                          <div className="space-y-2">
+                            {catAnswers.map((a, idx) => (
+                              <div
+                                key={`${a.questionId}-${idx}`}
+                                className={`flex items-start gap-3 p-3 rounded-xl ${
+                                  a.answer === 'yes' 
+                                    ? 'bg-emerald-50 border border-emerald-100' 
+                                    : 'bg-rose-50 border border-rose-100'
+                                }`}
+                              >
+                                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                                  a.answer === 'yes' ? 'bg-emerald-500' : 'bg-rose-400'
+                                }`}>
+                                  {a.answer === 'yes' ? (
+                                    <Check className="w-4 h-4 text-white" />
+                                  ) : (
+                                    <X className="w-4 h-4 text-white" />
+                                  )}
+                                </div>
+                                <p className="text-sm font-medium text-gray-700 flex-1">{a.question}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    })()}
+                  </div>
+                </div>
+              </motion.div>
+            )}
             
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -749,14 +834,90 @@ export default function SwipeArticlePage() {
               <h3 className="text-xl font-black text-gray-900 mb-6">最終確認</h3>
 
               <div className="space-y-6 mb-8">
+              {/* タイトル選択（6種類から選択） */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">記事タイトル</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-bold text-gray-700">記事タイトル <span className="text-rose-500">*</span></label>
+                  {finalData.titleCandidates && finalData.titleCandidates.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setIsGeneratingTitles(true)
+                        try {
+                          // タイトルを再生成（APIを呼び出す）
+                          const res = await fetch('/api/seo/title-suggestions', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              keyword: keywords,
+                              summary: finalData.summary,
+                              count: 6,
+                            }),
+                          })
+                          const json = await res.json()
+                          if (json.titles && Array.isArray(json.titles)) {
+                            setFinalData({
+                              ...finalData,
+                              titleCandidates: json.titles,
+                              title: json.titles[0] || finalData.title,
+                            })
+                            setSelectedTitleIndex(0)
+                          }
+                        } catch (e) {
+                          console.error('タイトル再生成エラー:', e)
+                        } finally {
+                          setIsGeneratingTitles(false)
+                        }
+                      }}
+                      disabled={isGeneratingTitles}
+                      className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isGeneratingTitles ? 'animate-spin' : ''}`} />
+                      タイトル自動生成（{finalData.titleCandidates.length}）
+                    </button>
+                  )}
+                </div>
+                
+                {/* 現在選択中のタイトル（編集可能） */}
                 <input
                   type="text"
                   value={finalData.title}
                   onChange={(e) => setFinalData({ ...finalData, title: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none font-bold text-gray-900"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none font-bold text-gray-900 mb-3"
                 />
+                
+                {/* タイトル候補6種類 */}
+                {finalData.titleCandidates && finalData.titleCandidates.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-500 mb-2">💡 ボタンで候補を生成→クリックでタイトル確定（後から編集もOK）</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {finalData.titleCandidates.map((title, idx) => (
+                        <button
+                          key={`title-${idx}`}
+                          type="button"
+                          onClick={() => {
+                            setFinalData({ ...finalData, title })
+                            setSelectedTitleIndex(idx)
+                          }}
+                          className={`p-3 rounded-xl border-2 text-left transition-all ${
+                            finalData.title === title
+                              ? 'border-emerald-500 bg-emerald-50 shadow-md'
+                              : 'border-gray-100 bg-white hover:border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-start gap-2">
+                            {finalData.title === title && (
+                              <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                            )}
+                            <p className={`text-sm font-bold ${finalData.title === title ? 'text-emerald-700' : 'text-gray-700'}`}>
+                              {title}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
