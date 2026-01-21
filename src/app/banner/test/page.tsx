@@ -1,11 +1,12 @@
 'use client'
 
-import { Suspense, useState, useMemo, useEffect, useRef } from 'react'
+import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play } from 'lucide-react'
+import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
+import Image from 'next/image'
 
 type BannerTemplate = {
   id: string
@@ -49,6 +50,18 @@ function BannerTestPageInner() {
   const [customText, setCustomText] = useState('')
 
   const scrollRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+
+  // 画像読み込み完了ハンドラ
+  const handleImageLoad = useCallback((id: string) => {
+    setLoadedImages(prev => new Set(prev).add(id))
+  }, [])
+
+  // 画像エラーハンドラ
+  const handleImageError = useCallback((id: string) => {
+    setImageErrors(prev => new Set(prev).add(id))
+  }, [])
 
   // テンプレートを取得
   useEffect(() => {
@@ -251,12 +264,17 @@ function BannerTestPageInner() {
               <img
                 src={selectedBanner.imageUrl}
                 alt="Selected banner"
+                loading="eager"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
-            ) : selectedTemplate?.imageUrl ? (
+            ) : selectedTemplate?.imageUrl && !imageErrors.has(selectedTemplate.id) ? (
               <img
                 src={selectedTemplate.imageUrl}
                 alt={selectedTemplate.prompt}
+                loading="eager"
+                decoding="async"
+                onError={() => handleImageError(selectedTemplate.id)}
                 className="w-full h-full object-cover"
               />
             ) : selectedTemplate ? (
@@ -362,47 +380,65 @@ function BannerTestPageInner() {
                         className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-10 md:px-14 py-2 md:py-4"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                       >
-                        {categoryTemplates.map((template) => (
-                          <motion.div
-                            key={template.id}
-                            whileHover={{ scale: 1.08, y: -12, zIndex: 10 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => {
-                              setSelectedTemplate(template)
-                              setSelectedBanner(null)
-                            }}
-                            className={`flex-shrink-0 w-48 h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 ${
-                              selectedTemplate?.id === template.id
-                                ? 'ring-3 ring-white scale-105 shadow-2xl'
-                                : 'ring-1 ring-gray-800 hover:ring-gray-600'
-                            }`}
-                          >
-                            {template.imageUrl ? (
-                              <img
-                                src={template.imageUrl}
-                                alt={template.prompt}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex flex-col items-center justify-center p-3 md:p-4 relative overflow-hidden">
-                                <div className="absolute inset-0 opacity-20">
-                                  <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20" />
+                        {categoryTemplates.map((template) => {
+                          const hasError = imageErrors.has(template.id)
+                          const isLoaded = loadedImages.has(template.id)
+                          const showImage = template.imageUrl && !hasError
+                          
+                          return (
+                            <motion.div
+                              key={template.id}
+                              whileHover={{ scale: 1.08, y: -12, zIndex: 10 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => {
+                                setSelectedTemplate(template)
+                                setSelectedBanner(null)
+                              }}
+                              className={`flex-shrink-0 w-48 h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 relative ${
+                                selectedTemplate?.id === template.id
+                                  ? 'ring-3 ring-white scale-105 shadow-2xl'
+                                  : 'ring-1 ring-gray-800 hover:ring-gray-600'
+                              }`}
+                            >
+                              {showImage ? (
+                                <>
+                                  {/* 読み込み中のプレースホルダー */}
+                                  {!isLoaded && (
+                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-900 to-black flex items-center justify-center">
+                                      <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
+                                    </div>
+                                  )}
+                                  <img
+                                    src={template.imageUrl!}
+                                    alt={template.prompt}
+                                    loading="lazy"
+                                    decoding="async"
+                                    onLoad={() => handleImageLoad(template.id)}
+                                    onError={() => handleImageError(template.id)}
+                                    className={`w-full h-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                                  />
+                                </>
+                              ) : (
+                                <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex flex-col items-center justify-center p-3 md:p-4 relative overflow-hidden">
+                                  <div className="absolute inset-0 opacity-20">
+                                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20" />
+                                  </div>
+                                  <ImageIcon className="w-8 h-8 md:w-12 md:h-12 text-gray-500 mb-2 relative z-10" />
+                                  <p className="text-xs md:text-sm text-gray-500 text-center relative z-10 line-clamp-2 px-2">
+                                    {template.prompt.split('、')[0] || template.industry}
+                                  </p>
                                 </div>
-                                <Sparkles className="w-8 h-8 md:w-12 md:h-12 text-gray-400 mb-2 relative z-10" />
-                                <p className="text-xs md:text-sm text-gray-500 text-center relative z-10 line-clamp-2 px-2">
-                                  {template.prompt.split('、')[0] || template.industry}
-                                </p>
-                              </div>
-                            )}
-                            {selectedTemplate?.id === template.id && (
-                              <div className="absolute inset-0 bg-white/5 flex items-center justify-center backdrop-blur-sm">
-                                <div className="bg-black/80 px-3 py-1.5 md:px-4 md:py-2 rounded-md">
-                                  <p className="text-xs md:text-sm font-bold text-white">選択中</p>
+                              )}
+                              {selectedTemplate?.id === template.id && (
+                                <div className="absolute inset-0 bg-white/5 flex items-center justify-center backdrop-blur-sm">
+                                  <div className="bg-black/80 px-3 py-1.5 md:px-4 md:py-2 rounded-md">
+                                    <p className="text-xs md:text-sm font-bold text-white">選択中</p>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                          </motion.div>
-                        ))}
+                              )}
+                            </motion.div>
+                          )
+                        })}
                       </div>
 
                       {/* 右スクロールボタン */}

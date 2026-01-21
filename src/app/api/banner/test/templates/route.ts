@@ -871,12 +871,16 @@ export async function GET(request: NextRequest) {
       const fallbackImage = getFallbackImageUrl(t.category, t.industry)
       
       // DBに画像URLがある場合はそれを使用、なければフォールバック
-      // data:image/png;base64... のようなbase64データも有効な画像URLとして扱う
-      const imageUrl = dbTemplate?.imageUrl && 
-        !dbTemplate.imageUrl.startsWith('/banner-samples/') && 
-        !dbTemplate.imageUrl.startsWith('data:') 
-        ? dbTemplate.imageUrl 
-        : (dbTemplate?.imageUrl || fallbackImage)
+      // 有効な画像URL: https://..., data:image/..., /banner-samples/...
+      let imageUrl = fallbackImage
+      if (dbTemplate?.imageUrl) {
+        const url = dbTemplate.imageUrl
+        if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('data:image/')) {
+          imageUrl = url
+        } else if (url.startsWith('/')) {
+          imageUrl = url
+        }
+      }
       
       return {
         ...t,
