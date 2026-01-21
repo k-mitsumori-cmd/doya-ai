@@ -842,13 +842,21 @@ function getFallbackImageUrl(category: string, industry: string): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
+    // テンプレート定義を取得
+    let allTemplates: any[] = []
+    try {
+      allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
+    } catch (templateError: any) {
+      console.error('[Templates API] Template generation error:', templateError)
+      return NextResponse.json(
+        { error: 'テンプレート定義の生成に失敗しました', details: templateError.message },
+        { status: 500 }
+      )
+    }
     
     // DBから既存のテンプレート情報を取得（テーブルが存在しない場合は空配列）
-    // 接続数を最小限にするため、必要なカラムのみを取得
     let dbTemplates: any[] = []
     try {
-      // 必要なカラムのみを取得（接続数を最小限にするため）
       dbTemplates = await prisma.bannerTemplate.findMany({
         select: {
           templateId: true,
@@ -856,7 +864,6 @@ export async function GET(request: NextRequest) {
           previewUrl: true,
           isFeatured: true,
         },
-        // where: { isActive: true }, // フィルターを削除
       })
     } catch (dbError: any) {
       // テーブルが存在しない場合（P2021）は空配列で続行
