@@ -912,47 +912,13 @@ export async function GET(request: NextRequest) {
       
       const templates = dbTemplates.map((t) => {
         const fallbackImage = getFallbackImageUrl(t.category, t.industry)
-        let imageUrl = fallbackImage
-        let hasGeneratedImage = false
+        // DBにテンプレートが存在する場合は、常に画像APIを使用
+        // 画像APIがDBから画像を取得して返す（画像がない場合は404を返す）
+        const imageApiUrl = `/api/banner/test/image/${t.templateId}`
         
-        // DBにテンプレートが存在する場合は、画像APIを使用
-        // 画像APIがDBから画像を取得して返す
-        if (t.templateId) {
-          // まず画像APIのURLを設定
-          const imageApiUrl = `/api/banner/test/image/${t.templateId}`
-          
-          if (t.imageUrl) {
-            const url = t.imageUrl
-            
-            // エラープレースホルダーURLはスキップ（フォールバック画像を使用）
-            const isErrorPlaceholder = url.includes('placehold.co') && url.includes('Error')
-            
-            if (isErrorPlaceholder) {
-              // エラープレースホルダーの場合はフォールバック画像を使用
-              imageUrl = fallbackImage
-              hasGeneratedImage = false
-            } else if (url.startsWith('data:image/')) {
-              // base64画像がある場合は画像APIを使用
-              hasGeneratedImage = true
-              imageUrl = imageApiUrl
-            } else if (url.startsWith('https://') || url.startsWith('http://')) {
-              // 有効な外部URLの場合
-              imageUrl = url
-              hasGeneratedImage = true
-            } else if (url.startsWith('/api/banner/test/image/')) {
-              // 既に画像APIのURLの場合
-              imageUrl = url
-              hasGeneratedImage = true
-            } else if (url.startsWith('/')) {
-              // ローカルパスの場合はそのまま使用
-              imageUrl = url
-            } else if (url.length > 100) {
-              // 長い文字列（base64の可能性）の場合は画像APIを使用
-              hasGeneratedImage = true
-              imageUrl = imageApiUrl
-            }
-          }
-        }
+        // 常に画像APIを使用（画像APIが存在確認を行う）
+        const imageUrl = imageApiUrl
+        const hasGeneratedImage = true
         
         // V2プロンプトからdisplayTitleを取得
         const v2Prompt = v2PromptsMap.get(t.templateId)

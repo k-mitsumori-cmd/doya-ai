@@ -4,6 +4,16 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+// カテゴリに基づくフォールバック画像
+const FALLBACK_IMAGES: Record<string, string> = {
+  ec: '/banner-samples/cat-ec.png',
+  it: '/banner-samples/cat-it.png',
+  beauty: '/banner-samples/cat-beauty.png',
+  recruit: '/banner-samples/cat-marketing.png',
+  marketing: '/banner-samples/cat-marketing.png',
+  default: '/banner-samples/cat-it.png',
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { templateId: string } }
@@ -18,14 +28,24 @@ export async function GET(
     // DBから画像を取得
     const template = await prisma.bannerTemplate.findUnique({
       where: { templateId },
-      select: { imageUrl: true },
+      select: { imageUrl: true, category: true },
     })
     
+    // DBに画像がない場合はフォールバック画像にリダイレクト
     if (!template?.imageUrl) {
-      return NextResponse.json({ error: 'Image not found' }, { status: 404 })
+      const category = template?.category || 'default'
+      const fallbackUrl = FALLBACK_IMAGES[category] || FALLBACK_IMAGES.default
+      return NextResponse.redirect(new URL(fallbackUrl, request.url))
     }
     
     const imageUrl = template.imageUrl
+    
+    // エラープレースホルダーの場合はフォールバック画像にリダイレクト
+    if (imageUrl.includes('placehold.co') && imageUrl.includes('Error')) {
+      const category = template?.category || 'default'
+      const fallbackUrl = FALLBACK_IMAGES[category] || FALLBACK_IMAGES.default
+      return NextResponse.redirect(new URL(fallbackUrl, request.url))
+    }
     
     // base64画像の場合
     if (imageUrl.startsWith('data:image/')) {
