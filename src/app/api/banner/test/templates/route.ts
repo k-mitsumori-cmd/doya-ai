@@ -904,9 +904,16 @@ export async function GET(request: NextRequest) {
         
         if (t.imageUrl) {
           const url = t.imageUrl
-          // base64データは除外（レスポンスサイズ削減）
-          // 代わりに別エンドポイントで取得するか、hasGeneratedImageフラグを使用
-          if (url.startsWith('https://') || url.startsWith('http://')) {
+          
+          // エラープレースホルダーURLはスキップ（フォールバック画像を使用）
+          const isErrorPlaceholder = url.includes('placehold.co') && url.includes('Error')
+          
+          if (isErrorPlaceholder) {
+            // エラープレースホルダーの場合はフォールバック画像を使用
+            imageUrl = fallbackImage
+            hasGeneratedImage = false
+          } else if (url.startsWith('https://') || url.startsWith('http://')) {
+            // 有効な外部URLの場合
             imageUrl = url
             hasGeneratedImage = true
           } else if (url.startsWith('/')) {
