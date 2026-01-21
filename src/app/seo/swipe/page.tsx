@@ -312,9 +312,29 @@ export default function SwipeArticlePage() {
       if (json.done) {
         // 質問が完了したら最終確認へ
         // プラン上限を超えている場合は上限に調整
+        const currentYear = new Date().getFullYear()
+        const keywordParts = keywords.split(',').map((k: string) => k.trim()).filter(Boolean)
+        const mainKeyword = keywordParts[0] || 'キーワード'
+        
+        // titleCandidatesが存在しない場合はデフォルトを生成
+        let titleCandidates = json.finalData?.titleCandidates
+        if (!titleCandidates || !Array.isArray(titleCandidates) || titleCandidates.length === 0) {
+          const defaultTitle = json.finalData?.title || `「${mainKeyword}」完全ガイド【${currentYear}年最新版】`
+          titleCandidates = [
+            defaultTitle,
+            `${mainKeyword}比較｜目的別おすすめ＆導入前の注意点`,
+            `失敗しない！${mainKeyword}【${currentYear}年版】選び方ガイド`,
+            `プロが解説｜${mainKeyword}で見るべきポイント`,
+            `${mainKeyword}：初心者向け｜無料から始める活用術`,
+            `${mainKeyword}｜導入前に知っておくべき落とし穴`,
+          ]
+        }
+        
         const adjustedFinalData = {
           ...json.finalData,
-          targetChars: Math.min(json.finalData.targetChars || 4000, charLimit),
+          titleCandidates,
+          title: json.finalData?.title || titleCandidates[0],
+          targetChars: Math.min(json.finalData?.targetChars || 4000, charLimit),
         }
         setFinalData(adjustedFinalData)
         
