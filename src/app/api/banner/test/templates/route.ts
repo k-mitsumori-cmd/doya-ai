@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateBanners } from '@/lib/nanobanner'
-import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
+export const dynamic = 'force-dynamic'
+
+// Prismaを遅延インポート（接続プールエラー回避）
+async function getPrisma() {
+  const { prisma } = await import('@/lib/prisma')
+  return prisma
+}
 
 // 大量のプロンプトパターンを定義（デザイン要素のみ、テキスト内容は反映しない）
 export const BANNER_TEMPLATE_PROMPTS = [
@@ -844,20 +850,26 @@ export async function GET(request: NextRequest) {
     // DBから既存のテンプレート情報を取得（テーブルが存在しない場合は空配列）
     let dbTemplates: any[] = []
     try {
+      const prisma = await getPrisma()
       // isActiveフィルターを削除してすべてのテンプレートを取得
       dbTemplates = await prisma.bannerTemplate.findMany({
         // where: { isActive: true }, // フィルターを削除
       })
     } catch (dbError: any) {
       // テーブルが存在しない場合（P2021）は空配列で続行
-      if (dbError?.code === 'P2021') {
+      // 接続プールエラー（MaxClientsInSessionMode）も空配列で続行
+      const errorMessage = dbError?.message || ''
+      const errorCode = dbError?.code || ''
+      
+      if (errorCode === 'P2021') {
         console.warn('[Templates API] BannerTemplate table not found, returning templates without images')
-        dbTemplates = []
+      } else if (errorMessage.includes('MaxClientsInSessionMode') || errorMessage.includes('max clients')) {
+        console.warn('[Templates API] Database connection pool limit reached, returning templates without images')
       } else {
         console.error('[Templates API] Database error:', dbError)
-        // エラーを再スローせず、空配列で続行（フォールバック画像を使用）
-        dbTemplates = []
       }
+      // エラーでも空配列で続行（フォールバック画像を使用）
+      dbTemplates = []
     }
     
     // templateIdをキーにしたマップを作成
