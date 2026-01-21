@@ -915,30 +915,42 @@ export async function GET(request: NextRequest) {
         let imageUrl = fallbackImage
         let hasGeneratedImage = false
         
-        if (t.imageUrl) {
-          const url = t.imageUrl
+        // DBにテンプレートが存在する場合は、画像APIを使用
+        // 画像APIがDBから画像を取得して返す
+        if (t.templateId) {
+          // まず画像APIのURLを設定
+          const imageApiUrl = `/api/banner/test/image/${t.templateId}`
           
-          // エラープレースホルダーURLはスキップ（フォールバック画像を使用）
-          const isErrorPlaceholder = url.includes('placehold.co') && url.includes('Error')
-          
-          if (isErrorPlaceholder) {
-            // エラープレースホルダーの場合はフォールバック画像を使用
-            imageUrl = fallbackImage
-            hasGeneratedImage = false
-          } else if (url.startsWith('data:image/')) {
-            // base64画像がある場合は画像APIを使用
-            hasGeneratedImage = true
-            imageUrl = `/api/banner/test/image/${t.templateId}`
-          } else if (url.startsWith('https://') || url.startsWith('http://')) {
-            // 有効な外部URLの場合
-            imageUrl = url
-            hasGeneratedImage = true
-          } else if (url.startsWith('/api/banner/test/image/')) {
-            // 既に画像APIのURLの場合
-            imageUrl = url
-            hasGeneratedImage = true
-          } else if (url.startsWith('/')) {
-            imageUrl = url
+          if (t.imageUrl) {
+            const url = t.imageUrl
+            
+            // エラープレースホルダーURLはスキップ（フォールバック画像を使用）
+            const isErrorPlaceholder = url.includes('placehold.co') && url.includes('Error')
+            
+            if (isErrorPlaceholder) {
+              // エラープレースホルダーの場合はフォールバック画像を使用
+              imageUrl = fallbackImage
+              hasGeneratedImage = false
+            } else if (url.startsWith('data:image/')) {
+              // base64画像がある場合は画像APIを使用
+              hasGeneratedImage = true
+              imageUrl = imageApiUrl
+            } else if (url.startsWith('https://') || url.startsWith('http://')) {
+              // 有効な外部URLの場合
+              imageUrl = url
+              hasGeneratedImage = true
+            } else if (url.startsWith('/api/banner/test/image/')) {
+              // 既に画像APIのURLの場合
+              imageUrl = url
+              hasGeneratedImage = true
+            } else if (url.startsWith('/')) {
+              // ローカルパスの場合はそのまま使用
+              imageUrl = url
+            } else if (url.length > 100) {
+              // 長い文字列（base64の可能性）の場合は画像APIを使用
+              hasGeneratedImage = true
+              imageUrl = imageApiUrl
+            }
           }
         }
         
