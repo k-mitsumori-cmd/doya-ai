@@ -1028,13 +1028,54 @@ async function generateSingleBanner(
             
       if (!response.ok) {
         const errorText = await response.text()
+        let errorMessage = ''
+        
+        try {
+          const errorJson = JSON.parse(errorText)
+          const errorCode = errorJson?.error?.code || response.status
+          const errorMsg = errorJson?.error?.message || errorText
+          
+          // 429エラー（使用量制限）の場合
+          if (response.status === 429 || errorCode === 429) {
+            errorMessage = `APIの使用量制限に達しました。しばらく時間をおいてから再試行してください。\n` +
+              `詳細: ${errorMsg}\n` +
+              `プランと請求情報をご確認ください: https://ai.google.dev/gemini-api`
+          } else if (response.status === 401 || errorCode === 401) {
+            errorMessage = `APIキーが無効です。環境変数のGOOGLE_GENAI_API_KEYをご確認ください。`
+          } else if (response.status === 403 || errorCode === 403) {
+            errorMessage = `APIアクセスが拒否されました。APIキーの権限とプランをご確認ください。`
+          } else if (response.status === 400 || errorCode === 400) {
+            errorMessage = `リクエストが無効です。プロンプトやパラメータをご確認ください。\n` +
+              `詳細: ${errorMsg}`
+          } else {
+            errorMessage = `画像生成に失敗しました（Nano Banana Pro / ${model}）。\n` +
+              `環境変数のモデルIDとAPIキーをご確認ください。\n` +
+              `参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja#image_generation\n` +
+              `ステータス: ${response.status}\n` +
+              `エラー: ${errorMsg.substring(0, 200)}`
+          }
+        } catch (parseError) {
+          // JSONパースに失敗した場合は元のエラーテキストを使用
+          if (response.status === 429) {
+            errorMessage = `APIの使用量制限に達しました。しばらく時間をおいてから再試行してください。\n` +
+              `詳細: ${errorText.substring(0, 200)}`
+          } else {
+            errorMessage = `画像生成に失敗しました（Nano Banana Pro / ${model}）。\n` +
+              `環境変数のモデルIDとAPIキーをご確認ください。\n` +
+              `参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja#image_generation\n` +
+              `ステータス: ${response.status}\n` +
+              `エラー: ${errorText.substring(0, 200)}`
+          }
+        }
+        
         console.warn(`Model ${model} failed:`, response.status, errorText)
-        throw new Error(
-          `画像生成に失敗しました（Nano Banana Pro / ${model}）。` +
-          `環境変数のモデルIDとAPIキーをご確認ください。` +
-          ` 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja#image_generation` +
-          ` / status=${response.status} / ${errorText.substring(0, 200)}`
-        )
+        
+        // 429エラーの場合は、他のモデルにフォールバックせずに即座にエラーを返す
+        if (response.status === 429) {
+          throw new Error(errorMessage)
+        }
+        
+        throw new Error(errorMessage)
       }
             
       const result = await response.json()
@@ -1419,6 +1460,22 @@ export async function generateBanners(
 
     // 全て失敗した場合
     if (banners.every(b => b.startsWith('https://placehold'))) {
+      // 429エラー（使用量制限）のチェック
+      const isQuotaError = errors.some((e: string) => 
+        e.includes('使用量制限') || 
+        e.includes('quota') || 
+        e.includes('429') ||
+        e.toLowerCase().includes('exceeded your current quota')
+      )
+      
+      if (isQuotaError) {
+        return {
+          banners,
+          error: `⚠️ APIの使用量制限に達しました。\n\n【原因】\nGoogle AI Studio のAPI使用量制限に達しています。\n\n【対処法】\n・しばらく時間をおいてから再試行してください（通常、1時間ごとにリセットされます）\n・Google AI Studio でプランと請求情報をご確認ください\n・プランのアップグレードを検討してください\n\n詳細: https://ai.google.dev/gemini-api`,
+          usedModel: undefined,
+        }
+      }
+      
       return {
         banners,
         error: `⚠️ Nano Banana Pro で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・GOOGLE_GENAI_API_KEY が正しいか確認\n・APIキーが有効になっているか確認\n・Google AI Studio でAPIキーを再発行してみてください`,
@@ -1429,6 +1486,22 @@ export async function generateBanners(
     // 一部失敗した場合
     const failedCount = banners.filter(b => b.startsWith('https://placehold')).length
     if (failedCount > 0) {
+      // 429エラー（使用量制限）のチェック
+      const isQuotaError = errors.some((e: string) => 
+        e.includes('使用量制限') || 
+        e.includes('quota') || 
+        e.includes('429') ||
+        e.toLowerCase().includes('exceeded your current quota')
+      )
+      
+      if (isQuotaError) {
+        return { 
+          banners,
+          error: `⚠️ 一部のパターンでAPIの使用量制限に達しました。\n\n赤いプレースホルダーが表示されているパターンは、しばらく時間をおいてから再試行してください。\n\n詳細: https://ai.google.dev/gemini-api`,
+          usedModel,
+        }
+      }
+      
       return { 
         banners,
         error: `⚠️ ${failedCount}件のパターンで生成に失敗しました。赤いプレースホルダーが表示されているパターンは再試行してください。`,
