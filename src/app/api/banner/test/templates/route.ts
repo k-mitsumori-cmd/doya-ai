@@ -842,19 +842,7 @@ function getFallbackImageUrl(category: string, industry: string): string {
 
 export async function GET(request: NextRequest) {
   try {
-    // テンプレート定義を取得
-    let allTemplates: any[] = []
-    try {
-      allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
-    } catch (templateError: any) {
-      console.error('[Templates API] Template generation error:', templateError)
-      return NextResponse.json(
-        { error: 'テンプレート定義の生成に失敗しました', details: templateError.message },
-        { status: 500 }
-      )
-    }
-    
-    // DBから既存のテンプレート情報を取得（テーブルが存在しない場合は空配列）
+    // DBから既存のテンプレート情報を取得
     let dbTemplates: any[] = []
     try {
       dbTemplates = await prisma.bannerTemplate.findMany({
@@ -863,43 +851,88 @@ export async function GET(request: NextRequest) {
           imageUrl: true,
           previewUrl: true,
           isFeatured: true,
+          industry: true,
+          category: true,
+          prompt: true,
+          size: true,
         },
       })
     } catch (dbError: any) {
-      // テーブルが存在しない場合（P2021）は空配列で続行
-      // 接続プールエラー（MaxClientsInSessionMode）も空配列で続行
-      const errorMessage = dbError?.message || ''
-      const errorCode = dbError?.code || ''
-      
-      if (errorCode === 'P2021') {
-        console.warn('[Templates API] BannerTemplate table not found, returning templates without images')
-      } else if (errorMessage.includes('MaxClientsInSessionMode') || errorMessage.includes('max clients')) {
-        console.warn('[Templates API] Database connection pool limit reached, returning templates without images')
-      } else {
-        console.error('[Templates API] Database error:', dbError)
-      }
-      // エラーでも空配列で続行（フォールバック画像を使用）
+      console.error('[Templates API] Database error:', dbError)
       dbTemplates = []
     }
     
-    // templateIdをキーにしたマップを作成
+    // テンプレート定義を取得（DBにデータがない場合のみ静的定義を使用）
+    let allTemplates: any[] = []
+    if (dbTemplates.length > 0) {
+      // DBからのデータを使用
+      allTemplates = dbTemplates.map(t => ({
+        id: t.templateId,
+        industry: t.industry,
+        category: t.category,
+        prompt: t.prompt,
+        size: t.size || '1200x628',
+      }))
+    } else {
+      // DBにデータがない場合は静的定義を使用
+      try {
+        allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
+      } catch (templateError: any) {
+        console.error('[Templates API] Template generation error:', templateError)
+        return NextResponse.json(
+          { error: 'テンプレート定義の生成に失敗しました', details: templateError.message },
+          { status: 500 }
+        )
+      }
+    }
+    
+    // DBからデータがある場合は直接使用
+    if (dbTemplates.length > 0) {
+      const templates = dbTemplates.map((t) => {
+        const fallbackImage = getFallbackImageUrl(t.category, t.industry)
+        let imageUrl = fallbackImage
+        if (t.imageUrl) {
+          const url = t.imageUrl
+          if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('data:image/') || url.startsWith('/')) {
+            imageUrl = url
+          }
+        }
+        return {
+          id: t.templateId,
+          industry: t.industry,
+          category: t.category,
+          prompt: t.prompt,
+          size: t.size || '1200x628',
+          imageUrl,
+          previewUrl: t.previewUrl || imageUrl,
+          isFeatured: t.isFeatured || false,
+        }
+      })
+      
+      const featuredTemplate = dbTemplates.find((t) => t.isFeatured) || dbTemplates[0]
+      const featuredTemplateId = featuredTemplate?.templateId || templates[0]?.id || null
+      
+      return NextResponse.json({
+        templates,
+        featuredTemplateId,
+        count: templates.length,
+        generatedCount: dbTemplates.length,
+      })
+    }
+    
+    // DBにデータがない場合は静的定義を使用
     const dbTemplateMap = new Map(
       dbTemplates.map((t) => [t.templateId, t])
     )
     
-    // フロントエンド用のテンプレート配列を作成（DBに画像がない場合はフォールバック画像を使用）
     const templates = allTemplates.map((t) => {
       const dbTemplate = dbTemplateMap.get(t.id)
       const fallbackImage = getFallbackImageUrl(t.category, t.industry)
       
-      // DBに画像URLがある場合はそれを使用、なければフォールバック
-      // 有効な画像URL: https://..., data:image/..., /banner-samples/...
       let imageUrl = fallbackImage
       if (dbTemplate?.imageUrl) {
         const url = dbTemplate.imageUrl
-        if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('data:image/')) {
-          imageUrl = url
-        } else if (url.startsWith('/')) {
+        if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('data:image/') || url.startsWith('/')) {
           imageUrl = url
         }
       }
@@ -912,7 +945,6 @@ export async function GET(request: NextRequest) {
       }
     })
     
-    // featuredTemplateを取得
     const featuredTemplate = dbTemplates.find((t) => t.isFeatured) || dbTemplates[0]
     const featuredTemplateId = featuredTemplate?.templateId || templates[0]?.id || null
     
@@ -920,7 +952,7 @@ export async function GET(request: NextRequest) {
       templates,
       featuredTemplateId,
       count: templates.length,
-      generatedCount: dbTemplates.length, // 画像が生成済みの数
+      generatedCount: dbTemplates.length,
     })
   } catch (err: any) {
     console.error('[Templates API] Get templates error:', err)
