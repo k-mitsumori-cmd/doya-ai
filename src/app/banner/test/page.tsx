@@ -63,15 +63,58 @@ function BannerTestPageInner() {
     setImageErrors(prev => new Set(prev).add(id))
   }, [])
 
-  // テンプレートを取得
+  // テンプレートを取得（接続数を最小限にするため、クライアント側キャッシュを活用）
   useEffect(() => {
+    const CACHE_KEY = 'banner_templates_cache'
+    const CACHE_EXPIRY = 5 * 60 * 1000 // 5分間キャッシュ
+    
     const fetchTemplates = async () => {
       try {
-        const res = await fetch('/api/banner/test/templates')
+        // クライアント側キャッシュをチェック
+        const cached = sessionStorage.getItem(CACHE_KEY)
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached)
+          const now = Date.now()
+          
+          // キャッシュが有効な場合は使用
+          if (now - timestamp < CACHE_EXPIRY) {
+            if (data.templates) {
+              setTemplates(data.templates)
+              
+              if (data.featuredTemplateId) {
+                const featured = data.templates.find((t: BannerTemplate) => t.id === data.featuredTemplateId)
+                if (featured) {
+                  setSelectedTemplate(featured)
+                } else if (data.templates.length > 0) {
+                  setSelectedTemplate(data.templates[0])
+                }
+              } else if (data.templates.length > 0) {
+                setSelectedTemplate(data.templates[0])
+              }
+            }
+            setIsLoadingTemplates(false)
+            return
+          }
+        }
+        
+        // キャッシュが無効または存在しない場合はAPIから取得
+        const res = await fetch('/api/banner/test/templates', {
+          // 接続数を最小限にするため、キャッシュヘッダーを追加
+          headers: {
+            'Cache-Control': 'max-age=300', // 5分間キャッシュ
+          },
+        })
         const data = await res.json()
+        
         if (data.templates) {
           // すべてのテンプレートを設定（画像URLがないものも含む）
           setTemplates(data.templates)
+          
+          // クライアント側キャッシュに保存
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+            data,
+            timestamp: Date.now(),
+          }))
           
           // featuredTemplateを優先的に選択、なければ最初のテンプレート
           if (data.featuredTemplateId) {

@@ -843,10 +843,17 @@ export async function GET(request: NextRequest) {
     const allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
     
     // DBから既存のテンプレート情報を取得（テーブルが存在しない場合は空配列）
+    // 接続数を最小限にするため、必要なカラムのみを取得
     let dbTemplates: any[] = []
     try {
-      // isActiveフィルターを削除してすべてのテンプレートを取得
+      // 必要なカラムのみを取得（接続数を最小限にするため）
       dbTemplates = await prisma.bannerTemplate.findMany({
+        select: {
+          templateId: true,
+          imageUrl: true,
+          previewUrl: true,
+          isFeatured: true,
+        },
         // where: { isActive: true }, // フィルターを削除
       })
     } catch (dbError: any) {
