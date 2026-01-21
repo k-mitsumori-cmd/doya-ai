@@ -24,9 +24,16 @@ function ensureDatabaseUrlEnv() {
       process.env.POSTGRESQL_URL || ''
   }
   
-  if (dbUrl) {
+  if (dbUrl && dbUrl.startsWith('postgres')) {
     // Supabase Pooler URLの場合、接続パラメータを最適化
-    const url = new URL(dbUrl)
+    let url: URL
+    try {
+      url = new URL(dbUrl)
+    } catch (e) {
+      // URLパースに失敗した場合はそのまま使用
+      process.env.DATABASE_URL = dbUrl
+      return
+    }
     
     // pgbouncerモードを有効化（Supabaseの場合）
     if (url.hostname.includes('supabase') || url.hostname.includes('pooler')) {
