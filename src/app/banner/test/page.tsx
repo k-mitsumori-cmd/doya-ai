@@ -640,9 +640,9 @@ function BannerTestPageInner() {
                                 </div>
                               )}
                               {selectedTemplate?.id === template.id && (
-                                <div className="absolute inset-0 bg-white/5 flex items-center justify-center backdrop-blur-sm">
-                                  <div className="bg-black/80 px-3 py-1.5 md:px-4 md:py-2 rounded-md">
-                                    <p className="text-xs md:text-sm font-bold text-white">選択中</p>
+                                <div className="absolute inset-0 ring-4 ring-blue-500 rounded-lg pointer-events-none">
+                                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-blue-500 px-3 py-1 rounded-full">
+                                    <p className="text-xs font-bold text-white whitespace-nowrap">選択中</p>
                                   </div>
                                 </div>
                               )}
@@ -789,9 +789,9 @@ function BannerTestPageInner() {
                       className="w-full h-full object-cover"
                     />
                     {selectedBanner?.id === banner.id && (
-                      <div className="absolute inset-0 bg-white/5 flex items-center justify-center backdrop-blur-sm">
-                        <div className="bg-black/80 px-3 py-1.5 md:px-4 md:py-2 rounded-md">
-                          <p className="text-xs md:text-sm font-bold text-white">選択中</p>
+                      <div className="absolute inset-0 ring-4 ring-blue-500 rounded-lg pointer-events-none">
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-blue-500 px-3 py-1 rounded-full">
+                          <p className="text-xs font-bold text-white whitespace-nowrap">選択中</p>
                         </div>
                       </div>
                     )}
