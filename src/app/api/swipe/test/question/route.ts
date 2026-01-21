@@ -76,15 +76,24 @@ export async function POST(req: NextRequest) {
 主キーワード: ${keywordParts.join(', ')}
 
 要件:
-- 主キーワードに関連するキーワードを10-20個抽出してください
-- 関連キーワードには、類義語、上位概念、下位概念、関連語、派生語、競合キーワードなどを含めてください
+- 主キーワードに関連するキーワードを20-30個抽出してください
+- 関連キーワードには以下を含めてください：
+  * 類義語、上位概念、下位概念、関連語、派生語
+  * 競合キーワード、代替キーワード
+  * 長尾キーワード（「〜とは」「〜方法」「〜おすすめ」「〜比較」「〜違い」など）
+  * 疑問形キーワード（「〜ですか」「〜できますか」など）
+  * 時系列キーワード（「最新」「2024年」「2025年」など）
+  * 具体的なサービス名、製品名、ブランド名など
+  * ユーザーインテント別キーワード（情報収集、比較、購入検討など）
 - 特に「このキーワードは狙いますか？」という質問で使えるような具体的なキーワードを抽出してください
 - 記事作成時に一緒に狙えるキーワードも含めてください
 
 出力形式:
 {
   "relatedKeywords": ["関連キーワード1", "関連キーワード2", ...],
-  "targetKeywords": ["狙い手キーワード1", "狙い手キーワード2", ...]
+  "targetKeywords": ["狙い手キーワード1", "狙い手キーワード2", ...],
+  "longTailKeywords": ["長尾キーワード1", "長尾キーワード2", ...],
+  "competitorKeywords": ["競合キーワード1", "競合キーワード2", ...]
 }
 
 JSONのみを出力してください。`
@@ -93,7 +102,7 @@ JSONのみを出力してください。`
           model: GEMINI_TEXT_MODEL_DEFAULT,
           parts: [{ text: keywordAnalysisPrompt }],
           generationConfig: {
-            maxOutputTokens: 1000,
+            maxOutputTokens: 2000, // 20-30個のキーワード抽出のため増やす
             temperature: 0.7,
           },
         })
@@ -103,9 +112,11 @@ JSONのみを出力してください。`
           const analysisData = JSON.parse(analysisMatch[0])
           const relatedKeywords = Array.isArray(analysisData.relatedKeywords) ? analysisData.relatedKeywords : []
           const targetKeywords = Array.isArray(analysisData.targetKeywords) ? analysisData.targetKeywords : []
-          const allKeywords = [...relatedKeywords, ...targetKeywords]
+          const longTailKeywords = Array.isArray(analysisData.longTailKeywords) ? analysisData.longTailKeywords : []
+          const competitorKeywords = Array.isArray(analysisData.competitorKeywords) ? analysisData.competitorKeywords : []
+          const allKeywords = [...relatedKeywords, ...targetKeywords, ...longTailKeywords, ...competitorKeywords]
           if (allKeywords.length > 0) {
-            relatedKeywordsText = `\n関連キーワード・狙い手キーワード: ${allKeywords.join(', ')}`
+            relatedKeywordsText = `\n関連キーワード・狙い手キーワード・長尾キーワード・競合キーワード: ${allKeywords.join(', ')}`
           }
         }
       } catch (e) {
@@ -126,10 +137,22 @@ ${answersText}
 要件:
 1. まだ必要な情報がある場合は、次の質問を必ず8問生成してください
    - 質問はYes/Noで答えられる形式にしてください
-   - 「このキーワードは狙いますか？」「この関連キーワードも含めますか？」のような形で、キーワードや関連キーワードを具体的に質問に含めてください
+   - 具体的なキーワード名を含めた質問を作成してください：
+     * 「「[具体的なキーワード名]」も狙いますか？」
+     * 「「[長尾キーワード]」について説明しますか？」
+     * 「「[競合キーワード]」と比較しますか？」
+     * 「「[疑問形キーワード]」に対応しますか？」
+   - 関連キーワードリストから特に重要そうなキーワードを選んで具体的な質問にしてください
+   - これまでの回答を考慮して、まだ聞いていない重要なキーワードに関する質問を生成してください
+   - 以下の観点から質問を生成してください：
+     * まだ扱っていない関連キーワード・長尾キーワード
+     * 具体的なサービス名・製品名・ブランド名の扱い
+     * 時系列情報の扱い（最新情報、2024年版など）
+     * ターゲット読者層（初心者向け、上級者向けなど）
+     * 記事の種類（比較記事、解説記事、レビュー記事など）
+     * ユーザーインテント（情報収集、比較、購入検討など）
    - 極力短く、はっきり分かりやすい質問にしてください（30文字以内を推奨）
    - 長文は禁止。1文で簡潔に表現してください
-   - 記事の種類、ターゲット読者、関連キーワード、記事の方向性などに関連する質問にしてください
    - 各質問は独立して答えられるようにしてください
    - 日本語で質問してください
    - 改行は禁止です（質問文に改行を含めないでください）
