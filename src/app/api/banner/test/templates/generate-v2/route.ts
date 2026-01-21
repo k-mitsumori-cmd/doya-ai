@@ -69,6 +69,16 @@ export async function POST(request: NextRequest) {
         if (result.banners && result.banners.length > 0) {
           const imageUrl = result.banners[0]
           
+          // エラープレースホルダーは保存しない
+          if (imageUrl.includes('placehold.co') || imageUrl.includes('Error')) {
+            throw new Error('画像生成に失敗しました（エラープレースホルダー）')
+          }
+          
+          // 有効なbase64画像かどうかを確認
+          if (!imageUrl.startsWith('data:image/')) {
+            throw new Error('有効なbase64画像ではありません')
+          }
+          
           // DBに保存（upsert）
           await prisma.bannerTemplate.upsert({
             where: { templateId: prompt.id },
