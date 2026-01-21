@@ -52,6 +52,11 @@ function BannerTestPageInner() {
   const scrollRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  
+  // 各カテゴリごとの表示数を管理（初期は4枚、スクロール時に追加）
+  const [visibleCounts, setVisibleCounts] = useState<{ [key: string]: number }>({})
+  const INITIAL_VISIBLE_COUNT = 4 // 初期表示数
+  const LOAD_MORE_COUNT = 8 // 追加読み込み数
 
   // 画像読み込み完了ハンドラ
   const handleImageLoad = useCallback((id: string) => {
@@ -62,6 +67,23 @@ function BannerTestPageInner() {
   const handleImageError = useCallback((id: string) => {
     setImageErrors(prev => new Set(prev).add(id))
   }, [])
+
+  // カテゴリマッピング（要求に合わせて明確化）
+  const categoryMapping: { [key: string]: string } = {
+    'ビジネス / ブランディング': 'ビジネス / SaaS',
+    'UX / デザイン / テクノロジー': 'IT・AI',
+    'Web / IT / スクール / 教育': 'IT・AI',
+    '転職・採用・人材': '採用',
+    '人物写真 / ポートレート': '採用',
+    '季節感 / イベント': 'イベント',
+    'セール / キャンペーン': 'イベント',
+    'EC・小売業のデジタルマーケティング戦略': 'EC',
+    'カジュアル / 親しみやすい': 'EC',
+    'にぎやか / ポップ': 'EC',
+    '高級感 / きれいめ': '高級・ラグジュアリー',
+    'かわいい / ポップ': '高級・ラグジュアリー',
+    'ナチュラル / 爽やか': '高級・ラグジュアリー',
+  }
 
   // テンプレートを取得（接続数を最小限にするため、クライアント側キャッシュを活用）
   useEffect(() => {
@@ -80,6 +102,16 @@ function BannerTestPageInner() {
           if (now - timestamp < CACHE_EXPIRY) {
             if (data.templates) {
               setTemplates(data.templates)
+              
+              // 各カテゴリの初期表示数を設定
+              const initialCounts: { [key: string]: number } = {}
+              data.templates.forEach((template: BannerTemplate) => {
+                const category = categoryMapping[template.industry] || template.industry
+                if (!initialCounts[category]) {
+                  initialCounts[category] = INITIAL_VISIBLE_COUNT
+                }
+              })
+              setVisibleCounts(initialCounts)
               
               if (data.featuredTemplateId) {
                 const featured = data.templates.find((t: BannerTemplate) => t.id === data.featuredTemplateId)
@@ -110,6 +142,16 @@ function BannerTestPageInner() {
           // すべてのテンプレートを設定（画像URLがないものも含む）
           setTemplates(data.templates)
           
+          // 各カテゴリの初期表示数を設定
+          const initialCounts: { [key: string]: number } = {}
+          data.templates.forEach((template: BannerTemplate) => {
+            const category = categoryMapping[template.industry] || template.industry
+            if (!initialCounts[category]) {
+              initialCounts[category] = INITIAL_VISIBLE_COUNT
+            }
+          })
+          setVisibleCounts(initialCounts)
+          
           // クライアント側キャッシュに保存
           sessionStorage.setItem(CACHE_KEY, JSON.stringify({
             data,
@@ -138,24 +180,8 @@ function BannerTestPageInner() {
     fetchTemplates()
   }, [])
 
-  // カテゴリマッピング（要求に合わせて明確化）
-  const categoryMapping: { [key: string]: string } = {
-    'ビジネス / ブランディング': 'ビジネス / SaaS',
-    'UX / デザイン / テクノロジー': 'IT・AI',
-    'Web / IT / スクール / 教育': 'IT・AI',
-    '転職・採用・人材': '採用',
-    '人物写真 / ポートレート': '採用',
-    '季節感 / イベント': 'イベント',
-    'セール / キャンペーン': 'イベント',
-    'EC・小売業のデジタルマーケティング戦略': 'EC',
-    'カジュアル / 親しみやすい': 'EC',
-    'にぎやか / ポップ': 'EC',
-    '高級感 / きれいめ': '高級・ラグジュアリー',
-    'かわいい / ポップ': '高級・ラグジュアリー',
-    'ナチュラル / 爽やか': '高級・ラグジュアリー',
-  }
-
   // カテゴリごとにテンプレートをグループ化（要求に合わせて整理）
+  // 遅延読み込み対応：各カテゴリの表示数を制限
   const templatesByCategory = useMemo(() => {
     const grouped: { [key: string]: BannerTemplate[] } = {}
     const categoryOrder = ['ビジネス / SaaS', 'IT・AI', '採用', 'イベント', 'EC', '高級・ラグジュアリー']
@@ -186,8 +212,38 @@ function BannerTestPageInner() {
       }
     })
     
-    return sorted
+    // 各カテゴリの表示数を制限（遅延読み込み）
+    const limited: { [key: string]: BannerTemplate[] } = {}
+    Object.keys(sorted).forEach((cat) => {
+      const visibleCount = visibleCounts[cat] || INITIAL_VISIBLE_COUNT
+      limited[cat] = sorted[cat].slice(0, visibleCount)
+    })
+    
+    return limited
+  }, [templates, visibleCounts])
+  
+  // カテゴリごとの全テンプレート数（「もっと見る」ボタンの表示判定用）
+  const totalTemplatesByCategory = useMemo(() => {
+    const grouped: { [key: string]: BannerTemplate[] } = {}
+    templates.forEach((template) => {
+      const category = categoryMapping[template.industry] || template.industry
+      if (!grouped[category]) {
+        grouped[category] = []
+      }
+      grouped[category].push(template)
+    })
+    return grouped
   }, [templates])
+  
+  // カテゴリの表示数を増やす（スクロール時に呼び出し）
+  const loadMoreTemplates = useCallback((category: string) => {
+    setVisibleCounts((prev) => {
+      const current = prev[category] || INITIAL_VISIBLE_COUNT
+      const total = totalTemplatesByCategory[category]?.length || 0
+      const next = Math.min(current + LOAD_MORE_COUNT, total)
+      return { ...prev, [category]: next }
+    })
+  }, [totalTemplatesByCategory])
 
   // 横スクロール関数
   const scroll = (direction: 'left' | 'right', industry: string) => {
@@ -482,6 +538,38 @@ function BannerTestPageInner() {
                             </motion.div>
                           )
                         })}
+                        
+                        {/* 「もっと見る」ボタン（残りのテンプレートがある場合のみ表示） */}
+                        {(() => {
+                          const totalCount = totalTemplatesByCategory[categoryName]?.length || 0
+                          const visibleCount = visibleCounts[categoryName] || INITIAL_VISIBLE_COUNT
+                          const hasMore = totalCount > visibleCount
+                          
+                          if (!hasMore) return null
+                          
+                          return (
+                            <motion.div
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="flex-shrink-0 w-48 h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer"
+                            >
+                              <button
+                                onClick={() => loadMoreTemplates(categoryName)}
+                                className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black border-2 border-gray-700 hover:border-gray-500 transition-all flex flex-col items-center justify-center gap-2 md:gap-3 group"
+                              >
+                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 group-hover:bg-white/20 transition-all flex items-center justify-center">
+                                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                                </div>
+                                <p className="text-xs md:text-sm font-bold text-white">
+                                  もっと見る
+                                </p>
+                                <p className="text-[10px] md:text-xs text-gray-400">
+                                  {totalCount - visibleCount}件のテンプレート
+                                </p>
+                              </button>
+                            </motion.div>
+                          )
+                        })()}
                       </div>
 
                       {/* 右スクロールボタン */}
