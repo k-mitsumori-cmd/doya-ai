@@ -5,6 +5,9 @@ import prisma from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { v4 as uuidv4 } from 'uuid'
 
+// カード生成（質問生成）専用のモデル（gemini-2.0-flashを使用）
+const CARD_GENERATION_MODEL = 'gemini-2.0-flash'
+
 /**
  * 次の質問をAIで生成するAPI
  * - これまでの回答を分析して次の質問を生成
@@ -111,7 +114,7 @@ JSONのみを出力してください。`
       }
     }
 
-    // 次の質問を3-4問まとめて生成するか、完了判定を行う
+    // 次の質問を8問まとめて生成するか、完了判定を行う
     const prompt = `あなたはSEO記事作成のための質問を生成するAIです。
 これまでの回答を分析し、記事を作成するために必要な情報が揃っているか判断してください。
 
@@ -121,7 +124,7 @@ JSONのみを出力してください。`
 ${answersText}
 
 要件:
-1. まだ必要な情報がある場合は、次の質問を3-4問まとめて生成してください
+1. まだ必要な情報がある場合は、次の質問を必ず8問生成してください
    - 質問はYes/Noで答えられる形式にしてください
    - 「このキーワードは狙いますか？」「この関連キーワードも含めますか？」のような形で、キーワードや関連キーワードを具体的に質問に含めてください
    - 極力短く、はっきり分かりやすい質問にしてください（30文字以内を推奨）
@@ -141,15 +144,35 @@ ${answersText}
   "done": false,
   "questions": [
     {
-      "question": "短い質問文",
+      "question": "短い質問文1",
       "category": "質問のカテゴリ"
     },
     {
-      "question": "短い質問文",
+      "question": "短い質問文2",
       "category": "質問のカテゴリ"
     },
     {
-      "question": "短い質問文",
+      "question": "短い質問文3",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文4",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文5",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文6",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文7",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文8",
       "category": "質問のカテゴリ"
     }
   ]
@@ -166,11 +189,12 @@ ${answersText}
 
 JSONのみを出力してください。`
 
+    // カード生成（質問生成）はgemini-2.0-flashを使用
     const aiResponse = await geminiGenerateText({
-      model: GEMINI_TEXT_MODEL_DEFAULT,
+      model: CARD_GENERATION_MODEL, // カード生成はgemini-2.0-flashを使用
       parts: [{ text: prompt }],
       generationConfig: {
-        maxOutputTokens: 800,
+        maxOutputTokens: 1200, // 8問生成するため増やす
         temperature: 0.7,
       },
     })

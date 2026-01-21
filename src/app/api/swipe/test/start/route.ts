@@ -5,6 +5,9 @@ import prisma from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { v4 as uuidv4 } from 'uuid'
 
+// カード生成（質問生成）専用のモデル（gemini-2.0-flashを使用）
+const CARD_GENERATION_MODEL = 'gemini-2.0-flash'
+
 /**
  * テスト用スワイプセッション開始API
  * - キーワードを入力して初期質問をAIで生成
@@ -98,17 +101,18 @@ JSONのみを出力してください。`
       // エラー時は空配列のまま
     }
 
-    // 初期質問を3-4問まとめてAIで生成
+    // 初期質問を8問まとめてAIで生成（カード表示用）
     const relatedKeywordsText = relatedKeywords.length > 0
       ? `\n関連キーワード・狙い手キーワード:\n${relatedKeywords.map((k: any) => `- ${k.keyword} (${k.relationship || ''})`).join('\n')}`
       : ''
     
     const prompt = `あなたはSEO記事作成のための質問を生成するAIです。
-入力されたキーワードを分析し、記事を作成するために必要な情報を収集するための最初の質問を3-4問まとめて生成してください。
+入力されたキーワードを分析し、記事を作成するために必要な情報を収集するための最初の質問を必ず8問生成してください。
 
 主キーワード: ${keywords.join(', ')}${relatedKeywordsText}
 
 要件:
+- 質問は必ず8問生成してください（必須）
 - 質問はYes/Noで答えられる形式にしてください
 - 「このキーワードは狙いますか？」「この関連キーワードも含めますか？」のような形で、キーワードや関連キーワードを具体的に質問に含めてください
 - 極力短く、はっきり分かりやすい質問にしてください（30文字以内を推奨）
@@ -117,37 +121,59 @@ JSONのみを出力してください。`
 - 各質問は独立して答えられるようにしてください
 - 日本語で質問してください
 - 改行は禁止です（質問文に改行を含めないでください）
+- 必ず8問すべてを生成してください
 
 出力形式:
 {
   "questions": [
     {
-      "question": "短い質問文",
+      "question": "短い質問文1",
       "category": "質問のカテゴリ"
     },
     {
-      "question": "短い質問文",
+      "question": "短い質問文2",
       "category": "質問のカテゴリ"
     },
     {
-      "question": "短い質問文",
+      "question": "短い質問文3",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文4",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文5",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文6",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文7",
+      "category": "質問のカテゴリ"
+    },
+    {
+      "question": "短い質問文8",
       "category": "質問のカテゴリ"
     }
   ]
 }
 
-JSONのみを出力してください。`
+JSONのみを出力してください。必ず8問すべてを生成してください。`
 
     // 質問生成（エラー時はエラーを返す）
+    // カード生成専用のモデル（gemini-2.0-flash）を使用
     let questionData: any
     let aiGenerationError: string | null = null
     
     try {
       const aiResponse = await geminiGenerateText({
-        model: GEMINI_TEXT_MODEL_DEFAULT,
+        model: CARD_GENERATION_MODEL, // カード生成はgemini-2.0-flashを使用
         parts: [{ text: prompt }],
         generationConfig: {
-          maxOutputTokens: 500,
+          maxOutputTokens: 1000, // 8問生成するため増やす
           temperature: 0.7,
         },
       })
