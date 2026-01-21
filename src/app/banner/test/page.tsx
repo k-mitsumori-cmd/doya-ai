@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon } from 'lucide-react'
+import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -45,6 +45,9 @@ function BannerTestPageInner() {
   const [generatedBanners, setGeneratedBanners] = useState<GeneratedBanner[]>([])
   const [selectedBanner, setSelectedBanner] = useState<GeneratedBanner | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  
+  // 画像拡大モーダル用の状態
+  const [zoomImage, setZoomImage] = useState<{ url: string; title: string } | null>(null)
 
   // フォーム状態（簡素化：サービス名 / トーン / 任意テキスト）
   const [serviceName, setServiceName] = useState('')
@@ -517,18 +520,36 @@ function BannerTestPageInner() {
                 )}
                 <div className="flex gap-2 flex-wrap">
                   {!selectedBanner && selectedTemplate && (
-                    <button
-                      onClick={() => {
-                        const formElement = document.getElementById('banner-form')
-                        if (formElement) {
-                          formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                        }
-                      }}
-                      className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
-                    >
-                      <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
-                      <span className="whitespace-nowrap">このスタイルで生成</span>
-                    </button>
+                    <>
+                      <button
+                        onClick={() => {
+                          const formElement = document.getElementById('banner-form')
+                          if (formElement) {
+                            formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                          }
+                        }}
+                        className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
+                      >
+                        <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
+                        <span className="whitespace-nowrap">このスタイルで生成</span>
+                      </button>
+                      {/* 画像拡大ボタン */}
+                      <button
+                        onClick={() => {
+                          if (selectedTemplate?.imageUrl) {
+                            setZoomImage({
+                              url: selectedTemplate.imageUrl,
+                              title: selectedTemplate.displayTitle || selectedTemplate.name || selectedTemplate.industry
+                            })
+                          }
+                        }}
+                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-800/80 text-white font-bold rounded-md hover:bg-gray-700 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm backdrop-blur-sm border border-white/20"
+                        title="画像を拡大表示"
+                      >
+                        <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="whitespace-nowrap hidden sm:inline">拡大</span>
+                      </button>
+                    </>
                   )}
                   {selectedBanner && (
                     <>
@@ -538,6 +559,20 @@ function BannerTestPageInner() {
                       >
                         <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                         <span className="whitespace-nowrap">ダウンロード</span>
+                      </button>
+                      {/* 生成バナーの拡大ボタン */}
+                      <button
+                        onClick={() => {
+                          setZoomImage({
+                            url: selectedBanner.imageUrl,
+                            title: '生成されたバナー'
+                          })
+                        }}
+                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-800/80 text-white font-bold rounded-md hover:bg-gray-700 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm backdrop-blur-sm border border-white/20"
+                        title="画像を拡大表示"
+                      >
+                        <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span className="whitespace-nowrap hidden sm:inline">拡大</span>
                       </button>
                       <button 
                         onClick={() => setSelectedBanner(null)}
@@ -604,7 +639,7 @@ function BannerTestPageInner() {
                                 setSelectedTemplate(template)
                                 setSelectedBanner(null)
                               }}
-                              className={`flex-shrink-0 w-48 h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 relative ${
+                              className={`group flex-shrink-0 w-48 h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 relative ${
                                 selectedTemplate?.id === template.id
                                   ? 'ring-3 ring-white scale-105 shadow-2xl'
                                   : 'ring-1 ring-gray-800 hover:ring-gray-600'
@@ -638,6 +673,24 @@ function BannerTestPageInner() {
                                     {template.prompt.split('、')[0] || template.industry}
                                   </p>
                                 </div>
+                              )}
+                              {/* 拡大ボタン（ホバー時に表示） */}
+                              {showImage && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (template.imageUrl) {
+                                      setZoomImage({
+                                        url: template.imageUrl,
+                                        title: template.displayTitle || template.name || template.industry
+                                      })
+                                    }
+                                  }}
+                                  className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                  title="画像を拡大表示"
+                                >
+                                  <Maximize2 className="w-4 h-4 text-white" />
+                                </button>
                               )}
                               {selectedTemplate?.id === template.id && (
                                 <div className="absolute inset-0 ring-4 ring-blue-500 rounded-lg pointer-events-none">
@@ -777,7 +830,7 @@ function BannerTestPageInner() {
                     whileHover={{ scale: 1.05, zIndex: 10 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedBanner(banner)}
-                    className={`relative aspect-[16/9] rounded-lg overflow-hidden cursor-pointer transition-all duration-300 ${
+                    className={`group relative aspect-[16/9] rounded-lg overflow-hidden cursor-pointer transition-all duration-300 ${
                       selectedBanner?.id === banner.id
                         ? 'ring-3 ring-white shadow-2xl'
                         : 'ring-1 ring-gray-800 hover:ring-gray-600'
@@ -788,6 +841,20 @@ function BannerTestPageInner() {
                       alt="Generated banner"
                       className="w-full h-full object-cover"
                     />
+                    {/* 拡大ボタン（ホバー時に表示） */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setZoomImage({
+                          url: banner.imageUrl,
+                          title: '生成されたバナー'
+                        })
+                      }}
+                      className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                      title="画像を拡大表示"
+                    >
+                      <Maximize2 className="w-4 h-4 text-white" />
+                    </button>
                     {selectedBanner?.id === banner.id && (
                       <div className="absolute inset-0 ring-4 ring-blue-500 rounded-lg pointer-events-none">
                         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-blue-500 px-3 py-1 rounded-full">
@@ -804,6 +871,57 @@ function BannerTestPageInner() {
       </main>
 
       <Toaster position="top-right" />
+
+      {/* 画像拡大モーダル */}
+      <AnimatePresence>
+        {zoomImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+            onClick={() => setZoomImage(null)}
+          >
+            {/* 閉じるボタン */}
+            <button
+              onClick={() => setZoomImage(null)}
+              className="absolute top-4 right-4 z-[110] p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+              aria-label="閉じる"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+
+            {/* タイトル */}
+            <div className="absolute top-4 left-4 z-[110]">
+              <h3 className="text-white text-lg font-bold drop-shadow-lg">{zoomImage.title}</h3>
+            </div>
+
+            {/* 画像コンテナ */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="relative max-w-[95vw] max-h-[90vh] p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={zoomImage.url}
+                alt={zoomImage.title}
+                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              />
+              
+              {/* 下部の操作ヒント */}
+              <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-2">
+                <p className="text-white/60 text-xs bg-black/50 px-3 py-1 rounded-full">
+                  クリックまたは × で閉じる
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
