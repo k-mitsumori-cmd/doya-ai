@@ -547,7 +547,7 @@ function BannerTestPageInner() {
                         title="画像を拡大表示"
                       >
                         <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span className="whitespace-nowrap hidden sm:inline">拡大</span>
+                        <span className="whitespace-nowrap hidden sm:inline">画像全体を見る</span>
                       </button>
                     </>
                   )}
@@ -572,7 +572,7 @@ function BannerTestPageInner() {
                         title="画像を拡大表示"
                       >
                         <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span className="whitespace-nowrap hidden sm:inline">拡大</span>
+                        <span className="whitespace-nowrap hidden sm:inline">画像全体を見る</span>
                       </button>
                       <button 
                         onClick={() => setSelectedBanner(null)}
