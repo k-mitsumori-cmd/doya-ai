@@ -844,6 +844,7 @@ export async function GET(request: NextRequest) {
   try {
     // DBから既存のテンプレート情報を取得
     let dbTemplates: any[] = []
+    let dbError: any = null
     try {
       dbTemplates = await prisma.bannerTemplate.findMany({
         select: {
@@ -856,9 +857,12 @@ export async function GET(request: NextRequest) {
           prompt: true,
           size: true,
         },
+        take: 500, // 最大500件に制限
       })
-    } catch (dbError: any) {
-      console.error('[Templates API] Database error:', dbError)
+      console.log(`[Templates API] Fetched ${dbTemplates.length} templates from DB`)
+    } catch (err: any) {
+      console.error('[Templates API] Database error:', err)
+      dbError = err
       dbTemplates = []
     }
     
@@ -893,18 +897,29 @@ export async function GET(request: NextRequest) {
         let imageUrl = fallbackImage
         if (t.imageUrl) {
           const url = t.imageUrl
+          // base64データはそのまま使用（フロントエンドで表示）
           if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('data:image/') || url.startsWith('/')) {
             imageUrl = url
           }
         }
+        
+        // previewUrlも同様に処理
+        let previewUrl = imageUrl
+        if (t.previewUrl) {
+          const pUrl = t.previewUrl
+          if (pUrl.startsWith('https://') || pUrl.startsWith('http://') || pUrl.startsWith('data:image/') || pUrl.startsWith('/')) {
+            previewUrl = pUrl
+          }
+        }
+        
         return {
           id: t.templateId,
           industry: t.industry,
           category: t.category,
-          prompt: t.prompt,
+          prompt: t.prompt ? t.prompt.substring(0, 200) : '', // プロンプトを短縮
           size: t.size || '1200x628',
           imageUrl,
-          previewUrl: t.previewUrl || imageUrl,
+          previewUrl,
           isFeatured: t.isFeatured || false,
         }
       })
