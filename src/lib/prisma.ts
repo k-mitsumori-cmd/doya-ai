@@ -78,18 +78,7 @@ const prismaClientOptions = {
   log: process.env.NODE_ENV === 'development' 
     ? ['query', 'error', 'warn'] as const
     : ['error'] as const, // 本番環境ではエラーのみ
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-  // 接続プールの設定を明示的に指定
-  // Supabaseのセッションモードでは接続プールサイズに制限があるため、
-  // 接続の再利用とタイムアウト設定が重要
-  __internal: {
-    useUds: false, // Unixドメインソケットを使用しない
-  },
-} as const
+}
 
 export const prisma =
   globalForPrisma.prisma ??
@@ -98,15 +87,8 @@ export const prisma =
 // 本番環境でもグローバルシングルトンを使用（接続の再利用）
 // Vercelのサーバーレス環境では各リクエストで新しいインスタンスが作成される可能性があるため
 // グローバルシングルトンを使用することで、接続を再利用し、接続プールの枯渇を防ぐ
-globalForPrisma.prisma = prisma
-
-// 接続プールのエラーハンドリングを追加
-// MaxClientsInSessionModeエラーが発生した場合に備えて、
-// 接続の適切な管理を確実にする
-if (typeof window === 'undefined') {
-  // サーバー側でのみ実行
-  // 接続の初期化は遅延実行されるため、ここで明示的に接続しない
-  // Prismaクライアントは自動的に接続を管理する
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma
 }
 
 export default prisma

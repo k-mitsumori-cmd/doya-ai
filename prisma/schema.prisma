@@ -6,9 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // マイグレーション用の直接接続URL（接続プールをバイパス）
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ============================================
