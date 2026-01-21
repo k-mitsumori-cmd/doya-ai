@@ -359,7 +359,7 @@ function BannerTestPageInner() {
         {/* Netflix風のメインコンテンツ */}
         <div className="relative">
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート） */}
-          <div className="relative h-[70vh] md:h-[85vh] w-full overflow-hidden">
+          <div className="relative h-[50vh] sm:h-[60vh] md:h-[75vh] lg:h-[85vh] w-full overflow-hidden">
             {/* グラデーション: 下は黒、上は明るく */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
             {selectedBanner ? (
@@ -399,17 +399,17 @@ function BannerTestPageInner() {
             )}
             
             {/* オーバーレイ情報（Netflix風） */}
-            <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12 lg:p-16 z-20">
+            <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-10 lg:p-16 z-20">
               <div className="max-w-6xl mx-auto">
                 {/* メインタイトル：日本語の短いタイトルを優先表示 */}
-                <h1 className="text-3xl md:text-5xl lg:text-6xl font-black mb-3 drop-shadow-2xl leading-tight">
+                <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black mb-1 sm:mb-2 md:mb-3 drop-shadow-2xl leading-tight">
                   {selectedBanner 
                     ? serviceName || '生成されたバナー'
                     : selectedTemplate?.displayTitle || selectedTemplate?.name || selectedTemplate?.industry || 'バナーテンプレート'
                   }
                 </h1>
                 {/* サブタイトル：ジャンル名 */}
-                <p className="text-lg md:text-xl lg:text-2xl text-gray-200 mb-2 drop-shadow-lg font-medium">
+                <p className="text-sm sm:text-lg md:text-xl lg:text-2xl text-gray-200 mb-1 sm:mb-2 drop-shadow-lg font-medium">
                   {selectedBanner 
                     ? (tone ? `トーン: ${tone}` : '')
                     : selectedTemplate?.industry || ''
@@ -417,45 +417,49 @@ function BannerTestPageInner() {
                 </p>
                 {/* プロンプト表示：アイコン付きで分かりやすく */}
                 {!selectedBanner && selectedTemplate && (
-                  <div className="flex items-start gap-2 mb-6 max-w-3xl">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 shrink-0">
-                      <Sparkles className="w-4 h-4 text-yellow-400" />
-                      <span className="text-xs md:text-sm text-white/80 font-medium">AIプロンプト</span>
+                  <div className="flex flex-col sm:flex-row items-start gap-2 sm:gap-3 mb-4 md:mb-6 max-w-3xl">
+                    <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 shrink-0">
+                      <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400" />
+                      <span className="text-[10px] sm:text-xs md:text-sm text-white/80 font-medium whitespace-nowrap">AIプロンプト</span>
                     </div>
-                    <p className="text-sm md:text-base text-gray-300 drop-shadow-lg line-clamp-2 leading-relaxed">
-                      {selectedTemplate.prompt.length > 120 
-                        ? selectedTemplate.prompt.substring(0, 120) + '...'
+                    <p className="text-xs sm:text-sm md:text-base text-gray-300 drop-shadow-lg line-clamp-2 leading-relaxed">
+                      {selectedTemplate.prompt.length > 100 
+                        ? selectedTemplate.prompt.substring(0, 100) + '...'
                         : selectedTemplate.prompt
                       }
                     </p>
                   </div>
                 )}
-                <div className="flex gap-3 md:gap-4 flex-wrap">
+                <div className="flex gap-2 sm:gap-3 md:gap-4 flex-wrap">
                   {!selectedBanner && selectedTemplate && (
                     <button
-                      onClick={handleGenerate}
-                      disabled={isGenerating}
-                      className="px-6 md:px-8 py-2.5 md:py-3.5 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-2 disabled:opacity-50 text-sm md:text-base shadow-lg hover:shadow-xl"
+                      onClick={() => {
+                        const formElement = document.getElementById('banner-form')
+                        if (formElement) {
+                          formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }
+                      }}
+                      className="px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3.5 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base shadow-lg hover:shadow-xl"
                     >
-                      <Play className="w-4 h-4 md:w-5 md:h-5 fill-current" />
-                      {isGenerating ? '生成中...' : 'このスタイルで生成'}
+                      <Play className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 fill-current" />
+                      <span className="whitespace-nowrap">このスタイルで生成</span>
                     </button>
                   )}
                   {selectedBanner && (
                     <>
                       <button
                         onClick={() => handleDownload(selectedBanner)}
-                        className="px-6 md:px-8 py-2.5 md:py-3.5 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-2 text-sm md:text-base shadow-lg hover:shadow-xl"
+                        className="px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3.5 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base shadow-lg hover:shadow-xl"
                       >
-                        <Download className="w-4 h-4 md:w-5 md:h-5" />
-                        ダウンロード
+                        <Download className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+                        <span className="whitespace-nowrap">ダウンロード</span>
                       </button>
                       <button 
                         onClick={() => setSelectedBanner(null)}
-                        className="px-6 md:px-8 py-2.5 md:py-3.5 bg-gray-600/80 text-white font-bold rounded-md hover:bg-gray-600 transition-all flex items-center gap-2 text-sm md:text-base backdrop-blur-sm"
+                        className="px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3.5 bg-gray-600/80 text-white font-bold rounded-md hover:bg-gray-600 transition-all flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm md:text-base backdrop-blur-sm"
                       >
-                        <ChevronLeft className="w-4 h-4 md:w-5 md:h-5" />
-                        テンプレートに戻る
+                        <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
+                        <span className="whitespace-nowrap">戻る</span>
                       </button>
                     </>
                   )}
@@ -465,7 +469,7 @@ function BannerTestPageInner() {
           </div>
 
           {/* テンプレート一覧（Netflix風の横スクロール） */}
-          <div className="px-4 md:px-8 lg:px-12 -mt-20 md:-mt-32 relative z-30 space-y-6 md:space-y-8">
+          <div className="px-3 sm:px-4 md:px-8 lg:px-12 -mt-8 sm:-mt-12 md:-mt-20 lg:-mt-32 relative z-30 space-y-4 sm:space-y-6 md:space-y-8">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -603,9 +607,9 @@ function BannerTestPageInner() {
 
           {/* 生成フォーム（選択されたテンプレートに基づく、バナー選択時は非表示） */}
           {selectedTemplate && !selectedBanner && (
-            <div className="px-4 md:px-8 lg:px-12 py-8 md:py-12 bg-black/95 backdrop-blur-sm">
+            <div id="banner-form" className="px-4 md:px-8 lg:px-12 py-8 md:py-12 bg-black/95 backdrop-blur-sm scroll-mt-4">
               <div className="max-w-5xl mx-auto">
-                <h2 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-white">バナー情報を入力</h2>
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 md:mb-8 text-white">バナー情報を入力</h2>
                 <div className="bg-gray-900/90 rounded-xl md:rounded-2xl p-6 md:p-8 space-y-6 border border-gray-800">
                   <div>
                     <label className="block text-sm font-bold mb-2">サービス名 *</label>
