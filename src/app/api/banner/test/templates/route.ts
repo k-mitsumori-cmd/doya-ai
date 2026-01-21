@@ -925,17 +925,20 @@ export async function GET(request: NextRequest) {
             // エラープレースホルダーの場合はフォールバック画像を使用
             imageUrl = fallbackImage
             hasGeneratedImage = false
+          } else if (url.startsWith('data:image/')) {
+            // base64画像がある場合は画像APIを使用
+            hasGeneratedImage = true
+            imageUrl = `/api/banner/test/image/${t.templateId}`
           } else if (url.startsWith('https://') || url.startsWith('http://')) {
             // 有効な外部URLの場合
             imageUrl = url
             hasGeneratedImage = true
+          } else if (url.startsWith('/api/banner/test/image/')) {
+            // 既に画像APIのURLの場合
+            imageUrl = url
+            hasGeneratedImage = true
           } else if (url.startsWith('/')) {
             imageUrl = url
-          } else if (url.startsWith('data:image/')) {
-            // base64画像がある場合はフラグを立てるが、URLはフォールバックを使用
-            hasGeneratedImage = true
-            // 画像は /api/banner/test/image/[templateId] から取得する形式に変更
-            imageUrl = `/api/banner/test/image/${t.templateId}`
           }
         }
         

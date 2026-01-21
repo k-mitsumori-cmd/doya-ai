@@ -554,7 +554,7 @@ function BannerTestPageInner() {
           </div>
 
           {/* テンプレート一覧（Netflix風の横スクロール） */}
-          <div className="px-3 sm:px-4 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 relative z-30 space-y-4 sm:space-y-6 md:space-y-8 bg-gradient-to-t from-black via-black to-black/90">
+          <div className="px-3 sm:px-4 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 relative z-30 space-y-4 sm:space-y-6 md:space-y-8 bg-black pb-8">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
