@@ -6,9 +6,9 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    // 最初の5件のテンプレートを取得して、imageUrlの状態を確認
+    // 最初の10件のテンプレートを取得して、imageUrlの状態を確認
     const templates = await prisma.bannerTemplate.findMany({
-      take: 5,
+      take: 10,
       select: {
         templateId: true,
         imageUrl: true,
@@ -16,22 +16,61 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    const debugInfo = templates.map(t => ({
-      templateId: t.templateId,
-      industry: t.industry,
-      imageUrlType: t.imageUrl ? (
-        t.imageUrl.startsWith('data:image/') ? 'base64' :
-        t.imageUrl.startsWith('https://') ? 'https' :
-        t.imageUrl.startsWith('http://') ? 'http' :
-        t.imageUrl.startsWith('/') ? 'local' :
-        'unknown'
-      ) : 'null',
-      imageUrlLength: t.imageUrl?.length || 0,
-      imageUrlPreview: t.imageUrl?.substring(0, 100) || 'null',
-    }))
+    // 画像タイプ別の統計
+    let stats = {
+      total: templates.length,
+      base64: 0,
+      https: 0,
+      http: 0,
+      local: 0,
+      null: 0,
+      unknown: 0,
+      hasValidBase64: 0,
+    }
+
+    const debugInfo = templates.map(t => {
+      let imageUrlType = 'null'
+      let isValidBase64 = false
+      
+      if (t.imageUrl) {
+        if (t.imageUrl.startsWith('data:image/')) {
+          imageUrlType = 'base64'
+          stats.base64++
+          // base64が有効かチェック
+          const matches = t.imageUrl.match(/^data:image\/(\w+);base64,(.+)$/)
+          if (matches && matches[2] && matches[2].length > 100) {
+            isValidBase64 = true
+            stats.hasValidBase64++
+          }
+        } else if (t.imageUrl.startsWith('https://')) {
+          imageUrlType = 'https'
+          stats.https++
+        } else if (t.imageUrl.startsWith('http://')) {
+          imageUrlType = 'http'
+          stats.http++
+        } else if (t.imageUrl.startsWith('/')) {
+          imageUrlType = 'local'
+          stats.local++
+        } else {
+          imageUrlType = 'unknown'
+          stats.unknown++
+        }
+      } else {
+        stats.null++
+      }
+      
+      return {
+        templateId: t.templateId,
+        industry: t.industry,
+        imageUrlType,
+        imageUrlLength: t.imageUrl?.length || 0,
+        isValidBase64,
+        imageUrlPreview: t.imageUrl?.substring(0, 80) || 'null',
+      }
+    })
 
     return NextResponse.json({
-      count: templates.length,
+      stats,
       templates: debugInfo,
     })
   } catch (err: any) {
