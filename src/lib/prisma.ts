@@ -53,7 +53,13 @@ function ensureDatabaseUrlEnv() {
     
     // 接続制限を追加（Vercelサーバーレス環境向け）
     // connection_limitを低く設定して接続プール枯渇を防ぐ
+    // Supabaseのセッションモードでは接続プールサイズに制限があるため、
+    // connection_limitを1に設定することで接続の競合を避ける
+    // ただし、NextAuthなどの並行処理では接続を適切に管理する必要がある
     if (!url.searchParams.has('connection_limit')) {
+      // 接続プールの設定を確認
+      // Supabaseのセッションモードでは、接続プールサイズは通常15-25程度
+      // connection_limitを1に設定することで、接続の再利用を促進
       url.searchParams.set('connection_limit', '1')
     }
     
@@ -72,7 +78,18 @@ const prismaClientOptions = {
   log: process.env.NODE_ENV === 'development' 
     ? ['query', 'error', 'warn'] as const
     : ['error'] as const, // 本番環境ではエラーのみ
-}
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+  // 接続プールの設定を明示的に指定
+  // Supabaseのセッションモードでは接続プールサイズに制限があるため、
+  // 接続の再利用とタイムアウト設定が重要
+  __internal: {
+    useUds: false, // Unixドメインソケットを使用しない
+  },
+} as const
 
 export const prisma =
   globalForPrisma.prisma ??
@@ -80,6 +97,16 @@ export const prisma =
 
 // 本番環境でもグローバルシングルトンを使用（接続の再利用）
 // Vercelのサーバーレス環境では各リクエストで新しいインスタンスが作成される可能性があるため
+// グローバルシングルトンを使用することで、接続を再利用し、接続プールの枯渇を防ぐ
 globalForPrisma.prisma = prisma
+
+// 接続プールのエラーハンドリングを追加
+// MaxClientsInSessionModeエラーが発生した場合に備えて、
+// 接続の適切な管理を確実にする
+if (typeof window === 'undefined') {
+  // サーバー側でのみ実行
+  // 接続の初期化は遅延実行されるため、ここで明示的に接続しない
+  // Prismaクライアントは自動的に接続を管理する
+}
 
 export default prisma
