@@ -895,20 +895,22 @@ export async function GET(request: NextRequest) {
       const templates = dbTemplates.map((t) => {
         const fallbackImage = getFallbackImageUrl(t.category, t.industry)
         let imageUrl = fallbackImage
+        let hasGeneratedImage = false
+        
         if (t.imageUrl) {
           const url = t.imageUrl
-          // base64データはそのまま使用（フロントエンドで表示）
-          if (url.startsWith('https://') || url.startsWith('http://') || url.startsWith('data:image/') || url.startsWith('/')) {
+          // base64データは除外（レスポンスサイズ削減）
+          // 代わりに別エンドポイントで取得するか、hasGeneratedImageフラグを使用
+          if (url.startsWith('https://') || url.startsWith('http://')) {
             imageUrl = url
-          }
-        }
-        
-        // previewUrlも同様に処理
-        let previewUrl = imageUrl
-        if (t.previewUrl) {
-          const pUrl = t.previewUrl
-          if (pUrl.startsWith('https://') || pUrl.startsWith('http://') || pUrl.startsWith('data:image/') || pUrl.startsWith('/')) {
-            previewUrl = pUrl
+            hasGeneratedImage = true
+          } else if (url.startsWith('/')) {
+            imageUrl = url
+          } else if (url.startsWith('data:image/')) {
+            // base64画像がある場合はフラグを立てるが、URLはフォールバックを使用
+            hasGeneratedImage = true
+            // 画像は /api/banner/test/image/[templateId] から取得する形式に変更
+            imageUrl = `/api/banner/test/image/${t.templateId}`
           }
         }
         
@@ -916,11 +918,12 @@ export async function GET(request: NextRequest) {
           id: t.templateId,
           industry: t.industry,
           category: t.category,
-          prompt: t.prompt ? t.prompt.substring(0, 200) : '', // プロンプトを短縮
+          prompt: t.prompt ? t.prompt.substring(0, 200) : '',
           size: t.size || '1200x628',
           imageUrl,
-          previewUrl,
+          previewUrl: imageUrl, // 同じURLを使用
           isFeatured: t.isFeatured || false,
+          hasGeneratedImage,
         }
       })
       
