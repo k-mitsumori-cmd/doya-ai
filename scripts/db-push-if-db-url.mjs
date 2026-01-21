@@ -10,6 +10,8 @@ const RETRYABLE_ERRORS = [
   'connection refused',
   'ECONNREFUSED',
   'ETIMEDOUT',
+  'Schema engine error',
+  'FATAL:',
 ]
 
 function sleep(ms) {
