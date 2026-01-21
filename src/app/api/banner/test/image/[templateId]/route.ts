@@ -4,32 +4,48 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// カテゴリに基づくフォールバック画像
-const FALLBACK_IMAGES: Record<string, string> = {
-  ec: '/banner-samples/cat-ec.png',
-  it: '/banner-samples/cat-it.png',
-  beauty: '/banner-samples/cat-beauty.png',
-  recruit: '/banner-samples/cat-marketing.png',
-  marketing: '/banner-samples/cat-marketing.png',
-  default: '/banner-samples/cat-it.png',
+// ジャンルに基づくフォールバックテンプレートID（DBの高品質画像を使用）
+const FALLBACK_TEMPLATE_IDS: Record<string, string> = {
+  fashion: 'fashion-001',
+  beauty: 'beauty-001',
+  food: 'food-001',
+  it: 'it-001',
+  business: 'business-001',
+  recruit: 'recruit-001',
+  education: 'education-001',
+  travel: 'travel-001',
+  luxury: 'luxury-001',
+  natural: 'natural-001',
 }
 
-// templateIdからカテゴリを推測
-function getCategoryFromTemplateId(templateId: string): string {
+// templateIdからジャンルを推測
+function getGenreFromTemplateId(templateId: string): string {
   const prefix = templateId.split('-')[0]
-  const categoryMap: Record<string, string> = {
-    fashion: 'ec',
-    beauty: 'beauty',
-    food: 'ec',
-    it: 'it',
-    business: 'it',
-    recruit: 'recruit',
-    education: 'it',
-    travel: 'ec',
-    luxury: 'beauty',
-    natural: 'beauty',
+  return prefix || 'it'
+}
+
+// フォールバック画像を取得する関数（DBから別のテンプレートの画像を取得）
+async function getFallbackImage(genre: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
+  const fallbackTemplateId = FALLBACK_TEMPLATE_IDS[genre] || FALLBACK_TEMPLATE_IDS.it
+  
+  try {
+    const fallbackTemplate = await prisma.bannerTemplate.findUnique({
+      where: { templateId: fallbackTemplateId },
+      select: { imageUrl: true },
+    })
+    
+    if (fallbackTemplate?.imageUrl?.startsWith('data:image/')) {
+      const matches = fallbackTemplate.imageUrl.match(/^data:image\/(\w+);base64,(.+)$/)
+      if (matches) {
+        const [, mimeType, base64Data] = matches
+        return { buffer: Buffer.from(base64Data, 'base64'), mimeType }
+      }
+    }
+  } catch (e) {
+    console.error('[Image API] Fallback fetch error:', e)
   }
-  return categoryMap[prefix] || 'default'
+  
+  return null
 }
 
 export async function GET(
@@ -42,8 +58,8 @@ export async function GET(
     return NextResponse.json({ error: 'templateId is required' }, { status: 400 })
   }
   
-  // templateIdからカテゴリを推測（DBエラー時のフォールバック用）
-  const inferredCategory = getCategoryFromTemplateId(templateId)
+  // templateIdからジャンルを推測（DBエラー時のフォールバック用）
+  const inferredGenre = getGenreFromTemplateId(templateId)
   
   try {
     // DBから画像を取得
@@ -52,25 +68,34 @@ export async function GET(
       select: { imageUrl: true, category: true },
     })
     
-    // DBに画像がない場合はフォールバック画像にリダイレクト
-    if (!template?.imageUrl) {
-      const category = template?.category || inferredCategory
-      const fallbackUrl = FALLBACK_IMAGES[category] || FALLBACK_IMAGES.default
-      return NextResponse.redirect(new URL(fallbackUrl, request.url))
-    }
+    // DBに画像がない場合またはエラープレースホルダーの場合
+    const imageUrl = template?.imageUrl
+    const needsFallback = !imageUrl || 
+      (imageUrl.includes('placehold.co') && imageUrl.includes('Error'))
     
-    const imageUrl = template.imageUrl
-    
-    // エラープレースホルダーの場合はフォールバック画像にリダイレクト
-    if (imageUrl.includes('placehold.co') && imageUrl.includes('Error')) {
-      const category = template?.category || inferredCategory
-      const fallbackUrl = FALLBACK_IMAGES[category] || FALLBACK_IMAGES.default
-      return NextResponse.redirect(new URL(fallbackUrl, request.url))
+    if (needsFallback) {
+      // DBから同じジャンルの別の画像をフォールバックとして取得
+      const fallback = await getFallbackImage(inferredGenre)
+      if (fallback) {
+        return new NextResponse(fallback.buffer, {
+          headers: {
+            'Content-Type': `image/${fallback.mimeType}`,
+            'Cache-Control': 'public, max-age=3600',
+          },
+        })
+      }
+      // フォールバックも取得できない場合は透明な1x1 PNG
+      const transparentPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64')
+      return new NextResponse(transparentPng, {
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=60',
+        },
+      })
     }
     
     // base64画像の場合
     if (imageUrl.startsWith('data:image/')) {
-      // data:image/png;base64,... 形式からバイナリに変換
       const matches = imageUrl.match(/^data:image\/(\w+);base64,(.+)$/)
       if (!matches) {
         return NextResponse.json({ error: 'Invalid image format' }, { status: 400 })
@@ -92,16 +117,31 @@ export async function GET(
       return NextResponse.redirect(imageUrl)
     }
     
-    // ローカルパスの場合
+    // ローカルパスの場合はリダイレクト
     if (imageUrl.startsWith('/')) {
       return NextResponse.redirect(new URL(imageUrl, request.url))
     }
     
     return NextResponse.json({ error: 'Invalid image URL' }, { status: 400 })
   } catch (err: any) {
-    // DBエラーの場合はフォールバック画像にリダイレクト
+    // DBエラーの場合はフォールバック画像を取得
     console.error('[Image API] Error:', err)
-    const fallbackUrl = FALLBACK_IMAGES[inferredCategory] || FALLBACK_IMAGES.default
-    return NextResponse.redirect(new URL(fallbackUrl, request.url))
+    const fallback = await getFallbackImage(inferredGenre)
+    if (fallback) {
+      return new NextResponse(fallback.buffer, {
+        headers: {
+          'Content-Type': `image/${fallback.mimeType}`,
+          'Cache-Control': 'public, max-age=3600',
+        },
+      })
+    }
+    // フォールバックも取得できない場合は透明な1x1 PNG
+    const transparentPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64')
+    return new NextResponse(transparentPng, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=60',
+      },
+    })
   }
 }
