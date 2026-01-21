@@ -899,6 +899,17 @@ export async function GET(request: NextRequest) {
     
     // DBからデータがある場合は直接使用
     if (dbTemplates.length > 0) {
+      // V2プロンプトを事前にインポート（mapの外で）
+      let v2PromptsMap = new Map<string, { displayTitle?: string; name: string }>()
+      try {
+        const { BANNER_PROMPTS_V2 } = await import('@/lib/banner-prompts-v2')
+        BANNER_PROMPTS_V2.forEach(p => {
+          v2PromptsMap.set(p.id, { displayTitle: p.displayTitle, name: p.name })
+        })
+      } catch (e) {
+        // V2プロンプトが見つからない場合は空のマップを使用
+      }
+      
       const templates = dbTemplates.map((t) => {
         const fallbackImage = getFallbackImageUrl(t.category, t.industry)
         let imageUrl = fallbackImage
@@ -929,18 +940,9 @@ export async function GET(request: NextRequest) {
         }
         
         // V2プロンプトからdisplayTitleを取得
-        let displayTitle = ''
-        let name = ''
-        try {
-          const { BANNER_PROMPTS_V2 } = await import('@/lib/banner-prompts-v2')
-          const v2Prompt = BANNER_PROMPTS_V2.find(p => p.id === t.templateId)
-          if (v2Prompt) {
-            displayTitle = v2Prompt.displayTitle || v2Prompt.name || ''
-            name = v2Prompt.name || ''
-          }
-        } catch (e) {
-          // V2プロンプトが見つからない場合は空文字
-        }
+        const v2Prompt = v2PromptsMap.get(t.templateId)
+        const displayTitle = v2Prompt?.displayTitle || v2Prompt?.name || ''
+        const name = v2Prompt?.name || ''
         
         return {
           id: t.templateId,
