@@ -1204,32 +1204,56 @@ const EXTRA_VARIANT_HINTS: string[] = [
   'Make it more playful: friendly shapes, upbeat tone, but keep high CTR and legibility.',
 ]
 
-// バリエーションの“型”（レイアウト差分を強制して似た見た目を回避）
+// バリエーションの"型"（レイアウト差分を強制して似た見た目を回避）
+// ※ 順序をシャッフルして多様なレイアウトが生成されるようにしている
 const DIVERSE_CREATIVE_PRESETS: string[] = [
-  'Layout: split-screen. One side is a solid color text panel (big headline), the other side is the hero photo/product. CTA at bottom of the text panel. Strong hierarchy.',
+  // 1. フルブリード・センター配置（最も汎用的）
+  'Layout: full-bleed hero. Large background image/scene fills the entire canvas. Headline and CTA overlay on a semi-transparent gradient panel. Text centered or bottom-aligned. Premium, immersive feel.',
+  // 2. 大胆なタイポグラフィ中心
   'Layout: centered headline with large numeric/short phrase. Add a prominent badge (e.g., "無料", "限定", "No.1" style) and a clean CTA button below. Minimal background.',
-  'Layout: diagonal / dynamic composition. Use bold shape accents and a high-contrast CTA button. Keep text on a clean panel for readability.',
-  'Layout: premium minimal. Lots of whitespace, thin lines, refined typography, subtle gradient. Small trust badge near the headline. CTA understated but clickable.',
-  'Layout: infographic. 2–3 simple icon bullets (NO extra text beyond provided copy), with a clear headline and CTA. Use grid alignment.',
-  'Layout: testimonial / proof. Include a simple quote bubble shape and a "実績/導入" style proof badge. Keep it clean and realistic (no tiny legal text).',
+  // 3. 商品クローズアップ
   'Layout: product close-up. Large product/scene photo, headline in a translucent panel, CTA as a pill button. Background slightly blurred for focus.',
-  'Layout: comparison / before-after. Split background into two zones, with a clear "変化" feeling. Headline on top, sub on middle, CTA bottom.',
+  // 4. ダイナミック・斜め構図
+  'Layout: diagonal / dynamic composition. Use bold shape accents and a high-contrast CTA button. Keep text on a clean panel for readability.',
+  // 5. プレミアム・ミニマル
+  'Layout: premium minimal. Lots of whitespace, thin lines, refined typography, subtle gradient. Small trust badge near the headline. CTA understated but clickable.',
+  // 6. セール・キャンペーン
   'Layout: bold sale/campaign. Big discount/offer number emphasis, urgency accents, but with strong contrast text blocks. CTA very prominent.',
+  // 7. インフォグラフィック
+  'Layout: infographic. 2–3 simple icon bullets (NO extra text beyond provided copy), with a clear headline and CTA. Use grid alignment.',
+  // 8. コラージュグリッド
   'Layout: collage grid. 2–3 image tiles with one dominant tile, headline across the grid, CTA in a corner. Keep it modern and uncluttered.',
+  // 9. 比較・ビフォーアフター
+  'Layout: comparison / before-after. Split background into two zones, with a clear "変化" feeling. Headline on top, sub on middle, CTA bottom.',
+  // 10. スプリットスクリーン（左右分割）- 後ろに移動
+  'Layout: split-screen. One side is a solid color text panel (big headline), the other side is the hero photo/product. CTA at bottom of the text panel. Strong hierarchy.',
+  // 11. 実績・証言
+  'Layout: testimonial / proof. Include a simple quote bubble shape and a "実績/導入" style proof badge. Keep it clean and realistic (no tiny legal text).',
 ]
 
-// “似た形”再生成時：レイアウトは大きく変えず、要素の強弱/表現だけ変える
+// "似た形"再生成時：レイアウトは大きく変えず、要素の強弱/表現だけ変える
+// ※ 順序をシャッフルして多様なバリエーションが生成されるようにしている
 const SIMILAR_CREATIVE_PRESETS: string[] = [
-  'Keep the overall composition close to the reference. Variation: change the CTA button shape and color accent, and adjust text hierarchy (headline bigger, sub smaller).',
-  'Keep the overall composition close to the reference. Variation: swap the hero image angle/scene while keeping similar framing and whitespace for text.',
-  'Keep the overall composition close to the reference. Variation: add/remove a simple badge (e.g., "無料" / "最短" / "実績") without clutter.',
+  // 1. 背景処理の変更
   'Keep the overall composition close to the reference. Variation: change background treatment (solid → subtle gradient, or light texture) while preserving readability.',
-  'Keep the overall composition close to the reference. Variation: change iconography accents (simple shapes) and adjust alignment slightly (left → center) but keep the same template.',
+  // 2. タイポグラフィの雰囲気変更
   'Keep the overall composition close to the reference. Variation: change typography mood (bold/gothic vs clean/sans) while keeping text fully readable.',
-  'Keep the overall composition close to the reference. Variation: emphasize trust cues (badge/seal silhouette) or remove them for a cleaner version (one per output).',
-  'Keep the overall composition close to the reference. Variation: increase/decrease contrast, adjust color palette within the brand colors, keep the same layout.',
-  'Keep the overall composition close to the reference. Variation: change the CTA placement within the same layout area (bottom-left vs bottom-right) but keep consistent spacing.',
+  // 3. 写真とテキストのバランス調整
   'Keep the overall composition close to the reference. Variation: tweak photo vs text balance (photo slightly larger/smaller) while keeping the template consistent.',
+  // 4. コントラスト・カラー調整
+  'Keep the overall composition close to the reference. Variation: increase/decrease contrast, adjust color palette within the brand colors, keep the same layout.',
+  // 5. ヒーロー画像のアングル変更
+  'Keep the overall composition close to the reference. Variation: swap the hero image angle/scene while keeping similar framing and whitespace for text.',
+  // 6. アイコン・アクセント変更
+  'Keep the overall composition close to the reference. Variation: change iconography accents (simple shapes) and adjust alignment slightly (left → center) but keep the same template.',
+  // 7. バッジの追加/削除
+  'Keep the overall composition close to the reference. Variation: add/remove a simple badge (e.g., "無料" / "最短" / "実績") without clutter.',
+  // 8. 信頼性要素の強調/削除
+  'Keep the overall composition close to the reference. Variation: emphasize trust cues (badge/seal silhouette) or remove them for a cleaner version (one per output).',
+  // 9. CTAボタンの形状・色変更
+  'Keep the overall composition close to the reference. Variation: change the CTA button shape and color accent, and adjust text hierarchy (headline bigger, sub smaller).',
+  // 10. CTA配置の微調整
+  'Keep the overall composition close to the reference. Variation: change the CTA placement within the same layout area (bottom-left vs bottom-right) but keep consistent spacing.',
 ]
 
 function buildHardConstraintsAppendix(keyword: string, size: string, options: GenerateOptions, patternLabel: string): string {
