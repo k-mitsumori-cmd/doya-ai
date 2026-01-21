@@ -33,8 +33,8 @@ type NavItem = {
 
 const SEO_NAV: NavItem[] = [
   { href: '/seo/swipe', label: 'スワイプ記事作成', icon: Sparkles },
-  { href: '/seo', label: '新規記事作成', icon: Plus },
-  { href: '/seo/articles', label: '生成記事一覧', icon: FileText },
+  { href: '/seo/create', label: '新規記事作成', icon: Plus },
+  { href: '/seo', label: '生成記事一覧', icon: FileText },
   { href: '/seo/pricing', label: '料金/プラン', icon: CreditCard },
   { href: '/seo/settings', label: '設定', icon: Settings },
 ]
@@ -124,7 +124,8 @@ function SeoSidebarImpl({
   }
 
   const isActive = (href: string) => {
-    if (href === '/seo') return pathname === '/seo' || pathname === '/seo/create'
+    if (href === '/seo/create') return pathname === '/seo/create'
+    if (href === '/seo') return pathname === '/seo'
     if (href === '/seo/articles') return pathname.startsWith('/seo/articles')
     return pathname.startsWith(href)
   }

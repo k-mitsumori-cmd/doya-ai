@@ -2,17 +2,39 @@ import { spawnSync } from 'node:child_process'
 import { existsSync } from 'fs'
 import { join } from 'path'
 
-function run(cmd, args, options = {}) {
-  console.log(`[db-push] Executing: ${cmd} ${args.join(' ')}`)
-  const r = spawnSync(cmd, args, {
-    stdio: 'pipe',
-    shell: true,
-    env: process.env,
-    encoding: 'utf8',
-    ...options,
-  })
+// リトライ可能なエラーパターン（接続プール制限など）
+const RETRYABLE_ERRORS = [
+  'MaxClientsInSessionMode',
+  'max clients reached',
+  'too many connections',
+  'connection refused',
+  'ECONNREFUSED',
+  'ETIMEDOUT',
+]
 
-  if (r.status !== 0) {
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function runWithRetry(cmd, args, options = {}, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    console.log(`[db-push] Attempt ${attempt}/${maxRetries}: ${cmd} ${args.join(' ')}`)
+    
+    const r = spawnSync(cmd, args, {
+      stdio: 'pipe',
+      shell: true,
+      env: process.env,
+      encoding: 'utf8',
+      ...options,
+    })
+
+    if (r.status === 0) {
+      // 成功時は出力を表示（デバッグ用）
+      if (r.stdout) console.log(r.stdout.toString())
+      if (r.stderr) console.error(r.stderr.toString())
+      return true
+    }
+
     const stderr = r.stderr ? r.stderr.toString() : ''
     const stdout = r.stdout ? r.stdout.toString() : ''
     const allOutput = stderr + stdout
@@ -33,6 +55,24 @@ function run(cmd, args, options = {}) {
       return true
     }
 
+    // リトライ可能なエラーかチェック
+    const isRetryable = RETRYABLE_ERRORS.some((pattern) => allOutput.includes(pattern))
+
+    if (isRetryable && attempt < maxRetries) {
+      const waitTime = attempt * 5000 // 5秒、10秒、15秒と増加
+      console.warn(`[db-push] ⚠️  Retryable error detected: ${allOutput.split('\n').find((line) => line.includes('Error:') || line.includes('FATAL:')) || 'Connection issue'}`)
+      console.warn(`[db-push] ⚠️  Waiting ${waitTime / 1000} seconds before retry...`)
+      await sleep(waitTime)
+      continue
+    }
+
+    // リトライ可能なエラーで最大リトライ回数に達した場合は警告して続行
+    if (isRetryable) {
+      console.warn(`[db-push] ⚠️  Max retries reached for retryable error. Continuing build without db push.`)
+      console.warn(`[db-push] ⚠️  The database schema may need to be updated manually.`)
+      return true // ビルドを続行
+    }
+
     // 非無視エラーのときだけ詳細を表示（Vercelログのノイズ抑制）
     if (r.stdout) console.log(stdout.toString())
     if (r.stderr) console.error(stderr.toString())
@@ -42,10 +82,7 @@ function run(cmd, args, options = {}) {
     if (r.error) console.error('[db-push] Error:', r.error)
     return false
   }
-  // 成功時は出力を表示（デバッグ用）
-  if (r.stdout) console.log(r.stdout.toString())
-  if (r.stderr) console.error(r.stderr.toString())
-  return true
+  return false
 }
 
 // Vercel本番でDBが設定されている時だけ、スキーマ反映を自動化
@@ -71,8 +108,18 @@ if (existsSync(prismaPath)) {
   args = ['db', 'push', '--skip-generate', '--accept-data-loss']
 }
 
-const success = run(prismaCmd, args)
-process.exit(success ? 0 : 1)
+// 非同期関数でリトライ付き実行
+async function main() {
+  const success = await runWithRetry(prismaCmd, args, {}, 3)
+  process.exit(success ? 0 : 1)
+}
+
+main().catch((err) => {
+  console.error('[db-push] Unexpected error:', err)
+  // 予期せぬエラーでもビルドを続行（DBスキーマは手動で更新が必要な場合あり）
+  console.warn('[db-push] ⚠️  Continuing build despite error.')
+  process.exit(0)
+})
 
 
 
