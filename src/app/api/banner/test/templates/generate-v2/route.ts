@@ -18,15 +18,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { promptIds, batchSize = 5 } = body
 
+    // DBから既に生成済みのテンプレートIDを取得
+    const existingTemplates = await prisma.bannerTemplate.findMany({
+      select: { templateId: true },
+    })
+    const existingIds = new Set(existingTemplates.map(t => t.templateId))
+
     // 生成対象のプロンプトを取得
     let promptsToGenerate: BannerPromptV2[] = []
     
     if (promptIds && Array.isArray(promptIds) && promptIds.length > 0) {
-      // 指定されたIDのプロンプトのみ
-      promptsToGenerate = BANNER_PROMPTS_V2.filter(p => promptIds.includes(p.id))
+      // 指定されたIDのプロンプトのみ（未生成のもの）
+      promptsToGenerate = BANNER_PROMPTS_V2.filter(p => 
+        promptIds.includes(p.id) && !existingIds.has(p.id)
+      )
     } else {
-      // 全プロンプト（バッチサイズで制限）
-      promptsToGenerate = BANNER_PROMPTS_V2.slice(0, batchSize)
+      // 未生成のプロンプトからバッチサイズ分を選択
+      promptsToGenerate = BANNER_PROMPTS_V2
+        .filter(p => !existingIds.has(p.id))
+        .slice(0, batchSize)
     }
 
     if (promptsToGenerate.length === 0) {
