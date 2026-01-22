@@ -1263,47 +1263,17 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
   const cta = (options.ctaText || '').trim()
   const company = (options.companyName || '').trim()
 
-  // customImagePrompt を使う場合でも、テキストを画像内に描画する制約を追加
-  // ドヤライティングAIのバナーは「テキスト入り」が必須
+  // customImagePrompt を使う場合は、最小限の制約のみ追加
+  // プロンプト自体にレイアウト指示が含まれているため、共通のレイアウト指示は追加しない
   if (options?.customImagePrompt) {
     return [
       '',
-      '=== HARD CONSTRAINTS (DO NOT DROP) ===',
-      `PATTERN: ${patternLabel} (must be a distinct creative variation, but must follow the same content/image intent)`,
-      `Output dimensions: EXACTLY ${width}x${height} px. Do NOT change aspect ratio.`,
-      '- Fill the entire canvas edge-to-edge. NO letterboxing, NO empty top/bottom bars, NO padding, NO borders.',
-      '',
-      '=== JAPANESE TEXT RENDERING (CRITICAL - MUST FOLLOW) ===',
-      '- The image MUST contain readable Japanese text (headline, subhead, CTA, etc.).',
-      '- Extract the main message from the article content and render it as large, bold, high-contrast text.',
-      '- Use a clean Japanese font style (Noto Sans JP-like or Gothic style).',
-      '- Place text on a solid/gradient panel for maximum readability.',
-      '- Do NOT output an image without Japanese text. If text rendering fails, retry internally.',
-      '- Text must be perfectly legible (no garbling, no pseudo-characters).',
-      '- Do NOT add text that is not derived from the article content.',
-      '',
-      options.imageDescription
-        ? [
-            'USER VISUAL DESCRIPTION (HIGHEST PRIORITY):',
-            `"${options.imageDescription}"`,
-            'Reflect this in ALL patterns, including B/C and beyond.',
-            '',
-          ].join('\n')
-        : '',
-      Array.isArray(options.brandColors) && options.brandColors.length > 0
-        ? [
-            'BRAND COLORS (MUST USE):',
-            options.brandColors.slice(0, 8).join(', '),
-            '',
-          ].join('\n')
-        : '',
-      options.logoImage
-        ? 'LOGO PROVIDED: use ONLY the provided logo image. Do NOT invent any logo/mark.\n'
-        : 'NO LOGO: do NOT invent any logo/mark.\n',
-      options.personImage || options.hasPerson
-        ? 'PERSON: include the provided person photo if available; otherwise generate a suitable person. Keep text readable.\n'
-        : '',
-      'FINAL: Return ONE PNG image with Japanese text rendered correctly.',
+      '=== OUTPUT CONSTRAINTS ===',
+      `Output dimensions: ${width}x${height} px.`,
+      '- Fill the entire canvas. No letterboxing or empty bars.',
+      '- Include readable Japanese text as specified in the prompt.',
+      '- Use clean, legible Japanese typography.',
+      'FINAL: Return ONE PNG image.',
     ]
       .filter(Boolean)
       .join('\n')
