@@ -61,8 +61,11 @@ export async function GET(request: NextRequest) {
     ])
 
     // フロントエンド用にデータを整形（V2プロンプトのgenreを使用）
+    // 画像URLはサービスと同じAPIエンドポイントを使用
     const formattedImages = images.map(img => {
       const v2Prompt = v2PromptsMap.get(img.templateId)
+      // サービスと同じ画像APIエンドポイントを使用
+      const imageApiUrl = `/api/banner/test/image/${img.templateId}`
       return {
         id: img.id,
         templateId: img.templateId,
@@ -71,8 +74,9 @@ export async function GET(request: NextRequest) {
         industry: v2Prompt?.genre || img.industry,
         prompt: v2Prompt?.fullPrompt || img.prompt,
         promptSummary: (v2Prompt?.fullPrompt || img.prompt).substring(0, 50) + ((v2Prompt?.fullPrompt || img.prompt).length > 50 ? '...' : ''),
-        imageUrl: img.imageUrl,
-        previewUrl: img.previewUrl,
+        // サービスと同じ画像URLを使用（一貫性のため）
+        imageUrl: imageApiUrl,
+        previewUrl: imageApiUrl,
         isActive: img.isActive,
         isFeatured: img.isFeatured,
         size: img.size,
