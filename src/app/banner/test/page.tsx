@@ -139,6 +139,12 @@ function BannerTestPageInner() {
   const [customPrompt, setCustomPrompt] = useState('')
   const [showCustomPrompt, setShowCustomPrompt] = useState(false)
   
+  // 画像修正モーダル（エンタープライズ限定）
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingBanner, setEditingBanner] = useState<GeneratedBanner | null>(null)
+  const [editPrompt, setEditPrompt] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
+  
   // 生成中のローディング状態
   const [loadingMessage, setLoadingMessage] = useState('')
   const [generationProgress, setGenerationProgress] = useState(0)
@@ -1799,54 +1805,168 @@ function BannerTestPageInner() {
             </div>
           )}
 
-          {/* 生成されたバナー一覧（グリッド表示） */}
+          {/* 生成されたバナー一覧（改善版） */}
           {generatedBanners.length > 0 && (
-            <div className="px-3 sm:px-4 md:px-8 lg:px-12 py-6 sm:py-8 md:py-12 space-y-4 md:space-y-6">
-              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold px-2 md:px-4 text-white">生成結果</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
-                {generatedBanners.map((banner) => (
+            <div className="px-3 sm:px-4 md:px-8 lg:px-12 py-8 sm:py-10 md:py-14 space-y-6 md:space-y-8 bg-gradient-to-b from-transparent via-gray-900/50 to-gray-900">
+              {/* ヘッダー */}
+              <div className="flex items-center justify-between px-2 md:px-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
+                      🎉 生成完了！
+                    </h2>
+                    <p className="text-sm text-gray-400">{generatedBanners.length}枚のバナーが生成されました</p>
+                  </div>
+                </div>
+                {/* 一括ダウンロードボタン */}
+                <button
+                  onClick={() => {
+                    generatedBanners.forEach((banner, idx) => {
+                      setTimeout(() => {
+                        const link = document.createElement('a')
+                        link.href = banner.imageUrl
+                        link.download = `banner-${idx + 1}.png`
+                        document.body.appendChild(link)
+                        link.click()
+                        document.body.removeChild(link)
+                      }, idx * 500)
+                    })
+                    toast.success('全画像をダウンロード中...')
+                  }}
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-lg transition-all shadow-lg hover:shadow-blue-500/30"
+                >
+                  <Download className="w-4 h-4" />
+                  全てダウンロード
+                </button>
+              </div>
+              
+              {/* バナーグリッド */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {generatedBanners.map((banner, idx) => (
                   <motion.div
                     key={banner.id}
-                    whileHover={{ scale: 1.05, zIndex: 10 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedBanner(banner)}
-                    className={`group relative aspect-[16/9] rounded-lg overflow-hidden cursor-pointer transition-all duration-300 ${
-                      selectedBanner?.id === banner.id
-                        ? 'ring-3 ring-white shadow-2xl'
-                        : 'ring-1 ring-gray-800 hover:ring-gray-600'
-                    }`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="group relative bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-gray-500 transition-all shadow-lg hover:shadow-xl"
                   >
-                    <img
-                      src={banner.imageUrl}
-                      alt="Generated banner"
-                      className="w-full h-full object-cover"
-                    />
-                    {/* 拡大ボタン（ホバー時に表示） */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setZoomImage({
-                          url: banner.imageUrl,
-                          title: '生成されたバナー'
-                        })
+                    {/* 画像 */}
+                    <div 
+                      className="relative aspect-[16/9] cursor-pointer"
+                      onClick={() => {
+                        if (currentPlan === 'ENTERPRISE' || isTrialActive) {
+                          setEditingBanner(banner)
+                          setEditPrompt('')
+                          setShowEditModal(true)
+                        } else {
+                          setZoomImage({ url: banner.imageUrl, title: `バナー ${idx + 1}` })
+                        }
                       }}
-                      className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                      title="画像を拡大表示"
                     >
-                      <Maximize2 className="w-4 h-4 text-white" />
-                    </button>
-                    {selectedBanner?.id === banner.id && (
-                      <div className="absolute -inset-2 ring-4 ring-blue-400 rounded-xl pointer-events-none shadow-[0_0_30px_rgba(59,130,246,0.6)] animate-pulse">
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-1.5 rounded-full shadow-lg">
-                          <p className="text-xs font-bold text-white whitespace-nowrap flex items-center gap-1">
-                            <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
-                            選択中
-                          </p>
+                      <img
+                        src={banner.imageUrl}
+                        alt={`Generated banner ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* オーバーレイ（ホバー時） */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                        <div className="opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center gap-2">
+                          {(currentPlan === 'ENTERPRISE' || isTrialActive) ? (
+                            <>
+                              <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center">
+                                <Sparkles className="w-6 h-6 text-white" />
+                              </div>
+                              <span className="text-white font-bold text-sm">クリックして修正</span>
+                              <span className="px-2 py-0.5 bg-purple-600 text-[10px] font-bold rounded-full text-white">ENTERPRISE</span>
+                            </>
+                          ) : (
+                            <>
+                              <Maximize2 className="w-8 h-8 text-white" />
+                              <span className="text-white font-bold text-sm">拡大表示</span>
+                            </>
+                          )}
                         </div>
                       </div>
-                    )}
+                      {/* バナー番号 */}
+                      <div className="absolute top-2 left-2 px-2 py-1 bg-black/70 rounded-md text-xs font-bold text-white">
+                        #{idx + 1}
+                      </div>
+                    </div>
+                    
+                    {/* アクションボタン */}
+                    <div className="p-3 sm:p-4 space-y-3">
+                      {/* ダウンロードボタン（メイン） */}
+                      <button
+                        onClick={() => handleDownload(banner)}
+                        className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-green-500/30"
+                      >
+                        <Download className="w-5 h-5" />
+                        ダウンロード
+                      </button>
+                      
+                      {/* サブアクション */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setZoomImage({ url: banner.imageUrl, title: `バナー ${idx + 1}` })}
+                          className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <Maximize2 className="w-4 h-4" />
+                          拡大
+                        </button>
+                        {(currentPlan === 'ENTERPRISE' || isTrialActive) ? (
+                          <button
+                            onClick={() => {
+                              setEditingBanner(banner)
+                              setEditPrompt('')
+                              setShowEditModal(true)
+                            }}
+                            className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            修正
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setLockModalType('pro')
+                              setShowLockModal(true)
+                            }}
+                            className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 text-gray-400 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                          >
+                            <Lock className="w-4 h-4" />
+                            修正
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </motion.div>
                 ))}
+              </div>
+              
+              {/* モバイル用一括ダウンロード */}
+              <div className="sm:hidden px-2">
+                <button
+                  onClick={() => {
+                    generatedBanners.forEach((banner, idx) => {
+                      setTimeout(() => {
+                        const link = document.createElement('a')
+                        link.href = banner.imageUrl
+                        link.download = `banner-${idx + 1}.png`
+                        document.body.appendChild(link)
+                        link.click()
+                        document.body.removeChild(link)
+                      }, idx * 500)
+                    })
+                    toast.success('全画像をダウンロード中...')
+                  }}
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                >
+                  <Download className="w-5 h-5" />
+                  全てダウンロード ({generatedBanners.length}枚)
+                </button>
               </div>
             </div>
           )}
@@ -2353,6 +2473,182 @@ function BannerTestPageInner() {
                       <span className="text-purple-300 font-medium">全画像解放 + 1日200枚</span>
                     </div>
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 🎨 画像修正モーダル（エンタープライズ限定） */}
+      <AnimatePresence>
+        {showEditModal && editingBanner && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            onClick={() => !isEditing && setShowEditModal(false)}
+          >
+            {/* 背景オーバーレイ */}
+            <div className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+            
+            {/* モーダルコンテンツ */}
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative z-10 w-full max-w-4xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-purple-500/30"
+            >
+              {/* ヘッダー */}
+              <div className="p-4 sm:p-6 bg-gradient-to-r from-purple-600 to-pink-500 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                      画像を修正
+                      <span className="px-2 py-0.5 bg-white/20 text-xs font-bold rounded-full">ENTERPRISE</span>
+                    </h3>
+                    <p className="text-white/80 text-sm">AIに指示を出して画像を修正できます</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => !isEditing && setShowEditModal(false)}
+                  disabled={isEditing}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors disabled:opacity-50"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+              
+              {/* コンテンツ */}
+              <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 現在の画像 */}
+                <div>
+                  <h4 className="text-sm font-bold text-gray-300 mb-3">現在の画像</h4>
+                  <div className="relative aspect-video rounded-xl overflow-hidden border border-gray-700 shadow-lg">
+                    <img
+                      src={editingBanner.imageUrl}
+                      alt="編集中の画像"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {/* ダウンロードボタン */}
+                  <button
+                    onClick={() => handleDownload(editingBanner)}
+                    className="mt-3 w-full py-2.5 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    この画像をダウンロード
+                  </button>
+                </div>
+                
+                {/* 修正指示入力 */}
+                <div>
+                  <h4 className="text-sm font-bold text-gray-300 mb-3">修正指示を入力</h4>
+                  <textarea
+                    value={editPrompt}
+                    onChange={(e) => setEditPrompt(e.target.value)}
+                    placeholder="例：&#10;・背景をもっと明るくして&#10;・文字を大きくして&#10;・右下にロゴを追加して&#10;・全体的にポップな雰囲気に"
+                    disabled={isEditing}
+                    className="w-full h-40 px-4 py-3 bg-gray-800 border border-gray-600 focus:border-purple-500 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none text-sm disabled:opacity-50"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">{editPrompt.length} / 500文字</p>
+                  
+                  {/* 修正例 */}
+                  <div className="mt-4 space-y-2">
+                    <p className="text-xs font-bold text-gray-400">クイック修正:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['背景を明るく', '文字を大きく', 'コントラストを上げる', 'ポップな雰囲気に', '落ち着いた色合いに'].map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          onClick={() => setEditPrompt(prev => prev ? `${prev}\n・${suggestion}` : `・${suggestion}`)}
+                          disabled={isEditing}
+                          className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          + {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* 修正実行ボタン */}
+                  <button
+                    onClick={async () => {
+                      if (!editPrompt.trim()) {
+                        toast.error('修正指示を入力してください')
+                        return
+                      }
+                      
+                      setIsEditing(true)
+                      try {
+                        // 修正APIを呼び出し
+                        const res = await fetch('/api/banner/test/generate', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            template: selectedTemplate?.category || 'it',
+                            size: `${customWidth}x${customHeight}`,
+                            industry: selectedTemplate?.industry || '',
+                            mainTitle: serviceName,
+                            count: 1,
+                            basePrompt: editingBanner.prompt || selectedTemplate?.prompt || '',
+                            customPrompt: `【修正指示】\n${editPrompt}\n\n【元の画像の特徴を維持しつつ、上記の修正を適用してください】`,
+                          }),
+                        })
+                        
+                        const result = await res.json()
+                        
+                        if (result.banners && result.banners.length > 0) {
+                          // 修正された画像を追加
+                          const newBanner: GeneratedBanner = {
+                            id: `edited-${Date.now()}`,
+                            imageUrl: result.banners[0],
+                            prompt: editPrompt,
+                            createdAt: new Date(),
+                          }
+                          setGeneratedBanners(prev => [newBanner, ...prev])
+                          setEditingBanner(newBanner)
+                          setEditPrompt('')
+                          toast.success('画像を修正しました！')
+                          incrementGenerationCount(1)
+                        } else {
+                          throw new Error(result.error || '修正に失敗しました')
+                        }
+                      } catch (err: any) {
+                        console.error('Edit error:', err)
+                        toast.error(err.message || '修正に失敗しました')
+                      } finally {
+                        setIsEditing(false)
+                      }
+                    }}
+                    disabled={isEditing || !editPrompt.trim()}
+                    className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+                  >
+                    {isEditing ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        修正中...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5" />
+                        この指示で修正する
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+              
+              {/* フッター */}
+              <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="p-3 bg-purple-900/30 rounded-lg border border-purple-700/50">
+                  <p className="text-xs text-purple-300">
+                    💡 ヒント：具体的な指示ほど正確に反映されます。「もっと明るく」より「背景を白に近い明るさに」のように指定してください。
+                  </p>
                 </div>
               </div>
             </motion.div>
