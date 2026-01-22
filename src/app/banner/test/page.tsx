@@ -675,9 +675,9 @@ function BannerTestPageInner() {
                       <span className="text-[10px] sm:text-xs text-white/80 font-medium whitespace-nowrap">AIプロンプト</span>
                     </div>
                     <p className="text-[10px] sm:text-xs text-gray-300 drop-shadow-lg line-clamp-1 leading-relaxed">
-                      {selectedTemplate.prompt.length > 80 
+                      {selectedTemplate.prompt && selectedTemplate.prompt.length > 80 
                         ? selectedTemplate.prompt.substring(0, 80) + '...'
-                        : selectedTemplate.prompt
+                        : selectedTemplate.prompt || 'プロンプトなし'
                       }
                     </p>
                   </div>
