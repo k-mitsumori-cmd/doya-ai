@@ -540,13 +540,27 @@ function BannerTestPageInner() {
     // マウスが離れた時はドラッグを継続（グローバルイベントで処理）
   }, [])
   
-  // マウスホイールでの横スクロール（PC用）
+  // マウスホイール/トラックパッドでの横スクロール（Netflix風）
   const handleWheel = useCallback((e: React.WheelEvent, category: string) => {
-    // Shiftキーが押されている場合、または横スクロールが可能な場合
     const container = scrollRefs.current[category]
-    if (container && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {
+    if (!container) return
+    
+    // トラックパッドの横スワイプを検出（deltaXが大きい場合）
+    // または縦スクロールを横スクロールに変換
+    const isHorizontalSwipe = Math.abs(e.deltaX) > Math.abs(e.deltaY) * 0.5
+    const hasHorizontalScroll = container.scrollWidth > container.clientWidth
+    
+    if (hasHorizontalScroll && (isHorizontalSwipe || e.shiftKey)) {
+      // 横スワイプまたはShift+スクロールの場合
       e.preventDefault()
+      e.stopPropagation()
       container.scrollLeft += e.deltaX || e.deltaY
+      updateScrollPosition(category)
+    } else if (hasHorizontalScroll && Math.abs(e.deltaY) > 0) {
+      // 縦スクロールを横スクロールに変換（Netflix風）
+      e.preventDefault()
+      e.stopPropagation()
+      container.scrollLeft += e.deltaY * 1.5 // 感度調整
       updateScrollPosition(category)
     }
   }, [updateScrollPosition])
@@ -559,7 +573,7 @@ function BannerTestPageInner() {
     }
 
     if (!serviceName.trim()) {
-      toast.error('サービス名を入力してください')
+      toast.error('入れたいテキストを入力してください')
       return
     }
 
@@ -571,6 +585,7 @@ function BannerTestPageInner() {
       const sizeString = `${selectedSize.width}x${selectedSize.height}`
 
       // 既存APIをラップして使用（本番APIは変更しない）
+      // 選択したテンプレートのスタイルを維持するため、basePromptとtemplateImageUrlを渡す
       const res = await fetch('/api/banner/test/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -579,10 +594,11 @@ function BannerTestPageInner() {
           size: sizeString,
           industry: selectedTemplate.industry,
           mainTitle: serviceName,
-          subTitle: tone ? `トーン: ${tone}` : undefined,
-          accentText: customText || undefined,
+          // トーンは削除（元のスタイルを維持するため）
           count: generateCount,
           basePrompt: selectedTemplate.prompt,
+          templateImageUrl: selectedTemplate.imageUrl, // 元の画像URLを渡してスタイル参照
+          templateDisplayTitle: selectedTemplate.displayTitle || selectedTemplate.name,
           logoBase64: logoPreview || undefined,
           personBase64: personPreview || undefined,
         }),
@@ -730,12 +746,14 @@ function BannerTestPageInner() {
                   <div className="hidden sm:flex items-center gap-2 mb-2 sm:mb-3 max-w-2xl">
                     <div className="flex items-center gap-1 px-2 py-0.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 shrink-0">
                       <Sparkles className="w-3 h-3 text-yellow-400" />
-                      <span className="text-[10px] sm:text-xs text-white/80 font-medium whitespace-nowrap">AIプロンプト</span>
+                      <span className="text-[10px] sm:text-xs text-white/80 font-medium whitespace-nowrap">スタイル</span>
                     </div>
                     <p className="text-[10px] sm:text-xs text-gray-300 drop-shadow-lg line-clamp-1 leading-relaxed">
-                      {selectedTemplate.prompt && selectedTemplate.prompt.length > 80 
-                        ? selectedTemplate.prompt.substring(0, 80) + '...'
-                        : selectedTemplate.prompt || 'プロンプトなし'
+                      {selectedTemplate.prompt && selectedTemplate.prompt.length > 10 
+                        ? (selectedTemplate.prompt.length > 100 
+                            ? selectedTemplate.prompt.substring(0, 100) + '...'
+                            : selectedTemplate.prompt)
+                        : selectedTemplate.displayTitle || selectedTemplate.name || selectedTemplate.industry || 'スタイル情報あり'
                       }
                     </p>
                   </div>
@@ -1033,48 +1051,40 @@ function BannerTestPageInner() {
                 <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 md:mb-8 text-white">バナー情報を入力</h2>
                 <div className="bg-gray-900/90 rounded-xl md:rounded-2xl p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 border border-gray-800">
                   
-                  {/* サービス名 */}
+                  {/* 選択中のテンプレート情報 */}
+                  <div className="bg-gray-800/50 rounded-lg p-3 sm:p-4 border border-gray-700">
+                    <div className="flex items-center gap-3">
+                      {selectedTemplate.imageUrl && (
+                        <div className="w-20 h-12 sm:w-24 sm:h-14 rounded overflow-hidden flex-shrink-0">
+                          <img 
+                            src={selectedTemplate.imageUrl} 
+                            alt={selectedTemplate.displayTitle || ''} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm text-gray-400">選択中のスタイル</p>
+                        <p className="text-sm sm:text-base font-bold text-white truncate">
+                          {selectedTemplate.displayTitle || selectedTemplate.name || selectedTemplate.industry}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* 入れたいテキスト（メイン入力） */}
                   <div>
-                    <label className="block text-xs sm:text-sm font-bold mb-2">サービス名 *</label>
+                    <label className="block text-xs sm:text-sm font-bold mb-2">入れたいテキスト *</label>
                     <input
                       type="text"
                       value={serviceName}
                       onChange={(e) => setServiceName(e.target.value)}
-                      placeholder="例: AIライティングツール"
+                      placeholder="例: AIライティングツール比較2026"
                       className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-700 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                  </div>
-
-                  {/* トーン */}
-                  <div>
-                    <label className="block text-xs sm:text-sm font-bold mb-2">トーン</label>
-                    <select
-                      value={tone}
-                      onChange={(e) => setTone(e.target.value)}
-                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-700 rounded-lg sm:rounded-xl text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">選択してください</option>
-                      <option value="プロフェッショナル">プロフェッショナル</option>
-                      <option value="カジュアル">カジュアル</option>
-                      <option value="高級感">高級感</option>
-                      <option value="ポップ">ポップ</option>
-                      <option value="ミニマル">ミニマル</option>
-                      <option value="エネルギッシュ">エネルギッシュ</option>
-                      <option value="上品">上品</option>
-                      <option value="親しみやすい">親しみやすい</option>
-                    </select>
-                  </div>
-
-                  {/* 任意テキスト */}
-                  <div>
-                    <label className="block text-xs sm:text-sm font-bold mb-2">任意テキスト</label>
-                    <input
-                      type="text"
-                      value={customText}
-                      onChange={(e) => setCustomText(e.target.value)}
-                      placeholder="例: 2026年最新版 / SEO重視"
-                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-700 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-1.5">
+                      選択したスタイルを維持しながら、このテキストを反映したバナーを生成します
+                    </p>
                   </div>
                   
                   {/* サイズ選択 */}

@@ -827,12 +827,18 @@ export async function GET(request: NextRequest) {
       dbTemplates = []
     }
     
-    // V2プロンプトを事前にインポート（mapの外で）
-    let v2PromptsMap = new Map<string, { displayTitle?: string; name: string }>()
+    // V2プロンプトを事前にインポート（mapの外で）- 完全なプロンプトを含める
+    let v2PromptsMap = new Map<string, { displayTitle?: string; name: string; fullPrompt: string; genre: string; category: string }>()
     try {
       const { BANNER_PROMPTS_V2 } = await import('@/lib/banner-prompts-v2')
       BANNER_PROMPTS_V2.forEach(p => {
-        v2PromptsMap.set(p.id, { displayTitle: p.displayTitle, name: p.name })
+        v2PromptsMap.set(p.id, { 
+          displayTitle: p.displayTitle, 
+          name: p.name,
+          fullPrompt: p.fullPrompt, // 完全なプロンプトを保持
+          genre: p.genre,
+          category: p.category,
+        })
       })
     } catch (e) {
       // V2プロンプトが見つからない場合は空のマップを使用
@@ -844,11 +850,14 @@ export async function GET(request: NextRequest) {
         const imageApiUrl = `/api/banner/test/image/${t.templateId}`
         const v2Prompt = v2PromptsMap.get(t.templateId)
         
+        // V2プロンプトがある場合は完全なプロンプトを使用、なければDBのプロンプトを使用
+        const fullPrompt = v2Prompt?.fullPrompt || t.prompt || ''
+        
         // 最小限のレスポンス（高速化）
         const baseTemplate = {
           id: t.templateId,
-          industry: t.industry,
-          category: t.category,
+          industry: v2Prompt?.genre || t.industry,
+          category: v2Prompt?.category || t.category,
           imageUrl: imageApiUrl,
           isFeatured: t.isFeatured || false,
           displayTitle: v2Prompt?.displayTitle || v2Prompt?.name || '',
@@ -859,7 +868,7 @@ export async function GET(request: NextRequest) {
         if (!minimal) {
           return {
             ...baseTemplate,
-            prompt: t.prompt ? t.prompt.substring(0, 100) : '', // プロンプトを短縮
+            prompt: fullPrompt, // 完全なプロンプトを返す（スタイル維持のため）
             previewUrl: imageApiUrl,
             size: '1200x628',
             hasGeneratedImage: true,
@@ -890,14 +899,14 @@ export async function GET(request: NextRequest) {
     // DBにデータがない場合はV2プロンプトを使用
     const allTemplates = Array.from(v2PromptsMap.entries()).slice(offset, offset + limit).map(([id, prompt]) => ({
       id,
-      industry: '',
-      category: '',
+      industry: prompt.genre || '',
+      category: prompt.category || '',
       imageUrl: `/api/banner/test/image/${id}`,
       isFeatured: false,
       displayTitle: prompt.displayTitle || prompt.name || '',
       name: prompt.name || '',
       ...(minimal ? {} : {
-        prompt: '',
+        prompt: prompt.fullPrompt || '', // 完全なプロンプトを返す
         previewUrl: `/api/banner/test/image/${id}`,
         size: '1200x628',
         hasGeneratedImage: true,

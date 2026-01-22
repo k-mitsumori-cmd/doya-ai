@@ -13,6 +13,10 @@ type TestGenerateRequest = {
   accentText?: string
   count?: number
   basePrompt?: string // テンプレートのベースプロンプト
+  templateImageUrl?: string // 元のテンプレート画像URL（スタイル参照用）
+  templateDisplayTitle?: string // テンプレートの表示名
+  logoBase64?: string // ロゴ画像（Base64）
+  personBase64?: string // 人物画像（Base64）
 }
 
 // テンプレート別のプロンプト生成（ユーザー例を参考に拡張可能）
@@ -25,41 +29,44 @@ function buildTestBannerPrompt(params: {
   accentText?: string
   variationIndex: number
   basePrompt?: string // テンプレートのベースプロンプト
+  templateDisplayTitle?: string // テンプレートの表示名
 }): string {
-  const { template, size, industry, mainTitle, subTitle, accentText, variationIndex, basePrompt } = params
+  const { template, size, industry, mainTitle, subTitle, accentText, variationIndex, basePrompt, templateDisplayTitle } = params
   const [width, height] = size.split('x')
   
-  // basePromptがある場合は、それをベースにカスタマイズ
-  if (basePrompt) {
-    const variationHints = [
-      'Layout: split-screen with large headline on left, visual elements on right.',
-      'Layout: centered composition with large title at center-top.',
-      'Layout: diagonal dynamic composition with headline angled.',
-      'Layout: minimal with lots of whitespace, headline in upper-left.',
-      'Layout: grid pattern with multiple small UI elements.',
-      'Layout: hero section style with massive title.',
-      'Layout: card-based with rounded corners.',
-      'Layout: asymmetric with headline offset to left.',
-      'Layout: full-width banner with title spanning entire width.',
-      'Layout: magazine-style with clear hierarchy.',
+  // basePromptがある場合は、それをベースにカスタマイズ（スタイルを維持）
+  if (basePrompt && basePrompt.length > 50) {
+    // 元のプロンプトのスタイル部分を抽出して維持
+    // レイアウトのバリエーションは最小限に（元のスタイルを維持するため）
+    const layoutVariations = [
+      '', // バリエーション0: 元のレイアウトをそのまま維持
+      'わずかに構図を調整しつつ、全体のスタイルは維持',
+      '同じスタイルで、テキスト配置を微調整',
     ]
-    const variationHint = variationHints[variationIndex % variationHints.length] || variationHints[0]
+    const layoutHint = layoutVariations[variationIndex % layoutVariations.length] || ''
     
     return `
+【重要】以下のスタイル・デザインを完全に維持してください：
 ${basePrompt}
 
-カスタマイズ内容：
-・メインタイトル：「${mainTitle}」
-${subTitle ? `・サブタイトル：「${subTitle}」` : ''}
-${accentText ? `・アクセントテキスト：「${accentText}」` : ''}
+【変更点】テキストのみ以下に置き換え：
+・メインテキスト：「${mainTitle}」
 
-構図バリエーション：
-${variationHint}
+【維持すべき要素】
+・色使い、配色パターン
+・レイアウト構成
+・フォントスタイル
+・背景デザイン
+・全体的な雰囲気とトーン
+${templateDisplayTitle ? `・「${templateDisplayTitle}」のスタイル` : ''}
 
-出力サイズ：
-・正確に ${width}×${height} px
-・エッジまで埋める（レターボックスなし）
-・日本語テキストは必ず可読性を確保
+${layoutHint ? `【微調整】${layoutHint}` : ''}
+
+【出力仕様】
+・サイズ: ${width}×${height} px
+・エッジまで埋める（余白なし）
+・日本語テキストは可読性を確保
+・元のデザインと同じクオリティを維持
 `.trim()
   }
 
@@ -171,6 +178,10 @@ export async function POST(request: NextRequest) {
       accentText = '',
       count = 10,
       basePrompt,
+      templateImageUrl,
+      templateDisplayTitle,
+      logoBase64,
+      personBase64,
     } = body
 
     if (!mainTitle.trim()) {
@@ -201,6 +212,7 @@ export async function POST(request: NextRequest) {
         accentText,
         variationIndex: i,
         basePrompt,
+        templateDisplayTitle,
       })
       prompts.push(prompt)
     }
