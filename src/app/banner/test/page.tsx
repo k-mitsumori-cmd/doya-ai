@@ -57,6 +57,8 @@ function BannerTestPageInner() {
   const scrollRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
+  const [visibleImages, setVisibleImages] = useState<Set<string>>(new Set()) // ビューポート内の画像
+  const imageObserverRef = useRef<IntersectionObserver | null>(null)
   
   // スクロール位置の状態（左右矢印の表示制御用）
   const [scrollPositions, setScrollPositions] = useState<{ [key: string]: { canScrollLeft: boolean; canScrollRight: boolean } }>({})
@@ -80,6 +82,44 @@ function BannerTestPageInner() {
   const handleImageError = useCallback((id: string) => {
     setImageErrors(prev => new Set(prev).add(id))
   }, [])
+  
+  // IntersectionObserverで画像の遅延読み込みを管理
+  useEffect(() => {
+    // 既存のオブザーバーをクリーンアップ
+    if (imageObserverRef.current) {
+      imageObserverRef.current.disconnect()
+    }
+    
+    // 新しいオブザーバーを作成
+    imageObserverRef.current = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const id = entry.target.getAttribute('data-template-id')
+          if (id && entry.isIntersecting) {
+            setVisibleImages(prev => new Set(prev).add(id))
+          }
+        })
+      },
+      {
+        rootMargin: '200px', // 200px手前から読み込み開始
+        threshold: 0.01,
+      }
+    )
+    
+    return () => {
+      if (imageObserverRef.current) {
+        imageObserverRef.current.disconnect()
+      }
+    }
+  }, [])
+  
+  // 画像要素をオブザーバーに登録するコールバック
+  const observeImage = useCallback((element: HTMLDivElement | null, id: string) => {
+    if (element && imageObserverRef.current) {
+      element.setAttribute('data-template-id', id)
+      imageObserverRef.current.observe(element)
+    }
+  }, [])
 
   // カテゴリマッピング（要求に合わせて明確化）
   const categoryMapping: { [key: string]: string } = {
@@ -98,22 +138,24 @@ function BannerTestPageInner() {
     'ナチュラル / 爽やか': '高級・ラグジュアリー',
   }
 
-  // テンプレートを取得（接続数を最小限にするため、クライアント側キャッシュを活用）
+  // テンプレートを取得（高速化: 最小限のデータを最初に取得）
   useEffect(() => {
-    const CACHE_KEY = 'banner_templates_cache'
-    const CACHE_EXPIRY = 5 * 60 * 1000 // 5分間キャッシュ
+    const CACHE_KEY = 'banner_templates_cache_v2'
+    const CACHE_EXPIRY = 10 * 60 * 1000 // 10分間キャッシュ（延長）
     
     const fetchTemplates = async () => {
+      const startTime = Date.now()
+      
       try {
         // クライアント側キャッシュをチェック
         const cached = sessionStorage.getItem(CACHE_KEY)
         if (cached) {
-          const { data, timestamp } = JSON.parse(cached)
-          const now = Date.now()
-          
-          // キャッシュが有効な場合は使用
-          if (now - timestamp < CACHE_EXPIRY) {
-            if (data.templates) {
+          try {
+            const { data, timestamp } = JSON.parse(cached)
+            const now = Date.now()
+            
+            // キャッシュが有効な場合は使用
+            if (now - timestamp < CACHE_EXPIRY && data.templates) {
               setTemplates(data.templates)
               
               // 各カテゴリの初期表示数を設定
@@ -136,23 +178,29 @@ function BannerTestPageInner() {
               } else if (data.templates.length > 0) {
                 setSelectedTemplate(data.templates[0])
               }
+              
+              setIsLoadingTemplates(false)
+              console.log(`[Templates] Loaded from cache in ${Date.now() - startTime}ms`)
+              return
             }
-            setIsLoadingTemplates(false)
-            return
+          } catch (e) {
+            // キャッシュが壊れている場合は無視
+            sessionStorage.removeItem(CACHE_KEY)
           }
         }
         
-        // キャッシュが無効または存在しない場合はAPIから取得
-        const res = await fetch('/api/banner/test/templates', {
-          // 接続数を最小限にするため、キャッシュヘッダーを追加
-          headers: {
-            'Cache-Control': 'max-age=300', // 5分間キャッシュ
-          },
+        // APIから取得（最小限モードで高速化）
+        const res = await fetch('/api/banner/test/templates?minimal=true&limit=100', {
+          next: { revalidate: 300 }, // Next.js ISR: 5分間キャッシュ
         })
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`)
+        }
+        
         const data = await res.json()
         
         if (data.templates) {
-          // すべてのテンプレートを設定（画像URLがないものも含む）
           setTemplates(data.templates)
           
           // 各カテゴリの初期表示数を設定
@@ -166,12 +214,16 @@ function BannerTestPageInner() {
           setVisibleCounts(initialCounts)
           
           // クライアント側キャッシュに保存
-          sessionStorage.setItem(CACHE_KEY, JSON.stringify({
-            data,
-            timestamp: Date.now(),
-          }))
+          try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+              data,
+              timestamp: Date.now(),
+            }))
+          } catch (e) {
+            // sessionStorageが満杯の場合は無視
+          }
           
-          // featuredTemplateを優先的に選択、なければ最初のテンプレート
+          // featuredTemplateを優先的に選択
           if (data.featuredTemplateId) {
             const featured = data.templates.find((t: BannerTemplate) => t.id === data.featuredTemplateId)
             if (featured) {
@@ -182,6 +234,8 @@ function BannerTestPageInner() {
           } else if (data.templates.length > 0) {
             setSelectedTemplate(data.templates[0])
           }
+          
+          console.log(`[Templates] Loaded ${data.templates.length} templates in ${Date.now() - startTime}ms (API: ${data.loadTime}ms)`)
         }
       } catch (err) {
         console.error('Failed to fetch templates:', err)
@@ -680,11 +734,13 @@ function BannerTestPageInner() {
                         {categoryTemplates.map((template) => {
                           const hasError = imageErrors.has(template.id)
                           const isLoaded = loadedImages.has(template.id)
+                          const isVisible = visibleImages.has(template.id)
                           const showImage = template.imageUrl && !hasError
                           
                           return (
                             <motion.div
                               key={template.id}
+                              ref={(el) => observeImage(el, template.id)}
                               whileHover={{ scale: 1.08, y: -12, zIndex: 10 }}
                               whileTap={{ scale: 0.98 }}
                               onClick={() => {
@@ -697,7 +753,7 @@ function BannerTestPageInner() {
                                   : 'ring-1 ring-gray-800 hover:ring-gray-600'
                               }`}
                             >
-                              {showImage ? (
+                              {showImage && isVisible ? (
                                 <>
                                   {/* 読み込み中のプレースホルダー */}
                                   {!isLoaded && (
@@ -707,7 +763,7 @@ function BannerTestPageInner() {
                                   )}
                                   <img
                                     src={template.imageUrl!}
-                                    alt={template.prompt}
+                                    alt={template.displayTitle || template.industry}
                                     loading="lazy"
                                     decoding="async"
                                     onLoad={() => handleImageLoad(template.id)}
@@ -715,6 +771,11 @@ function BannerTestPageInner() {
                                     className={`w-full h-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                                   />
                                 </>
+                              ) : showImage && !isVisible ? (
+                                // ビューポート外：プレースホルダー表示（画像は読み込まない）
+                                <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex items-center justify-center">
+                                  <div className="w-8 h-8 rounded-full bg-gray-700/50" />
+                                </div>
                               ) : (
                                 <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex flex-col items-center justify-center p-3 md:p-4 relative overflow-hidden">
                                   <div className="absolute inset-0 opacity-20">
@@ -722,12 +783,12 @@ function BannerTestPageInner() {
                                   </div>
                                   <ImageIcon className="w-8 h-8 md:w-12 md:h-12 text-gray-500 mb-2 relative z-10" />
                                   <p className="text-xs md:text-sm text-gray-500 text-center relative z-10 line-clamp-2 px-2">
-                                    {template.prompt.split('、')[0] || template.industry}
+                                    {template.displayTitle || template.industry}
                                   </p>
                                 </div>
                               )}
                               {/* 拡大ボタン（ホバー時に表示） */}
-                              {showImage && (
+                              {showImage && isLoaded && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()

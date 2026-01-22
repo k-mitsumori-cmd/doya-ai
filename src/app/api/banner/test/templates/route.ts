@@ -793,195 +793,133 @@ export const generateMoreVariations = () => {
 }
 
 // GET: テンプレート一覧を取得（DBから画像URLを取得）
-// カテゴリに基づいてフォールバック画像を取得
-function getFallbackImageUrl(category: string, industry: string): string {
-  // カテゴリベースのマッピング
-  const categoryImageMap: { [key: string]: string } = {
-    'it': '/banner-samples/cat-it.png',
-    'recruit': '/banner-samples/cat-marketing.png',
-    'ec': '/banner-samples/cat-ec.png',
-    'beauty': '/banner-samples/cat-beauty.png',
-  }
-  
-  // 業種名ベースのマッピング（より具体的）
-  const industryImageMap: { [key: string]: string } = {
-    'ビジネス / ブランディング': '/banner-samples/cat-marketing.png',
-    'UX / デザイン / テクノロジー': '/banner-samples/cat-it.png',
-    'Web / IT / スクール / 教育': '/banner-samples/cat-education.png',
-    '転職・採用・人材': '/banner-samples/cat-marketing.png',
-    'SaaS / BtoBサービス': '/banner-samples/cat-it.png',
-    'かわいい / ポップ': '/banner-samples/cat-beauty.png',
-    'かっこいい / スタイリッシュ': '/banner-samples/cat-it.png',
-    '高級感 / きれいめ': '/banner-samples/cat-beauty.png',
-    'ナチュラル / 爽やか': '/banner-samples/cat-health.png',
-    'カジュアル / 親しみやすい': '/banner-samples/cat-food.png',
-    'にぎやか / ポップ': '/banner-samples/cat-ec.png',
-    'イラスト / アート': '/banner-samples/cat-beauty.png',
-    '人物写真 / ポートレート': '/banner-samples/cat-marketing.png',
-    '切り抜き / シルエット': '/banner-samples/cat-ec.png',
-    '和風 / ジャパニーズ': '/banner-samples/cat-food.png',
-    'ネオン / サイバー': '/banner-samples/cat-it.png',
-    'レトロ / エスニック': '/banner-samples/cat-food.png',
-    '文字組み / タイポグラフィ': '/banner-samples/cat-marketing.png',
-    'セール / キャンペーン': '/banner-samples/cat-ec.png',
-    '季節感 / イベント': '/banner-samples/cat-ec.png',
-    '写真ベース / ビジュアル重視': '/banner-samples/cat-marketing.png',
-    'グラデーション / カラー重視': '/banner-samples/cat-it.png',
-    'ミニマル / シンプル': '/banner-samples/cat-marketing.png',
-    '抽象 / パターン': '/banner-samples/cat-it.png',
-    'データ可視化 / 図解': '/banner-samples/cat-finance.png',
-    'UI要素 / スクリーンショット': '/banner-samples/cat-it.png',
-    '分割レイアウト': '/banner-samples/cat-marketing.png',
-    'オーバーレイ / フィルター': '/banner-samples/cat-beauty.png',
-    'ビズリーチ風 / プロフェッショナル': '/banner-samples/cat-marketing.png',
-  }
-  
-  // 業種名でマッチ → カテゴリでマッチ → デフォルト
-  return industryImageMap[industry] || categoryImageMap[category] || '/banner-samples/cat-it.png'
-}
+// 最適化: 必要最小限のフィールドのみ返す
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now()
+  
   try {
-    // DBから既存のテンプレート情報を取得
+    // クエリパラメータを取得（ページネーション対応）
+    const { searchParams } = new URL(request.url)
+    const limit = parseInt(searchParams.get('limit') || '100') // デフォルト100件
+    const offset = parseInt(searchParams.get('offset') || '0')
+    const minimal = searchParams.get('minimal') === 'true' // 最小限のデータのみ返す
+    
+    // DBから既存のテンプレート情報を取得（最適化: 必要なフィールドのみ）
     let dbTemplates: any[] = []
-    let dbError: any = null
     try {
       dbTemplates = await prisma.bannerTemplate.findMany({
         select: {
           templateId: true,
-          imageUrl: true,
-          previewUrl: true,
           isFeatured: true,
           industry: true,
           category: true,
-          prompt: true,
-          size: true,
+          // minimalモードでは不要なフィールドを省略
+          ...(minimal ? {} : { prompt: true }),
         },
-        take: 500, // 最大500件に制限
+        take: limit,
+        skip: offset,
+        orderBy: { isFeatured: 'desc' }, // フィーチャーを優先
       })
-      console.log(`[Templates API] Fetched ${dbTemplates.length} templates from DB`)
+      console.log(`[Templates API] Fetched ${dbTemplates.length} templates in ${Date.now() - startTime}ms`)
     } catch (err: any) {
       console.error('[Templates API] Database error:', err)
-      dbError = err
       dbTemplates = []
     }
     
-    // テンプレート定義を取得（DBにデータがない場合のみ静的定義を使用）
-    let allTemplates: any[] = []
-    if (dbTemplates.length > 0) {
-      // DBからのデータを使用
-      allTemplates = dbTemplates.map(t => ({
-        id: t.templateId,
-        industry: t.industry,
-        category: t.category,
-        prompt: t.prompt,
-        size: t.size || '1200x628',
-      }))
-    } else {
-      // DBにデータがない場合はV2プロンプトを使用
-      try {
-        const { BANNER_PROMPTS_V2 } = await import('@/lib/banner-prompts-v2')
-        allTemplates = BANNER_PROMPTS_V2.map(p => ({
-          id: p.id,
-          industry: p.genre,
-          category: p.category,
-          prompt: p.fullPrompt,
-          size: '1200x628',
-          displayTitle: p.displayTitle || p.name, // 日本語の短いタイトル
-          name: p.name, // プロンプト名
-        }))
-      } catch (templateError: any) {
-        console.error('[Templates API] Template generation error:', templateError)
-        // フォールバック: 旧プロンプトを使用
-        allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
-      }
+    // V2プロンプトを事前にインポート（mapの外で）
+    let v2PromptsMap = new Map<string, { displayTitle?: string; name: string }>()
+    try {
+      const { BANNER_PROMPTS_V2 } = await import('@/lib/banner-prompts-v2')
+      BANNER_PROMPTS_V2.forEach(p => {
+        v2PromptsMap.set(p.id, { displayTitle: p.displayTitle, name: p.name })
+      })
+    } catch (e) {
+      // V2プロンプトが見つからない場合は空のマップを使用
     }
     
-    // DBからデータがある場合は直接使用
+    // DBからデータがある場合
     if (dbTemplates.length > 0) {
-      // V2プロンプトを事前にインポート（mapの外で）
-      let v2PromptsMap = new Map<string, { displayTitle?: string; name: string }>()
-      try {
-        const { BANNER_PROMPTS_V2 } = await import('@/lib/banner-prompts-v2')
-        BANNER_PROMPTS_V2.forEach(p => {
-          v2PromptsMap.set(p.id, { displayTitle: p.displayTitle, name: p.name })
-        })
-      } catch (e) {
-        // V2プロンプトが見つからない場合は空のマップを使用
-      }
-      
       const templates = dbTemplates.map((t) => {
-        const fallbackImage = getFallbackImageUrl(t.category, t.industry)
-        // DBにテンプレートが存在する場合は、常に画像APIを使用
-        // 画像APIがDBから画像を取得して返す（画像がない場合は404を返す）
         const imageApiUrl = `/api/banner/test/image/${t.templateId}`
-        
-        // 常に画像APIを使用（画像APIが存在確認を行う）
-        const imageUrl = imageApiUrl
-        const hasGeneratedImage = true
-        
-        // V2プロンプトからdisplayTitleを取得
         const v2Prompt = v2PromptsMap.get(t.templateId)
-        const displayTitle = v2Prompt?.displayTitle || v2Prompt?.name || ''
-        const name = v2Prompt?.name || ''
         
-        return {
+        // 最小限のレスポンス（高速化）
+        const baseTemplate = {
           id: t.templateId,
           industry: t.industry,
           category: t.category,
-          prompt: t.prompt ? t.prompt.substring(0, 200) : '',
-          size: t.size || '1200x628',
-          imageUrl,
-          previewUrl: imageUrl, // 同じURLを使用
+          imageUrl: imageApiUrl,
           isFeatured: t.isFeatured || false,
-          hasGeneratedImage,
-          displayTitle, // 日本語の短いタイトル
-          name, // プロンプト名
+          displayTitle: v2Prompt?.displayTitle || v2Prompt?.name || '',
+          name: v2Prompt?.name || '',
         }
+        
+        // minimalモードでない場合は追加フィールドを含める
+        if (!minimal) {
+          return {
+            ...baseTemplate,
+            prompt: t.prompt ? t.prompt.substring(0, 100) : '', // プロンプトを短縮
+            previewUrl: imageApiUrl,
+            size: '1200x628',
+            hasGeneratedImage: true,
+          }
+        }
+        
+        return baseTemplate
       })
       
       const featuredTemplate = dbTemplates.find((t) => t.isFeatured) || dbTemplates[0]
       const featuredTemplateId = featuredTemplate?.templateId || templates[0]?.id || null
       
-      return NextResponse.json({
+      // レスポンスヘッダーにキャッシュ設定を追加
+      const response = NextResponse.json({
         templates,
         featuredTemplateId,
         count: templates.length,
         generatedCount: dbTemplates.length,
+        loadTime: Date.now() - startTime,
       })
+      
+      // 5分間のキャッシュを設定
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+      
+      return response
     }
     
-    // DBにデータがない場合でも、V2プロンプトのIDに基づいて画像APIのURLを返す
-    // 画像APIがDBから画像を取得するため、DBに画像があれば表示される
-    const templates = allTemplates.map((t) => {
-      // 常に画像APIのURLを使用（画像APIがDBから画像を取得する）
-      const imageApiUrl = `/api/banner/test/image/${t.id}`
-      
-      return {
-        ...t,
-        imageUrl: imageApiUrl,
-        previewUrl: imageApiUrl,
-        isFeatured: false,
-        hasGeneratedImage: true, // 画像APIが存在確認を行う
-      }
+    // DBにデータがない場合はV2プロンプトを使用
+    const allTemplates = Array.from(v2PromptsMap.entries()).slice(offset, offset + limit).map(([id, prompt]) => ({
+      id,
+      industry: '',
+      category: '',
+      imageUrl: `/api/banner/test/image/${id}`,
+      isFeatured: false,
+      displayTitle: prompt.displayTitle || prompt.name || '',
+      name: prompt.name || '',
+      ...(minimal ? {} : {
+        prompt: '',
+        previewUrl: `/api/banner/test/image/${id}`,
+        size: '1200x628',
+        hasGeneratedImage: true,
+      }),
+    }))
+    
+    const response = NextResponse.json({
+      templates: allTemplates,
+      featuredTemplateId: allTemplates[0]?.id || null,
+      count: allTemplates.length,
+      generatedCount: 0,
+      loadTime: Date.now() - startTime,
     })
     
-    const featuredTemplate = dbTemplates.find((t) => t.isFeatured) || dbTemplates[0]
-    const featuredTemplateId = featuredTemplate?.templateId || templates[0]?.id || null
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
     
-    return NextResponse.json({
-      templates,
-      featuredTemplateId,
-      count: templates.length,
-      generatedCount: dbTemplates.length,
-    })
+    return response
   } catch (err: any) {
     console.error('[Templates API] Get templates error:', err)
-    console.error('[Templates API] Error stack:', err.stack)
     return NextResponse.json(
       { 
         error: err.message || '取得に失敗しました',
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
       }, 
       { status: 500 }
     )
