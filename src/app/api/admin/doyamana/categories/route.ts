@@ -1,55 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { BANNER_PROMPTS_V2, GENRES } from '@/lib/banner-prompts-v2'
 
 export const dynamic = 'force-dynamic'
 
-// カテゴリ一覧取得（BannerTemplateから動的に取得）
+// V2プロンプトのマップを作成（templateId -> V2プロンプト情報）
+const v2PromptsMap = new Map(BANNER_PROMPTS_V2.map(p => [p.id, p]))
+
+// カテゴリ一覧取得（V2プロンプトのgenreを使用）
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const includeStats = searchParams.get('includeStats') === 'true'
 
-    // BannerTemplateからユニークなカテゴリと業種を取得
+    // BannerTemplateからテンプレートIDを取得
     const templates = await prisma.bannerTemplate.findMany({
       select: {
-        category: true,
-        industry: true,
+        templateId: true,
         isActive: true,
       }
     })
 
-    // カテゴリごとに集計
-    const categoryMap = new Map<string, {
+    // V2プロンプトのgenreごとに集計
+    const genreMap = new Map<string, {
       name: string,
       slug: string,
       imageCount: number,
       activeCount: number,
-      industries: Set<string>
     }>()
 
     templates.forEach(t => {
-      const existing = categoryMap.get(t.category)
+      // V2プロンプトからgenreを取得
+      const v2Prompt = v2PromptsMap.get(t.templateId)
+      const genre = v2Prompt?.genre || 'その他'
+      
+      const existing = genreMap.get(genre)
       if (existing) {
         existing.imageCount++
         if (t.isActive) existing.activeCount++
-        existing.industries.add(t.industry)
       } else {
-        categoryMap.set(t.category, {
-          name: getCategoryDisplayName(t.category),
-          slug: t.category,
+        genreMap.set(genre, {
+          name: genre, // genreはすでに日本語名
+          slug: genre, // slugもgenreを使用
           imageCount: 1,
           activeCount: t.isActive ? 1 : 0,
-          industries: new Set([t.industry])
         })
       }
     })
 
     // 配列に変換
-    const categories = Array.from(categoryMap.entries()).map(([slug, data], index) => ({
-      id: slug, // カテゴリスラッグをIDとして使用
+    const categories = Array.from(genreMap.entries()).map(([genre, data], index) => ({
+      id: genre, // genreをIDとして使用
       name: data.name,
       slug: data.slug,
-      description: `${Array.from(data.industries).join(', ')}`,
+      description: `${data.imageCount}件の画像`,
       order: index,
       isActive: true,
       imageCount: data.imageCount,
@@ -57,8 +61,16 @@ export async function GET(request: NextRequest) {
       totalUsage: 0, // 使用回数は別途トラッキングが必要
     }))
 
-    // 名前でソート
-    categories.sort((a, b) => a.name.localeCompare(b.name, 'ja'))
+    // GENRES定義の順序でソート（定義されていないものは最後）
+    const genreOrder = GENRES.map(g => g.name)
+    categories.sort((a, b) => {
+      const aIndex = genreOrder.indexOf(a.name)
+      const bIndex = genreOrder.indexOf(b.name)
+      if (aIndex === -1 && bIndex === -1) return a.name.localeCompare(b.name, 'ja')
+      if (aIndex === -1) return 1
+      if (bIndex === -1) return -1
+      return aIndex - bIndex
+    })
 
     return NextResponse.json({ categories })
   } catch (error) {
@@ -68,26 +80,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
-
-// カテゴリ表示名のマッピング
-function getCategoryDisplayName(slug: string): string {
-  const displayNames: Record<string, string> = {
-    'it': 'IT・テクノロジー',
-    'ec': 'EC・通販',
-    'recruit': '採用・HR',
-    'beauty': '美容・コスメ',
-    'food': '飲料・食品',
-    'fashion': 'ファッション',
-    'education': '教育・学習',
-    'finance': '金融・保険',
-    'realestate': '不動産',
-    'medical': '医療・ヘルスケア',
-    'travel': '旅行・観光',
-    'entertainment': 'エンタメ',
-    'sports': 'スポーツ',
-    'lifestyle': 'ライフスタイル',
-    'business': 'ビジネス・BtoB',
-  }
-  return displayNames[slug] || slug
 }

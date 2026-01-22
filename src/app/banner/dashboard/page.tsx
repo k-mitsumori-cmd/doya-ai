@@ -162,6 +162,9 @@ function BannerTestPageInner() {
   const [lockModalType, setLockModalType] = useState<LockType>(null)
   const [lockedTemplate, setLockedTemplate] = useState<BannerTemplate | null>(null)
   
+  // 選択中のテンプレートのロック状態
+  const [selectedTemplateLockType, setSelectedTemplateLockType] = useState<LockType>(null)
+  
   // 今日の生成数（ローカルストレージから取得）
   const [todayGenerationCount, setTodayGenerationCount] = useState(0)
   
@@ -295,7 +298,14 @@ function BannerTestPageInner() {
   }, [currentPlan, planConfig])
   
   // ロック画像クリック時のハンドラ
+  // ヒーローセクションにも画像を表示し、ロック状態を明示
   const handleLockedImageClick = useCallback((template: BannerTemplate, lockType: LockType) => {
+    // ヒーローセクションに画像を表示（ロック状態でも）
+    setSelectedTemplate(template)
+    setSelectedBanner(null)
+    // ヒーローセクションにロック状態を表示
+    setSelectedTemplateLockType(lockType)
+    // ロックモーダルを表示
     setLockedTemplate(template)
     setLockModalType(lockType)
     setShowLockModal(true)
@@ -974,6 +984,49 @@ function BannerTestPageInner() {
           <div className={`sticky ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} z-20 h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] w-full overflow-hidden`}>
             {/* グラデーション: 下は黒、上は明るく */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
+            
+            {/* ロック状態のオーバーレイ */}
+            {selectedTemplateLockType && !selectedBanner && (
+              <div className="absolute inset-0 z-15 flex items-center justify-center">
+                <div className={`absolute inset-0 ${
+                  selectedTemplateLockType === 'login' 
+                    ? 'bg-red-900/30' 
+                    : 'bg-yellow-900/30'
+                }`} />
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className={`relative z-10 flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-6 rounded-xl backdrop-blur-md ${
+                    selectedTemplateLockType === 'login'
+                      ? 'bg-red-500/20 border border-red-500/50'
+                      : 'bg-yellow-500/20 border border-yellow-500/50'
+                  }`}
+                >
+                  <div className={`p-3 sm:p-4 rounded-full ${
+                    selectedTemplateLockType === 'login'
+                      ? 'bg-red-500/30'
+                      : 'bg-yellow-500/30'
+                  }`}>
+                    <Lock className={`w-8 h-8 sm:w-12 sm:h-12 ${
+                      selectedTemplateLockType === 'login'
+                        ? 'text-red-400'
+                        : 'text-yellow-400'
+                    }`} />
+                  </div>
+                  <p className="text-white text-sm sm:text-lg font-bold text-center">
+                    {selectedTemplateLockType === 'login'
+                      ? 'ログインすると使えます'
+                      : 'PROプランで解放'}
+                  </p>
+                  <p className="text-gray-300 text-xs sm:text-sm text-center max-w-xs">
+                    {selectedTemplateLockType === 'login'
+                      ? '無料アカウントを作成して、このスタイルで画像を生成しましょう'
+                      : 'PROプランにアップグレードして、全てのスタイルを使い放題に'}
+                  </p>
+                </motion.div>
+              </div>
+            )}
+            
             {selectedBanner ? (
               <img
                 src={selectedBanner.imageUrl}
@@ -1047,18 +1100,39 @@ function BannerTestPageInner() {
                 <div className="flex gap-2 flex-wrap">
                   {!selectedBanner && selectedTemplate && (
                     <>
-                      <button
-                        onClick={() => {
-                          const formElement = document.getElementById('banner-form')
-                          if (formElement) {
-                            formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                          }
-                        }}
-                        className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
-                      >
-                        <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
-                        <span className="whitespace-nowrap">このスタイルで生成</span>
-                      </button>
+                      {/* ロック状態の場合 */}
+                      {selectedTemplateLockType ? (
+                        <button
+                          onClick={() => {
+                            setLockedTemplate(selectedTemplate)
+                            setLockModalType(selectedTemplateLockType)
+                            setShowLockModal(true)
+                          }}
+                          className={`px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 font-bold rounded-md transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg ${
+                            selectedTemplateLockType === 'login'
+                              ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700'
+                              : 'bg-gradient-to-r from-yellow-500 to-orange-500 text-black hover:from-yellow-600 hover:to-orange-600'
+                          }`}
+                        >
+                          <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="whitespace-nowrap">
+                            {selectedTemplateLockType === 'login' ? 'ログインして使う' : 'PROプランで解放'}
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            const formElement = document.getElementById('banner-form')
+                            if (formElement) {
+                              formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                            }
+                          }}
+                          className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
+                        >
+                          <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
+                          <span className="whitespace-nowrap">このスタイルで生成</span>
+                        </button>
+                      )}
                       {/* 画像拡大ボタン */}
                       <button
                         onClick={() => {
@@ -1196,6 +1270,7 @@ function BannerTestPageInner() {
                                 } else {
                                   setSelectedTemplate(template)
                                   setSelectedBanner(null)
+                                  setSelectedTemplateLockType(null) // ロック状態をリセット
                                 }
                               }}
                               className={`group flex-shrink-0 w-36 h-20 sm:w-48 sm:h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 relative ${

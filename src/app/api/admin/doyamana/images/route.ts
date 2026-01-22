@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { BANNER_PROMPTS_V2, GENRES } from '@/lib/banner-prompts-v2'
 
 export const dynamic = 'force-dynamic'
 
-// 画像一覧取得（BannerTemplateテーブルを使用）
+// V2プロンプトのマップを作成（templateId -> V2プロンプト情報）
+const v2PromptsMap = new Map(BANNER_PROMPTS_V2.map(p => [p.id, p]))
+
+// 画像一覧取得（BannerTemplateテーブルを使用、V2プロンプトのgenreを参照）
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const category = searchParams.get('category')
+    const genre = searchParams.get('category') // フロントエンドからはcategoryとして送られるが、実際はgenre
     const status = searchParams.get('status') // 'active' | 'inactive' | 'all'
     const search = searchParams.get('search')
     const page = parseInt(searchParams.get('page') || '1')
@@ -16,8 +20,17 @@ export async function GET(request: NextRequest) {
     // フィルタ条件構築
     const where: Record<string, unknown> = {}
     
-    if (category && category !== 'all') {
-      where.category = category
+    // genreフィルタ: V2プロンプトのgenreに基づいてtemplateIdでフィルタ
+    let filteredTemplateIds: string[] | null = null
+    if (genre && genre !== 'all') {
+      // 指定されたgenreに一致するV2プロンプトのIDを取得
+      filteredTemplateIds = BANNER_PROMPTS_V2
+        .filter(p => p.genre === genre)
+        .map(p => p.id)
+      
+      if (filteredTemplateIds.length > 0) {
+        where.templateId = { in: filteredTemplateIds }
+      }
     }
     
     if (status === 'active') {
@@ -47,22 +60,29 @@ export async function GET(request: NextRequest) {
       prisma.bannerTemplate.count({ where })
     ])
 
-    // フロントエンド用にデータを整形
-    const formattedImages = images.map(img => ({
-      id: img.id,
-      templateId: img.templateId,
-      category: img.category,
-      industry: img.industry,
-      prompt: img.prompt,
-      promptSummary: img.prompt.substring(0, 50) + (img.prompt.length > 50 ? '...' : ''),
-      imageUrl: img.imageUrl,
-      previewUrl: img.previewUrl,
-      isActive: img.isActive,
-      isFeatured: img.isFeatured,
-      size: img.size,
-      createdAt: img.createdAt,
-      updatedAt: img.updatedAt,
-    }))
+    // フロントエンド用にデータを整形（V2プロンプトのgenreを使用）
+    const formattedImages = images.map(img => {
+      const v2Prompt = v2PromptsMap.get(img.templateId)
+      return {
+        id: img.id,
+        templateId: img.templateId,
+        // V2プロンプトのgenreを優先、なければDBのindustryを使用
+        category: v2Prompt?.genre || img.industry,
+        industry: v2Prompt?.genre || img.industry,
+        prompt: v2Prompt?.fullPrompt || img.prompt,
+        promptSummary: (v2Prompt?.fullPrompt || img.prompt).substring(0, 50) + ((v2Prompt?.fullPrompt || img.prompt).length > 50 ? '...' : ''),
+        imageUrl: img.imageUrl,
+        previewUrl: img.previewUrl,
+        isActive: img.isActive,
+        isFeatured: img.isFeatured,
+        size: img.size,
+        createdAt: img.createdAt,
+        updatedAt: img.updatedAt,
+        // 追加情報
+        displayTitle: v2Prompt?.displayTitle || '',
+        name: v2Prompt?.name || '',
+      }
+    })
 
     return NextResponse.json({
       images: formattedImages,
