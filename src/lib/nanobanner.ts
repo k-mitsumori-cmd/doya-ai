@@ -993,10 +993,17 @@ async function generateSingleBanner(
                   text: [
                     prompt,
                     '',
-                    '--- OUTPUT CONSTRAINTS ---',
-                    `Aspect ratio: ${aspectRatio}`,
-                    `Target size: ${size}px`,
-                    `Return an IMAGE output (PNG)`,
+                    '=== MANDATORY OUTPUT CONSTRAINTS ===',
+                    `**EXACT OUTPUT SIZE: ${w}x${h} pixels (width x height)**`,
+                    `**ASPECT RATIO: ${aspectRatio}**`,
+                    '',
+                    'CRITICAL SIZE REQUIREMENTS:',
+                    `- Output MUST be EXACTLY ${w} pixels wide and ${h} pixels tall.`,
+                    '- Fill the entire canvas edge-to-edge with content.',
+                    '- NO letterboxing, NO empty bars, NO padding.',
+                    '- DO NOT change the aspect ratio.',
+                    '',
+                    'Return ONE PNG image.',
                   ].join('\n'),
                 },
               ],
@@ -1263,17 +1270,30 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
   const cta = (options.ctaText || '').trim()
   const company = (options.companyName || '').trim()
 
-  // customImagePrompt を使う場合は、最小限の制約のみ追加
+  // customImagePrompt を使う場合は、サイズ制約を強調して追加
   // プロンプト自体にレイアウト指示が含まれているため、共通のレイアウト指示は追加しない
   if (options?.customImagePrompt) {
+    const aspectRatio = parseInt(width) > parseInt(height) ? 'landscape (horizontal)' : 
+                        parseInt(width) < parseInt(height) ? 'portrait (vertical)' : 'square'
     return [
       '',
-      '=== OUTPUT CONSTRAINTS ===',
-      `Output dimensions: ${width}x${height} px.`,
-      '- Fill the entire canvas. No letterboxing or empty bars.',
+      '=== CRITICAL OUTPUT CONSTRAINTS (MUST FOLLOW) ===',
+      `**EXACT OUTPUT DIMENSIONS: ${width}x${height} pixels**`,
+      `**ASPECT RATIO: ${aspectRatio}**`,
+      '',
+      'SIZE REQUIREMENTS (MANDATORY):',
+      `- The output image MUST be EXACTLY ${width} pixels wide and ${height} pixels tall.`,
+      `- DO NOT change the aspect ratio under any circumstances.`,
+      `- Fill the ENTIRE canvas edge-to-edge with content.`,
+      `- NO letterboxing, NO empty bars at top/bottom/sides, NO padding, NO borders.`,
+      `- If the content doesn\'t fit, scale and crop appropriately to fill ${width}x${height}.`,
+      '',
+      'CONTENT REQUIREMENTS:',
       '- Include readable Japanese text as specified in the prompt.',
       '- Use clean, legible Japanese typography.',
-      'FINAL: Return ONE PNG image.',
+      '- Ensure all text is fully visible within the frame.',
+      '',
+      `FINAL: Return ONE PNG image at EXACTLY ${width}x${height} pixels.`,
     ]
       .filter(Boolean)
       .join('\n')

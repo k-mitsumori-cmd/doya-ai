@@ -70,11 +70,14 @@ ${customInstructions}
 4. Keep all decorative elements, backgrounds, and visual effects identical${customPrompt ? ' (unless modified by custom instructions)' : ''}
 5. The Japanese text "${mainTitle}" must be clearly readable and properly positioned
 
-=== OUTPUT SPECIFICATIONS ===
-- Dimensions: ${width}x${height} pixels
-- Fill entire canvas (no letterboxing)
-- Japanese text must be legible with clean typography
-- Return ONE PNG image
+=== CRITICAL OUTPUT SPECIFICATIONS (MUST FOLLOW) ===
+**EXACT OUTPUT SIZE: ${width}x${height} pixels**
+- The output image MUST be EXACTLY ${width} pixels wide and ${height} pixels tall.
+- DO NOT change the aspect ratio under any circumstances.
+- Fill the ENTIRE canvas edge-to-edge with content.
+- NO letterboxing, NO empty bars at top/bottom/sides, NO padding, NO borders.
+- Japanese text must be legible with clean typography.
+- Return ONE PNG image at EXACTLY ${width}x${height} pixels.
 `.trim()
   }
 
@@ -165,10 +168,13 @@ ${subTitle ? `・サブタイトル：「${subTitle}」` : ''}
 全体の印象：
 「SEOやコンテンツマーケに本気な人がクリックしたくなる、"保存版・決定版"感のあるAIツール比較バナー」
 
-出力サイズ：
-・正確に ${width}×${height} px
-・エッジまで埋める（レターボックスなし）
+=== 出力サイズ（必須） ===
+**正確に ${width}×${height} ピクセル**
+・出力画像は必ず幅${width}px、高さ${height}pxで生成すること
+・アスペクト比を絶対に変更しないこと
+・キャンバス全体をコンテンツで埋める（レターボックス、余白、パディング、ボーダーなし）
 ・日本語テキストは必ず可読性を確保
+・1枚のPNG画像を ${width}×${height} ピクセルで返すこと
 `.trim()
 
   return prompt
