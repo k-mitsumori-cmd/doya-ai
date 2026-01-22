@@ -22,13 +22,13 @@ async function runWithRetry(cmd, args, options = {}, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     console.log(`[db-push] Attempt ${attempt}/${maxRetries}: ${cmd} ${args.join(' ')}`)
     
-    const r = spawnSync(cmd, args, {
-      stdio: 'pipe',
-      shell: true,
-      env: process.env,
-      encoding: 'utf8',
-      ...options,
-    })
+  const r = spawnSync(cmd, args, {
+    stdio: 'pipe',
+    shell: true,
+    env: process.env,
+    encoding: 'utf8',
+    ...options,
+  })
 
     if (r.status === 0) {
       // 成功時は出力を表示（デバッグ用）
@@ -113,7 +113,7 @@ if (existsSync(prismaPath)) {
 // 非同期関数でリトライ付き実行
 async function main() {
   const success = await runWithRetry(prismaCmd, args, {}, 3)
-  process.exit(success ? 0 : 1)
+process.exit(success ? 0 : 1)
 }
 
 main().catch((err) => {

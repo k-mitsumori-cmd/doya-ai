@@ -207,21 +207,21 @@ JSONのみを出力してください。必ず8問すべてを生成してくだ
     let aiGenerationError: string | null = null
     
     try {
-      const aiResponse = await geminiGenerateText({
+    const aiResponse = await geminiGenerateText({
         model: CARD_GENERATION_MODEL, // カード生成はgemini-2.0-flashを使用
-        parts: [{ text: prompt }],
-        generationConfig: {
+      parts: [{ text: prompt }],
+      generationConfig: {
           maxOutputTokens: 1000, // 8問生成するため増やす
-          temperature: 0.7,
-        },
-      })
+        temperature: 0.7,
+      },
+    })
 
       // AIレスポンスが空の場合はエラー
       if (!aiResponse || aiResponse.trim() === '') {
         throw new Error('AI質問生成が空のレスポンスを返しました')
       }
 
-      // JSONをパース
+    // JSONをパース
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         questionData = JSON.parse(jsonMatch[0])
