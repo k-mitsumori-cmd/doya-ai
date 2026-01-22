@@ -82,7 +82,7 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
   },
   ENTERPRISE: {
     label: 'Enterpriseプラン',
-    maxCountPerGeneration: 10,
+    maxCountPerGeneration: 5, // 5枚に変更
     dailyLimit: 200,
     imagesPerGenre: Infinity, // 全画像
     allUnlocked: true,
@@ -96,7 +96,7 @@ type LockType = 'login' | 'pro' | 'enterprise' | null
 const PLAN_LIMITS = {
   FREE: { maxCount: 3, label: '無料プラン' },
   PRO: { maxCount: 5, label: 'PROプラン' },
-  ENTERPRISE: { maxCount: 10, label: 'Enterpriseプラン' },
+  ENTERPRISE: { maxCount: 5, label: 'Enterpriseプラン' },
 }
 
 export default function BannerTestPage() {
@@ -1596,14 +1596,14 @@ function BannerTestPageInner() {
                     <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">
                       デフォルトは3枚（A/B/C）。
                       {userPlan === 'FREE' ? (
-                        <span className="text-yellow-400"> 有料プランは最大10枚まで増やせます。</span>
+                        <span className="text-yellow-400"> 有料プランは最大5枚まで増やせます。</span>
                       ) : (
                         <span className="text-green-400"> {planLimits.label}で最大{planLimits.maxCount}枚まで生成可能。</span>
                       )}
                       <span className="text-orange-400 font-medium"> 枚数を増やすほど時間がかかります。</span>
                     </p>
                     <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                      {[3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
+                      {[3, 4, 5].map((num) => {
                         const isDisabled = num > planLimits.maxCount
                         return (
                           <button
@@ -1628,7 +1628,7 @@ function BannerTestPageInner() {
                         <div className="flex items-center gap-2">
                           <Crown className="w-4 h-4 text-yellow-400" />
                           <p className="text-[10px] sm:text-xs text-yellow-200">
-                            <span className="font-bold">PROプラン</span>にアップグレードすると最大10枚まで生成可能
+                            <span className="font-bold">PROプラン</span>にアップグレードすると最大5枚まで生成可能
                           </p>
                         </div>
                       </div>
