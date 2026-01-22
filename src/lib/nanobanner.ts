@@ -1099,14 +1099,66 @@ async function generateSingleBanner(
         console.log(`Image generated successfully with ${model}`)
         const rawBase64 = String(extracted.base64)
         const [w_num, h_num] = size.split('x').map(v => Number(v))
-        let resized = await sharp(Buffer.from(rawBase64, 'base64'))
-          .resize(
-            Number.isFinite(w_num) && Number.isFinite(h_num) && w_num > 0 && h_num > 0
-              ? { width: w_num, height: h_num, fit: 'cover', position: 'centre' }
-              : undefined
-          )
-          .png()
-          .toBuffer()
+        
+        // サイズを確実に反映するための処理
+        // 1. まず生成された画像のサイズを取得
+        // 2. 指定サイズに合わせてリサイズ（アスペクト比を維持）
+        // 3. 必要に応じてパディングを追加して正確なサイズにする
+        const imageBuffer = Buffer.from(rawBase64, 'base64')
+        const metadata = await sharp(imageBuffer).metadata()
+        const originalWidth = metadata.width || 1024
+        const originalHeight = metadata.height || 1024
+        
+        let resized: Buffer
+        if (Number.isFinite(w_num) && Number.isFinite(h_num) && w_num > 0 && h_num > 0) {
+          // 目標アスペクト比と元画像のアスペクト比を比較
+          const targetRatio = w_num / h_num
+          const originalRatio = originalWidth / originalHeight
+          
+          // アスペクト比の差が大きい場合（10%以上）は、パディングを追加
+          const ratioDiff = Math.abs(targetRatio - originalRatio) / targetRatio
+          
+          if (ratioDiff > 0.1) {
+            // アスペクト比が大きく異なる場合：
+            // 1. まず 'contain' でリサイズ（アスペクト比を維持、余白なし）
+            // 2. 次に 'extend' でパディングを追加して正確なサイズにする
+            const containedImage = await sharp(imageBuffer)
+              .resize({ width: w_num, height: h_num, fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 1 } })
+              .png()
+              .toBuffer()
+            
+            // containでリサイズした画像のサイズを確認
+            const containedMeta = await sharp(containedImage).metadata()
+            const containedWidth = containedMeta.width || w_num
+            const containedHeight = containedMeta.height || h_num
+            
+            // 正確なサイズになるようにextendでパディングを追加
+            const padLeft = Math.floor((w_num - containedWidth) / 2)
+            const padRight = w_num - containedWidth - padLeft
+            const padTop = Math.floor((h_num - containedHeight) / 2)
+            const padBottom = h_num - containedHeight - padTop
+            
+            resized = await sharp(containedImage)
+              .extend({
+                top: Math.max(0, padTop),
+                bottom: Math.max(0, padBottom),
+                left: Math.max(0, padLeft),
+                right: Math.max(0, padRight),
+                background: { r: 0, g: 0, b: 0, alpha: 1 }
+              })
+              .resize({ width: w_num, height: h_num, fit: 'fill' }) // 最終的に正確なサイズに
+              .png()
+              .toBuffer()
+          } else {
+            // アスペクト比が近い場合：coverでリサイズ（少しクロップ）
+            resized = await sharp(imageBuffer)
+              .resize({ width: w_num, height: h_num, fit: 'cover', position: 'centre' })
+              .png()
+              .toBuffer()
+          }
+        } else {
+          resized = await sharp(imageBuffer).png().toBuffer()
+        }
 
         // Nano Banana Proが画像内にテキストを描画するため、
         // 後処理でのテキストオーバーレイは行わない（AIに任せる）
