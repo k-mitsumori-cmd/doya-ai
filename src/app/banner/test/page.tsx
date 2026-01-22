@@ -33,6 +33,18 @@ const SIZE_PRESETS = [
   { id: 'feed', label: 'フィード', ratio: '1:1', width: 1080, height: 1080, icon: Square },
   { id: 'link', label: 'リンク', ratio: '1.91:1', width: 1200, height: 628, icon: RectangleHorizontal },
   { id: 'story', label: 'ストーリー', ratio: '9:16', width: 1080, height: 1920, icon: RectangleVertical },
+  { id: 'custom', label: 'カスタム', ratio: 'カスタム', width: 1200, height: 628, icon: Square },
+]
+
+// 生成中のローディングメッセージ
+const LOADING_MESSAGES = [
+  'AIがデザインを分析中...',
+  'スタイルを適用中...',
+  'レイアウトを調整中...',
+  'テキストを配置中...',
+  '色彩を最適化中...',
+  '最終調整中...',
+  'もう少しで完成です...',
 ]
 
 // プラン別の生成枚数上限
@@ -70,11 +82,17 @@ function BannerTestPageInner() {
   
   // 新しいフォーム状態
   const [selectedSize, setSelectedSize] = useState(SIZE_PRESETS[1]) // デフォルト: リンク (1200x628)
+  const [customWidth, setCustomWidth] = useState(1200)
+  const [customHeight, setCustomHeight] = useState(628)
   const [generateCount, setGenerateCount] = useState(3)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [personFile, setPersonFile] = useState<File | null>(null)
   const [personPreview, setPersonPreview] = useState<string | null>(null)
+  
+  // 生成中のローディング状態
+  const [loadingMessage, setLoadingMessage] = useState('')
+  const [generationProgress, setGenerationProgress] = useState(0)
   
   // ユーザープラン
   const userPlan = useMemo(() => {
@@ -545,24 +563,29 @@ function BannerTestPageInner() {
     const container = scrollRefs.current[category]
     if (!container) return
     
-    // トラックパッドの横スワイプを検出（deltaXが大きい場合）
-    // または縦スクロールを横スクロールに変換
-    const isHorizontalSwipe = Math.abs(e.deltaX) > Math.abs(e.deltaY) * 0.5
     const hasHorizontalScroll = container.scrollWidth > container.clientWidth
+    if (!hasHorizontalScroll) return
     
-    if (hasHorizontalScroll && (isHorizontalSwipe || e.shiftKey)) {
-      // 横スワイプまたはShift+スクロールの場合
-      e.preventDefault()
-      e.stopPropagation()
-      container.scrollLeft += e.deltaX || e.deltaY
+    // トラックパッドの横スワイプを検出
+    // deltaXが0でない場合は横スワイプ
+    if (e.deltaX !== 0) {
+      // 横スワイプの場合はそのまま適用
+      container.scrollLeft += e.deltaX
       updateScrollPosition(category)
-    } else if (hasHorizontalScroll && Math.abs(e.deltaY) > 0) {
-      // 縦スクロールを横スクロールに変換（Netflix風）
-      e.preventDefault()
-      e.stopPropagation()
-      container.scrollLeft += e.deltaY * 1.5 // 感度調整
-      updateScrollPosition(category)
+      return
     }
+    
+    // Shiftキー + 縦スクロールの場合
+    if (e.shiftKey && e.deltaY !== 0) {
+      e.preventDefault()
+      container.scrollLeft += e.deltaY
+      updateScrollPosition(category)
+      return
+    }
+    
+    // 通常の縦スクロールは横スクロールに変換しない（ページスクロールを優先）
+    // ただし、カテゴリ上にマウスがある場合のみ横スクロールに変換
+    // これはNetflixの挙動に近い
   }, [updateScrollPosition])
 
   // バナー生成
@@ -579,10 +602,22 @@ function BannerTestPageInner() {
 
     setIsGenerating(true)
     setGeneratedBanners([])
+    setGenerationProgress(0)
+    setLoadingMessage(LOADING_MESSAGES[0])
+    
+    // ローディングメッセージを定期的に更新
+    let messageIndex = 0
+    const messageInterval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % LOADING_MESSAGES.length
+      setLoadingMessage(LOADING_MESSAGES[messageIndex])
+      setGenerationProgress(prev => Math.min(prev + Math.random() * 15, 90))
+    }, 3000)
 
     try {
-      // サイズ文字列を生成
-      const sizeString = `${selectedSize.width}x${selectedSize.height}`
+      // サイズ文字列を生成（カスタムサイズの場合はカスタム値を使用）
+      const finalWidth = selectedSize.id === 'custom' ? customWidth : selectedSize.width
+      const finalHeight = selectedSize.id === 'custom' ? customHeight : selectedSize.height
+      const sizeString = `${finalWidth}x${finalHeight}`
 
       // 既存APIをラップして使用（本番APIは変更しない）
       // 選択したテンプレートのスタイルを維持するため、basePromptとtemplateImageUrlを渡す
@@ -611,6 +646,8 @@ function BannerTestPageInner() {
       }
 
       if (result.banners && Array.isArray(result.banners) && result.banners.length > 0) {
+        setGenerationProgress(100)
+        setLoadingMessage('完成しました！')
         const banners: GeneratedBanner[] = result.banners.map((url: string, idx: number) => ({
           id: `banner-${Date.now()}-${idx}`,
           imageUrl: url,
@@ -626,7 +663,10 @@ function BannerTestPageInner() {
       console.error('Generate error:', err)
       toast.error(err.message || '生成に失敗しました')
     } finally {
+      clearInterval(messageInterval)
       setIsGenerating(false)
+      setGenerationProgress(0)
+      setLoadingMessage('')
     }
   }
 
@@ -668,7 +708,7 @@ function BannerTestPageInner() {
       </AnimatePresence>
 
       {/* メインコンテンツ */}
-      <main className="flex-1 ml-0 md:ml-[240px] min-h-screen bg-black">
+      <main className="flex-1 ml-0 md:ml-[240px] min-h-screen bg-black overflow-x-hidden">
         {/* モバイル用ヘッダー */}
         <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-black/90 backdrop-blur-sm border-b border-gray-800 px-3 py-2 flex items-center justify-between">
           <button
@@ -829,7 +869,7 @@ function BannerTestPageInner() {
           </div>
 
           {/* テンプレート一覧（Netflix風の横スクロール） */}
-          <div className="px-0 sm:px-4 md:px-8 lg:px-12 pt-3 sm:pt-6 md:pt-8 relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8">
+          <div className="w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 pt-3 sm:pt-6 md:pt-8 relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -1046,8 +1086,8 @@ function BannerTestPageInner() {
 
           {/* 生成フォーム（選択されたテンプレートに基づく、バナー選択時は非表示） */}
           {selectedTemplate && !selectedBanner && (
-            <div id="banner-form" className="px-3 sm:px-4 md:px-8 lg:px-12 py-6 sm:py-8 md:py-12 bg-black/95 backdrop-blur-sm scroll-mt-4">
-              <div className="max-w-5xl mx-auto">
+            <div id="banner-form" className="w-full overflow-x-hidden px-3 sm:px-4 md:px-8 lg:px-12 py-6 sm:py-8 md:py-12 bg-black/95 backdrop-blur-sm scroll-mt-4">
+              <div className="max-w-5xl mx-auto w-full">
                 <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 md:mb-8 text-white">バナー情報を入力</h2>
                 <div className="bg-gray-900/90 rounded-xl md:rounded-2xl p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 border border-gray-800">
                   
@@ -1108,22 +1148,68 @@ function BannerTestPageInner() {
                           >
                             <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             <span>{size.label}</span>
-                            <span className="text-[10px] sm:text-xs opacity-70">{size.ratio}</span>
+                            {size.id !== 'custom' && (
+                              <span className="text-[10px] sm:text-xs opacity-70">{size.ratio}</span>
+                            )}
                           </button>
                         )
                       })}
                     </div>
+                    
+                    {/* カスタムサイズ入力（カスタムが選択されている場合のみ表示） */}
+                    {selectedSize.id === 'custom' && (
+                      <div className="mt-3 p-3 sm:p-4 bg-gray-800/50 rounded-lg border border-gray-700">
+                        <p className="text-xs sm:text-sm font-bold mb-3 text-white">カスタムサイズを入力</p>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="flex-1">
+                            <label className="text-[10px] sm:text-xs text-gray-400 mb-1 block">幅 (px)</label>
+                            <input
+                              type="number"
+                              value={customWidth}
+                              onChange={(e) => setCustomWidth(Math.max(100, Math.min(4096, parseInt(e.target.value) || 100)))}
+                              min={100}
+                              max={4096}
+                              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                          <span className="text-gray-400 font-bold mt-5">×</span>
+                          <div className="flex-1">
+                            <label className="text-[10px] sm:text-xs text-gray-400 mb-1 block">高さ (px)</label>
+                            <input
+                              type="number"
+                              value={customHeight}
+                              onChange={(e) => setCustomHeight(Math.max(100, Math.min(4096, parseInt(e.target.value) || 100)))}
+                              min={100}
+                              max={4096}
+                              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-2">※ 100〜4096pxの範囲で指定できます</p>
+                      </div>
+                    )}
+                    
                     <div className="mt-2 sm:mt-3 flex items-center justify-center">
                       <div className="bg-gray-800 rounded-lg p-3 sm:p-4 flex flex-col items-center">
-                        <div 
-                          className="bg-gray-700 rounded border border-gray-600"
-                          style={{
-                            width: selectedSize.width > selectedSize.height ? '80px' : `${80 * selectedSize.width / selectedSize.height}px`,
-                            height: selectedSize.height > selectedSize.width ? '80px' : `${80 * selectedSize.height / selectedSize.width}px`,
-                          }}
-                        />
-                        <p className="text-xs sm:text-sm font-bold text-white mt-2">{selectedSize.width}×{selectedSize.height}</p>
-                        <p className="text-[10px] sm:text-xs text-gray-400">ASPECT RATIO PREVIEW</p>
+                        {(() => {
+                          const displayWidth = selectedSize.id === 'custom' ? customWidth : selectedSize.width
+                          const displayHeight = selectedSize.id === 'custom' ? customHeight : selectedSize.height
+                          const previewWidth = displayWidth > displayHeight ? 80 : 80 * displayWidth / displayHeight
+                          const previewHeight = displayHeight > displayWidth ? 80 : 80 * displayHeight / displayWidth
+                          return (
+                            <>
+                              <div 
+                                className="bg-gray-700 rounded border border-gray-600"
+                                style={{
+                                  width: `${previewWidth}px`,
+                                  height: `${previewHeight}px`,
+                                }}
+                              />
+                              <p className="text-xs sm:text-sm font-bold text-white mt-2">{displayWidth}×{displayHeight}</p>
+                              <p className="text-[10px] sm:text-xs text-gray-400">ASPECT RATIO PREVIEW</p>
+                            </>
+                          )
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -1235,24 +1321,57 @@ function BannerTestPageInner() {
                     </div>
                   </div>
 
-                  {/* 生成ボタン */}
-                  <button
-                    onClick={handleGenerate}
-                    disabled={isGenerating || !serviceName.trim()}
-                    className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-lg sm:rounded-xl transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                        生成中...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
-                        このバナーをベースに{generateCount}種類のバリエーションを生成
-                      </>
-                    )}
-                  </button>
+                  {/* 生成ボタン / ローディングUI */}
+                  {isGenerating ? (
+                    <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 rounded-xl p-6 border border-blue-700/50">
+                      <div className="flex flex-col items-center gap-4">
+                        {/* アニメーションアイコン */}
+                        <div className="relative">
+                          <div className="w-16 h-16 rounded-full bg-blue-600/20 flex items-center justify-center">
+                            <Sparkles className="w-8 h-8 text-blue-400 animate-pulse" />
+                          </div>
+                          <div className="absolute inset-0 rounded-full border-2 border-blue-500 border-t-transparent animate-spin" />
+                        </div>
+                        
+                        {/* メッセージ */}
+                        <div className="text-center">
+                          <p className="text-lg font-bold text-white mb-1">画像を生成中...</p>
+                          <p className="text-sm text-blue-300 animate-pulse">{loadingMessage}</p>
+                        </div>
+                        
+                        {/* プログレスバー */}
+                        <div className="w-full max-w-xs">
+                          <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <motion.div 
+                              className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${generationProgress}%` }}
+                              transition={{ duration: 0.5 }}
+                            />
+                          </div>
+                          <p className="text-xs text-gray-400 text-center mt-2">
+                            {generateCount}枚のバナーを生成中... しばらくお待ちください
+                          </p>
+                        </div>
+                        
+                        {/* ヒント */}
+                        <div className="mt-2 p-3 bg-gray-800/50 rounded-lg max-w-sm">
+                          <p className="text-xs text-gray-400 text-center">
+                            💡 AIが選択したスタイルを分析し、テキストを反映したバナーを生成しています
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={handleGenerate}
+                      disabled={!serviceName.trim()}
+                      className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-lg sm:rounded-xl transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                    >
+                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                      このバナーをベースに{generateCount}種類のバリエーションを生成
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
