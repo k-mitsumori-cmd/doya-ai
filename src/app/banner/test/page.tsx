@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X } from 'lucide-react'
+import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -28,6 +28,20 @@ type GeneratedBanner = {
   createdAt: Date
 }
 
+// サイズプリセット
+const SIZE_PRESETS = [
+  { id: 'feed', label: 'フィード', ratio: '1:1', width: 1080, height: 1080, icon: Square },
+  { id: 'link', label: 'リンク', ratio: '1.91:1', width: 1200, height: 628, icon: RectangleHorizontal },
+  { id: 'story', label: 'ストーリー', ratio: '9:16', width: 1080, height: 1920, icon: RectangleVertical },
+]
+
+// プラン別の生成枚数上限
+const PLAN_LIMITS = {
+  FREE: { maxCount: 3, label: '無料プラン' },
+  PRO: { maxCount: 10, label: 'PROプラン' },
+  ENTERPRISE: { maxCount: 10, label: 'Enterpriseプラン' },
+}
+
 export default function BannerTestPage() {
   return (
     <Suspense fallback={null}>
@@ -49,10 +63,48 @@ function BannerTestPageInner() {
   // 画像拡大モーダル用の状態
   const [zoomImage, setZoomImage] = useState<{ url: string; title: string } | null>(null)
 
-  // フォーム状態（簡素化：サービス名 / トーン / 任意テキスト）
+  // フォーム状態（拡張版）
   const [serviceName, setServiceName] = useState('')
   const [tone, setTone] = useState('')
   const [customText, setCustomText] = useState('')
+  
+  // 新しいフォーム状態
+  const [selectedSize, setSelectedSize] = useState(SIZE_PRESETS[1]) // デフォルト: リンク (1200x628)
+  const [generateCount, setGenerateCount] = useState(3)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [personFile, setPersonFile] = useState<File | null>(null)
+  const [personPreview, setPersonPreview] = useState<string | null>(null)
+  
+  // ユーザープラン
+  const userPlan = useMemo(() => {
+    const user = session?.user as any
+    const plan = user?.bannerPlan || user?.plan || 'FREE'
+    return String(plan).toUpperCase() as 'FREE' | 'PRO' | 'ENTERPRISE'
+  }, [session])
+  
+  const planLimits = useMemo(() => PLAN_LIMITS[userPlan] || PLAN_LIMITS.FREE, [userPlan])
+  
+  // ファイルアップロードハンドラ
+  const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setLogoFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => setLogoPreview(reader.result as string)
+      reader.readAsDataURL(file)
+    }
+  }, [])
+  
+  const handlePersonUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setPersonFile(file)
+      const reader = new FileReader()
+      reader.onloadend = () => setPersonPreview(reader.result as string)
+      reader.readAsDataURL(file)
+    }
+  }, [])
 
   const scrollRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set())
@@ -457,19 +509,34 @@ function BannerTestPageInner() {
     setGeneratedBanners([])
 
     try {
+      // FormDataを使用してファイルも送信
+      const formData = new FormData()
+      formData.append('template', selectedTemplate.category)
+      formData.append('size', selectedSize)
+      formData.append('industry', selectedTemplate.industry)
+      formData.append('mainTitle', serviceName)
+      if (tone) formData.append('subTitle', `トーン: ${tone}`)
+      if (customText) formData.append('accentText', customText)
+      formData.append('count', String(generateCount))
+      formData.append('basePrompt', selectedTemplate.prompt || '')
+      if (logoFile) formData.append('logo', logoFile)
+      if (personFile) formData.append('person', personFile)
+
       // 既存APIをラップして使用（本番APIは変更しない）
       const res = await fetch('/api/banner/test/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template: selectedTemplate.category,
-          size: '1200x628', // 固定サイズ
+          size: selectedSize,
           industry: selectedTemplate.industry,
-          mainTitle: serviceName, // サービス名をメインタイトルとして使用
-          subTitle: tone ? `トーン: ${tone}` : undefined, // トーンをサブタイトルとして使用
-          accentText: customText || undefined, // 任意テキストをアクセントとして使用
-          count: 10,
-          basePrompt: selectedTemplate.prompt, // ベースプロンプトを渡す（既存のプロンプトを参照）
+          mainTitle: serviceName,
+          subTitle: tone ? `トーン: ${tone}` : undefined,
+          accentText: customText || undefined,
+          count: generateCount,
+          basePrompt: selectedTemplate.prompt,
+          logoBase64: logoPreview || undefined,
+          personBase64: personPreview || undefined,
         }),
       })
 
@@ -787,6 +854,15 @@ function BannerTestPageInner() {
                                   </p>
                                 </div>
                               )}
+                              {/* 画像名ラベル（常に表示） */}
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-2 md:p-3 z-10">
+                                <p className="text-[10px] sm:text-xs md:text-sm font-bold text-white line-clamp-1 drop-shadow-lg">
+                                  {template.displayTitle || template.name || template.industry}
+                                </p>
+                                <p className="text-[8px] sm:text-[10px] text-gray-300 line-clamp-1">
+                                  {categoryMapping[template.industry] || template.industry}
+                                </p>
+                              </div>
                               {/* 拡大ボタン（ホバー時に表示） */}
                               {showImage && isLoaded && (
                                 <button
@@ -806,9 +882,9 @@ function BannerTestPageInner() {
                                 </button>
                               )}
                               {selectedTemplate?.id === template.id && (
-                                <div className="absolute inset-0 ring-4 ring-blue-500 rounded-lg pointer-events-none">
-                                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-blue-500 px-3 py-1 rounded-full">
-                                    <p className="text-xs font-bold text-white whitespace-nowrap">選択中</p>
+                                <div className="absolute inset-0 ring-4 ring-blue-500 rounded-lg pointer-events-none z-20">
+                                  <div className="absolute top-2 left-2 bg-blue-500 px-2 py-0.5 rounded-full">
+                                    <p className="text-[10px] font-bold text-white whitespace-nowrap">選択中</p>
                                   </div>
                                 </div>
                               )}
@@ -872,27 +948,30 @@ function BannerTestPageInner() {
 
           {/* 生成フォーム（選択されたテンプレートに基づく、バナー選択時は非表示） */}
           {selectedTemplate && !selectedBanner && (
-            <div id="banner-form" className="px-4 md:px-8 lg:px-12 py-8 md:py-12 bg-black/95 backdrop-blur-sm scroll-mt-4">
+            <div id="banner-form" className="px-3 sm:px-4 md:px-8 lg:px-12 py-6 sm:py-8 md:py-12 bg-black/95 backdrop-blur-sm scroll-mt-4">
               <div className="max-w-5xl mx-auto">
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 md:mb-8 text-white">バナー情報を入力</h2>
-                <div className="bg-gray-900/90 rounded-xl md:rounded-2xl p-6 md:p-8 space-y-6 border border-gray-800">
+                <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 md:mb-8 text-white">バナー情報を入力</h2>
+                <div className="bg-gray-900/90 rounded-xl md:rounded-2xl p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 border border-gray-800">
+                  
+                  {/* サービス名 */}
                   <div>
-                    <label className="block text-sm font-bold mb-2">サービス名 *</label>
+                    <label className="block text-xs sm:text-sm font-bold mb-2">サービス名 *</label>
                     <input
                       type="text"
                       value={serviceName}
                       onChange={(e) => setServiceName(e.target.value)}
                       placeholder="例: AIライティングツール"
-                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-700 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
 
+                  {/* トーン */}
                   <div>
-                    <label className="block text-sm font-bold mb-2">トーン</label>
+                    <label className="block text-xs sm:text-sm font-bold mb-2">トーン</label>
                     <select
                       value={tone}
                       onChange={(e) => setTone(e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-700 rounded-lg sm:rounded-xl text-sm sm:text-base text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">選択してください</option>
                       <option value="プロフェッショナル">プロフェッショナル</option>
@@ -906,31 +985,181 @@ function BannerTestPageInner() {
                     </select>
                   </div>
 
+                  {/* 任意テキスト */}
                   <div>
-                    <label className="block text-sm font-bold mb-2">任意テキスト</label>
+                    <label className="block text-xs sm:text-sm font-bold mb-2">任意テキスト</label>
                     <input
                       type="text"
                       value={customText}
                       onChange={(e) => setCustomText(e.target.value)}
                       placeholder="例: 2026年最新版 / SEO重視"
-                      className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-700 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+                  
+                  {/* サイズ選択 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs sm:text-sm font-bold">サイズを選択</label>
+                      <span className="text-[10px] sm:text-xs text-gray-400">CANVAS DIMENSIONS</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
+                      {SIZE_PRESETS.map((size) => {
+                        const IconComponent = size.icon
+                        return (
+                          <button
+                            key={size.id}
+                            onClick={() => setSelectedSize(size)}
+                            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl transition-all text-xs sm:text-sm font-medium ${
+                              selectedSize.id === size.id
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                            }`}
+                          >
+                            <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            <span>{size.label}</span>
+                            <span className="text-[10px] sm:text-xs opacity-70">{size.ratio}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-2 sm:mt-3 flex items-center justify-center">
+                      <div className="bg-gray-800 rounded-lg p-3 sm:p-4 flex flex-col items-center">
+                        <div 
+                          className="bg-gray-700 rounded border border-gray-600"
+                          style={{
+                            width: selectedSize.width > selectedSize.height ? '80px' : `${80 * selectedSize.width / selectedSize.height}px`,
+                            height: selectedSize.height > selectedSize.width ? '80px' : `${80 * selectedSize.height / selectedSize.width}px`,
+                          }}
+                        />
+                        <p className="text-xs sm:text-sm font-bold text-white mt-2">{selectedSize.width}×{selectedSize.height}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-400">ASPECT RATIO PREVIEW</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* 生成枚数 */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs sm:text-sm font-bold">生成枚数</label>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-lg sm:text-xl font-bold text-blue-400">{generateCount}枚</span>
+                        <span className="text-[10px] sm:text-xs text-gray-400">最大{planLimits.maxCount}枚</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">
+                      デフォルトは3枚（A/B/C）。
+                      {userPlan === 'FREE' ? (
+                        <span className="text-yellow-400"> 有料プランは最大10枚まで増やせます。</span>
+                      ) : (
+                        <span className="text-green-400"> {planLimits.label}で最大{planLimits.maxCount}枚まで生成可能。</span>
+                      )}
+                      <span className="text-orange-400 font-medium"> 枚数を増やすほど時間がかかります。</span>
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                      {[3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
+                        const isDisabled = num > planLimits.maxCount
+                        return (
+                          <button
+                            key={num}
+                            onClick={() => !isDisabled && setGenerateCount(num)}
+                            disabled={isDisabled}
+                            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition-all ${
+                              generateCount === num
+                                ? 'bg-blue-600 text-white'
+                                : isDisabled
+                                  ? 'bg-gray-800/50 text-gray-600 cursor-not-allowed'
+                                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                            }`}
+                          >
+                            {num}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {userPlan === 'FREE' && (
+                      <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 rounded-lg border border-yellow-700/50">
+                        <div className="flex items-center gap-2">
+                          <Crown className="w-4 h-4 text-yellow-400" />
+                          <p className="text-[10px] sm:text-xs text-yellow-200">
+                            <span className="font-bold">PROプラン</span>にアップグレードすると最大10枚まで生成可能
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* ロゴ・人物写真アップロード */}
+                  <div>
+                    <label className="text-xs sm:text-sm font-bold mb-2 block">ロゴ / 人物写真（任意）</label>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">アップロードした画像をバナーに反映します（AIが画像内に合成します）。</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                      {/* ロゴアップロード */}
+                      <div className="bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-700">
+                        <p className="text-xs sm:text-sm font-bold mb-2 sm:mb-3">ロゴ</p>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden border border-gray-600 shrink-0">
+                            {logoPreview ? (
+                              <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
+                            ) : (
+                              <span className="text-[10px] sm:text-xs text-gray-500 font-bold">LOGO</span>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] sm:text-xs text-gray-400 mb-1.5 truncate">{logoFile ? logoFile.name : '未設定'}</p>
+                            <label className="cursor-pointer">
+                              <span className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-[10px] sm:text-xs font-medium transition-colors inline-flex items-center gap-1">
+                                <Upload className="w-3 h-3" />
+                                アップロード
+                              </span>
+                              <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* 人物写真アップロード */}
+                      <div className="bg-gray-800 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-700">
+                        <p className="text-xs sm:text-sm font-bold mb-2 sm:mb-3">人物写真</p>
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden border border-gray-600 shrink-0">
+                            {personPreview ? (
+                              <img src={personPreview} alt="Person" className="w-full h-full object-cover" />
+                            ) : (
+                              <User className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] sm:text-xs text-gray-400 mb-1.5 truncate">{personFile ? personFile.name : '未設定'}</p>
+                            <label className="cursor-pointer">
+                              <span className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-[10px] sm:text-xs font-medium transition-colors inline-flex items-center gap-1">
+                                <Upload className="w-3 h-3" />
+                                アップロード
+                              </span>
+                              <input type="file" accept="image/*" onChange={handlePersonUpload} className="hidden" />
+                            </label>
+                          </div>
+                        </div>
+                        <p className="text-[8px] sm:text-[10px] text-gray-500 mt-2">※ 人物写真は1名（1枚）のみ対応です</p>
+                      </div>
+                    </div>
+                  </div>
 
+                  {/* 生成ボタン */}
                   <button
                     onClick={handleGenerate}
                     disabled={isGenerating || !serviceName.trim()}
-                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-lg sm:rounded-xl transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                   >
                     {isGenerating ? (
                       <>
-                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                         生成中...
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-5 h-5" />
-                        このバナーをベースに10種類のバリエーションを生成
+                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                        このバナーをベースに{generateCount}種類のバリエーションを生成
                       </>
                     )}
                   </button>
@@ -941,9 +1170,9 @@ function BannerTestPageInner() {
 
           {/* 生成されたバナー一覧（グリッド表示） */}
           {generatedBanners.length > 0 && (
-            <div className="px-4 md:px-8 lg:px-12 py-8 md:py-12 space-y-4 md:space-y-6">
-              <h2 className="text-xl md:text-2xl lg:text-3xl font-bold px-2 md:px-4 text-white">生成結果</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+            <div className="px-3 sm:px-4 md:px-8 lg:px-12 py-6 sm:py-8 md:py-12 space-y-4 md:space-y-6">
+              <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold px-2 md:px-4 text-white">生成結果</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
                 {generatedBanners.map((banner) => (
                   <motion.div
                     key={banner.id}
