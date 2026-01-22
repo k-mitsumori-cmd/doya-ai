@@ -28,12 +28,14 @@ type GeneratedBanner = {
   createdAt: Date
 }
 
-// サイズプリセット
+// サイズプリセット（Gemini APIで確実に生成できるサイズのみ）
+// Gemini APIは正方形（1:1）の画像を生成し、その後リサイズするため、
+// 正方形に近いアスペクト比が最も品質が高くなります
 const SIZE_PRESETS = [
-  { id: 'feed', label: 'フィード', ratio: '1:1', width: 1080, height: 1080, icon: Square },
-  { id: 'link', label: 'リンク', ratio: '1.91:1', width: 1200, height: 628, icon: RectangleHorizontal },
-  { id: 'story', label: 'ストーリー', ratio: '9:16', width: 1080, height: 1920, icon: RectangleVertical },
-  { id: 'custom', label: 'カスタム', ratio: 'カスタム', width: 1200, height: 628, icon: Square },
+  { id: 'square-large', label: '正方形（大）', ratio: '1:1', width: 1024, height: 1024, icon: Square },
+  { id: 'square-medium', label: '正方形（中）', ratio: '1:1', width: 512, height: 512, icon: Square },
+  { id: 'landscape', label: '横長', ratio: '4:3', width: 1024, height: 768, icon: RectangleHorizontal },
+  { id: 'portrait', label: '縦長', ratio: '3:4', width: 768, height: 1024, icon: RectangleVertical },
 ]
 
 // 生成中のローディングメッセージ
@@ -126,9 +128,9 @@ function BannerTestPageInner() {
   const [customText, setCustomText] = useState('')
   
   // 新しいフォーム状態
-  const [selectedSize, setSelectedSize] = useState(SIZE_PRESETS[1]) // デフォルト: リンク (1200x628)
-  const [customWidth, setCustomWidth] = useState(1200)
-  const [customHeight, setCustomHeight] = useState(628)
+  const [selectedSize, setSelectedSize] = useState(SIZE_PRESETS[0]) // デフォルト: 正方形（大）(1024x1024)
+  const [customWidth, setCustomWidth] = useState(1024)
+  const [customHeight, setCustomHeight] = useState(1024)
   const [generateCount, setGenerateCount] = useState(3)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
@@ -869,9 +871,9 @@ function BannerTestPageInner() {
     }, 3000)
 
     try {
-      // サイズ文字列を生成（カスタムサイズの場合はカスタム値を使用）
-      const finalWidth = selectedSize.id === 'custom' ? customWidth : selectedSize.width
-      const finalHeight = selectedSize.id === 'custom' ? customHeight : selectedSize.height
+      // サイズ文字列を生成（プリセットのみ使用）
+      const finalWidth = selectedSize.width
+      const finalHeight = selectedSize.height
       const sizeString = `${finalWidth}x${finalHeight}`
 
       // 既存APIをラップして使用（本番APIは変更しない）
@@ -1570,52 +1572,17 @@ function BannerTestPageInner() {
                           >
                             <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             <span>{size.label}</span>
-                            {size.id !== 'custom' && (
-                              <span className="text-[10px] sm:text-xs opacity-70">{size.ratio}</span>
-                            )}
+                            <span className="text-[10px] sm:text-xs opacity-70">{size.ratio}</span>
                           </button>
                         )
                       })}
                     </div>
                     
-                    {/* カスタムサイズ入力（カスタムが選択されている場合のみ表示） */}
-                    {selectedSize.id === 'custom' && (
-                      <div className="mt-3 p-3 sm:p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-                        <p className="text-xs sm:text-sm font-bold mb-3 text-white">カスタムサイズを入力</p>
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <div className="flex-1">
-                            <label className="text-[10px] sm:text-xs text-gray-400 mb-1 block">幅 (px)</label>
-                            <input
-                              type="number"
-                              value={customWidth}
-                              onChange={(e) => setCustomWidth(Math.max(100, Math.min(4096, parseInt(e.target.value) || 100)))}
-                              min={100}
-                              max={4096}
-                              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                          <span className="text-gray-400 font-bold mt-5">×</span>
-                          <div className="flex-1">
-                            <label className="text-[10px] sm:text-xs text-gray-400 mb-1 block">高さ (px)</label>
-                            <input
-                              type="number"
-                              value={customHeight}
-                              onChange={(e) => setCustomHeight(Math.max(100, Math.min(4096, parseInt(e.target.value) || 100)))}
-                              min={100}
-                              max={4096}
-                              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                          </div>
-                        </div>
-                        <p className="text-[10px] text-gray-500 mt-2">※ 100〜4096pxの範囲で指定できます</p>
-                      </div>
-                    )}
-                    
                     <div className="mt-2 sm:mt-3 flex items-center justify-center">
                       <div className="bg-gray-800 rounded-lg p-3 sm:p-4 flex flex-col items-center">
                         {(() => {
-                          const displayWidth = selectedSize.id === 'custom' ? customWidth : selectedSize.width
-                          const displayHeight = selectedSize.id === 'custom' ? customHeight : selectedSize.height
+                          const displayWidth = selectedSize.width
+                          const displayHeight = selectedSize.height
                           const previewWidth = displayWidth > displayHeight ? 80 : 80 * displayWidth / displayHeight
                           const previewHeight = displayHeight > displayWidth ? 80 : 80 * displayHeight / displayWidth
                           return (
@@ -2325,9 +2292,7 @@ function BannerTestPageInner() {
                           <div>
                             <p className="text-white/50 text-[10px] sm:text-xs mb-0.5 sm:mb-1">サイズ</p>
                             <p className="text-white font-medium text-xs sm:text-sm md:text-base">
-                              {selectedSize.id === 'custom' 
-                                ? `${customWidth}×${customHeight}` 
-                                : `${selectedSize.width}×${selectedSize.height}`}
+                              {`${selectedSize.width}×${selectedSize.height}`}
                             </p>
                           </div>
                           <div>
