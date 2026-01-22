@@ -912,10 +912,10 @@ function BannerTestPageInner() {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-black text-white -m-4 sm:-m-6 md:-m-8">
+      <div className="min-h-screen bg-black text-white -m-4 sm:-m-6 md:-m-8 -mt-16">
         {/* トライアルバナー（ログイン後1時間） */}
         {isTrialActive && (
-          <div className="fixed top-16 left-0 md:left-[240px] right-0 z-40 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white py-2 px-4 flex items-center justify-center gap-2 text-sm font-medium shadow-lg">
+          <div className="fixed top-16 left-0 md:left-[72px] lg:left-[240px] right-0 z-40 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white py-2 px-4 flex items-center justify-center gap-2 text-sm font-medium shadow-lg">
             <Sparkles className="w-4 h-4 animate-pulse" />
             <span>🎉 全機能無料トライアル中！</span>
             <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold">
@@ -926,9 +926,9 @@ function BannerTestPageInner() {
         )}
         
         {/* Netflix風のメインコンテンツ */}
-        <div className={`relative ${isTrialActive ? 'pt-20 md:pt-8' : 'pt-12 md:pt-0'}`}>
+        <div className={`relative ${isTrialActive ? 'pt-10' : ''}`}>
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- スティッキー */}
-          <div className={`sticky ${isTrialActive ? 'top-20 md:top-8' : 'top-12 md:top-0'} z-20 h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] w-full overflow-hidden`}>
+          <div className={`sticky ${isTrialActive ? 'top-[104px]' : 'top-16'} z-20 h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] w-full overflow-hidden`}>
             {/* グラデーション: 下は黒、上は明るく */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
             {selectedBanner ? (
