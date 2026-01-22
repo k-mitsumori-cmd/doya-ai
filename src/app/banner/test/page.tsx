@@ -94,6 +94,10 @@ function BannerTestPageInner() {
   const [loadingMessage, setLoadingMessage] = useState('')
   const [generationProgress, setGenerationProgress] = useState(0)
   
+  // 生成モーダル状態
+  const [showGenerationModal, setShowGenerationModal] = useState(false)
+  const [generationComplete, setGenerationComplete] = useState(false)
+  
   // ユーザープラン
   const userPlan = useMemo(() => {
     const user = session?.user as any
@@ -607,6 +611,8 @@ function BannerTestPageInner() {
     setGeneratedBanners([])
     setGenerationProgress(0)
     setLoadingMessage(LOADING_MESSAGES[0])
+    setShowGenerationModal(true)
+    setGenerationComplete(false)
     
     // ローディングメッセージを定期的に更新
     let messageIndex = 0
@@ -658,14 +664,21 @@ function BannerTestPageInner() {
           createdAt: new Date(),
         }))
         setGeneratedBanners(banners)
-        toast.success(`${banners.length}枚のバナーを生成しました`)
+        setGenerationComplete(true)
+        clearInterval(messageInterval)
+        // 完了演出を3秒表示してからモーダルを閉じる
+        setTimeout(() => {
+          setShowGenerationModal(false)
+          setIsGenerating(false)
+          setGenerationComplete(false)
+        }, 3000)
       } else {
         throw new Error('バナーが生成されませんでした')
       }
     } catch (err: any) {
       console.error('Generate error:', err)
       toast.error(err.message || '生成に失敗しました')
-    } finally {
+      setShowGenerationModal(false)
       clearInterval(messageInterval)
       setIsGenerating(false)
       setGenerationProgress(0)
@@ -1486,6 +1499,310 @@ function BannerTestPageInner() {
                   クリックまたは × で閉じる
                 </p>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 🎨 生成中モーダル */}
+      <AnimatePresence>
+        {showGenerationModal && selectedTemplate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center"
+          >
+            {/* 背景オーバーレイ（グラデーション） */}
+            <motion.div 
+              className="absolute inset-0 bg-gradient-to-br from-blue-900/95 via-purple-900/95 to-black/95 backdrop-blur-xl"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            />
+            
+            {/* パーティクルアニメーション背景 */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(20)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute w-2 h-2 bg-white/20 rounded-full"
+                  initial={{ 
+                    x: Math.random() * window.innerWidth, 
+                    y: window.innerHeight + 100,
+                    scale: Math.random() * 0.5 + 0.5
+                  }}
+                  animate={{ 
+                    y: -100,
+                    transition: {
+                      duration: Math.random() * 10 + 10,
+                      repeat: Infinity,
+                      ease: "linear",
+                      delay: Math.random() * 5
+                    }
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* メインコンテンツ */}
+            <motion.div
+              initial={{ scale: 0.8, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.8, y: 50 }}
+              transition={{ type: "spring", damping: 20, stiffness: 300 }}
+              className="relative z-10 w-full max-w-4xl mx-4 p-6 sm:p-8 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl"
+            >
+              {!generationComplete ? (
+                /* 生成中の表示 */
+                <>
+                  {/* ヘッダー */}
+                  <div className="text-center mb-8">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      className="inline-block mb-4"
+                    >
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-1">
+                        <div className="w-full h-full rounded-full bg-black/50 flex items-center justify-center">
+                          <Sparkles className="w-8 h-8 text-white" />
+                        </div>
+                      </div>
+                    </motion.div>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                      🎨 バナーを生成中...
+                    </h2>
+                    <motion.p 
+                      key={loadingMessage}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-blue-200 text-lg"
+                    >
+                      {loadingMessage}
+                    </motion.p>
+                  </div>
+
+                  {/* プログレスバー */}
+                  <div className="mb-8">
+                    <div className="flex justify-between text-sm text-white/70 mb-2">
+                      <span>進捗</span>
+                      <span>{Math.round(generationProgress)}%</span>
+                    </div>
+                    <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${generationProgress}%` }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* 入力内容と参考画像 */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* 参考画像（大きく表示） */}
+                    <div className="space-y-3">
+                      <h3 className="text-white/80 font-semibold flex items-center gap-2">
+                        <ImageLucide className="w-5 h-5" />
+                        参考スタイル
+                      </h3>
+                      <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-white/30 shadow-lg">
+                        <img
+                          src={selectedTemplate.imageUrl || selectedTemplate.previewUrl || ''}
+                          alt={selectedTemplate.displayTitle || selectedTemplate.name || '参考画像'}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute bottom-3 left-3 right-3">
+                          <p className="text-white font-bold text-lg drop-shadow-lg">
+                            {selectedTemplate.displayTitle || selectedTemplate.name}
+                          </p>
+                          <p className="text-white/70 text-sm">{selectedTemplate.industry}</p>
+                        </div>
+                        {/* パルスアニメーション */}
+                        <motion.div
+                          className="absolute inset-0 border-4 border-blue-400 rounded-xl"
+                          animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.02, 1] }}
+                          transition={{ duration: 2, repeat: Infinity }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* 入力内容 */}
+                    <div className="space-y-4">
+                      <h3 className="text-white/80 font-semibold flex items-center gap-2">
+                        <Sparkles className="w-5 h-5" />
+                        生成設定
+                      </h3>
+                      <div className="space-y-3 bg-white/5 rounded-xl p-4 border border-white/10">
+                        <div>
+                          <p className="text-white/50 text-xs mb-1">入れたいテキスト</p>
+                          <p className="text-white font-medium text-lg">{serviceName}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <p className="text-white/50 text-xs mb-1">サイズ</p>
+                            <p className="text-white font-medium">
+                              {selectedSize.id === 'custom' 
+                                ? `${customWidth}×${customHeight}` 
+                                : `${selectedSize.width}×${selectedSize.height}`}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-white/50 text-xs mb-1">生成枚数</p>
+                            <p className="text-white font-medium">{generateCount}枚</p>
+                          </div>
+                        </div>
+                        {(logoPreview || personPreview) && (
+                          <div className="flex gap-3 pt-2 border-t border-white/10">
+                            {logoPreview && (
+                              <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10">
+                                  <img src={logoPreview} alt="ロゴ" className="w-full h-full object-contain" />
+                                </div>
+                                <span className="text-white/70 text-sm">ロゴ</span>
+                              </div>
+                            )}
+                            {personPreview && (
+                              <div className="flex items-center gap-2">
+                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10">
+                                  <img src={personPreview} alt="人物" className="w-full h-full object-cover" />
+                                </div>
+                                <span className="text-white/70 text-sm">人物</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 生成中のヒント */}
+                  <div className="mt-6 text-center">
+                    <p className="text-white/50 text-sm">
+                      ✨ AIが選択したスタイルを分析し、あなたのテキストに合わせてバナーを生成しています
+                    </p>
+                  </div>
+                </>
+              ) : (
+                /* 完了時の表示 */
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", damping: 15, stiffness: 300 }}
+                  className="text-center py-8"
+                >
+                  {/* 成功アイコン */}
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: [0, 1.2, 1] }}
+                    transition={{ duration: 0.5, times: [0, 0.6, 1] }}
+                    className="mb-6"
+                  >
+                    <div className="inline-block relative">
+                      <motion.div
+                        className="absolute inset-0 bg-green-500/30 rounded-full"
+                        animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      />
+                      <div className="relative w-24 h-24 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/50">
+                        <motion.svg
+                          className="w-12 h-12 text-white"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: 1 }}
+                          transition={{ duration: 0.5, delay: 0.2 }}
+                        >
+                          <motion.path
+                            d="M5 13l4 4L19 7"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </motion.svg>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* 完了メッセージ */}
+                  <motion.h2
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-3xl sm:text-4xl font-bold text-white mb-3"
+                  >
+                    🎉 生成完了！
+                  </motion.h2>
+                  <motion.p
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-xl text-green-300 mb-6"
+                  >
+                    {generatedBanners.length}枚のバナーが完成しました
+                  </motion.p>
+
+                  {/* 生成された画像のプレビュー */}
+                  <motion.div
+                    initial={{ y: 30, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="flex justify-center gap-3 flex-wrap"
+                  >
+                    {generatedBanners.slice(0, 3).map((banner, idx) => (
+                      <motion.div
+                        key={banner.id}
+                        initial={{ scale: 0, rotate: -10 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ delay: 0.6 + idx * 0.1, type: "spring" }}
+                        className="w-32 h-20 rounded-lg overflow-hidden border-2 border-white/30 shadow-lg"
+                      >
+                        <img
+                          src={banner.imageUrl}
+                          alt={`生成バナー ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </motion.div>
+                    ))}
+                    {generatedBanners.length > 3 && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.9, type: "spring" }}
+                        className="w-32 h-20 rounded-lg bg-white/10 border-2 border-white/30 flex items-center justify-center"
+                      >
+                        <span className="text-white font-bold">+{generatedBanners.length - 3}</span>
+                      </motion.div>
+                    )}
+                  </motion.div>
+
+                  {/* 紙吹雪エフェクト */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    {[...Array(30)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        className="absolute w-3 h-3 rounded-sm"
+                        style={{
+                          background: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'][i % 6],
+                          left: `${Math.random() * 100}%`,
+                        }}
+                        initial={{ y: -20, rotate: 0, opacity: 1 }}
+                        animate={{ 
+                          y: window.innerHeight + 100,
+                          rotate: Math.random() * 720 - 360,
+                          opacity: [1, 1, 0]
+                        }}
+                        transition={{
+                          duration: Math.random() * 2 + 2,
+                          delay: Math.random() * 0.5,
+                          ease: "easeOut"
+                        }}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           </motion.div>
         )}
