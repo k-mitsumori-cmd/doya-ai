@@ -172,6 +172,10 @@ function BannerTestPageInner() {
   const [isTrialActive, setIsTrialActive] = useState(false)
   const [trialRemainingMinutes, setTrialRemainingMinutes] = useState(0)
   
+  // フォームエリアの可視性（ヒーローセクションの縮小制御用）
+  const [isFormVisible, setIsFormVisible] = useState(false)
+  const formRef = useRef<HTMLDivElement>(null)
+  
   // トライアル判定（ログイン後1時間）
   useEffect(() => {
     if (!session?.user) {
@@ -230,6 +234,29 @@ function BannerTestPageInner() {
     
     return () => clearInterval(interval)
   }, [session])
+  
+  // フォームエリアの可視性を検知（ヒーローセクションの縮小制御用）
+  useEffect(() => {
+    if (!formRef.current) return
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // フォームが画面に入ってきたらヒーローを縮小
+          setIsFormVisible(entry.isIntersecting)
+        })
+      },
+      {
+        // フォームの上端が画面の60%の位置に来たら発火
+        rootMargin: '-40% 0px -40% 0px',
+        threshold: 0,
+      }
+    )
+    
+    observer.observe(formRef.current)
+    
+    return () => observer.disconnect()
+  }, [selectedTemplate, selectedBanner])
   
   // ユーザープラン（GUEST / FREE / PRO / ENTERPRISE）
   // トライアル中はENTERPRISEとして扱う
@@ -980,8 +1007,14 @@ function BannerTestPageInner() {
         
         {/* Netflix風のメインコンテンツ */}
         <div className={`relative ${isTrialActive ? 'pt-20 md:pt-10' : 'pt-12 md:pt-0'}`}>
-          {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- 固定表示 */}
-          <div className={`fixed ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} left-0 md:left-[240px] right-0 z-20 h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] overflow-hidden`}>
+          {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- 固定表示、フォーム表示時は縮小 */}
+          <div 
+            className={`fixed ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} left-0 md:left-[240px] right-0 z-20 overflow-hidden transition-all duration-300 ease-in-out ${
+              isFormVisible 
+                ? 'h-[15vh] sm:h-[18vh] md:h-[20vh] lg:h-[22vh]' 
+                : 'h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh]'
+            }`}
+          >
             {/* グラデーション: 下は黒、上は明るく */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
             
@@ -1063,25 +1096,33 @@ function BannerTestPageInner() {
               </div>
             )}
             
-            {/* オーバーレイ情報（Netflix風） */}
-            <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-4 md:p-6 lg:p-8 z-20">
+            {/* オーバーレイ情報（Netflix風）- フォーム表示時は縮小 */}
+            <div className={`absolute bottom-0 left-0 right-0 z-20 transition-all duration-300 ease-in-out ${
+              isFormVisible ? 'p-1 sm:p-2' : 'p-2 sm:p-4 md:p-6 lg:p-8'
+            }`}>
               <div className="max-w-6xl mx-auto">
                 {/* メインタイトル：日本語の短いタイトルを優先表示 */}
-                <h1 className="text-base sm:text-xl md:text-3xl lg:text-4xl font-black mb-0.5 sm:mb-2 drop-shadow-2xl leading-tight">
+                <h1 className={`font-black drop-shadow-2xl leading-tight transition-all duration-300 ${
+                  isFormVisible 
+                    ? 'text-sm sm:text-base md:text-lg mb-0.5' 
+                    : 'text-base sm:text-xl md:text-3xl lg:text-4xl mb-0.5 sm:mb-2'
+                }`}>
                   {selectedBanner 
                     ? serviceName || '生成されたバナー'
                     : selectedTemplate?.displayTitle || selectedTemplate?.name || selectedTemplate?.industry || 'バナーテンプレート'
                   }
                 </h1>
-                {/* サブタイトル：ジャンル名 */}
-                <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-200 mb-1 drop-shadow-lg font-medium">
-                  {selectedBanner 
-                    ? (tone ? `トーン: ${tone}` : '')
-                    : selectedTemplate?.industry || ''
-                  }
-                </p>
-                {/* プロンプト表示：アイコン付きで分かりやすく（スマホでは非表示） */}
-                {!selectedBanner && selectedTemplate && (
+                {/* サブタイトル：ジャンル名（フォーム表示時は非表示） */}
+                {!isFormVisible && (
+                  <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-200 mb-1 drop-shadow-lg font-medium">
+                    {selectedBanner 
+                      ? (tone ? `トーン: ${tone}` : '')
+                      : selectedTemplate?.industry || ''
+                    }
+                  </p>
+                )}
+                {/* プロンプト表示：アイコン付きで分かりやすく（スマホでは非表示、フォーム表示時も非表示） */}
+                {!selectedBanner && selectedTemplate && !isFormVisible && (
                   <div className="hidden sm:flex items-center gap-2 mb-2 sm:mb-3 max-w-2xl">
                     <div className="flex items-center gap-1 px-2 py-0.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 shrink-0">
                       <Sparkles className="w-3 h-3 text-yellow-400" />
@@ -1097,99 +1138,106 @@ function BannerTestPageInner() {
                     </p>
                   </div>
                 )}
-                <div className="flex gap-2 flex-wrap">
-                  {!selectedBanner && selectedTemplate && (
-                    <>
-                      {/* ロック状態の場合 */}
-                      {selectedTemplateLockType ? (
+                {/* ボタン（フォーム表示時は非表示） */}
+                {!isFormVisible && (
+                  <div className="flex gap-2 flex-wrap">
+                    {!selectedBanner && selectedTemplate && (
+                      <>
+                        {/* ロック状態の場合 */}
+                        {selectedTemplateLockType ? (
+                          <button
+                            onClick={() => {
+                              setLockedTemplate(selectedTemplate)
+                              setLockModalType(selectedTemplateLockType)
+                              setShowLockModal(true)
+                            }}
+                            className={`px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 font-bold rounded-md transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg ${
+                              selectedTemplateLockType === 'login'
+                                ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700'
+                                : 'bg-gradient-to-r from-yellow-500 to-orange-500 text-black hover:from-yellow-600 hover:to-orange-600'
+                            }`}
+                          >
+                            <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span className="whitespace-nowrap">
+                              {selectedTemplateLockType === 'login' ? 'ログインして使う' : 'PROプランで解放'}
+                            </span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              const formElement = document.getElementById('banner-form')
+                              if (formElement) {
+                                formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                              }
+                            }}
+                            className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
+                          >
+                            <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
+                            <span className="whitespace-nowrap">このスタイルで生成</span>
+                          </button>
+                        )}
+                        {/* 画像拡大ボタン */}
                         <button
                           onClick={() => {
-                            setLockedTemplate(selectedTemplate)
-                            setLockModalType(selectedTemplateLockType)
-                            setShowLockModal(true)
-                          }}
-                          className={`px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 font-bold rounded-md transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg ${
-                            selectedTemplateLockType === 'login'
-                              ? 'bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700'
-                              : 'bg-gradient-to-r from-yellow-500 to-orange-500 text-black hover:from-yellow-600 hover:to-orange-600'
-                          }`}
-                        >
-                          <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
-                          <span className="whitespace-nowrap">
-                            {selectedTemplateLockType === 'login' ? 'ログインして使う' : 'PROプランで解放'}
-                          </span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            const formElement = document.getElementById('banner-form')
-                            if (formElement) {
-                              formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                            if (selectedTemplate?.imageUrl) {
+                              setZoomImage({
+                                url: selectedTemplate.imageUrl,
+                                title: selectedTemplate.displayTitle || selectedTemplate.name || selectedTemplate.industry
+                              })
                             }
                           }}
+                          className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-800/80 text-white font-bold rounded-md hover:bg-gray-700 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm backdrop-blur-sm border border-white/20"
+                          title="画像を拡大表示"
+                        >
+                          <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="whitespace-nowrap hidden sm:inline">画像全体を見る</span>
+                        </button>
+                      </>
+                    )}
+                    {selectedBanner && (
+                      <>
+                        <button
+                          onClick={() => handleDownload(selectedBanner)}
                           className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
                         >
-                          <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
-                          <span className="whitespace-nowrap">このスタイルで生成</span>
+                          <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="whitespace-nowrap">ダウンロード</span>
                         </button>
-                      )}
-                      {/* 画像拡大ボタン */}
-                      <button
-                        onClick={() => {
-                          if (selectedTemplate?.imageUrl) {
+                        {/* 生成バナーの拡大ボタン */}
+                        <button
+                          onClick={() => {
                             setZoomImage({
-                              url: selectedTemplate.imageUrl,
-                              title: selectedTemplate.displayTitle || selectedTemplate.name || selectedTemplate.industry
+                              url: selectedBanner.imageUrl,
+                              title: '生成されたバナー'
                             })
-                          }
-                        }}
-                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-800/80 text-white font-bold rounded-md hover:bg-gray-700 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm backdrop-blur-sm border border-white/20"
-                        title="画像を拡大表示"
-                      >
-                        <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span className="whitespace-nowrap hidden sm:inline">画像全体を見る</span>
-                      </button>
-                    </>
-                  )}
-                  {selectedBanner && (
-                    <>
-                      <button
-                        onClick={() => handleDownload(selectedBanner)}
-                        className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
-                      >
-                        <Download className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span className="whitespace-nowrap">ダウンロード</span>
-                      </button>
-                      {/* 生成バナーの拡大ボタン */}
-                      <button
-                        onClick={() => {
-                          setZoomImage({
-                            url: selectedBanner.imageUrl,
-                            title: '生成されたバナー'
-                          })
-                        }}
-                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-800/80 text-white font-bold rounded-md hover:bg-gray-700 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm backdrop-blur-sm border border-white/20"
-                        title="画像を拡大表示"
-                      >
-                        <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span className="whitespace-nowrap hidden sm:inline">画像全体を見る</span>
-                      </button>
-                      <button 
-                        onClick={() => setSelectedBanner(null)}
-                        className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-gray-600/80 text-white font-bold rounded-md hover:bg-gray-600 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm backdrop-blur-sm"
-                      >
-                        <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
-                        <span className="whitespace-nowrap">戻る</span>
-                      </button>
-                    </>
-                  )}
-                </div>
+                          }}
+                          className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-800/80 text-white font-bold rounded-md hover:bg-gray-700 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm backdrop-blur-sm border border-white/20"
+                          title="画像を拡大表示"
+                        >
+                          <Maximize2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="whitespace-nowrap hidden sm:inline">画像全体を見る</span>
+                        </button>
+                        <button 
+                          onClick={() => setSelectedBanner(null)}
+                          className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-gray-600/80 text-white font-bold rounded-md hover:bg-gray-600 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm backdrop-blur-sm"
+                        >
+                          <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="whitespace-nowrap">戻る</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* テンプレート一覧（Netflix風の横スクロール） - 固定ヒーローの下にパディング */}
-          <div className="w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh] relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8">
+          {/* テンプレート一覧（Netflix風の横スクロール） - 固定ヒーローの下にパディング、フォーム表示時は縮小 */}
+          <div className={`w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8 transition-all duration-300 ease-in-out ${
+            isFormVisible 
+              ? 'pt-[17vh] sm:pt-[20vh] md:pt-[22vh] lg:pt-[24vh]' 
+              : 'pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh]'
+          }`}>
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -1456,7 +1504,11 @@ function BannerTestPageInner() {
 
           {/* 生成フォーム（選択されたテンプレートに基づく、バナー選択時は非表示） */}
           {selectedTemplate && !selectedBanner && (
-            <div id="banner-form" className="w-full overflow-x-hidden px-3 sm:px-4 md:px-8 lg:px-12 py-6 sm:py-8 md:py-12 bg-black/95 backdrop-blur-sm scroll-mt-4">
+            <div 
+              ref={formRef}
+              id="banner-form" 
+              className="w-full overflow-x-hidden px-3 sm:px-4 md:px-8 lg:px-12 py-6 sm:py-8 md:py-12 bg-black/95 backdrop-blur-sm scroll-mt-4"
+            >
               <div className="max-w-5xl mx-auto w-full">
                 <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 md:mb-8 text-white">バナー情報を入力</h2>
                 <div className="bg-gray-900/90 rounded-xl md:rounded-2xl p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 border border-gray-800">
