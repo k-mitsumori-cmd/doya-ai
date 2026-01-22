@@ -558,7 +558,7 @@ function BannerTestPageInner() {
     // マウスが離れた時はドラッグを継続（グローバルイベントで処理）
   }, [])
   
-  // マウスホイール/トラックパッドでの横スクロール（Netflix風）- 軽快なスワイプ
+  // マウスホイール/トラックパッドでの横スクロール（Netflix風）- 超軽快なスワイプ
   const handleWheel = useCallback((e: React.WheelEvent, category: string) => {
     const container = scrollRefs.current[category]
     if (!container) return
@@ -569,17 +569,22 @@ function BannerTestPageInner() {
     // トラックパッドの横スワイプを検出
     // deltaXが0でない場合は横スワイプ
     if (e.deltaX !== 0) {
-      // 横スワイプの場合は感度を上げて適用（2倍速）
-      container.scrollLeft += e.deltaX * 2
-      updateScrollPosition(category)
+      // 横スワイプの場合は感度を大幅に上げて適用（3倍速）
+      // requestAnimationFrameでスムーズに
+      requestAnimationFrame(() => {
+        container.scrollLeft += e.deltaX * 3
+        updateScrollPosition(category)
+      })
       return
     }
     
     // Shiftキー + 縦スクロールの場合
     if (e.shiftKey && e.deltaY !== 0) {
       e.preventDefault()
-      container.scrollLeft += e.deltaY * 2
-      updateScrollPosition(category)
+      requestAnimationFrame(() => {
+        container.scrollLeft += e.deltaY * 3
+        updateScrollPosition(category)
+      })
       return
     }
     
@@ -905,13 +910,14 @@ function BannerTestPageInner() {
                       {/* 横スクロールコンテナ（タッチ/マウススワイプ対応） */}
                       <div
                         ref={(el) => { scrollRefs.current[categoryName] = el }}
-                        className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-0 sm:px-10 md:px-16 py-1.5 sm:py-2 md:py-4 cursor-grab active:cursor-grabbing select-none scroll-smooth"
+                        className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-0 sm:px-10 md:px-16 py-1.5 sm:py-2 md:py-4 cursor-grab active:cursor-grabbing select-none"
                         style={{ 
                           scrollbarWidth: 'none', 
                           msOverflowStyle: 'none',
                           WebkitOverflowScrolling: 'touch',
                           scrollPaddingLeft: '12px',
                           scrollPaddingRight: '12px',
+                          willChange: 'scroll-position',
                         }}
                         onScroll={() => handleScroll(categoryName)}
                         onTouchStart={(e) => handleTouchStart(e, categoryName)}
@@ -1117,7 +1123,7 @@ function BannerTestPageInner() {
                       type="text"
                       value={serviceName}
                       onChange={(e) => setServiceName(e.target.value)}
-                      placeholder="例: AIライティングツール比較2026"
+                      placeholder="例: 新規事業立ち上げセミナー / 採用強化キャンペーン / 春の新商品発売"
                       className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-800 border border-gray-700 rounded-lg sm:rounded-xl text-sm sm:text-base text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <p className="text-[10px] sm:text-xs text-gray-400 mt-1.5">
