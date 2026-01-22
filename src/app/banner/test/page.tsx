@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu, Lock, LogIn } from 'lucide-react'
+import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu, Lock, LogIn, FileText, Copy, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -144,6 +144,10 @@ function BannerTestPageInner() {
   const [editingBanner, setEditingBanner] = useState<GeneratedBanner | null>(null)
   const [editPrompt, setEditPrompt] = useState('')
   const [isEditing, setIsEditing] = useState(false)
+  
+  // プロンプト閲覧モーダル（エンタープライズ限定）
+  const [showPromptModal, setShowPromptModal] = useState(false)
+  const [viewingPromptBanner, setViewingPromptBanner] = useState<GeneratedBanner | null>(null)
   
   // 生成中のローディング状態
   const [loadingMessage, setLoadingMessage] = useState('')
@@ -1941,6 +1945,33 @@ function BannerTestPageInner() {
                           </button>
                         )}
                       </div>
+                      
+                      {/* プロンプト閲覧ボタン（エンタープライズ限定） */}
+                      {(currentPlan === 'ENTERPRISE' || isTrialActive) ? (
+                        <button
+                          onClick={() => {
+                            setViewingPromptBanner(banner)
+                            setShowPromptModal(true)
+                          }}
+                          className="w-full py-2 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-500 hover:to-blue-400 text-white text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <FileText className="w-4 h-4" />
+                          プロンプトを見る
+                          <span className="px-1.5 py-0.5 bg-white/20 text-[10px] font-bold rounded">ENTERPRISE</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setLockModalType('enterprise')
+                            setShowLockModal(true)
+                          }}
+                          className="w-full py-2 bg-gray-700 hover:bg-gray-600 text-gray-400 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <Lock className="w-4 h-4" />
+                          プロンプトを見る
+                          <span className="px-1.5 py-0.5 bg-gray-600 text-[10px] font-bold rounded">ENTERPRISE</span>
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 ))}
@@ -2650,6 +2681,161 @@ function BannerTestPageInner() {
                     💡 ヒント：具体的な指示ほど正確に反映されます。「もっと明るく」より「背景を白に近い明るさに」のように指定してください。
                   </p>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 📝 プロンプト閲覧モーダル（エンタープライズ限定） */}
+      <AnimatePresence>
+        {showPromptModal && viewingPromptBanner && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            onClick={() => setShowPromptModal(false)}
+          >
+            {/* 背景オーバーレイ */}
+            <div className="absolute inset-0 bg-black/90 backdrop-blur-md" />
+            
+            {/* モーダルコンテンツ */}
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative z-10 w-full max-w-4xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-indigo-500/30"
+            >
+              {/* ヘッダー */}
+              <div className="p-4 sm:p-6 bg-gradient-to-r from-indigo-600 to-blue-500 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+                      プロンプト詳細
+                      <span className="px-2 py-0.5 bg-white/20 text-xs font-bold rounded-full">ENTERPRISE</span>
+                    </h3>
+                    <p className="text-white/80 text-sm">この画像を生成したプロンプトを確認できます</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPromptModal(false)}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
+              </div>
+              
+              {/* コンテンツ */}
+              <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* 画像プレビュー */}
+                <div>
+                  <h4 className="text-sm font-bold text-gray-300 mb-3">生成された画像</h4>
+                  <div className="relative aspect-video rounded-xl overflow-hidden border border-gray-700 shadow-lg">
+                    <img
+                      src={viewingPromptBanner.imageUrl}
+                      alt="生成画像"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {/* ダウンロードボタン */}
+                  <button
+                    onClick={() => handleDownload(viewingPromptBanner)}
+                    className="mt-3 w-full py-2.5 bg-gradient-to-r from-green-600 to-emerald-500 hover:from-green-500 hover:to-emerald-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    画像をダウンロード
+                  </button>
+                </div>
+                
+                {/* プロンプト表示 */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-bold text-gray-300">使用プロンプト</h4>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          const prompt = viewingPromptBanner.prompt || selectedTemplate?.prompt || '（プロンプト情報なし）'
+                          navigator.clipboard.writeText(prompt)
+                          toast.success('プロンプトをコピーしました')
+                        }}
+                        className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        コピー
+                      </button>
+                      <button
+                        onClick={() => {
+                          const prompt = viewingPromptBanner.prompt || selectedTemplate?.prompt || '（プロンプト情報なし）'
+                          const blob = new Blob([prompt], { type: 'text/plain' })
+                          const url = URL.createObjectURL(blob)
+                          const link = document.createElement('a')
+                          link.href = url
+                          link.download = `prompt-${viewingPromptBanner.id}.txt`
+                          document.body.appendChild(link)
+                          link.click()
+                          document.body.removeChild(link)
+                          URL.revokeObjectURL(url)
+                          toast.success('プロンプトをダウンロードしました')
+                        }}
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        DL
+                      </button>
+                    </div>
+                  </div>
+                  <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 h-[200px] sm:h-[250px] overflow-y-auto">
+                    <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono leading-relaxed">
+                      {viewingPromptBanner.prompt || selectedTemplate?.prompt || '（プロンプト情報なし）'}
+                    </pre>
+                  </div>
+                  
+                  {/* プロンプト活用ヒント */}
+                  <div className="mt-4 p-3 bg-indigo-900/30 rounded-lg border border-indigo-700/50">
+                    <h5 className="text-xs font-bold text-indigo-300 mb-2">💡 プロンプト活用のヒント</h5>
+                    <ul className="text-xs text-indigo-200/80 space-y-1">
+                      <li>• このプロンプトをベースに修正して新しい画像を生成できます</li>
+                      <li>• 色やレイアウトの指示を変更して別バリエーションを作成</li>
+                      <li>• 他のAI画像生成ツールでも使用可能です</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
+              {/* フッター：画像＋プロンプト一括ダウンロード */}
+              <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+                <button
+                  onClick={async () => {
+                    const prompt = viewingPromptBanner.prompt || selectedTemplate?.prompt || '（プロンプト情報なし）'
+                    
+                    // プロンプトをダウンロード
+                    const promptBlob = new Blob([prompt], { type: 'text/plain' })
+                    const promptUrl = URL.createObjectURL(promptBlob)
+                    const promptLink = document.createElement('a')
+                    promptLink.href = promptUrl
+                    promptLink.download = `prompt-${viewingPromptBanner.id}.txt`
+                    document.body.appendChild(promptLink)
+                    promptLink.click()
+                    document.body.removeChild(promptLink)
+                    URL.revokeObjectURL(promptUrl)
+                    
+                    // 画像をダウンロード
+                    setTimeout(() => {
+                      handleDownload(viewingPromptBanner)
+                    }, 500)
+                    
+                    toast.success('画像とプロンプトをダウンロードしました')
+                  }}
+                  className="w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-500 hover:from-indigo-500 hover:to-blue-400 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <Download className="w-5 h-5" />
+                  画像＋プロンプトを一括ダウンロード
+                </button>
               </div>
             </motion.div>
           </motion.div>
