@@ -135,6 +135,10 @@ function BannerTestPageInner() {
   const [personFile, setPersonFile] = useState<File | null>(null)
   const [personPreview, setPersonPreview] = useState<string | null>(null)
   
+  // カスタムプロンプト（エンタープライズ限定）
+  const [customPrompt, setCustomPrompt] = useState('')
+  const [showCustomPrompt, setShowCustomPrompt] = useState(false)
+  
   // 生成中のローディング状態
   const [loadingMessage, setLoadingMessage] = useState('')
   const [generationProgress, setGenerationProgress] = useState(0)
@@ -772,6 +776,8 @@ function BannerTestPageInner() {
           templateDisplayTitle: selectedTemplate.displayTitle || selectedTemplate.name,
           logoBase64: logoPreview || undefined,
           personBase64: personPreview || undefined,
+          // エンタープライズ限定：カスタムプロンプト
+          customPrompt: currentPlan === 'ENTERPRISE' && customPrompt.trim() ? customPrompt.trim() : undefined,
         }),
       })
 
@@ -1543,6 +1549,84 @@ function BannerTestPageInner() {
                     </div>
                   </div>
 
+                  {/* カスタムプロンプト（エンタープライズ限定） */}
+                  <div className={`${currentPlan !== 'ENTERPRISE' ? 'opacity-60' : ''}`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs sm:text-sm font-bold flex items-center gap-2">
+                        <span>詳細な生成指示</span>
+                        <span className="px-2 py-0.5 bg-purple-600 text-[10px] font-bold rounded-full">ENTERPRISE</span>
+                      </label>
+                      {currentPlan === 'ENTERPRISE' && (
+                        <button
+                          type="button"
+                          onClick={() => setShowCustomPrompt(!showCustomPrompt)}
+                          className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          {showCustomPrompt ? '閉じる' : '開く'}
+                        </button>
+                      )}
+                    </div>
+                    
+                    {currentPlan !== 'ENTERPRISE' ? (
+                      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                        <div className="flex items-center gap-3">
+                          <Lock className="w-5 h-5 text-purple-400" />
+                          <div>
+                            <p className="text-sm text-gray-300">エンタープライズプラン限定機能</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              詳細な生成指示を入力して、より細かくバナーをカスタマイズできます
+                            </p>
+                          </div>
+                        </div>
+                        <a
+                          href="/banner/dashboard/plan"
+                          className="mt-3 inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          <Crown className="w-3 h-3" />
+                          プランをアップグレード
+                        </a>
+                      </div>
+                    ) : showCustomPrompt ? (
+                      <div className="space-y-3">
+                        <p className="text-[10px] sm:text-xs text-gray-400">
+                          選択したスタイルに加えて、追加の指示を入力できます。背景、色、レイアウト、装飾などを細かく指定できます。
+                        </p>
+                        <textarea
+                          value={customPrompt}
+                          onChange={(e) => setCustomPrompt(e.target.value)}
+                          placeholder="例：背景を青いグラデーションに変更、右下にキラキラエフェクトを追加、文字を黄色で縁取り..."
+                          className="w-full h-32 px-4 py-3 bg-gray-800 border border-purple-600/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none text-sm"
+                        />
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500">{customPrompt.length} / 500文字</span>
+                          {customPrompt && (
+                            <button
+                              type="button"
+                              onClick={() => setCustomPrompt('')}
+                              className="text-gray-400 hover:text-white transition-colors"
+                            >
+                              クリア
+                            </button>
+                          )}
+                        </div>
+                        <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-700/50">
+                          <p className="text-[10px] text-purple-300">
+                            💡 ヒント：「背景を〇〇に」「文字の色を〇〇に」「〇〇を追加」などの指示が効果的です
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomPrompt(true)}
+                        className="w-full py-3 bg-gray-800 hover:bg-gray-700 border border-purple-600/30 rounded-lg text-sm text-purple-300 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        詳細な生成指示を追加
+                      </button>
+                    )}
+                  </div>
+
                   {/* 生成ボタン / ローディングUI */}
                   {isGenerating ? (
                     <div className="bg-gradient-to-br from-blue-900/50 to-purple-900/50 rounded-xl p-6 border border-blue-700/50">
@@ -1887,6 +1971,16 @@ function BannerTestPageInner() {
                             )}
                           </div>
                         )}
+                        {/* カスタムプロンプト表示（エンタープライズ） */}
+                        {customPrompt && (
+                          <div className="pt-2 border-t border-white/10">
+                            <p className="text-white/50 text-xs mb-1 flex items-center gap-1">
+                              <span className="px-1.5 py-0.5 bg-purple-600 text-[8px] font-bold rounded">ENTERPRISE</span>
+                              詳細指示
+                            </p>
+                            <p className="text-white/80 text-xs line-clamp-2">{customPrompt}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1895,6 +1989,7 @@ function BannerTestPageInner() {
                   <div className="mt-6 text-center">
                     <p className="text-white/50 text-sm">
                       ✨ AIが選択したスタイルを分析し、あなたのテキストに合わせてバナーを生成しています
+                      {customPrompt && '（カスタム指示を適用中）'}
                     </p>
                   </div>
                 </>

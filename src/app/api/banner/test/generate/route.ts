@@ -17,6 +17,7 @@ type TestGenerateRequest = {
   templateDisplayTitle?: string // テンプレートの表示名
   logoBase64?: string // ロゴ画像（Base64）
   personBase64?: string // 人物画像（Base64）
+  customPrompt?: string // エンタープライズ限定：カスタムプロンプト
 }
 
 // テンプレート別のプロンプト生成（ユーザー例を参考に拡張可能）
@@ -30,8 +31,9 @@ function buildTestBannerPrompt(params: {
   variationIndex: number
   basePrompt?: string // テンプレートのベースプロンプト
   templateDisplayTitle?: string // テンプレートの表示名
+  customPrompt?: string // エンタープライズ限定：カスタムプロンプト
 }): string {
-  const { template, size, industry, mainTitle, subTitle, accentText, variationIndex, basePrompt, templateDisplayTitle } = params
+  const { template, size, industry, mainTitle, subTitle, accentText, variationIndex, basePrompt, templateDisplayTitle, customPrompt } = params
   const [width, height] = size.split('x')
   
   // basePromptがある場合は、それをベースにカスタマイズ（スタイルを維持）
@@ -42,6 +44,16 @@ function buildTestBannerPrompt(params: {
     // 元のプロンプトからテキスト指示を除去し、新しいテキストを追加
     // 元のプロンプトの構造を維持しつつ、テキスト内容のみ変更
     
+    // カスタムプロンプトがある場合は追加指示として含める
+    const customInstructions = customPrompt ? `
+
+=== ADDITIONAL CUSTOM INSTRUCTIONS (ENTERPRISE) ===
+The following custom modifications should be applied to the design:
+${customPrompt}
+
+Please incorporate these custom instructions while maintaining the overall style and quality.
+` : ''
+    
     return `
 ${basePrompt}
 
@@ -50,12 +62,12 @@ Replace any placeholder text or sample text in the design with:
 - Main headline: "${mainTitle}"
 ${subTitle ? `- Subheadline: "${subTitle}"` : ''}
 ${accentText ? `- Accent text: "${accentText}"` : ''}
-
+${customInstructions}
 === CRITICAL INSTRUCTIONS ===
-1. KEEP the exact same visual style, colors, layout, and composition as described above
+1. KEEP the exact same visual style, colors, layout, and composition as described above${customPrompt ? ' (unless modified by custom instructions)' : ''}
 2. ONLY change the text content to the new Japanese text provided
 3. Maintain the same typography style (font weight, size, color, position)
-4. Keep all decorative elements, backgrounds, and visual effects identical
+4. Keep all decorative elements, backgrounds, and visual effects identical${customPrompt ? ' (unless modified by custom instructions)' : ''}
 5. The Japanese text "${mainTitle}" must be clearly readable and properly positioned
 
 === OUTPUT SPECIFICATIONS ===
@@ -178,6 +190,7 @@ export async function POST(request: NextRequest) {
       templateDisplayTitle,
       logoBase64,
       personBase64,
+      customPrompt, // エンタープライズ限定：カスタムプロンプト
     } = body
 
     if (!mainTitle.trim()) {
@@ -209,6 +222,7 @@ export async function POST(request: NextRequest) {
         variationIndex: i,
         basePrompt,
         templateDisplayTitle,
+        customPrompt, // エンタープライズ限定：カスタムプロンプト
       })
       prompts.push(prompt)
     }
