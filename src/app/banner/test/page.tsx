@@ -472,6 +472,9 @@ function BannerTestPageInner() {
   
   // マウスドラッグハンドラ（デスクトップ用）
   const handleMouseDown = useCallback((e: React.MouseEvent, category: string) => {
+    // 左クリックのみ処理
+    if (e.button !== 0) return
+    
     touchStartX.current[category] = e.clientX
     touchCurrentX.current[category] = e.clientX
     isDragging.current[category] = true
@@ -481,6 +484,34 @@ function BannerTestPageInner() {
       container.style.cursor = 'grabbing'
       container.style.userSelect = 'none'
     }
+    
+    // グローバルイベントリスナーを追加（コンテナ外でもドラッグを継続）
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current[category]) return
+      e.preventDefault()
+      
+      touchCurrentX.current[category] = e.clientX
+      const container = scrollRefs.current[category]
+      if (container) {
+        const diff = touchStartX.current[category] - touchCurrentX.current[category]
+        container.scrollLeft += diff
+        touchStartX.current[category] = touchCurrentX.current[category]
+      }
+    }
+    
+    const handleGlobalMouseUp = () => {
+      isDragging.current[category] = false
+      const container = scrollRefs.current[category]
+      if (container) {
+        container.style.cursor = 'grab'
+        container.style.userSelect = ''
+      }
+      document.removeEventListener('mousemove', handleGlobalMouseMove)
+      document.removeEventListener('mouseup', handleGlobalMouseUp)
+    }
+    
+    document.addEventListener('mousemove', handleGlobalMouseMove)
+    document.addEventListener('mouseup', handleGlobalMouseUp)
   }, [])
   
   const handleMouseMove = useCallback((e: React.MouseEvent, category: string) => {
@@ -506,10 +537,19 @@ function BannerTestPageInner() {
   }, [])
   
   const handleMouseLeave = useCallback((category: string) => {
-    if (isDragging.current[category]) {
-      handleMouseUp(category)
+    // マウスが離れた時はドラッグを継続（グローバルイベントで処理）
+  }, [])
+  
+  // マウスホイールでの横スクロール（PC用）
+  const handleWheel = useCallback((e: React.WheelEvent, category: string) => {
+    // Shiftキーが押されている場合、または横スクロールが可能な場合
+    const container = scrollRefs.current[category]
+    if (container && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {
+      e.preventDefault()
+      container.scrollLeft += e.deltaX || e.deltaY
+      updateScrollPosition(category)
     }
-  }, [handleMouseUp])
+  }, [updateScrollPosition])
 
   // バナー生成
   const handleGenerate = async () => {
@@ -796,12 +836,12 @@ function BannerTestPageInner() {
                         onClick={() => scroll('left', categoryName)}
                         className={`absolute left-0 top-0 bottom-0 z-20 w-8 sm:w-10 md:w-16 bg-transparent flex items-center justify-center transition-all duration-300 ${
                           scrollPositions[categoryName]?.canScrollLeft
-                            ? 'opacity-60 sm:opacity-0 group-hover/scroll:opacity-100'
+                            ? 'opacity-60 sm:opacity-40 md:opacity-0 group-hover/scroll:opacity-100'
                             : 'opacity-0 pointer-events-none'
                         }`}
                         aria-label="左にスクロール"
                       >
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 shadow-lg border border-white/20">
                           <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 text-white" />
                         </div>
                       </button>
@@ -825,6 +865,7 @@ function BannerTestPageInner() {
                         onMouseMove={(e) => handleMouseMove(e, categoryName)}
                         onMouseUp={() => handleMouseUp(categoryName)}
                         onMouseLeave={() => handleMouseLeave(categoryName)}
+                        onWheel={(e) => handleWheel(e, categoryName)}
                       >
                         {categoryTemplates.map((template, index) => {
                           const hasError = imageErrors.has(template.id)
@@ -969,12 +1010,12 @@ function BannerTestPageInner() {
                         onClick={() => scroll('right', categoryName)}
                         className={`absolute right-0 top-0 bottom-0 z-20 w-8 sm:w-10 md:w-16 bg-transparent flex items-center justify-center transition-all duration-300 ${
                           scrollPositions[categoryName]?.canScrollRight
-                            ? 'opacity-60 sm:opacity-0 group-hover/scroll:opacity-100'
+                            ? 'opacity-60 sm:opacity-40 md:opacity-0 group-hover/scroll:opacity-100'
                             : 'opacity-0 pointer-events-none'
                         }`}
                         aria-label="右にスクロール"
                       >
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 shadow-lg border border-white/20">
                           <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 text-white" />
                         </div>
                       </button>
