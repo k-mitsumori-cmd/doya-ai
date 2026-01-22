@@ -913,9 +913,12 @@ function BannerTestPageInner() {
 
   return (
     <div className="min-h-screen bg-black text-white flex">
-      <DashboardSidebar isMobile={false} />
+      {/* PC用サイドバー（モバイルでは完全に非表示） */}
+      <div className="hidden md:block">
+        <DashboardSidebar isMobile={false} />
+      </div>
       
-      {/* モバイル用サイドバーオーバーレイ */}
+      {/* モバイル用サイドバーオーバーレイ（ハンバーガーメニューから開く） */}
       <AnimatePresence>
         {isSidebarOpen && (
           <>
