@@ -966,9 +966,9 @@ function BannerTestPageInner() {
         )}
         
         {/* Netflix風のメインコンテンツ */}
-        <div className={`relative ${isTrialActive ? 'pt-20 md:pt-8' : 'pt-12 md:pt-0'}`}>
+        <div className={`relative ${isTrialActive ? 'pt-20 md:pt-10' : 'pt-12 md:pt-0'}`}>
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- スティッキー */}
-          <div className={`sticky ${isTrialActive ? 'top-20 md:top-8' : 'top-12 md:top-0'} z-20 h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] w-full overflow-hidden`}>
+          <div className={`sticky ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} z-20 h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] w-full overflow-hidden`}>
             {/* グラデーション: 下は黒、上は明るく */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
             {selectedBanner ? (
