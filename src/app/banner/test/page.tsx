@@ -629,7 +629,7 @@ function BannerTestPageInner() {
           </div>
 
           {/* テンプレート一覧（Netflix風の横スクロール） */}
-          <div className="px-3 sm:px-4 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 relative z-30 space-y-4 sm:space-y-6 md:space-y-8 bg-black pb-8">
+          <div className="px-3 sm:px-4 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 relative z-10 space-y-6 sm:space-y-8 md:space-y-10 bg-black pb-8">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -639,9 +639,9 @@ function BannerTestPageInner() {
                 if (categoryTemplates.length === 0) return null
                 
                 return (
-                  <div key={categoryName} className="space-y-3 md:space-y-4">
-                    <h2 className="text-xl md:text-2xl lg:text-3xl font-bold px-2 md:px-4 text-white">
-                      ▶ {categoryName}
+                  <div key={categoryName} className="space-y-2 sm:space-y-3">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold px-2 md:px-4 text-white flex items-center gap-2">
+                      <span className="text-blue-400">▶</span> {categoryName}
                     </h2>
                     <div className="relative group/scroll">
                       {/* 左スクロールボタン（スクロール可能な場合のみ表示） */}
