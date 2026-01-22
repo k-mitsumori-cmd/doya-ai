@@ -353,8 +353,9 @@ function BannerTestPageInner() {
             const { data, timestamp } = JSON.parse(cached)
             const now = Date.now()
             
-            // キャッシュが有効な場合は使用
-            if (now - timestamp < CACHE_EXPIRY && data.templates && Array.isArray(data.templates)) {
+            // キャッシュが有効で、promptフィールドが含まれている場合のみ使用
+            const hasPrompts = data.templates?.[0]?.prompt && data.templates[0].prompt.length > 50
+            if (now - timestamp < CACHE_EXPIRY && data.templates && Array.isArray(data.templates) && hasPrompts) {
               setTemplates(data.templates)
               
               // 各カテゴリの初期表示数を設定
@@ -388,8 +389,9 @@ function BannerTestPageInner() {
           }
         }
         
-        // APIから取得（最小限モードで高速化）
-        const res = await fetch('/api/banner/test/templates?minimal=true&limit=100', {
+        // APIから取得（完全なプロンプトを含む）
+        // minimal=falseで完全なプロンプトを取得（スタイル維持のため必須）
+        const res = await fetch('/api/banner/test/templates?limit=100', {
           next: { revalidate: 300 }, // Next.js ISR: 5分間キャッシュ
         })
         

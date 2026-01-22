@@ -36,36 +36,33 @@ function buildTestBannerPrompt(params: {
   
   // basePromptがある場合は、それをベースにカスタマイズ（スタイルを維持）
   if (basePrompt && basePrompt.length > 50) {
-    // 元のプロンプトから主要なスタイル要素を抽出
-    // バリエーションは最小限に（元のスタイルを完全に維持）
+    // 元のプロンプトをそのまま使用し、テキストのみ差し替え
+    // 元のプロンプトが英語の場合はそのまま使用
+    
+    // 元のプロンプトからテキスト指示を除去し、新しいテキストを追加
+    // 元のプロンプトの構造を維持しつつ、テキスト内容のみ変更
     
     return `
-あなたはプロのグラフィックデザイナーです。以下の参照デザインを「完全にコピー」して、テキストのみを差し替えてください。
-
-【参照デザインの詳細】
 ${basePrompt}
 
-【絶対に変更しないでください】
-1. 背景のデザイン・色・グラデーション・パターン
-2. レイアウト構成（テキストの位置、要素の配置）
-3. フォントのスタイル・サイズ・色
-4. 装飾要素（線、図形、アイコン、イラスト）
-5. 全体の雰囲気・トーン・世界観
+=== TEXT REPLACEMENT ===
+Replace any placeholder text or sample text in the design with:
+- Main headline: "${mainTitle}"
+${subTitle ? `- Subheadline: "${subTitle}"` : ''}
+${accentText ? `- Accent text: "${accentText}"` : ''}
 
-【変更するのはテキストのみ】
-・メインテキスト：「${mainTitle}」
-・上記のテキストを、参照デザインと同じフォントスタイル・配置で表示
+=== CRITICAL INSTRUCTIONS ===
+1. KEEP the exact same visual style, colors, layout, and composition as described above
+2. ONLY change the text content to the new Japanese text provided
+3. Maintain the same typography style (font weight, size, color, position)
+4. Keep all decorative elements, backgrounds, and visual effects identical
+5. The Japanese text "${mainTitle}" must be clearly readable and properly positioned
 
-【重要な指示】
-・参照デザインの「見た目」を99%再現してください
-・テキスト内容だけが異なる、ほぼ同一のデザインを生成してください
-・創造性は不要です。忠実な再現を優先してください
-${templateDisplayTitle ? `・「${templateDisplayTitle}」というスタイル名のデザインです` : ''}
-
-【出力仕様】
-・サイズ: ${width}×${height} px
-・エッジまで埋める（余白なし）
-・日本語テキストは可読性を確保
+=== OUTPUT SPECIFICATIONS ===
+- Dimensions: ${width}x${height} pixels
+- Fill entire canvas (no letterboxing)
+- Japanese text must be legible with clean typography
+- Return ONE PNG image
 `.trim()
   }
 
