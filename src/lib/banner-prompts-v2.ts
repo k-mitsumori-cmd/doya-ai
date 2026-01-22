@@ -36,7 +36,8 @@ export interface BannerPromptV2 {
 export const GENRES = [
   { id: 'fashion', name: 'ファッション・アパレル', category: 'ec' },
   { id: 'beauty', name: '美容・コスメ', category: 'beauty' },
-  { id: 'food', name: '飲料・食品', category: 'ec' },
+  { id: 'beverage', name: '飲料', category: 'ec' },
+  { id: 'food', name: '食品', category: 'ec' },
   { id: 'it', name: 'IT・テクノロジー', category: 'it' },
   { id: 'business', name: 'ビジネス・SaaS', category: 'it' },
   { id: 'recruit', name: '転職・採用・人材', category: 'recruit' },
@@ -55,7 +56,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 1. 清涼飲料水バナー（水色・爽快系）
   {
     id: 'ref-beverage-001',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: '清涼飲料水爽快',
     displayTitle: '新爽快ドリンク',
@@ -73,7 +74,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 2. ビールイベントバナー（夜空・ゴールド系）
   {
     id: 'ref-beverage-002',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'ビールイベント夜空',
     displayTitle: 'ビアフェス',
@@ -91,7 +92,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 3. ハイボールキャンペーン（白・爽快系）
   {
     id: 'ref-beverage-003',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'ハイボールキャンペーン',
     displayTitle: 'ハイボールCP',
@@ -163,7 +164,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 7. ドーナツ商品（ベージュ・ナチュラル）
   {
     id: 'ref-food-001',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: 'ドーナツナチュラル',
     displayTitle: 'もちもちドーナツ',
@@ -181,7 +182,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 8. ピザキャンペーン（赤・ポップ）
   {
     id: 'ref-food-002',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: 'ピザキャンペーン赤',
     displayTitle: '2枚目無料',
@@ -199,7 +200,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 9. 牛タン弁当（オレンジ×緑・和風）
   {
     id: 'ref-food-003',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: '牛タン弁当ポップ',
     displayTitle: 'ネギ塩牛タン',
@@ -253,7 +254,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 12. 月見メニュー（深い青・和風）
   {
     id: 'ref-food-004',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: '月見メニュー和風',
     displayTitle: '月見御膳',
@@ -271,7 +272,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 13. カフェドリンク（水色×ベージュ）
   {
     id: 'ref-beverage-004',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'カフェドリンク爽やか',
     displayTitle: 'バニララテ',
@@ -289,7 +290,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 14. チューハイ広告（水色・タレント）
   {
     id: 'ref-beverage-005',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'チューハイ広告タレント',
     displayTitle: '笑える！熱くなる！',
@@ -307,7 +308,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 15. フルーティーチューハイ（ピンク・レトロ）
   {
     id: 'ref-beverage-006',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'フルーティーチューハイレトロ',
     displayTitle: '華よいキャンペーン',
@@ -343,7 +344,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 17. ビールプレゼント（青・キャンペーン）
   {
     id: 'ref-beverage-007',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'ビールプレゼント青',
     displayTitle: 'ホワイトビール新発売',
@@ -433,7 +434,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 22. グルメ特集（赤×ベージュ・和風）
   {
     id: 'ref-food-005',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: 'グルメ特集和風',
     displayTitle: '神宮グルメ',
@@ -451,7 +452,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 23. チョコアイス（赤茶・高級感）
   {
     id: 'ref-food-006',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: 'チョコアイス高級',
     displayTitle: 'ガナッシュショコラ',
@@ -559,7 +560,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 29. ウイスキー商品（オレンジ・高級感）
   {
     id: 'ref-beverage-008',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'ウイスキー高級',
     displayTitle: 'プレミアムウイスキー',
@@ -613,7 +614,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 32. 巨峰ドリンク（紫・フルーティー）
   {
     id: 'ref-beverage-009',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: '巨峰ドリンク紫',
     displayTitle: 'あふれる巨峰',
@@ -649,7 +650,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 34. プレミアムビール（黄×白・高級感）
   {
     id: 'ref-beverage-010',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'プレミアムビール黄',
     displayTitle: 'プレミアムビール',
@@ -721,7 +722,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 38. カフェドリンク季節限定（金×白）
   {
     id: 'ref-beverage-011',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'カフェドリンク季節限定',
     displayTitle: 'ゆず蜂蜜ラテ',
@@ -757,7 +758,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 40. スポーツドリンク（青・スポーツ）
   {
     id: 'ref-beverage-012',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'スポーツドリンク青',
     displayTitle: 'ハイドレーション',
@@ -811,7 +812,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 43. 牛丼新商品（茶×黒・食欲）
   {
     id: 'ref-food-007',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: '牛丼新商品茶黒',
     displayTitle: '牛魯肉飯',
@@ -829,7 +830,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 44. ビール新商品（青・爽快）
   {
     id: 'ref-beverage-013',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'ビール新商品青',
     displayTitle: '糖質ゼロ新発売',
@@ -847,7 +848,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 45. 焼酎割り方（白×紺・シンプル）
   {
     id: 'ref-beverage-014',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: '焼酎割り方シンプル',
     displayTitle: '炭酸割り1:2',
@@ -883,7 +884,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 47. フルーツティー（水色・爽やか）
   {
     id: 'ref-beverage-015',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'フルーツティー水色',
     displayTitle: 'フルーツティー',
@@ -901,7 +902,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 48. コンビニアイス（紫・商品）
   {
     id: 'ref-food-008',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: 'コンビニアイス紫',
     displayTitle: '巨峰ミルク',
@@ -937,7 +938,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 50. 牛丼トッピング（白×紺・シンプル）
   {
     id: 'ref-food-009',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: '牛丼トッピング白紺',
     displayTitle: '新トッピング',
@@ -973,7 +974,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 52. ほうじ茶ラテ（赤茶・秋）
   {
     id: 'ref-beverage-016',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'ほうじ茶ラテ秋',
     displayTitle: 'ほうじ茶ラテ',
@@ -1009,7 +1010,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 54. チョコアイス対決（茶×金・高級感）
   {
     id: 'ref-food-010',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: 'チョコアイス対決茶金',
     displayTitle: '悪魔と天使',
@@ -1027,7 +1028,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 55. 月見バーガー（黄×青・秋）
   {
     id: 'ref-food-011',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: '月見バーガー黄青',
     displayTitle: '月見祭',
@@ -1045,7 +1046,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 56. 抹茶ドリンク（緑×茶・和）
   {
     id: 'ref-beverage-017',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: '抹茶ドリンク和',
     displayTitle: '涼み抹茶',
@@ -1135,7 +1136,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 61. ほうじ茶ドリンク（赤茶・秋）
   {
     id: 'ref-beverage-018',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: 'ほうじ茶ドリンク秋',
     displayTitle: '秋焙煎ほうじ茶',
@@ -1171,7 +1172,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 63. 駅弁商品（黒×紅葉・秋）
   {
     id: 'ref-food-012',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: '駅弁秋黒',
     displayTitle: '京の錦秋弁当',
@@ -1225,7 +1226,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 66. 牛カレー商品（茶×黒・スパイシー）
   {
     id: 'ref-food-013',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: '牛カレー茶黒',
     displayTitle: '牛魯珈カレー',
@@ -1279,7 +1280,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 69. パン祭り（紫・食）
   {
     id: 'ref-food-014',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: 'パン祭り紫',
     displayTitle: 'パンまつり',
@@ -1351,7 +1352,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 73. 月見フェス2（黄×青・秋）
   {
     id: 'ref-food-015',
-    genre: '飲料・食品',
+    genre: '食品',
     category: 'ec',
     name: '月見フェス黄青',
     displayTitle: 'お月見祭2025',
@@ -1369,7 +1370,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 74. 抹茶ドリンク2（緑×茶・和カフェ）
   {
     id: 'ref-beverage-019',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: '抹茶ドリンク和カフェ',
     displayTitle: '抹茶とほうじ茶',
@@ -1459,7 +1460,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
   // 79. 秋ほうじ茶2（オレンジ×茶・秋）
   {
     id: 'ref-beverage-020',
-    genre: '飲料・食品',
+    genre: '飲料',
     category: 'ec',
     name: '秋ほうじ茶オレンジ',
     displayTitle: '秋の楽しみ',
