@@ -15,6 +15,8 @@ import {
   ChevronRight,
   Zap,
   Crown,
+  Image,
+  FolderOpen,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -25,6 +27,11 @@ const mainNavItems = [
   { icon: CreditCard, label: '売上・課金', href: '/admin/billing', badge: null },
   { icon: Shield, label: '管理者アカウント', href: '/admin/admins', badge: null },
   { icon: Settings, label: '設定', href: '/admin/settings', badge: null },
+]
+
+const doyamanaNavItems = [
+  { icon: Image, label: '画像・プロンプト管理', href: '/admin/doyamana-images', badge: null },
+  { icon: FolderOpen, label: 'カテゴリ管理', href: '/admin/doyamana-categories', badge: null },
 ]
 
 const serviceLinks = [
@@ -106,6 +113,45 @@ export function AdminSidebar() {
               </Link>
             )
           })}
+        </div>
+
+        {/* Doyamana AI Section */}
+        <div className="mt-8">
+          <p className="px-3 text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">
+            ドヤマナAI 管理
+          </p>
+          <div className="space-y-1">
+            {doyamanaNavItems.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              return (
+                <Link key={item.href} href={item.href}>
+                  <motion.div
+                    whileHover={{ x: 4 }}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all relative ${
+                      isActive
+                        ? 'bg-emerald-500/15 text-emerald-300'
+                        : 'text-white/50 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeDoyamanaIndicator"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-emerald-400 to-teal-400 rounded-full"
+                      />
+                    )}
+                    <item.icon className={`w-4.5 h-4.5 ${isActive ? 'text-emerald-400' : ''}`} />
+                    <span className="font-medium">{item.label}</span>
+                    {item.badge && (
+                      <span className="ml-auto px-2 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                    {isActive && <ChevronRight className="w-4 h-4 ml-auto text-emerald-400" />}
+                  </motion.div>
+                </Link>
+              )
+            })}
+          </div>
         </div>
 
         {/* Services Section */}

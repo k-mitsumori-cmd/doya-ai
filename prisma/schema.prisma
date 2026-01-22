@@ -875,6 +875,89 @@ model StrategyProject {
 }
 
 // ============================================
+// ドヤマナAI - 画像・プロンプト・カテゴリ管理
+// ============================================
+
+model DoyamanaCategory {
+  id          String   @id @default(cuid())
+  name        String   // カテゴリ名（例: SEO系、LP系、WP系）
+  slug        String   @unique // URL用スラッグ
+  description String?  @db.Text
+  order       Int      @default(0) // 表示順
+  isActive    Boolean  @default(true) // ON/OFF
+  
+  images      DoyamanaImage[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([isActive, order])
+  @@map("doyamana_category")
+}
+
+model DoyamanaImage {
+  id          String   @id @default(cuid())
+  
+  // カテゴリ
+  categoryId  String
+  category    DoyamanaCategory @relation(fields: [categoryId], references: [id])
+  
+  // 画像情報
+  imageUrl    String   @db.Text // Supabase Storage URL or Base64
+  thumbnailUrl String? @db.Text // サムネイル用（オプション）
+  fileName    String?  // 元ファイル名
+  mimeType    String   @default("image/png")
+  width       Int?
+  height      Int?
+  
+  // プロンプト
+  prompt      String   @db.Text // 生成プロンプト
+  promptSummary String? // プロンプト冒頭（一覧表示用、50文字程度）
+  
+  // 表示設定
+  order       Int      @default(0) // 表示順
+  isActive    Boolean  @default(true) // ON/OFF
+  isDeleted   Boolean  @default(false) // 論理削除
+  
+  // 使用回数トラッキング
+  usageCount  Int      @default(0)
+  
+  // 使用ログ
+  usageLogs   DoyamanaUsageLog[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime? // 論理削除日時
+  
+  @@index([categoryId, isActive, isDeleted])
+  @@index([isActive, isDeleted, order])
+  @@index([usageCount])
+  @@map("doyamana_image")
+}
+
+model DoyamanaUsageLog {
+  id        String   @id @default(cuid())
+  
+  imageId   String
+  image     DoyamanaImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  
+  // 使用コンテキスト
+  userId    String?  // ログインユーザーの場合
+  guestId   String?  // ゲストの場合
+  serviceId String?  // どのサービスで使用されたか
+  
+  // メタデータ
+  metadata  Json?    // 追加情報（生成パラメータ等）
+  
+  createdAt DateTime @default(now())
+  
+  @@index([imageId, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("doyamana_usage_log")
+}
+
+// ============================================
 // ドヤバナーAI - テンプレート管理
 // ============================================
 
