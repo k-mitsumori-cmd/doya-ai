@@ -1019,9 +1019,12 @@ function BannerTestPageInner() {
                                 </button>
                               )}
                               {selectedTemplate?.id === template.id && (
-                                <div className="absolute inset-0 ring-4 ring-blue-500 rounded-lg pointer-events-none z-20">
-                                  <div className="absolute top-2 left-2 bg-blue-500 px-2 py-0.5 rounded-full">
-                                    <p className="text-[10px] font-bold text-white whitespace-nowrap">選択中</p>
+                                <div className="absolute -inset-2 ring-4 ring-blue-400 rounded-xl pointer-events-none z-20 shadow-[0_0_30px_rgba(59,130,246,0.6)] animate-pulse">
+                                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-1.5 rounded-full shadow-lg">
+                                    <p className="text-xs font-bold text-white whitespace-nowrap flex items-center gap-1">
+                                      <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
+                                      選択中
+                                    </p>
                                   </div>
                                 </div>
                               )}
@@ -1418,9 +1421,12 @@ function BannerTestPageInner() {
                       <Maximize2 className="w-4 h-4 text-white" />
                     </button>
                     {selectedBanner?.id === banner.id && (
-                      <div className="absolute inset-0 ring-4 ring-blue-500 rounded-lg pointer-events-none">
-                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-blue-500 px-3 py-1 rounded-full">
-                          <p className="text-xs font-bold text-white whitespace-nowrap">選択中</p>
+                      <div className="absolute -inset-2 ring-4 ring-blue-400 rounded-xl pointer-events-none shadow-[0_0_30px_rgba(59,130,246,0.6)] animate-pulse">
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-1.5 rounded-full shadow-lg">
+                          <p className="text-xs font-bold text-white whitespace-nowrap flex items-center gap-1">
+                            <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
+                            選択中
+                          </p>
                         </div>
                       </div>
                     )}
