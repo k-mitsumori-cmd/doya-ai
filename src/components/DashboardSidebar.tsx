@@ -43,11 +43,8 @@ interface NavItem {
 }
 
 const bannerNavItems: NavItem[] = [
-  { href: '/banner', label: 'URL自動生成', icon: Link2, hot: true },
-  { href: '/banner/dashboard', label: 'バナー作成', icon: Palette },
-  { href: '/banner/dashboard/chat', label: 'AIチャット', icon: MessageSquare },
-  { href: '/banner/gallery', label: 'ギャラリー', icon: Layers },
-  { href: '/banner/dashboard/history', label: '履歴', icon: Clock },
+  { href: '/banner/dashboard', label: '選んで生成', icon: Sparkles, hot: true },
+  { href: '/banner/dashboard/create', label: '0からバナー作成', icon: Palette },
   { href: '/banner/dashboard/plan', label: 'プラン・使用量', icon: CreditCard },
 ]
 
