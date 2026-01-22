@@ -54,14 +54,17 @@ export async function POST(request: NextRequest) {
         console.log(`[Generate V2] Generating: ${prompt.id} - ${prompt.name}`)
         
         // 画像生成
+        // 注意: variationMode を指定しない（'none'）ことで、
+        // DIVERSE_CREATIVE_PRESETS の共通レイアウト指示を回避し、
+        // 各プロンプトの fullPrompt をそのまま使用する
         const result = await generateBanners(
           prompt.category as any,
-          prompt.fullPrompt,
+          prompt.displayTitle || prompt.name, // キーワードとして短いタイトルを使用
           '1200x628',
           {
-            headlineText: prompt.name,
+            headlineText: prompt.displayTitle || prompt.name,
             customImagePrompt: prompt.fullPrompt,
-            variationMode: 'diverse',
+            // variationMode を指定しない（デフォルトは 'none'）
           },
           1
         )

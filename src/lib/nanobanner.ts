@@ -1443,11 +1443,16 @@ export async function generateBanners(
         }
       }
 
+      // customImagePrompt が指定されている場合は、creativeBrief と diverseExtraHint を追加しない
+      // これにより、各プロンプトの fullPrompt がそのまま使用され、
+      // 共通のレイアウト指示（CTA at bottom 等）が適用されない
       finalPrompt = [
         finalPrompt,
         options?.negativePrompt ? `\n=== NEGATIVE PROMPT (AVOID) ===\n${options.negativePrompt}\n` : '',
-        creativeBrief ? `\n=== CREATIVE BRIEF (MUST DIFFER PER PATTERN) ===\n${creativeBrief}\n` : '',
-        diverseExtraHint ? `\n=== VARIATION HINT ===\n${diverseExtraHint}\n` : '',
+        // customImagePrompt がない場合のみ creativeBrief を追加
+        (!hasCustomPrompt && creativeBrief) ? `\n=== CREATIVE BRIEF (MUST DIFFER PER PATTERN) ===\n${creativeBrief}\n` : '',
+        // customImagePrompt がない場合のみ diverseExtraHint を追加
+        (!hasCustomPrompt && diverseExtraHint) ? `\n=== VARIATION HINT ===\n${diverseExtraHint}\n` : '',
         buildHardConstraintsAppendix(keyword, size, options, `PATTERN ${patternLabel}`),
       ]
         .filter(Boolean)
