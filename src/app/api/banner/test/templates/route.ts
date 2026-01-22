@@ -806,9 +806,13 @@ export async function GET(request: NextRequest) {
     const minimal = searchParams.get('minimal') === 'true' // 最小限のデータのみ返す
     
     // DBから既存のテンプレート情報を取得（最適化: 必要なフィールドのみ）
+    // isActive=true のテンプレートのみ取得（管理画面と同期）
     let dbTemplates: any[] = []
     try {
       dbTemplates = await prisma.bannerTemplate.findMany({
+        where: {
+          isActive: true, // アクティブなテンプレートのみ表示
+        },
         select: {
           templateId: true,
           isFeatured: true,
@@ -821,7 +825,7 @@ export async function GET(request: NextRequest) {
         skip: offset,
         orderBy: { isFeatured: 'desc' }, // フィーチャーを優先
       })
-      console.log(`[Templates API] Fetched ${dbTemplates.length} templates in ${Date.now() - startTime}ms`)
+      console.log(`[Templates API] Fetched ${dbTemplates.length} active templates in ${Date.now() - startTime}ms`)
     } catch (err: any) {
       console.error('[Templates API] Database error:', err)
       dbTemplates = []
