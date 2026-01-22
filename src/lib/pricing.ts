@@ -240,12 +240,8 @@ export const BANNER_PRICING: ServicePricing = {
   // NOTE: 生成「枚数」ベースで管理（1回の生成で複数枚作れるため）
   guestLimit: 3,      // ゲスト: 1日3枚（= デフォルト3枚生成1回相当）
   freeLimit: 9,       // 無料会員: 1日9枚（= デフォルト3枚生成3回相当）
-  proLimit: 50,       // PRO: 1日50枚
-  enterpriseLimit: 500, // ENTERPRISE: 1日500枚
-  historyDays: {
-    free: 0,          // 無料/ゲスト: 履歴閲覧不可（有料プラン限定機能）
-    pro: 90,          // 有料: 3ヶ月（90日）保存（DB肥大化防止のため）
-  },
+  proLimit: 30,       // PRO: 1日30枚
+  enterpriseLimit: 200, // ENTERPRISE: 1日200枚
   plans: [
     {
       id: 'banner-free',
@@ -257,9 +253,8 @@ export const BANNER_PRICING: ServicePricing = {
       features: [
         { text: 'ゲスト: 1日3枚まで', included: true },
         { text: 'ログイン: 1日9枚まで', included: true },
-        { text: 'SNS広告/YouTube/ディスプレイなど対応', included: true },
-        { text: 'デフォルト3枚生成（A/B/C）', included: true },
-        { text: '履歴保存（7日間）', included: true },
+        { text: 'サイズ: 1080×1080固定', included: true },
+        { text: '同時生成: 最大3枚', included: true },
       ],
       cta: '3回生成',
     },
@@ -269,15 +264,13 @@ export const BANNER_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '月額 ¥9,980',
       period: '/月（税込）',
-      description: '1日50枚まで生成（PRO）',
+      description: '1日30枚まで生成（PRO）',
       popular: true,
       color: 'slate',
       features: [
-        { text: '1日50枚まで生成', included: true },
-        { text: '1回の生成で最大10枚まで', included: true },
-        { text: 'すべての機能', included: true },
-        { text: '履歴閲覧（3ヶ月）', included: true },
-        { text: '優先サポート', included: true },
+        { text: '1日30枚まで生成', included: true },
+        { text: 'サイズ自由指定', included: true },
+        { text: '同時生成: 最大5枚', included: true },
       ],
       cta: 'プロプランを始める',
     },
@@ -287,14 +280,13 @@ export const BANNER_PRICING: ServicePricing = {
       price: 49800,
       priceLabel: '月額 ¥49,800',
       period: '/月（税込）',
-      description: '1日500枚まで生成（Enterprise）',
+      description: '1日200枚まで生成（Enterprise）',
       color: 'slate',
       features: [
-        { text: '1日500枚まで生成', included: true },
-        { text: '1回の生成で最大10枚まで', included: true },
-        { text: 'チーム運用向け（大量生成）', included: true },
-        { text: '履歴閲覧（3ヶ月）', included: true },
+        { text: '1日200枚まで生成', included: true },
+        { text: '大量運用・チーム向け', included: true },
         { text: '優先サポート', included: true },
+        { text: 'さらに上限UP相談可', included: true },
       ],
       cta: 'エンタープライズを始める',
     },
@@ -306,12 +298,12 @@ export function getBannerDailyLimitByUserPlan(plan: string | null | undefined): 
   if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.BANNER_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
   if (p === 'BUNDLE') return BANNER_PRICING.proLimit
-  if (p === 'ENTERPRISE') return BANNER_PRICING.enterpriseLimit || 500
+  if (p === 'ENTERPRISE') return BANNER_PRICING.enterpriseLimit || 200
   if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return BANNER_PRICING.proLimit
   return BANNER_PRICING.freeLimit
 }
 
-// 50枚/日を超える利用（チーム/法人/大量生成など）の相談導線
+// 30枚/日を超える利用（チーム/法人/大量生成など）の相談導線
 export const HIGH_USAGE_CONTACT_URL =
   process.env.NEXT_PUBLIC_HIGH_USAGE_CONTACT_URL ||
   'https://doyamarke.surisuta.jp/lp/doyamarke'

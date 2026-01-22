@@ -597,8 +597,7 @@ export default function BannerPlanPage() {
                       <ul className="mt-4 space-y-2 text-sm text-white/90 font-bold">
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 1日{BANNER_PRICING.proLimit}枚まで生成</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> サイズ自由指定</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 同時生成：最大10枚</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 履歴3ヶ月保存</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 同時生成：最大5枚</li>
                       </ul>
                       {bannerPlanTier === 'PRO' ? (
                         <p className="mt-4 text-xs font-black text-blue-300 flex items-center gap-1">
@@ -619,7 +618,7 @@ export default function BannerPlanPage() {
                       <p className="text-xl font-black text-slate-900 mt-1">エンタープライズ</p>
                       <p className="text-2xl font-black text-slate-800 mt-2">¥49,800<span className="text-sm font-bold text-slate-400">/月</span></p>
                       <ul className="mt-4 space-y-2 text-sm text-slate-600 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 1日{BANNER_PRICING.enterpriseLimit || 500}枚まで生成</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 1日{BANNER_PRICING.enterpriseLimit || 200}枚まで生成</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 大量運用・チーム向け</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 優先サポート</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> さらに上限UP相談可</li>

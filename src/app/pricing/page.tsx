@@ -141,7 +141,7 @@ function PricingContent() {
               {isEnterprise ? 'エンタープライズをご利用中です' : 'プロプランをご利用中です'}
             </h1>
             <p className="text-gray-600 mb-8 text-lg">
-              {isEnterprise ? '1日500枚まで生成できます' : '1日50枚まで生成できます'}
+              {isEnterprise ? '1日200枚まで生成できます' : '1日30枚まで生成できます'}
             </p>
             <div className="space-y-3">
               <button
@@ -165,7 +165,7 @@ function PricingContent() {
                 料金プラン
               </h1>
               <p className="text-gray-600 text-lg">
-                PRO（¥9,980 / 1日50枚）と、Enterprise（¥49,800 / 1日500枚）
+                PRO（¥9,980 / 1日30枚）と、Enterprise（¥49,800 / 1日200枚）
               </p>
             </div>
 
@@ -227,10 +227,9 @@ function PricingContent() {
                 </div>
                 <ul className="space-y-3 mb-6">
                   {[
-                    '1日50枚まで生成',
-                    '主要機能をフル活用',
-                    '優先サポート',
-                    'いつでも解約OK',
+                    '1日30枚まで生成',
+                    'サイズ自由指定',
+                    '同時生成: 最大5枚',
                   ].map((feature, i) => (
                     <li key={i} className="flex items-center gap-3">
                       <Check className="w-5 h-5 flex-shrink-0" />
@@ -271,10 +270,10 @@ function PricingContent() {
                 </div>
                 <ul className="space-y-3 mb-6">
                   {[
-                    '1日500枚まで生成',
-                    '主要機能をフル活用',
+                    '1日200枚まで生成',
+                    '大量運用・チーム向け',
                     '優先サポート',
-                    'いつでも解約OK',
+                    'さらに上限UP相談可',
                   ].map((feature, i) => (
                     <li key={i} className="flex items-center gap-3">
                       <Check className="w-5 h-5 flex-shrink-0" />

@@ -613,7 +613,7 @@ function BannerUrlAutoPageInner() {
                                 プランをアップグレード
                               </Link>
                               <span className="text-[10px] text-red-600 font-bold">
-                                プロプランなら1日50枚まで生成可能
+                                プロプランなら1日30枚まで生成可能
                               </span>
                             </>
                           )}

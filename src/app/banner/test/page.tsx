@@ -50,7 +50,7 @@ const LOADING_MESSAGES = [
 // プラン別の生成枚数上限
 const PLAN_LIMITS = {
   FREE: { maxCount: 3, label: '無料プラン' },
-  PRO: { maxCount: 10, label: 'PROプラン' },
+  PRO: { maxCount: 5, label: 'PROプラン' },
   ENTERPRISE: { maxCount: 10, label: 'Enterpriseプラン' },
 }
 

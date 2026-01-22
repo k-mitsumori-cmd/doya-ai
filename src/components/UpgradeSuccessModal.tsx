@@ -24,20 +24,17 @@ interface UpgradeSuccessModalProps {
 }
 
 const PRO_FEATURES = [
-  { icon: Palette, text: '1日50枚まで生成可能', highlight: true },
-  { icon: Zap, text: 'サイズ自由選択（7種類対応）' },
-  { icon: MessageSquare, text: 'AIチャットで細かく調整' },
-  { icon: Clock, text: '90日間の履歴保存' },
+  { icon: Palette, text: '1日30枚まで生成可能', highlight: true },
+  { icon: Zap, text: 'サイズ自由指定' },
+  { icon: MessageSquare, text: '同時生成: 最大5枚' },
   { icon: Star, text: '高品質な画像生成' },
 ]
 
 const ENTERPRISE_FEATURES = [
-  { icon: Rocket, text: '1日500枚まで生成可能', highlight: true },
-  { icon: Palette, text: 'サイズ自由選択（7種類対応）' },
-  { icon: Zap, text: '最優先キュー処理' },
-  { icon: MessageSquare, text: 'AIチャットで細かく調整' },
-  { icon: Clock, text: '90日間の履歴保存' },
-  { icon: Star, text: '専用サポート対応' },
+  { icon: Rocket, text: '1日200枚まで生成可能', highlight: true },
+  { icon: Palette, text: '大量運用・チーム向け' },
+  { icon: Zap, text: '優先サポート' },
+  { icon: Star, text: 'さらに上限UP相談可' },
 ]
 
 export default function UpgradeSuccessModal({ isOpen, onClose, planName = 'PRO' }: UpgradeSuccessModalProps) {
