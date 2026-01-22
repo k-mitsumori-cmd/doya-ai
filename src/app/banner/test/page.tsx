@@ -394,9 +394,10 @@ function BannerTestPageInner() {
   const scroll = (direction: 'left' | 'right', category: string) => {
     const container = scrollRefs.current[category]
     if (container) {
-      // カード幅 + gap を考慮したスクロール量
-      const cardWidth = window.innerWidth < 768 ? 200 : window.innerWidth < 1024 ? 272 : 336
-      const scrollAmount = cardWidth * 2 // 2枚分スクロール
+      // カード幅 + gap を考慮したスクロール量（実際のカードサイズに合わせる）
+      const cardWidth = window.innerWidth < 640 ? 144 : window.innerWidth < 768 ? 192 : window.innerWidth < 1024 ? 256 : 320
+      const gap = window.innerWidth < 640 ? 8 : window.innerWidth < 768 ? 12 : 16
+      const scrollAmount = (cardWidth + gap) * 2 // 2枚分スクロール
       
       container.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
@@ -435,13 +436,14 @@ function BannerTestPageInner() {
   
   const handleTouchMove = useCallback((e: React.TouchEvent, category: string) => {
     if (!isDragging.current[category]) return
+    e.preventDefault() // デフォルトのスクロールを防止
     touchCurrentX.current[category] = e.touches[0].clientX
     
     const container = scrollRefs.current[category]
     if (container) {
       const diff = touchStartX.current[category] - touchCurrentX.current[category]
-      // リアルタイムでスクロール位置を更新（スムーズな追従）
-      container.scrollLeft += diff * 0.5
+      // リアルタイムでスクロール位置を更新（完全に追従）
+      container.scrollLeft += diff
       touchStartX.current[category] = touchCurrentX.current[category]
     }
   }, [])
@@ -454,16 +456,19 @@ function BannerTestPageInner() {
     if (container) {
       // スワイプの勢いを計算してスムーズにスクロール
       const diff = touchStartX.current[category] - touchCurrentX.current[category]
-      if (Math.abs(diff) > 50) {
-        // 大きなスワイプの場合、カード1枚分スクロール
-        const cardWidth = window.innerWidth < 768 ? 200 : 320
+      if (Math.abs(diff) > 30) {
+        // スワイプの速度に応じてスクロール量を調整
+        const cardWidth = window.innerWidth < 768 ? 144 : window.innerWidth < 1024 ? 256 : 320
+        const scrollAmount = Math.min(Math.abs(diff) * 1.5, cardWidth * 2) // 最大2枚分
         container.scrollBy({
-          left: diff > 0 ? cardWidth : -cardWidth,
+          left: diff > 0 ? scrollAmount : -scrollAmount,
           behavior: 'smooth',
         })
       }
+      // スクロール位置を更新
+      setTimeout(() => updateScrollPosition(category), 300)
     }
-  }, [])
+  }, [updateScrollPosition])
   
   // マウスドラッグハンドラ（デスクトップ用）
   const handleMouseDown = useCallback((e: React.MouseEvent, category: string) => {
@@ -781,29 +786,36 @@ function BannerTestPageInner() {
                       <span className="text-blue-400 text-xs sm:text-base">▶</span> {categoryName}
                     </h2>
                     <div className="relative group/scroll">
-                      {/* 左スクロールボタン（スクロール可能な場合のみ表示、スマホでは常に非表示） */}
+                      {/* 左側グラデーションオーバーレイ（スクロール可能な場合のみ表示） */}
+                      {scrollPositions[categoryName]?.canScrollLeft && (
+                        <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-16 md:w-20 bg-gradient-to-r from-black via-black/50 to-transparent z-10 pointer-events-none" />
+                      )}
+                      
+                      {/* 左スクロールボタン（スクロール可能な場合のみ表示） */}
                       <button
                         onClick={() => scroll('left', categoryName)}
-                        className={`hidden sm:flex absolute left-0 top-0 bottom-0 z-20 w-10 md:w-16 bg-gradient-to-r from-black via-black/90 to-transparent items-center justify-center transition-all duration-300 ${
+                        className={`absolute left-0 top-0 bottom-0 z-20 w-8 sm:w-10 md:w-16 bg-transparent flex items-center justify-center transition-all duration-300 ${
                           scrollPositions[categoryName]?.canScrollLeft
-                            ? 'opacity-0 group-hover/scroll:opacity-100 hover:from-black'
+                            ? 'opacity-60 sm:opacity-0 group-hover/scroll:opacity-100'
                             : 'opacity-0 pointer-events-none'
                         }`}
                         aria-label="左にスクロール"
                       >
-                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110">
-                          <ChevronLeft className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+                          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 text-white" />
                         </div>
                       </button>
                       
                       {/* 横スクロールコンテナ（タッチ/マウススワイプ対応） */}
                       <div
                         ref={(el) => { scrollRefs.current[categoryName] = el }}
-                        className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-3 sm:px-10 md:px-16 py-1.5 sm:py-2 md:py-4 cursor-grab active:cursor-grabbing select-none scroll-smooth"
+                        className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-0 sm:px-10 md:px-16 py-1.5 sm:py-2 md:py-4 cursor-grab active:cursor-grabbing select-none scroll-smooth"
                         style={{ 
                           scrollbarWidth: 'none', 
                           msOverflowStyle: 'none',
-                          WebkitOverflowScrolling: 'touch'
+                          WebkitOverflowScrolling: 'touch',
+                          scrollPaddingLeft: '12px',
+                          scrollPaddingRight: '12px',
                         }}
                         onScroll={() => handleScroll(categoryName)}
                         onTouchStart={(e) => handleTouchStart(e, categoryName)}
@@ -814,11 +826,13 @@ function BannerTestPageInner() {
                         onMouseUp={() => handleMouseUp(categoryName)}
                         onMouseLeave={() => handleMouseLeave(categoryName)}
                       >
-                        {categoryTemplates.map((template) => {
+                        {categoryTemplates.map((template, index) => {
                           const hasError = imageErrors.has(template.id)
                           const isLoaded = loadedImages.has(template.id)
                           const isVisible = visibleImages.has(template.id)
                           const showImage = template.imageUrl && !hasError
+                          const isFirst = index === 0
+                          const isLast = index === categoryTemplates.length - 1
                           
                           return (
                             <motion.div
@@ -831,6 +845,10 @@ function BannerTestPageInner() {
                                 setSelectedBanner(null)
                               }}
                               className={`group flex-shrink-0 w-36 h-20 sm:w-48 sm:h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 relative ${
+                                isFirst ? 'ml-3 sm:ml-0' : ''
+                              } ${
+                                isLast ? 'mr-3 sm:mr-0' : ''
+                              } ${
                                 selectedTemplate?.id === template.id
                                   ? 'ring-3 ring-white scale-105 shadow-2xl'
                                   : 'ring-1 ring-gray-800 hover:ring-gray-600'
@@ -920,7 +938,7 @@ function BannerTestPageInner() {
                             <motion.div
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              className="flex-shrink-0 w-36 h-20 sm:w-48 sm:h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer"
+                              className="flex-shrink-0 w-36 h-20 sm:w-48 sm:h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer mr-3 sm:mr-0"
                             >
                               <button
                                 onClick={() => loadMoreTemplates(categoryName)}
@@ -941,18 +959,23 @@ function BannerTestPageInner() {
                         })()}
                       </div>
 
-                      {/* 右スクロールボタン（スクロール可能な場合のみ表示、スマホでは常に非表示） */}
+                      {/* 右側グラデーションオーバーレイ（スクロール可能な場合のみ表示） */}
+                      {scrollPositions[categoryName]?.canScrollRight && (
+                        <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-16 md:w-20 bg-gradient-to-l from-black via-black/50 to-transparent z-10 pointer-events-none" />
+                      )}
+                      
+                      {/* 右スクロールボタン（スクロール可能な場合のみ表示） */}
                       <button
                         onClick={() => scroll('right', categoryName)}
-                        className={`hidden sm:flex absolute right-0 top-0 bottom-0 z-20 w-10 md:w-16 bg-gradient-to-l from-black via-black/90 to-transparent items-center justify-center transition-all duration-300 ${
+                        className={`absolute right-0 top-0 bottom-0 z-20 w-8 sm:w-10 md:w-16 bg-transparent flex items-center justify-center transition-all duration-300 ${
                           scrollPositions[categoryName]?.canScrollRight
-                            ? 'opacity-0 group-hover/scroll:opacity-100 hover:from-black'
+                            ? 'opacity-60 sm:opacity-0 group-hover/scroll:opacity-100'
                             : 'opacity-0 pointer-events-none'
                         }`}
                         aria-label="右にスクロール"
                       >
-                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110">
-                          <ChevronRight className="w-5 h-5 md:w-8 md:h-8 text-white" />
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 shadow-lg">
+                          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 text-white" />
                         </div>
                       </button>
                     </div>
