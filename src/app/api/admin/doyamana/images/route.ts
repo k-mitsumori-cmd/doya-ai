@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 // 画像一覧取得（BannerTemplateテーブルを使用）
 export async function GET(request: NextRequest) {
@@ -35,6 +36,9 @@ export async function GET(request: NextRequest) {
       ]
     }
 
+    console.log('[GET /api/admin/doyamana/images] Query params:', { category, status, search, page, limit })
+    console.log('[GET /api/admin/doyamana/images] Where:', JSON.stringify(where))
+
     const [images, total] = await Promise.all([
       prisma.bannerTemplate.findMany({
         where,
@@ -46,6 +50,8 @@ export async function GET(request: NextRequest) {
       }),
       prisma.bannerTemplate.count({ where })
     ])
+    
+    console.log('[GET /api/admin/doyamana/images] Found:', images.length, 'images, total:', total)
 
     // フロントエンド用にデータを整形
     const formattedImages = images.map(img => ({
@@ -73,10 +79,11 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(total / limit)
       }
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('[GET /api/admin/doyamana/images] Error:', error)
+    console.error('[GET /api/admin/doyamana/images] Error stack:', error?.stack)
     return NextResponse.json(
-      { error: '画像一覧の取得に失敗しました', details: String(error) },
+      { error: '画像一覧の取得に失敗しました', details: String(error), stack: error?.stack },
       { status: 500 }
     )
   }
