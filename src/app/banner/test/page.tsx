@@ -509,18 +509,8 @@ function BannerTestPageInner() {
     setGeneratedBanners([])
 
     try {
-      // FormDataを使用してファイルも送信
-      const formData = new FormData()
-      formData.append('template', selectedTemplate.category)
-      formData.append('size', selectedSize)
-      formData.append('industry', selectedTemplate.industry)
-      formData.append('mainTitle', serviceName)
-      if (tone) formData.append('subTitle', `トーン: ${tone}`)
-      if (customText) formData.append('accentText', customText)
-      formData.append('count', String(generateCount))
-      formData.append('basePrompt', selectedTemplate.prompt || '')
-      if (logoFile) formData.append('logo', logoFile)
-      if (personFile) formData.append('person', personFile)
+      // サイズ文字列を生成
+      const sizeString = `${selectedSize.width}x${selectedSize.height}`
 
       // 既存APIをラップして使用（本番APIは変更しない）
       const res = await fetch('/api/banner/test/generate', {
@@ -528,7 +518,7 @@ function BannerTestPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template: selectedTemplate.category,
-          size: selectedSize,
+          size: sizeString,
           industry: selectedTemplate.industry,
           mainTitle: serviceName,
           subTitle: tone ? `トーン: ${tone}` : undefined,
@@ -757,7 +747,7 @@ function BannerTestPageInner() {
               </div>
             ) : (
               Object.entries(templatesByCategory).map(([categoryName, categoryTemplates]) => {
-                if (categoryTemplates.length === 0) return null
+                if (!categoryTemplates || categoryTemplates.length === 0) return null
                 
                 return (
                   <div key={categoryName} className="space-y-2 sm:space-y-3">
@@ -894,7 +884,7 @@ function BannerTestPageInner() {
                         
                         {/* 「もっと見る」ボタン（残りのテンプレートがある場合のみ表示） */}
                         {(() => {
-                          const totalCount = totalTemplatesByCategory[categoryName]?.length || 0
+                          const totalCount = (totalTemplatesByCategory[categoryName] || []).length
                           const visibleCount = visibleCounts[categoryName] || INITIAL_VISIBLE_COUNT
                           const hasMore = totalCount > visibleCount
                           
