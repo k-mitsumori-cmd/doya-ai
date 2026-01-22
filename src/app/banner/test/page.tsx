@@ -980,8 +980,8 @@ function BannerTestPageInner() {
         
         {/* Netflix風のメインコンテンツ */}
         <div className={`relative ${isTrialActive ? 'pt-20 md:pt-10' : 'pt-12 md:pt-0'}`}>
-          {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- スティッキー */}
-          <div className={`sticky ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} z-20 h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] w-full overflow-hidden`}>
+          {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- 固定表示 */}
+          <div className={`fixed ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} left-0 md:left-[240px] right-0 z-20 h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] overflow-hidden`}>
             {/* グラデーション: 下は黒、上は明るく */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
             
@@ -1188,8 +1188,8 @@ function BannerTestPageInner() {
             </div>
           </div>
 
-          {/* テンプレート一覧（Netflix風の横スクロール） */}
-          <div className="w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 pt-3 sm:pt-6 md:pt-8 relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8">
+          {/* テンプレート一覧（Netflix風の横スクロール） - 固定ヒーローの下にパディング */}
+          <div className="w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh] relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
