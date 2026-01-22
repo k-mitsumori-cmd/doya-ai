@@ -1735,6 +1735,352 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     fullPrompt: 'A professional BtoB comparison article thumbnail with dark tone background (black to dark gray), multiple website UI mockups, whitepaper covers, slide presentations, and document screens arranged diagonally in layers on the right and top area, large title text area on the left bottom with Japanese text "【徹底比較】ホワイトペーパー制作会社15選" in white, subtitle "失敗しないためのおすすめの決め方もご紹介" below, cool intellectual trustworthy design, corporate media style, digital UI focused visuals without real company logos, 1200x628 pixels',
     tags: ['BtoB', '比較記事', 'ホワイトペーパー', 'ダークトーン', 'プロフェッショナル', 'SEO記事'],
   },
+
+  // ============================================
+  // 参考画像ベースの新プロンプト（19種類）
+  // ============================================
+  
+  // 1. 神社グルメ特集風（和風・グルメ）
+  {
+    id: 'reference-shrine-gourmet-001',
+    genre: '飲料・食品',
+    category: 'ec',
+    name: '神社グルメ特集',
+    displayTitle: '参拝グルメ特集',
+    prompt: {
+      composition: '正方形、中央に縦書き日本語タイトル、周囲に料理写真を円形配置',
+      subject: '和食料理（うどん、和菓子、定食など）、神社・参拝イメージ',
+      colorPalette: '和風カラー（クリーム #F5F5DC、朱色 #E63946、金 #D4AF37）',
+      designElements: '和柄パターン背景、円形フレーム、縦書きタイポグラフィ',
+      typography: '縦書き筆文字風、朱色アクセント、「グルメ特集」強調',
+    },
+    fullPrompt: 'A Japanese shrine gourmet guide banner with cream and vermillion color scheme, traditional Japanese food photos (udon, wagashi, teishoku) arranged in circular frames around center, vertical Japanese title text "参拝と一緒に楽しみたい！〇〇神宮 周辺グルメ特集" in brush calligraphy style, traditional Japanese patterns in background, warm inviting atmosphere, 1080x1080 pixels',
+    tags: ['和風', 'グルメ', '神社', '観光', '縦書き'],
+  },
+
+  // 2. 冬ファッションスタイルブック風
+  {
+    id: 'reference-winter-fashion-001',
+    genre: 'ファッション・アパレル',
+    category: 'ec',
+    name: 'ウィンタースタイルブック',
+    displayTitle: '冬の着こなし',
+    prompt: {
+      composition: '縦長、複数モデルのレイヤー配置、右側に縦書きタイトル',
+      subject: '冬服を着た女性モデル（ニット、マフラー、コート）',
+      colorPalette: 'ニュートラルトーン（グレー、ベージュ、赤アクセント）',
+      designElements: 'モデル写真の重なり、ブランド名ロゴ、シンプルなレイアウト',
+      typography: '縦書き日本語「あのブランドの冬の推しの着こなし」、欧文ブランド名',
+    },
+    fullPrompt: 'A winter fashion style book banner with neutral gray background, multiple female models wearing winter clothes (knit sweaters, scarves, coats) in layered composition, vertical Japanese text "あのブランドの冬の推しの着こなし" on right side, brand names in small text, sophisticated fashion magazine aesthetic, muted color palette with red accent, 1080x1350 pixels',
+    tags: ['ファッション', '冬', 'スタイルブック', 'モデル', 'アパレル'],
+  },
+
+  // 3. ヒップホップイベント風
+  {
+    id: 'reference-hiphop-event-001',
+    genre: 'イベント・メディア',
+    category: 'ec',
+    name: 'ヒップホップパーティー',
+    displayTitle: 'AFTER PARTY',
+    prompt: {
+      composition: '縦長、上部にロゴ、中央にアーティスト集合写真、下部に詳細情報',
+      subject: 'ヒップホップアーティストグループ、ストリートファッション',
+      colorPalette: 'ダークブルー基調（#0A1628）、ネオンブルー（#00D4FF）アクセント',
+      designElements: 'ネオン光線、スモークエフェクト、メタリックロゴ',
+      typography: 'メタリック3Dロゴ「RAPSTAR 2025」、出演者名リスト、日時情報',
+    },
+    fullPrompt: 'A hip-hop after party event poster with dark blue background (#0A1628), group of artists in street fashion at center, metallic 3D logo "RAPSTAR 2025 AFTER PARTY" at top, neon blue light effects and smoke, artist names listed at bottom, event date and venue info, ABEMAプレミアムで生中継 text, urban nightclub atmosphere, 1080x1350 pixels',
+    tags: ['ヒップホップ', 'イベント', 'パーティー', 'ネオン', 'アーティスト'],
+  },
+
+  // 4. テーマパーク周年記念風
+  {
+    id: 'reference-themepark-anniversary-001',
+    genre: 'イベント・メディア',
+    category: 'ec',
+    name: 'テーマパーク周年',
+    displayTitle: 'オープン1周年',
+    prompt: {
+      composition: '横長、左に雑誌風レイアウト、右にキャラクター・アトラクション',
+      subject: 'テーマパークのアトラクション、キャラクター、ファミリー向けビジュアル',
+      colorPalette: '明るいブルー（#0066CC）、イエロー（#FFD700）、レッド（#E63946）',
+      designElements: '雑誌表紙風レイアウト、吹き出し、ロゴバッジ',
+      typography: '「祝！オープン1周年」大きく、キャッチコピー、週刊誌風ヘッダー',
+    },
+    fullPrompt: 'A theme park anniversary celebration banner with bright blue and yellow color scheme, magazine cover style layout with "WEEKLY" header, theme park attraction visuals and cartoon characters on right, large Japanese text "祝！オープン1周年" with red accent, speech bubbles with excitement text, family-friendly festive atmosphere, 1200x628 pixels',
+    tags: ['テーマパーク', '周年', 'ファミリー', '雑誌風', 'エンタメ'],
+  },
+
+  // 5. お土産・ギフトガイド風
+  {
+    id: 'reference-gift-guide-001',
+    genre: '飲料・食品',
+    category: 'ec',
+    name: 'ギフトガイド',
+    displayTitle: '手土産図鑑',
+    prompt: {
+      composition: '正方形、4分割グリッド（各色異なる）、中央にタイトル',
+      subject: 'スイーツ・お菓子（ロールケーキ、クッキー、和菓子）を俯瞰撮影',
+      colorPalette: '4色グリッド（赤 #E63946、黄 #FFD93D、青 #4ECDC4、ピンク #FFB6C1）',
+      designElements: 'カラーブロック背景、商品の俯瞰写真、エレガントなフレーム',
+      typography: '中央に縦書き「とっておきの手土産図鑑」、サブタイトル小さく',
+    },
+    fullPrompt: 'A gift guide souvenir banner with 4-color grid background (red, yellow, teal, pink quadrants), various Japanese sweets and confectionery products photographed from above in each section, centered vertical Japanese title "とっておきの手土産図鑑 Guide to Souvenirs", elegant gift box aesthetic, premium quality feel, 1080x1080 pixels',
+    tags: ['ギフト', '手土産', 'スイーツ', 'グリッド', 'プレミアム'],
+  },
+
+  // 6. お笑い番組風
+  {
+    id: 'reference-comedy-show-001',
+    genre: 'イベント・メディア',
+    category: 'ec',
+    name: 'お笑い番組',
+    displayTitle: 'コメディアン特番',
+    prompt: {
+      composition: '正方形、対角線で分割、両側にコンビ・芸人',
+      subject: '笑っているお笑い芸人、スーツ姿、エンタメ感',
+      colorPalette: 'ロイヤルブルー（#1E3A8A）、ゴールド（#FFD700）ストライプ',
+      designElements: '斜めストライプ背景、キラキラエフェクト、番組ロゴ',
+      typography: '「ザ・コメディアン2025」メタリックロゴ、配信日時、プラットフォーム名',
+    },
+    fullPrompt: 'A comedy TV show banner with royal blue and gold diagonal stripe background, comedians in suits laughing on both sides, metallic logo "ザ・コメディアン2025" at top, sparkle effects, broadcast date "12月30日(火)" and "プライムビデオで独占配信開始!" text, entertainment show atmosphere, 1080x1080 pixels',
+    tags: ['お笑い', '番組', 'エンタメ', 'ストライプ', '配信'],
+  },
+
+  // 7. ドラマ・SNSキャンペーン風
+  {
+    id: 'reference-drama-campaign-001',
+    genre: 'イベント・メディア',
+    category: 'ec',
+    name: 'ドラマキャンペーン',
+    displayTitle: 'SNSキャンペーン',
+    prompt: {
+      composition: '正方形、上半分に人物・タイトル、下半分にキャンペーン情報',
+      subject: '俳優のポートレート、モダンなファッション',
+      colorPalette: 'ネイビー（#1E3A5F）、マゼンタ（#E91E8C）、ホワイト',
+      designElements: 'グラデーション背景、矢印アイコン、SNS風デザイン',
+      typography: '「GOOD BUY」英語ロゴ、キャンペーン詳細、フォロー促進テキスト',
+    },
+    fullPrompt: 'A drama SNS campaign banner with navy to magenta gradient background, actor portrait in modern fashion at top, title "スナック GOOD BUY" in stylized text, campaign info section at bottom with pink background, "フォロー＆景品をタップして応募！" call-to-action text, arrow icons, modern social media aesthetic, 1080x1350 pixels',
+    tags: ['ドラマ', 'キャンペーン', 'SNS', 'プロモーション', 'グラデーション'],
+  },
+
+  // 8. ビジネス書籍要約風
+  {
+    id: 'reference-book-summary-001',
+    genre: '教育・学習・セミナー',
+    category: 'it',
+    name: '書籍要約',
+    displayTitle: '10分読書',
+    prompt: {
+      composition: '横長、左に大きな縦書きタイトル、右に本のアイコン',
+      subject: '本・読書のアイコン、シンプルなイラスト',
+      colorPalette: 'ライトブルーグレー（#E8F4F8）、ネイビー（#1E3A5F）、赤アクセント',
+      designElements: 'ミニマルデザイン、アイコン、余白を活かしたレイアウト',
+      typography: '縦書き「目標達成の技術」を大きく、「10分読書」バッジ',
+    },
+    fullPrompt: 'A business book summary banner with light blue-gray background (#E8F4F8), vertical Japanese text "一生使える目標達成の技術" in bold navy typography with red accent on key characters, minimalist book icon on right, "10分読書" badge in corner, clean professional educational aesthetic, plenty of whitespace, 1200x628 pixels',
+    tags: ['書籍', '要約', 'ビジネス', 'ミニマル', '教育'],
+  },
+
+  // 9. プレミアムビール風
+  {
+    id: 'reference-premium-beer-001',
+    genre: '飲料・食品',
+    category: 'ec',
+    name: 'プレミアムビール',
+    displayTitle: 'クラフトビール',
+    prompt: {
+      composition: '横長、左に幾何学模様、中央にテキスト、右に商品',
+      subject: 'プレミアムビール缶、グラスに注いだビール',
+      colorPalette: 'ホワイト、ゴールド（#D4AF37）、ライトブルー（#87CEEB）',
+      designElements: '星形幾何学模様、企業限定バッジ、高級感のある装飾',
+      typography: '「Premium YEBISU」ロゴ、「WHITE SUN」商品名、キャッチコピー',
+    },
+    fullPrompt: 'A premium craft beer banner with white and gold color scheme, geometric star pattern on left side, "Premium YEBISU CREATIVE BREW WHITE SUN" text in center, beer can and glass product shot on right, "企業限定" badge, "スパイスが彩る爽やかなコク" tagline, elegant sophisticated design, 1200x628 pixels',
+    tags: ['ビール', 'プレミアム', '限定', 'ゴールド', '高級'],
+  },
+
+  // 10. スポーツドリンク風
+  {
+    id: 'reference-sports-drink-001',
+    genre: '飲料・食品',
+    category: 'ec',
+    name: 'スポーツドリンク',
+    displayTitle: 'アクエリアス',
+    prompt: {
+      composition: '正方形、上部にロゴ、中央に商品、両サイドにアスリート',
+      subject: 'スポーツドリンクボトル、スノーボーダー、オリンピック',
+      colorPalette: 'ビビッドブルー（#0066FF）、ホワイト、オレンジアクセント',
+      designElements: 'ダイナミックなアクションショット、オリンピックリング、躍動感',
+      typography: '「AQUARIUS」ロゴ大きく、「WORLDWIDE PARTNER」、商品名',
+    },
+    fullPrompt: 'A sports drink Olympic partner banner with vivid blue background (#0066FF), "AQUARIUS" logo at top with Olympic rings, large sports drink bottle at center, snowboarders in action on both sides, dynamic athletic energy, "SUPERIOR HYDRATION" text, official Olympic partnership aesthetic, 1080x1080 pixels',
+    tags: ['スポーツ', 'ドリンク', 'オリンピック', 'ダイナミック', 'ブルー'],
+  },
+
+  // 11. ウイスキー商品紹介風
+  {
+    id: 'reference-whisky-product-001',
+    genre: '飲料・食品',
+    category: 'ec',
+    name: 'ウイスキー商品',
+    displayTitle: 'プレミアムウイスキー',
+    prompt: {
+      composition: '横長、左にボトル、右に商品情報リスト',
+      subject: 'ウイスキーボトル、グラス、琥珀色の液体',
+      colorPalette: 'ダークブラウン（#3D2914）、アンバー（#FFBF00）、ブラック',
+      designElements: 'スプラッシュエフェクト、箇条書き情報、QRコード',
+      typography: '「NIKKA FRONTIER」ロゴ、商品スペック箇条書き、「家庭用 再発売」バッジ',
+    },
+    fullPrompt: 'A premium whisky product banner with dark brown to black gradient background, whisky bottle and glass with amber liquid splash on left, bullet point product specs on right (余市のヘビーピートモルト使用, 度数48%の高アルコール, モルト比率51%以上), "NIKKA FRONTIER" logo, "家庭用 再発売" red badge, sophisticated masculine aesthetic, 1200x628 pixels',
+    tags: ['ウイスキー', '商品', 'プレミアム', 'ダーク', 'スペック'],
+  },
+
+  // 12. HR・インタビュー記事風
+  {
+    id: 'reference-hr-interview-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'HRインタビュー',
+    displayTitle: 'エースの流儀',
+    prompt: {
+      composition: '横長、左に人物写真、右にタイトル・テキスト',
+      subject: 'ビジネスパーソンのポートレート、オフィス環境',
+      colorPalette: 'ティール（#20B2AA）、ダークグレー（#2D2D2D）、ホワイト',
+      designElements: '斜めのカラーブロック、企業ロゴ、引用テキスト',
+      typography: '「エースの流儀」大きく、会社名・人名、インスピレーショナルな引用',
+    },
+    fullPrompt: 'A HR interview article banner with teal and dark gray color blocks at angles, business person portrait with glasses on left side looking thoughtful, "エースの流儀 -THE ACE FACTOR-" title on right, company logos (YOUTRUST, SmartHR), inspirational quote "微かな光から兆しを見出し、正解のない道を進む。" on left, professional corporate aesthetic, 1200x628 pixels',
+    tags: ['HR', 'インタビュー', 'ビジネス', 'ポートレート', 'コーポレート'],
+  },
+
+  // 13. 春ファッション・ロケーション風
+  {
+    id: 'reference-spring-fashion-001',
+    genre: 'ファッション・アパレル',
+    category: 'ec',
+    name: '春ファッションロケ',
+    displayTitle: '移ろう季節',
+    prompt: {
+      composition: '縦長、全身モデルショット、周囲に縦書きテキスト',
+      subject: '春服の女性モデル、公園・自然のロケーション',
+      colorPalette: 'ナチュラルグリーン、ホワイト、淡いパープル',
+      designElements: '自然光、ロケーション撮影、ファッション誌風レイアウト',
+      typography: '縦書き「移ろう季節、ここだけの物語を。」、ブランド名、ロケーション情報',
+    },
+    fullPrompt: 'A spring fashion location shoot banner with natural green park setting, female model in white skirt and blue blouse walking on stairs, vertical Japanese text "移ろう季節、ここだけの物語を。" in elegant typography, LUMINE brand logo, location credit at bottom, fashion magazine editorial aesthetic, natural lighting, 1080x1350 pixels',
+    tags: ['ファッション', '春', 'ロケーション', '自然', 'エディトリアル'],
+  },
+
+  // 14. スタバ季節限定風
+  {
+    id: 'reference-starbucks-seasonal-001',
+    genre: '飲料・食品',
+    category: 'ec',
+    name: 'カフェ季節限定',
+    displayTitle: '季節限定ドリンク',
+    prompt: {
+      composition: '正方形、中央に商品、周囲に季節装飾',
+      subject: 'カフェドリンク（カップ入り）、季節のデコレーション',
+      colorPalette: 'クリームゴールド（#F5E6C8）、グリーン（#00704A）、レッド',
+      designElements: '和柄モチーフ、キラキラエフェクト、「期間限定」バッジ',
+      typography: '商品名「YUZU HONEY TEA LATTE」大きく、ブランドロゴ',
+    },
+    fullPrompt: 'A cafe seasonal drink banner with cream gold gradient background with Japanese pattern motifs, Starbucks cup product at center, "YUZU HONEY TEA LATTE" product name prominently displayed, "期間限定" badges, sparkle and confetti effects, festive new year atmosphere, green and gold color accents, 1080x1080 pixels',
+    tags: ['カフェ', '季節限定', 'ドリンク', '和風', 'スターバックス'],
+  },
+
+  // 15. 住宅・不動産風
+  {
+    id: 'reference-realestate-home-001',
+    genre: '住宅・不動産',
+    category: 'ec',
+    name: '住宅ブランド',
+    displayTitle: 'ホームズ',
+    prompt: {
+      composition: '縦長、上部にインテリア写真、下部にブランド情報',
+      subject: 'モダンなリビング・キッチン、家族のシルエット',
+      colorPalette: 'ナチュラルウッド、ホワイト、ゴールドアクセント',
+      designElements: '明るい室内写真、No.1バッジ、家のイラストアイコン',
+      typography: '「The JOHNSON HOMES」ロゴ、「毎日の暮らし、もっと自分らしく。」コピー',
+    },
+    fullPrompt: 'A home builder brand banner with bright modern kitchen and living room interior photo at top, family silhouette, "The JOHNSON HOMES" elegant logo in center, "毎日の暮らし、もっと自分らしく。" tagline, "No.1" award badge, small house illustrations at bottom, natural wood and white color scheme, warm inviting family home aesthetic, 1080x1350 pixels',
+    tags: ['住宅', '不動産', 'インテリア', 'ファミリー', 'ナチュラル'],
+  },
+
+  // 16. ECセール風
+  {
+    id: 'reference-ec-sale-001',
+    genre: 'EC・セール',
+    category: 'ec',
+    name: 'ファッションセール',
+    displayTitle: 'MAX95%OFF',
+    prompt: {
+      composition: '正方形、中央にモデル2人、周囲にセール情報',
+      subject: 'カラフルな服を着たモデル、笑顔、ショッピング感',
+      colorPalette: 'ビビッドレッド（#FF0000）、オレンジ、イエロー、グリーン',
+      designElements: 'ポップなイラスト装飾、セールバッジ、CTAボタン',
+      typography: '「ZOZOSALE」大きく、「MAX95%OFF」強調、「詳細はこちら」CTA',
+    },
+    fullPrompt: 'A fashion EC sale banner with vivid red background, two models (male and female) in colorful winter clothes smiling at center, "ZOZOSALE" large logo, "着たい！が、今トク。" tagline, "MAX95%OFF" in white box, pop art style decorations (daruma, trees, house icons), "新春WEEK 第2弾" badge, "詳細はこちら" CTA button, energetic sale atmosphere, 1080x1080 pixels',
+    tags: ['セール', 'EC', 'ファッション', 'ポップ', 'カラフル'],
+  },
+
+  // 17. 新春キャンペーン風
+  {
+    id: 'reference-newyear-campaign-001',
+    genre: 'イベント・メディア',
+    category: 'ec',
+    name: '新春キャンペーン',
+    displayTitle: '紅白クイズ',
+    prompt: {
+      composition: '縦長、上部にタイトル、中央にキャンペーン内容、下部に日程',
+      subject: '和風装飾、金色の背景、お正月モチーフ',
+      colorPalette: '紅白（#E63946、#FFFFFF）、ゴールド（#FFD700）、和柄',
+      designElements: '和柄パターン、金箔エフェクト、縁起物モチーフ',
+      typography: '「紅白クイズバトル」大きく、「新春」縦書き、キャンペーン詳細',
+    },
+    fullPrompt: 'A new year campaign banner with red white and gold color scheme, Japanese patterns (shippo, seigaiha) in background, "紅白クイズバトル" title in bold red and white, "新春" vertical text, gold foil textures, "最大3万円のクーポンが当たる プレゼントキャンペーン" text, "2026.1.1 Thu - 1.15Thu" date, festive Japanese new year aesthetic, 1080x1350 pixels',
+    tags: ['新春', 'キャンペーン', '和風', '紅白', 'クイズ'],
+  },
+
+  // 18. モバイル家族割風
+  {
+    id: 'reference-mobile-family-001',
+    genre: '通信・サービス',
+    category: 'it',
+    name: 'モバイル家族割',
+    displayTitle: '親子割',
+    prompt: {
+      composition: '縦長、上部にモデル（親子）、下部に料金プラン詳細',
+      subject: '制服の学生と親、桜、家族イメージ',
+      colorPalette: 'ダークネイビー（#0A1628）、桜ピンク（#FFB7C5）、ホワイト',
+      designElements: '桜の花びら、料金表、ブランドロゴ',
+      typography: '「ワイモバ親子割」大きく、料金「780円/月〜」強調、詳細テキスト',
+    },
+    fullPrompt: 'A mobile family plan banner with dark navy background and cherry blossom petals, mother and student daughter in school uniform at top, "ワイモバ「親子」割" title with arrow, "親も子も超オトク！" tagline, price "780円/月〜" prominently displayed, detailed pricing table at bottom, SoftBank and PayPay logos, "詳しく見る" CTA button, spring family campaign aesthetic, 1080x1350 pixels',
+    tags: ['モバイル', '家族割', '通信', '桜', 'キャンペーン'],
+  },
+
+  // 19. ソフトウェア開発ツール風
+  {
+    id: 'reference-software-dev-001',
+    genre: 'IT・テクノロジー',
+    category: 'it',
+    name: 'ソフトウェア開発',
+    displayTitle: '開発自動化',
+    prompt: {
+      composition: '正方形、左上に人物写真、右に円形CTA、下部にロゴ',
+      subject: 'ラップトップを使うビジネスパーソン、オフィス環境',
+      colorPalette: 'ダークブルー（#1E3A5F）、ティール（#20B2AA）、ホワイト',
+      designElements: '斜めの写真クロップ、円形ボタン、モダンなレイアウト',
+      typography: '「ソフトウェア開発を自動化」キャッチコピー、「GeneXus」ロゴ、「詳細はこちら」CTA',
+    },
+    fullPrompt: 'A software development tool banner with dark blue gradient background, business person using laptop photo cropped at angle on left, "詳細はこちら" teal circular CTA button on right, "ソフトウェア開発を自動化" tagline in white, "GeneXus" logo at bottom, modern B2B SaaS aesthetic, clean professional design, 1080x1080 pixels',
+    tags: ['ソフトウェア', '開発', 'IT', 'SaaS', 'B2B'],
+  },
 ]
 
 /**
