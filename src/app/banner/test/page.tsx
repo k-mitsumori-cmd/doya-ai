@@ -140,7 +140,7 @@ function BannerTestPageInner() {
   
   // 各カテゴリごとの表示数を管理（初期は4枚、スクロール時に追加）
   const [visibleCounts, setVisibleCounts] = useState<{ [key: string]: number }>({})
-  const INITIAL_VISIBLE_COUNT = 4 // 初期表示数
+  const INITIAL_VISIBLE_COUNT = 5 // 初期表示数（1列5枚）
   const LOAD_MORE_COUNT = 8 // 追加読み込み数
 
   // 画像読み込み完了ハンドラ
@@ -558,7 +558,7 @@ function BannerTestPageInner() {
     // マウスが離れた時はドラッグを継続（グローバルイベントで処理）
   }, [])
   
-  // マウスホイール/トラックパッドでの横スクロール（Netflix風）
+  // マウスホイール/トラックパッドでの横スクロール（Netflix風）- 軽快なスワイプ
   const handleWheel = useCallback((e: React.WheelEvent, category: string) => {
     const container = scrollRefs.current[category]
     if (!container) return
@@ -569,8 +569,8 @@ function BannerTestPageInner() {
     // トラックパッドの横スワイプを検出
     // deltaXが0でない場合は横スワイプ
     if (e.deltaX !== 0) {
-      // 横スワイプの場合はそのまま適用
-      container.scrollLeft += e.deltaX
+      // 横スワイプの場合は感度を上げて適用（2倍速）
+      container.scrollLeft += e.deltaX * 2
       updateScrollPosition(category)
       return
     }
@@ -578,14 +578,12 @@ function BannerTestPageInner() {
     // Shiftキー + 縦スクロールの場合
     if (e.shiftKey && e.deltaY !== 0) {
       e.preventDefault()
-      container.scrollLeft += e.deltaY
+      container.scrollLeft += e.deltaY * 2
       updateScrollPosition(category)
       return
     }
     
     // 通常の縦スクロールは横スクロールに変換しない（ページスクロールを優先）
-    // ただし、カテゴリ上にマウスがある場合のみ横スクロールに変換
-    // これはNetflixの挙動に近い
   }, [updateScrollPosition])
 
   // バナー生成
