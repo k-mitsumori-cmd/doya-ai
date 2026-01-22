@@ -1715,6 +1715,26 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     fullPrompt: 'A lavender field natural banner with lavender field spreading composition, lavender butterfly and blue sky, lavender color palette (lavender, medium purple, white, sky blue), lavender flowers butterfly and soft light elements, elegant sans-serif typography in purple, calming and aromatic mood, 1200x628 pixels',
     tags: ['ラベンダー', 'フィールド', 'カーミング', 'アロマティック'],
   },
+  
+  // ============================================
+  // BtoB・比較記事・ホワイトペーパー系（カスタム追加）
+  // ============================================
+  {
+    id: 'btob-whitepaper-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'ホワイトペーパー比較記事',
+    displayTitle: 'ホワイトペーパー15選',
+    prompt: {
+      composition: '横長16:9、右〜上部に複数のWebサイト・資料・スライドUIを斜めレイヤー状に配置、左下〜中央に余白を取りタイトルテキストを大きく配置',
+      subject: '架空のホワイトペーパー表紙、スライド資料、LP/WebページのUI、グラフ・図解・テキストブロック入りドキュメント、Web管理画面風ビジュアル',
+      colorPalette: 'ダークトーン基調（黒〜濃いグレー #1a1a1a, #2d2d2d）、アクセントに白・薄いグレー・イエロー（#FFD700）',
+      designElements: '複数UIのコラージュ構成、斜めの動き、情報量が多いが整理されたレイアウト、BtoB向けプロフェッショナル感',
+      typography: 'メインタイトル「【徹底比較】ホワイトペーパー制作会社15選」を大きく白文字で、サブコピー「失敗しないためのおすすめの決め方もご紹介」を小さく、「15選」を強調',
+    },
+    fullPrompt: 'A professional BtoB comparison article thumbnail with dark tone background (black to dark gray), multiple website UI mockups, whitepaper covers, slide presentations, and document screens arranged diagonally in layers on the right and top area, large title text area on the left bottom with Japanese text "【徹底比較】ホワイトペーパー制作会社15選" in white, subtitle "失敗しないためのおすすめの決め方もご紹介" below, cool intellectual trustworthy design, corporate media style, digital UI focused visuals without real company logos, 1200x628 pixels',
+    tags: ['BtoB', '比較記事', 'ホワイトペーパー', 'ダークトーン', 'プロフェッショナル', 'SEO記事'],
+  },
 ]
 
 /**
