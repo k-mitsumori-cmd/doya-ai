@@ -3,12 +3,12 @@ import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
-// 画像一覧取得
+// 画像一覧取得（BannerTemplateテーブルを使用）
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const categoryId = searchParams.get('categoryId')
-    const status = searchParams.get('status') // 'active' | 'inactive' | 'deleted' | 'all'
+    const category = searchParams.get('category')
+    const status = searchParams.get('status') // 'active' | 'inactive' | 'all'
     const search = searchParams.get('search')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
@@ -16,54 +16,56 @@ export async function GET(request: NextRequest) {
     // フィルタ条件構築
     const where: Record<string, unknown> = {}
     
-    if (categoryId && categoryId !== 'all') {
-      where.categoryId = categoryId
+    if (category && category !== 'all') {
+      where.category = category
     }
     
     if (status === 'active') {
       where.isActive = true
-      where.isDeleted = false
     } else if (status === 'inactive') {
       where.isActive = false
-      where.isDeleted = false
-    } else if (status === 'deleted') {
-      where.isDeleted = true
-    } else {
-      // 'all' または未指定の場合は論理削除されていないものを表示
-      where.isDeleted = false
     }
+    // 'all' の場合はフィルタなし
     
     if (search) {
       where.OR = [
         { prompt: { contains: search, mode: 'insensitive' } },
-        { promptSummary: { contains: search, mode: 'insensitive' } },
-        { fileName: { contains: search, mode: 'insensitive' } },
+        { industry: { contains: search, mode: 'insensitive' } },
+        { templateId: { contains: search, mode: 'insensitive' } },
       ]
     }
 
     const [images, total] = await Promise.all([
-      prisma.doyamanaImage.findMany({
+      prisma.bannerTemplate.findMany({
         where,
-        include: {
-          category: {
-            select: { id: true, name: true, slug: true }
-          },
-          _count: {
-            select: { usageLogs: true }
-          }
-        },
         orderBy: [
-          { order: 'asc' },
           { createdAt: 'desc' }
         ],
         skip: (page - 1) * limit,
         take: limit,
       }),
-      prisma.doyamanaImage.count({ where })
+      prisma.bannerTemplate.count({ where })
     ])
 
+    // フロントエンド用にデータを整形
+    const formattedImages = images.map(img => ({
+      id: img.id,
+      templateId: img.templateId,
+      category: img.category,
+      industry: img.industry,
+      prompt: img.prompt,
+      promptSummary: img.prompt.substring(0, 50) + (img.prompt.length > 50 ? '...' : ''),
+      imageUrl: img.imageUrl,
+      previewUrl: img.previewUrl,
+      isActive: img.isActive,
+      isFeatured: img.isFeatured,
+      size: img.size,
+      createdAt: img.createdAt,
+      updatedAt: img.updatedAt,
+    }))
+
     return NextResponse.json({
-      images,
+      images: formattedImages,
       pagination: {
         page,
         limit,
@@ -74,7 +76,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[GET /api/admin/doyamana/images] Error:', error)
     return NextResponse.json(
-      { error: '画像一覧の取得に失敗しました' },
+      { error: '画像一覧の取得に失敗しました', details: String(error) },
       { status: 500 }
     )
   }
@@ -84,44 +86,34 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { categoryId, imageUrl, thumbnailUrl, fileName, mimeType, width, height, prompt, order, isActive } = body
+    const { templateId, industry, category, prompt, size, imageUrl, previewUrl, isFeatured, isActive } = body
 
-    if (!categoryId || !imageUrl || !prompt) {
+    if (!templateId || !industry || !category || !prompt) {
       return NextResponse.json(
-        { error: 'カテゴリ、画像、プロンプトは必須です' },
+        { error: 'テンプレートID、業種、カテゴリ、プロンプトは必須です' },
         { status: 400 }
       )
     }
 
-    // プロンプト冒頭を自動生成
-    const promptSummary = prompt.substring(0, 50) + (prompt.length > 50 ? '...' : '')
-
-    const image = await prisma.doyamanaImage.create({
+    const image = await prisma.bannerTemplate.create({
       data: {
-        categoryId,
-        imageUrl,
-        thumbnailUrl,
-        fileName,
-        mimeType: mimeType || 'image/png',
-        width,
-        height,
+        templateId,
+        industry,
+        category,
         prompt,
-        promptSummary,
-        order: order || 0,
+        size: size || '1200x628',
+        imageUrl,
+        previewUrl,
+        isFeatured: isFeatured || false,
         isActive: isActive !== false,
       },
-      include: {
-        category: {
-          select: { id: true, name: true, slug: true }
-        }
-      }
     })
 
     return NextResponse.json({ image })
   } catch (error) {
     console.error('[POST /api/admin/doyamana/images] Error:', error)
     return NextResponse.json(
-      { error: '画像の作成に失敗しました' },
+      { error: '画像の作成に失敗しました', details: String(error) },
       { status: 500 }
     )
   }
@@ -143,29 +135,21 @@ export async function PATCH(request: NextRequest) {
     let result
     switch (action) {
       case 'delete':
-        // 論理削除
-        result = await prisma.doyamanaImage.updateMany({
-          where: { id: { in: ids } },
-          data: { isDeleted: true, deletedAt: new Date() }
+        // 物理削除（サービス上からも削除される）
+        result = await prisma.bannerTemplate.deleteMany({
+          where: { id: { in: ids } }
         })
         break
       case 'activate':
-        result = await prisma.doyamanaImage.updateMany({
+        result = await prisma.bannerTemplate.updateMany({
           where: { id: { in: ids } },
           data: { isActive: true }
         })
         break
       case 'deactivate':
-        result = await prisma.doyamanaImage.updateMany({
+        result = await prisma.bannerTemplate.updateMany({
           where: { id: { in: ids } },
           data: { isActive: false }
-        })
-        break
-      case 'restore':
-        // 論理削除から復元
-        result = await prisma.doyamanaImage.updateMany({
-          where: { id: { in: ids } },
-          data: { isDeleted: false, deletedAt: null }
         })
         break
       default:
@@ -179,7 +163,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('[PATCH /api/admin/doyamana/images] Error:', error)
     return NextResponse.json(
-      { error: '一括操作に失敗しました' },
+      { error: '一括操作に失敗しました', details: String(error) },
       { status: 500 }
     )
   }

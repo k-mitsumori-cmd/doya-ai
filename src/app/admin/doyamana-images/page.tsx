@@ -26,20 +26,18 @@ interface Category {
   slug: string
 }
 
-interface DoyamanaImage {
+interface BannerImage {
   id: string
-  categoryId: string
-  category: Category
-  imageUrl: string
-  thumbnailUrl: string | null
-  fileName: string | null
+  templateId: string
+  category: string
+  industry: string
   prompt: string
-  promptSummary: string | null
-  order: number
+  promptSummary: string
+  imageUrl: string | null
+  previewUrl: string | null
   isActive: boolean
-  isDeleted: boolean
-  usageCount: number
-  _count: { usageLogs: number }
+  isFeatured: boolean
+  size: string
   createdAt: string
 }
 
@@ -51,7 +49,7 @@ interface Pagination {
 }
 
 export default function DoyamanaImagesPage() {
-  const [images, setImages] = useState<DoyamanaImage[]>([])
+  const [images, setImages] = useState<BannerImage[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
@@ -84,7 +82,7 @@ export default function DoyamanaImagesPage() {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
-        ...(categoryFilter !== 'all' && { categoryId: categoryFilter }),
+        ...(categoryFilter !== 'all' && { category: categoryFilter }),
         ...(statusFilter !== 'all' && { status: statusFilter }),
         ...(searchQuery && { search: searchQuery }),
       })
@@ -170,7 +168,7 @@ export default function DoyamanaImagesPage() {
           body: JSON.stringify({ action: 'delete', ids: Array.from(selectedIds) }),
         })
         if (res.ok) {
-          toast.success(`${selectedIds.size}件の画像を削除しました`)
+          toast.success(`${selectedIds.size}件の画像を削除しました（サービス上からも削除されます）`)
           setSelectedIds(new Set())
         }
       } else if (deleteTarget) {
@@ -178,7 +176,7 @@ export default function DoyamanaImagesPage() {
           method: 'DELETE',
         })
         if (res.ok) {
-          toast.success('画像を削除しました')
+          toast.success('画像を削除しました（サービス上からも削除されます）')
         }
       }
       fetchImages()
@@ -195,6 +193,14 @@ export default function DoyamanaImagesPage() {
     setDeleteModalOpen(true)
   }
 
+  // 画像URLを取得（Base64の場合はそのまま、APIパスの場合はそのまま）
+  const getImageSrc = (image: BannerImage) => {
+    if (!image.imageUrl) return null
+    if (image.imageUrl.startsWith('data:')) return image.imageUrl
+    if (image.imageUrl.startsWith('/api/')) return image.imageUrl
+    return `/api/banner/test/image/${image.templateId}`
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* ヘッダー */}
@@ -205,7 +211,7 @@ export default function DoyamanaImagesPage() {
             ドヤマナAI 画像・プロンプト管理
           </h1>
           <p className="text-white/50 text-sm mt-1">
-            画像の追加・編集・削除、プロンプト管理を行います
+            画像の追加・編集・削除、プロンプト管理を行います（削除するとサービス上からも削除されます）
           </p>
         </div>
         <Link href="/admin/doyamana-images/new">
@@ -231,7 +237,7 @@ export default function DoyamanaImagesPage() {
           >
             <option value="all">すべて</option>
             {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
+              <option key={cat.id} value={cat.slug}>{cat.name}</option>
             ))}
           </select>
         </div>
@@ -246,7 +252,6 @@ export default function DoyamanaImagesPage() {
             <option value="all">すべて</option>
             <option value="active">ON</option>
             <option value="inactive">OFF</option>
-            <option value="deleted">削除済み</option>
           </select>
         </div>
         
@@ -322,9 +327,8 @@ export default function DoyamanaImagesPage() {
                 </button>
               </th>
               <th className="p-4 text-left text-white/60 text-sm font-medium">画像</th>
-              <th className="p-4 text-left text-white/60 text-sm font-medium">カテゴリ</th>
+              <th className="p-4 text-left text-white/60 text-sm font-medium">カテゴリ / 業種</th>
               <th className="p-4 text-left text-white/60 text-sm font-medium">プロンプト冒頭</th>
-              <th className="p-4 text-left text-white/60 text-sm font-medium">使用回数</th>
               <th className="p-4 text-left text-white/60 text-sm font-medium">状態</th>
               <th className="p-4 text-left text-white/60 text-sm font-medium">操作</th>
             </tr>
@@ -332,13 +336,13 @@ export default function DoyamanaImagesPage() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-white/40">
+                <td colSpan={6} className="p-8 text-center text-white/40">
                   読み込み中...
                 </td>
               </tr>
             ) : images.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-white/40">
+                <td colSpan={6} className="p-8 text-center text-white/40">
                   画像がありません
                 </td>
               </tr>
@@ -355,10 +359,10 @@ export default function DoyamanaImagesPage() {
                     </button>
                   </td>
                   <td className="p-4">
-                    <div className="w-16 h-16 rounded-lg overflow-hidden bg-white/10">
-                      {image.imageUrl ? (
+                    <div className="w-20 h-12 rounded-lg overflow-hidden bg-white/10">
+                      {getImageSrc(image) ? (
                         <img
-                          src={image.thumbnailUrl || image.imageUrl}
+                          src={getImageSrc(image)!}
                           alt=""
                           className="w-full h-full object-cover"
                         />
@@ -370,26 +374,20 @@ export default function DoyamanaImagesPage() {
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className="px-2 py-1 bg-white/10 rounded text-white/80 text-sm">
-                      {image.category?.name || '-'}
-                    </span>
+                    <div>
+                      <span className="px-2 py-1 bg-white/10 rounded text-white/80 text-sm">
+                        {image.category}
+                      </span>
+                      <p className="text-white/50 text-xs mt-1">{image.industry}</p>
+                    </div>
                   </td>
                   <td className="p-4">
                     <p className="text-white/80 text-sm max-w-xs truncate">
-                      {image.promptSummary || image.prompt.substring(0, 50)}
+                      {image.promptSummary}
                     </p>
                   </td>
                   <td className="p-4">
-                    <span className="text-white/80 text-sm">
-                      {image.usageCount}回
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    {image.isDeleted ? (
-                      <span className="px-2 py-1 bg-red-500/20 text-red-300 rounded text-xs">
-                        削除済み
-                      </span>
-                    ) : image.isActive ? (
+                    {image.isActive ? (
                       <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 rounded text-xs">
                         ON
                       </span>
@@ -468,7 +466,9 @@ export default function DoyamanaImagesPage() {
                 ? `選択した${selectedIds.size}件の画像を削除しますか？`
                 : 'この画像を削除しますか？'}
               <br />
-              <span className="text-white/40 text-sm">※論理削除のため、後から復元可能です</span>
+              <span className="text-red-400 text-sm font-medium">
+                ※ 削除するとサービス上からも完全に削除されます
+              </span>
             </p>
             <div className="flex gap-3 justify-end">
               <button

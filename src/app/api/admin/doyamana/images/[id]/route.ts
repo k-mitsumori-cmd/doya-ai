@@ -11,16 +11,8 @@ export async function GET(
   try {
     const { id } = await params
 
-    const image = await prisma.doyamanaImage.findUnique({
+    const image = await prisma.bannerTemplate.findUnique({
       where: { id },
-      include: {
-        category: {
-          select: { id: true, name: true, slug: true }
-        },
-        _count: {
-          select: { usageLogs: true }
-        }
-      }
     })
 
     if (!image) {
@@ -30,11 +22,28 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ image })
+    // フロントエンド用にデータを整形
+    const formattedImage = {
+      id: image.id,
+      templateId: image.templateId,
+      category: image.category,
+      industry: image.industry,
+      prompt: image.prompt,
+      promptSummary: image.prompt.substring(0, 50) + (image.prompt.length > 50 ? '...' : ''),
+      imageUrl: image.imageUrl,
+      previewUrl: image.previewUrl,
+      isActive: image.isActive,
+      isFeatured: image.isFeatured,
+      size: image.size,
+      createdAt: image.createdAt,
+      updatedAt: image.updatedAt,
+    }
+
+    return NextResponse.json({ image: formattedImage })
   } catch (error) {
     console.error('[GET /api/admin/doyamana/images/[id]] Error:', error)
     return NextResponse.json(
-      { error: '画像の取得に失敗しました' },
+      { error: '画像の取得に失敗しました', details: String(error) },
       { status: 500 }
     )
   }
@@ -48,70 +57,50 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await request.json()
-    const { categoryId, imageUrl, thumbnailUrl, fileName, mimeType, width, height, prompt, order, isActive } = body
+    const { templateId, industry, category, prompt, size, imageUrl, previewUrl, isFeatured, isActive } = body
 
-    // プロンプト冒頭を自動生成
-    const promptSummary = prompt ? prompt.substring(0, 50) + (prompt.length > 50 ? '...' : '') : undefined
-
-    const image = await prisma.doyamanaImage.update({
+    const image = await prisma.bannerTemplate.update({
       where: { id },
       data: {
-        ...(categoryId && { categoryId }),
-        ...(imageUrl && { imageUrl }),
-        ...(thumbnailUrl !== undefined && { thumbnailUrl }),
-        ...(fileName !== undefined && { fileName }),
-        ...(mimeType && { mimeType }),
-        ...(width !== undefined && { width }),
-        ...(height !== undefined && { height }),
-        ...(prompt && { prompt, promptSummary }),
-        ...(order !== undefined && { order }),
+        ...(templateId && { templateId }),
+        ...(industry && { industry }),
+        ...(category && { category }),
+        ...(prompt && { prompt }),
+        ...(size && { size }),
+        ...(imageUrl !== undefined && { imageUrl }),
+        ...(previewUrl !== undefined && { previewUrl }),
+        ...(isFeatured !== undefined && { isFeatured }),
         ...(isActive !== undefined && { isActive }),
       },
-      include: {
-        category: {
-          select: { id: true, name: true, slug: true }
-        }
-      }
     })
 
     return NextResponse.json({ image })
   } catch (error) {
     console.error('[PUT /api/admin/doyamana/images/[id]] Error:', error)
     return NextResponse.json(
-      { error: '画像の更新に失敗しました' },
+      { error: '画像の更新に失敗しました', details: String(error) },
       { status: 500 }
     )
   }
 }
 
-// 画像削除（論理削除）
+// 画像削除（物理削除 - サービス上からも削除される）
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
-    const { searchParams } = new URL(request.url)
-    const permanent = searchParams.get('permanent') === 'true'
 
-    if (permanent) {
-      // 物理削除
-      await prisma.doyamanaImage.delete({
-        where: { id }
-      })
-    } else {
-      // 論理削除
-      await prisma.doyamanaImage.update({
-        where: { id },
-        data: { isDeleted: true, deletedAt: new Date() }
-      })
-    }
+    await prisma.bannerTemplate.delete({
+      where: { id }
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('[DELETE /api/admin/doyamana/images/[id]] Error:', error)
     return NextResponse.json(
-      { error: '画像の削除に失敗しました' },
+      { error: '画像の削除に失敗しました', details: String(error) },
       { status: 500 }
     )
   }

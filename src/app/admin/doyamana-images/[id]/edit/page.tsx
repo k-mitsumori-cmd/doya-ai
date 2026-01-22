@@ -15,41 +15,23 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-interface Category {
-  id: string
-  name: string
-  slug: string
-  isActive: boolean
-}
-
 export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   
   // フォーム
-  const [categoryId, setCategoryId] = useState('')
+  const [templateId, setTemplateId] = useState('')
+  const [industry, setIndustry] = useState('')
+  const [category, setCategory] = useState('')
+  const [prompt, setPrompt] = useState('')
+  const [size, setSize] = useState('1200x628')
   const [imageUrl, setImageUrl] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [prompt, setPrompt] = useState('')
-  const [order, setOrder] = useState(0)
   const [isActive, setIsActive] = useState(true)
-  const [usageCount, setUsageCount] = useState(0)
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await fetch('/api/admin/doyamana/categories')
-      const data = await res.json()
-      if (data.categories) {
-        setCategories(data.categories)
-      }
-    } catch (error) {
-      console.error('カテゴリ取得エラー:', error)
-    }
-  }, [])
+  const [isFeatured, setIsFeatured] = useState(false)
 
   const fetchImage = useCallback(async () => {
     setFetching(true)
@@ -58,13 +40,23 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
       const data = await res.json()
       
       if (data.image) {
-        setCategoryId(data.image.categoryId)
-        setImageUrl(data.image.imageUrl)
-        setImagePreview(data.image.imageUrl)
+        setTemplateId(data.image.templateId)
+        setIndustry(data.image.industry)
+        setCategory(data.image.category)
         setPrompt(data.image.prompt)
-        setOrder(data.image.order)
+        setSize(data.image.size || '1200x628')
+        setImageUrl(data.image.imageUrl || '')
         setIsActive(data.image.isActive)
-        setUsageCount(data.image.usageCount)
+        setIsFeatured(data.image.isFeatured)
+        
+        // 画像プレビュー設定
+        if (data.image.imageUrl) {
+          if (data.image.imageUrl.startsWith('data:')) {
+            setImagePreview(data.image.imageUrl)
+          } else {
+            setImagePreview(`/api/banner/test/image/${data.image.templateId}`)
+          }
+        }
       } else {
         toast.error('画像が見つかりません')
         router.push('/admin/doyamana-images')
@@ -78,9 +70,8 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
   }, [id, router])
 
   useEffect(() => {
-    fetchCategories()
     fetchImage()
-  }, [fetchCategories, fetchImage])
+  }, [fetchImage])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -103,12 +94,16 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!categoryId) {
-      toast.error('カテゴリを選択してください')
+    if (!templateId.trim()) {
+      toast.error('テンプレートIDを入力してください')
       return
     }
-    if (!imageUrl) {
-      toast.error('画像をアップロードしてください')
+    if (!industry.trim()) {
+      toast.error('業種を入力してください')
+      return
+    }
+    if (!category.trim()) {
+      toast.error('カテゴリを入力してください')
       return
     }
     if (!prompt.trim()) {
@@ -122,11 +117,14 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          categoryId,
-          imageUrl,
+          templateId: templateId.trim(),
+          industry: industry.trim(),
+          category: category.trim(),
           prompt: prompt.trim(),
-          order,
+          size,
+          imageUrl: imageUrl || null,
           isActive,
+          isFeatured,
         }),
       })
 
@@ -151,7 +149,7 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
       })
 
       if (res.ok) {
-        toast.success('画像を削除しました')
+        toast.success('画像を削除しました（サービス上からも削除されました）')
         router.push('/admin/doyamana-images')
       } else {
         throw new Error()
@@ -186,15 +184,15 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
             画像・プロンプト 編集
           </h1>
           <p className="text-white/50 text-sm mt-1">
-            使用回数: {usageCount}回
+            テンプレートID: {templateId}
           </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* 画像アップロード */}
+        {/* 画像プレビュー */}
         <div className="bg-white/5 rounded-xl p-6">
-          <label className="block text-white font-medium mb-3">画像 *</label>
+          <label className="block text-white font-medium mb-3">画像</label>
           
           {imagePreview ? (
             <div className="relative inline-block">
@@ -229,32 +227,52 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
           )}
         </div>
 
+        {/* テンプレートID */}
+        <div className="bg-white/5 rounded-xl p-6">
+          <label className="block text-white font-medium mb-3">テンプレートID *</label>
+          <input
+            type="text"
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value)}
+            placeholder="例: fashion-001"
+            className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+
+        {/* 業種 */}
+        <div className="bg-white/5 rounded-xl p-6">
+          <label className="block text-white font-medium mb-3">業種 *</label>
+          <input
+            type="text"
+            value={industry}
+            onChange={(e) => setIndustry(e.target.value)}
+            placeholder="例: ファッション・アパレル"
+            className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+
         {/* カテゴリ */}
         <div className="bg-white/5 rounded-xl p-6">
           <label className="block text-white font-medium mb-3">カテゴリ *</label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          >
-            <option value="">選択してください</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
+          <input
+            type="text"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="例: ec"
+            className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
         </div>
 
-        {/* 表示順 */}
+        {/* サイズ */}
         <div className="bg-white/5 rounded-xl p-6">
-          <label className="block text-white font-medium mb-3">表示順</label>
+          <label className="block text-white font-medium mb-3">サイズ</label>
           <input
-            type="number"
-            value={order}
-            onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
-            min={0}
-            className="w-32 bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            type="text"
+            value={size}
+            onChange={(e) => setSize(e.target.value)}
+            placeholder="例: 1200x628"
+            className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
-          <p className="text-white/40 text-sm mt-2">数値が小さいほど先に表示されます</p>
         </div>
 
         {/* プロンプト */}
@@ -272,26 +290,24 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
         {/* 状態 */}
         <div className="bg-white/5 rounded-xl p-6">
           <label className="block text-white font-medium mb-3">状態</label>
-          <div className="flex gap-4">
+          <div className="flex gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
-                type="radio"
-                name="isActive"
+                type="checkbox"
                 checked={isActive}
-                onChange={() => setIsActive(true)}
-                className="w-4 h-4 text-emerald-500 focus:ring-emerald-500"
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="w-4 h-4 text-emerald-500 focus:ring-emerald-500 rounded"
               />
-              <span className="text-white">ON</span>
+              <span className="text-white">アクティブ (ON)</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
-                type="radio"
-                name="isActive"
-                checked={!isActive}
-                onChange={() => setIsActive(false)}
-                className="w-4 h-4 text-emerald-500 focus:ring-emerald-500"
+                type="checkbox"
+                checked={isFeatured}
+                onChange={(e) => setIsFeatured(e.target.checked)}
+                className="w-4 h-4 text-emerald-500 focus:ring-emerald-500 rounded"
               />
-              <span className="text-white">OFF</span>
+              <span className="text-white">注目 (Featured)</span>
             </label>
           </div>
         </div>
@@ -347,7 +363,9 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
             <p className="text-white/60 mb-6">
               この画像を削除しますか？
               <br />
-              <span className="text-white/40 text-sm">※論理削除のため、後から復元可能です</span>
+              <span className="text-red-400 text-sm font-medium">
+                ※ 削除するとサービス上からも完全に削除されます
+              </span>
             </p>
             <div className="flex gap-3 justify-end">
               <button
