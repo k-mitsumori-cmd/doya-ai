@@ -192,7 +192,7 @@ function BannerTestPageInner() {
 
   // テンプレートを取得（高速化: 最小限のデータを最初に取得）
   useEffect(() => {
-    const CACHE_KEY = 'banner_templates_cache_v3'
+    const CACHE_KEY = 'banner_templates_cache_v4'
     const CACHE_EXPIRY = 10 * 60 * 1000 // 10分間キャッシュ（延長）
     
     const fetchTemplates = async () => {
@@ -301,14 +301,20 @@ function BannerTestPageInner() {
 
   // カテゴリごとにテンプレートをグループ化（要求に合わせて整理）
   // 遅延読み込み対応：各カテゴリの表示数を制限
-  const templatesByCategory = useMemo(() => {
+  const templatesByCategory = useMemo((): { [key: string]: BannerTemplate[] } => {
+    if (!templates || !Array.isArray(templates) || templates.length === 0) {
+      return {}
+    }
+    
     const grouped: { [key: string]: BannerTemplate[] } = {}
     const categoryOrder = ['ビジネス / SaaS', 'IT・AI', '採用', 'イベント', 'EC', '高級・ラグジュアリー']
     
     // すべてのテンプレートを処理（画像URLがないものも含む）
     templates.forEach((template) => {
+      if (!template) return
       // カテゴリマッピングを使用、なければ元の業種名を使用
-      const category = categoryMapping[template.industry] || template.industry
+      const industry = template.industry || 'その他'
+      const category = categoryMapping[industry] || industry
       
       if (!grouped[category]) {
         grouped[category] = []
@@ -319,14 +325,14 @@ function BannerTestPageInner() {
     // カテゴリ順序に従ってソート
     const sorted: { [key: string]: BannerTemplate[] } = {}
     categoryOrder.forEach((cat) => {
-      if (grouped[cat]) {
+      if (grouped[cat] && grouped[cat].length > 0) {
         sorted[cat] = grouped[cat]
       }
     })
     
     // その他のカテゴリも追加
     Object.keys(grouped).forEach((cat) => {
-      if (!categoryOrder.includes(cat)) {
+      if (!categoryOrder.includes(cat) && grouped[cat] && grouped[cat].length > 0) {
         sorted[cat] = grouped[cat]
       }
     })
@@ -335,17 +341,24 @@ function BannerTestPageInner() {
     const limited: { [key: string]: BannerTemplate[] } = {}
     Object.keys(sorted).forEach((cat) => {
       const visibleCount = visibleCounts[cat] || INITIAL_VISIBLE_COUNT
-      limited[cat] = sorted[cat].slice(0, visibleCount)
+      const categoryTemplates = sorted[cat] || []
+      limited[cat] = categoryTemplates.slice(0, visibleCount)
     })
     
     return limited
   }, [templates, visibleCounts])
   
   // カテゴリごとの全テンプレート数（「もっと見る」ボタンの表示判定用）
-  const totalTemplatesByCategory = useMemo(() => {
+  const totalTemplatesByCategory = useMemo((): { [key: string]: BannerTemplate[] } => {
+    if (!templates || !Array.isArray(templates) || templates.length === 0) {
+      return {}
+    }
+    
     const grouped: { [key: string]: BannerTemplate[] } = {}
     templates.forEach((template) => {
-      const category = categoryMapping[template.industry] || template.industry
+      if (!template) return
+      const industry = template.industry || 'その他'
+      const category = categoryMapping[industry] || industry
       if (!grouped[category]) {
         grouped[category] = []
       }
