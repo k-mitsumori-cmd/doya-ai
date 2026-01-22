@@ -192,7 +192,7 @@ function BannerTestPageInner() {
 
   // テンプレートを取得（高速化: 最小限のデータを最初に取得）
   useEffect(() => {
-    const CACHE_KEY = 'banner_templates_cache_v2'
+    const CACHE_KEY = 'banner_templates_cache_v3'
     const CACHE_EXPIRY = 10 * 60 * 1000 // 10分間キャッシュ（延長）
     
     const fetchTemplates = async () => {
@@ -207,7 +207,7 @@ function BannerTestPageInner() {
             const now = Date.now()
             
             // キャッシュが有効な場合は使用
-            if (now - timestamp < CACHE_EXPIRY && data.templates) {
+            if (now - timestamp < CACHE_EXPIRY && data.templates && Array.isArray(data.templates)) {
               setTemplates(data.templates)
               
               // 各カテゴリの初期表示数を設定
@@ -252,7 +252,7 @@ function BannerTestPageInner() {
         
         const data = await res.json()
         
-        if (data.templates) {
+        if (data.templates && Array.isArray(data.templates)) {
           setTemplates(data.templates)
           
           // 各カテゴリの初期表示数を設定
