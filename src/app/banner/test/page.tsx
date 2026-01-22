@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown } from 'lucide-react'
+import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -608,10 +608,23 @@ function BannerTestPageInner() {
 
       {/* メインコンテンツ */}
       <main className="flex-1 ml-0 md:ml-[240px] min-h-screen bg-black">
+        {/* モバイル用ヘッダー */}
+        <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-black/90 backdrop-blur-sm border-b border-gray-800 px-3 py-2 flex items-center justify-between">
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="メニューを開く"
+          >
+            <Menu className="w-5 h-5 text-white" />
+          </button>
+          <h1 className="text-sm font-bold text-white">バナーテンプレート</h1>
+          <div className="w-9" /> {/* スペーサー */}
+        </div>
+        
         {/* Netflix風のメインコンテンツ */}
-        <div className="relative">
+        <div className="relative pt-12 md:pt-0">
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- スティッキー */}
-          <div className="sticky top-0 z-20 h-[35vh] sm:h-[40vh] md:h-[45vh] lg:h-[50vh] w-full overflow-hidden">
+          <div className="sticky top-0 z-20 h-[28vh] sm:h-[35vh] md:h-[45vh] lg:h-[50vh] w-full overflow-hidden">
             {/* グラデーション: 下は黒、上は明るく */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
             {selectedBanner ? (
@@ -651,10 +664,10 @@ function BannerTestPageInner() {
             )}
             
             {/* オーバーレイ情報（Netflix風） */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 md:p-6 lg:p-8 z-20">
+            <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-4 md:p-6 lg:p-8 z-20">
               <div className="max-w-6xl mx-auto">
                 {/* メインタイトル：日本語の短いタイトルを優先表示 */}
-                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black mb-1 sm:mb-2 drop-shadow-2xl leading-tight">
+                <h1 className="text-base sm:text-xl md:text-3xl lg:text-4xl font-black mb-0.5 sm:mb-2 drop-shadow-2xl leading-tight">
                   {selectedBanner 
                     ? serviceName || '生成されたバナー'
                     : selectedTemplate?.displayTitle || selectedTemplate?.name || selectedTemplate?.industry || 'バナーテンプレート'
@@ -667,9 +680,9 @@ function BannerTestPageInner() {
                     : selectedTemplate?.industry || ''
                   }
                 </p>
-                {/* プロンプト表示：アイコン付きで分かりやすく */}
+                {/* プロンプト表示：アイコン付きで分かりやすく（スマホでは非表示） */}
                 {!selectedBanner && selectedTemplate && (
-                  <div className="flex items-center gap-2 mb-2 sm:mb-3 max-w-2xl">
+                  <div className="hidden sm:flex items-center gap-2 mb-2 sm:mb-3 max-w-2xl">
                     <div className="flex items-center gap-1 px-2 py-0.5 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 shrink-0">
                       <Sparkles className="w-3 h-3 text-yellow-400" />
                       <span className="text-[10px] sm:text-xs text-white/80 font-medium whitespace-nowrap">AIプロンプト</span>
@@ -753,7 +766,7 @@ function BannerTestPageInner() {
           </div>
 
           {/* テンプレート一覧（Netflix風の横スクロール） */}
-          <div className="px-3 sm:px-4 md:px-8 lg:px-12 pt-4 sm:pt-6 md:pt-8 relative z-10 space-y-6 sm:space-y-8 md:space-y-10 bg-black pb-8">
+          <div className="px-0 sm:px-4 md:px-8 lg:px-12 pt-3 sm:pt-6 md:pt-8 relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -763,30 +776,30 @@ function BannerTestPageInner() {
                 if (!categoryTemplates || categoryTemplates.length === 0) return null
                 
                 return (
-                  <div key={categoryName} className="space-y-2 sm:space-y-3">
-                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold px-2 md:px-4 text-white flex items-center gap-2">
-                      <span className="text-blue-400">▶</span> {categoryName}
+                  <div key={categoryName} className="space-y-1.5 sm:space-y-3">
+                    <h2 className="text-sm sm:text-lg md:text-2xl lg:text-3xl font-bold px-3 sm:px-2 md:px-4 text-white flex items-center gap-1.5 sm:gap-2">
+                      <span className="text-blue-400 text-xs sm:text-base">▶</span> {categoryName}
                     </h2>
                     <div className="relative group/scroll">
-                      {/* 左スクロールボタン（スクロール可能な場合のみ表示） */}
+                      {/* 左スクロールボタン（スクロール可能な場合のみ表示、スマホでは常に非表示） */}
                       <button
                         onClick={() => scroll('left', categoryName)}
-                        className={`absolute left-0 top-0 bottom-0 z-20 w-12 md:w-16 bg-gradient-to-r from-black via-black/90 to-transparent flex items-center justify-center transition-all duration-300 ${
+                        className={`hidden sm:flex absolute left-0 top-0 bottom-0 z-20 w-10 md:w-16 bg-gradient-to-r from-black via-black/90 to-transparent items-center justify-center transition-all duration-300 ${
                           scrollPositions[categoryName]?.canScrollLeft
                             ? 'opacity-0 group-hover/scroll:opacity-100 hover:from-black'
                             : 'opacity-0 pointer-events-none'
                         }`}
                         aria-label="左にスクロール"
                       >
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110">
-                          <ChevronLeft className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110">
+                          <ChevronLeft className="w-5 h-5 md:w-8 md:h-8 text-white" />
                         </div>
                       </button>
                       
                       {/* 横スクロールコンテナ（タッチ/マウススワイプ対応） */}
                       <div
                         ref={(el) => { scrollRefs.current[categoryName] = el }}
-                        className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-12 md:px-16 py-2 md:py-4 cursor-grab active:cursor-grabbing select-none scroll-smooth"
+                        className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-3 sm:px-10 md:px-16 py-1.5 sm:py-2 md:py-4 cursor-grab active:cursor-grabbing select-none scroll-smooth"
                         style={{ 
                           scrollbarWidth: 'none', 
                           msOverflowStyle: 'none',
@@ -817,7 +830,7 @@ function BannerTestPageInner() {
                                 setSelectedTemplate(template)
                                 setSelectedBanner(null)
                               }}
-                              className={`group flex-shrink-0 w-48 h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 relative ${
+                              className={`group flex-shrink-0 w-36 h-20 sm:w-48 sm:h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 relative ${
                                 selectedTemplate?.id === template.id
                                   ? 'ring-3 ring-white scale-105 shadow-2xl'
                                   : 'ring-1 ring-gray-800 hover:ring-gray-600'
@@ -858,11 +871,11 @@ function BannerTestPageInner() {
                                 </div>
                               )}
                               {/* 画像名ラベル（常に表示） */}
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-2 md:p-3 z-10">
-                                <p className="text-[10px] sm:text-xs md:text-sm font-bold text-white line-clamp-1 drop-shadow-lg">
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-1.5 sm:p-2 md:p-3 z-10">
+                                <p className="text-[8px] sm:text-[10px] md:text-sm font-bold text-white line-clamp-1 drop-shadow-lg">
                                   {template.displayTitle || template.name || template.industry}
                                 </p>
-                                <p className="text-[8px] sm:text-[10px] text-gray-300 line-clamp-1">
+                                <p className="text-[6px] sm:text-[8px] md:text-[10px] text-gray-300 line-clamp-1 hidden sm:block">
                                   {categoryMapping[template.industry] || template.industry}
                                 </p>
                               </div>
@@ -907,20 +920,20 @@ function BannerTestPageInner() {
                             <motion.div
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
-                              className="flex-shrink-0 w-48 h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer"
+                              className="flex-shrink-0 w-36 h-20 sm:w-48 sm:h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer"
                             >
                               <button
                                 onClick={() => loadMoreTemplates(categoryName)}
-                                className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black border-2 border-gray-700 hover:border-gray-500 transition-all flex flex-col items-center justify-center gap-2 md:gap-3 group"
+                                className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black border-2 border-gray-700 hover:border-gray-500 transition-all flex flex-col items-center justify-center gap-1 sm:gap-2 md:gap-3 group"
                               >
-                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 group-hover:bg-white/20 transition-all flex items-center justify-center">
-                                  <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-white/10 group-hover:bg-white/20 transition-all flex items-center justify-center">
+                                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
                                 </div>
-                                <p className="text-xs md:text-sm font-bold text-white">
+                                <p className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
                                   もっと見る
                                 </p>
-                                <p className="text-[10px] md:text-xs text-gray-400">
-                                  {totalCount - visibleCount}件のテンプレート
+                                <p className="text-[8px] sm:text-[10px] md:text-xs text-gray-400">
+                                  +{totalCount - visibleCount}件
                                 </p>
                               </button>
                             </motion.div>
@@ -928,18 +941,18 @@ function BannerTestPageInner() {
                         })()}
                       </div>
 
-                      {/* 右スクロールボタン（スクロール可能な場合のみ表示） */}
+                      {/* 右スクロールボタン（スクロール可能な場合のみ表示、スマホでは常に非表示） */}
                       <button
                         onClick={() => scroll('right', categoryName)}
-                        className={`absolute right-0 top-0 bottom-0 z-20 w-12 md:w-16 bg-gradient-to-l from-black via-black/90 to-transparent flex items-center justify-center transition-all duration-300 ${
+                        className={`hidden sm:flex absolute right-0 top-0 bottom-0 z-20 w-10 md:w-16 bg-gradient-to-l from-black via-black/90 to-transparent items-center justify-center transition-all duration-300 ${
                           scrollPositions[categoryName]?.canScrollRight
                             ? 'opacity-0 group-hover/scroll:opacity-100 hover:from-black'
                             : 'opacity-0 pointer-events-none'
                         }`}
                         aria-label="右にスクロール"
                       >
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110">
-                          <ChevronRight className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110">
+                          <ChevronRight className="w-5 h-5 md:w-8 md:h-8 text-white" />
                         </div>
                       </button>
                     </div>
