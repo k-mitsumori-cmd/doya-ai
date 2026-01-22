@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
             headlineText: mainTitle,
             subheadText: subTitle || undefined,
             customImagePrompt: prompt,
-            variationMode: 'diverse',
+            // variationMode を指定しない（customImagePrompt使用時は共通プロンプトを追加しない）
           },
           1 // 1枚ずつ生成
         )
