@@ -2142,7 +2142,7 @@ function BannerTestPageInner() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center"
+            className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden"
           >
             {/* 背景オーバーレイ（グラデーション） */}
             <motion.div 
@@ -2151,15 +2151,15 @@ function BannerTestPageInner() {
               animate={{ opacity: 1 }}
             />
             
-            {/* パーティクルアニメーション背景 */}
+            {/* パーティクルアニメーション背景 - モバイルでは数を減らす */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              {[...Array(20)].map((_, i) => (
+              {[...Array(typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 20)].map((_, i) => (
                 <motion.div
                   key={i}
-                  className="absolute w-2 h-2 bg-white/20 rounded-full"
+                  className="absolute w-1.5 sm:w-2 h-1.5 sm:h-2 bg-white/20 rounded-full"
                   initial={{ 
-                    x: Math.random() * window.innerWidth, 
-                    y: window.innerHeight + 100,
+                    x: typeof window !== 'undefined' ? Math.random() * window.innerWidth : 0, 
+                    y: typeof window !== 'undefined' ? window.innerHeight + 100 : 800,
                     scale: Math.random() * 0.5 + 0.5
                   }}
                   animate={{ 
@@ -2181,44 +2181,44 @@ function BannerTestPageInner() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.8, y: 50 }}
               transition={{ type: "spring", damping: 20, stiffness: 300 }}
-              className="relative z-10 w-full max-w-4xl mx-4 p-6 sm:p-8 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl"
+              className="relative z-10 w-[calc(100%-24px)] sm:w-[calc(100%-32px)] max-w-4xl mx-auto p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl max-h-[90vh] overflow-y-auto"
             >
               {!generationComplete ? (
                 /* 生成中の表示 */
                 <>
                   {/* ヘッダー */}
-                  <div className="text-center mb-8">
+                  <div className="text-center mb-4 sm:mb-6 md:mb-8">
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      className="inline-block mb-4"
+                      className="inline-block mb-3 sm:mb-4"
                     >
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-1">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-0.5 sm:p-1">
                         <div className="w-full h-full rounded-full bg-black/50 flex items-center justify-center">
-                          <Sparkles className="w-8 h-8 text-white" />
+                          <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-white" />
                         </div>
                       </div>
                     </motion.div>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">
                       🎨 バナーを生成中...
                     </h2>
                     <motion.p 
                       key={loadingMessage}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="text-blue-200 text-lg"
+                      className="text-blue-200 text-sm sm:text-base md:text-lg"
                     >
                       {loadingMessage}
                     </motion.p>
                   </div>
 
                   {/* プログレスバー */}
-                  <div className="mb-8">
-                    <div className="flex justify-between text-sm text-white/70 mb-2">
+                  <div className="mb-4 sm:mb-6 md:mb-8">
+                    <div className="flex justify-between text-xs sm:text-sm text-white/70 mb-1.5 sm:mb-2">
                       <span>進捗</span>
                       <span>{Math.round(generationProgress)}%</span>
                     </div>
-                    <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 sm:h-3 bg-white/10 rounded-full overflow-hidden">
                       <motion.div
                         className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
                         initial={{ width: 0 }}
@@ -2229,29 +2229,29 @@ function BannerTestPageInner() {
                   </div>
 
                   {/* 入力内容と参考画像 */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
                     {/* 参考画像（大きく表示） */}
-                    <div className="space-y-3">
-                      <h3 className="text-white/80 font-semibold flex items-center gap-2">
-                        <ImageLucide className="w-5 h-5" />
+                    <div className="space-y-2 sm:space-y-3">
+                      <h3 className="text-white/80 font-semibold flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+                        <ImageLucide className="w-4 h-4 sm:w-5 sm:h-5" />
                         参考スタイル
                       </h3>
-                      <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-white/30 shadow-lg">
+                      <div className="relative aspect-video rounded-lg sm:rounded-xl overflow-hidden border-2 border-white/30 shadow-lg">
                         <img
                           src={selectedTemplate.imageUrl || selectedTemplate.previewUrl || ''}
                           alt={selectedTemplate.displayTitle || selectedTemplate.name || '参考画像'}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        <div className="absolute bottom-3 left-3 right-3">
-                          <p className="text-white font-bold text-lg drop-shadow-lg">
+                        <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 right-2 sm:right-3">
+                          <p className="text-white font-bold text-sm sm:text-base md:text-lg drop-shadow-lg truncate">
                             {selectedTemplate.displayTitle || selectedTemplate.name}
                           </p>
-                          <p className="text-white/70 text-sm">{selectedTemplate.industry}</p>
+                          <p className="text-white/70 text-xs sm:text-sm">{selectedTemplate.industry}</p>
                         </div>
                         {/* パルスアニメーション */}
                         <motion.div
-                          className="absolute inset-0 border-4 border-blue-400 rounded-xl"
+                          className="absolute inset-0 border-2 sm:border-4 border-blue-400 rounded-lg sm:rounded-xl"
                           animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.02, 1] }}
                           transition={{ duration: 2, repeat: Infinity }}
                         />
@@ -2259,46 +2259,46 @@ function BannerTestPageInner() {
                     </div>
 
                     {/* 入力内容 */}
-                    <div className="space-y-4">
-                      <h3 className="text-white/80 font-semibold flex items-center gap-2">
-                        <Sparkles className="w-5 h-5" />
+                    <div className="space-y-3 sm:space-y-4">
+                      <h3 className="text-white/80 font-semibold flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
+                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
                         生成設定
                       </h3>
-                      <div className="space-y-3 bg-white/5 rounded-xl p-4 border border-white/10">
+                      <div className="space-y-2 sm:space-y-3 bg-white/5 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/10">
                         <div>
-                          <p className="text-white/50 text-xs mb-1">入れたいテキスト</p>
-                          <p className="text-white font-medium text-lg">{serviceName}</p>
+                          <p className="text-white/50 text-[10px] sm:text-xs mb-0.5 sm:mb-1">入れたいテキスト</p>
+                          <p className="text-white font-medium text-sm sm:text-base md:text-lg truncate">{serviceName}</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
                           <div>
-                            <p className="text-white/50 text-xs mb-1">サイズ</p>
-                            <p className="text-white font-medium">
+                            <p className="text-white/50 text-[10px] sm:text-xs mb-0.5 sm:mb-1">サイズ</p>
+                            <p className="text-white font-medium text-xs sm:text-sm md:text-base">
                               {selectedSize.id === 'custom' 
                                 ? `${customWidth}×${customHeight}` 
                                 : `${selectedSize.width}×${selectedSize.height}`}
                             </p>
                           </div>
                           <div>
-                            <p className="text-white/50 text-xs mb-1">生成枚数</p>
-                            <p className="text-white font-medium">{generateCount}枚</p>
+                            <p className="text-white/50 text-[10px] sm:text-xs mb-0.5 sm:mb-1">生成枚数</p>
+                            <p className="text-white font-medium text-xs sm:text-sm md:text-base">{generateCount}枚</p>
                           </div>
                         </div>
                         {(logoPreview || personPreview) && (
-                          <div className="flex gap-3 pt-2 border-t border-white/10">
+                          <div className="flex gap-2 sm:gap-3 pt-2 border-t border-white/10">
                             {logoPreview && (
-                              <div className="flex items-center gap-2">
-                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-white/10">
                                   <img src={logoPreview} alt="ロゴ" className="w-full h-full object-contain" />
                                 </div>
-                                <span className="text-white/70 text-sm">ロゴ</span>
+                                <span className="text-white/70 text-xs sm:text-sm">ロゴ</span>
                               </div>
                             )}
                             {personPreview && (
-                              <div className="flex items-center gap-2">
-                                <div className="w-10 h-10 rounded-lg overflow-hidden bg-white/10">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-white/10">
                                   <img src={personPreview} alt="人物" className="w-full h-full object-cover" />
                                 </div>
-                                <span className="text-white/70 text-sm">人物</span>
+                                <span className="text-white/70 text-xs sm:text-sm">人物</span>
                               </div>
                             )}
                           </div>
@@ -2306,11 +2306,11 @@ function BannerTestPageInner() {
                         {/* カスタムプロンプト表示（エンタープライズ） */}
                         {customPrompt && (
                           <div className="pt-2 border-t border-white/10">
-                            <p className="text-white/50 text-xs mb-1 flex items-center gap-1">
-                              <span className="px-1.5 py-0.5 bg-purple-600 text-[8px] font-bold rounded">ENTERPRISE</span>
+                            <p className="text-white/50 text-[10px] sm:text-xs mb-0.5 sm:mb-1 flex items-center gap-1">
+                              <span className="px-1 sm:px-1.5 py-0.5 bg-purple-600 text-[7px] sm:text-[8px] font-bold rounded">ENTERPRISE</span>
                               詳細指示
                             </p>
-                            <p className="text-white/80 text-xs line-clamp-2">{customPrompt}</p>
+                            <p className="text-white/80 text-[10px] sm:text-xs line-clamp-2">{customPrompt}</p>
                           </div>
                         )}
                       </div>
@@ -2318,8 +2318,8 @@ function BannerTestPageInner() {
                   </div>
 
                   {/* 生成中のヒント */}
-                  <div className="mt-6 text-center">
-                    <p className="text-white/50 text-sm">
+                  <div className="mt-4 sm:mt-5 md:mt-6 text-center">
+                    <p className="text-white/50 text-[10px] sm:text-xs md:text-sm px-2">
                       ✨ AIが選択したスタイルを分析し、あなたのテキストに合わせてバナーを生成しています
                       {customPrompt && '（カスタム指示を適用中）'}
                     </p>
@@ -2331,14 +2331,14 @@ function BannerTestPageInner() {
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", damping: 15, stiffness: 300 }}
-                  className="text-center py-8"
+                  className="text-center py-4 sm:py-6 md:py-8"
                 >
                   {/* 成功アイコン */}
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: [0, 1.2, 1] }}
                     transition={{ duration: 0.5, times: [0, 0.6, 1] }}
-                    className="mb-6"
+                    className="mb-4 sm:mb-5 md:mb-6"
                   >
                     <div className="inline-block relative">
                       <motion.div
@@ -2346,9 +2346,9 @@ function BannerTestPageInner() {
                         animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
                       />
-                      <div className="relative w-24 h-24 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/50">
+                      <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/50">
                         <motion.svg
-                          className="w-12 h-12 text-white"
+                          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-white"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
@@ -2372,7 +2372,7 @@ function BannerTestPageInner() {
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.3 }}
-                    className="text-3xl sm:text-4xl font-bold text-white mb-3"
+                    className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3"
                   >
                     🎉 生成完了！
                   </motion.h2>
@@ -2380,7 +2380,7 @@ function BannerTestPageInner() {
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.4 }}
-                    className="text-xl text-green-300 mb-6"
+                    className="text-base sm:text-lg md:text-xl text-green-300 mb-4 sm:mb-5 md:mb-6"
                   >
                     {generatedBanners.length}枚のバナーが完成しました
                   </motion.p>
@@ -2390,7 +2390,7 @@ function BannerTestPageInner() {
                     initial={{ y: 30, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.5 }}
-                    className="flex justify-center gap-3 flex-wrap"
+                    className="flex justify-center gap-2 sm:gap-3 flex-wrap px-2"
                   >
                     {generatedBanners.slice(0, 3).map((banner, idx) => (
                       <motion.div
@@ -2398,7 +2398,7 @@ function BannerTestPageInner() {
                         initial={{ scale: 0, rotate: -10 }}
                         animate={{ scale: 1, rotate: 0 }}
                         transition={{ delay: 0.6 + idx * 0.1, type: "spring" }}
-                        className="w-32 h-20 rounded-lg overflow-hidden border-2 border-white/30 shadow-lg"
+                        className="w-20 h-12 sm:w-24 sm:h-14 md:w-32 md:h-20 rounded-lg overflow-hidden border-2 border-white/30 shadow-lg"
                       >
                         <img
                           src={banner.imageUrl}
@@ -2412,26 +2412,26 @@ function BannerTestPageInner() {
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.9, type: "spring" }}
-                        className="w-32 h-20 rounded-lg bg-white/10 border-2 border-white/30 flex items-center justify-center"
+                        className="w-20 h-12 sm:w-24 sm:h-14 md:w-32 md:h-20 rounded-lg bg-white/10 border-2 border-white/30 flex items-center justify-center"
                       >
-                        <span className="text-white font-bold">+{generatedBanners.length - 3}</span>
+                        <span className="text-white font-bold text-xs sm:text-sm md:text-base">+{generatedBanners.length - 3}</span>
                       </motion.div>
                     )}
                   </motion.div>
 
-                  {/* 紙吹雪エフェクト */}
+                  {/* 紙吹雪エフェクト - モバイルでは数を減らす */}
                   <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    {[...Array(30)].map((_, i) => (
+                    {[...Array(typeof window !== 'undefined' && window.innerWidth < 640 ? 15 : 30)].map((_, i) => (
                       <motion.div
                         key={i}
-                        className="absolute w-3 h-3 rounded-sm"
+                        className="absolute w-2 h-2 sm:w-3 sm:h-3 rounded-sm"
                         style={{
                           background: ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'][i % 6],
                           left: `${Math.random() * 100}%`,
                         }}
                         initial={{ y: -20, rotate: 0, opacity: 1 }}
                         animate={{ 
-                          y: window.innerHeight + 100,
+                          y: typeof window !== 'undefined' ? window.innerHeight + 100 : 800,
                           rotate: Math.random() * 720 - 360,
                           opacity: [1, 1, 0]
                         }}
@@ -2457,7 +2457,7 @@ function BannerTestPageInner() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-4 overflow-hidden"
             onClick={() => setShowLockModal(false)}
           >
             {/* 背景オーバーレイ */}
@@ -2469,29 +2469,29 @@ function BannerTestPageInner() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative z-10 w-full max-w-md bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-700"
+              className="relative z-10 w-full max-w-[calc(100%-24px)] sm:max-w-md bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl border border-gray-700 max-h-[90vh] overflow-y-auto"
             >
               {/* ヘッダー（ロックタイプに応じた色） */}
-              <div className={`p-6 ${
+              <div className={`p-4 sm:p-6 ${
                 lockModalType === 'login' 
                   ? 'bg-gradient-to-r from-red-600 to-red-500' 
                   : lockModalType === 'pro'
                     ? 'bg-gradient-to-r from-amber-600 to-amber-500'
                     : 'bg-gradient-to-r from-purple-600 to-purple-500'
               }`}>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                    <Lock className="w-6 h-6 text-white" />
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                    <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-white">
                       {lockModalType === 'login' 
                         ? 'ログインが必要です' 
                         : lockModalType === 'pro'
                           ? 'PROプランで解放'
                           : 'Enterpriseプランで解放'}
                     </h3>
-                    <p className="text-white/80 text-sm">
+                    <p className="text-white/80 text-xs sm:text-sm">
                       {lockModalType === 'login' 
                         ? 'この画像を使用するにはログインしてください' 
                         : lockModalType === 'pro'
@@ -2503,8 +2503,8 @@ function BannerTestPageInner() {
               </div>
               
               {/* 画像プレビュー */}
-              <div className="p-6">
-                <div className="relative aspect-video rounded-lg overflow-hidden mb-4 border border-gray-700">
+              <div className="p-4 sm:p-6">
+                <div className="relative aspect-video rounded-lg overflow-hidden mb-3 sm:mb-4 border border-gray-700">
                   {lockedTemplate.imageUrl ? (
                     <img
                       src={lockedTemplate.imageUrl}
@@ -2513,17 +2513,17 @@ function BannerTestPageInner() {
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                      <ImageLucide className="w-12 h-12 text-gray-600" />
+                      <ImageLucide className="w-8 h-8 sm:w-12 sm:h-12 text-gray-600" />
                     </div>
                   )}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-16 h-16 rounded-full bg-black/60 flex items-center justify-center">
-                      <Lock className="w-8 h-8 text-white" />
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-black/60 flex items-center justify-center">
+                      <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                     </div>
                   </div>
                 </div>
                 
-                <p className="text-gray-300 text-center mb-6">
+                <p className="text-gray-300 text-center mb-4 sm:mb-6 text-xs sm:text-sm md:text-base px-2">
                   「{lockedTemplate.displayTitle || lockedTemplate.name || lockedTemplate.industry}」を使用するには
                   {lockModalType === 'login' 
                     ? 'ログインしてください' 
@@ -2533,27 +2533,27 @@ function BannerTestPageInner() {
                 </p>
                 
                 {/* アクションボタン */}
-                <div className="flex gap-3">
+                <div className="flex gap-2 sm:gap-3">
                   <button
                     onClick={() => setShowLockModal(false)}
-                    className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                    className="flex-1 py-2.5 sm:py-3 px-3 sm:px-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-sm sm:text-base"
                   >
                     閉じる
                   </button>
                   {lockModalType === 'login' ? (
                     <a
                       href="/auth/doyamarke/signin?callbackUrl=/banner/test"
-                      className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 sm:py-3 px-3 sm:px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
                     >
-                      <LogIn className="w-5 h-5" />
+                      <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
                       ログイン
                     </a>
                   ) : (
                     <a
                       href="/banner/dashboard/plan"
-                      className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                      className="flex-1 py-2.5 sm:py-3 px-3 sm:px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
                     >
-                      <Crown className="w-5 h-5" />
+                      <Crown className="w-4 h-4 sm:w-5 sm:h-5" />
                       プランを見る
                     </a>
                   )}
