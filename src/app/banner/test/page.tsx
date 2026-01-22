@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu } from 'lucide-react'
+import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu, Lock, LogIn } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -47,7 +47,52 @@ const LOADING_MESSAGES = [
   'もう少しで完成です...',
 ]
 
-// プラン別の生成枚数上限
+// プラン別の制約定義
+type PlanType = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE'
+
+type PlanConfig = {
+  label: string
+  maxCountPerGeneration: number // 1回の生成で作れる枚数
+  dailyLimit: number // 1日の生成上限
+  imagesPerGenre: number // 各ジャンルで使える画像数（左から何枚目まで）
+  allUnlocked: boolean // 全画像解放かどうか
+}
+
+const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
+  GUEST: {
+    label: 'ゲスト',
+    maxCountPerGeneration: 3,
+    dailyLimit: 5,
+    imagesPerGenre: 1, // 各ジャンル左から1枚目のみ
+    allUnlocked: false,
+  },
+  FREE: {
+    label: 'ベーシック',
+    maxCountPerGeneration: 3,
+    dailyLimit: 10,
+    imagesPerGenre: 3, // 各ジャンル左から3枚目まで
+    allUnlocked: false,
+  },
+  PRO: {
+    label: 'PROプラン',
+    maxCountPerGeneration: 5,
+    dailyLimit: 30,
+    imagesPerGenre: Infinity, // 全画像
+    allUnlocked: true,
+  },
+  ENTERPRISE: {
+    label: 'Enterpriseプラン',
+    maxCountPerGeneration: 10,
+    dailyLimit: 200,
+    imagesPerGenre: Infinity, // 全画像
+    allUnlocked: true,
+  },
+}
+
+// ロック状態の種類
+type LockType = 'login' | 'pro' | 'enterprise' | null
+
+// 後方互換性のためのPLAN_LIMITS
 const PLAN_LIMITS = {
   FREE: { maxCount: 3, label: '無料プラン' },
   PRO: { maxCount: 5, label: 'PROプラン' },
@@ -98,14 +143,94 @@ function BannerTestPageInner() {
   const [showGenerationModal, setShowGenerationModal] = useState(false)
   const [generationComplete, setGenerationComplete] = useState(false)
   
-  // ユーザープラン
-  const userPlan = useMemo(() => {
-    const user = session?.user as any
+  // ロックモーダル状態
+  const [showLockModal, setShowLockModal] = useState(false)
+  const [lockModalType, setLockModalType] = useState<LockType>(null)
+  const [lockedTemplate, setLockedTemplate] = useState<BannerTemplate | null>(null)
+  
+  // 今日の生成数（ローカルストレージから取得）
+  const [todayGenerationCount, setTodayGenerationCount] = useState(0)
+  
+  // ユーザープラン（GUEST / FREE / PRO / ENTERPRISE）
+  const currentPlan = useMemo((): PlanType => {
+    if (!session?.user) return 'GUEST'
+    const user = session.user as any
     const plan = user?.bannerPlan || user?.plan || 'FREE'
-    return String(plan).toUpperCase() as 'FREE' | 'PRO' | 'ENTERPRISE'
+    const upperPlan = String(plan).toUpperCase()
+    if (upperPlan === 'PRO') return 'PRO'
+    if (upperPlan === 'ENTERPRISE') return 'ENTERPRISE'
+    return 'FREE'
   }, [session])
   
+  const planConfig = useMemo(() => PLAN_CONFIG[currentPlan], [currentPlan])
+  
+  // 後方互換性のためのuserPlan
+  const userPlan = useMemo(() => {
+    if (currentPlan === 'GUEST') return 'FREE'
+    return currentPlan as 'FREE' | 'PRO' | 'ENTERPRISE'
+  }, [currentPlan])
+  
   const planLimits = useMemo(() => PLAN_LIMITS[userPlan] || PLAN_LIMITS.FREE, [userPlan])
+  
+  // 今日の生成数をローカルストレージから読み込み
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const stored = localStorage.getItem('bannerGenerationCount')
+    if (stored) {
+      try {
+        const data = JSON.parse(stored)
+        if (data.date === today) {
+          setTodayGenerationCount(data.count || 0)
+        } else {
+          // 日付が変わったらリセット
+          localStorage.setItem('bannerGenerationCount', JSON.stringify({ date: today, count: 0 }))
+          setTodayGenerationCount(0)
+        }
+      } catch {
+        setTodayGenerationCount(0)
+      }
+    }
+  }, [])
+  
+  // 画像のロック状態を判定する関数
+  const getImageLockType = useCallback((template: BannerTemplate, indexInGenre: number): LockType => {
+    // PRO以上は全解放
+    if (planConfig.allUnlocked) return null
+    
+    // ジャンル内のインデックスで判定
+    if (indexInGenre < planConfig.imagesPerGenre) {
+      return null // 解放済み
+    }
+    
+    // ロックされている場合、どのプランで解放されるか
+    if (currentPlan === 'GUEST') {
+      return 'login' // ログインで解放
+    }
+    if (currentPlan === 'FREE') {
+      return 'pro' // PROで解放
+    }
+    return null
+  }, [currentPlan, planConfig])
+  
+  // ロック画像クリック時のハンドラ
+  const handleLockedImageClick = useCallback((template: BannerTemplate, lockType: LockType) => {
+    setLockedTemplate(template)
+    setLockModalType(lockType)
+    setShowLockModal(true)
+  }, [])
+  
+  // 1日の生成上限チェック
+  const isOverDailyLimit = useMemo(() => {
+    return todayGenerationCount >= planConfig.dailyLimit
+  }, [todayGenerationCount, planConfig.dailyLimit])
+  
+  // 生成数を更新する関数
+  const incrementGenerationCount = useCallback((count: number) => {
+    const today = new Date().toISOString().split('T')[0]
+    const newCount = todayGenerationCount + count
+    setTodayGenerationCount(newCount)
+    localStorage.setItem('bannerGenerationCount', JSON.stringify({ date: today, count: newCount }))
+  }, [todayGenerationCount])
   
   // ファイルアップロードハンドラ
   const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -666,6 +791,10 @@ function BannerTestPageInner() {
         setGeneratedBanners(banners)
         setGenerationComplete(true)
         clearInterval(messageInterval)
+        
+        // 生成数をカウントアップ
+        incrementGenerationCount(banners.length)
+        
         // 完了演出を3秒表示してからモーダルを閉じる
         setTimeout(() => {
           setShowGenerationModal(false)
@@ -950,24 +1079,34 @@ function BannerTestPageInner() {
                           const isFirst = index === 0
                           const isLast = index === categoryTemplates.length - 1
                           
+                          // ロック状態を判定
+                          const lockType = getImageLockType(template, index)
+                          const isLocked = lockType !== null
+                          
                           return (
                             <motion.div
                               key={template.id}
                               ref={(el) => observeImage(el, template.id)}
-                              whileHover={{ scale: 1.08, y: -12, zIndex: 10 }}
+                              whileHover={{ scale: isLocked ? 1.02 : 1.08, y: isLocked ? -4 : -12, zIndex: 10 }}
                               whileTap={{ scale: 0.98 }}
                               onClick={() => {
-                                setSelectedTemplate(template)
-                                setSelectedBanner(null)
+                                if (isLocked) {
+                                  handleLockedImageClick(template, lockType)
+                                } else {
+                                  setSelectedTemplate(template)
+                                  setSelectedBanner(null)
+                                }
                               }}
                               className={`group flex-shrink-0 w-36 h-20 sm:w-48 sm:h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 relative ${
                                 isFirst ? 'ml-3 sm:ml-0' : ''
                               } ${
                                 isLast ? 'mr-3 sm:mr-0' : ''
                               } ${
-                                selectedTemplate?.id === template.id
-                                  ? 'ring-3 ring-white scale-105 shadow-2xl'
-                                  : 'ring-1 ring-gray-800 hover:ring-gray-600'
+                                isLocked
+                                  ? 'ring-1 ring-gray-700 opacity-70 hover:opacity-90'
+                                  : selectedTemplate?.id === template.id
+                                    ? 'ring-3 ring-white scale-105 shadow-2xl'
+                                    : 'ring-1 ring-gray-800 hover:ring-gray-600'
                               }`}
                             >
                               {showImage && isVisible ? (
@@ -1031,7 +1170,7 @@ function BannerTestPageInner() {
                                   <Maximize2 className="w-4 h-4 text-white" />
                                 </button>
                               )}
-                              {selectedTemplate?.id === template.id && (
+                              {selectedTemplate?.id === template.id && !isLocked && (
                                 <div className="absolute -inset-2 ring-4 ring-blue-400 rounded-xl pointer-events-none z-20 shadow-[0_0_30px_rgba(59,130,246,0.6)] animate-pulse">
                                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-1.5 rounded-full shadow-lg">
                                     <p className="text-xs font-bold text-white whitespace-nowrap flex items-center gap-1">
@@ -1040,6 +1179,41 @@ function BannerTestPageInner() {
                                     </p>
                                   </div>
                                 </div>
+                              )}
+                              
+                              {/* ロックUI */}
+                              {isLocked && (
+                                <>
+                                  {/* 暗いオーバーレイ */}
+                                  <div className="absolute inset-0 bg-black/50 z-15 pointer-events-none" />
+                                  
+                                  {/* ロックアイコン（右上） */}
+                                  <div className={`absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-20 flex items-center gap-1 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md ${
+                                    lockType === 'login' 
+                                      ? 'bg-red-500/90' 
+                                      : lockType === 'pro'
+                                        ? 'bg-amber-500/90'
+                                        : 'bg-purple-500/90'
+                                  }`}>
+                                    <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
+                                    <span className="text-[8px] sm:text-[10px] font-bold text-white">
+                                      {lockType === 'login' ? 'ログイン' : lockType === 'pro' ? 'PRO' : 'ENTERPRISE'}
+                                    </span>
+                                  </div>
+                                  
+                                  {/* ホバー時のメッセージ */}
+                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none">
+                                    <div className="bg-black/80 px-3 py-2 rounded-lg text-center max-w-[90%]">
+                                      <p className="text-[10px] sm:text-xs text-white font-medium">
+                                        {lockType === 'login' 
+                                          ? 'ログインすると使えます' 
+                                          : lockType === 'pro'
+                                            ? 'PROプランで解放されます'
+                                            : 'Enterpriseで解放されます'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </>
                               )}
                             </motion.div>
                           )
@@ -1285,6 +1459,32 @@ function BannerTestPageInner() {
                     )}
                   </div>
                   
+                  {/* 今日の生成状況 */}
+                  <div className="p-3 sm:p-4 bg-gray-800/50 rounded-lg sm:rounded-xl border border-gray-700">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs sm:text-sm font-bold text-gray-300">今日の生成状況</span>
+                      <span className={`text-xs sm:text-sm font-bold ${
+                        isOverDailyLimit ? 'text-red-400' : todayGenerationCount > planConfig.dailyLimit * 0.8 ? 'text-yellow-400' : 'text-green-400'
+                      }`}>
+                        {todayGenerationCount} / {planConfig.dailyLimit}枚
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-300 ${
+                          isOverDailyLimit ? 'bg-red-500' : todayGenerationCount > planConfig.dailyLimit * 0.8 ? 'bg-yellow-500' : 'bg-green-500'
+                        }`}
+                        style={{ width: `${Math.min((todayGenerationCount / planConfig.dailyLimit) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-500 mt-1.5">
+                      {planConfig.label}：1日{planConfig.dailyLimit}枚まで生成可能
+                      {currentPlan !== 'ENTERPRISE' && (
+                        <> / <a href="/banner/dashboard/plan" className="text-amber-400 hover:underline">上限を増やす</a></>
+                      )}
+                    </p>
+                  </div>
+                  
                   {/* ロゴ・人物写真アップロード */}
                   <div>
                     <label className="text-xs sm:text-sm font-bold mb-2 block">ロゴ / 人物写真（任意）</label>
@@ -1381,6 +1581,19 @@ function BannerTestPageInner() {
                           </p>
                         </div>
                       </div>
+                    </div>
+                  ) : isOverDailyLimit ? (
+                    <div className="w-full py-3 sm:py-4 bg-gray-700 text-white rounded-lg sm:rounded-xl text-center">
+                      <div className="flex items-center justify-center gap-2 text-red-400 font-bold text-sm sm:text-base">
+                        <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
+                        本日の生成上限（{planConfig.dailyLimit}枚）に達しました
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        明日0時にリセットされます
+                        {currentPlan !== 'ENTERPRISE' && (
+                          <> / <a href="/banner/dashboard/plan" className="text-amber-400 hover:underline">プランをアップグレード</a></>
+                        )}
+                      </p>
                     </div>
                   ) : (
                     <button
@@ -1803,6 +2016,145 @@ function BannerTestPageInner() {
                   </div>
                 </motion.div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 🔒 ロックモーダル */}
+      <AnimatePresence>
+        {showLockModal && lockedTemplate && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            onClick={() => setShowLockModal(false)}
+          >
+            {/* 背景オーバーレイ */}
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+            
+            {/* モーダルコンテンツ */}
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative z-10 w-full max-w-md bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl overflow-hidden shadow-2xl border border-gray-700"
+            >
+              {/* ヘッダー（ロックタイプに応じた色） */}
+              <div className={`p-6 ${
+                lockModalType === 'login' 
+                  ? 'bg-gradient-to-r from-red-600 to-red-500' 
+                  : lockModalType === 'pro'
+                    ? 'bg-gradient-to-r from-amber-600 to-amber-500'
+                    : 'bg-gradient-to-r from-purple-600 to-purple-500'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                    <Lock className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">
+                      {lockModalType === 'login' 
+                        ? 'ログインが必要です' 
+                        : lockModalType === 'pro'
+                          ? 'PROプランで解放'
+                          : 'Enterpriseプランで解放'}
+                    </h3>
+                    <p className="text-white/80 text-sm">
+                      {lockModalType === 'login' 
+                        ? 'この画像を使用するにはログインしてください' 
+                        : lockModalType === 'pro'
+                          ? 'この画像はPROプランで使用できます'
+                          : 'この画像はEnterpriseプランで使用できます'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* 画像プレビュー */}
+              <div className="p-6">
+                <div className="relative aspect-video rounded-lg overflow-hidden mb-4 border border-gray-700">
+                  {lockedTemplate.imageUrl ? (
+                    <img
+                      src={lockedTemplate.imageUrl}
+                      alt={lockedTemplate.displayTitle || lockedTemplate.name || ''}
+                      className="w-full h-full object-cover opacity-50"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                      <ImageLucide className="w-12 h-12 text-gray-600" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-16 h-16 rounded-full bg-black/60 flex items-center justify-center">
+                      <Lock className="w-8 h-8 text-white" />
+                    </div>
+                  </div>
+                </div>
+                
+                <p className="text-gray-300 text-center mb-6">
+                  「{lockedTemplate.displayTitle || lockedTemplate.name || lockedTemplate.industry}」を使用するには
+                  {lockModalType === 'login' 
+                    ? 'ログインしてください' 
+                    : lockModalType === 'pro'
+                      ? 'PROプランにアップグレードしてください'
+                      : 'Enterpriseプランにアップグレードしてください'}
+                </p>
+                
+                {/* アクションボタン */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowLockModal(false)}
+                    className="flex-1 py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                  >
+                    閉じる
+                  </button>
+                  {lockModalType === 'login' ? (
+                    <a
+                      href="/auth/doyamarke/signin?callbackUrl=/banner/test"
+                      className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      <LogIn className="w-5 h-5" />
+                      ログイン
+                    </a>
+                  ) : (
+                    <a
+                      href="/banner/dashboard/plan"
+                      className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      <Crown className="w-5 h-5" />
+                      プランを見る
+                    </a>
+                  )}
+                </div>
+              </div>
+              
+              {/* プラン比較（簡易版） */}
+              <div className="px-6 pb-6">
+                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                  <h4 className="text-sm font-bold text-white mb-3">プラン別の画像解放数</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">ゲスト（未ログイン）</span>
+                      <span className="text-gray-300">各ジャンル1枚</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-400">ベーシック（ログイン）</span>
+                      <span className="text-gray-300">各ジャンル3枚</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-amber-400 font-medium">PRO</span>
+                      <span className="text-amber-300 font-medium">全画像解放 + 1日30枚</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-purple-400 font-medium">Enterprise</span>
+                      <span className="text-purple-300 font-medium">全画像解放 + 1日200枚</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}
