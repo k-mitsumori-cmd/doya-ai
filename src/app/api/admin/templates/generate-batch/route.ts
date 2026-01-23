@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
+import { generateBanners } from '@/lib/nanobanner'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
-
-// Google AI API設定
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 // 新規追加する22個のテンプレートID
 const NEW_TEMPLATE_IDS = [
@@ -34,83 +32,41 @@ const NEW_TEMPLATE_IDS = [
   'new-sales-overview-001',
 ]
 
-async function generateImage(prompt: string, apiKey: string): Promise<string> {
-  const model = 'gemini-2.0-flash-exp'
-  const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
-  
-  const requestBody = {
-    contents: [{
-      role: 'user',
-      parts: [{
-        text: `${prompt}
+async function generateTemplateImage(prompt: string): Promise<string> {
+  // プロンプトにテンプレート用の追加指示を付与
+  const templatePrompt = `${prompt}
 
-=== MANDATORY OUTPUT CONSTRAINTS ===
-**TARGET SIZE: 1200x628 pixels (width x height)**
-**ASPECT RATIO: 1.91:1**
+ADDITIONAL INSTRUCTIONS FOR TEMPLATE:
+- DO NOT include any specific company logos, brand names, or company-specific text.
+- Use placeholder text or generic headlines like "YOUR TITLE HERE" or Japanese placeholder "タイトルテキスト".
+- This will be used as a template, so keep text areas editable-looking.`
 
-CRITICAL REQUIREMENTS:
-- Generate image with 1.91:1 aspect ratio (standard banner format).
-- Fill the entire canvas edge-to-edge with content.
-- NO letterboxing, NO empty bars, NO padding, NO borders.
-- DO NOT include any company logos, brand names, or specific company text.
-- Use placeholder text or generic headlines only.
-- Japanese text must be PERFECTLY CORRECT and READABLE.
-- If you cannot render Japanese text correctly, DO NOT include any text.
-
-Return ONE PNG image.`
-      }]
-    }],
-    generationConfig: {
-      responseModalities: ['IMAGE'],
-      temperature: 0.7,
-      candidateCount: 1,
+  // generateBannersを使用して画像を生成
+  const result = await generateBanners(
+    'it', // デフォルトカテゴリ
+    'テンプレート', // デフォルトタイトル
+    '1200x628',
+    {
+      headlineText: 'テンプレート',
+      customImagePrompt: templatePrompt,
     },
-    safetySettings: [
-      { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-      { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-    ],
+    1 // 1枚のみ生成
+  )
+
+  if (result.error) {
+    throw new Error(result.error)
   }
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify(requestBody),
-  })
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Image generation failed: ${response.status} - ${errorText.substring(0, 200)}`)
+  if (!result.banners || result.banners.length === 0) {
+    throw new Error('No image generated')
   }
 
-  const result = await response.json()
-  
-  // 画像データを抽出
-  const candidates = result?.candidates || []
-  for (const candidate of candidates) {
-    const parts = candidate?.content?.parts || []
-    for (const part of parts) {
-      if (part?.inlineData?.mimeType?.startsWith('image/')) {
-        return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`
-      }
-    }
-  }
-  
-  throw new Error('No image generated')
+  return result.banners[0]
 }
 
 // POST: 新規テンプレートをバッチ生成
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
-    }
-
     const body = await request.json().catch(() => ({}))
     const { templateIds, limit = 5 } = body as { templateIds?: string[], limit?: number }
 
@@ -148,7 +104,7 @@ export async function POST(request: NextRequest) {
       
       try {
         // 画像生成
-        const imageData = await generateImage(prompt.fullPrompt, apiKey)
+        const imageData = await generateTemplateImage(prompt.fullPrompt)
         console.log(`[Generate Batch] Image generated for ${prompt.id}`)
 
         // データベースに保存
