@@ -138,6 +138,10 @@ function BannerTestPageInner() {
   const [personFile, setPersonFile] = useState<File | null>(null)
   const [personPreview, setPersonPreview] = useState<string | null>(null)
   
+  // カラー指定
+  const [mainColor, setMainColor] = useState('')
+  const [subColor, setSubColor] = useState('')
+  
   // カスタムプロンプト（エンタープライズ限定）
   const [customPrompt, setCustomPrompt] = useState('')
   const [showCustomPrompt, setShowCustomPrompt] = useState(false)
@@ -941,6 +945,9 @@ function BannerTestPageInner() {
           templateDisplayTitle: selectedTemplate.displayTitle || selectedTemplate.name,
           logoBase64: logoPreview || undefined,
           personBase64: personPreview || undefined,
+          // カラー指定
+          mainColor: mainColor.trim() || undefined,
+          subColor: subColor.trim() || undefined,
           // エンタープライズ限定：カスタムプロンプト
           customPrompt: currentPlan === 'ENTERPRISE' && customPrompt.trim() ? customPrompt.trim() : undefined,
         }),
@@ -1869,6 +1876,74 @@ function BannerTestPageInner() {
                           </div>
                         </div>
                         <p className="text-[8px] sm:text-[10px] text-gray-500 mt-2">※ 人物写真は1名（1枚）のみ対応です</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* カラー指定 */}
+                  <div>
+                    <label className="text-xs sm:text-sm font-bold mb-2 sm:mb-3 block">
+                      カラー指定（任意）
+                    </label>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mb-3">
+                      バナーのメインカラーとサブカラーを指定できます。
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                      {/* メインカラー */}
+                      <div className="bg-gray-800/50 rounded-lg p-3 sm:p-4 border border-gray-700">
+                        <p className="text-xs sm:text-sm font-bold mb-2">メインカラー</p>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={mainColor || '#3B82F6'}
+                            onChange={(e) => setMainColor(e.target.value)}
+                            className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={mainColor}
+                            onChange={(e) => setMainColor(e.target.value)}
+                            placeholder="#3B82F6"
+                            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        {mainColor && (
+                          <button
+                            type="button"
+                            onClick={() => setMainColor('')}
+                            className="mt-2 text-[10px] text-gray-400 hover:text-white transition-colors"
+                          >
+                            クリア
+                          </button>
+                        )}
+                      </div>
+                      {/* サブカラー */}
+                      <div className="bg-gray-800/50 rounded-lg p-3 sm:p-4 border border-gray-700">
+                        <p className="text-xs sm:text-sm font-bold mb-2">サブカラー</p>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={subColor || '#8B5CF6'}
+                            onChange={(e) => setSubColor(e.target.value)}
+                            className="w-10 h-10 rounded cursor-pointer border-0 bg-transparent"
+                          />
+                          <input
+                            type="text"
+                            value={subColor}
+                            onChange={(e) => setSubColor(e.target.value)}
+                            placeholder="#8B5CF6"
+                            className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        {subColor && (
+                          <button
+                            type="button"
+                            onClick={() => setSubColor('')}
+                            className="mt-2 text-[10px] text-gray-400 hover:text-white transition-colors"
+                          >
+                            クリア
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

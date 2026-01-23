@@ -18,6 +18,8 @@ type TestGenerateRequest = {
   logoBase64?: string // ロゴ画像（Base64）
   personBase64?: string // 人物画像（Base64）
   customPrompt?: string // エンタープライズ限定：カスタムプロンプト
+  mainColor?: string // メインカラー
+  subColor?: string // サブカラー
 }
 
 // テンプレート別のプロンプト生成（ユーザー例を参考に拡張可能）
@@ -197,6 +199,8 @@ export async function POST(request: NextRequest) {
       logoBase64,
       personBase64,
       customPrompt, // エンタープライズ限定：カスタムプロンプト
+      mainColor,
+      subColor,
     } = body
 
     if (!mainTitle.trim()) {
@@ -246,6 +250,11 @@ export async function POST(request: NextRequest) {
             subheadText: subTitle || undefined,
             customImagePrompt: prompt,
             // variationMode を指定しない（customImagePrompt使用時は共通プロンプトを追加しない）
+            // ロゴ・人物画像を渡す
+            logoImage: logoBase64 || undefined,
+            personImages: personBase64 ? [personBase64] : undefined,
+            // カラー指定
+            brandColors: [mainColor, subColor].filter(Boolean) as string[],
           },
           1 // 1枚ずつ生成
         )
