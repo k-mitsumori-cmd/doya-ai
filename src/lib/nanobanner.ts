@@ -500,6 +500,8 @@ Web広告・LP・SNS・キャンペーンで
 - 指定テキストは最優先要素。日本語可読性を最優先
 - 文字が潰れる/歪む/意味が変わる表現は禁止
 - 同一文言の重複表示は禁止（同じテキストを2回以上並べない）
+- 日本語は正しい文字で表示（文字化け・意味不明な文字・存在しない漢字は絶対禁止）
+- 日本語テキストが正しく表示できない場合は、テキストなしの画像を生成すること
 
 ■ 画像内に必ず含めるテキスト
 【キャッチコピー】${catchCopy}
@@ -539,6 +541,8 @@ Web広告・LP・SNS・キャンペーンで
 - 同じ文言の繰り返し（例：「クーポン配布中 クーポン配布中」など）
 - 読めない日本語フォント、意味不明な英語、不要記号
 - ロゴや人物の破綻、透かし、無関係なブランド要素
+- 文字化け・存在しない漢字・意味不明な文字列
+- 日本語として読めない文字の生成（例：「夏月」→正しくは「7月」など）
 
 ■ ゴール
 「修正したくならない」「そのまま広告配信できる」プロ品質のマーケティングバナー画像を生成してください。
@@ -621,9 +625,12 @@ ${company ? `- Brand (任意): ${company}` : ''}
 - Use strong contrast + solid/gradient panel behind text
 - Headline is very large, 1–2 lines max. Avoid long sentences.
 - The Headline must appear as real Japanese text inside the image. Do NOT output an image without it.
-- If you struggle to render Japanese correctly, retry internally; do NOT omit the text.
+- If you struggle to render Japanese correctly, OUTPUT IMAGE WITHOUT TEXT instead of garbled text.
 - Do NOT include any other text besides the provided strings above.
 - NO DUPLICATION: Do NOT repeat the same phrase. Each provided string (Headline/Subhead/CTA/Brand) must appear at most once in the image.
+- ABSOLUTELY FORBIDDEN: Non-existent kanji, garbled characters, meaningless character combinations
+- If Japanese text cannot be rendered correctly, generate a text-free image instead of broken text
+- Example of WRONG text: "夏月" (should be "7月"), "お布" (should be "お知らせ"), random character combinations
 
 === YOUTUBE THUMBNAIL DESIGN PRINCIPLES ===
 1. **HIGH CONTRAST & SATURATION**:
@@ -1001,7 +1008,13 @@ async function generateSingleBanner(
                     `- Generate image with ${aspectRatio} aspect ratio.`,
                     '- Fill the entire canvas edge-to-edge with content.',
                     '- NO letterboxing, NO empty bars, NO padding, NO borders.',
-                    '- Japanese text must be clearly readable.',
+                    '',
+                    '=== JAPANESE TEXT QUALITY (CRITICAL) ===',
+                    '- Japanese text must be PERFECTLY CORRECT and READABLE.',
+                    '- ABSOLUTELY FORBIDDEN: garbled text, non-existent kanji, meaningless character combinations.',
+                    '- If you cannot render Japanese text correctly, DO NOT include any text in the image.',
+                    '- Examples of WRONG text to avoid: "夏月" (wrong), "お布" (wrong), random kanji combinations.',
+                    '- Better to have NO TEXT than WRONG TEXT.',
                     '',
                     'Return ONE PNG image.',
                   ].join('\n'),
