@@ -1602,6 +1602,10 @@ function BannerTestPageInner() {
                         })()}
                       </div>
                     </div>
+                    {/* 注釈 */}
+                    <p className="text-[9px] sm:text-[10px] text-yellow-500/80 mt-2 text-center">
+                      ⚠️ AIの仕様により、選択したサイズと異なるサイズで生成される場合があります。ご了承ください。
+                    </p>
                   </div>
                   
                   {/* 生成枚数 */}
