@@ -1492,6 +1492,404 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     fullPrompt: 'A night repair hair care banner. Deep blue night sky with aurora borealis. Three hair products - shampoo, treatment, styling - in center. "Mellow Night Repair Series" product line. "Smooth silky hair with silk repair" promise. Mystical nighttime beauty atmosphere. Blue and purple aurora colors.',
     tags: ['ヘアケア', '青紫', 'オーロラ', 'ナイトケア'],
   },
+
+  // ===== 新規追加: 参考画像ベースのプロンプト（22種類） =====
+
+  // 1. ブランディング価値訴求（ダークグレー×イエロー）
+  {
+    id: 'new-branding-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'ブランディング価値訴求',
+    displayTitle: 'ブランド価値',
+    prompt: {
+      composition: '中央に大きな日本語タイトル、背景にデータビジュアライゼーション',
+      subject: 'グラフ、チャート、データダッシュボード',
+      colorPalette: 'ダークグレー、黒、イエローアクセント',
+      designElements: 'データ可視化、ピラミッドチャート、数値',
+      typography: '大きな日本語タイトル、イエロー強調、白文字サブ',
+    },
+    fullPrompt: 'A professional branding value proposition banner. Dark charcoal gray to black background with subtle data visualization elements - pyramid charts, numerical scores, brand measurement graphs in the background. Large bold Japanese headline in center with key words highlighted in bright yellow. Small English header text above main title. Subtitle text at bottom. Sophisticated data-driven business aesthetic. Clean modern typography with strong contrast.',
+    tags: ['ブランディング', 'データ', 'ダーク', 'イエロー'],
+  },
+
+  // 2. ショールーム・空間紹介（写真コラージュ×白黒）
+  {
+    id: 'new-showroom-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'ショールーム空間紹介',
+    displayTitle: 'ザ・ショールーム',
+    prompt: {
+      composition: '複数の空間写真を背景にコラージュ、中央に大きなタイトル',
+      subject: 'オフィス空間、植物、モダンインテリア、照明',
+      colorPalette: '白、黒、ベージュ',
+      designElements: '写真コラージュ、筆記体英語、統計数字',
+      typography: '大きな英語タイトル、筆記体のアクセント、日本語サブ',
+    },
+    fullPrompt: 'A stylish showroom introduction banner. Multiple interior photos as background collage - modern office spaces, plants, warm lighting, lounge areas. Large bold serif typography "THE SHOWROOM" in center with cursive "New Service" above. Japanese subtitle text below main title. Statistics bar at bottom with icons. Professional real estate or co-working space aesthetic. Clean white and black color scheme with warm photo tones.',
+    tags: ['ショールーム', '空間', 'コラージュ', 'モノクロ'],
+  },
+
+  // 3. コピーライター体験談（人物×赤文字）
+  {
+    id: 'new-copywriter-001',
+    genre: '転職・採用・人材',
+    category: 'recruit',
+    name: 'コピーライター体験談',
+    displayTitle: 'ライターの仕事',
+    prompt: {
+      composition: '人物写真左、縦書きテキスト右、大きな手書き風タイトル下部',
+      subject: 'カジュアルな若い男性、帽子、屋外',
+      colorPalette: '白、グレー、赤アクセント',
+      designElements: '縦書きテキスト、手書き風フォント、ドキュメンタリー感',
+      typography: '縦書き日本語、赤い手書き風メインタイトル',
+    },
+    fullPrompt: 'A copywriter career story banner. Large photo of a young casual man wearing a hat, smiling, outdoor setting with soft gray sky background. Vertical Japanese text on the right side describing work experiences. Bold red hand-drawn style Japanese title at bottom left. Documentary storytelling aesthetic. Warm and personal atmosphere. White, gray, and red accent color scheme.',
+    tags: ['コピーライター', '体験談', '人物写真', '赤'],
+  },
+
+  // 4. 経営理念まとめ（黒背景×大文字ロゴウォール）
+  {
+    id: 'new-philosophy-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: '経営理念まとめ',
+    displayTitle: '経営理念集',
+    prompt: {
+      composition: '背景に様々なフォントの文字が散りばめられた壁、中央に大きなタイトル',
+      subject: '様々な企業のキャッチフレーズ、理念の文字',
+      colorPalette: '黒、白、イエローアクセント',
+      designElements: 'タイポグラフィウォール、文字の海、アーカイブ感',
+      typography: '大きな白い日本語タイトル、イエローのサブタイトル枠',
+    },
+    fullPrompt: 'A corporate philosophy collection banner. Black background completely filled with various company slogans and mission statements in different Japanese fonts - some large, some small, creating a typography wall effect. Large bold white Japanese title "経営理念まとめ" in center. Yellow highlighted subtitle box at bottom. Intellectual archive aesthetic. Black and white with yellow accent.',
+    tags: ['経営理念', 'タイポグラフィ', '黒背景', 'まとめ'],
+  },
+
+  // 5. リブランディングプロジェクト（写真×青系）
+  {
+    id: 'new-rebranding-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'リブランディング事例',
+    displayTitle: 'リブランディング',
+    prompt: {
+      composition: 'スマートフォンモックアップ左、子供の写真右、筆記体タイトル',
+      subject: 'スマートフォン、子供たち、アプリ画面',
+      colorPalette: '青、白、ベージュ',
+      designElements: 'スマホモックアップ、実績写真、筆記体ロゴ',
+      typography: '筆記体英語タイトル、日本語説明文',
+    },
+    fullPrompt: 'A rebranding project case study banner. Light blue and white background. Large smartphone mockup on left showing a website or app design. Happy children photo on right side - kids pointing and looking up excitedly. Elegant cursive "Rebranding Project" title in script font. Japanese subtitle text describing the project. Professional portfolio aesthetic. Blue and warm beige color scheme.',
+    tags: ['リブランディング', '事例', 'スマホ', '青'],
+  },
+
+  // 6. クリエイティブノウハウ（人物写真×黒帯）
+  {
+    id: 'new-creative-001',
+    genre: '教育・学習・セミナー',
+    category: 'it',
+    name: 'クリエイティブノウハウ',
+    displayTitle: 'デザインフィードバック',
+    prompt: {
+      composition: 'オフィスで議論する3人の写真、黒い帯にタイトル',
+      subject: 'ビジネスパーソン、打ち合わせ、オフィス',
+      colorPalette: '白、黒、イエローアクセント',
+      designElements: '黒い文字帯、筆記体英語、ビジネス写真',
+      typography: '黒帯に白文字、イエロー強調、筆記体英語',
+    },
+    fullPrompt: 'A creative know-how sharing banner. Photo of three business professionals collaborating in a bright modern office - looking at documents or screens together. Cursive yellow "Creative know-how" text overlaid on photo. Large black horizontal band at bottom with white Japanese text. Key words highlighted in yellow. Professional educational content aesthetic. Clean white, black, and yellow color scheme.',
+    tags: ['クリエイティブ', 'ノウハウ', 'オフィス', 'イエロー'],
+  },
+
+  // 7. ブランド戦略論（人物×シンプル）
+  {
+    id: 'new-strategy-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'ブランド戦略論',
+    displayTitle: '戦略論',
+    prompt: {
+      composition: '人物写真メイン、左下にタイトル',
+      subject: 'スーツの男性、マイク、講演者',
+      colorPalette: '緑、白、黒',
+      designElements: 'シンプル、ミニマル、プロフェッショナル',
+      typography: '大きな日本語タイトル、シンプルレイアウト',
+    },
+    fullPrompt: 'A brand strategy thought leadership banner. Large portrait photo of a professional businessman in a suit speaking into a microphone, looking confidently to the side. Green foliage or nature background with bokeh effect. Simple Japanese title "ブランド戦略論" at bottom left in bold black text with smaller subtitle above. Minimal professional aesthetic. Green, white, and black color scheme.',
+    tags: ['ブランド戦略', '人物', 'ミニマル', '緑'],
+  },
+
+  // 8. 採用ブランディング（女性×イエロー）
+  {
+    id: 'new-recruit-001',
+    genre: '転職・採用・人材',
+    category: 'recruit',
+    name: '採用ブランディング',
+    displayTitle: '勝つ採用',
+    prompt: {
+      composition: '後ろ姿の女性写真、大きなタイトル',
+      subject: 'ビジネスウーマン、スマートフォン、都会',
+      colorPalette: '白、黒、イエローアクセント',
+      designElements: 'シルエット的人物写真、大きな文字',
+      typography: '巨大な日本語タイトル、イエローアクセント',
+    },
+    fullPrompt: 'A recruitment branding banner. Back view silhouette of a professional woman in business attire holding a smartphone, looking at a bright city skyline. Large bold Japanese title "勝つ採用" with the first character in yellow and rest in black. Smaller subtitle text on the left side. Clean minimal design. White, black, and yellow accent color scheme. Aspirational career aesthetic.',
+    tags: ['採用', 'ブランディング', '女性', 'イエロー'],
+  },
+
+  // 9. 企業ブランディング書籍（本×白背景）
+  {
+    id: 'new-book-001',
+    genre: '教育・学習・セミナー',
+    category: 'it',
+    name: '企業ブランディング書籍',
+    displayTitle: '名著から学ぶ',
+    prompt: {
+      composition: '開いた本の写真、縦書きタイトル',
+      subject: '本、書籍、ページ',
+      colorPalette: '白、グレー、ネイビー、ゴールド',
+      designElements: 'ミニマル、エレガント、知的',
+      typography: '縦書き日本語、明朝体、上品',
+    },
+    fullPrompt: 'A corporate branding book recommendation banner. Clean white background with a beautifully photographed open hardcover book at right, pages fanned out elegantly. Large vertical Japanese calligraphy-style title "企業ブランディング" on the left. Small subtitle "名著から学ぶ" above. Intellectual and elegant aesthetic. Minimal clean design. White, gray, navy, and subtle gold color scheme.',
+    tags: ['書籍', 'ブランディング', '白背景', 'エレガント'],
+  },
+
+  // 10. ウェビナー戦略（イラスト×パステル）
+  {
+    id: 'new-webinar-001',
+    genre: '教育・学習・セミナー',
+    category: 'it',
+    name: 'ウェビナー戦略',
+    displayTitle: 'ウェビナー戦略',
+    prompt: {
+      composition: 'フラットイラスト左、タイトル右、登壇者写真右下',
+      subject: 'ビジネスイラスト、チームワーク、山登り',
+      colorPalette: '薄紫、白、青アクセント',
+      designElements: 'フラットデザイン、イラスト、アイコン',
+      typography: '日本語タイトル、強調色、登壇者表示',
+    },
+    fullPrompt: 'A webinar strategy seminar banner. Soft lavender to white gradient background. Flat design illustration of business people climbing steps or helping each other reach a goal on the left side. Japanese title "ウェビナー戦略" with key words in purple highlight on the right. Small circular portrait photo of speaker at bottom right with name and title. Professional seminar aesthetic. Soft purple, white, and blue accent colors.',
+    tags: ['ウェビナー', 'セミナー', 'イラスト', 'パステル'],
+  },
+
+  // 11. マーケティング解説（人物×青）
+  {
+    id: 'new-marketing-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'マーケティング解説',
+    displayTitle: 'マーケの全貌',
+    prompt: {
+      composition: '笑顔の人物左、タイトル右、幾何学背景',
+      subject: 'ビジネスマン、ノートPC、カジュアルオフィス',
+      colorPalette: '青、白、アクセントカラー',
+      designElements: '幾何学図形、3Dブロック、モダン',
+      typography: '大きな日本語タイトル、赤アクセント',
+    },
+    fullPrompt: 'A marketing insight interview banner. Blue geometric background with 3D cube shapes and abstract elements. Smiling young businessman at left side with laptop, gesturing while explaining. Large Japanese title on right with some characters highlighted in red. "BtoBマーケティング" subtitle. Modern tech aesthetic with geometric shapes. Blue, white, and red accent color scheme.',
+    tags: ['マーケティング', 'インタビュー', '青', '幾何学'],
+  },
+
+  // 12. CRMマーケティング（オレンジ×イラスト）
+  {
+    id: 'new-crm-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'CRMマーケティング',
+    displayTitle: 'レシートCRM',
+    prompt: {
+      composition: '大きなタイトル上、イラスト人物右下',
+      subject: 'ビジネスイラスト、グラフ、データ',
+      colorPalette: 'オレンジ、白、黒',
+      designElements: 'フラットイラスト、アイデア電球、チャート',
+      typography: '大きな日本語タイトル、強調色',
+    },
+    fullPrompt: 'A CRM marketing solution banner. Warm orange gradient background. Large bold Japanese title at top. Flat design illustration of a business professional with glasses pointing at charts and graphs at bottom right, with idea lightbulb icon. Key words highlighted in different colors. Clean modern SaaS aesthetic. Orange, white, and black color scheme.',
+    tags: ['CRM', 'マーケティング', 'オレンジ', 'イラスト'],
+  },
+
+  // 13. 商談獲得率セミナー（青×イラスト）
+  {
+    id: 'new-sales-001',
+    genre: '教育・学習・セミナー',
+    category: 'it',
+    name: '商談獲得率向上',
+    displayTitle: '商談獲得率',
+    prompt: {
+      composition: 'タイトル中央上、イラスト左、登壇者右下',
+      subject: 'オンライン会議イラスト、ビジネスパーソン',
+      colorPalette: '青、白、グレー',
+      designElements: 'フラットイラスト、UIアイコン、ビデオ会議',
+      typography: '日本語タイトル、オレンジ強調、登壇者情報',
+    },
+    fullPrompt: 'A sales meeting conversion rate seminar banner. Light blue to white gradient background with subtle UI element icons. Large Japanese question-style title "商談獲得率を高めるには？" with key words in orange highlight. Flat design illustration of people in video conference at bottom left. Speaker portrait photo at bottom right with company name. Professional webinar aesthetic. Blue, white, and orange accent colors.',
+    tags: ['商談', 'セミナー', '青', 'イラスト'],
+  },
+
+  // 14. 夢を足す（白×シンプル）
+  {
+    id: 'new-dream-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: '見積書に夢を',
+    displayTitle: '夢を足そう',
+    prompt: {
+      composition: '電卓写真右上、筆記体タイトル、大きな日本語',
+      subject: '電卓、ビジネスツール',
+      colorPalette: '白、グレー、イエローアクセント',
+      designElements: 'ミニマル、筆記体、引用符',
+      typography: '筆記体英語、大きな日本語タイトル、イエロー帯',
+    },
+    fullPrompt: 'A business philosophy banner. Clean white background with a calculator photo at top right corner. Large elegant cursive English word "Dream" in light yellow. Bold Japanese title "見積書に「夢」を足そう。" with quotation marks around key word. Yellow highlighted subtitle bar at bottom with Japanese question. Minimal sophisticated design. White, gray, and yellow accent color scheme.',
+    tags: ['ビジネス', '哲学', 'ミニマル', 'イエロー'],
+  },
+
+  // 15. GA4活用方法（青グラデーション）
+  {
+    id: 'new-ga4-001',
+    genre: 'IT・テクノロジー',
+    category: 'it',
+    name: 'GA4活用解説',
+    displayTitle: 'GA4活用法',
+    prompt: {
+      composition: '大きな日本語タイトル中央、ロゴ右下',
+      subject: 'なし（テキストのみ）',
+      colorPalette: '青グラデーション、白',
+      designElements: 'グラデーション背景、シンプル、テック感',
+      typography: '大きな白い日本語タイトル、オレンジ帯のサブタイトル',
+    },
+    fullPrompt: 'A GA4 analytics how-to banner. Beautiful blue gradient background from light blue to deep blue. Large white Japanese title in center explaining GA4 usage methods across multiple lines. Small orange highlighted subtitle banner "これだけはおさえて！" at top. Clean minimal tech aesthetic. Blue gradient and white color scheme with subtle texture.',
+    tags: ['GA4', 'アナリティクス', '青グラデーション', 'テック'],
+  },
+
+  // 16. クリエイティブディレクター（ダーク×グリーン）
+  {
+    id: 'new-director-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'クリエイティブディレクター',
+    displayTitle: '行動指針',
+    prompt: {
+      composition: '大きな英語テキスト背景、日本語タイトル下部',
+      subject: 'なし（テキストのみ）',
+      colorPalette: 'ダークグレー、黒、グリーンアクセント',
+      designElements: '大きな背景文字、縦書き日本語、モダン',
+      typography: '大きな英語背景文字、グリーンの日本語タイトル',
+    },
+    fullPrompt: 'A creative director guidelines banner. Dark charcoal gray to black background. Very large faded English text "CREATIVE DIRECTOR" as background element. Vertical Japanese text on right side. Bold Japanese title "クリエイティブディレクター 8つの行動指針" at bottom with key number in bright green. Professional leadership aesthetic. Dark gray, black, and green accent color scheme.',
+    tags: ['ディレクター', '行動指針', 'ダーク', 'グリーン'],
+  },
+
+  // 17. 炎上回避（漫画風×青）
+  {
+    id: 'new-crisis-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: '炎上回避術',
+    displayTitle: '炎上回避',
+    prompt: {
+      composition: '漫画風イラスト左、タイトル右',
+      subject: '漫画風キャラクター、困惑表情',
+      colorPalette: '青、白、赤アクセント',
+      designElements: '漫画風、スクリーントーン、吹き出し',
+      typography: '日本語タイトル、赤強調、漫画風',
+    },
+    fullPrompt: 'A crisis management manga-style banner. Blue halftone screentone background like manga art. Comic-style illustration of a distressed character on left side with sweat drops and rain effects. Hand-drawn Japanese text in speech bubble style "なんか思ってたのと違うっ！". Bold title at bottom right "炎上を回避せよ" with key word in red. Manga comic aesthetic. Blue, white, and red accent color scheme.',
+    tags: ['炎上', '漫画風', '青', 'クライシス'],
+  },
+
+  // 18. デザインの価値（青紫グラデーション）
+  {
+    id: 'new-design-value-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'デザインの価値',
+    displayTitle: 'デザインの価値',
+    prompt: {
+      composition: '大きなタイトル中央、背景にタイポグラフィウォール',
+      subject: '様々なデザイン関連の文字',
+      colorPalette: '青、紫、グラデーション',
+      designElements: 'タイポグラフィ背景、グラデーション、モダン',
+      typography: '大きな白い日本語タイトル、イエロー強調',
+    },
+    fullPrompt: 'A design value proposition banner. Blue to purple gradient background with faded typography wall - various design-related Japanese words scattered in background. Small yellow headline "AI時代を生き残る「デザイナーの新常識」" at top. Large white Japanese title in center "そのデザインは本当に「価値」があるのか？" with keywords in brackets. Thought-provoking intellectual aesthetic. Blue, purple gradient with yellow accents.',
+    tags: ['デザイン', '価値', '青紫', 'タイポグラフィ'],
+  },
+
+  // 19. インタビュー惨敗記（人物×ミニマル）
+  {
+    id: 'new-interview-001',
+    genre: '転職・採用・人材',
+    category: 'recruit',
+    name: 'インタビュー失敗談',
+    displayTitle: '惨敗記',
+    prompt: {
+      composition: '後ろ向きの人物写真中央、タイトル下部',
+      subject: '後ろ向きの男性、白い壁',
+      colorPalette: '白、黒、グレー',
+      designElements: 'ミニマル、孤独感、ドキュメンタリー',
+      typography: '縦書き＋横書き日本語、モダン',
+    },
+    fullPrompt: 'A career interview failure story banner. Minimalist white room with a person standing facing the corner, back to camera, looking defeated. Dark casual clothing against stark white walls. Vertical Japanese text on right "#35歳、初転職". Horizontal Japanese title at bottom "インタビュー惨敗記" in elegant typography. Documentary confession aesthetic. White, black, and gray minimal color scheme.',
+    tags: ['インタビュー', '失敗談', 'ミニマル', 'モノクロ'],
+  },
+
+  // 20. BtoBマーケティング入門（人物×グリーン）
+  {
+    id: 'new-btob-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'BtoBマーケ入門',
+    displayTitle: 'BtoBマーケ',
+    prompt: {
+      composition: '人物写真左、タイトル右、ロゴ上',
+      subject: 'スーツのビジネスマン、講演者',
+      colorPalette: '白、グレー、グリーンアクセント',
+      designElements: 'セミナー風、登壇者情報、アーカイブ表示',
+      typography: '日本語タイトル、「」で強調、登壇者名',
+    },
+    fullPrompt: 'A BtoB marketing seminar archive banner. Clean white to light gray background. Professional businessman in suit at left side with arms crossed, confident pose. Green logo icon at top left. Japanese title "BtoBマーケティングの「出発点」とツール活用の考え方" with keywords in brackets. Small subheading above title. Speaker name and archive duration "30min" at bottom. Professional seminar aesthetic. White, gray, and green accent colors.',
+    tags: ['BtoB', 'マーケティング', 'セミナー', 'グリーン'],
+  },
+
+  // 21. 厳選公開（黒帯×イエロー）
+  {
+    id: 'new-featured-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: '厳選公開まとめ',
+    displayTitle: '厳選公開',
+    prompt: {
+      composition: '背景にタイポグラフィ、黒帯にタイトル',
+      subject: 'なし（テキストのみ）',
+      colorPalette: '白、黒、イエローアクセント',
+      designElements: '背景テキスト、黒帯、ハッシュタグ',
+      typography: '黒帯に白文字、イエロー強調、ハッシュタグ',
+    },
+    fullPrompt: 'A featured selection compilation banner. Light gray background with faded large typography pattern. Small yellow highlighted label "厳選公開!!" at top. Large black horizontal bands with white Japanese text "企業の7つの悩みはブランディングで改善できる". Key numbers and words in yellow highlight. Hashtag keywords at bottom like "#優良顧客 #離職率 #優秀人材". Editorial magazine style. White, black, and yellow accent color scheme.',
+    tags: ['厳選', 'まとめ', '黒帯', 'イエロー'],
+  },
+
+  // 22. セールス全貌（人物×青幾何学）
+  {
+    id: 'new-sales-overview-001',
+    genre: 'ビジネス・SaaS',
+    category: 'it',
+    name: 'コンテンツセールス',
+    displayTitle: 'セールスの全貌',
+    prompt: {
+      composition: '人物写真左、大きなタイトル右、幾何学背景',
+      subject: 'ノートPCを使うビジネスマン、カジュアル',
+      colorPalette: '青、白、赤アクセント',
+      designElements: '3D幾何学図形、モダン、テック感',
+      typography: '大きな日本語タイトル、赤アクセント',
+    },
+    fullPrompt: 'A content sales overview banner. Light blue background with 3D geometric cube shapes and modern tech elements. Young businessman at left working on laptop with confident expression. Small credit text at top. Large Japanese title on right "コンテンツセールスの全貌" with large single kanji character "全貌" emphasized. Subtitle below explaining BtoB marketing approach. Modern tech business aesthetic. Blue, white, and red accent color scheme.',
+    tags: ['セールス', 'コンテンツ', '青', '幾何学'],
+  },
 ]
 
 /**
