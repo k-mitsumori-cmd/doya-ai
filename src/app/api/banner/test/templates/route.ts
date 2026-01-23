@@ -798,6 +798,10 @@ export const generateMoreVariations = () => {
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
   
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'templates/route.ts:798',message:'GET request started',data:{timestamp:Date.now()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
   try {
     // クエリパラメータを取得（ページネーション対応）
     const { searchParams } = new URL(request.url)
@@ -805,10 +809,18 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
     const minimal = searchParams.get('minimal') === 'true' // 最小限のデータのみ返す
     
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'templates/route.ts:806',message:'Query params parsed',data:{limit,offset,minimal},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
     // DBから既存のテンプレート情報を取得（最適化: 必要なフィールドのみ）
     // isActive=true のテンプレートのみ取得（管理画面と同期）
     let dbTemplates: any[] = []
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'templates/route.ts:812',message:'Before DB query',data:{limit,offset},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       dbTemplates = await prisma.bannerTemplate.findMany({
         where: {
           isActive: true, // アクティブなテンプレートのみ表示
@@ -825,8 +837,17 @@ export async function GET(request: NextRequest) {
         skip: offset,
         orderBy: { isFeatured: 'desc' }, // フィーチャーを優先
       })
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'templates/route.ts:828',message:'After DB query',data:{count:dbTemplates.length,firstId:dbTemplates[0]?.templateId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       console.log(`[Templates API] Fetched ${dbTemplates.length} active templates in ${Date.now() - startTime}ms`)
     } catch (err: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'templates/route.ts:830',message:'DB error',data:{error:err.message,stack:err.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       console.error('[Templates API] Database error:', err)
       dbTemplates = []
     }
@@ -834,17 +855,44 @@ export async function GET(request: NextRequest) {
     // V2プロンプトを事前にインポート（mapの外で）- 完全なプロンプトを含める
     let v2PromptsMap = new Map<string, { displayTitle?: string; name: string; fullPrompt: string; genre: string; category: string }>()
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'templates/route.ts:837',message:'Before V2 import',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
+      console.log('[Templates API] Importing BANNER_PROMPTS_V2...')
       const { BANNER_PROMPTS_V2 } = await import('@/lib/banner-prompts-v2')
-      BANNER_PROMPTS_V2.forEach(p => {
-        v2PromptsMap.set(p.id, { 
-          displayTitle: p.displayTitle, 
-          name: p.name,
-          fullPrompt: p.fullPrompt, // 完全なプロンプトを保持
-          genre: p.genre,
-          category: p.category,
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'templates/route.ts:838',message:'After V2 import',data:{count:BANNER_PROMPTS_V2.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
+      console.log(`[Templates API] Loaded ${BANNER_PROMPTS_V2.length} V2 prompts`)
+      
+      if (!Array.isArray(BANNER_PROMPTS_V2) || BANNER_PROMPTS_V2.length === 0) {
+        console.error('[Templates API] BANNER_PROMPTS_V2 is empty or not an array')
+      } else {
+        BANNER_PROMPTS_V2.forEach(p => {
+          if (!p.id || !p.fullPrompt) {
+            console.warn(`[Templates API] Invalid V2 prompt entry:`, p)
+            return
+          }
+          v2PromptsMap.set(p.id, { 
+            displayTitle: p.displayTitle, 
+            name: p.name,
+            fullPrompt: p.fullPrompt, // 完全なプロンプトを保持
+            genre: p.genre,
+            category: p.category,
+          })
         })
-      })
-    } catch (e) {
+        console.log(`[Templates API] Mapped ${v2PromptsMap.size} V2 prompts to map`)
+      }
+    } catch (e: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'templates/route.ts:848',message:'V2 import error',data:{error:e.message,stack:e.stack?.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
+      console.error('[Templates API] Failed to import BANNER_PROMPTS_V2:', e)
+      console.error('[Templates API] Error stack:', e.stack)
       // V2プロンプトが見つからない場合は空のマップを使用
     }
     
@@ -886,6 +934,10 @@ export async function GET(request: NextRequest) {
       const featuredTemplateId = featuredTemplate?.templateId || templates[0]?.id || null
       
       // レスポンスヘッダーにキャッシュ設定を追加
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'templates/route.ts:889',message:'Before response (DB templates)',data:{templatesCount:templates.length,featuredId:featuredTemplateId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
       const response = NextResponse.json({
         templates,
         featuredTemplateId,
@@ -901,6 +953,24 @@ export async function GET(request: NextRequest) {
     }
     
     // DBにデータがない場合はV2プロンプトを使用
+    console.log(`[Templates API] No DB templates found, using V2 prompts. V2 map size: ${v2PromptsMap.size}`)
+    
+    if (v2PromptsMap.size === 0) {
+      console.error('[Templates API] No V2 prompts available and no DB templates. Returning empty array.')
+      return NextResponse.json({
+        templates: [],
+        featuredTemplateId: null,
+        count: 0,
+        generatedCount: 0,
+        loadTime: Date.now() - startTime,
+        error: 'No templates available. Please generate templates first.',
+        debug: {
+          dbTemplatesCount: dbTemplates.length,
+          v2PromptsCount: v2PromptsMap.size,
+        },
+      })
+    }
+    
     const allTemplates = Array.from(v2PromptsMap.entries()).slice(offset, offset + limit).map(([id, prompt]) => ({
       id,
       industry: prompt.genre || '',
@@ -913,9 +983,11 @@ export async function GET(request: NextRequest) {
         prompt: prompt.fullPrompt || '', // 完全なプロンプトを返す
         previewUrl: `/api/banner/test/image/${id}`,
         size: '1200x628',
-        hasGeneratedImage: true,
+        hasGeneratedImage: false, // V2プロンプトは画像が生成されていない可能性がある
       }),
     }))
+    
+    console.log(`[Templates API] Returning ${allTemplates.length} templates from V2 prompts`)
     
     const response = NextResponse.json({
       templates: allTemplates,
@@ -923,16 +995,31 @@ export async function GET(request: NextRequest) {
       count: allTemplates.length,
       generatedCount: 0,
       loadTime: Date.now() - startTime,
+      debug: {
+        dbTemplatesCount: dbTemplates.length,
+        v2PromptsCount: v2PromptsMap.size,
+        source: 'v2-prompts',
+      },
     })
     
     response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
     
     return response
   } catch (err: any) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'templates/route.ts:932',message:'Top-level error',data:{error:err.message,stack:err.stack?.substring(0,300)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     console.error('[Templates API] Get templates error:', err)
+    console.error('[Templates API] Error stack:', err.stack)
     return NextResponse.json(
       { 
         error: err.message || '取得に失敗しました',
+        debug: {
+          message: err.message,
+          name: err.name,
+          stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+        },
       }, 
       { status: 500 }
     )

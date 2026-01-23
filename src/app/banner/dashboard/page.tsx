@@ -513,17 +513,49 @@ function BannerTestPageInner() {
         
         // APIから取得（完全なプロンプトを含む）
         // minimal=falseで完全なプロンプトを取得（スタイル維持のため必須）
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:516',message:'Before API fetch',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
         const res = await fetch('/api/banner/test/templates?limit=100', {
           next: { revalidate: 300 }, // Next.js ISR: 5分間キャッシュ
         })
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:520',message:'After API fetch',data:{status:res.status,ok:res.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
         if (!res.ok) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:521',message:'API error',data:{status:res.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+          // #endregion
+          
           throw new Error(`HTTP error! status: ${res.status}`)
         }
         
         const data = await res.json()
         
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:524',message:'API response parsed',data:{templatesCount:data.templates?.length,hasTemplates:Array.isArray(data.templates)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        
         if (data.templates && Array.isArray(data.templates)) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:526',message:'Templates array found',data:{count:data.templates.length,hasError:!!data.error,debug:data.debug},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          
+          if (data.templates.length === 0) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:528',message:'Empty templates array',data:{error:data.error,debug:data.debug},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
+            
+            console.warn('[Templates] Empty templates array received', data)
+            toast.error(data.error || 'テンプレートが見つかりませんでした')
+            setIsLoadingTemplates(false)
+            return
+          }
+          
           setTemplates(data.templates)
           
           // 各カテゴリの初期表示数を設定
@@ -559,11 +591,26 @@ function BannerTestPageInner() {
           }
           
           console.log(`[Templates] Loaded ${data.templates.length} templates in ${Date.now() - startTime}ms (API: ${data.loadTime}ms)`)
+        } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:563',message:'Templates not array or missing',data:{hasTemplates:!!data.templates,isArray:Array.isArray(data.templates),error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          
+          console.error('[Templates] Invalid response format:', data)
+          toast.error('テンプレートの取得に失敗しました（無効な形式）')
         }
-      } catch (err) {
+      } catch (err: any) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:563',message:'Fetch error caught',data:{error:err.message,stack:err.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
         console.error('Failed to fetch templates:', err)
         toast.error('テンプレートの取得に失敗しました')
       } finally {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:567',message:'Setting isLoadingTemplates=false',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
         setIsLoadingTemplates(false)
       }
     }
