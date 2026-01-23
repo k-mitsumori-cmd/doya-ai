@@ -1727,7 +1727,7 @@ function BannerTestPageInner() {
                       </div>
                     </div>
                     <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">
-                      デフォルトは3枚（A/B/C）。
+                      1〜5枚から選択。
                       {userPlan === 'FREE' ? (
                         <span className="text-yellow-400"> 有料プランは最大5枚まで増やせます。</span>
                       ) : (
@@ -1736,7 +1736,7 @@ function BannerTestPageInner() {
                       <span className="text-orange-400 font-medium"> 枚数を増やすほど時間がかかります。</span>
                     </p>
                     <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                      {[3, 4, 5].map((num) => {
+                      {[1, 2, 3, 4, 5].map((num) => {
                         const isDisabled = num > planLimits.maxCount
                         return (
                           <button
