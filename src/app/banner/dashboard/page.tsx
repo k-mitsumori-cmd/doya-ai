@@ -28,14 +28,15 @@ type GeneratedBanner = {
   createdAt: Date
 }
 
-// サイズプリセット（Gemini APIで確実に生成できるサイズのみ）
-// Gemini APIは正方形（1:1）の画像を生成し、その後リサイズするため、
-// 正方形に近いアスペクト比が最も品質が高くなります
+// サイズプリセット（Gemini APIがネイティブでサポートするアスペクト比）
+// Gemini APIは以下のアスペクト比をサポート: 1:1, 3:4, 4:3, 9:16, 16:9
+// これらのアスペクト比で生成すると、パディングやクロップなしで正確なサイズが得られます
 const SIZE_PRESETS = [
-  { id: 'square-large', label: '正方形（大）', ratio: '1:1', width: 1024, height: 1024, icon: Square },
-  { id: 'square-medium', label: '正方形（中）', ratio: '1:1', width: 512, height: 512, icon: Square },
-  { id: 'landscape', label: '横長', ratio: '4:3', width: 1024, height: 768, icon: RectangleHorizontal },
-  { id: 'portrait', label: '縦長', ratio: '3:4', width: 768, height: 1024, icon: RectangleVertical },
+  { id: 'square', label: '正方形', ratio: '1:1', width: 1024, height: 1024, icon: Square },
+  { id: 'landscape-4-3', label: '横長 4:3', ratio: '4:3', width: 1024, height: 768, icon: RectangleHorizontal },
+  { id: 'portrait-3-4', label: '縦長 3:4', ratio: '3:4', width: 768, height: 1024, icon: RectangleVertical },
+  { id: 'landscape-16-9', label: 'ワイド 16:9', ratio: '16:9', width: 1280, height: 720, icon: RectangleHorizontal },
+  { id: 'portrait-9-16', label: 'ストーリー 9:16', ratio: '9:16', width: 720, height: 1280, icon: RectangleVertical },
 ]
 
 // 生成中のローディングメッセージ

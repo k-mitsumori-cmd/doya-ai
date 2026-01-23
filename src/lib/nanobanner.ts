@@ -983,6 +983,25 @@ async function generateSingleBanner(
         } catch { /* ignore */ }
       }
 
+      // アスペクト比をGemini APIのサポートする形式に変換
+      // Gemini APIは以下のアスペクト比をサポート: 1:1, 3:4, 4:3, 9:16, 16:9
+      const getGeminiAspectRatio = (width: number, height: number): string => {
+        const ratio = width / height
+        if (Math.abs(ratio - 1) < 0.1) return '1:1'           // 正方形
+        if (Math.abs(ratio - 4/3) < 0.1) return '4:3'         // 横長 4:3
+        if (Math.abs(ratio - 3/4) < 0.1) return '3:4'         // 縦長 3:4
+        if (Math.abs(ratio - 16/9) < 0.15) return '16:9'      // 横長 16:9
+        if (Math.abs(ratio - 9/16) < 0.15) return '9:16'      // 縦長 9:16
+        // デフォルトは最も近いアスペクト比を選択
+        if (ratio > 1.5) return '16:9'
+        if (ratio > 1.1) return '4:3'
+        if (ratio < 0.67) return '9:16'
+        if (ratio < 0.9) return '3:4'
+        return '1:1'
+      }
+      
+      const geminiAspectRatio = getGeminiAspectRatio(Number(w), Number(h))
+      
       const requestBody = {
           contents: [
             {
@@ -994,14 +1013,14 @@ async function generateSingleBanner(
                     prompt,
                     '',
                     '=== MANDATORY OUTPUT CONSTRAINTS ===',
-                    `**EXACT OUTPUT SIZE: ${w}x${h} pixels (width x height)**`,
-                    `**ASPECT RATIO: ${aspectRatio}**`,
+                    `**TARGET SIZE: ${w}x${h} pixels (width x height)**`,
+                    `**ASPECT RATIO: ${geminiAspectRatio}**`,
                     '',
-                    'CRITICAL SIZE REQUIREMENTS:',
-                    `- Output MUST be EXACTLY ${w} pixels wide and ${h} pixels tall.`,
+                    'CRITICAL REQUIREMENTS:',
+                    `- Generate image with ${geminiAspectRatio} aspect ratio.`,
                     '- Fill the entire canvas edge-to-edge with content.',
-                    '- NO letterboxing, NO empty bars, NO padding.',
-                    '- DO NOT change the aspect ratio.',
+                    '- NO letterboxing, NO empty bars, NO padding, NO borders.',
+                    '- Japanese text must be clearly readable.',
                     '',
                     'Return ONE PNG image.',
                   ].join('\n'),
@@ -1015,6 +1034,9 @@ async function generateSingleBanner(
             responseModalities: ['IMAGE'],
             temperature: 0.4,
             candidateCount: 1,
+            // アスペクト比を明示的に指定（Gemini APIでサポートされている場合）
+            // サポートされるアスペクト比: 1:1, 3:4, 4:3, 9:16, 16:9
+            aspectRatio: geminiAspectRatio,
           },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
@@ -1111,33 +1133,48 @@ async function generateSingleBanner(
         
         let resized: Buffer
         if (Number.isFinite(w_num) && Number.isFinite(h_num) && w_num > 0 && h_num > 0) {
-          // 常に 'contain' を使用してクロップを完全に避ける
-          // アスペクト比を維持し、余白部分は背景色で埋める
-          // これにより、画像の重要な部分が切り取られることがない
+          // 生成された画像のアスペクト比と目標アスペクト比を比較
+          const originalRatio = originalWidth / originalHeight
+          const targetRatio = w_num / h_num
+          const ratioDiff = Math.abs(originalRatio - targetRatio) / targetRatio
           
-          // 背景色を画像の端のピクセルから取得（より自然な見た目）
-          // デフォルトは黒（#000000）
-          let bgColor = { r: 0, g: 0, b: 0, alpha: 1 }
-          
-          try {
-            // 画像の左上のピクセル色を取得して背景色として使用
-            const { dominant } = await sharp(imageBuffer).stats()
-            if (dominant) {
-              bgColor = { r: dominant.r, g: dominant.g, b: dominant.b, alpha: 1 }
+          if (ratioDiff < 0.05) {
+            // アスペクト比がほぼ同じ（5%以内）の場合：
+            // 単純にリサイズ（fillで正確なサイズに）
+            // Gemini APIが正しいアスペクト比で生成した場合はこちら
+            resized = await sharp(imageBuffer)
+              .resize({ 
+                width: w_num, 
+                height: h_num, 
+                fit: 'fill' // 正確なサイズにリサイズ
+              })
+              .png()
+              .toBuffer()
+          } else {
+            // アスペクト比が異なる場合：
+            // 'contain' を使用してクロップを避け、背景色でパディング
+            // 背景色を画像の dominant color から取得
+            let bgColor = { r: 0, g: 0, b: 0, alpha: 1 }
+            
+            try {
+              const { dominant } = await sharp(imageBuffer).stats()
+              if (dominant) {
+                bgColor = { r: dominant.r, g: dominant.g, b: dominant.b, alpha: 1 }
+              }
+            } catch {
+              // 色取得に失敗した場合は黒を使用
             }
-          } catch {
-            // 色取得に失敗した場合は黒を使用
+            
+            resized = await sharp(imageBuffer)
+              .resize({ 
+                width: w_num, 
+                height: h_num, 
+                fit: 'contain', // クロップせず、アスペクト比を維持
+                background: bgColor 
+              })
+              .png()
+              .toBuffer()
           }
-          
-          resized = await sharp(imageBuffer)
-            .resize({ 
-              width: w_num, 
-              height: h_num, 
-              fit: 'contain', // クロップせず、アスペクト比を維持
-              background: bgColor 
-            })
-            .png()
-            .toBuffer()
         } else {
           resized = await sharp(imageBuffer).png().toBuffer()
         }
