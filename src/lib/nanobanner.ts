@@ -1111,51 +1111,33 @@ async function generateSingleBanner(
         
         let resized: Buffer
         if (Number.isFinite(w_num) && Number.isFinite(h_num) && w_num > 0 && h_num > 0) {
-          // 目標アスペクト比と元画像のアスペクト比を比較
-          const targetRatio = w_num / h_num
-          const originalRatio = originalWidth / originalHeight
+          // 常に 'contain' を使用してクロップを完全に避ける
+          // アスペクト比を維持し、余白部分は背景色で埋める
+          // これにより、画像の重要な部分が切り取られることがない
           
-          // アスペクト比の差が大きい場合（10%以上）は、パディングを追加
-          const ratioDiff = Math.abs(targetRatio - originalRatio) / targetRatio
+          // 背景色を画像の端のピクセルから取得（より自然な見た目）
+          // デフォルトは黒（#000000）
+          let bgColor = { r: 0, g: 0, b: 0, alpha: 1 }
           
-          if (ratioDiff > 0.1) {
-            // アスペクト比が大きく異なる場合：
-            // 1. まず 'contain' でリサイズ（アスペクト比を維持、余白なし）
-            // 2. 次に 'extend' でパディングを追加して正確なサイズにする
-            const containedImage = await sharp(imageBuffer)
-              .resize({ width: w_num, height: h_num, fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 1 } })
-              .png()
-              .toBuffer()
-            
-            // containでリサイズした画像のサイズを確認
-            const containedMeta = await sharp(containedImage).metadata()
-            const containedWidth = containedMeta.width || w_num
-            const containedHeight = containedMeta.height || h_num
-            
-            // 正確なサイズになるようにextendでパディングを追加
-            const padLeft = Math.floor((w_num - containedWidth) / 2)
-            const padRight = w_num - containedWidth - padLeft
-            const padTop = Math.floor((h_num - containedHeight) / 2)
-            const padBottom = h_num - containedHeight - padTop
-            
-            resized = await sharp(containedImage)
-              .extend({
-                top: Math.max(0, padTop),
-                bottom: Math.max(0, padBottom),
-                left: Math.max(0, padLeft),
-                right: Math.max(0, padRight),
-                background: { r: 0, g: 0, b: 0, alpha: 1 }
-              })
-              .resize({ width: w_num, height: h_num, fit: 'fill' }) // 最終的に正確なサイズに
-              .png()
-              .toBuffer()
-          } else {
-            // アスペクト比が近い場合：coverでリサイズ（少しクロップ）
-            resized = await sharp(imageBuffer)
-              .resize({ width: w_num, height: h_num, fit: 'cover', position: 'centre' })
-              .png()
-              .toBuffer()
+          try {
+            // 画像の左上のピクセル色を取得して背景色として使用
+            const { dominant } = await sharp(imageBuffer).stats()
+            if (dominant) {
+              bgColor = { r: dominant.r, g: dominant.g, b: dominant.b, alpha: 1 }
+            }
+          } catch {
+            // 色取得に失敗した場合は黒を使用
           }
+          
+          resized = await sharp(imageBuffer)
+            .resize({ 
+              width: w_num, 
+              height: h_num, 
+              fit: 'contain', // クロップせず、アスペクト比を維持
+              background: bgColor 
+            })
+            .png()
+            .toBuffer()
         } else {
           resized = await sharp(imageBuffer).png().toBuffer()
         }

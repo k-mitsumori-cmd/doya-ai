@@ -2201,44 +2201,44 @@ function BannerTestPageInner() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.8, y: 50 }}
               transition={{ type: "spring", damping: 20, stiffness: 300 }}
-              className="relative z-10 w-[calc(100%-24px)] sm:w-[calc(100%-32px)] max-w-4xl mx-auto p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl max-h-[90vh] overflow-y-auto"
+              className="relative z-10 w-[calc(100%-16px)] sm:w-[calc(100%-32px)] max-w-sm sm:max-w-lg md:max-w-2xl lg:max-w-4xl mx-2 sm:mx-auto p-3 sm:p-5 md:p-6 lg:p-8 rounded-xl sm:rounded-2xl md:rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto"
             >
               {!generationComplete ? (
                 /* 生成中の表示 */
                 <>
                   {/* ヘッダー */}
-                  <div className="text-center mb-4 sm:mb-6 md:mb-8">
+                  <div className="text-center mb-3 sm:mb-4 md:mb-6">
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      className="inline-block mb-3 sm:mb-4"
+                      className="inline-block mb-2 sm:mb-3"
                     >
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-0.5 sm:p-1">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 p-0.5">
                         <div className="w-full h-full rounded-full bg-black/50 flex items-center justify-center">
-                          <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-white" />
+                          <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
                         </div>
                       </div>
                     </motion.div>
-                    <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white mb-1 sm:mb-2">
+                    <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white mb-1">
                       🎨 バナーを生成中...
                     </h2>
                     <motion.p 
                       key={loadingMessage}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="text-blue-200 text-sm sm:text-base md:text-lg"
+                      className="text-blue-200 text-xs sm:text-sm md:text-base"
                     >
                       {loadingMessage}
                     </motion.p>
                   </div>
 
                   {/* プログレスバー */}
-                  <div className="mb-4 sm:mb-6 md:mb-8">
-                    <div className="flex justify-between text-xs sm:text-sm text-white/70 mb-1.5 sm:mb-2">
+                  <div className="mb-3 sm:mb-4 md:mb-6">
+                    <div className="flex justify-between text-[10px] sm:text-xs text-white/70 mb-1">
                       <span>進捗</span>
                       <span>{Math.round(generationProgress)}%</span>
                     </div>
-                    <div className="h-2 sm:h-3 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-1.5 sm:h-2 bg-white/10 rounded-full overflow-hidden">
                       <motion.div
                         className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
                         initial={{ width: 0 }}
@@ -2248,87 +2248,86 @@ function BannerTestPageInner() {
                     </div>
                   </div>
 
-                  {/* 入力内容と参考画像 */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
-                    {/* 参考画像（大きく表示） */}
-                    <div className="space-y-2 sm:space-y-3">
-                      <h3 className="text-white/80 font-semibold flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
-                        <ImageLucide className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {/* 入力内容と参考画像 - スマホでは縦並び、コンパクトに */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    {/* 参考画像（スマホでは小さく） */}
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <h3 className="text-white/80 font-semibold flex items-center gap-1 text-xs sm:text-sm">
+                        <ImageLucide className="w-3 h-3 sm:w-4 sm:h-4" />
                         参考スタイル
                       </h3>
-                      <div className="relative aspect-video rounded-lg sm:rounded-xl overflow-hidden border-2 border-white/30 shadow-lg">
+                      <div className="relative aspect-video rounded-lg overflow-hidden border border-white/30 shadow-lg">
                         <img
                           src={selectedTemplate.imageUrl || selectedTemplate.previewUrl || ''}
                           alt={selectedTemplate.displayTitle || selectedTemplate.name || '参考画像'}
                           className="w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-3 right-2 sm:right-3">
-                          <p className="text-white font-bold text-sm sm:text-base md:text-lg drop-shadow-lg truncate">
+                        <div className="absolute bottom-1.5 sm:bottom-2 left-1.5 sm:left-2 right-1.5 sm:right-2">
+                          <p className="text-white font-bold text-xs sm:text-sm drop-shadow-lg truncate">
                             {selectedTemplate.displayTitle || selectedTemplate.name}
                           </p>
-                          <p className="text-white/70 text-xs sm:text-sm">{selectedTemplate.industry}</p>
                         </div>
                         {/* パルスアニメーション */}
                         <motion.div
-                          className="absolute inset-0 border-2 sm:border-4 border-blue-400 rounded-lg sm:rounded-xl"
+                          className="absolute inset-0 border-2 border-blue-400 rounded-lg"
                           animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.02, 1] }}
                           transition={{ duration: 2, repeat: Infinity }}
                         />
                       </div>
                     </div>
 
-                    {/* 入力内容 */}
-                    <div className="space-y-3 sm:space-y-4">
-                      <h3 className="text-white/80 font-semibold flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base">
-                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                    {/* 入力内容（コンパクト） */}
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <h3 className="text-white/80 font-semibold flex items-center gap-1 text-xs sm:text-sm">
+                        <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                         生成設定
                       </h3>
-                      <div className="space-y-2 sm:space-y-3 bg-white/5 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-white/10">
+                      <div className="space-y-1.5 sm:space-y-2 bg-white/5 rounded-lg p-2 sm:p-3 border border-white/10">
                         <div>
-                          <p className="text-white/50 text-[10px] sm:text-xs mb-0.5 sm:mb-1">入れたいテキスト</p>
-                          <p className="text-white font-medium text-sm sm:text-base md:text-lg truncate">{serviceName}</p>
+                          <p className="text-white/50 text-[9px] sm:text-[10px]">テキスト</p>
+                          <p className="text-white font-medium text-xs sm:text-sm truncate">{serviceName}</p>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                           <div>
-                            <p className="text-white/50 text-[10px] sm:text-xs mb-0.5 sm:mb-1">サイズ</p>
-                            <p className="text-white font-medium text-xs sm:text-sm md:text-base">
+                            <p className="text-white/50 text-[9px] sm:text-[10px]">サイズ</p>
+                            <p className="text-white font-medium text-[10px] sm:text-xs">
                               {`${selectedSize.width}×${selectedSize.height}`}
                             </p>
                           </div>
                           <div>
-                            <p className="text-white/50 text-[10px] sm:text-xs mb-0.5 sm:mb-1">生成枚数</p>
-                            <p className="text-white font-medium text-xs sm:text-sm md:text-base">{generateCount}枚</p>
+                            <p className="text-white/50 text-[9px] sm:text-[10px]">枚数</p>
+                            <p className="text-white font-medium text-[10px] sm:text-xs">{generateCount}枚</p>
                           </div>
                         </div>
                         {(logoPreview || personPreview) && (
-                          <div className="flex gap-2 sm:gap-3 pt-2 border-t border-white/10">
+                          <div className="flex gap-1.5 sm:gap-2 pt-1.5 border-t border-white/10">
                             {logoPreview && (
-                              <div className="flex items-center gap-1.5 sm:gap-2">
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-white/10">
+                              <div className="flex items-center gap-1">
+                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded overflow-hidden bg-white/10">
                                   <img src={logoPreview} alt="ロゴ" className="w-full h-full object-contain" />
                                 </div>
-                                <span className="text-white/70 text-xs sm:text-sm">ロゴ</span>
+                                <span className="text-white/70 text-[9px] sm:text-xs">ロゴ</span>
                               </div>
                             )}
                             {personPreview && (
-                              <div className="flex items-center gap-1.5 sm:gap-2">
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-white/10">
+                              <div className="flex items-center gap-1">
+                                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded overflow-hidden bg-white/10">
                                   <img src={personPreview} alt="人物" className="w-full h-full object-cover" />
                                 </div>
-                                <span className="text-white/70 text-xs sm:text-sm">人物</span>
+                                <span className="text-white/70 text-[9px] sm:text-xs">人物</span>
                               </div>
                             )}
                           </div>
                         )}
                         {/* カスタムプロンプト表示（エンタープライズ） */}
                         {customPrompt && (
-                          <div className="pt-2 border-t border-white/10">
-                            <p className="text-white/50 text-[10px] sm:text-xs mb-0.5 sm:mb-1 flex items-center gap-1">
-                              <span className="px-1 sm:px-1.5 py-0.5 bg-purple-600 text-[7px] sm:text-[8px] font-bold rounded">ENTERPRISE</span>
+                          <div className="pt-1.5 border-t border-white/10">
+                            <p className="text-white/50 text-[9px] sm:text-[10px] flex items-center gap-1">
+                              <span className="px-1 py-0.5 bg-purple-600 text-[6px] sm:text-[7px] font-bold rounded">ENT</span>
                               詳細指示
                             </p>
-                            <p className="text-white/80 text-[10px] sm:text-xs line-clamp-2">{customPrompt}</p>
+                            <p className="text-white/80 text-[9px] sm:text-[10px] line-clamp-2">{customPrompt}</p>
                           </div>
                         )}
                       </div>
@@ -2336,10 +2335,10 @@ function BannerTestPageInner() {
                   </div>
 
                   {/* 生成中のヒント */}
-                  <div className="mt-4 sm:mt-5 md:mt-6 text-center">
-                    <p className="text-white/50 text-[10px] sm:text-xs md:text-sm px-2">
-                      ✨ AIが選択したスタイルを分析し、あなたのテキストに合わせてバナーを生成しています
-                      {customPrompt && '（カスタム指示を適用中）'}
+                  <div className="mt-2 sm:mt-3 md:mt-4 text-center">
+                    <p className="text-white/50 text-[9px] sm:text-[10px] md:text-xs px-1">
+                      ✨ AIがバナーを生成中...
+                      {customPrompt && '（カスタム指示適用中）'}
                     </p>
                   </div>
                 </>
