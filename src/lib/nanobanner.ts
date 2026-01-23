@@ -983,25 +983,6 @@ async function generateSingleBanner(
         } catch { /* ignore */ }
       }
 
-      // アスペクト比をGemini APIのサポートする形式に変換
-      // Gemini APIは以下のアスペクト比をサポート: 1:1, 3:4, 4:3, 9:16, 16:9
-      const getGeminiAspectRatio = (width: number, height: number): string => {
-        const ratio = width / height
-        if (Math.abs(ratio - 1) < 0.1) return '1:1'           // 正方形
-        if (Math.abs(ratio - 4/3) < 0.1) return '4:3'         // 横長 4:3
-        if (Math.abs(ratio - 3/4) < 0.1) return '3:4'         // 縦長 3:4
-        if (Math.abs(ratio - 16/9) < 0.15) return '16:9'      // 横長 16:9
-        if (Math.abs(ratio - 9/16) < 0.15) return '9:16'      // 縦長 9:16
-        // デフォルトは最も近いアスペクト比を選択
-        if (ratio > 1.5) return '16:9'
-        if (ratio > 1.1) return '4:3'
-        if (ratio < 0.67) return '9:16'
-        if (ratio < 0.9) return '3:4'
-        return '1:1'
-      }
-      
-      const geminiAspectRatio = getGeminiAspectRatio(Number(w), Number(h))
-      
       const requestBody = {
           contents: [
             {
@@ -1014,10 +995,10 @@ async function generateSingleBanner(
                     '',
                     '=== MANDATORY OUTPUT CONSTRAINTS ===',
                     `**TARGET SIZE: ${w}x${h} pixels (width x height)**`,
-                    `**ASPECT RATIO: ${geminiAspectRatio}**`,
+                    `**ASPECT RATIO: ${aspectRatio}**`,
                     '',
                     'CRITICAL REQUIREMENTS:',
-                    `- Generate image with ${geminiAspectRatio} aspect ratio.`,
+                    `- Generate image with ${aspectRatio} aspect ratio.`,
                     '- Fill the entire canvas edge-to-edge with content.',
                     '- NO letterboxing, NO empty bars, NO padding, NO borders.',
                     '- Japanese text must be clearly readable.',
@@ -1034,9 +1015,8 @@ async function generateSingleBanner(
             responseModalities: ['IMAGE'],
             temperature: 0.4,
             candidateCount: 1,
-            // アスペクト比を明示的に指定（Gemini APIでサポートされている場合）
-            // サポートされるアスペクト比: 1:1, 3:4, 4:3, 9:16, 16:9
-            aspectRatio: geminiAspectRatio,
+            // 注意: aspectRatioパラメータはGemini APIでサポートされていない可能性があるため、
+            // プロンプト内でサイズを指示し、後処理でリサイズする方式を採用
           },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
