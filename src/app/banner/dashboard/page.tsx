@@ -2021,9 +2021,12 @@ function BannerTestPageInner() {
                     transition={{ delay: idx * 0.1 }}
                     className="group relative bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-gray-500 transition-all shadow-lg hover:shadow-xl"
                   >
-                    {/* 画像 */}
+                    {/* 画像 - 選択したサイズのアスペクト比に合わせる */}
                     <div 
-                      className="relative aspect-[16/9] cursor-pointer"
+                      className="relative cursor-pointer"
+                      style={{
+                        aspectRatio: `${selectedSize.width} / ${selectedSize.height}`,
+                      }}
                       onClick={() => {
                         if (currentPlan === 'ENTERPRISE' || isTrialActive) {
                           setEditingBanner(banner)
@@ -2037,7 +2040,7 @@ function BannerTestPageInner() {
                       <img
                         src={banner.imageUrl}
                         alt={`Generated banner ${idx + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain bg-gray-900"
                       />
                       {/* オーバーレイ（ホバー時） */}
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
@@ -2468,34 +2471,49 @@ function BannerTestPageInner() {
                     {generatedBanners.length}枚のバナーが完成しました
                   </motion.p>
 
-                  {/* 生成された画像のプレビュー */}
+                  {/* 生成された画像のプレビュー - 選択したサイズに合わせる */}
                   <motion.div
                     initial={{ y: 30, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.5 }}
                     className="flex justify-center gap-2 sm:gap-3 flex-wrap px-2"
                   >
-                    {generatedBanners.slice(0, 3).map((banner, idx) => (
-                      <motion.div
-                        key={banner.id}
-                        initial={{ scale: 0, rotate: -10 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{ delay: 0.6 + idx * 0.1, type: "spring" }}
-                        className="w-20 h-12 sm:w-24 sm:h-14 md:w-32 md:h-20 rounded-lg overflow-hidden border-2 border-white/30 shadow-lg"
-                      >
-                        <img
-                          src={banner.imageUrl}
-                          alt={`生成バナー ${idx + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </motion.div>
-                    ))}
+                    {generatedBanners.slice(0, 3).map((banner, idx) => {
+                      // アスペクト比に基づいてサイズを計算
+                      const ratio = selectedSize.width / selectedSize.height
+                      const baseWidth = ratio >= 1 ? 80 : 60 // 横長なら幅を基準、縦長なら小さめ
+                      const width = baseWidth
+                      const height = baseWidth / ratio
+                      return (
+                        <motion.div
+                          key={banner.id}
+                          initial={{ scale: 0, rotate: -10 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ delay: 0.6 + idx * 0.1, type: "spring" }}
+                          className="rounded-lg overflow-hidden border-2 border-white/30 shadow-lg"
+                          style={{
+                            width: `${width}px`,
+                            height: `${height}px`,
+                          }}
+                        >
+                          <img
+                            src={banner.imageUrl}
+                            alt={`生成バナー ${idx + 1}`}
+                            className="w-full h-full object-contain bg-gray-900"
+                          />
+                        </motion.div>
+                      )
+                    })}
                     {generatedBanners.length > 3 && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.9, type: "spring" }}
-                        className="w-20 h-12 sm:w-24 sm:h-14 md:w-32 md:h-20 rounded-lg bg-white/10 border-2 border-white/30 flex items-center justify-center"
+                        className="rounded-lg bg-white/10 border-2 border-white/30 flex items-center justify-center"
+                        style={{
+                          width: `${selectedSize.width / selectedSize.height >= 1 ? 80 : 60}px`,
+                          height: `${(selectedSize.width / selectedSize.height >= 1 ? 80 : 60) / (selectedSize.width / selectedSize.height)}px`,
+                        }}
                       >
                         <span className="text-white font-bold text-xs sm:text-sm md:text-base">+{generatedBanners.length - 3}</span>
                       </motion.div>
@@ -2893,14 +2911,19 @@ function BannerTestPageInner() {
               
               {/* コンテンツ */}
               <div className="p-3 sm:p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 md:gap-6">
-                {/* 画像プレビュー */}
+                {/* 画像プレビュー - 選択したサイズに合わせる */}
                 <div>
                   <h4 className="text-xs sm:text-sm font-bold text-gray-300 mb-2 sm:mb-3">生成された画像</h4>
-                  <div className="relative aspect-video rounded-lg sm:rounded-xl overflow-hidden border border-gray-700 shadow-lg">
+                  <div 
+                    className="relative rounded-lg sm:rounded-xl overflow-hidden border border-gray-700 shadow-lg bg-gray-900"
+                    style={{
+                      aspectRatio: `${selectedSize.width} / ${selectedSize.height}`,
+                    }}
+                  >
                     <img
                       src={viewingPromptBanner.imageUrl}
                       alt="生成画像"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                   {/* ダウンロードボタン */}
