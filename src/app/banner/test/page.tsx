@@ -1080,6 +1080,39 @@ function BannerTestPageInner() {
                 onError={() => handleImageError(selectedTemplate.id)}
                 className="w-full h-full object-cover"
               />
+            ) : selectedTemplate && imageErrors.has(selectedTemplate.id) ? (
+              // ヒーロー画像読み込みエラー時
+              <div className="w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
+                <div className="text-center p-4 sm:p-8">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <X className="w-6 h-6 sm:w-8 sm:h-8 text-red-400" />
+                  </div>
+                  <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-2 text-white">
+                    画像を読み込めませんでした
+                  </h2>
+                  <p className="text-gray-400 text-sm sm:text-base mb-4">
+                    ネットワーク接続を確認してください
+                  </p>
+                  <button
+                    onClick={() => {
+                      // エラーをクリアして再読み込み
+                      setImageErrors(prev => {
+                        const next = new Set(prev)
+                        next.delete(selectedTemplate.id)
+                        return next
+                      })
+                      setLoadedImages(prev => {
+                        const next = new Set(prev)
+                        next.delete(selectedTemplate.id)
+                        return next
+                      })
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  >
+                    再読み込み
+                  </button>
+                </div>
+              </div>
             ) : selectedTemplate ? (
               <div className="w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
                 <div className="text-center p-8">
@@ -1336,7 +1369,36 @@ function BannerTestPageInner() {
                                     : 'ring-1 ring-gray-800 hover:ring-gray-600'
                               }`}
                             >
-                              {showImage && isVisible ? (
+                              {showImage && isVisible && imageErrors.has(template.id) ? (
+                                // 画像読み込みエラー時
+                                <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex flex-col items-center justify-center p-2 sm:p-3">
+                                  <div className="text-center">
+                                    <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 rounded-full bg-red-500/20 flex items-center justify-center">
+                                      <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
+                                    </div>
+                                    <p className="text-[8px] sm:text-[10px] text-gray-400 mb-1.5">画像を読み込めませんでした</p>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        // エラーをクリアして再読み込み
+                                        setImageErrors(prev => {
+                                          const next = new Set(prev)
+                                          next.delete(template.id)
+                                          return next
+                                        })
+                                        setLoadedImages(prev => {
+                                          const next = new Set(prev)
+                                          next.delete(template.id)
+                                          return next
+                                        })
+                                      }}
+                                      className="text-[8px] sm:text-[10px] text-blue-400 hover:text-blue-300 underline"
+                                    >
+                                      再読み込み
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : showImage && isVisible ? (
                                 <>
                                   {/* 読み込み中のプレースホルダー */}
                                   {!isLoaded && (
