@@ -18,6 +18,16 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     // ログイン済みでも、同一ブラウザで作成した「ゲスト記事/ジョブ」を閲覧できるようにするため
     // guestId は常に取得しておき、所有者判定で userId OR guestId のどちらかが一致すればOKとする。
     const guestId = getGuestIdFromRequest(_req)
+    
+    // デバッグログ
+    console.log('[seo job get] auth check', {
+      jobId: id,
+      hasSession: !!session,
+      userId: userId || '(none)',
+      guestId: guestId || '(none)',
+      cookieHeader: _req.headers.get('cookie')?.substring(0, 200) || '(no cookie)',
+    })
+    
     const job = await (prisma as any).seoJob.findUnique({
       where: { id },
       include: {
@@ -25,13 +35,29 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
         sections: { orderBy: { index: 'asc' } },
       },
     })
-    if (!job) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
+    if (!job) {
+      console.log('[seo job get] job not found in DB', { jobId: id })
+      return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
+    }
     // 所有者チェック（ユーザー/ゲストで分離）
     const articleUserId = String(job.article?.userId || '').trim()
     const articleGuestId = String(job.article?.guestId || '').trim()
     const canReadByUser = !!userId && !!articleUserId && articleUserId === userId
     const canReadByGuest = !!guestId && !!articleGuestId && articleGuestId === guestId
+    
+    // デバッグログ
+    console.log('[seo job get] ownership check', {
+      jobId: id,
+      articleUserId: articleUserId || '(none)',
+      articleGuestId: articleGuestId || '(none)',
+      requestUserId: userId || '(none)',
+      requestGuestId: guestId || '(none)',
+      canReadByUser,
+      canReadByGuest,
+    })
+    
     if (!canReadByUser && !canReadByGuest) {
+      console.log('[seo job get] access denied', { jobId: id, userId, guestId, articleUserId, articleGuestId })
       return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     }
 
