@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { articleSections } from './data'
 import { ArticleTemplate } from './types'
 import { HorizontalScrollSection } from './components/HorizontalScrollSection'
-import { Sparkles, Play, ChevronDown, ChevronUp, ArrowRight, ArrowLeft, Loader2, CheckCircle2, Lightbulb, FileText, Zap, Target, TrendingUp, Search, BarChart3, Link2, X, HelpCircle, Download, Maximize2, Square, RectangleHorizontal, RectangleVertical, Upload, User } from 'lucide-react'
+import { Sparkles, Play, ChevronDown, ChevronUp, ArrowRight, ArrowLeft, Loader2, CheckCircle2, Lightbulb, FileText, Zap, Target, TrendingUp, Search, BarChart3, Link2, X, HelpCircle, Download, Maximize2, Square, RectangleHorizontal, RectangleVertical, Upload, User, ImageIcon } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Toaster, toast } from 'react-hot-toast'
 
