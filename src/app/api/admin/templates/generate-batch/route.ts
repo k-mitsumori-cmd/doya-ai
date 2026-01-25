@@ -6,8 +6,9 @@ import { generateBanners } from '@/lib/nanobanner'
 export const runtime = 'nodejs'
 export const maxDuration = 300
 
-// 新規追加する22個のテンプレートID
+// 新規追加するテンプレートID（バッチ1: 22個 + バッチ2: 7個 = 29個）
 const NEW_TEMPLATE_IDS = [
+  // バッチ1（22個）
   'new-branding-001',
   'new-showroom-001',
   'new-copywriter-001',
@@ -30,6 +31,14 @@ const NEW_TEMPLATE_IDS = [
   'new-btob-001',
   'new-featured-001',
   'new-sales-overview-001',
+  // バッチ2（7個）
+  'new-strawberry-drink-001',
+  'new-drama-promo-001',
+  'new-cosmetic-campaign-001',
+  'new-travel-onsen-001',
+  'new-seminar-orange-001',
+  'new-food-campaign-001',
+  'new-yuzu-drink-001',
 ]
 
 async function generateTemplateImage(prompt: string): Promise<string> {

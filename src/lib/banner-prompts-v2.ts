@@ -1890,6 +1890,134 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     fullPrompt: 'A content sales overview banner. Light blue background with 3D geometric cube shapes and modern tech elements. Young businessman at left working on laptop with confident expression. Small credit text at top. Large Japanese title on right "コンテンツセールスの全貌" with large single kanji character "全貌" emphasized. Subtitle below explaining BtoB marketing approach. Modern tech business aesthetic. Blue, white, and red accent color scheme.',
     tags: ['セールス', 'コンテンツ', '青', '幾何学'],
   },
+
+  // ===== 新規追加: 参考画像ベースのプロンプト（バッチ2: 7種類） =====
+
+  // 1. いちごドリンク季節限定（赤×ボケ背景）
+  {
+    id: 'new-strawberry-drink-001',
+    genre: '飲料',
+    category: 'ec',
+    name: 'いちごドリンク季節限定',
+    displayTitle: '季節限定ドリンク',
+    prompt: {
+      composition: 'ドリンク中央、縦書きテキスト右、日付左下',
+      subject: 'いちごドリンク、クリーム、赤い果実',
+      colorPalette: '赤、ピンク、金色ボケ',
+      designElements: '手書き風英語ロゴ、日付バッジ、ボケ背景',
+      typography: '縦書き日本語、筆記体英語、日付表示',
+    },
+    fullPrompt: 'A seasonal strawberry drink promotion banner. Deep red bokeh background with golden light spots creating a festive holiday atmosphere. A tall clear glass with layered strawberry cream drink, topped with fresh strawberries and whipped cream, positioned at center. Vertical Japanese text on the right side reading "最高に、きらめく季節に。". Cursive English script "Holiday" at bottom left. Date badge "11.27 START" at bottom right. Premium beverage photography style. Red, pink, and warm gold color scheme.',
+    tags: ['いちご', 'ドリンク', '季節限定', '赤'],
+  },
+
+  // 2. ドラマ・映画告知（ダーク×ブルー）
+  {
+    id: 'new-drama-promo-001',
+    genre: 'イベント・メディア',
+    category: 'ec',
+    name: 'ドラマ告知ダーク',
+    displayTitle: 'ドラマシリーズ',
+    prompt: {
+      composition: '人物写真中央、ポイント番号左、テキスト中央右',
+      subject: '2人の男性俳優、対面シーン',
+      colorPalette: 'ダークブルー、黒、白アクセント',
+      designElements: '縦書きテキスト、ポイント番号、配信情報',
+      typography: '大きなポイント番号、日本語タイトル、配信日表示',
+    },
+    fullPrompt: 'A drama series streaming announcement banner. Dark blue to black atmospheric background with subtle lighting. Two men in business suits facing each other across a table in an intense conversation scene. Large "POINT 01" number on the left side. Japanese title text in center explaining the viewing recommendation. Vertical text panel on right side. Streaming platform logo and release date "12月19日(金) 世界独占配信" at bottom. Cinematic thriller aesthetic. Dark blue, black, and white color scheme.',
+    tags: ['ドラマ', '映画', 'ダークブルー', '配信'],
+  },
+
+  // 3. コスメキャンペーン（ピンク×パステル）
+  {
+    id: 'new-cosmetic-campaign-001',
+    genre: '美容・コスメ',
+    category: 'beauty',
+    name: 'コスメキャンペーン',
+    displayTitle: 'フレグランスCP',
+    prompt: {
+      composition: '商品中央、タイトル上部、キャンペーン情報下部',
+      subject: 'シャンプーボトル3本、花、アイスクリーム',
+      colorPalette: 'ピンク、白、パステル',
+      designElements: 'アーチ窓、装飾小物、キャンペーン文言',
+      typography: '筆記体英語タイトル、大きな当選確率、キャンペーン詳細',
+    },
+    fullPrompt: 'A fragrance cosmetics campaign banner. Soft pastel pink background with elegant arch window frames. Three hair care product bottles (shampoo and conditioner) in center on a marble-like surface. Decorative elements including flowers, ice cream cones, and macarons around the products. Cursive English title "Fragrance Collection" at top. Large Japanese text "100人に1人当たる！" highlighting the winning odds. Campaign period and details at bottom. Elegant feminine aesthetic. Pink, white, and pastel color scheme.',
+    tags: ['コスメ', 'キャンペーン', 'ピンク', 'パステル'],
+  },
+
+  // 4. 観光・旅行PR（夜景×和風）
+  {
+    id: 'new-travel-onsen-001',
+    genre: '住宅・不動産',
+    category: 'ec',
+    name: '温泉旅行PR',
+    displayTitle: '温泉へ行こう',
+    prompt: {
+      composition: '温泉街夜景全体、タイトル中央下、ロゴ左上',
+      subject: '温泉旅館街、提灯、木造建築',
+      colorPalette: 'オレンジ、黒、金色',
+      designElements: '和風提灯、夜景、木造建築',
+      typography: '大きな日本語タイトル、読み仮名付き',
+    },
+    fullPrompt: 'A Japanese hot spring resort travel promotion banner. Beautiful night scene of a traditional onsen town with wooden buildings and warm orange lanterns (chochin) lining the streets. Mountains in the background with misty atmosphere. Large Japanese title at center-bottom "温泉へは、電車で。" with furigana reading above the place name. Small informational box at bottom right. Warm nostalgic Japanese travel aesthetic. Orange lantern light, dark blue night sky, and golden warm tones.',
+    tags: ['温泉', '旅行', '夜景', '和風'],
+  },
+
+  // 5. セミナー告知（白×オレンジ）
+  {
+    id: 'new-seminar-orange-001',
+    genre: '教育・学習・セミナー',
+    category: 'it',
+    name: 'オフィスセミナー',
+    displayTitle: 'シェアオフィスセミナー',
+    prompt: {
+      composition: '人物写真左下、テキスト右側、日時右下',
+      subject: 'ビジネスウーマン、オフィス',
+      colorPalette: 'オレンジ、白、黒',
+      designElements: 'アルファベットロゴ、日時表示、登壇者情報',
+      typography: '大きな英語タイトル、日本語説明、日時',
+    },
+    fullPrompt: 'A business seminar announcement banner. Clean white background with bold orange typography. Large stacked text "TSO SUMIDA SEMINAR" in orange. "FREE ENTRY 入場無料" badge on the left side. Photo of a professional businesswoman at bottom left corner. Japanese text explaining the seminar topic about workplace innovation and next-generation ABW offices. Date and time "11.21 19:00-" at bottom right. Speaker information with names and titles. Clean corporate seminar aesthetic. Orange, white, and black color scheme.',
+    tags: ['セミナー', 'オフィス', 'オレンジ', 'ビジネス'],
+  },
+
+  // 6. ホットパイキャンペーン（黒×ゴールド）
+  {
+    id: 'new-food-campaign-001',
+    genre: 'EC・セール',
+    category: 'ec',
+    name: 'フードキャンペーン',
+    displayTitle: 'ホットパイCP',
+    prompt: {
+      composition: '商品写真上下分割、キャンペーン情報中央',
+      subject: 'チョコレートパイ、溶けるチョコ',
+      colorPalette: '黒、金色、茶色',
+      designElements: '溶けるチョコ演出、期間限定バッジ、キャンペーン詳細',
+      typography: '手書き風日本語、キャンペーン条件',
+    },
+    fullPrompt: 'A hot pie food campaign banner. Rich black background split into two product photos - top shows chocolate dripping onto a dark chocolate pie creating melting effect, bottom shows golden crispy fried pie. "期間限定" badge at top. Handwritten-style Japanese title "とろけるホットパイ" in center. Campaign hashtag text. Prize information "100名様にマックカード1,000円分が当たる！" at bottom. Campaign period dates. Indulgent food photography style. Black, gold, and warm brown color scheme.',
+    tags: ['フード', 'キャンペーン', '黒', 'チョコレート'],
+  },
+
+  // 7. 季節限定ドリンク（金×和風）
+  {
+    id: 'new-yuzu-drink-001',
+    genre: '飲料',
+    category: 'ec',
+    name: 'ゆずはちみつドリンク',
+    displayTitle: 'ゆずティーラテ',
+    prompt: {
+      composition: '商品中央、タイトル下部、装飾要素散りばめ',
+      subject: 'カップドリンク、梅の花、金色装飾',
+      colorPalette: '金色、白、赤アクセント',
+      designElements: '和風梅の花、金箔風、期間限定バッジ',
+      typography: '大きな英語タイトル、日本語サブ',
+    },
+    fullPrompt: 'A yuzu honey tea latte seasonal drink banner. Warm golden gradient background with scattered plum blossom petals and gold leaf decorative elements. A branded cup of yuzu honey tea latte in center with condensation droplets. "期間限定" red badge at top left. Product name label on the cup. Large bold English title "YUZU HONEY TEA LATTE" at bottom in dark text. Japanese-inspired seasonal aesthetic with subtle floral patterns. Gold, cream, and red accent color scheme.',
+    tags: ['ゆず', 'ドリンク', '金色', '和風'],
+  },
 ]
 
 /**
