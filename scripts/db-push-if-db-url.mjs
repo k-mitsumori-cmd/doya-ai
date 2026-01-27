@@ -12,6 +12,8 @@ const RETRYABLE_ERRORS = [
   'ETIMEDOUT',
   'Schema engine error',
   'FATAL:',
+  'statement timeout',
+  'canceling statement',
 ]
 
 function sleep(ms) {
