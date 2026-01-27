@@ -321,15 +321,15 @@ export default function BannerLandingPage() {
         <div className="max-w-[1000px] mx-auto">
           <h2 className="text-2xl font-black text-slate-800 text-center mb-12 uppercase tracking-widest">Other AI Services</h2>
 
-          <Link href="/kantan">
+          <Link href="/seo">
             <div className="bg-white rounded-[2rem] p-8 border border-slate-200 hover:border-blue-400 hover:shadow-2xl transition-all cursor-pointer group">
               <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center flex-shrink-0 shadow-lg group-hover:scale-110 transition-transform">
                   <ZapIcon className="w-10 h-10 text-white" />
                 </div>
                 <div className="flex-1 text-center sm:text-left">
-                  <h3 className="text-2xl font-black text-slate-800 mb-2">カンタンドヤAI</h3>
-                  <p className="text-slate-500 font-medium leading-relaxed">ビジネス文章をAIが自動生成。メール、ブログ、SNS投稿など68種類の高品質テンプレート。</p>
+                  <h3 className="text-2xl font-black text-slate-800 mb-2">ドヤライティングAI</h3>
+                  <p className="text-slate-500 font-medium leading-relaxed">SEO記事をAIが自動作成。アウトラインから本文まで、最大20,000字の記事を一括生成。</p>
                 </div>
                 <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
                   <ArrowRight className="w-6 h-6" />
@@ -354,7 +354,6 @@ export default function BannerLandingPage() {
             <div className="flex items-center gap-8">
               <Link href="/" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">ポータル</Link>
               <Link href="/seo" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">ドヤライティングAI</Link>
-              <Link href="/kantan" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">カンタン</Link>
               <Link href="/admin" className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">管理者</Link>
             </div>
           </div>

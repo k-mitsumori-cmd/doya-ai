@@ -11,13 +11,10 @@ import {
   Play,
   ChevronRight,
 } from 'lucide-react'
-import { getAllServices } from '@/lib/services'
-import { KANTAN_PRICING, BANNER_PRICING, BUNDLE_PRICING } from '@/lib/pricing'
+import { SEO_PRICING, BANNER_PRICING } from '@/lib/pricing'
 
 export default function PortalPage() {
   const { data: session } = useSession()
-  const allServices = getAllServices()
-  const activeServices = allServices.filter(s => s.status === 'active' || s.status === 'beta')
 
   return (
     <div className="min-h-screen bg-white">
@@ -40,8 +37,8 @@ export default function PortalPage() {
             {/* Actions */}
             <div className="flex items-center gap-3">
               {session ? (
-                <Link 
-                  href="/kantan/dashboard" 
+                <Link
+                  href="/seo"
                   className="px-5 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-bold rounded-full shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30 transition-all"
                 >
                   ダッシュボード
@@ -51,8 +48,8 @@ export default function PortalPage() {
                   <Link href="/auth/signin" className="text-gray-600 hover:text-gray-900 text-sm font-medium hidden sm:block">
                     ログイン
                   </Link>
-                  <Link 
-                    href="/kantan/dashboard" 
+                  <Link
+                    href="/seo"
                     className="px-5 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-bold rounded-full shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30 transition-all"
                   >
                     無料で試す
@@ -77,17 +74,17 @@ export default function PortalPage() {
           
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
-            文章もバナーも<br />
+            SEO記事もバナーも<br />
             <span className="bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
               AIで秒速
             </span>
             作成
           </h1>
-          
+
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             ログインなしで今すぐお試し。<br className="sm:hidden" />
-            必要な文章やバナーを、AIがパパッと作ります。
+            SEO記事やバナーを、AIがパパッと作ります。
           </p>
           
           {/* Quick Stats */}
@@ -114,32 +111,32 @@ export default function PortalPage() {
       <section className="pb-16 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <div className="grid md:grid-cols-2 gap-6">
-            {/* カンタンドヤAI */}
-            <Link href="/kantan/dashboard" className="group">
-              <div className="relative h-full bg-gradient-to-br from-blue-500 to-cyan-400 rounded-3xl p-6 sm:p-8 overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-blue-500/20">
+            {/* ドヤライティングAI */}
+            <Link href="/seo" className="group">
+              <div className="relative h-full bg-gradient-to-br from-slate-700 to-slate-900 rounded-3xl p-6 sm:p-8 overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-slate-500/20">
                 {/* Decorations */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full blur-xl" />
-                
+
                 <div className="relative">
-                  <span className="text-5xl mb-4 block">📝</span>
+                  <span className="text-5xl mb-4 block">🧠</span>
                   <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                    カンタンドヤAI
+                    ドヤライティングAI
                   </h2>
                   <p className="text-white/80 mb-6">
-                    メール、ブログ、SNS投稿...<br />
-                    68種類のテンプレートで文章を自動作成
+                    SEO記事をAIが自動作成<br />
+                    アウトライン〜本文まで一括生成
                   </p>
-                  
+
                   <div className="flex items-center gap-4 mb-6">
                     <div className="px-3 py-1.5 bg-white/20 backdrop-blur rounded-lg text-white text-sm font-medium">
-                      ゲスト1日{KANTAN_PRICING.guestLimit}回無料
+                      ゲスト1回無料
                     </div>
                     <div className="px-3 py-1.5 bg-white/20 backdrop-blur rounded-lg text-white text-sm font-medium">
-                      68テンプレート
+                      最大20,000字
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 text-white font-bold">
                     今すぐ使ってみる
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
@@ -149,7 +146,7 @@ export default function PortalPage() {
             </Link>
 
             {/* ドヤバナーAI */}
-            <Link href="/banner/dashboard" className="group">
+            <Link href="/banner" className="group">
               <div className="relative h-full bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-3xl p-6 sm:p-8 overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-violet-500/20">
                 {/* Decorations */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
@@ -234,9 +231,9 @@ export default function PortalPage() {
           
           <div className="grid sm:grid-cols-3 gap-6">
             {[
-              { icon: '📧', title: 'ビジネスメール作成', desc: 'お礼・謝罪・依頼など、シーンに合わせた文章を数秒で生成' },
+              { icon: '🧠', title: 'SEO記事の執筆', desc: 'アウトラインから本文まで、最大20,000字の記事を自動生成' },
               { icon: '🎨', title: 'SNS広告バナー', desc: 'A/B/C 3パターンを同時生成、広告運用の効率化に' },
-              { icon: '📝', title: 'ブログ・記事作成', desc: 'SEOを意識した構成案から本文まで、執筆をサポート' },
+              { icon: '📊', title: 'コンテンツマーケ', desc: 'SEO対策済みの記事と目を引くバナーでリード獲得を加速' },
             ].map((item, i) => (
               <div key={i} className="bg-gray-50 rounded-2xl p-6 text-center">
                 <div className="text-4xl mb-4">{item.icon}</div>
@@ -268,8 +265,8 @@ export default function PortalPage() {
               <ul className="space-y-3 mb-6">
                 {[
                   '登録なしで使える',
-                  `文章: ゲスト1日${KANTAN_PRICING.guestLimit}回`,
-                  `バナー: ゲスト1日${BANNER_PRICING.guestLimit}回`,
+                  `SEO記事: ゲスト1回 / ログイン1日${SEO_PRICING.freeLimit}回`,
+                  `バナー: ゲスト1日${BANNER_PRICING.guestLimit}枚`,
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-2 text-gray-600 text-sm">
                     <span className="text-emerald-500">✓</span>
@@ -277,30 +274,36 @@ export default function PortalPage() {
                   </li>
                 ))}
               </ul>
-              <Link href="/kantan/dashboard">
+              <Link href="/seo">
                 <button className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
                   無料で試す
                 </button>
               </Link>
             </div>
             
-            {/* セットプラン */}
+            {/* プロプラン */}
             <div className="bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl p-6 text-white relative overflow-hidden">
               <div className="absolute top-0 right-0 w-20 h-20 bg-white/10 rounded-full blur-xl" />
               <div className="relative">
                 <div className="inline-block px-2 py-1 bg-white/20 rounded text-xs font-bold mb-3">
-                  {BUNDLE_PRICING.discount}
+                  おすすめ
                 </div>
-                <h3 className="text-lg font-bold mb-2">{BUNDLE_PRICING.name}</h3>
-                <div className="text-3xl font-extrabold mb-1">{BUNDLE_PRICING.priceLabel}</div>
-                <p className="text-white/70 text-sm mb-4">{BUNDLE_PRICING.period}</p>
+                <h3 className="text-lg font-bold mb-2">プロプラン</h3>
+                <div className="text-3xl font-extrabold mb-1">¥9,980〜</div>
+                <p className="text-white/70 text-sm mb-4">/月（税込）</p>
                 <ul className="space-y-3 mb-6">
-                  {BUNDLE_PRICING.features.map((item, i) => (
-                    <li key={i} className="flex items-center gap-2 text-white/90 text-sm">
-                      <span>✓</span>
-                      {item.text}
-                    </li>
-                  ))}
+                  <li className="flex items-center gap-2 text-white/90 text-sm">
+                    <span>✓</span>
+                    ドヤライティングAI: 1日3回 / 20,000字
+                  </li>
+                  <li className="flex items-center gap-2 text-white/90 text-sm">
+                    <span>✓</span>
+                    ドヤバナーAI: 1日30枚
+                  </li>
+                  <li className="flex items-center gap-2 text-white/90 text-sm">
+                    <span>✓</span>
+                    画像生成・優先サポート
+                  </li>
                 </ul>
                 <Link href="/auth/signin">
                   <button className="w-full py-3 bg-white text-violet-600 font-bold rounded-xl hover:bg-white/90 transition-colors">
@@ -327,13 +330,13 @@ export default function PortalPage() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/kantan/dashboard">
+            <Link href="/seo">
               <button className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-lg font-bold rounded-full shadow-xl shadow-violet-500/25 hover:shadow-2xl hover:shadow-violet-500/30 transition-all flex items-center justify-center gap-2">
                 <Sparkles className="w-5 h-5" />
-                文章を作成する
+                SEO記事を作成する
               </button>
             </Link>
-            <Link href="/banner/dashboard">
+            <Link href="/banner">
               <button className="w-full sm:w-auto px-8 py-4 bg-white text-gray-700 text-lg font-bold rounded-full border-2 border-gray-200 hover:border-violet-300 hover:text-violet-600 transition-all flex items-center justify-center gap-2">
                 <Play className="w-5 h-5" />
                 バナーを作成する
