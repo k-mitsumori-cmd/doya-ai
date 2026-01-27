@@ -2,6 +2,12 @@ import { spawnSync } from 'node:child_process'
 import { existsSync } from 'fs'
 import { join } from 'path'
 
+// Vercel本番ビルドではdb pushをスキップ（スキーマは手動で管理）
+if (process.env.VERCEL === '1' || process.env.SKIP_DB_PUSH === '1') {
+  console.log('[db-push] Skipping db push on Vercel/CI build. Schema is managed manually.')
+  process.exit(0)
+}
+
 // リトライ可能なエラーパターン（接続プール制限など）
 const RETRYABLE_ERRORS = [
   'MaxClientsInSessionMode',
