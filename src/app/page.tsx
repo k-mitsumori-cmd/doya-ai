@@ -13,9 +13,6 @@ import {
   Clock,
   Users,
   TrendingUp,
-  Zap,
-  Star,
-  ChevronRight,
 } from 'lucide-react'
 import { SEO_PRICING, BANNER_PRICING } from '@/lib/pricing'
 
@@ -281,20 +278,15 @@ export default function TestPortalPage() {
                     </button>
                   </Link>
                 </div>
-                <div className="bg-[#0a0f1f] rounded-2xl p-6 border border-white/10">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
-                      <span className="text-white/60">従来の記事作成</span>
-                      <span className="text-red-400 font-bold">4〜8時間</span>
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <ChevronRight className="w-6 h-6 text-violet-400 rotate-90" />
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl">
-                      <span className="text-white">ドヤAI</span>
-                      <span className="text-violet-400 font-bold text-xl">30秒</span>
-                    </div>
-                  </div>
+                <div className="rounded-2xl overflow-hidden border border-white/10">
+                  <video
+                    src="https://storage.googleapis.com/studio-design-asset-files/projects/Jgqe2P25ak/s-1236x720_9090dae4-65f8-4060-a4ad-540e2bb40d80.mp4#t=0.01"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-auto"
+                  />
                 </div>
               </div>
             ) : (
@@ -325,20 +317,15 @@ export default function TestPortalPage() {
                     </button>
                   </Link>
                 </div>
-                <div className="bg-[#0a0f1f] rounded-2xl p-6 border border-white/10">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl">
-                      <span className="text-white/60">従来のバナー制作</span>
-                      <span className="text-red-400 font-bold">5,000円〜/枚</span>
-                    </div>
-                    <div className="flex items-center justify-center">
-                      <ChevronRight className="w-6 h-6 text-violet-400 rotate-90" />
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-xl">
-                      <span className="text-white">ドヤAI</span>
-                      <span className="text-fuchsia-400 font-bold text-xl">¥0</span>
-                    </div>
-                  </div>
+                <div className="rounded-2xl overflow-hidden border border-white/10">
+                  <video
+                    src="https://storage.googleapis.com/studio-design-asset-files/projects/Jgqe2P25ak/s-1216x720_9a24b0af-50e3-4f43-9db4-9537408d3552.mp4#t=0.01"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-auto"
+                  />
                 </div>
               </div>
             )}
