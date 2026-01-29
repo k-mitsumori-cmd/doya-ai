@@ -149,6 +149,26 @@ Elements: Shopping cart, credit card, store icons
 Text area: Leave space for title overlay
 Mood: Dynamic, trustworthy, commercial`,
   },
+  'compare-7': {
+    title: 'CRMツール比較',
+    category: 'business',
+    prompt: `Create a professional B2B comparison banner for "CRM Tool Comparison: Salesforce vs HubSpot vs Zoho".
+Style: Corporate, professional, comparison-focused
+Colors: Blue and teal gradient with subtle gold accents
+Elements: Three platform logos/icons side by side, comparison chart visual, customer icons, data flow arrows
+Text area: Leave space for title overlay
+Mood: Professional, authoritative, comprehensive`,
+  },
+  'compare-8': {
+    title: 'Web会議ツール比較',
+    category: 'it',
+    prompt: `Create a modern tech comparison banner for "Video Conferencing Tool Comparison: Zoom vs Teams vs Google Meet".
+Style: Clean, modern, collaboration-focused
+Colors: Blue, purple and green gradient (representing the three brands)
+Elements: Video call icons, multiple user avatars in a grid, screen sharing visual, microphone/camera icons
+Text area: Leave space for title overlay
+Mood: Connected, collaborative, professional`,
+  },
   // 構造タイプ別
   'structure-1': {
     title: 'DX推進の進め方',
