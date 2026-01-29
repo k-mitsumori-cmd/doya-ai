@@ -598,10 +598,10 @@ export default function SeoTestPage() {
       {/* 固定ヒーローセクション（ドヤバナーAIスタイル） */}
       {selectedTemplate && (
         <div
-          className={`fixed top-0 left-0 right-0 z-20 overflow-hidden transition-all duration-300 ease-in-out ${
+          className={`fixed top-16 left-0 right-0 md:left-[240px] z-20 overflow-hidden transition-all duration-300 ease-in-out ${
             isFormVisible
-              ? 'h-[15vh] sm:h-[18vh] md:h-[20vh] lg:h-[22vh]'
-              : 'h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh]'
+              ? 'h-[12vh] sm:h-[14vh] md:h-[16vh] lg:h-[18vh]'
+              : 'h-[25vh] sm:h-[32vh] md:h-[40vh] lg:h-[45vh]'
           }`}
         >
           {/* グラデーションオーバーレイ */}
@@ -711,9 +711,9 @@ export default function SeoTestPage() {
       <div
         className={`w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8 transition-all duration-300 ease-in-out ${
           isFormVisible
-            ? 'pt-[17vh] sm:pt-[20vh] md:pt-[22vh] lg:pt-[24vh]'
+            ? 'pt-[calc(4rem+14vh)] sm:pt-[calc(4rem+16vh)] md:pt-[calc(4rem+18vh)] lg:pt-[calc(4rem+20vh)]'
             : selectedTemplate
-              ? 'pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh]'
+              ? 'pt-[calc(4rem+27vh)] sm:pt-[calc(4rem+34vh)] md:pt-[calc(4rem+42vh)] lg:pt-[calc(4rem+47vh)]'
               : 'pt-6 sm:pt-8'
         }`}
       >
@@ -1466,74 +1466,73 @@ export default function SeoTestPage() {
               </div>
 
               {/* フッター（ナビゲーション） */}
-              <div className="px-6 sm:px-10 pb-8 sm:pb-10 flex flex-col gap-3">
+              <div className="px-6 sm:px-10 pb-8 sm:pb-10 flex flex-col gap-4">
+                {/* 戻る・次へボタン（横並び） */}
                 <div className="flex items-center gap-3">
                   {step > 1 && (
-              <button
+                    <button
                       type="button"
                       onClick={() => setStep((s) => Math.max(1, s - 1) as 1 | 2 | 3)}
                       className="h-12 sm:h-14 px-6 rounded-xl bg-gray-800 text-gray-300 font-bold text-sm hover:bg-gray-700 transition-colors flex items-center gap-2 border border-gray-700"
-              >
+                    >
                       <ArrowLeft className="w-4 h-4" />
-                戻る
-              </button>
+                      戻る
+                    </button>
                   )}
 
-                  <div className="flex flex-col gap-3">
-              <button
-                      type="button"
-                      onClick={() => {
-                        if (step < 3) {
-                          setStep((s) => Math.min(3, s + 1) as 1 | 2 | 3)
-                        } else {
-                          handleGenerate()
-                        }
-                      }}
-                      disabled={!canProceed || loading}
-                      className="flex-1 h-12 sm:h-14 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm sm:text-base shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    生成中...
-                  </>
-                      ) : step < 3 ? (
-                        <>
-                          次へ
-                          <ArrowRight className="w-5 h-5" />
-                  </>
-                ) : (
-                  <>
-                          記事を生成する
-                          <Sparkles className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-
-                    {/* バナー生成ボタン（Step 3のみ表示） */}
-                    {step === 3 && (
-                      <button
-                        type="button"
-                        onClick={handleGenerateBanner}
-                        disabled={!articleTitle.trim() || isGeneratingBanner}
-                        className="h-12 sm:h-14 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-sm sm:text-base shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
-                      >
-                        {isGeneratingBanner ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            バナー生成中...
-                          </>
-                        ) : (
-                          <>
-                            <ImageIcon className="w-5 h-5" />
-                            記事バナーを生成する
-                          </>
-                        )}
-                      </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (step < 3) {
+                        setStep((s) => Math.min(3, s + 1) as 1 | 2 | 3)
+                      } else {
+                        handleGenerate()
+                      }
+                    }}
+                    disabled={!canProceed || loading}
+                    className="flex-1 h-12 sm:h-14 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-sm sm:text-base shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        生成中...
+                      </>
+                    ) : step < 3 ? (
+                      <>
+                        次へ
+                        <ArrowRight className="w-5 h-5" />
+                      </>
+                    ) : (
+                      <>
+                        記事を生成する
+                        <Sparkles className="w-5 h-5" />
+                      </>
                     )}
-                  </div>
-            </div>
-      </div>
+                  </button>
+                </div>
+
+                {/* バナー生成ボタン（Step 3のみ表示） */}
+                {step === 3 && (
+                  <button
+                    type="button"
+                    onClick={handleGenerateBanner}
+                    disabled={!articleTitle.trim() || isGeneratingBanner}
+                    className="w-full h-12 sm:h-14 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold text-sm sm:text-base shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:shadow-purple-500/40 hover:translate-y-[-2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
+                  >
+                    {isGeneratingBanner ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        バナー生成中...
+                      </>
+                    ) : (
+                      <>
+                        <ImageIcon className="w-5 h-5" />
+                        記事バナーを生成する
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

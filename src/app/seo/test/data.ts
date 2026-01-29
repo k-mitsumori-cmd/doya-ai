@@ -492,33 +492,48 @@ const articleTemplates: ArticleTemplate[] = [
   },
 ]
 
+/**
+ * テンプレートにv2バナー画像URLを追加
+ * NanoBanana Pro v2で生成された専用画像を使用（未生成の場合は自動でフォールバック）
+ */
+function getImageUrl(template: ArticleTemplate): string {
+  // テンプレートID専用のAPIを使用
+  return `/api/seo/test/image/template/${template.id}`
+}
+
+// 画像URL付きのテンプレート一覧
+const templatesWithImages: ArticleTemplate[] = articleTemplates.map((t) => ({
+  ...t,
+  imageUrl: getImageUrl(t),
+}))
+
 // 棚（Section）の定義
 export const articleSections: ArticleSection[] = [
   {
     id: 'intro',
     title: 'まずはここから',
     description: '初心者向け・入門系の記事テンプレート',
-    templates: articleTemplates.filter(t => t.id.startsWith('intro-')),
+    templates: templatesWithImages.filter(t => t.id.startsWith('intro-')),
   },
   {
     id: 'compare',
     title: '比較・検討向け',
     description: 'ツール比較・選び方の記事テンプレート',
-    templates: articleTemplates.filter(t => t.id.startsWith('compare-')),
+    templates: templatesWithImages.filter(t => t.id.startsWith('compare-')),
   },
   {
     id: 'structure',
     title: '構造タイプ別',
     description: '記事の構造パターン別テンプレート',
-    templates: articleTemplates.filter(t => t.id.startsWith('structure-')),
+    templates: templatesWithImages.filter(t => t.id.startsWith('structure-')),
   },
   {
     id: 'template',
     title: '鉄板テンプレ',
     description: 'CV・リード獲得に効果的なテンプレート',
-    templates: articleTemplates.filter(t => t.id.startsWith('template-')),
+    templates: templatesWithImages.filter(t => t.id.startsWith('template-')),
   },
 ]
 
 // テンプレート一覧をエクスポート（バナー生成用）
-export { articleTemplates }
+export { templatesWithImages as articleTemplates }
