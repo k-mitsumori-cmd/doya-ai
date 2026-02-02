@@ -5,18 +5,95 @@ import { generateBanners } from '@/lib/nanobanner'
 export const runtime = 'nodejs'
 export const maxDuration = 300
 
+// ドヤバナーAI風の高品質プロンプトを生成するヘルパー
+function buildSeoArticlePrompt(params: {
+  articleTitle: string
+  visualConcept: string
+  mainColor: string
+  subColors: string[]
+  visualElements: string[]
+  mood: string
+  targetAudience: string
+}): string {
+  const { articleTitle, visualConcept, mainColor, subColors, visualElements, mood, targetAudience } = params
+
+  return `
+■ あなたは日本の一流デザイン制作会社の「SEO記事サムネイル制作チーム」です。
+
+以下の指示をすべて厳守し、
+SEOブログ記事のサムネイル画像として「そのまま使用できるプロ品質の画像」を生成してください。
+
+■ 最重要ルール（必ず厳守）
+- この画像はSEO記事のサムネイル（アイキャッチ画像）です
+- テキストは一切含めない（タイトルは後から別レイヤーでオーバーレイします）
+- プロフェッショナルで洗練されたデザイン
+- 小さいサイズでも視認性が高いシンプルな構図
+
+■ 記事テーマ
+【タイトル】${articleTitle}
+【ターゲット】${targetAudience}
+
+■ ビジュアルコンセプト
+${visualConcept}
+
+■ カラー指定（必ず反映）
+【メインカラー】${mainColor}
+【サブカラー】${subColors.join(', ')}
+- グラデーションを効果的に使用
+- 高級感とモダンさを両立
+- 背景は暗すぎず、明るすぎず
+
+■ 含めるビジュアル要素
+${visualElements.map((e) => `- ${e}`).join('\n')}
+
+■ ムード・雰囲気
+${mood}
+
+■ デザイン要件
+- 16:9のアスペクト比（1200x628px）
+- 中央〜やや上部にビジュアル要素を配置
+- 下部1/4は暗めのグラデーション（タイトルオーバーレイ用）
+- 写真のようなリアルさではなく、洗練されたイラスト/グラフィック調
+- ミニマルだがインパクトのある構図
+- ストック写真っぽさは避ける
+
+■ 禁止事項
+- テキスト、文字、ロゴ、ウォーターマーク
+- 人物の顔（プライバシー配慮）
+- ゴチャゴチャした複雑な構図
+- 安っぽいクリップアート調
+- 過度に派手な色使い
+
+■ ゴール
+「このサムネイルをクリックしたい」と思わせる、プロ品質のSEO記事サムネイル画像を生成してください。
+`.trim()
+}
+
 // SEO記事テンプレートのプロンプト定義
 const SEO_TEMPLATE_PROMPTS: Record<string, { title: string; prompt: string; category: string }> = {
   // まずはここから（初心者向け）
   'intro-1': {
     title: 'ChatGPTの使い方',
     category: 'it',
-    prompt: `Create a modern tech banner for an article about "How to use ChatGPT for beginners".
-Style: Clean, modern, tech-focused design
-Colors: Blue gradient with white accents
-Elements: AI/robot icon, chat bubbles, lightbulb for ideas
-Text area: Leave space at bottom for title overlay
-Mood: Friendly, approachable, educational`,
+    prompt: buildSeoArticlePrompt({
+      articleTitle: 'ChatGPTの使い方｜初心者でも5分でわかる完全ガイド',
+      visualConcept: `
+AIアシスタントとの対話をイメージした、フレンドリーで親しみやすいテック系デザイン。
+ChatGPTを象徴するようなAIアイコン（脳+回路、またはスマートなロボットアイコン）を中央に配置。
+チャットバブルやスパークルで「会話」「ひらめき」を表現。
+初心者でも安心して学べる雰囲気を演出。`,
+      mainColor: '#2563EB',
+      subColors: ['#3B82F6', '#60A5FA', '#DBEAFE', '#1E3A8A'],
+      visualElements: [
+        'モダンなAI/ロボットアイコン（親しみやすいデザイン）',
+        'チャットバブル（会話を象徴）',
+        ' ライトバルブまたはスパークル（ひらめき・アイデア）',
+        '微細なサーキットパターンまたはドット模様（テック感）',
+        '柔らかいグロー効果',
+      ],
+      mood: '親しみやすい、教育的、ポジティブ、テクノロジーを身近に感じさせる',
+      targetAudience: 'ChatGPTを初めて使う人、AI初心者',
+    }),
   },
   'intro-2': {
     title: 'Notionの始め方',
