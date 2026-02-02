@@ -897,6 +897,13 @@ function BannerTestPageInner() {
 
   // バナー生成
   const handleGenerate = async () => {
+    // 未ログインの場合はログインモーダルを表示
+    if (!session?.user) {
+      setLockModalType('login')
+      setShowLockModal(true)
+      return
+    }
+
     if (!selectedTemplate) {
       toast.error('テンプレートを選択してください')
       return
@@ -1075,47 +1082,7 @@ function BannerTestPageInner() {
             {/* グラデーション: 下は黒、上は明るく */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
             
-            {/* ロック状態のオーバーレイ */}
-            {selectedTemplateLockType && !selectedBanner && (
-              <div className="absolute inset-0 z-15 flex items-center justify-center">
-                <div className={`absolute inset-0 ${
-                  selectedTemplateLockType === 'login' 
-                    ? 'bg-red-900/30' 
-                    : 'bg-yellow-900/30'
-                }`} />
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className={`relative z-10 flex flex-col items-center gap-2 sm:gap-3 p-4 sm:p-6 rounded-xl backdrop-blur-md ${
-                    selectedTemplateLockType === 'login'
-                      ? 'bg-red-500/20 border border-red-500/50'
-                      : 'bg-yellow-500/20 border border-yellow-500/50'
-                  }`}
-                >
-                  <div className={`p-3 sm:p-4 rounded-full ${
-                    selectedTemplateLockType === 'login'
-                      ? 'bg-red-500/30'
-                      : 'bg-yellow-500/30'
-                  }`}>
-                    <Lock className={`w-8 h-8 sm:w-12 sm:h-12 ${
-                      selectedTemplateLockType === 'login'
-                        ? 'text-red-400'
-                        : 'text-yellow-400'
-                    }`} />
-                  </div>
-                  <p className="text-white text-sm sm:text-lg font-bold text-center">
-                    {selectedTemplateLockType === 'login'
-                      ? 'ログインすると使えます'
-                      : 'PROプランで解放'}
-                  </p>
-                  <p className="text-gray-300 text-xs sm:text-sm text-center max-w-xs">
-                    {selectedTemplateLockType === 'login'
-                      ? '無料アカウントを作成して、このスタイルで画像を生成しましょう'
-                      : 'PROプランにアップグレードして、全てのスタイルを使い放題に'}
-                  </p>
-                </motion.div>
-              </div>
-            )}
+            {/* ロック状態のオーバーレイ - 削除済み（生成ボタン押下時にログイン誘導へ変更） */}
             
             {selectedBanner ? (
               <img
