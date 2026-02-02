@@ -96,325 +96,272 @@ ${mood}
 `.trim()
 }
 
-// SEO記事テンプレートのプロンプト定義
+// SEO記事テンプレートのプロンプト定義（12種類）
 const SEO_TEMPLATE_PROMPTS: Record<string, { title: string; prompt: string; category: string }> = {
-  // まずはここから（初心者向け）
-  'intro-1': {
+  // 1. ChatGPTの使い方（IT/AI）
+  'chatgpt': {
     title: 'ChatGPTの使い方',
     category: 'it',
     prompt: buildSeoArticlePrompt({
       headlineText: 'ChatGPTの使い方',
       subheadText: '初心者でも5分でわかる完全ガイド',
-      visualConcept: `
-AIアシスタントとの対話をイメージした、フレンドリーで親しみやすいテック系デザイン。
+      visualConcept: `AIアシスタントとの対話をイメージした、フレンドリーで親しみやすいテック系デザイン。
 ChatGPTを象徴するようなAIアイコン（脳+回路、またはスマートなロボットアイコン）を中央上部に配置。
-チャットバブルやスパークルで「会話」「ひらめき」を表現。
-初心者でも安心して学べる雰囲気を演出。`,
+チャットバブルやスパークルで「会話」「ひらめき」を表現。`,
       mainColor: '#2563EB',
-      subColors: ['#3B82F6', '#60A5FA', '#DBEAFE', '#1E3A8A'],
+      subColors: ['#3B82F6', '#60A5FA', '#DBEAFE'],
       visualElements: [
-        'モダンなAI/ロボットアイコン（親しみやすいデザイン）を上部中央に配置',
+        'モダンなAI/ロボットアイコンを上部中央に配置',
         'チャットバブル（会話を象徴）',
-        'ライトバルブまたはスパークル（ひらめき・アイデア）',
-        '微細なサーキットパターンまたはドット模様（テック感）',
-        '柔らかいグロー効果',
+        'ライトバルブまたはスパークル',
+        'サーキットパターン（テック感）',
       ],
-      mood: '親しみやすい、教育的、ポジティブ、テクノロジーを身近に感じさせる',
+      mood: '親しみやすい、教育的、ポジティブ',
       targetAudience: 'ChatGPTを初めて使う人、AI初心者',
     }),
   },
-  'intro-2': {
+
+  // 2. Notionの始め方（IT/生産性）
+  'notion': {
     title: 'Notionの始め方',
     category: 'it',
-    prompt: `Create a productivity-focused banner for an article about "Getting started with Notion".
-Style: Minimalist, organized, workspace aesthetic
-Colors: Black and white with subtle color accents
-Elements: Notebook, checklist, organized blocks
-Text area: Leave space for title overlay
-Mood: Clean, productive, professional`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: 'Notionの始め方',
+      subheadText: '仕事効率が3倍になる活用術',
+      visualConcept: `ミニマルで整理されたワークスペースをイメージ。
+Notionのブロック構造を連想させる幾何学的なデザイン。
+ノートブック、チェックリスト、整理されたブロック要素を配置。`,
+      mainColor: '#191919',
+      subColors: ['#FFFFFF', '#F7F6F3', '#37352F'],
+      visualElements: [
+        'ノートブック/ドキュメントアイコン',
+        'チェックリストまたはToDoアイコン',
+        '整理されたブロック/グリッドパターン',
+        'シンプルなワークスペースイメージ',
+      ],
+      mood: 'クリーン、生産的、プロフェッショナル',
+      targetAudience: '仕事の効率化を目指すビジネスパーソン',
+    }),
   },
-  'intro-3': {
+
+  // 3. 副業の始め方（ビジネス）
+  'sidebusiness': {
     title: '副業の始め方',
     category: 'business',
-    prompt: `Create an inspiring banner for an article about "How to start a side business".
-Style: Professional yet approachable
-Colors: Green and gold tones (money/growth theme)
-Elements: Laptop, coins, growing plant, clock
-Text area: Leave space for title overlay
-Mood: Motivating, achievable, hopeful`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: '副業の始め方',
+      subheadText: '会社員でも始められる人気の副業10選',
+      visualConcept: `成長と収入増加をイメージした、希望に満ちたデザイン。
+ラップトップ、コイン、成長する植物などの要素で「努力」と「成果」を表現。`,
+      mainColor: '#059669',
+      subColors: ['#10B981', '#D97706', '#FBBF24'],
+      visualElements: [
+        'ラップトップまたはスマートフォン',
+        'コインまたは収入を示すアイコン',
+        '成長する植物または上向きの矢印',
+        '時計（時間の有効活用）',
+      ],
+      mood: 'モチベーティング、達成可能、希望に満ちた',
+      targetAudience: '副収入を得たい会社員、主婦',
+    }),
   },
-  'intro-4': {
-    title: 'プログラミング学習ロードマップ',
-    category: 'it',
-    prompt: `Create a tech education banner for "Programming learning roadmap".
-Style: Modern, educational, tech
-Colors: Purple and blue gradient
-Elements: Code brackets, path/roadmap visual, laptop
-Text area: Leave space for title overlay
-Mood: Structured, educational, achievable`,
-  },
-  'intro-5': {
+
+  // 4. 投資信託の選び方（金融）
+  'investment': {
     title: '投資信託の選び方',
     category: 'finance',
-    prompt: `Create a finance-focused banner for "How to choose investment trusts".
-Style: Professional, trustworthy
-Colors: Navy blue and gold
-Elements: Charts, graphs, coins, shield (security)
-Text area: Leave space for title overlay
-Mood: Reliable, educational, confident`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: '投資信託の選び方',
+      subheadText: '初心者向け失敗しない7つのポイント',
+      visualConcept: `信頼性と安定感を表現したプロフェッショナルなデザイン。
+チャート、グラフ、シールド（セキュリティ）などで「安心」と「成長」を表現。`,
+      mainColor: '#1E3A8A',
+      subColors: ['#3B82F6', '#D97706', '#FBBF24'],
+      visualElements: [
+        '上昇するチャートまたはグラフ',
+        'コインまたは資産アイコン',
+        'シールド（安全性・セキュリティ）',
+        '計算機または分析アイコン',
+      ],
+      mood: '信頼性がある、教育的、自信を与える',
+      targetAudience: '投資初心者、資産運用を始めたい人',
+    }),
   },
-  'intro-6': {
+
+  // 5. Webデザインの基本（デザイン）
+  'webdesign': {
     title: 'Webデザインの基本',
     category: 'design',
-    prompt: `Create a design-focused banner for "Web design basics".
-Style: Creative, modern, artistic
-Colors: Vibrant gradient (pink, purple, blue)
-Elements: Color palette, browser window, design tools
-Text area: Leave space for title overlay
-Mood: Creative, inspiring, accessible`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: 'Webデザインの基本',
+      subheadText: 'センスがなくても大丈夫！基礎から学ぶ',
+      visualConcept: `クリエイティブでモダンなデザイン要素を配置。
+カラーパレット、ブラウザウィンドウ、デザインツールのアイコンで「創造性」を表現。`,
+      mainColor: '#8B5CF6',
+      subColors: ['#EC4899', '#3B82F6', '#06B6D4'],
+      visualElements: [
+        'カラーパレットまたはスウォッチ',
+        'ブラウザウィンドウまたはUIフレーム',
+        'ペンツールまたはデザインツールアイコン',
+        '幾何学的な形状やグラデーション',
+      ],
+      mood: 'クリエイティブ、インスピレーション、アクセシブル',
+      targetAudience: 'Webデザインを学びたい初心者、ノンデザイナー',
+    }),
   },
-  'intro-7': {
-    title: 'リモートワークの始め方',
-    category: 'business',
-    prompt: `Create a lifestyle banner for "How to start remote work".
-Style: Modern, comfortable, professional
-Colors: Soft blue and warm neutral tones
-Elements: Home office, laptop, coffee cup, window view
-Text area: Leave space for title overlay
-Mood: Comfortable, productive, balanced`,
-  },
-  'intro-8': {
+
+  // 6. SNSマーケティング入門（マーケティング）
+  'snsmarketing': {
     title: 'SNSマーケティング入門',
     category: 'marketing',
-    prompt: `Create a social media marketing banner for beginners.
-Style: Dynamic, social, engaging
-Colors: Bright colors (Instagram-style gradient)
-Elements: Social media icons, speech bubbles, engagement metrics
-Text area: Leave space for title overlay
-Mood: Energetic, connected, modern`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: 'SNSマーケティング入門',
+      subheadText: 'フォロワー1万人達成の戦略とは',
+      visualConcept: `ダイナミックでソーシャルな雰囲気のデザイン。
+SNSアイコン、吹き出し、エンゲージメント指標などで「つながり」と「拡散」を表現。`,
+      mainColor: '#E1306C',
+      subColors: ['#833AB4', '#F77737', '#FCAF45'],
+      visualElements: [
+        'SNSプラットフォームを示すアイコン群',
+        '吹き出しまたはコメントアイコン',
+        'ハートやいいね、シェアアイコン',
+        'フォロワー増加を示す上向き矢印',
+      ],
+      mood: 'エネルギッシュ、つながり、モダン',
+      targetAudience: 'SNS運用を始めたい個人・企業',
+    }),
   },
-  // 比較・検討向け
-  'compare-1': {
+
+  // 7. プロジェクト管理ツール比較（IT/比較）
+  'projecttools': {
     title: 'プロジェクト管理ツール比較',
     category: 'it',
-    prompt: `Create a comparison-style banner for "Project management tool comparison".
-Style: Clean, organized, professional
-Colors: Blue and gray tones
-Elements: Multiple app icons, comparison table visual, checkmarks
-Text area: Leave space for title overlay
-Mood: Objective, helpful, comprehensive`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: 'プロジェクト管理ツール比較',
+      subheadText: 'Notion vs Asana vs Trello 徹底比較',
+      visualConcept: `整理された比較表をイメージしたクリーンなデザイン。
+複数のアプリアイコン、比較チャート、チェックマークで「選択」と「最適化」を表現。`,
+      mainColor: '#2563EB',
+      subColors: ['#64748B', '#0EA5E9', '#22C55E'],
+      visualElements: [
+        '複数のアプリ/ツールアイコン（並列配置）',
+        '比較表またはグリッドレイアウト',
+        'チェックマークまたは評価アイコン',
+        'ダッシュボードまたはカンバンボード',
+      ],
+      mood: '客観的、ヘルプフル、包括的',
+      targetAudience: 'チーム管理ツールを探しているビジネスパーソン',
+    }),
   },
-  'compare-2': {
-    title: 'クラウド会計ソフト比較',
-    category: 'finance',
-    prompt: `Create a business comparison banner for "Cloud accounting software comparison".
-Style: Professional, business-focused
-Colors: Green and blue (finance theme)
-Elements: Calculator, cloud icon, spreadsheet visual
-Text area: Leave space for title overlay
-Mood: Professional, informative, trustworthy`,
-  },
-  'compare-3': {
+
+  // 8. 動画編集ソフトおすすめ（クリエイティブ）
+  'videoediting': {
     title: '動画編集ソフトおすすめ',
     category: 'creative',
-    prompt: `Create a creative tools banner for "Best video editing software".
-Style: Dynamic, creative, professional
-Colors: Purple and orange gradient
-Elements: Film reel, timeline, play button, editing icons
-Text area: Leave space for title overlay
-Mood: Creative, professional, exciting`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: '動画編集ソフトおすすめ',
+      subheadText: '初心者からプロまで使える8選',
+      visualConcept: `ダイナミックでクリエイティブな映像制作をイメージ。
+フィルムリール、タイムライン、再生ボタンなどで「動画制作」を表現。`,
+      mainColor: '#7C3AED',
+      subColors: ['#F97316', '#EC4899', '#06B6D4'],
+      visualElements: [
+        'フィルムリールまたはビデオカメラアイコン',
+        '編集タイムラインのビジュアル',
+        '再生ボタンまたはプレイアイコン',
+        'エフェクトやトランジションを示す波形',
+      ],
+      mood: 'クリエイティブ、プロフェッショナル、エキサイティング',
+      targetAudience: '動画編集を始めたい人、YouTuber志望者',
+    }),
   },
-  'compare-4': {
-    title: 'オンライン英会話比較',
-    category: 'education',
-    prompt: `Create an education banner for "Online English conversation comparison".
-Style: Friendly, international, educational
-Colors: Blue and yellow (learning theme)
-Elements: Speech bubbles, globe, headphones, people icons
-Text area: Leave space for title overlay
-Mood: Friendly, global, achievable`,
-  },
-  'compare-5': {
+
+  // 9. CRM/MAツール比較（B2B）
+  'crmtools': {
     title: 'CRM/MAツール比較',
     category: 'business',
-    prompt: `Create a B2B software banner for "CRM/MA tool comparison".
-Style: Corporate, professional, tech
-Colors: Blue and teal gradient
-Elements: Dashboard, customer icons, automation visual
-Text area: Leave space for title overlay
-Mood: Professional, data-driven, efficient`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: 'CRM/MAツール比較',
+      subheadText: 'Salesforce・HubSpot・Zoho完全比較',
+      visualConcept: `コーポレートでプロフェッショナルなB2Bツール比較のイメージ。
+ダッシュボード、顧客アイコン、オートメーションビジュアルで「効率化」を表現。`,
+      mainColor: '#0891B2',
+      subColors: ['#2563EB', '#059669', '#D97706'],
+      visualElements: [
+        'ダッシュボードまたは分析画面',
+        '顧客/ユーザーアイコン群',
+        '自動化を示す歯車や矢印',
+        'データフローを示す接続線',
+      ],
+      mood: 'プロフェッショナル、データドリブン、効率的',
+      targetAudience: 'B2B企業のマーケター、営業担当者',
+    }),
   },
-  'compare-6': {
-    title: 'ECカートシステム比較',
-    category: 'ecommerce',
-    prompt: `Create an e-commerce banner for "EC cart system comparison".
-Style: Modern, commerce-focused
-Colors: Orange and purple gradient
-Elements: Shopping cart, credit card, store icons
-Text area: Leave space for title overlay
-Mood: Dynamic, trustworthy, commercial`,
-  },
-  'compare-7': {
-    title: 'CRMツール比較',
-    category: 'business',
-    prompt: `Create a professional B2B comparison banner for "CRM Tool Comparison: Salesforce vs HubSpot vs Zoho".
-Style: Corporate, professional, comparison-focused
-Colors: Blue and teal gradient with subtle gold accents
-Elements: Three platform logos/icons side by side, comparison chart visual, customer icons, data flow arrows
-Text area: Leave space for title overlay
-Mood: Professional, authoritative, comprehensive`,
-  },
-  'compare-8': {
-    title: 'Web会議ツール比較',
-    category: 'it',
-    prompt: `Create a modern tech comparison banner for "Video Conferencing Tool Comparison: Zoom vs Teams vs Google Meet".
-Style: Clean, modern, collaboration-focused
-Colors: Blue, purple and green gradient (representing the three brands)
-Elements: Video call icons, multiple user avatars in a grid, screen sharing visual, microphone/camera icons
-Text area: Leave space for title overlay
-Mood: Connected, collaborative, professional`,
-  },
-  // 構造タイプ別
-  'structure-1': {
+
+  // 10. DX推進の進め方（ビジネス/企業）
+  'dxstrategy': {
     title: 'DX推進の進め方',
     category: 'business',
-    prompt: `Create a corporate transformation banner for "How to promote DX".
-Style: Modern, corporate, innovative
-Colors: Blue gradient with tech accents
-Elements: Digital transformation visual, arrows, connected nodes
-Text area: Leave space for title overlay
-Mood: Progressive, strategic, modern`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: 'DX推進の進め方',
+      subheadText: '成功企業に学ぶ5つのステップ',
+      visualConcept: `デジタルトランスフォーメーションをイメージしたモダンで革新的なデザイン。
+デジタル変革ビジュアル、矢印、接続されたノードで「変革」と「進化」を表現。`,
+      mainColor: '#1E40AF',
+      subColors: ['#3B82F6', '#06B6D4', '#8B5CF6'],
+      visualElements: [
+        'デジタルトランスフォーメーションを示す変化の矢印',
+        '接続されたノードまたはネットワーク図',
+        'クラウドまたはデジタルアイコン',
+        '上昇するグラフまたは進捗を示すステップ',
+      ],
+      mood: '進歩的、戦略的、モダン',
+      targetAudience: '企業の経営者、DX推進担当者',
+    }),
   },
-  'structure-2': {
-    title: 'スタートアップ資金調達',
-    category: 'startup',
-    prompt: `Create a startup funding banner.
-Style: Dynamic, growth-focused
-Colors: Green and blue gradient
-Elements: Rocket, graph going up, handshake, money icons
-Text area: Leave space for title overlay
-Mood: Ambitious, growing, professional`,
-  },
-  'structure-3': {
-    title: 'SaaSトレンド20選',
-    category: 'it',
-    prompt: `Create a tech trends banner for "Top 20 SaaS trends".
-Style: Modern, tech-forward, list-style
-Colors: Purple and blue tech gradient
-Elements: Cloud icons, app windows, trend arrows
-Text area: Leave space for title overlay
-Mood: Innovative, comprehensive, cutting-edge`,
-  },
-  'structure-4': {
-    title: 'LP制作のコツ',
-    category: 'marketing',
-    prompt: `Create a marketing banner for "Landing page creation tips".
-Style: Web design focused, conversion-oriented
-Colors: Orange and white (CTA colors)
-Elements: Browser window, CTA button, conversion funnel
-Text area: Leave space for title overlay
-Mood: Action-oriented, professional, results-focused`,
-  },
-  'structure-5': {
-    title: 'マーケティング分析手法',
-    category: 'marketing',
-    prompt: `Create an analytics banner for "Marketing analysis methods".
-Style: Data-driven, analytical
-Colors: Blue and green data colors
-Elements: Charts, graphs, magnifying glass, data points
-Text area: Leave space for title overlay
-Mood: Analytical, insightful, strategic`,
-  },
-  'structure-6': {
-    title: 'Webライターになる方法',
-    category: 'creative',
-    prompt: `Create a writing career banner for "How to become a web writer".
-Style: Creative, professional, inspiring
-Colors: Warm orange and cream tones
-Elements: Keyboard, pen, document, coffee cup
-Text area: Leave space for title overlay
-Mood: Inspiring, achievable, creative`,
-  },
-  'structure-7': {
-    title: 'ブランディング戦略',
-    category: 'marketing',
-    prompt: `Create a branding strategy banner.
-Style: Premium, strategic, professional
-Colors: Navy and gold
-Elements: Brand identity elements, target visual, strategy icons
-Text area: Leave space for title overlay
-Mood: Strategic, premium, professional`,
-  },
-  // 鉄板テンプレ
-  'template-1': {
-    title: '採用ブランディング戦略',
-    category: 'hr',
-    prompt: `Create an HR/recruiting banner for "Recruitment branding strategy".
-Style: Professional, people-focused
-Colors: Blue and warm orange
-Elements: People icons, company building, handshake
-Text area: Leave space for title overlay
-Mood: Professional, welcoming, strategic`,
-  },
-  'template-2': {
-    title: 'コンテンツマーケティング',
-    category: 'marketing',
-    prompt: `Create a content marketing banner.
-Style: Creative, content-focused
-Colors: Purple and orange gradient
-Elements: Content blocks, engagement icons, megaphone
-Text area: Leave space for title overlay
-Mood: Engaging, creative, strategic`,
-  },
-  'template-3': {
-    title: 'ビジネス文書テンプレート集',
-    category: 'business',
-    prompt: `Create a business documents banner for "Business document template collection".
-Style: Clean, professional, organized
-Colors: Navy blue and white
-Elements: Document icons, folder, checklist
-Text area: Leave space for title overlay
-Mood: Professional, organized, helpful`,
-  },
-  'template-4': {
-    title: 'ECサイト構築ガイド',
-    category: 'ecommerce',
-    prompt: `Create an e-commerce guide banner.
-Style: Modern, commerce-focused
-Colors: Green and purple gradient
-Elements: Shopping cart, store icon, payment icons
-Text area: Leave space for title overlay
-Mood: Comprehensive, trustworthy, modern`,
-  },
-  'template-5': {
+
+  // 11. SEO完全ガイド（マーケティング）
+  'seoguide': {
     title: 'SEO完全ガイド',
     category: 'marketing',
-    prompt: `Create an SEO guide banner.
-Style: Digital marketing focused
-Colors: Blue and green gradient
-Elements: Search icon, ranking arrows, keywords visual
-Text area: Leave space for title overlay
-Mood: Comprehensive, expert, results-focused`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: 'SEO完全ガイド',
+      subheadText: '検索順位1位を獲得する方法',
+      visualConcept: `デジタルマーケティングとサーチエンジン最適化をイメージ。
+検索アイコン、ランキング矢印、キーワードビジュアルで「上位表示」を表現。`,
+      mainColor: '#059669',
+      subColors: ['#2563EB', '#0EA5E9', '#22C55E'],
+      visualElements: [
+        '検索アイコンまたは虫眼鏡',
+        '上昇するランキング矢印（1位を示す）',
+        'キーワードまたはタグのビジュアル',
+        'ウェブサイトまたはブラウザアイコン',
+      ],
+      mood: '包括的、エキスパート、結果重視',
+      targetAudience: 'SEOを学びたいマーケター、ブロガー',
+    }),
   },
-  'template-6': {
+
+  // 12. 新規事業立ち上げ（スタートアップ）
+  'newbusiness': {
     title: '新規事業立ち上げ',
     category: 'business',
-    prompt: `Create a new business launch banner.
-Style: Dynamic, entrepreneurial
-Colors: Orange and blue gradient
-Elements: Rocket launch, light bulb, growth chart
-Text area: Leave space for title overlay
-Mood: Ambitious, exciting, achievable`,
-  },
-  'template-7': {
-    title: 'データ分析入門',
-    category: 'it',
-    prompt: `Create a data analysis banner for beginners.
-Style: Tech-focused, educational
-Colors: Blue and purple data colors
-Elements: Charts, data visualization, magnifying glass
-Text area: Leave space for title overlay
-Mood: Educational, analytical, accessible`,
+    prompt: buildSeoArticlePrompt({
+      headlineText: '新規事業立ち上げ',
+      subheadText: 'アイデアから実現までの完全ロードマップ',
+      visualConcept: `起業とイノベーションをイメージしたダイナミックなデザイン。
+ロケット発射、電球、成長チャートで「スタート」と「成長」を表現。`,
+      mainColor: '#F97316',
+      subColors: ['#2563EB', '#059669', '#FBBF24'],
+      visualElements: [
+        'ロケット発射または上昇するアイコン',
+        '電球またはアイデアを示すアイコン',
+        '成長チャートまたは上向きグラフ',
+        'ターゲットまたはゴールアイコン',
+      ],
+      mood: '野心的、エキサイティング、達成可能',
+      targetAudience: '起業を考えている人、新規事業担当者',
+    }),
   },
 }
 
