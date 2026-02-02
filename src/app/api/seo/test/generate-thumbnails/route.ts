@@ -418,24 +418,37 @@ Mood: Educational, analytical, accessible`,
   },
 }
 
-// テンプレート画像を生成
-async function generateTemplateImage(templateId: string, prompt: string, category: string): Promise<string> {
+// テンプレート画像を生成（テキスト込み）
+async function generateTemplateImage(
+  templateId: string,
+  prompt: string,
+  category: string,
+  title: string
+): Promise<string> {
+  // タイトルからメインタイトルとサブタイトルを抽出（「｜」や「|」で分割）
+  const titleParts = title.split(/[｜|]/).map((s) => s.trim())
+  const headlineText = titleParts[0] || title
+  const subheadText = titleParts[1] || ''
+
   const templatePrompt = `${prompt}
 
-IMPORTANT INSTRUCTIONS:
+=== ADDITIONAL INSTRUCTIONS ===
 - Create a professional banner image suitable for an SEO article thumbnail
-- Size should be optimized for 16:9 or similar aspect ratio
+- Size: 1200x628px (16:9 aspect ratio)
+- The Japanese text MUST be rendered clearly and legibly in the image
+- Text should be placed in the lower portion of the image with a dark gradient panel behind it
 - Keep the design clean and readable at small sizes
-- DO NOT include any text in the image (text will be overlaid separately)
 - Use modern, professional design aesthetics`
 
   const result = await generateBanners(
     category,
-    'SEOテンプレート',
+    headlineText, // キーワードとしてメインタイトルを使用
     '1200x628', // OGP推奨サイズ
     {
-      headlineText: '',
+      headlineText: headlineText,
+      subheadText: subheadText,
       customImagePrompt: templatePrompt,
+      purpose: 'article_banner',
     },
     1
   )
@@ -498,7 +511,7 @@ export async function POST(request: NextRequest) {
       console.log(`[SEO Template Gen] Processing: ${templateId} - ${config.title}`)
 
       try {
-        const imageData = await generateTemplateImage(templateId, config.prompt, config.category)
+        const imageData = await generateTemplateImage(templateId, config.prompt, config.category, config.title)
         console.log(`[SEO Template Gen] Image generated for ${templateId}`)
 
         // データベースに保存
