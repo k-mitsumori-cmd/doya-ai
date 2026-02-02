@@ -478,3 +478,27 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
+// DELETE: 生成済みテンプレート画像を全て削除
+export async function DELETE() {
+  try {
+    // seo-article-で始まるテンプレートを全て削除
+    const result = await prisma.bannerTemplate.deleteMany({
+      where: {
+        templateId: {
+          startsWith: 'seo-article-',
+        },
+      },
+    })
+
+    console.log(`[SEO Template Gen] Deleted ${result.count} templates`)
+
+    return NextResponse.json({
+      message: `Deleted ${result.count} templates`,
+      deletedCount: result.count,
+    })
+  } catch (error: any) {
+    console.error('[SEO Template Gen] DELETE error:', error.message)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
