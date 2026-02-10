@@ -257,7 +257,61 @@ export const SERVICES: Service[] = [
     requiresAuth: false,
     isNew: true,
   },
-  
+
+  // ----------------------------------------
+  // ドヤインタビューAI（インタビュー記事生成）
+  // ----------------------------------------
+  {
+    id: 'interview',
+    name: 'ドヤインタビュー',
+    shortName: 'インタビュー',
+    description: 'インタビュー音声からプロ品質の記事を自動生成',
+    longDescription:
+      '音声・動画・PDF等の取材素材をアップロードするだけで、AIが文字起こし→構成→執筆→校正まで一気通貫で記事を生成。編集者の"中間工程"をAIが代行します。',
+    icon: '🎙️',
+    color: 'orange',
+    gradient: 'from-orange-500 to-amber-500',
+    bgGradient: 'from-orange-50 to-amber-50',
+    href: '/interview',
+    dashboardHref: '/interview',
+    pricingHref: '/interview/pricing',
+    guideHref: '/interview',
+    features: [
+      '音声/動画を自動文字起こし（話者分離対応）',
+      '10種類の執筆スキル（Q&A/ストーリー/プレスリリース等）',
+      'AI記事ドラフト生成（リアルタイムストリーミング）',
+      '校正・校閲（誤字脱字・表記揺れ修正）',
+      'プラットフォーム別タイトル提案',
+      '5GB超の大容量ファイル対応',
+    ],
+    useCases: [
+      'インタビュー音声の文字起こしに時間がかかる',
+      '取材後の記事化に数日かかっている',
+      'ライターのリソースが足りない',
+      '記事の品質にばらつきがある',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '1日3回まで',
+        dailyLimit: 3,
+        price: 0,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '1日30回まで',
+        dailyLimit: 30,
+        price: 9980,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_INTERVIEW_PRO_PRICE_ID,
+      },
+    },
+    status: 'active',
+    category: 'text',
+    order: 5,
+    requiresAuth: false,
+    isNew: true,
+  },
+
   // ----------------------------------------
   // LP作成AI（近日公開）
   // ----------------------------------------

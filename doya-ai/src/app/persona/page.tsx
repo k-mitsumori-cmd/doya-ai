@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 import {
   Sparkles,
   Image as ImageIcon,
@@ -14,6 +15,7 @@ import {
   X,
   Target,
   Check,
+  AlertTriangle,
 } from 'lucide-react'
 
 // バナーサイズオプション
@@ -86,6 +88,8 @@ export default function PersonaPage() {
   const [selectedCatchphrase, setSelectedCatchphrase] = useState('')
   const [activeTab, setActiveTab] = useState<'persona' | 'creatives' | 'checklist'>('persona')
   const [copied, setCopied] = useState<string | null>(null)
+  const [portraitError, setPortraitError] = useState('')
+  const [bannerError, setBannerError] = useState('')
 
   // ローカルストレージから履歴読み込み
   useEffect(() => {
@@ -109,6 +113,8 @@ export default function PersonaPage() {
 
     setLoading(true)
     setError('')
+    setPortraitError('')
+    setBannerError('')
     setGeneratedData(null)
     setPortraitImage(null)
     setBannerImage(null)
@@ -138,7 +144,7 @@ export default function PersonaPage() {
       }
 
       if (!data?.data || !data?.data?.persona) {
-        throw new Error('ペルソナデータの取得に失敗しました')
+        throw new Error('ペルソナデータの取得に失敗しました。もう一度お試しください。')
       }
 
       setGeneratedData(data.data)
@@ -161,6 +167,7 @@ export default function PersonaPage() {
     if (!generatedData?.persona) return
 
     setPortraitLoading(true)
+    setPortraitError('')
     try {
       const res = await fetch('/api/persona/portrait', {
         method: 'POST',
@@ -168,17 +175,29 @@ export default function PersonaPage() {
         body: JSON.stringify({ persona: generatedData.persona }),
       })
 
-      const data = await res.json()
+      const raw = await res.text()
+      let data: any = null
+      try {
+        data = raw ? JSON.parse(raw) : null
+      } catch {
+        data = null
+      }
+
+      if (!res.ok || !data) {
+        const msg = data?.error || 'ポートレート生成に失敗しました。もう一度お試しください。'
+        throw new Error(msg)
+      }
+
       if (data.success && data.image) {
         setPortraitImage(data.image)
         const stored = JSON.parse(localStorage.getItem('doya_persona_last') || '{}')
         stored.portrait = data.image
         localStorage.setItem('doya_persona_last', JSON.stringify(stored))
       } else {
-        throw new Error(data.error || 'ポートレート生成失敗')
+        throw new Error(data.error || 'ポートレート画像の取得に失敗しました')
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'ポートレート生成エラー')
+      setPortraitError(e instanceof Error ? e.message : 'ポートレート生成エラーが発生しました')
     } finally {
       setPortraitLoading(false)
     }
@@ -186,11 +205,12 @@ export default function PersonaPage() {
 
   const handleGenerateBanner = async () => {
     if (!generatedData?.persona || !selectedCatchphrase) {
-      setError('キャッチコピーを選択してください')
+      setBannerError('キャッチコピーを選択してください')
       return
     }
 
     setBannerLoading(true)
+    setBannerError('')
     try {
       const res = await fetch('/api/persona/banner', {
         method: 'POST',
@@ -203,14 +223,26 @@ export default function PersonaPage() {
         }),
       })
 
-      const data = await res.json()
+      const raw = await res.text()
+      let data: any = null
+      try {
+        data = raw ? JSON.parse(raw) : null
+      } catch {
+        data = null
+      }
+
+      if (!res.ok || !data) {
+        const msg = data?.error || 'バナー生成に失敗しました。もう一度お試しください。'
+        throw new Error(msg)
+      }
+
       if (data.success && data.image) {
         setBannerImage(data.image)
       } else {
-        throw new Error(data.error || 'バナー生成失敗')
+        throw new Error(data.error || 'バナー画像の取得に失敗しました')
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'バナー生成エラー')
+      setBannerError(e instanceof Error ? e.message : 'バナー生成エラーが発生しました')
     } finally {
       setBannerLoading(false)
     }
@@ -408,6 +440,13 @@ export default function PersonaPage() {
                       </button>
                     )}
 
+                    {portraitError && (
+                      <div className="mt-3 p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-xs flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <span>{portraitError}</span>
+                      </div>
+                    )}
+
                     {generatedData.persona.quote && (
                       <div className="mt-4 p-3 bg-slate-800/50 rounded-lg border-l-4 border-purple-500">
                         <p className="text-slate-300 text-sm italic">&ldquo;{generatedData.persona.quote}&rdquo;</p>
@@ -559,6 +598,13 @@ export default function PersonaPage() {
                         </button>
                       </div>
 
+                      {bannerError && (
+                        <div className="mt-3 p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-xs flex items-start gap-2">
+                          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                          <span>{bannerError}</span>
+                        </div>
+                      )}
+
                       {bannerImage && (
                         <div className="mt-4">
                           <img src={bannerImage} alt="Generated Banner" className="max-w-full h-auto rounded-lg border border-slate-700" />
@@ -684,6 +730,8 @@ export default function PersonaPage() {
           </div>
         )}
       </div>
+
+
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { BarChart3, PenLine, Palette, Sparkles } from 'lucide-react'
+import { BarChart3, PenLine, Palette, Sparkles, Mic, FileText, Wand2 } from 'lucide-react'
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -100,27 +100,65 @@ function SignInContent() {
           />
 
           <div className="relative">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-xs font-black tracking-wide">
-              <Sparkles className="w-4 h-4 text-blue-300" />
-              ドヤマーケAI
-            </div>
+            {callbackUrl.startsWith('/interview') ? (
+              <>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-xs font-black tracking-wide">
+                  <Mic className="w-4 h-4 text-purple-300" />
+                  ドヤインタビューAI
+                </div>
 
-            <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight">
-              マーケティング全体を
-              <span className="text-blue-300"> AIで一気通貫 </span>
-            </h2>
-            <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed">
-              ドヤバナーAIとドヤライティングAIで、企画→制作→改善までを最短で。
-              <br className="hidden sm:block" />
-              「作るだけ」で終わらない、成果につなげる制作体験へ。
-            </p>
+                <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight">
+                  インタビュー記事を
+                  <span className="text-purple-300"> AIが自動生成 </span>
+                </h2>
+                <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed">
+                  音声・動画をアップロードするだけ。文字起こし→構成→執筆→校正まで一気通貫。
+                </p>
+              </>
+            ) : callbackUrl.startsWith('/persona') ? (
+              <>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-xs font-black tracking-wide">
+                  <Sparkles className="w-4 h-4 text-blue-300" />
+                  ドヤペルソナAI
+                </div>
+
+                <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight">
+                  URLから
+                  <span className="text-blue-300"> ペルソナを自動生成 </span>
+                </h2>
+                <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed">
+                  WebサイトURLを入力するだけで、ターゲットペルソナとクリエイティブを生成。
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-xs font-black tracking-wide">
+                  <Sparkles className="w-4 h-4 text-blue-300" />
+                  ドヤマーケAI
+                </div>
+
+                <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight">
+                  マーケティング全体を
+                  <span className="text-blue-300"> AIで一気通貫 </span>
+                </h2>
+                <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed">
+                  ドヤバナーAIとドヤライティングAIで、企画→制作→改善までを最短で。
+                  <br className="hidden sm:block" />
+                  「作るだけ」で終わらない、成果につなげる制作体験へ。
+                </p>
+              </>
+            )}
 
             <div className="mt-8 grid gap-3">
-              {[
+              {(callbackUrl.startsWith('/interview') ? [
+                { icon: Mic, title: '音声→記事', desc: 'インタビュー音声から自動で記事を生成', tone: 'from-purple-500/20 to-indigo-500/20' },
+                { icon: FileText, title: '校正・ファクトチェック', desc: 'AIが品質をチェック、信頼性を担保', tone: 'from-emerald-500/20 to-teal-500/20' },
+                { icon: Wand2, title: 'SNS・翻訳', desc: '記事からSNS投稿文や多言語翻訳も一括生成', tone: 'from-amber-500/20 to-fuchsia-500/20' },
+              ] : [
                 { icon: Palette, title: 'ドヤバナーAI', desc: '広告バナーを最速で量産（A/Bテストに強い）', tone: 'from-emerald-500/20 to-blue-500/20' },
                 { icon: PenLine, title: 'ドヤライティングAI', desc: 'SEO記事を安定生成（分割生成・監査で品質担保）', tone: 'from-violet-500/20 to-indigo-500/20' },
                 { icon: BarChart3, title: '改善まで支援', desc: '訴求・コピー・構成を改善して成果に寄せる', tone: 'from-amber-500/20 to-fuchsia-500/20' },
-              ].map((item, idx) => (
+              ]).map((item, idx) => (
                 <motion.div
                   key={item.title}
                   className={`rounded-2xl border border-white/15 bg-gradient-to-br ${item.tone} backdrop-blur px-4 py-4 flex items-start gap-3`}
@@ -185,7 +223,7 @@ function SignInContent() {
             </div>
 
             <div className="pt-6 flex items-center justify-between gap-3 flex-wrap">
-              <Link href="/seo" className="text-sm font-black text-blue-600 hover:text-blue-700">
+              <Link href={callbackUrl.startsWith('/') ? callbackUrl : '/seo'} className="text-sm font-black text-blue-600 hover:text-blue-700">
                 ログインせずに試す →
               </Link>
               <div className="text-xs text-slate-500 font-bold">
