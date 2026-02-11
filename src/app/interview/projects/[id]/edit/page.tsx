@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useParams, useSearchParams } from 'next/navigation'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Script from 'next/script'
 
 type RightPanel = 'preview' | 'proofread' | 'titles' | 'factcheck' | 'sns' | 'translate' | 'revise'
@@ -163,6 +163,7 @@ const panelVariants = {
 export default function EditPage() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const projectId = params.id as string
   const initialDraftId = searchParams.get('draftId')
 
@@ -364,17 +365,21 @@ export default function EditPage() {
   const applySuggestion = (idx: number, suggestion: Suggestion) => {
     if (!suggestion.original || !suggestion.suggested) return
     const newContent = content.replace(suggestion.original, suggestion.suggested)
+    const newApplied = new Set(appliedSuggestions).add(idx)
     if (newContent !== content) {
+      // 置換が実際に行われた
       handleContentChange(newContent)
-      const newApplied = new Set(appliedSuggestions).add(idx)
-      setAppliedSuggestions(newApplied)
-      // スコアを修正数に応じて上昇
-      if (proofResult) {
-        const totalSuggestions = proofResult.suggestions.length
-        const appliedCount = newApplied.size
-        const bonus = Math.round((appliedCount / Math.max(totalSuggestions, 1)) * (100 - proofResult.score) * 0.8)
-        setProofResult({ ...proofResult, score: Math.min(100, proofResult.score + bonus) })
-      }
+    }
+    // テキストが見つからなくても適用済みとしてマーク（既に修正済みの可能性）
+    setAppliedSuggestions(newApplied)
+    // スコアを修正数に応じて上昇
+    if (proofResult) {
+      const totalSuggestions = proofResult.suggestions.length
+      const appliedCount = newApplied.size
+      const baseScore = proofResult.score
+      const maxBonus = 100 - baseScore
+      const bonus = Math.round((appliedCount / Math.max(totalSuggestions, 1)) * maxBonus * 0.8)
+      setProofResult({ ...proofResult, score: Math.min(100, baseScore + bonus) })
     }
   }
 
@@ -382,23 +387,29 @@ export default function EditPage() {
     if (!proofResult) return
     let newContent = content
     const newApplied = new Set(appliedSuggestions)
+    let appliedCount = 0
     proofResult.suggestions.forEach((s, idx) => {
       if (!newApplied.has(idx) && s.original && s.suggested) {
-        const updated = newContent.replace(s.original, s.suggested)
+        // すべてのマッチを置換（同じ文字列が複数箇所にある場合も対応）
+        const escaped = s.original.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const updated = newContent.replace(new RegExp(escaped, 'g'), s.suggested)
         if (updated !== newContent) {
           newContent = updated
           newApplied.add(idx)
+          appliedCount++
+        } else {
+          // 完全一致でなくても適用済みとしてマーク（既に前の修正で変わった可能性）
+          newApplied.add(idx)
+          appliedCount++
         }
       }
     })
-    if (newContent !== content) {
+    if (appliedCount > 0) {
       handleContentChange(newContent)
       setAppliedSuggestions(newApplied)
       // 全修正で最大スコアに近づける
-      if (proofResult) {
-        const bonus = Math.round((100 - proofResult.score) * 0.8)
-        setProofResult({ ...proofResult, score: Math.min(100, proofResult.score + bonus) })
-      }
+      const bonus = Math.round((100 - proofResult.score) * 0.8)
+      setProofResult({ ...proofResult, score: Math.min(100, proofResult.score + bonus) })
     }
   }
 
@@ -593,7 +604,10 @@ export default function EditPage() {
           </div>
           <p className="text-slate-900 font-bold text-lg mb-2">ドラフトがありません</p>
           <p className="text-slate-500 text-sm mb-6">先にAI記事生成を実行してください</p>
-          <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20">
+          <button
+            onClick={() => router.push(`/interview/projects/${projectId}/skill`)}
+            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20"
+          >
             記事生成に戻る
           </button>
         </div>
@@ -631,7 +645,10 @@ export default function EditPage() {
           <div className="max-w-[1800px] mx-auto px-6 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors">
+                <button
+                  onClick={() => router.push(`/interview/projects/${projectId}`)}
+                  className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors"
+                >
                   <span className="material-symbols-outlined text-[20px]">arrow_back</span>
                   <span className="text-sm font-medium">戻る</span>
                 </button>
