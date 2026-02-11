@@ -337,6 +337,7 @@ export default function EditPage() {
   // バナー画像
   const [bannerUrl, setBannerUrl] = useState<string | null>(null)
   const [bannerGenerating, setBannerGenerating] = useState(false)
+  const bannerAutoTriedRef = useRef(false)
 
   // エクスポートドロップダウン外クリック閉じ
   useEffect(() => {
@@ -449,6 +450,14 @@ export default function EditPage() {
       setBannerGenerating(false)
     }
   }, [projectId, content, bannerGenerating])
+
+  // バナー自動生成: 記事読み込み完了時にバナーが未生成なら自動で作成
+  useEffect(() => {
+    if (!loading && content.trim().length > 100 && !bannerUrl && !bannerGenerating && !bannerAutoTriedRef.current) {
+      bannerAutoTriedRef.current = true
+      generateBanner()
+    }
+  }, [loading, content, bannerUrl, bannerGenerating, generateBanner])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content)
