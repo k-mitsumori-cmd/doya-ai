@@ -286,55 +286,75 @@ export default function MaterialsPage() {
 
       const { signedUrl, materialId } = urlData
 
-      // Step 2: Supabase Storage へ直接PUT (Vercel経由しない!)
-      // XMLHttpRequest で進捗トラッキング
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
+      // Step 2: Supabase Storage へ直接PUT (リトライ付き)
+      const maxRetries = 3
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest()
 
-        xhr.upload.addEventListener('progress', (e) => {
-          if (e.lengthComputable) {
-            const progress = Math.round((e.loaded / e.total) * 100)
-            // 速度計算
-            const speedInfo = uploadSpeedRef.current.get(uploadKey)
-            if (speedInfo) {
-              const elapsed = (Date.now() - speedInfo.startTime) / 1000
-              if (elapsed > 0) {
-                speedInfo.speed = e.loaded / elapsed
-                speedInfo.lastLoaded = e.loaded
+            xhr.upload.addEventListener('progress', (e) => {
+              if (e.lengthComputable) {
+                const progress = Math.round((e.loaded / e.total) * 100)
+                // 速度計算
+                const speedInfo = uploadSpeedRef.current.get(uploadKey)
+                if (speedInfo) {
+                  const elapsed = (Date.now() - speedInfo.startTime) / 1000
+                  if (elapsed > 0) {
+                    speedInfo.speed = e.loaded / elapsed
+                    speedInfo.lastLoaded = e.loaded
+                  }
+                } else {
+                  uploadSpeedRef.current.set(uploadKey, { startTime: Date.now(), lastLoaded: e.loaded, speed: 0 })
+                }
+                setUploads((prev) => {
+                  const next = new Map(prev)
+                  const item = next.get(uploadKey)
+                  if (item) next.set(uploadKey, { ...item, progress, materialId })
+                  return next
+                })
               }
-            } else {
-              uploadSpeedRef.current.set(uploadKey, { startTime: Date.now(), lastLoaded: e.loaded, speed: 0 })
-            }
+            })
+
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve()
+              } else {
+                console.error('[upload] Supabase Storage error:', xhr.status, xhr.responseText)
+                reject(new Error(`Upload failed: ${xhr.status} - ${(xhr.responseText || 'Unknown error').slice(0, 200)}`))
+              }
+            })
+
+            xhr.addEventListener('error', () => reject(new Error('ネットワークエラー')))
+            xhr.addEventListener('abort', () => reject(new Error('アップロードが中断されました')))
+
+            const formData = new FormData()
+            formData.append('cacheControl', '3600')
+            formData.append('', file, file.name)
+
+            xhr.open('PUT', signedUrl)
+            xhr.setRequestHeader('x-upsert', 'true')
+            xhr.send(formData)
+          })
+          break // 成功したらループを抜ける
+        } catch (uploadErr: any) {
+          const is5xx = /Upload failed: 5\d\d/.test(uploadErr?.message || '')
+          if (is5xx && attempt < maxRetries) {
+            console.warn(`[interview] Upload attempt ${attempt} failed (${uploadErr.message}), retrying in ${attempt * 3}s...`)
+            // プログレスをリセットして再試行
             setUploads((prev) => {
               const next = new Map(prev)
               const item = next.get(uploadKey)
-              if (item) next.set(uploadKey, { ...item, progress, materialId })
+              if (item) next.set(uploadKey, { ...item, progress: 0 })
               return next
             })
+            uploadSpeedRef.current.delete(uploadKey)
+            await new Promise(r => setTimeout(r, attempt * 3000))
+            continue
           }
-        })
-
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve()
-          } else {
-            console.error('[upload] Supabase Storage error:', xhr.status, xhr.responseText)
-            reject(new Error(`Upload failed: ${xhr.status} - ${xhr.responseText || 'Unknown error'}`))
-          }
-        })
-
-        xhr.addEventListener('error', () => reject(new Error('ネットワークエラー')))
-        xhr.addEventListener('abort', () => reject(new Error('アップロードが中断されました')))
-
-        // Supabase Storage SDK と同じ FormData 形式
-        const formData = new FormData()
-        formData.append('cacheControl', '3600')
-        formData.append('', file, file.name)
-
-        xhr.open('PUT', signedUrl)
-        xhr.setRequestHeader('x-upsert', 'false')
-        xhr.send(formData)
-      })
+          throw uploadErr
+        }
+      }
 
       // Step 3: アップロード完了確認 (API → DBに保存)
       setUploads((prev) => {

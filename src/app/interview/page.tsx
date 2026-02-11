@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -60,15 +61,39 @@ const cardVariants = {
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
 }
 
+const UPLOAD_STEPS = [
+  { key: 'creating', label: 'プロジェクト作成', icon: 'folder_open', activeIcon: 'create_new_folder' },
+  { key: 'uploading', label: 'アップロード中', icon: 'cloud_upload', activeIcon: 'cloud_sync' },
+  { key: 'confirming', label: '確認処理', icon: 'verified', activeIcon: 'pending' },
+  { key: 'transcribing', label: '文字起こし開始', icon: 'mic', activeIcon: 'graphic_eq' },
+  { key: 'done', label: '完了', icon: 'check_circle', activeIcon: 'celebration' },
+]
+
+const UPLOAD_TIPS = [
+  { icon: 'auto_awesome', text: 'AI文字起こしは95%以上の精度で音声をテキスト化します', emoji: '✨' },
+  { icon: 'speed', text: '30分の音声でも約1〜2分で文字起こしが完了します', emoji: '⚡' },
+  { icon: 'mic', text: '複数の話者がいても、AIが自動で話者を分離します', emoji: '🎙️' },
+  { icon: 'article', text: '文字起こし結果からプロ品質の記事を自動生成します', emoji: '📝' },
+  { icon: 'edit_note', text: '生成された記事はエディタで自由に編集できます', emoji: '✏️' },
+  { icon: 'fact_check', text: 'ファクトチェック機能で信頼性を自動検証します', emoji: '🔍' },
+  { icon: 'share', text: 'SNS投稿文の自動生成で、記事の拡散も簡単です', emoji: '🚀' },
+  { icon: 'translate', text: '10言語への翻訳機能で、グローバル展開も対応', emoji: '🌐' },
+]
+
+const FLOATING_EMOJIS = ['🎙️', '📝', '✨', '🎬', '🎵', '💡', '⚡', '🔥', '🚀', '💜']
+
 export default function InterviewDashboard() {
   const { data: session } = useSession()
+  const router = useRouter()
   const userName = (session?.user?.name || '').split(' ')[0] || 'ゲスト'
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const uploadSpeedRef = useRef<Map<string, { startTime: number; lastLoaded: number; speed: number }>>(new Map())
 
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [dragOver, setDragOver] = useState(false)
   const [uploads, setUploads] = useState<Map<string, UploadingFile>>(new Map())
+  const [tipIndex, setTipIndex] = useState(0)
 
   // プロジェクト一覧取得
   useEffect(() => {
@@ -80,6 +105,27 @@ export default function InterviewDashboard() {
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+
+  // 豆知識サイクル
+  const hasActiveUpload = useMemo(() => {
+    return Array.from(uploads.values()).some(
+      (u) => u.status === 'creating' || u.status === 'uploading' || u.status === 'confirming' || u.status === 'transcribing'
+    )
+  }, [uploads])
+
+  useEffect(() => {
+    if (!hasActiveUpload) return
+    const interval = setInterval(() => setTipIndex((i) => (i + 1) % UPLOAD_TIPS.length), 4000)
+    return () => clearInterval(interval)
+  }, [hasActiveUpload])
+
+  // ブラウザ離脱防止
+  useEffect(() => {
+    if (!hasActiveUpload) return
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [hasActiveUpload])
 
   const recentProjects = projects.slice(0, 6)
 
@@ -135,35 +181,73 @@ export default function InterviewDashboard() {
 
       const { signedUrl, materialId } = urlData
 
-      // Step 3: Supabase Storage へ直接PUT
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
+      // Step 3: Supabase Storage へ直接PUT (リトライ付き)
+      const maxRetries = 3
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest()
 
-        xhr.upload.addEventListener('progress', (e) => {
-          if (e.lengthComputable) {
-            const progress = Math.round((e.loaded / e.total) * 100)
+            xhr.upload.addEventListener('progress', (e) => {
+              if (e.lengthComputable) {
+                const progress = Math.round((e.loaded / e.total) * 100)
+                // 速度計算
+                const speedInfo = uploadSpeedRef.current.get(uploadKey)
+                if (speedInfo) {
+                  const elapsed = (Date.now() - speedInfo.startTime) / 1000
+                  if (elapsed > 0) {
+                    speedInfo.speed = e.loaded / elapsed
+                    speedInfo.lastLoaded = e.loaded
+                  }
+                } else {
+                  uploadSpeedRef.current.set(uploadKey, { startTime: Date.now(), lastLoaded: e.loaded, speed: 0 })
+                }
+                setUploads((prev) => {
+                  const next = new Map(prev)
+                  const item = next.get(uploadKey)
+                  if (item) next.set(uploadKey, { ...item, progress, materialId })
+                  return next
+                })
+              }
+            })
+
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve()
+              } else {
+                const errMsg = xhr.responseText || ''
+                reject(new Error(`Upload failed: ${xhr.status}${errMsg ? ` - ${errMsg.slice(0, 200)}` : ''}`))
+              }
+            })
+            xhr.addEventListener('error', () => reject(new Error('ネットワークエラー')))
+            xhr.addEventListener('abort', () => reject(new Error('アップロードが中断されました')))
+
+            const formData = new FormData()
+            formData.append('cacheControl', '3600')
+            formData.append('', file, file.name)
+            xhr.open('PUT', signedUrl)
+            xhr.setRequestHeader('x-upsert', 'true')
+            xhr.send(formData)
+          })
+          break // 成功したらループを抜ける
+        } catch (uploadErr: any) {
+          const is5xx = /Upload failed: 5\d\d/.test(uploadErr?.message || '')
+          if (is5xx && attempt < maxRetries) {
+            console.warn(`[interview] Upload attempt ${attempt} failed (${uploadErr.message}), retrying in ${attempt * 3}s...`)
+            // プログレスをリセットして再試行
             setUploads((prev) => {
               const next = new Map(prev)
               const item = next.get(uploadKey)
-              if (item) next.set(uploadKey, { ...item, progress, materialId })
+              if (item) next.set(uploadKey, { ...item, progress: 0 })
               return next
             })
+            uploadSpeedRef.current.delete(uploadKey)
+            await new Promise(r => setTimeout(r, attempt * 3000))
+            continue
           }
-        })
-
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve()
-          else reject(new Error(`Upload failed: ${xhr.status}`))
-        })
-        xhr.addEventListener('error', () => reject(new Error('ネットワークエラー')))
-
-        const formData = new FormData()
-        formData.append('cacheControl', '3600')
-        formData.append('', file, file.name)
-        xhr.open('PUT', signedUrl)
-        xhr.setRequestHeader('x-upsert', 'false')
-        xhr.send(formData)
-      })
+          throw uploadErr
+        }
+      }
 
       // Step 4: アップロード確認
       setUploads((prev) => {
@@ -246,6 +330,12 @@ export default function InterviewDashboard() {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
     if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
     return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+  }
+
+  const formatSpeed = (bytesPerSec: number) => {
+    if (bytesPerSec < 1024) return `${bytesPerSec.toFixed(0)} B/s`
+    if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`
+    return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`
   }
 
   const getTimeSince = (dateStr: string) => {
@@ -365,70 +455,398 @@ export default function InterviewDashboard() {
         </div>
       </motion.div>
 
-      {/* Upload Progress */}
+      {/* Upload Progress Modal */}
       <AnimatePresence>
-        {uploads.size > 0 && (
+        {uploads.size > 0 && (() => {
+          const allUploads = Array.from(uploads.entries())
+          const activeUploads = allUploads.filter(([, u]) => u.status !== 'done' && u.status !== 'error')
+          const doneUploads = allUploads.filter(([, u]) => u.status === 'done')
+          const errorUploads = allUploads.filter(([, u]) => u.status === 'error')
+          const isAllDone = activeUploads.length === 0 && doneUploads.length > 0
+
+          // 全体の進捗 (各ステップを均等配分: creating=10%, uploading=60%, confirming=80%, transcribing=90%, done=100%)
+          const getStepProgress = (u: UploadingFile) => {
+            if (u.status === 'creating') return 5
+            if (u.status === 'uploading') return 10 + (u.progress * 0.6)
+            if (u.status === 'confirming') return 75
+            if (u.status === 'transcribing') return 85
+            if (u.status === 'done') return 100
+            return 0
+          }
+          const totalProgress = allUploads.length > 0
+            ? Math.round(allUploads.reduce((sum, [, u]) => sum + getStepProgress(u), 0) / allUploads.length)
+            : 0
+
+          const circumference = 2 * Math.PI * 54
+          const strokeDashoffset = circumference - (totalProgress / 100) * circumference
+
+          // 現在のメインステータスを取得
+          const primaryUpload = activeUploads[0]?.[1] || doneUploads[0]?.[1]
+          const currentStepIndex = primaryUpload ? UPLOAD_STEPS.findIndex(s => s.key === primaryUpload.status) : -1
+
+          return (
           <motion.div
-            className="space-y-3"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            key="upload-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-gradient-to-b from-slate-900/80 via-purple-900/40 to-slate-900/80 backdrop-blur-md flex items-center justify-center p-4"
           >
-            {Array.from(uploads.entries()).map(([key, upload]) => (
-              <div key={key} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className={`material-symbols-outlined text-2xl ${
-                      upload.status === 'done' ? 'text-emerald-500' :
-                      upload.status === 'error' ? 'text-red-500' :
-                      'text-[#7f19e6]'
-                    }`}>
-                      {upload.status === 'done' ? 'check_circle' :
-                       upload.status === 'error' ? 'error' :
-                       upload.status === 'creating' ? 'folder' :
-                       upload.status === 'transcribing' ? 'mic' :
-                       'upload_file'}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate">{upload.file.name}</p>
-                      <p className="text-xs text-slate-500">{formatFileSize(upload.file.size)}</p>
+            {/* 浮遊エモジ背景 */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {FLOATING_EMOJIS.map((emoji, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute text-2xl opacity-20"
+                  style={{
+                    left: `${5 + (i * 10) % 90}%`,
+                    top: `${10 + (i * 13) % 70}%`,
+                  }}
+                  animate={{
+                    y: [0, -30, 0],
+                    x: [0, i % 2 === 0 ? 15 : -15, 0],
+                    rotate: [0, i % 2 === 0 ? 20 : -20, 0],
+                    scale: [1, 1.3, 1],
+                    opacity: [0.15, 0.3, 0.15],
+                  }}
+                  transition={{
+                    duration: 4 + i * 0.6,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                    delay: i * 0.3,
+                  }}
+                >
+                  {emoji}
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 30 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden"
+            >
+              {/* グラデーション背景トップ */}
+              <div className="relative bg-gradient-to-br from-[#7f19e6] via-[#9b3ae6] to-[#b366f0] px-6 pt-8 pb-6 overflow-hidden">
+                {/* パーティクル装飾 */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  {[...Array(6)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute w-2 h-2 bg-white/20 rounded-full"
+                      style={{
+                        left: `${15 + i * 15}%`,
+                        top: `${20 + (i * 20) % 60}%`,
+                      }}
+                      animate={{
+                        y: [0, -20, 0],
+                        opacity: [0.2, 0.5, 0.2],
+                        scale: [1, 1.5, 1],
+                      }}
+                      transition={{
+                        duration: 3 + i * 0.5,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                        delay: i * 0.4,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <div className="relative flex flex-col items-center">
+                  {/* 円形プログレスリング */}
+                  <div className="relative w-36 h-36 mb-4">
+                    <svg className="w-36 h-36 -rotate-90" viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="6" />
+                      <motion.circle
+                        cx="60" cy="60" r="54" fill="none"
+                        stroke="white" strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={circumference}
+                        initial={{ strokeDashoffset: circumference }}
+                        animate={{ strokeDashoffset }}
+                        transition={{ duration: 0.6, ease: 'easeOut' }}
+                      />
+                    </svg>
+                    {/* パルスリング */}
+                    {!isAllDone && (
+                      <motion.div
+                        className="absolute inset-2 rounded-full border-2 border-white/20"
+                        animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0, 0.3] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
+                      />
+                    )}
+                    {/* 中央 */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      {isAllDone ? (
+                        <motion.span
+                          className="text-4xl"
+                          initial={{ scale: 0, rotate: -180 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                        >
+                          🎉
+                        </motion.span>
+                      ) : (
+                        <>
+                          <motion.span
+                            className="text-3xl font-black text-white tabular-nums leading-none"
+                            key={totalProgress}
+                            initial={{ scale: 1.2 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            {totalProgress}
+                          </motion.span>
+                          <span className="text-[10px] font-bold text-white/60 mt-0.5">%</span>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-slate-500">
-                    {upload.status === 'creating' && 'プロジェクト作成中...'}
-                    {upload.status === 'uploading' && `${upload.progress}%`}
-                    {upload.status === 'confirming' && '確認中...'}
-                    {upload.status === 'transcribing' && '文字起こし開始...'}
-                    {upload.status === 'done' && '完了'}
-                    {upload.status === 'error' && upload.error}
-                  </span>
+
+                  {/* タイトル */}
+                  <AnimatePresence mode="wait">
+                    <motion.h3
+                      key={isAllDone ? 'done' : 'active'}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="text-xl font-black text-white mb-1 text-center"
+                    >
+                      {isAllDone ? 'アップロード完了!' : 'アップロード中...'}
+                    </motion.h3>
+                  </AnimatePresence>
+                  <p className="text-sm text-white/70 font-bold">
+                    {isAllDone
+                      ? '文字起こしがバックグラウンドで進行中です'
+                      : 'このページを離れないでください'}
+                  </p>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-300 ${
-                      upload.status === 'error' ? 'bg-red-500' :
-                      upload.status === 'done' ? 'bg-emerald-500' :
-                      'bg-[#7f19e6]'
-                    }`}
-                    style={{ width: `${upload.status === 'done' || upload.status === 'transcribing' || upload.status === 'confirming' ? 100 : upload.progress}%` }}
-                  />
-                </div>
-                {upload.status === 'error' && (
-                  <button
-                    onClick={() => {
-                      const file = upload.file
-                      setUploads((prev) => { const next = new Map(prev); next.delete(key); return next })
-                      uploadFromDashboard(file)
-                    }}
-                    className="mt-2 text-xs font-bold text-red-600 hover:underline"
-                  >
-                    再試行
-                  </button>
-                )}
               </div>
-            ))}
+
+              {/* ステップインジケーター */}
+              {primaryUpload && !isAllDone && (
+                <div className="px-6 pt-5 pb-2">
+                  <div className="flex items-center justify-between">
+                    {UPLOAD_STEPS.filter(s => s.key !== 'done').map((step, i) => {
+                      const stepIdx = UPLOAD_STEPS.findIndex(s => s.key === step.key)
+                      const isDone = currentStepIndex > stepIdx
+                      const isCurrent = currentStepIndex === stepIdx
+                      return (
+                        <div key={step.key} className="flex items-center flex-1">
+                          <div className="flex flex-col items-center flex-1">
+                            <motion.div
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                                isDone
+                                  ? 'bg-green-500 shadow-md shadow-green-500/30'
+                                  : isCurrent
+                                  ? 'bg-[#7f19e6] shadow-md shadow-[#7f19e6]/30'
+                                  : 'bg-slate-100'
+                              }`}
+                              animate={isCurrent ? { scale: [1, 1.1, 1] } : {}}
+                              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                            >
+                              <span className={`material-symbols-outlined text-lg ${
+                                isDone || isCurrent ? 'text-white' : 'text-slate-400'
+                              }`}>
+                                {isDone ? 'check' : isCurrent ? step.activeIcon : step.icon}
+                              </span>
+                            </motion.div>
+                            <span className={`text-[9px] font-bold mt-1.5 text-center leading-tight ${
+                              isDone ? 'text-green-600' : isCurrent ? 'text-[#7f19e6]' : 'text-slate-400'
+                            }`}>
+                              {step.label}
+                            </span>
+                          </div>
+                          {i < UPLOAD_STEPS.length - 2 && (
+                            <div className={`h-0.5 w-full max-w-[30px] mx-0.5 rounded-full transition-all ${
+                              isDone ? 'bg-green-400' : 'bg-slate-200'
+                            }`} />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ファイル別進捗 */}
+              <div className="px-6 py-4 space-y-3 max-h-[200px] overflow-y-auto">
+                {allUploads.map(([key, upload]) => {
+                  const speedInfo = uploadSpeedRef.current.get(key)
+                  const speed = speedInfo?.speed || 0
+                  const remaining = speed > 0 && upload.status === 'uploading'
+                    ? (upload.file.size * (1 - upload.progress / 100)) / speed
+                    : 0
+                  const isDone = upload.status === 'done'
+                  const isError = upload.status === 'error'
+                  const isUploading = upload.status === 'uploading'
+                  const effectiveProgress = isDone || upload.status === 'transcribing' || upload.status === 'confirming' ? 100 : upload.progress
+
+                  return (
+                    <motion.div
+                      key={key}
+                      layout
+                      className={`rounded-xl p-4 border transition-all ${
+                        isDone ? 'bg-green-50 border-green-200' :
+                        isError ? 'bg-red-50 border-red-200' :
+                        'bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2.5">
+                        <motion.div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            isDone ? 'bg-green-500' : isError ? 'bg-red-500' : 'bg-[#7f19e6]'
+                          }`}
+                          animate={!isDone && !isError ? { rotate: [0, 5, -5, 0] } : {}}
+                          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                        >
+                          <span className="material-symbols-outlined text-white text-xl">
+                            {isDone ? 'check_circle' : isError ? 'error' : upload.status === 'transcribing' ? 'graphic_eq' : 'cloud_upload'}
+                          </span>
+                        </motion.div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-900 truncate">{upload.file.name}</p>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                            <span className="font-mono">{formatFileSize(upload.file.size)}</span>
+                            {isUploading && speed > 0 && (
+                              <>
+                                <span className="text-slate-300">·</span>
+                                <span className="text-[#7f19e6] font-bold">{formatSpeed(speed)}</span>
+                                {remaining > 0 && remaining < 3600 && (
+                                  <>
+                                    <span className="text-slate-300">·</span>
+                                    <span>残り{remaining < 60 ? `${Math.ceil(remaining)}秒` : `${Math.ceil(remaining / 60)}分`}</span>
+                                  </>
+                                )}
+                              </>
+                            )}
+                            {upload.status === 'creating' && <span className="text-amber-500 font-bold">プロジェクト作成中...</span>}
+                            {upload.status === 'confirming' && <span className="text-[#7f19e6] font-bold">確認処理中...</span>}
+                            {upload.status === 'transcribing' && <span className="text-[#7f19e6] font-bold">文字起こし開始...</span>}
+                            {isDone && <span className="text-green-600 font-bold">完了</span>}
+                            {isError && <span className="text-red-500 font-bold">{upload.error}</span>}
+                          </div>
+                        </div>
+                        {isUploading && (
+                          <span className="text-lg font-black text-[#7f19e6] tabular-nums">{upload.progress}%</span>
+                        )}
+                      </div>
+                      {/* プログレスバー */}
+                      <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                        <motion.div
+                          className={`h-full rounded-full ${
+                            isDone ? 'bg-green-500' :
+                            isError ? 'bg-red-400' :
+                            'bg-gradient-to-r from-[#7f19e6] to-[#b366f0]'
+                          }`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${effectiveProgress}%` }}
+                          transition={{ duration: 0.3 }}
+                        />
+                      </div>
+                      {isError && (
+                        <motion.button
+                          onClick={() => {
+                            const file = upload.file
+                            setUploads((prev) => { const next = new Map(prev); next.delete(key); return next })
+                            uploadFromDashboard(file)
+                          }}
+                          className="mt-2 flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                        >
+                          <span className="material-symbols-outlined text-sm">refresh</span>
+                          再試行
+                        </motion.button>
+                      )}
+                    </motion.div>
+                  )
+                })}
+              </div>
+
+              {/* 豆知識セクション */}
+              {!isAllDone && (
+                <div className="mx-6 mb-5 p-4 bg-gradient-to-r from-[#7f19e6]/5 via-[#9b3ae6]/5 to-[#b366f0]/5 rounded-xl border border-[#7f19e6]/10">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={tipIndex}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex items-start gap-3"
+                    >
+                      <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm text-lg">
+                        {UPLOAD_TIPS[tipIndex].emoji}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-black text-[#7f19e6]/50 uppercase tracking-wider mb-0.5">豆知識</p>
+                        <p className="text-sm text-slate-600 leading-relaxed font-medium">{UPLOAD_TIPS[tipIndex].text}</p>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                  {/* ドットインジケーター */}
+                  <div className="flex justify-center gap-1.5 mt-3">
+                    {UPLOAD_TIPS.map((_, i) => (
+                      <motion.div
+                        key={i}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${i === tipIndex ? 'bg-[#7f19e6] w-5' : 'bg-slate-300 w-1.5'}`}
+                        layout
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 完了時のアクション */}
+              {isAllDone && doneUploads.length > 0 && (
+                <div className="px-6 pb-6 space-y-3">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="p-4 bg-green-50 rounded-xl border border-green-200 text-center"
+                  >
+                    <p className="text-sm font-bold text-green-700 mb-1">
+                      {doneUploads.length}件のファイルをアップロードしました
+                    </p>
+                    <p className="text-xs text-green-600/70">
+                      文字起こしはバックグラウンドで進行中です
+                    </p>
+                  </motion.div>
+                  <div className="flex gap-3">
+                    <motion.button
+                      onClick={() => {
+                        setUploads(new Map())
+                        uploadSpeedRef.current.clear()
+                      }}
+                      className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors text-sm"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      閉じる
+                    </motion.button>
+                    {doneUploads[0]?.[1]?.projectId && (
+                      <motion.button
+                        onClick={() => router.push(`/interview/projects/${doneUploads[0][1].projectId}/materials`)}
+                        className="flex-1 px-4 py-3 rounded-xl bg-[#7f19e6] text-white font-bold hover:bg-[#6b12c9] transition-colors text-sm inline-flex items-center justify-center gap-2 shadow-lg shadow-[#7f19e6]/25"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        プロジェクトを開く
+                        <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
           </motion.div>
-        )}
+          )
+        })()}
       </AnimatePresence>
 
       {/* Recent Projects */}
