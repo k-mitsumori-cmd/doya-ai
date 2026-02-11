@@ -242,6 +242,10 @@ export const BANNER_PRICING: ServicePricing = {
   freeLimit: 9,       // 無料会員: 1日9枚（= デフォルト3枚生成3回相当）
   proLimit: 30,       // PRO: 1日30枚
   enterpriseLimit: 200, // ENTERPRISE: 1日200枚
+  historyDays: {
+    free: 7,
+    pro: -1,
+  },
   plans: [
     {
       id: 'banner-free',
@@ -303,6 +307,191 @@ export function getBannerDailyLimitByUserPlan(plan: string | null | undefined): 
   return BANNER_PRICING.freeLimit
 }
 
+// ========================================
+// ドヤペルソナAI 料金設定
+// ========================================
+// ペルソナ生成はテキスト中心でAPIコストが低い
+export const PERSONA_PRICING: ServicePricing = {
+  serviceId: 'persona',
+  serviceName: 'ドヤペルソナAI',
+  serviceIcon: '🎯',
+  guestLimit: 2,      // ゲスト: 1日2回
+  freeLimit: 5,       // ログイン無料: 1日5回
+  proLimit: 30,       // PRO: 1日30回
+  historyDays: {
+    free: 7,
+    pro: -1,
+  },
+  plans: [
+    {
+      id: 'persona-free',
+      name: '無料',
+      price: 0,
+      priceLabel: '¥0',
+      period: '',
+      description: 'まずはペルソナ生成を体験',
+      features: [
+        { text: 'ゲスト: 1日2回まで', included: true },
+        { text: 'ログイン: 1日5回まで', included: true },
+        { text: 'ペルソナ + クリエイティブ生成', included: true },
+        { text: 'ポートレート画像生成', included: true },
+        { text: '履歴保存（7日間）', included: true },
+      ],
+      cta: '無料で試す',
+    },
+    {
+      id: 'persona-pro',
+      name: 'プロ',
+      price: 9980,
+      priceLabel: '¥9,980',
+      period: '/月（税込）',
+      description: 'ペルソナ分析を本格活用',
+      popular: true,
+      color: 'purple',
+      features: [
+        { text: '1日30回まで生成', included: true },
+        { text: 'バナー画像生成', included: true },
+        { text: '広告コピー + LP構成案', included: true },
+        { text: '履歴保存（無制限）', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+  ],
+}
+
+// Persona: user.plan から日次上限を決定
+export function getPersonaDailyLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.PERSONA_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'BUNDLE') return PERSONA_PRICING.proLimit
+  if (p === 'ENTERPRISE') return PERSONA_PRICING.proLimit
+  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return PERSONA_PRICING.proLimit
+  return PERSONA_PRICING.freeLimit
+}
+
+// ========================================
+// ドヤインタビュー 料金設定
+// ========================================
+// インタビュー文字起こしはAssemblyAI APIコストが発生
+// 月次制限（分数ベース + アップロード容量制限）
+export const INTERVIEW_PRICING = {
+  serviceId: 'interview',
+  serviceName: 'ドヤインタビュー',
+  serviceIcon: '🎙️',
+  // 月次文字起こし分数制限
+  transcriptionMinutes: {
+    guest: 5,          // ゲスト: 合計5分
+    free: 30,          // ログイン無料: 毎月30分
+    pro: 150,          // PRO: 毎月150分
+    enterprise: 1000,  // エンタープライズ: 毎月1000分
+  },
+  // アップロード容量制限（バイト単位）
+  uploadSizeLimit: {
+    guest: 100 * 1024 * 1024,         // ゲスト: 100MB
+    free: 500 * 1024 * 1024,          // ログイン無料: 500MB
+    pro: 2 * 1024 * 1024 * 1024,      // PRO: 2GB
+    enterprise: 5 * 1024 * 1024 * 1024, // エンタープライズ: 5GB
+  },
+  guestLimit: 2,
+  freeLimit: 5,
+  proLimit: 30,
+  enterpriseLimit: 100,
+  historyDays: {
+    guest: 30,
+    free: 30,
+    pro: 30,
+    enterprise: 30,
+  },
+  plans: [
+    {
+      id: 'interview-free',
+      name: '無料',
+      price: 0,
+      priceLabel: '¥0',
+      period: '',
+      description: 'まずはインタビュー記事生成を体験',
+      features: [
+        { text: 'ゲスト: 文字起こし合計5分まで / 100MBまで', included: true },
+        { text: 'ログイン: 毎月30分まで / 500MBまで', included: true },
+        { text: 'AI記事生成 + スキル選択', included: true },
+        { text: '校正・タイトル提案', included: true },
+        { text: 'データ保存（30日間）', included: true },
+      ],
+      cta: '無料で試す',
+    },
+    {
+      id: 'interview-pro',
+      name: 'プロ',
+      price: 9980,
+      priceLabel: '¥9,980',
+      period: '/月（税込）',
+      description: 'インタビュー記事制作を本格活用',
+      popular: true,
+      color: 'purple',
+      features: [
+        { text: '毎月150分まで文字起こし', included: true },
+        { text: 'アップロード最大2GB', included: true },
+        { text: 'ファクトチェック・翻訳', included: true },
+        { text: 'SNS投稿文生成', included: true },
+        { text: 'データ保存（30日間）', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+    {
+      id: 'interview-enterprise',
+      name: 'エンタープライズ',
+      price: 49980,
+      priceLabel: '¥49,980',
+      period: '/月（税込）',
+      description: '大規模チーム・法人向け',
+      color: 'slate',
+      features: [
+        { text: '毎月1,000分まで文字起こし', included: true },
+        { text: 'アップロード最大5GB', included: true },
+        { text: '全機能利用可能', included: true },
+        { text: 'チーム運用・大量制作', included: true },
+        { text: '専任サポート', included: true },
+      ],
+      cta: 'エンタープライズを始める',
+    },
+  ],
+}
+
+// Interview: user.plan から制限を決定
+export function getInterviewLimitsByPlan(plan: string | null | undefined): {
+  transcriptionMinutes: number
+  uploadSizeLimit: number
+} {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.INTERVIEW_DISABLE_LIMITS === '1') {
+    return { transcriptionMinutes: -1, uploadSizeLimit: -1 }
+  }
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'ENTERPRISE') return {
+    transcriptionMinutes: INTERVIEW_PRICING.transcriptionMinutes.enterprise,
+    uploadSizeLimit: INTERVIEW_PRICING.uploadSizeLimit.enterprise,
+  }
+  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS' || p === 'BUNDLE') return {
+    transcriptionMinutes: INTERVIEW_PRICING.transcriptionMinutes.pro,
+    uploadSizeLimit: INTERVIEW_PRICING.uploadSizeLimit.pro,
+  }
+  return {
+    transcriptionMinutes: INTERVIEW_PRICING.transcriptionMinutes.free,
+    uploadSizeLimit: INTERVIEW_PRICING.uploadSizeLimit.free,
+  }
+}
+
+export function getInterviewGuestLimits(): {
+  transcriptionMinutes: number
+  uploadSizeLimit: number
+} {
+  return {
+    transcriptionMinutes: INTERVIEW_PRICING.transcriptionMinutes.guest,
+    uploadSizeLimit: INTERVIEW_PRICING.uploadSizeLimit.guest,
+  }
+}
+
 // 30枚/日を超える利用（チーム/法人/大量生成など）の相談導線
 export const HIGH_USAGE_CONTACT_URL =
   process.env.NEXT_PUBLIC_HIGH_USAGE_CONTACT_URL ||
@@ -358,6 +547,10 @@ export function getPricingByService(serviceId: string): ServicePricing | null {
       return SEO_PRICING
     case 'banner':
       return BANNER_PRICING
+    case 'persona':
+      return PERSONA_PRICING
+    case 'interview':
+      return INTERVIEW_PRICING as any
     default:
       return null
   }
@@ -385,7 +578,7 @@ export function getDailyLimit(serviceId: string, userType: 'guest' | 'free' | 'p
 
 // プランを取得（無料版/有料版など）
 export function getPlanById(planId: string): Plan | null {
-  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans]
+  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...PERSONA_PRICING.plans, ...INTERVIEW_PRICING.plans]
   return allPlans.find(p => p.id === planId) || null
 }
 
