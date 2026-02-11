@@ -41,6 +41,7 @@ interface TranscriptionProgress {
   fileSize: number | null
   status: 'starting' | 'processing' | 'completed' | 'error'
   error?: string
+  durationMinutes?: number | null
 }
 
 const TRANSCRIPTION_STEPS = [
@@ -438,23 +439,35 @@ export default function MaterialsPage() {
       })
 
       const data = await res.json()
-      if (data.success) {
-        // 完了
+
+      // ゲスト制限超過
+      if (data.limitExceeded) {
         setTranscribing((prev) => {
           const next = new Map(prev)
           const info = next.get(materialId)
-          if (info) next.set(materialId, { ...info, status: 'completed' })
+          if (info) next.set(materialId, { ...info, status: 'error', error: data.error || 'ゲストの文字起こし上限（5分）に達しました。無料登録で月30分に拡大できます。' })
+          return next
+        })
+        return
+      }
+
+      if (data.success) {
+        // 完了 — durationMinutesを保持
+        setTranscribing((prev) => {
+          const next = new Map(prev)
+          const info = next.get(materialId)
+          if (info) next.set(materialId, { ...info, status: 'completed', durationMinutes: data.durationMinutes || null })
           return next
         })
         await fetchProject()
-        // 3秒後に表示を消す
+        // 5秒後に表示を消す（分数表示を確認できるよう延長）
         setTimeout(() => {
           setTranscribing((prev) => {
             const next = new Map(prev)
             next.delete(materialId)
             return next
           })
-        }, 3000)
+        }, 5000)
       } else {
         setTranscribing((prev) => {
           const next = new Map(prev)
@@ -957,7 +970,14 @@ export default function MaterialsPage() {
                           ? '文字起こしエラー'
                           : '文字起こし中...'}
                       </p>
-                      <p className="text-xs text-slate-600">{info.fileName}</p>
+                      <p className="text-xs text-slate-600">
+                        {info.fileName}
+                        {info.status === 'completed' && info.durationMinutes && (
+                          <span className="ml-2 text-green-600 font-bold">
+                            ({info.durationMinutes}分の文字起こしが完了しました)
+                          </span>
+                        )}
+                      </p>
                     </div>
                   </div>
                   {isActive && (

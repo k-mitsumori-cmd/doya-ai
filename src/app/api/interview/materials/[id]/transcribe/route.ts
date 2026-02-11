@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { transcribeFromUrl } from '@/lib/interview/transcription'
+import { getInterviewGuestLimits } from '@/lib/pricing'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
@@ -57,6 +58,32 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         { success: false, error: 'ファイルがアップロードされていません' },
         { status: 400 }
       )
+    }
+
+    // ゲストユーザーの文字起こし上限チェック
+    if (!userId && guestId) {
+      const guestLimits = getInterviewGuestLimits()
+      const limitSeconds = guestLimits.transcriptionMinutes * 60 // 5分 = 300秒
+
+      // ゲストの合計使用秒数を集計
+      const guestUsage = await prisma.interviewMaterial.aggregate({
+        _sum: { duration: true },
+        where: {
+          project: { guestId },
+          status: 'COMPLETED',
+        },
+      })
+      const usedSeconds = guestUsage._sum.duration || 0
+
+      if (usedSeconds >= limitSeconds) {
+        return NextResponse.json({
+          success: false,
+          error: `ゲストユーザーは合計${guestLimits.transcriptionMinutes}分までの文字起こしが可能です。無料登録で月${30}分に拡大できます。`,
+          limitExceeded: true,
+          usedMinutes: Math.ceil(usedSeconds / 60),
+          limitMinutes: guestLimits.transcriptionMinutes,
+        }, { status: 403 })
+      }
     }
 
     // 既に処理中の文字起こしがあるかチェック
@@ -116,6 +143,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         language,
       })
 
+      // duration計算: segmentsの最後のendか、AssemblyAIのaudio_durationから取得
+      let durationSeconds = 0
+      if (result.segments && result.segments.length > 0) {
+        durationSeconds = Math.ceil(result.segments[result.segments.length - 1].end)
+      }
+
       // 結果を保存
       await prisma.interviewTranscription.update({
         where: { id: transcription.id },
@@ -131,7 +164,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
       await prisma.interviewMaterial.update({
         where: { id: materialId },
-        data: { status: 'COMPLETED' },
+        data: {
+          status: 'COMPLETED',
+          duration: durationSeconds > 0 ? durationSeconds : null,
+        },
       })
 
       // プロジェクトステータスも更新
@@ -140,6 +176,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         data: { status: 'EDITING' },
       })
 
+      const durationMinutes = durationSeconds > 0 ? Math.ceil(durationSeconds / 60) : null
+
       return NextResponse.json({
         success: true,
         transcriptionId: transcription.id,
@@ -147,6 +185,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         text: result.text.slice(0, 500) + (result.text.length > 500 ? '...' : ''),
         provider: result.provider,
         segmentCount: result.segments.length,
+        durationSeconds,
+        durationMinutes,
       })
     } catch (transcribeError: any) {
       // 文字起こし失敗

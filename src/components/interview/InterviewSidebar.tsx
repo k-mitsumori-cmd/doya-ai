@@ -104,6 +104,13 @@ function UsageStats({ showLabel, isLoggedIn, planLabel, isCollapsed }: { showLab
 
   if (!showLabel || !isLoggedIn) return null
 
+  // 円形ゲージ用の計算
+  const gaugeRadius = 36
+  const gaugeCircumference = 2 * Math.PI * gaugeRadius
+  const gaugeOffset = gaugeCircumference - (pct / 100) * gaugeCircumference
+  const gaugeColor = remainingMinutes === 0 ? '#f87171' : isNearLimit ? '#fbbf24' : '#a855f7'
+  const gaugeBgColor = 'rgba(255,255,255,0.1)'
+
   return (
     <AnimatePresence>
       {showLabel && (
@@ -115,57 +122,72 @@ function UsageStats({ showLabel, isLoggedIn, planLabel, isCollapsed }: { showLab
         >
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2 px-1">文字起こし利用状況</p>
           <div className="bg-white/5 rounded-xl p-3 border border-white/10 space-y-2">
-            {/* 残り分数を目立つ表示 */}
-            {loaded && (
-              <div className={`flex items-center justify-between rounded-lg px-2.5 py-2 ${
-                remainingMinutes === 0 ? 'bg-red-500/20' : isNearLimit ? 'bg-amber-500/15' : 'bg-white/5'
-              }`}>
-                <div className="flex items-center gap-2">
-                  <span className={`material-symbols-outlined text-lg ${
-                    remainingMinutes === 0 ? 'text-red-300' : isNearLimit ? 'text-amber-300' : 'text-[#a855f7]'
-                  }`}>timer</span>
-                  <span className="text-[11px] text-white/70 font-bold">残り</span>
+            {/* 円形ゲージメーター */}
+            {loaded && limitMinutes > 0 && (
+              <div className="flex items-center gap-3">
+                <div className="relative w-20 h-20 flex-shrink-0">
+                  <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                    {/* 背景リング */}
+                    <circle
+                      cx="40" cy="40" r={gaugeRadius}
+                      fill="none"
+                      stroke={gaugeBgColor}
+                      strokeWidth="5"
+                    />
+                    {/* プログレスリング */}
+                    <motion.circle
+                      cx="40" cy="40" r={gaugeRadius}
+                      fill="none"
+                      stroke={gaugeColor}
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                      strokeDasharray={gaugeCircumference}
+                      initial={{ strokeDashoffset: gaugeCircumference }}
+                      animate={{ strokeDashoffset: gaugeOffset }}
+                      transition={{ duration: 1, ease: 'easeOut' }}
+                    />
+                  </svg>
+                  {/* 中央の数値 */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-base font-black tabular-nums leading-none ${
+                      remainingMinutes === 0 ? 'text-red-300' : isNearLimit ? 'text-amber-300' : 'text-white'
+                    }`}>
+                      {remainingMinutes === -1 ? '∞' : remainingMinutes}
+                    </span>
+                    <span className="text-[8px] text-white/50 font-bold mt-0.5">分 残り</span>
+                  </div>
                 </div>
-                <span className={`text-lg font-black tabular-nums ${
-                  remainingMinutes === 0 ? 'text-red-300' : isNearLimit ? 'text-amber-300' : 'text-white'
-                }`}>
-                  {remainingMinutes === -1 ? '∞' : `${remainingMinutes}`}
-                  <span className="text-[11px] text-white/50 font-bold ml-0.5">分</span>
-                </span>
+                <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="text-[11px] text-white/60 font-bold">今月の使用量</div>
+                  <div className={`text-sm font-black tabular-nums ${isNearLimit ? 'text-amber-300' : 'text-white/90'}`}>
+                    {usedMinutes}<span className="text-[10px] text-white/50 font-bold"> / {limitMinutes}分</span>
+                  </div>
+                  <div className="text-[10px] text-white/30 font-bold flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[10px]">schedule</span>
+                    毎月リセット
+                  </div>
+                </div>
               </div>
             )}
-            <div>
-              <div className="flex items-center justify-between text-[11px] mb-1">
-                <span className="text-white/60 font-bold">今月の使用量</span>
-                {loaded ? (
-                  <span className={`font-black tabular-nums text-[10px] ${isNearLimit ? 'text-amber-300' : 'text-white/70'}`}>
-                    {usedMinutes} / {limitMinutes === -1 ? '∞' : `${limitMinutes}分`}
-                  </span>
-                ) : (
-                  <span className="text-white/50 text-[10px]">--</span>
-                )}
+            {/* 無制限の場合 */}
+            {loaded && limitMinutes === -1 && (
+              <div className="flex items-center gap-2 px-2 py-2">
+                <span className="material-symbols-outlined text-lg text-[#a855f7]">all_inclusive</span>
+                <span className="text-sm font-black text-white">無制限</span>
               </div>
-              {limitMinutes > 0 && (
-                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      remainingMinutes === 0 ? 'bg-red-400' : isNearLimit ? 'bg-amber-400' : 'bg-[#a855f7]'
-                    }`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              )}
-            </div>
+            )}
+            {/* ロード中 */}
+            {!loaded && (
+              <div className="flex items-center justify-center py-4">
+                <span className="material-symbols-outlined text-white/30 text-sm animate-spin">sync</span>
+              </div>
+            )}
             {loaded && remainingMinutes === 0 && (
               <div className="flex items-center gap-1.5 text-[10px] text-red-300 font-bold">
                 <span className="material-symbols-outlined text-xs">warning</span>
                 <span>上限に達しました。プランをアップグレードしてください。</span>
               </div>
             )}
-            <div className="flex items-center gap-1.5 text-[10px] text-white/30 font-bold">
-              <span className="material-symbols-outlined text-[10px]">schedule</span>
-              <span>毎月リセット</span>
-            </div>
           </div>
         </motion.div>
       )}
