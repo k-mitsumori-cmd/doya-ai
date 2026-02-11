@@ -37,7 +37,7 @@ const INTERVIEW_NAV: NavItem[] = [
 ]
 
 // 利用分数表示コンポーネント
-function UsageStats({ showLabel, isLoggedIn, planLabel }: { showLabel: boolean; isLoggedIn: boolean; planLabel: string }) {
+function UsageStats({ showLabel, isLoggedIn, planLabel, isCollapsed }: { showLabel: boolean; isLoggedIn: boolean; planLabel: string; isCollapsed: boolean }) {
   const [usedMinutes, setUsedMinutes] = useState(0)
   const [limitMinutes, setLimitMinutes] = useState(0)
   const [loaded, setLoaded] = useState(false)
@@ -56,11 +56,53 @@ function UsageStats({ showLabel, isLoggedIn, planLabel }: { showLabel: boolean; 
       .catch(() => {})
   }, [isLoggedIn])
 
-  if (!showLabel || !isLoggedIn) return null
-
   const pct = limitMinutes > 0 ? Math.min((usedMinutes / limitMinutes) * 100, 100) : 0
   const isNearLimit = pct >= 80
   const remainingMinutes = limitMinutes > 0 ? Math.max(limitMinutes - usedMinutes, 0) : -1
+
+  // 折りたたみ時: コンパクトアイコン
+  if (isCollapsed && !showLabel) {
+    if (!isLoggedIn) return null
+    return (
+      <div className="flex justify-center mb-2" title={loaded ? `残り ${remainingMinutes === -1 ? '無制限' : `${remainingMinutes}分`}` : '文字起こし利用状況'}>
+        <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center ${
+          loaded && remainingMinutes === 0 ? 'bg-red-500/20' : isNearLimit ? 'bg-amber-500/20' : 'bg-white/10'
+        }`}>
+          <span className={`material-symbols-outlined text-lg ${
+            loaded && remainingMinutes === 0 ? 'text-red-300' : isNearLimit ? 'text-amber-300' : 'text-white/70'
+          }`}>timer</span>
+          {loaded && remainingMinutes !== -1 && (
+            <span className={`absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full text-[9px] font-black flex items-center justify-center px-1 ${
+              remainingMinutes === 0 ? 'bg-red-500 text-white' : isNearLimit ? 'bg-amber-400 text-slate-900' : 'bg-white/20 text-white'
+            }`}>
+              {remainingMinutes}
+            </span>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ゲスト向け: 制限情報のみ
+  if (!isLoggedIn && showLabel) {
+    return (
+      <div className="mx-3 mb-2">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2 px-1">文字起こし</p>
+        <div className="bg-white/5 rounded-xl p-3 border border-white/10 space-y-2">
+          <div className="flex items-center gap-2 text-[11px] text-white/70 font-bold">
+            <span className="material-symbols-outlined text-sm text-white/50">timer</span>
+            <span>ゲスト: <span className="text-white font-black">5分</span> まで</span>
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-amber-300/80 font-bold">
+            <span className="material-symbols-outlined text-[10px]">star</span>
+            <span>無料登録で30分/月に拡大</span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!showLabel || !isLoggedIn) return null
 
   return (
     <AnimatePresence>
@@ -71,46 +113,58 @@ function UsageStats({ showLabel, isLoggedIn, planLabel }: { showLabel: boolean; 
           exit={{ opacity: 0 }}
           className="mx-3 mb-2"
         >
-          <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2 px-1">利用状況</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2 px-1">文字起こし利用状況</p>
           <div className="bg-white/5 rounded-xl p-3 border border-white/10 space-y-2">
+            {/* 残り分数を目立つ表示 */}
+            {loaded && (
+              <div className={`flex items-center justify-between rounded-lg px-2.5 py-2 ${
+                remainingMinutes === 0 ? 'bg-red-500/20' : isNearLimit ? 'bg-amber-500/15' : 'bg-white/5'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <span className={`material-symbols-outlined text-lg ${
+                    remainingMinutes === 0 ? 'text-red-300' : isNearLimit ? 'text-amber-300' : 'text-[#a855f7]'
+                  }`}>timer</span>
+                  <span className="text-[11px] text-white/70 font-bold">残り</span>
+                </div>
+                <span className={`text-lg font-black tabular-nums ${
+                  remainingMinutes === 0 ? 'text-red-300' : isNearLimit ? 'text-amber-300' : 'text-white'
+                }`}>
+                  {remainingMinutes === -1 ? '∞' : `${remainingMinutes}`}
+                  <span className="text-[11px] text-white/50 font-bold ml-0.5">分</span>
+                </span>
+              </div>
+            )}
             <div>
               <div className="flex items-center justify-between text-[11px] mb-1">
-                <span className="text-white/70 font-bold">今月の文字起こし</span>
+                <span className="text-white/60 font-bold">今月の使用量</span>
                 {loaded ? (
-                  <span className={`font-black tabular-nums ${isNearLimit ? 'text-amber-300' : 'text-white'}`}>
-                    {usedMinutes} <span className="text-white/50">/ {limitMinutes === -1 ? '∞' : `${limitMinutes}分`}</span>
+                  <span className={`font-black tabular-nums text-[10px] ${isNearLimit ? 'text-amber-300' : 'text-white/70'}`}>
+                    {usedMinutes} / {limitMinutes === -1 ? '∞' : `${limitMinutes}分`}
                   </span>
                 ) : (
                   <span className="text-white/50 text-[10px]">--</span>
                 )}
               </div>
               {limitMinutes > 0 && (
-                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all duration-500 ${isNearLimit ? 'bg-amber-400' : 'bg-[#a855f7]'}`}
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      remainingMinutes === 0 ? 'bg-red-400' : isNearLimit ? 'bg-amber-400' : 'bg-[#a855f7]'
+                    }`}
                     style={{ width: `${pct}%` }}
                   />
                 </div>
               )}
             </div>
-            {/* 残り分数の表示 */}
-            {loaded && (
-              <div className={`flex items-center gap-1.5 text-[11px] font-bold ${
-                remainingMinutes === 0 ? 'text-red-300' : isNearLimit ? 'text-amber-300' : 'text-white/70'
-              }`}>
-                <span className="material-symbols-outlined text-sm">timer</span>
-                {remainingMinutes === -1 ? (
-                  <span>無制限</span>
-                ) : remainingMinutes === 0 ? (
-                  <span>上限に達しました</span>
-                ) : (
-                  <span>残り <span className="text-white font-black tabular-nums">{remainingMinutes}分</span> 利用可能</span>
-                )}
+            {loaded && remainingMinutes === 0 && (
+              <div className="flex items-center gap-1.5 text-[10px] text-red-300 font-bold">
+                <span className="material-symbols-outlined text-xs">warning</span>
+                <span>上限に達しました。プランをアップグレードしてください。</span>
               </div>
             )}
-            <div className="flex items-center gap-1.5 text-[10px] text-white/40 font-bold">
+            <div className="flex items-center gap-1.5 text-[10px] text-white/30 font-bold">
               <span className="material-symbols-outlined text-[10px]">schedule</span>
-              <span>毎月リセット • データ保存: 30日間</span>
+              <span>毎月リセット</span>
             </div>
           </div>
         </motion.div>
@@ -405,7 +459,7 @@ function InterviewSidebarImpl({
         </nav>
 
         {/* Usage Stats */}
-        <UsageStats showLabel={showLabel} isLoggedIn={isLoggedIn} planLabel={planLabel} />
+        <UsageStats showLabel={showLabel} isLoggedIn={isLoggedIn} planLabel={planLabel} isCollapsed={isCollapsed} />
 
         {/* 1時間生成し放題バナー（アクティブ時のみ表示） */}
         <FreeHourBanner />
