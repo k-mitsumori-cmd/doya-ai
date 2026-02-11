@@ -129,6 +129,18 @@ const SNS_PLATFORM_OPTIONS = [
   { value: 'note', label: 'note' },
 ]
 
+// プラットフォーム別ブランドカラー
+const PLATFORM_COLORS: Record<string, { active: string; text: string; icon?: string }> = {
+  seo: { active: 'bg-blue-600 text-white', text: 'text-blue-600' },
+  twitter: { active: 'bg-black text-white', text: 'text-black', icon: '𝕏' },
+  twitter_thread: { active: 'bg-black text-white', text: 'text-black', icon: '𝕏' },
+  facebook: { active: 'bg-[#1877F2] text-white', text: 'text-[#1877F2]' },
+  note: { active: 'bg-[#41C9B4] text-white', text: 'text-[#41C9B4]' },
+  news_portal: { active: 'bg-red-600 text-white', text: 'text-red-600' },
+  linkedin: { active: 'bg-[#0A66C2] text-white', text: 'text-[#0A66C2]' },
+  instagram: { active: 'bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] text-white', text: 'text-[#E1306C]' },
+}
+
 const TRANSLATE_LANGUAGES = [
   { value: 'en', label: 'English' },
   { value: 'zh', label: '简体中文' },
@@ -168,7 +180,7 @@ export default function EditPage() {
   const exportDropdownRef = useRef<HTMLDivElement>(null)
 
   // 右パネル
-  const [rightPanel, setRightPanel] = useState<RightPanel>('preview')
+  const [rightPanel, setRightPanel] = useState<RightPanel>('proofread')
 
   // 校正
   const [proofLoading, setProofLoading] = useState(false)
@@ -354,7 +366,39 @@ export default function EditPage() {
     const newContent = content.replace(suggestion.original, suggestion.suggested)
     if (newContent !== content) {
       handleContentChange(newContent)
-      setAppliedSuggestions((prev) => new Set(prev).add(idx))
+      const newApplied = new Set(appliedSuggestions).add(idx)
+      setAppliedSuggestions(newApplied)
+      // スコアを修正数に応じて上昇
+      if (proofResult) {
+        const totalSuggestions = proofResult.suggestions.length
+        const appliedCount = newApplied.size
+        const bonus = Math.round((appliedCount / Math.max(totalSuggestions, 1)) * (100 - proofResult.score) * 0.8)
+        setProofResult({ ...proofResult, score: Math.min(100, proofResult.score + bonus) })
+      }
+    }
+  }
+
+  const applyAllSuggestions = () => {
+    if (!proofResult) return
+    let newContent = content
+    const newApplied = new Set(appliedSuggestions)
+    proofResult.suggestions.forEach((s, idx) => {
+      if (!newApplied.has(idx) && s.original && s.suggested) {
+        const updated = newContent.replace(s.original, s.suggested)
+        if (updated !== newContent) {
+          newContent = updated
+          newApplied.add(idx)
+        }
+      }
+    })
+    if (newContent !== content) {
+      handleContentChange(newContent)
+      setAppliedSuggestions(newApplied)
+      // 全修正で最大スコアに近づける
+      if (proofResult) {
+        const bonus = Math.round((100 - proofResult.score) * 0.8)
+        setProofResult({ ...proofResult, score: Math.min(100, proofResult.score + bonus) })
+      }
     }
   }
 
@@ -545,11 +589,11 @@ export default function EditPage() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center py-20">
           <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <span className="material-symbols-outlined text-[#7f19e6] text-[48px]">description</span>
+            <span className="material-symbols-outlined text-blue-600 text-[48px]">description</span>
           </div>
           <p className="text-slate-900 font-bold text-lg mb-2">ドラフトがありません</p>
           <p className="text-slate-500 text-sm mb-6">先にAI記事生成を実行してください</p>
-          <button className="px-6 py-2.5 bg-[#7f19e6] text-white rounded-lg text-sm font-medium hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/20">
+          <button className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20">
             記事生成に戻る
           </button>
         </div>
@@ -587,7 +631,7 @@ export default function EditPage() {
           <div className="max-w-[1800px] mx-auto px-6 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-2 text-slate-600 hover:text-[#7f19e6] transition-colors">
+                <button className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors">
                   <span className="material-symbols-outlined text-[20px]">arrow_back</span>
                   <span className="text-sm font-medium">戻る</span>
                 </button>
@@ -670,7 +714,7 @@ export default function EditPage() {
                   )}
                 </div>
                 <div className="h-8 w-px bg-slate-200 mx-1"></div>
-                <button onClick={handleProofread} disabled={proofLoading} className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white rounded-lg text-sm hover:bg-[#6b12c9] disabled:opacity-50 transition-colors shadow-lg shadow-[#7f19e6]/20">
+                <button onClick={handleProofread} disabled={proofLoading} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-lg shadow-blue-500/20">
                   <span className="material-symbols-outlined text-[18px]">spellcheck</span>
                   <span>校正</span>
                 </button>
@@ -693,7 +737,7 @@ export default function EditPage() {
               <div key={step.label} className="flex items-center gap-2">
                 <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
                   i === 4
-                    ? 'bg-[#7f19e6] text-white font-bold shadow-lg shadow-[#7f19e6]/20'
+                    ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20'
                     : 'bg-green-50 text-green-600 border border-green-200 font-medium'
                 }`}>
                   {i < 4 && <span className="material-symbols-outlined text-[16px]">check_circle</span>}
@@ -744,7 +788,7 @@ export default function EditPage() {
                       <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-white border-t border-blue-100">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[#7f19e6] text-[18px]">check_circle</span>
+                            <span className="material-symbols-outlined text-blue-600 text-[18px]">check_circle</span>
                             <span className="text-sm font-semibold text-slate-900">AI修正が完了</span>
                             <span className="text-xs text-slate-500">
                               ({content.length.toLocaleString()} → {revisedContent.length.toLocaleString()}文字)
@@ -760,7 +804,7 @@ export default function EditPage() {
                             </button>
                             <button
                               onClick={applyRevision}
-                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-[#7f19e6] rounded-lg hover:bg-[#6b12c9] transition-colors shadow-sm"
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
                             >
                               <span className="material-symbols-outlined text-[14px]">done</span>
                               適用する
@@ -774,7 +818,7 @@ export default function EditPage() {
 
                 {/* 入力バー */}
                 <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-3">
-                  <span className="material-symbols-outlined text-[#7f19e6] text-[20px] shrink-0">auto_fix_high</span>
+                  <span className="material-symbols-outlined text-blue-600 text-[20px] shrink-0">auto_fix_high</span>
                   <input
                     type="text"
                     value={reviseInstruction}
@@ -786,13 +830,13 @@ export default function EditPage() {
                       }
                     }}
                     placeholder="AI修正指示を入力... 例:「です・ます調に統一して」「冒頭をもっと印象的に」"
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] transition-all placeholder:text-slate-400"
+                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-blue-600 transition-all placeholder:text-slate-400"
                     disabled={reviseLoading}
                   />
                   <button
                     onClick={handleRevise}
                     disabled={reviseLoading || !reviseInstruction.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white rounded-lg text-sm font-medium hover:bg-[#6b12c9] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm shrink-0"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm shrink-0"
                   >
                     {reviseLoading ? (
                       <>
@@ -815,8 +859,8 @@ export default function EditPage() {
               {/* タブナビゲーション */}
               <div className="bg-white border border-slate-200 rounded-t-xl flex shadow-sm">
                 {[
-                  { key: 'preview' as RightPanel, label: 'プレビュー', icon: 'visibility' },
                   { key: 'proofread' as RightPanel, label: '校正', icon: 'spellcheck' },
+                  { key: 'preview' as RightPanel, label: 'プレビュー', icon: 'visibility' },
                   { key: 'revise' as RightPanel, label: 'AI修正', icon: 'edit_note' },
                   { key: 'titles' as RightPanel, label: 'タイトル', icon: 'title' },
                   { key: 'factcheck' as RightPanel, label: 'ファクト', icon: 'fact_check' },
@@ -829,7 +873,7 @@ export default function EditPage() {
                     title={tab.label}
                     className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 text-xs transition-all ${
                       rightPanel === tab.key
-                        ? 'text-[#7f19e6] border-b-2 border-[#7f19e6] bg-blue-50 font-semibold'
+                        ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50 font-semibold'
                         : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50 font-medium'
                     }`}
                   >
@@ -848,7 +892,7 @@ export default function EditPage() {
                   <motion.div key="preview" variants={panelVariants} initial="hidden" animate="show" exit="exit">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-                      <span className="material-symbols-outlined text-[#7f19e6]">visibility</span>
+                      <span className="material-symbols-outlined text-blue-600">visibility</span>
                       <h3 className="text-sm font-bold tracking-tight text-slate-900">プレビュー</h3>
                     </div>
                     {!content.trim() && (
@@ -862,7 +906,7 @@ export default function EditPage() {
                         if (line.startsWith('### ')) return <h3 key={i} className="text-base font-bold text-slate-900 mt-5 mb-2">{line.slice(4)}</h3>
                         if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold text-slate-900 mt-6 mb-3">{line.slice(3)}</h2>
                         if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-bold text-slate-900 mt-6 mb-3">{line.slice(2)}</h1>
-                        if (line.startsWith('> ')) return <blockquote key={i} className="border-l-4 border-[#7f19e6] pl-4 text-slate-600 italic text-sm my-3 bg-blue-50 py-2">{line.slice(2)}</blockquote>
+                        if (line.startsWith('> ')) return <blockquote key={i} className="border-l-4 border-blue-600 pl-4 text-slate-600 italic text-sm my-3 bg-blue-50 py-2">{line.slice(2)}</blockquote>
                         if (line.startsWith('- ')) return <li key={i} className="text-sm text-slate-700 ml-4 leading-relaxed">{line.slice(2)}</li>
                         if (line.trim() === '') return <br key={i} />
                         const b = line.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>')
@@ -878,13 +922,13 @@ export default function EditPage() {
                   <motion.div key="proofread" variants={panelVariants} initial="hidden" animate="show" exit="exit">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-                      <span className="material-symbols-outlined text-[#7f19e6]">spellcheck</span>
+                      <span className="material-symbols-outlined text-blue-600">spellcheck</span>
                       <h3 className="text-sm font-bold tracking-tight text-slate-900">校正・校閲</h3>
                     </div>
 
                     {proofLoading && (
                       <div className="text-center py-12">
-                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-[#7f19e6] rounded-full animate-spin mb-4" />
+                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
                         <p className="text-sm text-slate-600 font-medium">AIが校正しています...</p>
                         <p className="text-xs text-slate-400 mt-1">しばらくお待ちください</p>
                       </div>
@@ -893,13 +937,13 @@ export default function EditPage() {
                     {!proofLoading && !proofResult && (
                       <div className="text-center py-12">
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="material-symbols-outlined text-[#7f19e6] text-[32px]">spellcheck</span>
+                          <span className="material-symbols-outlined text-blue-600 text-[32px]">spellcheck</span>
                         </div>
                         <p className="text-sm text-slate-700 font-medium mb-2">記事の校正を開始</p>
                         <p className="text-xs text-slate-500 mb-6">誤字脱字、表記揺れ、文法をチェックします</p>
                         <button
                           onClick={handleProofread}
-                          className="px-6 py-2.5 bg-[#7f19e6] text-white rounded-lg text-sm font-medium hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/20 flex items-center gap-2 mx-auto"
+                          className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2 mx-auto"
                         >
                           <span className="material-symbols-outlined text-[18px]">play_arrow</span>
                           <span>校正を実行</span>
@@ -909,10 +953,30 @@ export default function EditPage() {
 
                     {proofResult && (
                       <>
-                        <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-2xl p-6">
-                          <div className="text-center">
-                            <div className={`text-5xl font-black mb-2 ${proofScoreColor}`}>{proofResult.score}</div>
-                            <div className="text-xs text-slate-500 font-medium">校正スコア / 100</div>
+                        {/* スコアエリア（一番上） */}
+                        <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-2xl p-5">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className={`text-4xl font-black ${proofScoreColor}`}>{Math.round(proofResult.score)}</div>
+                              <div className="text-xs text-slate-500 font-medium mt-1">校正スコア / 100</div>
+                            </div>
+                            <button
+                              onClick={handleProofread}
+                              disabled={proofLoading}
+                              className="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">refresh</span>
+                              <span>再校正</span>
+                            </button>
+                          </div>
+                          {/* プログレスバー */}
+                          <div className="mt-3 w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                proofResult.score >= 80 ? 'bg-green-500' : proofResult.score >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(100, proofResult.score)}%` }}
+                            />
                           </div>
                         </div>
 
@@ -939,8 +1003,21 @@ export default function EditPage() {
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
                             <p className="text-sm font-bold tracking-tight text-slate-900">修正候補</p>
-                            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">{proofResult.suggestions.length}件</span>
+                            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+                              {appliedSuggestions.size}/{proofResult.suggestions.length}件適用済
+                            </span>
                           </div>
+
+                          {/* すべて修正ボタン */}
+                          {proofResult.suggestions.length > 0 && appliedSuggestions.size < proofResult.suggestions.length && (
+                            <button
+                              onClick={applyAllSuggestions}
+                              className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg text-sm font-medium hover:from-blue-700 hover:to-blue-600 transition-all shadow-sm flex items-center justify-center gap-2"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">done_all</span>
+                              <span>すべて修正を適用（{proofResult.suggestions.length - appliedSuggestions.size}件）</span>
+                            </button>
+                          )}
 
                           {proofResult.suggestions.length === 0 && (
                             <div className="text-center py-8 bg-green-50 rounded-lg border border-green-100">
@@ -975,7 +1052,7 @@ export default function EditPage() {
                                 {!isApplied ? (
                                   <button
                                     onClick={() => applySuggestion(idx, s)}
-                                    className="flex items-center gap-1 text-xs text-[#7f19e6] hover:text-[#6b12c9] font-bold transition-colors"
+                                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-bold transition-colors"
                                   >
                                     <span className="material-symbols-outlined text-[14px]">done</span>
                                     <span>この修正を適用</span>
@@ -994,9 +1071,9 @@ export default function EditPage() {
                         <button
                           onClick={handleProofread}
                           disabled={proofLoading}
-                          className="w-full py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                          className="w-full py-2 bg-slate-50 text-slate-500 rounded-lg text-xs font-medium hover:bg-slate-100 hover:text-slate-700 transition-colors flex items-center justify-center gap-1.5"
                         >
-                          <span className="material-symbols-outlined text-[18px]">refresh</span>
+                          <span className="material-symbols-outlined text-[14px]">refresh</span>
                           <span>再校正する</span>
                         </button>
                       </>
@@ -1010,33 +1087,36 @@ export default function EditPage() {
                   <motion.div key="titles" variants={panelVariants} initial="hidden" animate="show" exit="exit">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-                      <span className="material-symbols-outlined text-[#7f19e6]">title</span>
+                      <span className="material-symbols-outlined text-blue-600">title</span>
                       <h3 className="text-sm font-bold tracking-tight text-slate-900">タイトル提案</h3>
                     </div>
 
                     <div>
                       <p className="text-xs font-semibold text-slate-700 mb-3">プラットフォーム</p>
                       <div className="flex flex-wrap gap-2">
-                        {TITLE_PLATFORM_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.value}
-                            onClick={() => setTitlePlatform(opt.value)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                              titlePlatform === opt.value
-                                ? 'bg-[#7f19e6] text-white shadow-sm'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
+                        {TITLE_PLATFORM_OPTIONS.map((opt) => {
+                          const colors = PLATFORM_COLORS[opt.value]
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={() => setTitlePlatform(opt.value)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                titlePlatform === opt.value
+                                  ? `${colors?.active || 'bg-blue-600 text-white'} shadow-sm`
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
 
                     <button
                       onClick={handleSuggestTitles}
                       disabled={titlesLoading}
-                      className="w-full py-3 bg-[#7f19e6] text-white rounded-lg text-sm font-medium hover:bg-[#6b12c9] disabled:opacity-50 transition-colors shadow-lg shadow-[#7f19e6]/20 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
                     >
                       {titlesLoading ? (
                         <>
@@ -1053,7 +1133,7 @@ export default function EditPage() {
 
                     {titlesLoading && (
                       <div className="text-center py-8">
-                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-[#7f19e6] rounded-full animate-spin mb-4" />
+                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
                         <p className="text-sm text-slate-600">AIがタイトルを生成中...</p>
                       </div>
                     )}
@@ -1087,7 +1167,7 @@ export default function EditPage() {
                             ) : (
                               <button
                                 onClick={() => setTitle(t.title)}
-                                className="flex items-center gap-1 text-xs text-[#7f19e6] hover:text-[#6b12c9] font-bold transition-colors"
+                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-bold transition-colors"
                               >
                                 <span className="material-symbols-outlined text-[14px]">done</span>
                                 <span>このタイトルを使う</span>
@@ -1101,7 +1181,7 @@ export default function EditPage() {
                     {!titlesLoading && suggestedTitles.length === 0 && (
                       <div className="text-center py-12">
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="material-symbols-outlined text-[#7f19e6] text-[32px]">lightbulb</span>
+                          <span className="material-symbols-outlined text-blue-600 text-[32px]">lightbulb</span>
                         </div>
                         <p className="text-sm text-slate-700 font-medium mb-1">タイトルを提案します</p>
                         <p className="text-xs text-slate-500">プラットフォームを選んで生成してください</p>
@@ -1116,13 +1196,13 @@ export default function EditPage() {
                   <motion.div key="factcheck" variants={panelVariants} initial="hidden" animate="show" exit="exit">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-                      <span className="material-symbols-outlined text-[#7f19e6]">fact_check</span>
+                      <span className="material-symbols-outlined text-blue-600">fact_check</span>
                       <h3 className="text-sm font-bold tracking-tight text-slate-900">ファクトチェック</h3>
                     </div>
 
                     {factLoading && (
                       <div className="text-center py-12">
-                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-[#7f19e6] rounded-full animate-spin mb-4" />
+                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
                         <p className="text-sm text-slate-600 font-medium">AIが検証しています...</p>
                         <p className="text-xs text-slate-400 mt-1">事実関係を確認中</p>
                       </div>
@@ -1131,13 +1211,13 @@ export default function EditPage() {
                     {!factLoading && !factResult && (
                       <div className="text-center py-12">
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="material-symbols-outlined text-[#7f19e6] text-[32px]">fact_check</span>
+                          <span className="material-symbols-outlined text-blue-600 text-[32px]">fact_check</span>
                         </div>
                         <p className="text-sm text-slate-700 font-medium mb-2">記事の事実関係を検証</p>
                         <p className="text-xs text-slate-500 mb-6">数値・固有名詞・日付・主張をAIがチェック</p>
                         <button
                           onClick={handleFactCheck}
-                          className="px-6 py-2.5 bg-[#7f19e6] text-white rounded-lg text-sm font-medium hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/20 flex items-center gap-2 mx-auto"
+                          className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2 mx-auto"
                         >
                           <span className="material-symbols-outlined text-[18px]">play_arrow</span>
                           <span>ファクトチェック実行</span>
@@ -1216,26 +1296,29 @@ export default function EditPage() {
                   <motion.div key="sns" variants={panelVariants} initial="hidden" animate="show" exit="exit">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-                      <span className="material-symbols-outlined text-[#7f19e6]">share</span>
+                      <span className="material-symbols-outlined text-blue-600">share</span>
                       <h3 className="text-sm font-bold tracking-tight text-slate-900">SNS投稿生成</h3>
                     </div>
 
                     <div>
                       <p className="text-xs font-semibold text-slate-700 mb-3">プラットフォーム (複数選択可)</p>
                       <div className="flex flex-wrap gap-2">
-                        {SNS_PLATFORM_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.value}
-                            onClick={() => toggleSnsPlatform(opt.value)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                              snsSelectedPlatforms.includes(opt.value)
-                                ? 'bg-[#7f19e6] text-white shadow-sm'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                            }`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
+                        {SNS_PLATFORM_OPTIONS.map((opt) => {
+                          const colors = PLATFORM_COLORS[opt.value]
+                          return (
+                            <button
+                              key={opt.value}
+                              onClick={() => toggleSnsPlatform(opt.value)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                snsSelectedPlatforms.includes(opt.value)
+                                  ? `${colors?.active || 'bg-blue-600 text-white'} shadow-sm`
+                                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
 
@@ -1252,7 +1335,7 @@ export default function EditPage() {
                             onClick={() => setSnsTone(t.value)}
                             className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                               snsTone === t.value
-                                ? 'bg-[#7f19e6] text-white shadow-sm'
+                                ? 'bg-blue-600 text-white shadow-sm'
                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                             }`}
                           >
@@ -1276,7 +1359,7 @@ export default function EditPage() {
                     <button
                       onClick={handleSnsGenerate}
                       disabled={snsLoading || snsSelectedPlatforms.length === 0}
-                      className="w-full py-3 bg-[#7f19e6] text-white rounded-lg text-sm font-medium hover:bg-[#6b12c9] disabled:opacity-50 transition-colors shadow-lg shadow-[#7f19e6]/20 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
                     >
                       {snsLoading ? (
                         <>
@@ -1293,7 +1376,7 @@ export default function EditPage() {
 
                     {snsLoading && (
                       <div className="text-center py-8">
-                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-[#7f19e6] rounded-full animate-spin mb-4" />
+                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
                         <p className="text-sm text-slate-600">AIが投稿文を生成中...</p>
                       </div>
                     )}
@@ -1302,10 +1385,11 @@ export default function EditPage() {
                       <div className="space-y-3">
                         {snsPosts.map((post, idx) => {
                           const platformLabel = SNS_PLATFORM_OPTIONS.find((o) => o.value === post.platform)?.label || post.platform
+                          const platformColor = PLATFORM_COLORS[post.platform]
                           return (
                             <div key={idx} className="border border-slate-200 bg-white rounded-lg p-4 space-y-3 hover:border-blue-200 hover:shadow-md transition-all">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-semibold text-[#7f19e6]">{platformLabel}</span>
+                                <span className={`text-sm font-semibold ${platformColor?.text || 'text-blue-600'}`}>{platformLabel}</span>
                                 <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">{post.characterCount}文字</span>
                               </div>
                               <pre className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed bg-slate-50 rounded-lg p-3">{post.content}</pre>
@@ -1318,13 +1402,13 @@ export default function EditPage() {
                               )}
                               {post.tip && (
                                 <div className="flex items-start gap-2 bg-blue-50 rounded-lg p-2">
-                                  <span className="material-symbols-outlined text-[#7f19e6] text-[16px] mt-0.5">lightbulb</span>
+                                  <span className="material-symbols-outlined text-blue-600 text-[16px] mt-0.5">lightbulb</span>
                                   <p className="text-xs text-slate-600 leading-relaxed flex-1">{post.tip}</p>
                                 </div>
                               )}
                               <button
                                 onClick={() => copySnsPost(post.content)}
-                                className="flex items-center gap-1 text-xs text-[#7f19e6] hover:text-[#6b12c9] font-medium transition-colors"
+                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
                               >
                                 <span className="material-symbols-outlined text-[14px]">content_copy</span>
                                 <span>コピー</span>
@@ -1338,7 +1422,7 @@ export default function EditPage() {
                     {!snsLoading && snsPosts.length === 0 && (
                       <div className="text-center py-12">
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="material-symbols-outlined text-[#7f19e6] text-[32px]">share</span>
+                          <span className="material-symbols-outlined text-blue-600 text-[32px]">share</span>
                         </div>
                         <p className="text-sm text-slate-700 font-medium mb-1">SNS投稿文を生成</p>
                         <p className="text-xs text-slate-500">プラットフォームを選んで生成してください</p>
@@ -1353,7 +1437,7 @@ export default function EditPage() {
                   <motion.div key="translate" variants={panelVariants} initial="hidden" animate="show" exit="exit">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-                      <span className="material-symbols-outlined text-[#7f19e6]">translate</span>
+                      <span className="material-symbols-outlined text-blue-600">translate</span>
                       <h3 className="text-sm font-bold tracking-tight text-slate-900">多言語翻訳</h3>
                     </div>
 
@@ -1366,7 +1450,7 @@ export default function EditPage() {
                             onClick={() => setTranslateLang(lang.value)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                               translateLang === lang.value
-                                ? 'bg-[#7f19e6] text-white shadow-sm'
+                                ? 'bg-blue-600 text-white shadow-sm'
                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                             }`}
                           >
@@ -1379,7 +1463,7 @@ export default function EditPage() {
                     <button
                       onClick={handleTranslate}
                       disabled={translateLoading}
-                      className="w-full py-3 bg-[#7f19e6] text-white rounded-lg text-sm font-medium hover:bg-[#6b12c9] disabled:opacity-50 transition-colors shadow-lg shadow-[#7f19e6]/20 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
                     >
                       {translateLoading ? (
                         <>
@@ -1396,7 +1480,7 @@ export default function EditPage() {
 
                     {translateLoading && (
                       <div className="text-center py-8">
-                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-[#7f19e6] rounded-full animate-spin mb-4" />
+                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
                         <p className="text-sm text-slate-600 font-medium">AIが翻訳しています...</p>
                         <p className="text-xs text-slate-400 mt-1">Markdown構造を保持して翻訳中</p>
                       </div>
@@ -1406,7 +1490,7 @@ export default function EditPage() {
                       <>
                         <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-4 space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-[#7f19e6]">{translationResult.languageName}</span>
+                            <span className="text-sm font-semibold text-blue-600">{translationResult.languageName}</span>
                             <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded-full">{translationResult.wordCount.toLocaleString()}文字</span>
                           </div>
                           <p className="text-base font-bold text-slate-900 leading-snug">{translationResult.title}</p>
@@ -1445,7 +1529,7 @@ export default function EditPage() {
                           </button>
                           <button
                             onClick={exportTranslation}
-                            className="flex-1 py-2.5 bg-blue-50 text-[#7f19e6] rounded-lg text-xs font-semibold hover:bg-blue-100 transition-colors flex items-center justify-center gap-1.5"
+                            className="flex-1 py-2.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold hover:bg-blue-100 transition-colors flex items-center justify-center gap-1.5"
                           >
                             <span className="material-symbols-outlined text-[16px]">download</span>
                             <span>MDダウンロード</span>
@@ -1466,7 +1550,7 @@ export default function EditPage() {
                     {!translateLoading && !translationResult && (
                       <div className="text-center py-12">
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="material-symbols-outlined text-[#7f19e6] text-[32px]">translate</span>
+                          <span className="material-symbols-outlined text-blue-600 text-[32px]">translate</span>
                         </div>
                         <p className="text-sm text-slate-700 font-medium mb-1">多言語に翻訳</p>
                         <p className="text-xs text-slate-500 mb-1">言語を選んで翻訳してください</p>
@@ -1482,7 +1566,7 @@ export default function EditPage() {
                   <motion.div key="revise" variants={panelVariants} initial="hidden" animate="show" exit="exit">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-                      <span className="material-symbols-outlined text-[#7f19e6]">edit_note</span>
+                      <span className="material-symbols-outlined text-blue-600">edit_note</span>
                       <h3 className="text-sm font-bold tracking-tight text-slate-900">AI修正パネル</h3>
                     </div>
 
@@ -1502,7 +1586,7 @@ export default function EditPage() {
                     <button
                       onClick={handleRevise}
                       disabled={reviseLoading || !reviseInstruction.trim()}
-                      className="w-full py-3 bg-[#7f19e6] text-white rounded-lg text-sm font-medium hover:bg-[#6b12c9] disabled:opacity-50 transition-colors shadow-lg shadow-[#7f19e6]/20 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2"
                     >
                       {reviseLoading ? (
                         <>
@@ -1520,7 +1604,7 @@ export default function EditPage() {
                     {/* ローディング */}
                     {reviseLoading && (
                       <div className="text-center py-8">
-                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-[#7f19e6] rounded-full animate-spin mb-4" />
+                        <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
                         <p className="text-sm text-slate-600 font-medium">AIが記事を修正しています...</p>
                         <p className="text-xs text-slate-400 mt-1">元の構成を維持しながら修正中</p>
                       </div>
@@ -1544,7 +1628,7 @@ export default function EditPage() {
                       <>
                         <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-xl p-4 space-y-3">
                           <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[#7f19e6] text-[20px]">check_circle</span>
+                            <span className="material-symbols-outlined text-blue-600 text-[20px]">check_circle</span>
                             <p className="text-sm font-semibold text-slate-900">修正が完了しました</p>
                           </div>
                           <div className="flex items-center gap-4 text-xs text-slate-500">
@@ -1583,7 +1667,7 @@ export default function EditPage() {
                           </button>
                           <button
                             onClick={applyRevision}
-                            className="flex-1 py-2.5 bg-[#7f19e6] text-white rounded-lg text-xs font-semibold hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/20 flex items-center justify-center gap-1.5"
+                            className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 flex items-center justify-center gap-1.5"
                           >
                             <span className="material-symbols-outlined text-[16px]">done</span>
                             <span>適用する</span>
@@ -1625,7 +1709,7 @@ export default function EditPage() {
                     {!reviseLoading && !revisedContent && !reviseError && !reviseInstruction && revisionHistory.length === 0 && (
                       <div className="text-center py-12">
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <span className="material-symbols-outlined text-[#7f19e6] text-[32px]">edit_note</span>
+                          <span className="material-symbols-outlined text-blue-600 text-[32px]">edit_note</span>
                         </div>
                         <p className="text-sm text-slate-700 font-medium mb-2">AIで記事を修正</p>
                         <p className="text-xs text-slate-500 mb-1">自然言語で修正指示を入力すると</p>
@@ -1638,6 +1722,18 @@ export default function EditPage() {
                 </AnimatePresence>
               </div>
             </div>
+          </div>
+
+          {/* 底部ナビゲーション */}
+          <div className="max-w-[1800px] mx-auto px-6 py-8 flex items-center justify-center">
+            <a
+              href="/interview"
+              className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:text-blue-600 hover:border-blue-200 hover:shadow-md transition-all group"
+            >
+              <span className="material-symbols-outlined text-lg text-slate-400 group-hover:text-blue-500 transition-colors">add_circle</span>
+              <span>他の記事を作成する</span>
+              <span className="material-symbols-outlined text-lg text-slate-400 group-hover:text-blue-500 transition-colors">arrow_forward</span>
+            </a>
           </div>
         </div>
       </div>
