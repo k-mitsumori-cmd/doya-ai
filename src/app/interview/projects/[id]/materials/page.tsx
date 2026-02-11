@@ -77,6 +77,25 @@ const UPLOAD_TIPS = [
   { icon: 'share', text: 'SNS投稿文の自動生成で、記事の拡散も簡単です' },
 ]
 
+const SUPPORTED_FORMATS = [
+  { label: 'MP4', color: 'bg-red-100 text-red-700 border-red-200' },
+  { label: 'MOV', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+  { label: 'MP3', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  { label: 'WAV', color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
+  { label: 'M4A', color: 'bg-teal-100 text-teal-700 border-teal-200' },
+  { label: 'PDF', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  { label: 'DOCX', color: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+]
+
+const FLOATING_ICONS = ['mic', 'movie', 'music_note', 'description', 'image', 'graphic_eq']
+
+const WORKFLOW_STEPS = [
+  { icon: 'cloud_upload', label: 'アップロード', desc: '素材をアップロード' },
+  { icon: 'transcribe', label: '文字起こし', desc: 'AIが自動文字起こし' },
+  { icon: 'auto_awesome', label: 'スキル選択', desc: '記事の構成を選択' },
+  { icon: 'edit_note', label: '記事生成', desc: 'AIが記事を自動生成' },
+]
+
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
@@ -109,6 +128,7 @@ export default function MaterialsPage() {
   const [transcribing, setTranscribing] = useState<Map<string, TranscriptionProgress>>(new Map())
   const [elapsedTick, setElapsedTick] = useState(0) // 経過時間更新用
   const [tipIndex, setTipIndex] = useState(0)
+  const uploadSpeedRef = useRef<Map<string, { startTime: number; lastLoaded: number; speed: number }>>(new Map())
 
   // プロジェクトと素材一覧を取得
   const fetchProject = useCallback(async () => {
@@ -273,6 +293,17 @@ export default function MaterialsPage() {
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) {
             const progress = Math.round((e.loaded / e.total) * 100)
+            // 速度計算
+            const speedInfo = uploadSpeedRef.current.get(uploadKey)
+            if (speedInfo) {
+              const elapsed = (Date.now() - speedInfo.startTime) / 1000
+              if (elapsed > 0) {
+                speedInfo.speed = e.loaded / elapsed
+                speedInfo.lastLoaded = e.loaded
+              }
+            } else {
+              uploadSpeedRef.current.set(uploadKey, { startTime: Date.now(), lastLoaded: e.loaded, speed: 0 })
+            }
             setUploads((prev) => {
               const next = new Map(prev)
               const item = next.get(uploadKey)
@@ -461,24 +492,96 @@ export default function MaterialsPage() {
     return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`
   }
 
+  const formatSpeed = (bytesPerSec: number) => {
+    if (bytesPerSec < 1024) return `${bytesPerSec.toFixed(0)} B/s`
+    if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`
+    return `${(bytesPerSec / 1024 / 1024).toFixed(1)} MB/s`
+  }
+
+  const getFileTypeIcon = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase() || ''
+    if (['mp4', 'mov', 'avi', 'webm'].includes(ext)) return { icon: 'movie', color: 'text-red-500', bg: 'bg-red-100' }
+    if (['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext)) return { icon: 'music_note', color: 'text-blue-500', bg: 'bg-blue-100' }
+    if (['pdf'].includes(ext)) return { icon: 'description', color: 'text-amber-500', bg: 'bg-amber-100' }
+    if (['txt', 'docx'].includes(ext)) return { icon: 'article', color: 'text-indigo-500', bg: 'bg-indigo-100' }
+    if (['jpg', 'jpeg', 'png', 'webp'].includes(ext)) return { icon: 'image', color: 'text-green-500', bg: 'bg-green-100' }
+    return { icon: 'attach_file', color: 'text-slate-500', bg: 'bg-slate-100' }
+  }
+
+  // 完了済み素材数
+  const completedMaterials = materials.filter((m) => m.status === 'COMPLETED').length
+  const transcribedMaterials = materials.filter((m) => m.transcriptionStatus === 'COMPLETED').length
+  // 現在のワークフローステップ
+  const currentWorkflowStep = materials.length === 0 ? 0 : transcribedMaterials > 0 ? 2 : completedMaterials > 0 ? 1 : 0
+
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-8">
+      {/* ワークフローステッパー */}
+      <motion.div
+        className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="flex items-center justify-between">
+          {WORKFLOW_STEPS.map((step, i) => (
+            <div key={i} className="flex items-center flex-1">
+              <div className="flex flex-col items-center flex-1">
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 ${
+                  i < currentWorkflowStep
+                    ? 'bg-green-500 shadow-lg shadow-green-500/30'
+                    : i === currentWorkflowStep
+                    ? 'bg-[#7f19e6] shadow-lg shadow-[#7f19e6]/30 scale-110'
+                    : 'bg-slate-100'
+                }`}>
+                  <span className={`material-symbols-outlined text-2xl ${
+                    i <= currentWorkflowStep ? 'text-white' : 'text-slate-400'
+                  }`}>
+                    {i < currentWorkflowStep ? 'check_circle' : step.icon}
+                  </span>
+                </div>
+                <p className={`text-xs font-bold mt-2 ${
+                  i === currentWorkflowStep ? 'text-[#7f19e6]' : i < currentWorkflowStep ? 'text-green-600' : 'text-slate-400'
+                }`}>{step.label}</p>
+                <p className="text-[10px] text-slate-400 hidden md:block">{step.desc}</p>
+              </div>
+              {i < WORKFLOW_STEPS.length - 1 && (
+                <div className={`h-0.5 w-full max-w-[60px] mx-1 rounded-full transition-all duration-500 ${
+                  i < currentWorkflowStep ? 'bg-green-400' : 'bg-slate-200'
+                }`} />
+              )}
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
       {/* ヘッダー */}
-      <div className="text-center mb-12">
+      <motion.div
+        className="text-center mb-12"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-[#7f19e6]/10 rounded-full text-[#7f19e6] text-xs font-bold mb-4">
+          <span className="material-symbols-outlined text-sm">cloud_upload</span>
+          STEP 1
+        </div>
         <h1 className="text-4xl font-black tracking-tight mb-4">素材アップロード</h1>
         <p className="text-slate-500 text-lg max-w-2xl mx-auto leading-relaxed">
           {projectTitle || 'インタビュー素材をアップロードして、AIが高精度の文字起こしと記事を自動生成します。'}
         </p>
         {materials.some((m) => m.status === 'COMPLETED') && (
-          <button
+          <motion.button
             onClick={() => router.push(`/interview/projects/${projectId}/skill`)}
-            className="mt-6 px-6 py-3 bg-[#7f19e6] text-white rounded-lg text-sm font-bold hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/20 inline-flex items-center gap-2"
+            className="mt-6 px-8 py-3.5 bg-gradient-to-r from-[#7f19e6] to-[#a855f7] text-white rounded-xl text-sm font-bold hover:shadow-xl hover:shadow-[#7f19e6]/30 transition-all inline-flex items-center gap-2 group"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
           >
             スキル選択へ進む
-            <span className="material-symbols-outlined text-lg">arrow_forward</span>
-          </button>
+            <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>
+          </motion.button>
         )}
-      </div>
+      </motion.div>
 
       <motion.div
         className="bg-white shadow-2xl shadow-[#7f19e6]/5 rounded-2xl overflow-hidden border border-slate-100"
@@ -493,12 +596,39 @@ export default function MaterialsPage() {
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed flex flex-col items-center justify-center py-16 px-6 transition-all group cursor-pointer rounded-xl ${
+            className={`relative border-2 border-dashed flex flex-col items-center justify-center py-20 px-6 transition-all group cursor-pointer rounded-2xl overflow-hidden ${
               dragOver
-                ? 'border-[#7f19e6] bg-[#7f19e6]/10'
-                : 'border-[#7f19e6]/20 bg-[#7f19e6]/5 hover:bg-[#7f19e6]/10'
+                ? 'border-[#7f19e6] bg-[#7f19e6]/10 scale-[1.01]'
+                : 'border-[#7f19e6]/20 bg-gradient-to-b from-[#7f19e6]/5 to-[#7f19e6]/[0.02] hover:bg-[#7f19e6]/10 hover:border-[#7f19e6]/40'
             }`}
           >
+            {/* 浮遊アイコン背景 */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              {FLOATING_ICONS.map((icon, i) => (
+                <motion.span
+                  key={i}
+                  className="material-symbols-outlined text-[#7f19e6]/[0.07] text-3xl absolute"
+                  style={{
+                    left: `${10 + (i * 15) % 80}%`,
+                    top: `${15 + (i * 23) % 60}%`,
+                  }}
+                  animate={{
+                    y: [0, -12, 0],
+                    rotate: [0, i % 2 === 0 ? 8 : -8, 0],
+                    scale: [1, 1.1, 1],
+                  }}
+                  transition={{
+                    duration: 3 + i * 0.5,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                    delay: i * 0.4,
+                  }}
+                >
+                  {icon}
+                </motion.span>
+              ))}
+            </div>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -510,14 +640,46 @@ export default function MaterialsPage() {
               }}
               className="hidden"
             />
-            <div className="size-16 bg-white rounded-2xl shadow-lg flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined text-[#7f19e6] text-4xl">cloud_upload</span>
+
+            {/* メインアイコン */}
+            <motion.div
+              className="relative z-10 size-20 bg-white rounded-3xl shadow-xl shadow-[#7f19e6]/10 flex items-center justify-center mb-6"
+              animate={dragOver ? { scale: 1.15, rotate: [0, -3, 3, 0] } : { scale: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <span className="material-symbols-outlined text-[#7f19e6] text-5xl">
+                {dragOver ? 'downloading' : 'cloud_upload'}
+              </span>
+              {/* パルスリング */}
+              <motion.div
+                className="absolute inset-0 rounded-3xl border-2 border-[#7f19e6]/30"
+                animate={{ scale: [1, 1.3, 1.3], opacity: [0.6, 0, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' }}
+              />
+            </motion.div>
+
+            <h3 className="relative z-10 text-xl font-black mb-2 text-slate-900">
+              {dragOver ? 'ここにドロップ！' : 'ファイルをドラッグ&ドロップ'}
+            </h3>
+            <p className="relative z-10 text-slate-500 text-sm mb-4">または下のボタンから選択（最大5GB）</p>
+
+            {/* 対応フォーマットバッジ */}
+            <div className="relative z-10 flex flex-wrap justify-center gap-1.5 mb-6">
+              {SUPPORTED_FORMATS.map((fmt) => (
+                <span key={fmt.label} className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${fmt.color}`}>
+                  {fmt.label}
+                </span>
+              ))}
             </div>
-            <h3 className="text-xl font-bold mb-2">ファイルをドラッグ&ドロップ</h3>
-            <p className="text-slate-500 text-sm mb-6">MP4, MOV, MP3, WAV, M4A, PDF, TXT, DOCX（最大5GB）</p>
-            <span className="bg-[#7f19e6] text-white px-8 py-3 rounded-lg font-bold hover:bg-[#7f19e6]/90 transition-all shadow-lg shadow-[#7f19e6]/20">
+
+            <motion.span
+              className="relative z-10 bg-gradient-to-r from-[#7f19e6] to-[#a855f7] text-white px-10 py-3.5 rounded-xl font-bold shadow-lg shadow-[#7f19e6]/25 flex items-center gap-2"
+              whileHover={{ scale: 1.04, boxShadow: '0 20px 40px -10px rgba(127, 25, 230, 0.4)' }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <span className="material-symbols-outlined text-xl">add</span>
               ファイルを選択
-            </span>
+            </motion.span>
           </div>
 
           {/* Transcription Settings */}
@@ -554,23 +716,30 @@ export default function MaterialsPage() {
       </motion.div>
 
       {/* フィーチャーハイライト */}
-      <div className="grid md:grid-cols-3 gap-8 mt-12">
-        <div className="space-y-2">
-          <span className="material-symbols-outlined text-[#7f19e6]">speed</span>
-          <h6 className="font-bold text-sm uppercase">高速アップロード</h6>
-          <p className="text-sm text-slate-500">マルチスレッド転送でファイルを可能な限り高速に転送します。</p>
-        </div>
-        <div className="space-y-2">
-          <span className="material-symbols-outlined text-[#7f19e6]">closed_caption</span>
-          <h6 className="font-bold text-sm uppercase">高精度文字起こし</h6>
-          <p className="text-sm text-slate-500">AssemblyAI搭載のAIモデルがプロ品質の文字起こしを実現します。</p>
-        </div>
-        <div className="space-y-2">
-          <span className="material-symbols-outlined text-[#7f19e6]">security</span>
-          <h6 className="font-bold text-sm uppercase">安全・セキュア</h6>
-          <p className="text-sm text-slate-500">Supabase Storage経由の暗号化転送。音声データは安全に保管されます。</p>
-        </div>
-      </div>
+      <motion.div
+        className="grid md:grid-cols-3 gap-5 mt-12"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+      >
+        {[
+          { icon: 'speed', title: '高速アップロード', desc: 'Supabase Storage直接転送で大容量ファイルも高速にアップロード。', gradient: 'from-blue-500 to-cyan-500' },
+          { icon: 'closed_caption', title: '高精度文字起こし', desc: 'AssemblyAI搭載のAIモデルが95%以上の精度で文字起こし。', gradient: 'from-[#7f19e6] to-[#a855f7]' },
+          { icon: 'security', title: '安全・セキュア', desc: 'SSL/TLS暗号化転送。音声データはセキュアに保管されます。', gradient: 'from-emerald-500 to-green-500' },
+        ].map((feature, i) => (
+          <motion.div
+            key={i}
+            variants={itemVariants}
+            className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-lg hover:border-[#7f19e6]/20 transition-all group"
+          >
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
+              <span className="material-symbols-outlined text-white text-2xl">{feature.icon}</span>
+            </div>
+            <h6 className="font-bold text-sm mb-1.5">{feature.title}</h6>
+            <p className="text-sm text-slate-500 leading-relaxed">{feature.desc}</p>
+          </motion.div>
+        ))}
+      </motion.div>
 
       {/* セキュリティ・プライバシーポリシー */}
       <div className="mt-12 bg-slate-50 rounded-2xl border border-slate-200 p-8">
@@ -646,40 +815,55 @@ export default function MaterialsPage() {
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.3 }}
         >
-          {Array.from(uploads.entries()).map(([key, upload]) => (
-            <div key={key} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="material-symbols-outlined text-[#7f19e6] text-2xl">
-                    {upload.status === 'done' ? 'check_circle' : upload.status === 'error' ? 'error' : 'upload_file'}
+          {Array.from(uploads.entries()).map(([key, upload]) => {
+            const ft = getFileTypeIcon(upload.file.name)
+            return (
+            <motion.div
+              key={key}
+              className={`bg-white rounded-2xl p-5 border shadow-sm transition-all ${
+                upload.status === 'done' ? 'border-green-200' : upload.status === 'error' ? 'border-red-200' : 'border-[#7f19e6]/20'
+              }`}
+              layout
+            >
+              <div className="flex items-center gap-4 mb-3">
+                <div className={`w-12 h-12 ${
+                  upload.status === 'done' ? 'bg-green-100' : upload.status === 'error' ? 'bg-red-100' : ft.bg
+                } rounded-xl flex items-center justify-center flex-shrink-0`}>
+                  <span className={`material-symbols-outlined text-2xl ${
+                    upload.status === 'done' ? 'text-green-600' : upload.status === 'error' ? 'text-red-600' : ft.color
+                  }`}>
+                    {upload.status === 'done' ? 'check_circle' : upload.status === 'error' ? 'error' : ft.icon}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">
-                      {upload.file.name}
-                    </p>
-                    <span className="text-xs text-slate-500 font-mono">
-                      {formatFileSize(upload.file.size)}
-                    </span>
-                  </div>
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-900 truncate">{upload.file.name}</p>
+                  <span className="text-xs text-slate-500 font-mono">{formatFileSize(upload.file.size)}</span>
+                </div>
+                <span className={`text-lg font-black tabular-nums ${
+                  upload.status === 'done' ? 'text-green-600' : upload.status === 'error' ? 'text-red-600' : 'text-[#7f19e6]'
+                }`}>
+                  {upload.status === 'done' ? '完了' : upload.status === 'error' ? '' : `${upload.progress}%`}
+                </span>
               </div>
-              <div className="w-full bg-slate-100 rounded-full h-2 mb-2 overflow-hidden">
-                <div
-                  className={`h-2 rounded-full transition-all duration-300 ${
+              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                <motion.div
+                  className={`h-2.5 rounded-full transition-colors duration-300 ${
                     upload.status === 'error'
                       ? 'bg-red-500'
                       : upload.status === 'done'
                       ? 'bg-green-500'
-                      : 'bg-gradient-to-r from-[#7f19e6] to-blue-500'
+                      : 'bg-gradient-to-r from-[#7f19e6] to-[#a855f7]'
                   }`}
-                  style={{ width: `${upload.progress}%` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${upload.progress}%` }}
+                  transition={{ duration: 0.3 }}
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-2.5">
                 {upload.status === 'uploading' && (
                   <>
                     <span className="material-symbols-outlined text-[#7f19e6] text-sm animate-spin">sync</span>
-                    <p className="text-xs text-slate-600">アップロード中... {upload.progress}%</p>
+                    <p className="text-xs text-slate-600">アップロード中...</p>
                   </>
                 )}
                 {upload.status === 'confirming' && (
@@ -691,7 +875,7 @@ export default function MaterialsPage() {
                 {upload.status === 'done' && (
                   <>
                     <span className="material-symbols-outlined text-green-600 text-sm">check_circle</span>
-                    <p className="text-xs text-green-600 font-medium">アップロード完了</p>
+                    <p className="text-xs text-green-600 font-bold">アップロード完了</p>
                   </>
                 )}
                 {upload.status === 'error' && (
@@ -700,10 +884,9 @@ export default function MaterialsPage() {
                       <span className="material-symbols-outlined text-red-600 text-sm">error</span>
                       <p className="text-xs text-red-600">{upload.error}</p>
                     </div>
-                    <button
+                    <motion.button
                       onClick={(e) => {
                         e.stopPropagation()
-                        // 失敗エントリを削除して同じファイルで再アップロード
                         const file = upload.file
                         setUploads((prev) => {
                           const next = new Map(prev)
@@ -712,16 +895,19 @@ export default function MaterialsPage() {
                         })
                         uploadFile(file)
                       }}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors shadow-sm"
+                      className="flex items-center gap-1 px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
                     >
                       <span className="material-symbols-outlined text-sm">refresh</span>
                       再試行
-                    </button>
+                    </motion.button>
                   </div>
                 )}
               </div>
-            </div>
-          ))}
+            </motion.div>
+            )
+          })}
         </motion.div>
       )}
       </AnimatePresence>
@@ -870,27 +1056,58 @@ export default function MaterialsPage() {
 
       {/* 素材一覧 */}
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <span className="material-symbols-outlined text-slate-700 text-xl">folder</span>
-          <h2 className="text-sm font-black text-slate-900">
-            アップロード済み素材 ({materials.length})
-          </h2>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#7f19e6] to-[#a855f7] rounded-xl flex items-center justify-center shadow-lg shadow-[#7f19e6]/20">
+              <span className="material-symbols-outlined text-white text-xl">folder</span>
+            </div>
+            <div>
+              <h2 className="text-base font-black text-slate-900">アップロード済み素材</h2>
+              <p className="text-xs text-slate-500">{materials.length}件のファイル{transcribedMaterials > 0 && ` · ${transcribedMaterials}件文字起こし済み`}</p>
+            </div>
+          </div>
+          {materials.length > 0 && (
+            <div className="flex items-center gap-3 text-xs text-slate-500">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-500" />完了
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#7f19e6] animate-pulse" />処理中
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-red-500" />エラー
+              </span>
+            </div>
+          )}
         </div>
 
         {loading ? (
           <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <div key={i} className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm animate-pulse">
-                <div className="h-4 bg-slate-200 rounded w-1/3 mb-2" />
-                <div className="h-3 bg-slate-100 rounded w-1/4" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm animate-pulse flex items-center gap-4">
+                <div className="w-12 h-12 bg-slate-200 rounded-xl" />
+                <div className="flex-1">
+                  <div className="h-4 bg-slate-200 rounded-lg w-1/3 mb-2" />
+                  <div className="h-3 bg-slate-100 rounded-lg w-1/4" />
+                </div>
               </div>
             ))}
           </div>
         ) : materials.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-            <span className="material-symbols-outlined text-slate-300 text-5xl mb-3">inventory_2</span>
-            <p className="text-sm text-slate-500">まだ素材がアップロードされていません</p>
-          </div>
+          <motion.div
+            className="text-center py-16 bg-gradient-to-b from-slate-50 to-white rounded-2xl border-2 border-dashed border-slate-200"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <span className="material-symbols-outlined text-slate-200 text-7xl mb-4 block">inventory_2</span>
+            </motion.div>
+            <p className="text-base font-bold text-slate-400 mb-1">まだ素材がありません</p>
+            <p className="text-sm text-slate-400">上のエリアからファイルをアップロードしてください</p>
+          </motion.div>
         ) : (
           <motion.div
             className="space-y-3"
@@ -901,100 +1118,116 @@ export default function MaterialsPage() {
             {materials.map((m) => {
               const isTranscribing = transcribing.has(m.id)
               const transcriptionInfo = transcribing.get(m.id)
+              const ft = getFileTypeIcon(m.fileName)
 
               return (
                 <motion.div
                   key={m.id}
                   variants={itemVariants}
-                  className={`bg-white rounded-xl p-5 border flex items-center gap-4 transition-all shadow-sm ${
+                  className={`bg-white rounded-2xl overflow-hidden border transition-all shadow-sm group ${
                     isTranscribing && transcriptionInfo?.status !== 'completed'
-                      ? 'border-blue-200 bg-blue-50/30 shadow-blue-100'
-                      : 'border-slate-200 hover:border-blue-200 hover:shadow-md'
+                      ? 'border-[#7f19e6]/30 shadow-[#7f19e6]/10'
+                      : m.transcriptionStatus === 'COMPLETED'
+                      ? 'border-green-200 hover:shadow-lg hover:shadow-green-100'
+                      : m.status === 'ERROR'
+                      ? 'border-red-200 hover:shadow-lg hover:shadow-red-100'
+                      : 'border-slate-100 hover:border-[#7f19e6]/20 hover:shadow-lg'
                   }`}
+                  whileHover={{ y: -1 }}
                 >
-                  <div className="w-12 h-12 bg-gradient-to-br from-[#7f19e6]/10 to-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <span className="material-symbols-outlined text-[#7f19e6] text-2xl">
-                      {FILE_TYPE_ICONS[m.type] || 'attach_file'}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate mb-1">{m.fileName}</p>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <span className="font-mono">{formatFileSize(m.fileSize)}</span>
-                      <span className="material-symbols-outlined text-xs">circle</span>
-                      <span className="capitalize">{m.type}</span>
-                      {m.status === 'ERROR' && (
-                        <>
-                          <span className="material-symbols-outlined text-xs">circle</span>
-                          <span className="text-[11px] text-red-600 font-medium flex items-center gap-1">
-                            <span className="material-symbols-outlined text-sm">error</span>
-                            {m.error || 'エラーが発生しました'}
-                          </span>
-                        </>
-                      )}
+                  <div className="flex items-center gap-4 p-5">
+                    {/* ファイルタイプアイコン（左ボーダーグラデーション付き） */}
+                    <div className="relative">
+                      <div className={`w-14 h-14 ${ft.bg} rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
+                        <span className={`material-symbols-outlined ${ft.color} text-2xl`}>{ft.icon}</span>
+                      </div>
+                      {/* ステータスバッジ */}
                       {m.transcriptionStatus === 'COMPLETED' && (
-                        <>
-                          <span className="material-symbols-outlined text-xs">circle</span>
-                          <span className="text-[11px] text-green-600 font-medium flex items-center gap-1 border border-green-600/20 rounded-full px-2 py-0.5">
-                            <span className="material-symbols-outlined text-sm">check_circle</span>
-                            文字起こし完了
-                          </span>
-                        </>
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center shadow-md">
+                          <span className="material-symbols-outlined text-white text-sm">check</span>
+                        </div>
+                      )}
+                      {m.status === 'ERROR' && (
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-red-500 rounded-lg flex items-center justify-center shadow-md">
+                          <span className="material-symbols-outlined text-white text-sm">priority_high</span>
+                        </div>
                       )}
                     </div>
-                  </div>
-                  <span className="material-symbols-outlined text-slate-400 text-xl" title={m.status}>
-                    {STATUS_ICONS[m.status] || 'schedule'}
-                  </span>
-                  <div className="flex gap-2">
-                    {/* 素材自体がERRORの場合の再アップロードボタン */}
-                    {m.status === 'ERROR' && (
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="px-4 py-2 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-all flex items-center gap-1.5 shadow-lg shadow-red-500/20"
-                      >
-                        <span className="material-symbols-outlined text-base">refresh</span>
-                        再アップロード
-                      </button>
-                    )}
-                    {(m.type === 'audio' || m.type === 'video') &&
-                      (m.status === 'COMPLETED' || m.status === 'ERROR') &&
-                      m.transcriptionStatus !== 'COMPLETED' &&
-                      m.transcriptionStatus !== 'PROCESSING' &&
-                      !isTranscribing && (
-                        <button
-                          onClick={() => startTranscription(m.id)}
-                          className={`px-4 py-2 text-xs font-medium text-white rounded-lg transition-all flex items-center gap-1.5 ${
-                            m.transcriptionStatus === 'ERROR'
-                              ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20'
-                              : 'bg-[#7f19e6] hover:bg-[#6b12c9] shadow-lg shadow-[#7f19e6]/20'
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-base">
-                            {m.transcriptionStatus === 'ERROR' ? 'refresh' : 'transcribe'}
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-900 truncate mb-1.5">{m.fileName}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{formatFileSize(m.fileSize)}</span>
+                        <span className="text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md capitalize">{m.type}</span>
+                        {m.transcriptionStatus === 'COMPLETED' && (
+                          <span className="text-[11px] text-green-700 font-bold bg-green-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="material-symbols-outlined text-xs">check_circle</span>
+                            文字起こし完了
                           </span>
-                          {m.transcriptionStatus === 'ERROR' ? '再試行' : '文字起こし'}
-                        </button>
+                        )}
+                        {m.status === 'ERROR' && (
+                          <span className="text-[11px] text-red-700 font-medium bg-red-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="material-symbols-outlined text-xs">error</span>
+                            {m.error || 'エラー'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* 素材自体がERRORの場合の再アップロードボタン */}
+                      {m.status === 'ERROR' && (
+                        <motion.button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-4 py-2.5 text-xs font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-all flex items-center gap-1.5 shadow-lg shadow-red-500/20"
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                        >
+                          <span className="material-symbols-outlined text-base">refresh</span>
+                          再アップロード
+                        </motion.button>
                       )}
-                    {(isTranscribing && transcriptionInfo?.status !== 'completed') && (
-                      <span className="px-4 py-2 text-[11px] bg-blue-100 text-[#7f19e6] font-medium rounded-lg flex items-center gap-1.5 border border-[#7f19e6]/20">
-                        <span className="material-symbols-outlined text-base animate-spin">sync</span>
-                        処理中
-                      </span>
-                    )}
-                    {!isTranscribing && m.transcriptionStatus === 'PROCESSING' && (
-                      <span className="px-4 py-2 text-[11px] bg-blue-100 text-[#7f19e6] font-medium rounded-lg flex items-center gap-1.5 border border-[#7f19e6]/20">
-                        <span className="material-symbols-outlined text-base animate-spin">sync</span>
-                        処理中
-                      </span>
-                    )}
-                    <button
-                      onClick={() => deleteMaterial(m.id)}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      title="削除"
-                    >
-                      <span className="material-symbols-outlined text-xl">delete</span>
-                    </button>
+                      {(m.type === 'audio' || m.type === 'video') &&
+                        (m.status === 'COMPLETED' || m.status === 'ERROR') &&
+                        m.transcriptionStatus !== 'COMPLETED' &&
+                        m.transcriptionStatus !== 'PROCESSING' &&
+                        !isTranscribing && (
+                          <motion.button
+                            onClick={() => startTranscription(m.id)}
+                            className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl transition-all flex items-center gap-1.5 ${
+                              m.transcriptionStatus === 'ERROR'
+                                ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20'
+                                : 'bg-gradient-to-r from-[#7f19e6] to-[#a855f7] hover:shadow-xl shadow-lg shadow-[#7f19e6]/20'
+                            }`}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                          >
+                            <span className="material-symbols-outlined text-base">
+                              {m.transcriptionStatus === 'ERROR' ? 'refresh' : 'transcribe'}
+                            </span>
+                            {m.transcriptionStatus === 'ERROR' ? '再試行' : '文字起こし'}
+                          </motion.button>
+                        )}
+                      {(isTranscribing && transcriptionInfo?.status !== 'completed') && (
+                        <span className="px-4 py-2.5 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-xl flex items-center gap-1.5 border border-[#7f19e6]/20">
+                          <span className="material-symbols-outlined text-base animate-spin">sync</span>
+                          処理中
+                        </span>
+                      )}
+                      {!isTranscribing && m.transcriptionStatus === 'PROCESSING' && (
+                        <span className="px-4 py-2.5 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-xl flex items-center gap-1.5 border border-[#7f19e6]/20">
+                          <span className="material-symbols-outlined text-base animate-spin">sync</span>
+                          処理中
+                        </span>
+                      )}
+                      <button
+                        onClick={() => deleteMaterial(m.id)}
+                        className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors opacity-0 group-hover:opacity-100"
+                        title="削除"
+                      >
+                        <span className="material-symbols-outlined text-xl">delete</span>
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               )
@@ -1005,7 +1238,15 @@ export default function MaterialsPage() {
 
       {/* アップロード中モーダル */}
       <AnimatePresence>
-        {Array.from(uploads.values()).some((u) => u.status === 'uploading' || u.status === 'confirming') && (
+        {Array.from(uploads.values()).some((u) => u.status === 'uploading' || u.status === 'confirming') && (() => {
+          const activeUploads = Array.from(uploads.entries()).filter(([, u]) => u.status === 'uploading' || u.status === 'confirming')
+          const totalProgress = activeUploads.length > 0
+            ? Math.round(activeUploads.reduce((sum, [, u]) => sum + u.progress, 0) / activeUploads.length)
+            : 0
+          const circumference = 2 * Math.PI * 54
+          const strokeDashoffset = circumference - (totalProgress / 100) * circumference
+
+          return (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1017,28 +1258,85 @@ export default function MaterialsPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
-              className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+              className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
             >
-              {/* Header with animation */}
-              <div className="p-6 pb-0 text-center">
-                <div className="w-20 h-20 mx-auto mb-4 bg-[#7f19e6]/10 rounded-2xl flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[#7f19e6] text-4xl animate-bounce">cloud_upload</span>
+              {/* 円形プログレスヘッダー */}
+              <div className="relative px-6 pt-8 pb-4">
+                {/* 背景グラデーション */}
+                <div className="absolute inset-0 bg-gradient-to-b from-[#7f19e6]/5 to-transparent rounded-t-3xl" />
+
+                <div className="relative flex flex-col items-center">
+                  {/* 円形プログレスリング */}
+                  <div className="relative w-32 h-32 mb-4">
+                    <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
+                      {/* 背景リング */}
+                      <circle cx="60" cy="60" r="54" fill="none" stroke="#e2e8f0" strokeWidth="6" />
+                      {/* プログレスリング */}
+                      <motion.circle
+                        cx="60" cy="60" r="54" fill="none"
+                        stroke="url(#progressGradient)" strokeWidth="6"
+                        strokeLinecap="round"
+                        strokeDasharray={circumference}
+                        initial={{ strokeDashoffset: circumference }}
+                        animate={{ strokeDashoffset }}
+                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                      />
+                      <defs>
+                        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#7f19e6" />
+                          <stop offset="100%" stopColor="#a855f7" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    {/* 中央のパーセンテージ */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-3xl font-black text-[#7f19e6] tabular-nums">{totalProgress}</span>
+                      <span className="text-[10px] font-bold text-slate-400 -mt-1">%</span>
+                    </div>
+                  </div>
+
+                  <h3 className="text-lg font-black text-slate-900 mb-1">
+                    {totalProgress === 100 ? '確認処理中...' : 'アップロード中...'}
+                  </h3>
+                  <p className="text-xs text-slate-500">このページを離れないでください</p>
                 </div>
-                <h3 className="text-xl font-black text-slate-900 mb-1">アップロード中...</h3>
-                <p className="text-sm text-slate-500">ファイルをアップロードしています。このページを離れないでください。</p>
               </div>
 
-              {/* Progress section */}
-              <div className="p-6 space-y-4">
-                {Array.from(uploads.entries())
-                  .filter(([, u]) => u.status === 'uploading' || u.status === 'confirming')
-                  .map(([key, upload]) => (
-                    <div key={key} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-slate-700 truncate flex-1 mr-2">{upload.file.name}</span>
-                        <span className="text-[#7f19e6] font-bold tabular-nums">{upload.progress}%</span>
+              {/* ファイル別プログレス */}
+              <div className="px-6 py-4 space-y-3">
+                {activeUploads.map(([key, upload]) => {
+                  const ft = getFileTypeIcon(upload.file.name)
+                  const speedInfo = uploadSpeedRef.current.get(key)
+                  const speed = speedInfo?.speed || 0
+                  const remaining = speed > 0 ? (upload.file.size * (1 - upload.progress / 100)) / speed : 0
+
+                  return (
+                    <div key={key} className="bg-slate-50 rounded-xl p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-10 h-10 ${ft.bg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                          <span className={`material-symbols-outlined ${ft.color} text-xl`}>{ft.icon}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-900 truncate">{upload.file.name}</p>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                            <span className="font-mono">{formatFileSize(upload.file.size)}</span>
+                            {speed > 0 && upload.status === 'uploading' && (
+                              <>
+                                <span>·</span>
+                                <span className="text-[#7f19e6] font-medium">{formatSpeed(speed)}</span>
+                                {remaining > 0 && remaining < 3600 && (
+                                  <>
+                                    <span>·</span>
+                                    <span>残り{remaining < 60 ? `${Math.ceil(remaining)}秒` : `${Math.ceil(remaining / 60)}分`}</span>
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-sm font-bold text-[#7f19e6] tabular-nums">{upload.progress}%</span>
                       </div>
-                      <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                         <motion.div
                           className="h-full rounded-full bg-gradient-to-r from-[#7f19e6] to-[#a855f7]"
                           initial={{ width: 0 }}
@@ -1046,15 +1344,13 @@ export default function MaterialsPage() {
                           transition={{ duration: 0.3 }}
                         />
                       </div>
-                      <p className="text-xs text-slate-400">
-                        {upload.status === 'confirming' ? '確認処理中...' : `${formatFileSize(upload.file.size)} をアップロード中`}
-                      </p>
                     </div>
-                  ))}
+                  )
+                })}
               </div>
 
               {/* Tips section */}
-              <div className="mx-6 mb-6 p-4 bg-[#7f19e6]/5 rounded-xl border border-[#7f19e6]/10">
+              <div className="mx-6 mb-6 p-4 bg-gradient-to-r from-[#7f19e6]/5 to-[#a855f7]/5 rounded-xl border border-[#7f19e6]/10">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={tipIndex}
@@ -1064,17 +1360,26 @@ export default function MaterialsPage() {
                     transition={{ duration: 0.3 }}
                     className="flex items-start gap-3"
                   >
-                    <span className="material-symbols-outlined text-[#7f19e6] text-lg mt-0.5 flex-shrink-0">{UPLOAD_TIPS[tipIndex].icon}</span>
+                    <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <span className="material-symbols-outlined text-[#7f19e6] text-lg">{UPLOAD_TIPS[tipIndex].icon}</span>
+                    </div>
                     <div>
                       <p className="text-[10px] font-bold text-[#7f19e6]/60 uppercase tracking-wider mb-0.5">豆知識</p>
                       <p className="text-sm text-slate-600 leading-relaxed">{UPLOAD_TIPS[tipIndex].text}</p>
                     </div>
                   </motion.div>
                 </AnimatePresence>
+                {/* ドットインジケーター */}
+                <div className="flex justify-center gap-1.5 mt-3">
+                  {UPLOAD_TIPS.map((_, i) => (
+                    <div key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${i === tipIndex ? 'bg-[#7f19e6] w-4' : 'bg-slate-300'}`} />
+                  ))}
+                </div>
               </div>
             </motion.div>
           </motion.div>
-        )}
+          )
+        })()}
       </AnimatePresence>
     </div>
   )
