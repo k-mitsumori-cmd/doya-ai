@@ -2,6 +2,7 @@
 // ドヤペルソナAI - ポートレート画像生成API
 // ========================================
 import { NextRequest, NextResponse } from 'next/server'
+import { callGeminiImageAPI } from '@/lib/resolve-image-model'
 
 export async function POST(req: NextRequest) {
   try {
@@ -43,45 +44,28 @@ IMPORTANT:
 Output a single high-quality portrait image.
 `
 
-    // Gemini 3 Pro Image Preview で画像生成
-    const model = process.env.DOYA_BANNER_IMAGE_MODEL || 'gemini-3-pro-image-preview'
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          responseModalities: ['IMAGE'],
-          temperature: 0.4,
-          candidateCount: 1,
+    // Nano Banana Pro で画像生成（モデル自動解決）
+    const requestBody = {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }],
         },
-        safetySettings: [
-          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-        ],
-      }),
-    })
-
-    if (!response.ok) {
-      const errText = await response.text()
-      console.error('Portrait generation failed:', errText)
-      return NextResponse.json(
-        { error: `画像生成に失敗しました: ${response.status}` },
-        { status: 500 }
-      )
+      ],
+      generationConfig: {
+        responseModalities: ['IMAGE'],
+        temperature: 0.4,
+        candidateCount: 1,
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
+      ],
     }
+
+    const { response } = await callGeminiImageAPI(apiKey, requestBody)
 
     const result = await response.json()
     
@@ -95,10 +79,12 @@ Output a single high-quality portrait image.
       const inline = part?.inlineData || part?.inline_data
       if (inline?.data && typeof inline.data === 'string') {
         const mimeType = inline?.mimeType || 'image/png'
-        return NextResponse.json({
+        const res = NextResponse.json({
           success: true,
           image: `data:${mimeType};base64,${inline.data}`,
         })
+
+        return res
       }
     }
 

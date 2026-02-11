@@ -207,16 +207,13 @@ export async function POST(req: NextRequest) {
     let dailyLimit = PERSONA_PRICING.guestLimit
     let usedToday = 0
     let isUnlimited = false
+    let isGuest = !userId
 
     if (userId) {
+      // ログインユーザー
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { 
-          plan: true, 
-          personaUsageToday: true, 
-          lastUsageReset: true,
-          firstLoginAt: true 
-        },
+        select: { plan: true, firstLoginAt: true },
       })
 
       if (user) {
@@ -228,21 +225,31 @@ export async function POST(req: NextRequest) {
         dailyLimit = getPersonaDailyLimitByUserPlan(user.plan)
         if (dailyLimit < 0) isUnlimited = true
 
+        // UserServiceSubscription で使用回数管理
+        let sub = await prisma.userServiceSubscription.findUnique({
+          where: { userId_serviceId: { userId, serviceId: 'persona' } },
+        })
+
+        if (!sub) {
+          sub = await prisma.userServiceSubscription.create({
+            data: { userId, serviceId: 'persona', plan: user.plan || 'FREE' },
+          })
+        }
+
         // 日次リセット
-        if (shouldResetDailyUsage(user.lastUsageReset)) {
-          await prisma.user.update({
-            where: { id: userId },
-            data: { personaUsageToday: 0, lastUsageReset: new Date() },
+        if (shouldResetDailyUsage(sub.lastUsageReset)) {
+          await prisma.userServiceSubscription.update({
+            where: { id: sub.id },
+            data: { dailyUsage: 0, lastUsageReset: new Date() },
           })
           usedToday = 0
         } else {
-          usedToday = user.personaUsageToday || 0
+          usedToday = sub.dailyUsage || 0
         }
       }
     } else {
-      // ゲスト: IP制限（簡易）
-      const ip = req.headers.get('x-forwarded-for') || 'unknown'
-      // 本番ではRedis等でIPごとの利用回数を管理
+      // ゲスト: 無制限アクセス
+      isUnlimited = true
     }
 
     // 制限チェック
@@ -250,6 +257,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: `本日の生成上限（${dailyLimit}回）に達しました`,
+          limitReached: true,
+          isGuest,
           usedToday,
           dailyLimit,
         },
@@ -345,13 +354,13 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
 
     // 使用回数を更新
     if (userId) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { personaUsageToday: { increment: 1 } },
+      await prisma.userServiceSubscription.updateMany({
+        where: { userId, serviceId: 'persona' },
+        data: { dailyUsage: { increment: 1 } },
       })
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: result,
       meta: {
@@ -359,8 +368,11 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
         title: meta.title,
         usedToday: usedToday + 1,
         dailyLimit,
+        isGuest,
       },
     })
+
+    return response
   } catch (error) {
     console.error('Persona generation error:', error)
     return NextResponse.json(
