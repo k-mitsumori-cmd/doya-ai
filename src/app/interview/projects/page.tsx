@@ -335,9 +335,18 @@ export default function ProjectsPage() {
 
                     {/* カード情報 */}
                     <div className="p-4">
+                      {/* プロジェクト名 */}
                       <h4 className="font-bold text-sm text-slate-900 line-clamp-1 group-hover:text-[#7f19e6] transition-colors mb-1">
-                        {p.articleTitle || p.title}
+                        {p.title}
                       </h4>
+
+                      {/* 記事タイトル */}
+                      {p.articleTitle && (
+                        <p className="text-[12px] font-bold text-slate-700 line-clamp-2 mb-1.5 leading-snug">
+                          <span className="material-symbols-outlined text-[12px] text-blue-500 mr-0.5 align-middle">article</span>
+                          {p.articleTitle}
+                        </p>
+                      )}
 
                       {(p.intervieweeName || p.intervieweeCompany) && (
                         <p className="text-[11px] text-slate-500 truncate mb-2">
@@ -345,28 +354,15 @@ export default function ProjectsPage() {
                         </p>
                       )}
 
-                      {/* 文字起こし要約 */}
-                      {p.transcriptionSummary && (
+                      {/* 文字起こし要約 or 抜粋 */}
+                      {(p.transcriptionSummary || p.transcriptionExcerpt) && (
                         <div className="mb-2">
                           <div className="flex items-center gap-1 mb-0.5">
                             <span className="material-symbols-outlined text-[11px] text-[#7f19e6]">mic</span>
                             <span className="text-[10px] font-bold text-[#7f19e6]">文字起こし</span>
                           </div>
-                          <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-2">
-                            {p.transcriptionSummary}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* 文字起こし抜粋 (summaryが無い場合のみ) */}
-                      {!p.transcriptionSummary && p.transcriptionExcerpt && (
-                        <div className="mb-2">
-                          <div className="flex items-center gap-1 mb-0.5">
-                            <span className="material-symbols-outlined text-[11px] text-[#7f19e6]">mic</span>
-                            <span className="text-[10px] font-bold text-[#7f19e6]">文字起こし</span>
-                          </div>
-                          <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2">
-                            {p.transcriptionExcerpt}
+                          <p className={`text-[11px] leading-relaxed line-clamp-2 ${p.transcriptionSummary ? 'text-slate-600' : 'text-slate-500'}`}>
+                            {p.transcriptionSummary || p.transcriptionExcerpt}
                           </p>
                         </div>
                       )}
