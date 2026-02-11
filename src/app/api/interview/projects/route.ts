@@ -49,26 +49,49 @@ export async function GET(req: NextRequest) {
             drafts: true,
           },
         },
+        drafts: {
+          take: 1,
+          orderBy: { version: 'desc' },
+          select: { title: true, content: true },
+        },
+        transcriptions: {
+          where: { status: 'COMPLETED' },
+          take: 1,
+          orderBy: { createdAt: 'desc' },
+          select: { summary: true, text: true },
+        },
       },
     })
 
     return NextResponse.json({
       success: true,
-      projects: projects.map((p) => ({
-        id: p.id,
-        title: p.title,
-        status: p.status,
-        intervieweeName: p.intervieweeName,
-        intervieweeRole: p.intervieweeRole,
-        intervieweeCompany: p.intervieweeCompany,
-        genre: p.genre,
-        theme: p.theme,
-        thumbnailUrl: p.thumbnailUrl || null,
-        materialCount: p._count.materials,
-        draftCount: p._count.drafts,
-        createdAt: p.createdAt.toISOString(),
-        updatedAt: p.updatedAt.toISOString(),
-      })),
+      projects: projects.map((p) => {
+        const latestDraft = p.drafts?.[0]
+        const latestTranscription = p.transcriptions?.[0]
+        return {
+          id: p.id,
+          title: p.title,
+          status: p.status,
+          intervieweeName: p.intervieweeName,
+          intervieweeRole: p.intervieweeRole,
+          intervieweeCompany: p.intervieweeCompany,
+          genre: p.genre,
+          theme: p.theme,
+          thumbnailUrl: p.thumbnailUrl || null,
+          materialCount: p._count.materials,
+          draftCount: p._count.drafts,
+          articleTitle: latestDraft?.title || null,
+          articleSummary: latestDraft?.content
+            ? latestDraft.content.replace(/^#.*\n/gm, '').replace(/\n+/g, ' ').trim().slice(0, 120)
+            : null,
+          transcriptionSummary: latestTranscription?.summary || null,
+          transcriptionExcerpt: latestTranscription?.text
+            ? latestTranscription.text.replace(/\n+/g, ' ').trim().slice(0, 150)
+            : null,
+          createdAt: p.createdAt.toISOString(),
+          updatedAt: p.updatedAt.toISOString(),
+        }
+      }),
     })
   } catch (e: any) {
     return NextResponse.json(

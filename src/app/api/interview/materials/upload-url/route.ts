@@ -19,6 +19,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, ensureGuestId, setGuestCookie, requireDatabase } from '@/lib/interview/access'
 import { createSignedUploadUrl, buildStoragePath, getDetectedMaxFileSize } from '@/lib/interview/storage'
 import { ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, getMaxFileSize } from '@/lib/interview/types'
+import { getInterviewLimitsByPlan, getInterviewGuestLimits } from '@/lib/pricing'
 
 export async function POST(req: NextRequest) {
   const dbErr = requireDatabase()
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // 認証
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     let guestId = !userId ? getGuestIdFromRequest(req) : null
     if (!userId && !guestId) {
       guestId = ensureGuestId()
@@ -67,14 +68,33 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ファイルサイズチェック (検出された Supabase プラン上限 or 環境変数)
+    // プランベースのファイルサイズ制限
+    const planLimits = userId
+      ? getInterviewLimitsByPlan(plan)
+      : getInterviewGuestLimits()
+    const planMax = planLimits.uploadSizeLimit
+
+    // Supabaseプラン上限 & 環境変数上限も考慮
     const detectedMax = getDetectedMaxFileSize()
     const configMax = getMaxFileSize()
-    const maxSize = Math.min(detectedMax, configMax)
+    // プラン制限が有効(-1でない)場合は3つの中で最小値、無効なら従来通り
+    const maxSize = planMax > 0
+      ? Math.min(planMax, detectedMax, configMax)
+      : Math.min(detectedMax, configMax)
+
     if (fileSize && fileSize > maxSize) {
       const mb = Math.round(maxSize / 1024 / 1024)
+      const isGuest = !userId
       return NextResponse.json(
-        { success: false, error: `ファイルサイズが上限 (${mb}MB) を超えています。Supabaseプランをご確認ください。` },
+        {
+          success: false,
+          error: `ファイルサイズが上限 (${mb}MB) を超えています。`,
+          code: isGuest ? 'GUEST_UPLOAD_LIMIT' : 'PLAN_UPLOAD_LIMIT',
+          actionUrl: isGuest
+            ? '/auth/doyamarke/signin?callbackUrl=/interview'
+            : '/interview/settings',
+          actionLabel: isGuest ? 'ログインはこちら' : 'アップグレードはこちら',
+        },
         { status: 400 }
       )
     }

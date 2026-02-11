@@ -19,7 +19,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
-import { SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
+import { SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs, INTERVIEW_PRICING } from '@/lib/pricing'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
@@ -91,11 +91,11 @@ function UsageStats({ showLabel, isLoggedIn, planLabel, isCollapsed }: { showLab
         <div className="bg-white/5 rounded-xl p-3 border border-white/10 space-y-2">
           <div className="flex items-center gap-2 text-[11px] text-white/70 font-bold">
             <span className="material-symbols-outlined text-sm text-white/50">timer</span>
-            <span>ゲスト: <span className="text-white font-black">5分</span> まで</span>
+            <span>ゲスト: <span className="text-white font-black">{INTERVIEW_PRICING.transcriptionMinutes.guest}分</span> まで</span>
           </div>
           <div className="flex items-center gap-2 text-[10px] text-amber-300/80 font-bold">
             <span className="material-symbols-outlined text-[10px]">star</span>
-            <span>無料登録で30分/月に拡大</span>
+            <span>無料登録で{INTERVIEW_PRICING.transcriptionMinutes.free}分/月に拡大</span>
           </div>
         </div>
       </div>
@@ -526,7 +526,15 @@ function InterviewSidebarImpl({
                       {session?.user?.name || (isLoggedIn ? 'ユーザー' : 'ゲスト')}
                     </p>
                     <p className="text-[10px] font-bold text-purple-100/60 truncate">
-                      {planLabel === 'GUEST' ? 'ゲスト' : planLabel === 'FREE' ? '無料プラン' : `${planLabel}プラン`}
+                      {planLabel === 'GUEST'
+                        ? `ゲスト（${INTERVIEW_PRICING.transcriptionMinutes.guest}分まで）`
+                        : planLabel === 'FREE'
+                          ? `無料プラン（月${INTERVIEW_PRICING.transcriptionMinutes.free}分）`
+                          : planLabel === 'PRO'
+                            ? `PROプラン（月${INTERVIEW_PRICING.transcriptionMinutes.pro}分）`
+                            : planLabel === 'ENTERPRISE'
+                              ? `法人プラン（月${INTERVIEW_PRICING.transcriptionMinutes.enterprise}分）`
+                              : `${planLabel}プラン`}
                     </p>
                   </motion.div>
                 )}

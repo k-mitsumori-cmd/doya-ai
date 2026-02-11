@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -15,6 +16,10 @@ interface Project {
   thumbnailUrl?: string | null
   materialCount: number
   draftCount: number
+  articleTitle?: string | null
+  articleSummary?: string | null
+  transcriptionSummary?: string | null
+  transcriptionExcerpt?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -24,6 +29,8 @@ interface UploadingFile {
   progress: number
   status: 'creating' | 'uploading' | 'confirming' | 'transcribing' | 'done' | 'error'
   error?: string
+  errorActionUrl?: string
+  errorActionLabel?: string
   materialId?: string
   projectId?: string
 }
@@ -95,8 +102,12 @@ export default function InterviewDashboard() {
   const [uploads, setUploads] = useState<Map<string, UploadingFile>>(new Map())
   const [tipIndex, setTipIndex] = useState(0)
 
-  // プロジェクト一覧取得
+  // プロジェクト一覧取得（ログインユーザーのみ）
   useEffect(() => {
+    if (!session?.user) {
+      setLoading(false)
+      return
+    }
     fetch('/api/interview/projects')
       .then((r) => r.json())
       .then((data) => {
@@ -104,7 +115,7 @@ export default function InterviewDashboard() {
       })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [])
+  }, [session])
 
   // 豆知識サイクル — uploads.size でシンプルに判定
   const uploadsExist = uploads.size > 0
@@ -173,7 +184,12 @@ export default function InterviewDashboard() {
         }),
       })
       const urlData = await urlRes.json()
-      if (!urlData.success) throw new Error(urlData.error || 'アップロードURL取得失敗')
+      if (!urlData.success) {
+        const err: any = new Error(urlData.error || 'アップロードURL取得失敗')
+        err.actionUrl = urlData.actionUrl
+        err.actionLabel = urlData.actionLabel
+        throw err
+      }
 
       const { signedUrl, materialId } = urlData
 
@@ -303,7 +319,13 @@ export default function InterviewDashboard() {
       setUploads((prev) => {
         const next = new Map(prev)
         const item = next.get(uploadKey)
-        if (item) next.set(uploadKey, { ...item, status: 'error', error: e.message })
+        if (item) next.set(uploadKey, {
+          ...item,
+          status: 'error',
+          error: e.message,
+          errorActionUrl: e.actionUrl,
+          errorActionLabel: e.actionLabel,
+        })
         return next
       })
     }
@@ -451,7 +473,8 @@ export default function InterviewDashboard() {
         </div>
       </motion.div>
 
-      {/* Upload Progress Modal */}
+      {/* Upload Progress Modal — createPortal でビューポート直下にレンダリング */}
+      {typeof document !== 'undefined' && createPortal(
       <AnimatePresence>
         {uploads.size > 0 && (() => {
           const allUploads = Array.from(uploads.entries())
@@ -744,19 +767,34 @@ export default function InterviewDashboard() {
                         />
                       </div>
                       {isError && (
-                        <motion.button
-                          onClick={() => {
-                            const file = upload.file
-                            setUploads((prev) => { const next = new Map(prev); next.delete(key); return next })
-                            uploadFromDashboard(file)
-                          }}
-                          className="mt-2 flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
-                          whileHover={{ scale: 1.03 }}
-                          whileTap={{ scale: 0.97 }}
-                        >
-                          <span className="material-symbols-outlined text-sm">refresh</span>
-                          再試行
-                        </motion.button>
+                        <div className="mt-2 flex items-center gap-2">
+                          <motion.button
+                            onClick={() => {
+                              const file = upload.file
+                              setUploads((prev) => { const next = new Map(prev); next.delete(key); return next })
+                              uploadFromDashboard(file)
+                            }}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                          >
+                            <span className="material-symbols-outlined text-sm">refresh</span>
+                            再試行
+                          </motion.button>
+                          {upload.errorActionUrl && (
+                            <motion.a
+                              href={upload.errorActionUrl}
+                              className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white rounded-lg text-xs font-bold hover:bg-[#6b12c9] transition-colors shadow-sm"
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
+                            >
+                              <span className="material-symbols-outlined text-sm">
+                                {upload.errorActionUrl.includes('signin') ? 'login' : 'upgrade'}
+                              </span>
+                              {upload.errorActionLabel || '詳細'}
+                            </motion.a>
+                          )}
+                        </div>
                       )}
                     </motion.div>
                   )
@@ -843,7 +881,8 @@ export default function InterviewDashboard() {
           </motion.div>
           )
         })()}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body)}
 
       {/* Recent Projects */}
       <div>
@@ -852,15 +891,32 @@ export default function InterviewDashboard() {
             <span className="material-symbols-outlined text-slate-700">schedule</span>
             <h2 className="text-lg font-black text-slate-900">最近のプロジェクト</h2>
           </div>
-          <Link
-            href="/interview/projects"
-            className="text-sm font-bold text-[#7f19e6] hover:underline"
-          >
-            すべて表示
-          </Link>
+          {session?.user && (
+            <Link
+              href="/interview/projects"
+              className="text-sm font-bold text-[#7f19e6] hover:underline"
+            >
+              すべて表示
+            </Link>
+          )}
         </div>
 
-        {loading ? (
+        {!session?.user ? (
+          <div className="bg-white rounded-xl p-12 border border-slate-200 text-center">
+            <div className="w-16 h-16 bg-[#7f19e6]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-[#7f19e6] text-3xl">lock</span>
+            </div>
+            <p className="text-slate-900 font-bold mb-1">ログインしてプロジェクトを管理</p>
+            <p className="text-slate-500 text-sm mb-4">ログインすると、過去のプロジェクト一覧の閲覧や管理ができます</p>
+            <Link
+              href="/api/auth/signin"
+              className="inline-flex items-center gap-2 bg-[#7f19e6] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25"
+            >
+              <span className="material-symbols-outlined text-lg">login</span>
+              ログインする
+            </Link>
+          </div>
+        ) : loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 animate-pulse">
@@ -914,12 +970,25 @@ export default function InterviewDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <h4 className="text-sm font-bold text-slate-900 truncate group-hover:text-[#7f19e6] transition-colors flex-1">
-                          {project.title}
+                          {project.articleTitle || project.title}
                         </h4>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-black whitespace-nowrap ${status.color}`}>
                           {status.label}
                         </span>
                       </div>
+                      {/* 文字起こし要約 */}
+                      {(project.transcriptionSummary || project.transcriptionExcerpt) && (
+                        <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 mb-1">
+                          <span className="material-symbols-outlined text-[10px] text-[#7f19e6] mr-0.5 align-middle">mic</span>
+                          {project.transcriptionSummary || project.transcriptionExcerpt}
+                        </p>
+                      )}
+                      {/* 記事サマリー */}
+                      {project.articleSummary && (
+                        <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 mb-1">
+                          {project.articleSummary}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 font-bold">
                         <span>{getTimeSince(project.updatedAt)}</span>
                         {project.materialCount > 0 && (

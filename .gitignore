@@ -48,3 +48,4 @@ LOGO/outputs/**
 .vscode
 
 
+.env*.local

@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Recipe {
@@ -77,6 +79,7 @@ const slideInVariants = {
 }
 
 export default function SkillManagementPage() {
+  const { data: session, status: sessionStatus } = useSession()
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
@@ -271,6 +274,36 @@ export default function SkillManagementPage() {
     } finally {
       setDeleting(false)
     }
+  }
+
+  // ゲストユーザーはログインを促す
+  if (sessionStatus === 'loading') {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="inline-block w-8 h-8 border-2 border-slate-300 border-t-[#7f19e6] rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="max-w-md mx-auto mt-20 text-center">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-10">
+          <div className="w-16 h-16 bg-[#7f19e6]/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <span className="material-symbols-outlined text-[#7f19e6] text-3xl">lock</span>
+          </div>
+          <h2 className="text-xl font-black text-slate-900 mb-2">ログインが必要です</h2>
+          <p className="text-slate-500 text-sm mb-6">スキル管理を利用するにはログインしてください</p>
+          <Link
+            href="/api/auth/signin"
+            className="inline-flex items-center gap-2 bg-[#7f19e6] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25"
+          >
+            <span className="material-symbols-outlined text-lg">login</span>
+            ログインする
+          </Link>
+        </div>
+      </div>
+    )
   }
 
   return (

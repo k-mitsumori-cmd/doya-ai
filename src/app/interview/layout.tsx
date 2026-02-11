@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import InterviewLayout from '@/components/interview/InterviewLayout'
 
 export const metadata: Metadata = {
-  title: 'Doya Interview AI — AI記事生成',
+  title: 'ドヤインタビューAI — AI記事生成',
   description: 'インタビュー音声からプロ品質の記事をAIが自動生成。文字起こし→構成→執筆→校正まで一気通貫。',
 }
 

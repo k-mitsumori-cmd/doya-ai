@@ -280,7 +280,7 @@ export default function RecipeSelectionPage() {
                 AI記事を生成する
               </button>
               <p className="text-center text-[11px] text-slate-500 mt-4 uppercase tracking-wider font-semibold">
-                推定時間: 2-3分 • 1クレジット消費
+                推定時間: 2-3分
               </p>
             </div>
           </div>

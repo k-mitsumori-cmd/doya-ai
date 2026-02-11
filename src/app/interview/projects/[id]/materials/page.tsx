@@ -31,6 +31,8 @@ interface UploadingFile {
   progress: number
   status: 'uploading' | 'confirming' | 'done' | 'error'
   error?: string
+  errorActionUrl?: string
+  errorActionLabel?: string
   materialId?: string
 }
 
@@ -281,7 +283,10 @@ export default function MaterialsPage() {
 
       const urlData = await urlRes.json()
       if (!urlData.success) {
-        throw new Error(urlData.error || 'アップロードURL取得失敗')
+        const err: any = new Error(urlData.error || 'アップロードURL取得失敗')
+        err.actionUrl = urlData.actionUrl
+        err.actionLabel = urlData.actionLabel
+        throw err
       }
 
       const { signedUrl, materialId } = urlData
@@ -404,7 +409,13 @@ export default function MaterialsPage() {
       setUploads((prev) => {
         const next = new Map(prev)
         const item = next.get(uploadKey)
-        if (item) next.set(uploadKey, { ...item, status: 'error', error: e.message })
+        if (item) next.set(uploadKey, {
+          ...item,
+          status: 'error',
+          error: e.message,
+          errorActionUrl: e.actionUrl,
+          errorActionLabel: e.actionLabel,
+        })
         return next
       })
     }
@@ -912,29 +923,44 @@ export default function MaterialsPage() {
                   </>
                 )}
                 {upload.status === 'error' && (
-                  <div className="flex items-center justify-between w-full">
+                  <div className="w-full space-y-2">
                     <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-red-600 text-sm">error</span>
+                      <span className="material-symbols-outlined text-red-600 text-sm flex-shrink-0">error</span>
                       <p className="text-xs text-red-600">{upload.error}</p>
                     </div>
-                    <motion.button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        const file = upload.file
-                        setUploads((prev) => {
-                          const next = new Map(prev)
-                          next.delete(key)
-                          return next
-                        })
-                        uploadFile(file)
-                      }}
-                      className="flex items-center gap-1 px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                    >
-                      <span className="material-symbols-outlined text-sm">refresh</span>
-                      再試行
-                    </motion.button>
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const file = upload.file
+                          setUploads((prev) => {
+                            const next = new Map(prev)
+                            next.delete(key)
+                            return next
+                          })
+                          uploadFile(file)
+                        }}
+                        className="flex items-center gap-1 px-4 py-2 bg-red-500 text-white rounded-xl text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                      >
+                        <span className="material-symbols-outlined text-sm">refresh</span>
+                        再試行
+                      </motion.button>
+                      {upload.errorActionUrl && (
+                        <motion.a
+                          href={upload.errorActionUrl}
+                          className="flex items-center gap-1 px-4 py-2 bg-[#7f19e6] text-white rounded-xl text-xs font-bold hover:bg-[#6b12c9] transition-colors shadow-sm"
+                          whileHover={{ scale: 1.03 }}
+                          whileTap={{ scale: 0.97 }}
+                        >
+                          <span className="material-symbols-outlined text-sm">
+                            {upload.errorActionUrl.includes('signin') ? 'login' : 'upgrade'}
+                          </span>
+                          {upload.errorActionLabel || '詳細'}
+                        </motion.a>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { constructWebhookEvent, getPlanIdFromStripePriceId, getServiceIdFromPlanId, stripe } from '@/lib/stripe'
+import { constructWebhookEvent, getPlanIdFromStripePriceId, stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 
@@ -198,29 +198,21 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     },
   })
 
-  // サービス別プランもフリーに戻す（どのサービスの解約かは価格ID/metadataから推定）
-  try {
-    const priceId = subscription.items.data[0]?.price.id
-    const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
-    const planIdFromMeta = (subscription.metadata?.planId as any) || null
-    const planId = (planIdFromPrice || planIdFromMeta) as any
-    if (planId && typeof planId === 'string') {
-      const serviceId = getServiceIdFromPlanId(planId)
-      if (serviceId !== 'bundle') {
-        await prisma.userServiceSubscription.update({
-          where: { userId_serviceId: { userId: user.id, serviceId } },
-          data: {
-            plan: 'FREE',
-            stripeSubscriptionId: null,
-            stripePriceId: null,
-            stripeCurrentPeriodEnd: null,
-          },
-        }).catch(() => {})
-      }
-    }
-  } catch {}
+  // 統一課金: 全サービスをFREEに戻す
+  const allServiceIds = ['banner', 'seo', 'interview', 'persona', 'kantan']
+  for (const serviceId of allServiceIds) {
+    await prisma.userServiceSubscription.update({
+      where: { userId_serviceId: { userId: user.id, serviceId } },
+      data: {
+        plan: 'FREE',
+        stripeSubscriptionId: null,
+        stripePriceId: null,
+        stripeCurrentPeriodEnd: null,
+      },
+    }).catch(() => {})
+  }
 
-  console.log(`Subscription canceled for user: ${user.id}`)
+  console.log(`Subscription canceled for user: ${user.id} (all services reset to FREE)`)
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
@@ -234,60 +226,28 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 }
 
 // ========================================
-// ユーザーサブスクリプション更新
+// ユーザーサブスクリプション更新（統一課金）
 // ========================================
+// どのサービスから課金しても、全サービスが同じプランになる
 async function updateUserSubscription(userId: string, subscription: Stripe.Subscription) {
   const priceId = subscription.items.data[0]?.price.id
   const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
-  const planIdFromMeta = (subscription.metadata?.planId as any) || null
-  const planId = (planIdFromPrice || planIdFromMeta) as any
+  const planIdFromMeta = subscription.metadata?.planId || null
+  const planId = String(planIdFromPrice || planIdFromMeta || '')
 
-  // まずはサービス別に確実に反映
-  if (planId && typeof planId === 'string' && planId.includes('-')) {
-    const serviceId = getServiceIdFromPlanId(planId)
-    if (serviceId !== 'bundle') {
-      const isBannerPaid =
-        serviceId === 'banner' &&
-        (planId === 'banner-basic' || planId === 'banner-pro' || planId === 'banner-enterprise' || planId === 'banner-starter' || planId === 'banner-business')
-      const servicePlan =
-        serviceId === 'seo' && planId === 'seo-enterprise'
-          ? 'ENTERPRISE'
-          : serviceId === 'banner' && planId === 'banner-enterprise'
-            ? 'ENTERPRISE'
-            : (planId.endsWith('-pro') || isBannerPaid)
-              ? 'PRO'
-              : 'FREE'
-      await prisma.userServiceSubscription.upsert({
-        where: { userId_serviceId: { userId, serviceId } },
-        create: {
-          userId,
-          serviceId,
-          plan: servicePlan,
-          stripeSubscriptionId: subscription.id,
-          stripePriceId: priceId,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          dailyUsage: 0,
-          monthlyUsage: 0,
-          lastUsageReset: new Date(),
-        },
-        update: {
-          plan: servicePlan,
-          stripeSubscriptionId: subscription.id,
-          stripePriceId: priceId,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        },
-      })
-    }
+  // プランレベルを判定
+  let userPlan = 'PRO' // 有料プランのデフォルト
+  if (planId === 'bundle') {
+    userPlan = 'BUNDLE'
+  } else if (planId.endsWith('-enterprise')) {
+    userPlan = 'ENTERPRISE'
+  } else if (planId.endsWith('-pro') || planId === 'banner-basic' || planId.startsWith('banner-')) {
+    userPlan = 'PRO'
+  } else if (!planId) {
+    userPlan = 'FREE'
   }
 
-  // ポータル全体のplanも更新（互換用）
-  const userPlan =
-    planId === 'bundle' ? 'BUNDLE'
-      : planId === 'seo-enterprise' ? 'ENTERPRISE'
-        : planId === 'banner-enterprise' ? 'ENTERPRISE'
-          : (planId === 'banner-basic' || (planId && String(planId).endsWith('-pro'))) ? 'PRO'
-            : 'FREE'
-
+  // グローバルプランを更新
   await prisma.user.update({
     where: { id: userId },
     data: {
@@ -298,5 +258,31 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
     },
   })
 
-  console.log(`Updated subscription for user ${userId}: ${userPlan} (${subscription.status})`)
+  // 統一課金: 全サービスを同じプランに更新
+  const servicePlan = userPlan === 'BUNDLE' ? 'PRO' : userPlan
+  const allServiceIds = ['banner', 'seo', 'interview', 'persona', 'kantan']
+  for (const serviceId of allServiceIds) {
+    await prisma.userServiceSubscription.upsert({
+      where: { userId_serviceId: { userId, serviceId } },
+      create: {
+        userId,
+        serviceId,
+        plan: servicePlan,
+        stripeSubscriptionId: subscription.id,
+        stripePriceId: priceId,
+        stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        dailyUsage: 0,
+        monthlyUsage: 0,
+        lastUsageReset: new Date(),
+      },
+      update: {
+        plan: servicePlan,
+        stripeSubscriptionId: subscription.id,
+        stripePriceId: priceId,
+        stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      },
+    }).catch(() => {})
+  }
+
+  console.log(`Updated subscription for user ${userId}: ${userPlan} — all services: ${servicePlan} (${subscription.status})`)
 }

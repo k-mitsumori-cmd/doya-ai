@@ -160,6 +160,120 @@ const panelVariants = {
   exit: { opacity: 0, y: -10, transition: { duration: 0.15 } }
 }
 
+// ========================================
+// Markdown ↔ HTML 変換ヘルパー
+// ========================================
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+function inlineToHtml(s: string): string {
+  return escapeHtml(s)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+}
+
+function stripCodeFences(md: string): string {
+  // ```markdown ... ``` や ```json ... ``` のようなコードフェンスラッパーを除去
+  let s = md.trim()
+  const fenceStart = /^```\w*\s*\n/
+  if (fenceStart.test(s) && s.endsWith('```')) {
+    s = s.replace(fenceStart, '').replace(/\n?```$/, '')
+  }
+  return s
+}
+
+function markdownToHtml(md: string): string {
+  const cleaned = stripCodeFences(md)
+  const lines = cleaned.split('\n')
+  const out: string[] = []
+  let inCodeBlock = false
+  let codeLines: string[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    // コードブロック内
+    if (inCodeBlock) {
+      if (line.startsWith('```')) {
+        out.push(`<pre><code>${codeLines.map(escapeHtml).join('\n')}</code></pre>`)
+        codeLines = []
+        inCodeBlock = false
+      } else {
+        codeLines.push(line)
+      }
+      continue
+    }
+
+    // コードブロック開始
+    if (line.startsWith('```')) {
+      inCodeBlock = true
+      codeLines = []
+      continue
+    }
+
+    if (line.startsWith('#### ')) { out.push(`<h4>${inlineToHtml(line.slice(5))}</h4>`); continue }
+    if (line.startsWith('### ')) { out.push(`<h3>${inlineToHtml(line.slice(4))}</h3>`); continue }
+    if (line.startsWith('## ')) { out.push(`<h2>${inlineToHtml(line.slice(3))}</h2>`); continue }
+    if (line.startsWith('# ')) { out.push(`<h1>${inlineToHtml(line.slice(2))}</h1>`); continue }
+    if (line.startsWith('> ')) { out.push(`<blockquote>${inlineToHtml(line.slice(2))}</blockquote>`); continue }
+    if (line.startsWith('- ') || line.startsWith('* ')) {
+      // 連続リストアイテムをまとめる
+      const items: string[] = [inlineToHtml(line.slice(2))]
+      while (i + 1 < lines.length && (lines[i + 1].startsWith('- ') || lines[i + 1].startsWith('* '))) {
+        i++
+        items.push(inlineToHtml(lines[i].slice(2)))
+      }
+      out.push(`<ul>${items.map(t => `<li>${t}</li>`).join('')}</ul>`)
+      continue
+    }
+    if (/^\d+\.\s/.test(line)) {
+      const items: string[] = [inlineToHtml(line.replace(/^\d+\.\s/, ''))]
+      while (i + 1 < lines.length && /^\d+\.\s/.test(lines[i + 1])) {
+        i++
+        items.push(inlineToHtml(lines[i].replace(/^\d+\.\s/, '')))
+      }
+      out.push(`<ol>${items.map(t => `<li>${t}</li>`).join('')}</ol>`)
+      continue
+    }
+    if (line.startsWith('---') || line.startsWith('***')) { out.push('<hr>'); continue }
+    if (line.trim() === '') { out.push('<p><br></p>'); continue }
+    out.push(`<p>${inlineToHtml(line)}</p>`)
+  }
+
+  // 閉じ忘れたコードブロック
+  if (inCodeBlock && codeLines.length) {
+    out.push(`<pre><code>${codeLines.map(escapeHtml).join('\n')}</code></pre>`)
+  }
+
+  return out.join('\n')
+}
+
+// プレビューのCSS
+const RICH_EDITOR_STYLES = `
+.rich-editor { min-height: 300px; }
+.rich-editor h1 { font-size: 1.5rem; font-weight: 900; color: #0f172a; margin: 2.5rem 0 1.25rem; line-height: 1.25; }
+.rich-editor h2 { font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 2.5rem 0 1rem; line-height: 1.375; padding-bottom: 0.5rem; border-bottom: 1px solid #f1f5f9; }
+.rich-editor h3 { font-size: 1.125rem; font-weight: 700; color: #1e293b; margin: 2rem 0 0.75rem; line-height: 1.375; }
+.rich-editor h4 { font-size: 1rem; font-weight: 700; color: #1e293b; margin: 1.5rem 0 0.5rem; line-height: 1.375; }
+.rich-editor p { font-size: 0.9375rem; color: #334155; line-height: 1.9; margin-bottom: 0.75rem; }
+.rich-editor blockquote { border-left: 4px solid #3b82f6; padding: 0.75rem 1rem 0.75rem 1.25rem; margin: 1rem 0; background: rgba(59,130,246,0.04); border-radius: 0 0.5rem 0.5rem 0; color: #475569; font-style: italic; }
+.rich-editor ul, .rich-editor ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+.rich-editor li { font-size: 0.9375rem; color: #334155; line-height: 1.8; margin-bottom: 0.25rem; }
+.rich-editor ul li { list-style-type: disc; }
+.rich-editor ol li { list-style-type: decimal; }
+.rich-editor hr { margin: 2rem 0; border-color: #e2e8f0; }
+.rich-editor strong { font-weight: 700; color: #0f172a; }
+.rich-editor em { font-style: italic; }
+.rich-editor code { background: #f1f5f9; color: #2563eb; padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-size: 0.8125rem; font-family: ui-monospace, monospace; }
+.rich-editor a { color: #2563eb; text-decoration: underline; }
+.rich-editor a:hover { color: #1d4ed8; }
+.rich-editor pre { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; margin: 1rem 0; overflow-x: auto; }
+.rich-editor pre code { background: none; color: #334155; padding: 0; font-size: 0.8125rem; font-family: ui-monospace, monospace; }
+`
+
 export default function EditPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -179,6 +293,9 @@ export default function EditPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [exportDropdownOpen, setExportDropdownOpen] = useState(false)
   const exportDropdownRef = useRef<HTMLDivElement>(null)
+
+  // 左側: エディタ (リッチ) / Markdown 切替
+  const [leftMode, setLeftMode] = useState<'edit' | 'preview'>('edit')
 
   // 右パネル
   const [rightPanel, setRightPanel] = useState<RightPanel>('proofread')
@@ -217,6 +334,10 @@ export default function EditPage() {
   const [revisionHistory, setRevisionHistory] = useState<RevisionHistoryItem[]>([])
   const [contentBeforeRevision, setContentBeforeRevision] = useState<string | null>(null)
 
+  // バナー画像
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
+  const [bannerGenerating, setBannerGenerating] = useState(false)
+
   // エクスポートドロップダウン外クリック閉じ
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -238,6 +359,9 @@ export default function EditPage() {
         const data = await res.json()
         if (data.success) {
           setProjectInfo(data.project)
+          if (data.project?.thumbnailUrl) {
+            setBannerUrl(data.project.thumbnailUrl)
+          }
           const latestDraft = data.project.drafts?.[0]
           if (latestDraft) {
             setDraftId(latestDraft.id)
@@ -267,6 +391,9 @@ export default function EditPage() {
           setTitle(data.draft.title || '')
           setWordCount(data.draft.wordCount || data.draft.content.length)
           setProjectInfo(data.draft.project)
+          if (data.draft.project?.thumbnailUrl) {
+            setBannerUrl(data.draft.project.thumbnailUrl)
+          }
         }
       })
       .catch(console.error)
@@ -301,6 +428,27 @@ export default function EditPage() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     await autoSave(content)
   }
+
+  // バナー画像生成 (Nano Banana Pro)
+  const generateBanner = useCallback(async () => {
+    if (bannerGenerating) return
+    setBannerGenerating(true)
+    try {
+      const res = await fetch(`/api/interview/projects/${projectId}/thumbnail`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ articleContent: content.slice(0, 2000) }),
+      })
+      const data = await res.json()
+      if (data.success && data.thumbnailUrl) {
+        setBannerUrl(data.thumbnailUrl)
+      }
+    } catch (e) {
+      console.error('[banner] generation failed:', e)
+    } finally {
+      setBannerGenerating(false)
+    }
+  }, [projectId, content, bannerGenerating])
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content)
@@ -624,7 +772,7 @@ export default function EditPage() {
     (factResult?.reliability ?? 0) >= 60 ? 'text-yellow-600' : 'text-red-600'
 
   const TABS: { key: RightPanel; label: string }[] = [
-    { key: 'preview', label: '📄' },
+    { key: 'preview', label: '💻' },
     { key: 'proofread', label: '✅' },
     { key: 'titles', label: '💡' },
     { key: 'factcheck', label: '🔍' },
@@ -632,7 +780,7 @@ export default function EditPage() {
     { key: 'translate', label: '🌐' },
   ]
   const TAB_NAMES: Record<string, string> = {
-    preview: 'プレビュー', proofread: '校正', titles: 'タイトル',
+    preview: 'Markdown', proofread: '校正', titles: 'タイトル',
     factcheck: 'ファクトチェック', sns: 'SNS投稿', translate: '翻訳',
   }
 
@@ -769,27 +917,126 @@ export default function EditPage() {
           <div className="flex gap-6">
             {/* エディタエリア */}
             <div className="flex-1 min-w-0">
-              {/* タイトル入力 */}
-              <div className="bg-white border border-slate-200 rounded-t-xl px-6 py-4 shadow-sm">
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="記事タイトルを入力..."
-                  className="w-full text-2xl font-extrabold tracking-tight text-slate-900 outline-none placeholder:text-slate-300"
-                />
+              {/* モード切替バー */}
+              <div className="bg-white border border-slate-200 rounded-t-xl px-4 py-2.5 shadow-sm flex items-center justify-between">
+                <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setLeftMode('edit')}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      leftMode === 'edit'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">article</span>
+                    <span>プレビュー</span>
+                  </button>
+                  <button
+                    onClick={() => setLeftMode('preview')}
+                    className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      leftMode === 'preview'
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">code</span>
+                    <span>Markdown</span>
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <span className="material-symbols-outlined text-[14px]">info</span>
+                  {leftMode === 'edit' ? '記事プレビュー' : 'Markdownソースを編集'}
+                </div>
               </div>
 
-              {/* コンテンツエディタ */}
-              <div className="bg-white border border-slate-200 border-t-0 shadow-sm">
-                <textarea
-                  ref={textareaRef}
-                  value={content}
-                  onChange={(e) => handleContentChange(e.target.value)}
-                  className="w-full min-h-[calc(100vh-400px)] px-6 py-6 text-[15px] leading-[1.75] text-slate-700 outline-none resize-none font-sans"
-                  placeholder="ここに本文を入力してください。Markdown記法が使えます。"
-                />
-              </div>
+              {leftMode === 'edit' ? (
+                /* リッチテキストエディタ */
+                <div className="bg-white border border-slate-200 border-t-0 shadow-sm min-h-[calc(100vh-400px)] overflow-y-auto">
+                  <style dangerouslySetInnerHTML={{ __html: RICH_EDITOR_STYLES }} />
+                  <div className="max-w-[720px] mx-auto px-8 py-10">
+                    {/* バナー画像 (Nano Banana Pro) */}
+                    {bannerUrl ? (
+                      <div className="relative group mb-8 -mx-8 -mt-10 overflow-hidden">
+                        <img
+                          src={bannerUrl}
+                          alt="記事バナー"
+                          className="w-full h-[200px] object-cover"
+                          style={{ filter: 'brightness(0.92) contrast(1.08) saturate(1.1)' }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+                        <button
+                          onClick={generateBanner}
+                          disabled={bannerGenerating}
+                          className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-lg text-xs font-bold text-slate-700 hover:bg-white shadow-lg flex items-center gap-1.5"
+                        >
+                          <span className="material-symbols-outlined text-sm">{bannerGenerating ? 'sync' : 'refresh'}</span>
+                          {bannerGenerating ? '生成中...' : '再生成'}
+                        </button>
+                      </div>
+                    ) : content.trim() ? (
+                      <div className="mb-8 -mx-8 -mt-10">
+                        <button
+                          onClick={generateBanner}
+                          disabled={bannerGenerating}
+                          className="w-full h-[120px] bg-gradient-to-r from-slate-50 via-slate-100 to-slate-50 border-b border-slate-200 flex flex-col items-center justify-center gap-2 hover:from-[#7f19e6]/5 hover:via-[#7f19e6]/10 hover:to-[#7f19e6]/5 transition-all group"
+                        >
+                          {bannerGenerating ? (
+                            <>
+                              <span className="material-symbols-outlined text-2xl text-[#7f19e6] animate-spin">progress_activity</span>
+                              <span className="text-xs font-bold text-slate-500">Nano Banana Pro でバナー生成中...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-2xl text-slate-300 group-hover:text-[#7f19e6] transition-colors">add_photo_alternate</span>
+                              <span className="text-xs font-bold text-slate-400 group-hover:text-[#7f19e6] transition-colors">バナー画像を生成</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {/* タイトル入力 */}
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="記事タイトルを入力..."
+                      className="w-full text-3xl font-black tracking-tight text-slate-900 outline-none placeholder:text-slate-300 leading-[1.3] mb-8 pb-6 border-b-2 border-slate-100"
+                    />
+
+                    {/* レンダリング済みプレビュー */}
+                    <div
+                      className="rich-editor"
+                      dangerouslySetInnerHTML={{ __html: markdownToHtml(content) }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Markdown ソースコード */
+                <>
+                  {/* タイトル入力 */}
+                  <div className="bg-white border border-slate-200 border-t-0 px-6 py-4 shadow-sm">
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="記事タイトルを入力..."
+                      className="w-full text-2xl font-extrabold tracking-tight text-slate-900 outline-none placeholder:text-slate-300"
+                    />
+                  </div>
+
+                  {/* Markdown テキストエリア */}
+                  <div className="bg-white border border-slate-200 border-t-0 shadow-sm">
+                    <textarea
+                      ref={textareaRef}
+                      value={content}
+                      onChange={(e) => handleContentChange(e.target.value)}
+                      className="w-full min-h-[calc(100vh-400px)] px-6 py-6 text-[15px] leading-[1.75] text-slate-700 outline-none resize-none font-mono bg-slate-50/50"
+                      placeholder="Markdown記法で本文を入力..."
+                    />
+                  </div>
+                </>
+              )}
 
               {/* インラインAI修正バー */}
               <div className="bg-white border border-slate-200 border-t-0 rounded-b-xl shadow-sm">
@@ -877,7 +1124,7 @@ export default function EditPage() {
               <div className="bg-white border border-slate-200 rounded-t-xl flex shadow-sm">
                 {[
                   { key: 'proofread' as RightPanel, label: '校正', icon: 'spellcheck' },
-                  { key: 'preview' as RightPanel, label: 'プレビュー', icon: 'visibility' },
+                  { key: 'preview' as RightPanel, label: 'MD', icon: 'code' },
                   { key: 'revise' as RightPanel, label: 'AI修正', icon: 'edit_note' },
                   { key: 'titles' as RightPanel, label: 'タイトル', icon: 'title' },
                   { key: 'factcheck' as RightPanel, label: 'ファクト', icon: 'fact_check' },
@@ -904,32 +1151,35 @@ export default function EditPage() {
               <div className="bg-white border border-slate-200 border-t-0 rounded-b-xl p-6 overflow-y-auto shadow-sm" style={{ maxHeight: 'calc(100vh - 320px)' }}>
                 <AnimatePresence mode="wait">
 
-                {/* ===== プレビュー ===== */}
+                {/* ===== Markdownソース ===== */}
                 {rightPanel === 'preview' && (
                   <motion.div key="preview" variants={panelVariants} initial="hidden" animate="show" exit="exit">
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
-                      <span className="material-symbols-outlined text-blue-600">visibility</span>
-                      <h3 className="text-sm font-bold tracking-tight text-slate-900">プレビュー</h3>
+                    <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-blue-600">code</span>
+                        <h3 className="text-sm font-bold tracking-tight text-slate-900">Markdownソース</h3>
+                      </div>
+                      <button
+                        onClick={async () => { await navigator.clipboard.writeText(content); alert('Markdownをコピーしました') }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors font-medium"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">content_copy</span>
+                        コピー
+                      </button>
                     </div>
-                    {!content.trim() && (
+                    {!content.trim() ? (
                       <div className="text-center py-12">
-                        <span className="material-symbols-outlined text-slate-300 text-[48px] mb-3 block">article</span>
-                        <p className="text-sm text-slate-400">記事を入力するとプレビューが表示されます</p>
+                        <span className="material-symbols-outlined text-slate-300 text-[48px] mb-3 block">code</span>
+                        <p className="text-sm text-slate-400">記事を入力するとMarkdownが表示されます</p>
+                      </div>
+                    ) : (
+                      <div className="bg-slate-50 rounded-lg p-4 overflow-x-auto">
+                        <pre className="text-[13px] text-slate-700 whitespace-pre-wrap leading-[1.7] font-mono break-all">
+                          {content}
+                        </pre>
                       </div>
                     )}
-                    <div className="prose prose-sm max-w-none">
-                      {content.split('\n').map((line, i) => {
-                        if (line.startsWith('### ')) return <h3 key={i} className="text-base font-bold text-slate-900 mt-5 mb-2">{line.slice(4)}</h3>
-                        if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold text-slate-900 mt-6 mb-3">{line.slice(3)}</h2>
-                        if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-bold text-slate-900 mt-6 mb-3">{line.slice(2)}</h1>
-                        if (line.startsWith('> ')) return <blockquote key={i} className="border-l-4 border-blue-600 pl-4 text-slate-600 italic text-sm my-3 bg-blue-50 py-2">{line.slice(2)}</blockquote>
-                        if (line.startsWith('- ')) return <li key={i} className="text-sm text-slate-700 ml-4 leading-relaxed">{line.slice(2)}</li>
-                        if (line.trim() === '') return <br key={i} />
-                        const b = line.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>')
-                        return <p key={i} className="text-sm text-slate-700 leading-[1.8] mb-2" dangerouslySetInnerHTML={{ __html: b }} />
-                      })}
-                    </div>
                   </div>
                   </motion.div>
                 )}

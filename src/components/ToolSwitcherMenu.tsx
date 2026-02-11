@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target, Mic, BarChart3 } from 'lucide-react'
+import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target, Mic } from 'lucide-react'
 
 type ToolId = 'persona' | 'banner' | 'writing' | 'interview' | 'strategy'
 
@@ -53,8 +53,14 @@ const TOOLS: Array<{
     icon: FileText,
     iconBgClassName: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
   },
-  // ベータ版サービス（strategy, interview）は他サービスのサイドバーには表示しない
-  // ベータ版サービス自身のサイドバーでのみ表示する
+  {
+    id: 'interview',
+    href: '/interview/projects',
+    title: 'ドヤインタビューAI',
+    description: 'インタビュー記事生成',
+    icon: Mic,
+    iconBgClassName: 'bg-gradient-to-br from-blue-600 to-indigo-700',
+  },
 ]
 
 export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, className }: ToolSwitcherMenuProps) {

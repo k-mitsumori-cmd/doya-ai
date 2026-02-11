@@ -15,6 +15,10 @@ interface Project {
   thumbnailUrl?: string | null
   materialCount: number
   draftCount: number
+  articleTitle: string | null
+  articleSummary: string | null
+  transcriptionSummary: string | null
+  transcriptionExcerpt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -331,13 +335,46 @@ export default function ProjectsPage() {
 
                     {/* カード情報 */}
                     <div className="p-4">
-                      <h4 className="font-bold text-sm text-slate-900 line-clamp-1 group-hover:text-[#7f19e6] transition-colors mb-1.5">
-                        {p.title}
+                      <h4 className="font-bold text-sm text-slate-900 line-clamp-1 group-hover:text-[#7f19e6] transition-colors mb-1">
+                        {p.articleTitle || p.title}
                       </h4>
 
                       {(p.intervieweeName || p.intervieweeCompany) && (
                         <p className="text-[11px] text-slate-500 truncate mb-2">
                           {[p.intervieweeName, p.intervieweeCompany].filter(Boolean).join(' / ')}
+                        </p>
+                      )}
+
+                      {/* 文字起こし要約 */}
+                      {p.transcriptionSummary && (
+                        <div className="mb-2">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <span className="material-symbols-outlined text-[11px] text-[#7f19e6]">mic</span>
+                            <span className="text-[10px] font-bold text-[#7f19e6]">文字起こし</span>
+                          </div>
+                          <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-2">
+                            {p.transcriptionSummary}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 文字起こし抜粋 (summaryが無い場合のみ) */}
+                      {!p.transcriptionSummary && p.transcriptionExcerpt && (
+                        <div className="mb-2">
+                          <div className="flex items-center gap-1 mb-0.5">
+                            <span className="material-symbols-outlined text-[11px] text-[#7f19e6]">mic</span>
+                            <span className="text-[10px] font-bold text-[#7f19e6]">文字起こし</span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2">
+                            {p.transcriptionExcerpt}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 記事サマリー */}
+                      {p.articleSummary && (
+                        <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2 mb-2">
+                          {p.articleSummary}
                         </p>
                       )}
 

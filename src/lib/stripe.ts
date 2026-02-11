@@ -72,6 +72,17 @@ export const STRIPE_PRICE_IDS = {
       yearly: process.env.STRIPE_PRICE_BANNER_ENTERPRISE_YEARLY || 'price_banner_enterprise_yearly',
     },
   },
+  // ドヤインタビューAI（統一課金: ドヤバナーAIと同じ価格ID）
+  interview: {
+    pro: {
+      monthly: process.env.STRIPE_PRICE_INTERVIEW_PRO_MONTHLY || BANNER_PRO_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_INTERVIEW_PRO_YEARLY || BANNER_PRO_YEARLY,
+    },
+    enterprise: {
+      monthly: process.env.STRIPE_PRICE_INTERVIEW_ENTERPRISE_MONTHLY || BANNER_ENTERPRISE_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_INTERVIEW_ENTERPRISE_YEARLY || BANNER_ENTERPRISE_YEARLY,
+    },
+  },
   // セットプラン
   bundle: {
     monthly: process.env.STRIPE_PRICE_BUNDLE_MONTHLY || 'price_bundle_monthly',
@@ -82,8 +93,8 @@ export const STRIPE_PRICE_IDS = {
 // ========================================
 // 価格ID ↔ プランID 変換（厳密マッピング）
 // ========================================
-export type PlanId = 'seo-pro' | 'seo-enterprise' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'bundle'
-export type ServiceId = 'seo' | 'banner' | 'bundle'
+export type PlanId = 'seo-pro' | 'seo-enterprise' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'interview-pro' | 'interview-enterprise' | 'bundle'
+export type ServiceId = 'seo' | 'banner' | 'interview' | 'bundle'
 
 export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
   return (planId.split('-')[0] as ServiceId) || 'bundle'
@@ -97,6 +108,8 @@ export function getPlanIdFromStripePriceId(priceId: string | null | undefined): 
     ['banner-basic', STRIPE_PRICE_IDS.banner.basic],
     ['banner-pro', STRIPE_PRICE_IDS.banner.pro],
     ['banner-enterprise', STRIPE_PRICE_IDS.banner.enterprise],
+    ['interview-pro', STRIPE_PRICE_IDS.interview.pro],
+    ['interview-enterprise', STRIPE_PRICE_IDS.interview.enterprise],
     ['bundle', STRIPE_PRICE_IDS.bundle],
   ]
   for (const [planId, prices] of entries) {

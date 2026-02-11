@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 
 interface Recipe {
@@ -64,6 +65,7 @@ const slideInVariants = {
 export default function SkillSelectionPage() {
   const params = useParams()
   const router = useRouter()
+  const { data: session, status: sessionStatus } = useSession()
   const projectId = params.id as string
 
   const [recipes, setRecipes] = useState<Recipe[]>([])
@@ -74,7 +76,10 @@ export default function SkillSelectionPage() {
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
   const [transcriptionReady, setTranscriptionReady] = useState<boolean | null>(null)
 
+  const isGuest = sessionStatus !== 'loading' && !session?.user
+
   useEffect(() => {
+    if (isGuest) return
     // プロジェクトの文字起こし状況を確認
     fetch(`/api/interview/projects/${projectId}`)
       .then((r) => r.json())
@@ -89,9 +94,10 @@ export default function SkillSelectionPage() {
         }
       })
       .catch(() => setTranscriptionReady(false))
-  }, [projectId])
+  }, [projectId, isGuest])
 
   useEffect(() => {
+    if (isGuest) return
     fetch('/api/interview/recipes')
       .then((r) => r.json())
       .then((data) => {
@@ -99,7 +105,7 @@ export default function SkillSelectionPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [])
+  }, [isGuest])
 
   const categories = [...new Set(recipes.map((r) => r.category).filter(Boolean))]
   const filtered = filterCategory
@@ -117,6 +123,33 @@ export default function SkillSelectionPage() {
       ...(customInstructions ? { instructions: customInstructions } : {}),
     })
     router.push(`/interview/projects/${projectId}/generate?${params}`)
+  }
+
+  // ゲストユーザーはスキル選択不可 — ログインを促す
+  if (isGuest) {
+    return (
+      <motion.div className="flex items-center justify-center min-h-[400px]" variants={pageVariants} initial="hidden" animate="show">
+        <div className="text-center max-w-md space-y-6">
+          <div className="w-20 h-20 rounded-2xl bg-[#7f19e6]/10 flex items-center justify-center mx-auto">
+            <span className="material-symbols-outlined text-4xl text-[#7f19e6]">lock</span>
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 mb-2">ログインが必要です</h2>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              スキル選択やAI記事生成は、ログインユーザー限定の機能です。<br />
+              無料登録で利用を開始できます。
+            </p>
+          </div>
+          <Link
+            href="/api/auth/signin"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#7f19e6] text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:bg-[#6b12c9] transition-all"
+          >
+            <span className="material-symbols-outlined">login</span>
+            ログインする
+          </Link>
+        </div>
+      </motion.div>
+    )
   }
 
   // 文字起こし状態チェック中
@@ -366,7 +399,7 @@ export default function SkillSelectionPage() {
                 AI記事を生成する
               </button>
               <p className="text-center text-[11px] text-slate-500 mt-4 uppercase tracking-wider font-semibold">
-                推定時間: 2-3分 • 1クレジット消費
+                推定時間: 2-3分
               </p>
             </div>
           </div>

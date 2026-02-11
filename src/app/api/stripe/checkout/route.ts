@@ -70,13 +70,17 @@ export async function POST(request: NextRequest) {
         ? '/seo'
         : service === 'banner'
           ? '/banner'
-          : '/'
+          : service === 'interview'
+            ? '/interview/projects'
+            : '/'
     const cancelPath =
       service === 'seo'
         ? '/seo/pricing?payment=cancelled'
         : service === 'banner'
           ? '/banner?payment=cancelled'
-          : '/pricing?payment=cancelled'
+          : service === 'interview'
+            ? '/interview/projects?payment=cancelled'
+            : '/pricing?payment=cancelled'
 
     // 成功URLにプラン情報/Checkout Session IDを追加（決済直後にアプリ側で同期して即反映させる）
     // NOTE: {CHECKOUT_SESSION_ID} はStripeが自動で実IDに置換する
@@ -139,6 +143,9 @@ function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string
     'banner-basic': STRIPE_PRICE_IDS.banner.basic,
     'banner-pro': STRIPE_PRICE_IDS.banner.pro,
     'banner-enterprise': STRIPE_PRICE_IDS.banner.enterprise,
+    // ドヤインタビューAI（統一課金）
+    'interview-pro': STRIPE_PRICE_IDS.interview.pro,
+    'interview-enterprise': STRIPE_PRICE_IDS.interview.enterprise,
     // セットプラン
     'bundle': STRIPE_PRICE_IDS.bundle,
   }
