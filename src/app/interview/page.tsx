@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
@@ -106,26 +106,22 @@ export default function InterviewDashboard() {
       .finally(() => setLoading(false))
   }, [])
 
-  // 豆知識サイクル
-  const hasActiveUpload = useMemo(() => {
-    return Array.from(uploads.values()).some(
-      (u) => u.status === 'creating' || u.status === 'uploading' || u.status === 'confirming' || u.status === 'transcribing'
-    )
-  }, [uploads])
+  // 豆知識サイクル — uploads.size でシンプルに判定
+  const uploadsExist = uploads.size > 0
 
   useEffect(() => {
-    if (!hasActiveUpload) return
+    if (!uploadsExist) return
     const interval = setInterval(() => setTipIndex((i) => (i + 1) % UPLOAD_TIPS.length), 4000)
     return () => clearInterval(interval)
-  }, [hasActiveUpload])
+  }, [uploadsExist])
 
   // ブラウザ離脱防止
   useEffect(() => {
-    if (!hasActiveUpload) return
+    if (!uploadsExist) return
     const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [hasActiveUpload])
+  }, [uploadsExist])
 
   const recentProjects = projects.slice(0, 6)
 
