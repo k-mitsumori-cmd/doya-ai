@@ -335,16 +335,16 @@ export default function ProjectsPage() {
 
                     {/* カード情報 */}
                     <div className="p-4">
-                      {/* プロジェクト名 */}
-                      <h4 className="font-bold text-sm text-slate-900 line-clamp-1 group-hover:text-[#7f19e6] transition-colors mb-1">
-                        {p.title}
+                      {/* 記事タイトル（優先表示） */}
+                      <h4 className="font-bold text-sm text-slate-900 line-clamp-2 group-hover:text-[#7f19e6] transition-colors mb-1">
+                        {p.articleTitle || p.title}
                       </h4>
 
-                      {/* 記事タイトル */}
-                      {p.articleTitle && (
-                        <p className="text-[12px] font-bold text-slate-700 line-clamp-2 mb-1.5 leading-snug">
-                          <span className="material-symbols-outlined text-[12px] text-blue-500 mr-0.5 align-middle">article</span>
-                          {p.articleTitle}
+                      {/* プロジェクト名（記事タイトルと異なる場合のみ表示） */}
+                      {p.articleTitle && p.articleTitle !== p.title && (
+                        <p className="text-[11px] text-slate-400 truncate mb-1">
+                          <span className="material-symbols-outlined text-[11px] text-slate-400 mr-0.5 align-middle">folder</span>
+                          {p.title}
                         </p>
                       )}
 

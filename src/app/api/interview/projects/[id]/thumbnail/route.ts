@@ -168,11 +168,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const { userId } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
 
-    // リクエストボディから記事内容を受け取る（オプション）
+    // リクエストボディから記事内容・タイトルを受け取る（オプション）
     let articleContent = ''
+    let articleTitle = ''
     try {
       const body = await req.json()
       articleContent = body?.articleContent || ''
+      articleTitle = body?.articleTitle || ''
     } catch {
       // ボディなしの場合は無視
     }
@@ -205,16 +207,18 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ success: false, error: 'APIキーが設定されていません' }, { status: 500 })
     }
 
-    // 記事内容がなければDBから最新ドラフトまたは文字起こしを取得
-    if (!articleContent) {
+    // 記事内容・タイトルがなければDBから最新ドラフトまたは文字起こしを取得
+    if (!articleContent || !articleTitle) {
       const latestDraft = await prisma.interviewDraft.findFirst({
         where: { projectId: id },
         orderBy: { createdAt: 'desc' },
-        select: { content: true },
+        select: { title: true, content: true },
       })
-      if (latestDraft?.content) {
-        articleContent = latestDraft.content
-      } else {
+      if (latestDraft) {
+        if (!articleTitle && latestDraft.title) articleTitle = latestDraft.title
+        if (!articleContent && latestDraft.content) articleContent = latestDraft.content
+      }
+      if (!articleContent) {
         // 文字起こしテキストを使用
         const transcriptions = await prisma.interviewTranscription.findMany({
           where: { material: { projectId: id }, status: 'COMPLETED' },
@@ -232,9 +236,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // 記事内容からビジュアルキーワードを抽出
     const contentKeywords = extractVisualKeywords(articleContent)
 
-    // テーマ情報
+    // テーマ情報（記事タイトル優先）
+    const mainTitle = articleTitle || project.theme || project.title
     const themeInfo = [
-      project.theme || project.title,
+      mainTitle,
       project.intervieweeName ? `Person: ${project.intervieweeName}` : '',
       project.intervieweeCompany ? `Company: ${project.intervieweeCompany}` : '',
       project.intervieweeRole ? `Role: ${project.intervieweeRole}` : '',
@@ -250,8 +255,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // プロンプト構築（フォトリアリスティック・雑誌クオリティ + ランダム性）
     const prompt = `Create a stunning, photorealistic editorial thumbnail image for a professional interview article.
 
+ARTICLE TITLE: "${mainTitle}"
 ARTICLE CONTEXT: ${themeInfo}
 ${contentKeywords}
+
+IMPORTANT: The image should visually represent the theme and mood of this article title. Choose objects, scenes, and atmosphere that directly relate to "${mainTitle}".
 
 PRIMARY SCENE: ${genreScene}
 COLOR PALETTE: ${genreColors}
