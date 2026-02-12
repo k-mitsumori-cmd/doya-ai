@@ -391,112 +391,134 @@ export default function PersonaPage() {
               })}
             </div>
 
-            {/* Persona Tab */}
+            {/* Persona Tab — 履歴書スタイル */}
             {activeTab === 'persona' && generatedData.persona && (
-              <div className="grid lg:grid-cols-3 gap-6">
-                {/* Portrait Card */}
-                <div className="lg:col-span-1">
-                  <div className="bg-slate-900/80 border border-slate-700 rounded-2xl p-5 text-center sticky top-6">
-                    <div className="w-32 h-32 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-4 border-purple-500/30 overflow-hidden">
-                      {portraitImage ? (
-                        <img src={portraitImage} alt="Persona" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-5xl text-slate-600">
-                          👤
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-4xl mx-auto">
+                {/* Header Band */}
+                <div className="bg-gradient-to-r from-purple-700 to-purple-500 px-6 py-4">
+                  <h2 className="text-white text-lg font-bold tracking-wide">PERSONA PROFILE</h2>
+                </div>
+
+                <div className="p-6 lg:p-8">
+                  {/* Top Section: Photo + Name + Basic */}
+                  <div className="flex flex-col sm:flex-row gap-6 pb-6 border-b-2 border-purple-100">
+                    {/* Portrait */}
+                    <div className="flex-shrink-0 text-center">
+                      <div className="w-28 h-28 mx-auto rounded-lg bg-gray-100 border-2 border-purple-200 overflow-hidden shadow-sm">
+                        {portraitImage ? (
+                          <img src={portraitImage} alt="Persona" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-4xl text-gray-300">
+                            👤
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3">
+                        {!portraitImage ? (
+                          <button
+                            onClick={handleGeneratePortrait}
+                            disabled={portraitLoading}
+                            className="px-3 py-1.5 rounded-md bg-purple-600 text-white text-xs font-bold hover:bg-purple-500 disabled:opacity-50 inline-flex items-center gap-1.5"
+                          >
+                            {portraitLoading ? (
+                              <>
+                                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                生成中...
+                              </>
+                            ) : (
+                              <>
+                                <ImageIcon className="w-3 h-3" />
+                                写真を生成
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => downloadImage(portraitImage, `persona-${generatedData.persona.name}.png`)}
+                            className="px-3 py-1.5 rounded-md bg-purple-600 text-white text-xs font-bold hover:bg-purple-500 inline-flex items-center gap-1.5"
+                          >
+                            <Download className="w-3 h-3" />
+                            保存
+                          </button>
+                        )}
+                      </div>
+                      {portraitError && (
+                        <p className="mt-2 text-red-500 text-xs max-w-[140px] mx-auto">{portraitError}</p>
+                      )}
+                    </div>
+
+                    {/* Name & Basics */}
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-2xl font-black text-gray-900 mb-0.5">{generatedData.persona.name}</h2>
+                      <p className="text-purple-600 font-bold text-sm mb-3">{generatedData.persona.occupation}</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+                        <div>
+                          <span className="text-gray-400 text-xs">年齢</span>
+                          <p className="text-gray-800 font-medium">{generatedData.persona.age}歳</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 text-xs">性別</span>
+                          <p className="text-gray-800 font-medium">{generatedData.persona.gender}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 text-xs">居住地</span>
+                          <p className="text-gray-800 font-medium">{generatedData.persona.location}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 text-xs">年収</span>
+                          <p className="text-gray-800 font-medium">{generatedData.persona.income}</p>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 text-xs">家族構成</span>
+                          <p className="text-gray-800 font-medium">{generatedData.persona.familyStructure}</p>
+                        </div>
+                      </div>
+
+                      {generatedData.persona.quote && (
+                        <div className="mt-4 px-4 py-2.5 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+                          <p className="text-gray-700 text-sm italic">&ldquo;{generatedData.persona.quote}&rdquo;</p>
                         </div>
                       )}
                     </div>
-                    <h2 className="text-xl font-black text-white mb-1">{generatedData.persona.name}</h2>
-                    <p className="text-purple-400 font-bold text-sm mb-1">{generatedData.persona.occupation}</p>
-                    <p className="text-slate-500 text-xs mb-4">
-                      {generatedData.persona.age}歳 / {generatedData.persona.gender} / {generatedData.persona.location}
-                    </p>
-
-                    {!portraitImage ? (
-                      <button
-                        onClick={handleGeneratePortrait}
-                        disabled={portraitLoading}
-                        className="w-full py-2 px-4 rounded-lg bg-slate-800 border border-slate-700 text-white text-sm font-bold hover:bg-slate-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                      >
-                        {portraitLoading ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            生成中...
-                          </>
-                        ) : (
-                          <>
-                            <ImageIcon className="w-4 h-4" />
-                            ポートレート生成
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => downloadImage(portraitImage, `persona-${generatedData.persona.name}.png`)}
-                        className="w-full py-2 px-4 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-500 flex items-center justify-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        ダウンロード
-                      </button>
-                    )}
-
-                    {portraitError && (
-                      <div className="mt-3 p-3 bg-red-900/30 border border-red-800 rounded-lg text-red-400 text-xs flex items-start gap-2">
-                        <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        <span>{portraitError}</span>
-                      </div>
-                    )}
-
-                    {generatedData.persona.quote && (
-                      <div className="mt-4 p-3 bg-slate-800/50 rounded-lg border-l-4 border-purple-500">
-                        <p className="text-slate-300 text-sm italic">&ldquo;{generatedData.persona.quote}&rdquo;</p>
-                      </div>
-                    )}
                   </div>
-                </div>
 
-                {/* Details */}
-                <div className="lg:col-span-2 space-y-4">
-                  {/* Basic Info */}
-                  <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                    <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-purple-400" />
-                      基本情報
+                  {/* Lifestyle & Day */}
+                  <div className="py-5 border-b border-gray-200">
+                    <h3 className="text-sm font-bold text-purple-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      ライフスタイル
                     </h3>
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      {[
-                        { label: '年収', value: generatedData.persona.income },
-                        { label: '家族構成', value: generatedData.persona.familyStructure },
-                        { label: 'ライフスタイル', value: generatedData.persona.lifestyle },
-                        { label: '一日の過ごし方', value: generatedData.persona.dayInLife },
-                      ].map((item, i) => (
-                        <div key={i} className="p-3 bg-slate-800/50 rounded-lg">
-                          <p className="text-xs text-slate-500 mb-1">{item.label}</p>
-                          <p className="text-white text-sm">{item.value}</p>
-                        </div>
-                      ))}
+                    <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-400 text-xs mb-1">ライフスタイル</p>
+                        <p className="text-gray-800">{generatedData.persona.lifestyle}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-xs mb-1">一日の過ごし方</p>
+                        <p className="text-gray-800">{generatedData.persona.dayInLife}</p>
+                      </div>
                     </div>
                   </div>
 
                   {/* Challenges & Goals */}
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                      <h3 className="text-base font-bold text-white mb-3">🎯 課題・悩み</h3>
-                      <ul className="space-y-2">
+                  <div className="py-5 border-b border-gray-200 grid sm:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-red-600 uppercase tracking-wider mb-3">課題・悩み</h3>
+                      <ul className="space-y-1.5">
                         {generatedData.persona.challenges?.map((c, i) => (
-                          <li key={i} className="flex items-start gap-2 text-slate-300 text-sm">
-                            <span className="text-red-400 mt-0.5">•</span>
+                          <li key={i} className="flex items-start gap-2 text-gray-700 text-sm">
+                            <span className="text-red-400 mt-0.5 flex-shrink-0">&#9679;</span>
                             {c}
                           </li>
                         ))}
                       </ul>
                     </div>
-                    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                      <h3 className="text-base font-bold text-white mb-3">🚀 目標・願望</h3>
-                      <ul className="space-y-2">
+                    <div>
+                      <h3 className="text-sm font-bold text-green-600 uppercase tracking-wider mb-3">目標・願望</h3>
+                      <ul className="space-y-1.5">
                         {generatedData.persona.goals?.map((g, i) => (
-                          <li key={i} className="flex items-start gap-2 text-slate-300 text-sm">
-                            <span className="text-green-400 mt-0.5">•</span>
+                          <li key={i} className="flex items-start gap-2 text-gray-700 text-sm">
+                            <span className="text-green-500 mt-0.5 flex-shrink-0">&#9679;</span>
                             {g}
                           </li>
                         ))}
@@ -504,23 +526,55 @@ export default function PersonaPage() {
                     </div>
                   </div>
 
-                  {/* Media & Personality */}
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                      <h3 className="text-base font-bold text-white mb-3">📱 メディア利用</h3>
+                  {/* Purchase Motivation & Objections */}
+                  {(generatedData.persona.purchaseMotivation?.length > 0 || generatedData.persona.objections?.length > 0) && (
+                    <div className="py-5 border-b border-gray-200 grid sm:grid-cols-2 gap-6">
+                      {generatedData.persona.purchaseMotivation?.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-3">購買動機</h3>
+                          <ul className="space-y-1.5">
+                            {generatedData.persona.purchaseMotivation.map((m, i) => (
+                              <li key={i} className="flex items-start gap-2 text-gray-700 text-sm">
+                                <span className="text-blue-400 mt-0.5 flex-shrink-0">&#9679;</span>
+                                {m}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {generatedData.persona.objections?.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-bold text-orange-600 uppercase tracking-wider mb-3">懸念・反論</h3>
+                          <ul className="space-y-1.5">
+                            {generatedData.persona.objections.map((o, i) => (
+                              <li key={i} className="flex items-start gap-2 text-gray-700 text-sm">
+                                <span className="text-orange-400 mt-0.5 flex-shrink-0">&#9679;</span>
+                                {o}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Media Usage & Personality Tags */}
+                  <div className="py-5 grid sm:grid-cols-2 gap-6">
+                    <div>
+                      <h3 className="text-sm font-bold text-purple-700 uppercase tracking-wider mb-3">メディア利用</h3>
                       <div className="flex flex-wrap gap-2">
                         {generatedData.persona.mediaUsage?.map((m, i) => (
-                          <span key={i} className="px-2.5 py-1 bg-blue-900/50 text-blue-300 rounded-full text-xs font-bold">
+                          <span key={i} className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs font-bold">
                             {m}
                           </span>
                         ))}
                       </div>
                     </div>
-                    <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-4">
-                      <h3 className="text-base font-bold text-white mb-3">💡 性格特性</h3>
+                    <div>
+                      <h3 className="text-sm font-bold text-purple-700 uppercase tracking-wider mb-3">性格特性</h3>
                       <div className="flex flex-wrap gap-2">
                         {generatedData.persona.personalityTraits?.map((t, i) => (
-                          <span key={i} className="px-2.5 py-1 bg-purple-900/50 text-purple-300 rounded-full text-xs font-bold">
+                          <span key={i} className="px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-full text-xs font-bold">
                             {t}
                           </span>
                         ))}
