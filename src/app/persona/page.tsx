@@ -758,7 +758,7 @@ export default function PersonaPage() {
                   style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                 >
                   {/* タイトル + 日付 */}
-                  <div className="px-6 pt-5 pb-3 flex items-end justify-between">
+                  <div className="px-8 pt-6 pb-4 flex items-end justify-between">
                     <h2 className="text-2xl font-bold tracking-widest">ペルソナ履歴書</h2>
                     <p className="text-xs text-gray-500">
                       {new Date().getFullYear()}年{new Date().getMonth() + 1}月{new Date().getDate()}日 現在
@@ -766,7 +766,7 @@ export default function PersonaPage() {
                   </div>
 
                   {/* 名前 + 基本情報 + 写真 */}
-                  <div className="mx-6 border border-gray-400">
+                  <div className="mx-8 border border-gray-400">
                     <div className="flex">
                       <div className="flex-1 min-w-0">
                         <div className="border-b border-gray-300 px-3 py-1">
@@ -793,7 +793,16 @@ export default function PersonaPage() {
                       <div className="w-[130px] flex-shrink-0 border-l border-gray-400 flex flex-col items-center justify-center p-2 bg-gray-50">
                         <div className="w-[105px] h-[140px] border border-gray-300 bg-white overflow-hidden flex items-center justify-center">
                           {portraitImage ? (
-                            <img src={portraitImage} alt="Persona" className="w-full h-full object-cover object-center" />
+                            <div
+                              className="w-full h-full"
+                              style={{
+                                backgroundImage: `url(${portraitImage})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                              }}
+                              role="img"
+                              aria-label="Persona"
+                            />
                           ) : portraitLoading ? (
                             <div className="text-center export-hide">
                               <div className="w-5 h-5 border-2 border-gray-300 border-t-purple-600 rounded-full animate-spin mx-auto mb-1" />
@@ -834,7 +843,7 @@ export default function PersonaPage() {
                   </div>
 
                   {/* 基本属性テーブル */}
-                  <div className="mx-6 mt-4 border border-gray-400">
+                  <div className="mx-8 mt-6 border border-gray-400">
                     <table className="w-full text-sm border-collapse">
                       <tbody>
                         <tr>
@@ -865,7 +874,7 @@ export default function PersonaPage() {
 
                   {/* 座右の銘 */}
                   {persona.quote && (
-                    <div className="mx-6 mt-4 border border-gray-400">
+                    <div className="mx-8 mt-6 border border-gray-400">
                       <div className="flex">
                         <div className="bg-gray-100 border-r border-gray-300 px-3 py-2 font-bold text-xs w-[100px] flex items-center justify-center whitespace-nowrap">座右の銘</div>
                         <div className="px-3 py-2 text-sm italic flex-1">&ldquo;{persona.quote}&rdquo;</div>
@@ -874,7 +883,7 @@ export default function PersonaPage() {
                   )}
 
                   {/* 課題・目標 */}
-                  <div className="mx-6 mt-4 grid grid-cols-2 gap-0 border border-gray-400">
+                  <div className="mx-8 mt-6 grid grid-cols-2 gap-0 border border-gray-400">
                     <div className="border-r border-gray-400">
                       <div className="bg-red-50 border-b border-gray-400 px-3 py-1.5 font-bold text-xs text-center text-red-700">課題・悩み</div>
                       <div className="px-3 py-2">
@@ -901,7 +910,7 @@ export default function PersonaPage() {
 
                   {/* 購買動機 / 懸念 */}
                   {(persona.purchaseMotivation?.length > 0 || persona.objections?.length > 0) && (
-                    <div className="mx-6 mt-4 grid grid-cols-2 gap-0 border border-gray-400">
+                    <div className="mx-8 mt-6 grid grid-cols-2 gap-0 border border-gray-400">
                       <div className="border-r border-gray-400">
                         <div className="bg-blue-50 border-b border-gray-400 px-3 py-1.5 font-bold text-xs text-center text-blue-700">購買動機</div>
                         <div className="px-3 py-2">
@@ -928,7 +937,7 @@ export default function PersonaPage() {
                   )}
 
                   {/* メディア / 性格 */}
-                  <div className="mx-6 mt-4 border border-gray-400">
+                  <div className="mx-8 mt-6 border border-gray-400">
                     <table className="w-full text-sm border-collapse">
                       <tbody>
                         <tr>
@@ -955,7 +964,7 @@ export default function PersonaPage() {
                     </table>
                   </div>
 
-                  <div className="h-6" />
+                  <div className="h-8" />
                 </div>
 
                 {/* ======= 一日のスケジュール ======= */}
@@ -964,12 +973,12 @@ export default function PersonaPage() {
                     className="bg-gradient-to-b from-white to-amber-50/50 max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900"
                     style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-amber-600 to-orange-500 px-6 py-3 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-amber-600 to-orange-500 px-8 py-4 flex items-center gap-3">
                       <Clock className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">一日のスケジュール</h3>
                     </div>
 
-                    <div className="px-6 py-6">
+                    <div className="px-8 py-8">
                       <div className="relative">
                         <div className="absolute left-[52px] top-0 bottom-0 w-0.5 bg-amber-200" />
 
@@ -1013,7 +1022,7 @@ export default function PersonaPage() {
                     className="bg-amber-50 max-w-4xl mx-auto shadow-2xl overflow-hidden"
                     style={{ fontFamily: '"Klee One", "Zen Kurenaido", "Noto Sans JP", cursive, sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-emerald-700 to-teal-600 px-6 py-3 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-emerald-700 to-teal-600 px-8 py-4 flex items-center gap-3">
                       <BookOpen className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">ペルソナの日記</h3>
                     </div>
@@ -1075,11 +1084,11 @@ export default function PersonaPage() {
                     className="bg-white max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900"
                     style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-red-600 to-rose-500 px-6 py-3 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-red-600 to-rose-500 px-8 py-4 flex items-center gap-3">
                       <Zap className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">課題・ペインポイント</h3>
                     </div>
-                    <div className="px-6 py-4 space-y-4">
+                    <div className="px-8 py-6 space-y-5">
                       {persona.painPoints.map((pp, i) => {
                         const sceneKey = `painpoint-${i}`
                         const hasImage = !!pp.imagePrompt
@@ -1112,11 +1121,11 @@ export default function PersonaPage() {
                     className="bg-white max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900"
                     style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-orange-600 to-amber-500 px-6 py-3 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-orange-600 to-amber-500 px-8 py-4 flex items-center gap-3">
                       <Search className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">サービスを知る前の代替手段と不満</h3>
                     </div>
-                    <div className="px-6 py-4">
+                    <div className="px-8 py-6">
                       <table className="w-full text-sm border-collapse border border-gray-300">
                         <thead>
                           <tr>
@@ -1143,11 +1152,11 @@ export default function PersonaPage() {
                     className="bg-white max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900"
                     style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-blue-600 to-indigo-500 px-6 py-3 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-500 px-8 py-4 flex items-center gap-3">
                       <Lightbulb className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">行動・心理分析</h3>
                     </div>
-                    <div className="px-6 py-4 space-y-4">
+                    <div className="px-8 py-6 space-y-5">
                       {/* 情報収集行動（ロゴ付き） */}
                       {persona.informationGathering && persona.informationGathering.length > 0 && (
                         <div>
@@ -1237,11 +1246,11 @@ export default function PersonaPage() {
                     className="bg-white max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900"
                     style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-violet-700 to-purple-600 px-6 py-3 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-violet-700 to-purple-600 px-8 py-4 flex items-center gap-3">
                       <Shield className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">深掘りインタビュー</h3>
                     </div>
-                    <div className="px-6 py-5 space-y-5">
+                    <div className="px-8 py-6 space-y-6">
                       {generatedData.deepDive.objectionAnalysis.map((oa, i) => (
                         <div key={i} className="space-y-3">
                           {/* Q: インタビュアー */}
@@ -1260,7 +1269,14 @@ export default function PersonaPage() {
                             </div>
                             <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
                               {portraitImage ? (
-                                <img src={portraitImage} alt="" className="w-full h-full object-cover" />
+                                <div
+                                  className="w-full h-full"
+                                  style={{
+                                    backgroundImage: `url(${portraitImage})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                  }}
+                                />
                               ) : (
                                 <User className="w-4 h-4" />
                               )}
@@ -1281,13 +1297,13 @@ export default function PersonaPage() {
                     className="bg-white max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900"
                     style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-teal-600 to-cyan-500 px-6 py-3 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-teal-600 to-cyan-500 px-8 py-4 flex items-center gap-3">
                       <Route className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">導入ストーリー ─ {persona.name}の場合</h3>
                     </div>
 
                     {/* ストーリー概要（履歴書風テーブル） */}
-                    <div className="px-6 pt-4">
+                    <div className="px-8 pt-5">
                       <div className="border border-gray-300">
                         <table className="w-full text-sm border-collapse">
                           <tbody>
@@ -1324,7 +1340,7 @@ export default function PersonaPage() {
 
                     {/* ストーリー風タイムライン */}
                     {generatedData.deepDive.adoptionStory.timeline && (
-                      <div className="px-6 py-5">
+                      <div className="px-8 py-6">
                         <h4 className="text-sm font-bold text-teal-700 mb-4 flex items-center gap-2">
                           <BookOpen className="w-4 h-4" />
                           {persona.name}の導入ストーリー
@@ -1378,11 +1394,11 @@ export default function PersonaPage() {
                     className="bg-white max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900"
                     style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-sky-600 to-blue-500 px-6 py-3 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-sky-600 to-blue-500 px-8 py-4 flex items-center gap-3">
                       <Briefcase className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">利用シーン ─ サービスを使うある1日</h3>
                     </div>
-                    <div className="px-6 py-4">
+                    <div className="px-8 py-6">
                       <div className="bg-sky-50 rounded-lg border border-sky-200 p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-line">
                         {generatedData.deepDive.dayWithService}
                       </div>
@@ -1396,11 +1412,11 @@ export default function PersonaPage() {
                     className="bg-white max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900 rounded-b-lg"
                     style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
                   >
-                    <div className="bg-gradient-to-r from-purple-700 to-pink-600 px-6 py-3 flex items-center gap-3">
+                    <div className="bg-gradient-to-r from-purple-700 to-pink-600 px-8 py-4 flex items-center gap-3">
                       <Award className="w-5 h-5 text-white" />
                       <h3 className="text-white font-bold text-base tracking-wider">ペルソナシート ─ 最終まとめ</h3>
                     </div>
-                    <div className="px-6 py-5 space-y-5">
+                    <div className="px-8 py-6 space-y-6">
                       {/* ヒーロー画像 + 1行サマリー */}
                       <div className="relative rounded-xl overflow-hidden">
                         <SceneImageSlot sceneKey="summary-hero" className="w-full h-48 sm:h-56" />
