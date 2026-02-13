@@ -112,6 +112,13 @@ interface ShindanResult {
       area: string; currentScore: number; improvementPotential: number
       estimatedROI: string; difficulty: 'easy' | 'medium' | 'hard'; recommendation: string
     }>
+    financialImpact?: {
+      estimatedAnnualLoss: number
+      estimatedAnnualGain: number
+      competitorAvgScore: number
+      industryGap: number
+      lossBreakdown: { area: string; amount: number }[]
+    }
   }
 }
 
@@ -1332,6 +1339,60 @@ export default function ShindanPage() {
                   summary={result?.summary ?? ''}
                 />
 
+                {/* ===== 財務インパクトサマリー ===== */}
+                {result.analytics?.financialImpact && result.analytics.financialImpact.estimatedAnnualLoss > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="bg-gradient-to-br from-red-950/80 to-red-900/40 border border-red-500/30 rounded-2xl p-5 text-center">
+                      <div className="text-[11px] font-bold text-red-400 mb-1 flex items-center justify-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        推定年間機会損失
+                      </div>
+                      <div className="text-3xl sm:text-4xl font-black text-red-400">
+                        ¥{result.analytics.financialImpact.estimatedAnnualLoss.toLocaleString()}<span className="text-base ml-1">万円</span>
+                      </div>
+                      <div className="text-[10px] text-red-400/60 mt-1">
+                        このまま改善しない場合の推定損失額
+                      </div>
+                      {result.analytics.financialImpact.lossBreakdown.length > 0 && (
+                        <div className="mt-3 space-y-1.5">
+                          {result.analytics.financialImpact.lossBreakdown.slice(0, 4).map((item, i) => (
+                            <div key={i} className="flex items-center justify-between text-[11px] bg-red-500/5 rounded-lg px-3 py-1.5">
+                              <span className="text-slate-400">{item.area}</span>
+                              <span className="font-black text-red-300">-¥{item.amount.toLocaleString()}万</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-gradient-to-br from-emerald-950/80 to-emerald-900/40 border border-emerald-500/30 rounded-2xl p-5 text-center">
+                      <div className="text-[11px] font-bold text-emerald-400 mb-1 flex items-center justify-center gap-1.5">
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        改善後の期待年間収益増
+                      </div>
+                      <div className="text-3xl sm:text-4xl font-black text-emerald-400">
+                        +¥{result.analytics.financialImpact.estimatedAnnualGain.toLocaleString()}<span className="text-base ml-1">万円</span>
+                      </div>
+                      <div className="text-[10px] text-emerald-400/60 mt-1">
+                        提案アクション実行時の期待効果
+                      </div>
+                      {result.analytics.financialImpact.industryGap !== 0 && (
+                        <div className={`mt-3 text-sm font-black ${result.analytics.financialImpact.industryGap >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          業界平均比: {result.analytics.financialImpact.industryGap >= 0 ? '+' : ''}{result.analytics.financialImpact.industryGap}pt
+                        </div>
+                      )}
+                      {result.analytics.financialImpact.competitorAvgScore > 0 && result.analytics?.websiteHealth && (
+                        <div className={`text-[11px] font-bold mt-1 ${
+                          result.analytics.websiteHealth.totalScore >= result.analytics.financialImpact.competitorAvgScore ? 'text-emerald-400' : 'text-red-400'
+                        }`}>
+                          自社サイト {result.analytics.websiteHealth.totalScore}pt vs 競合平均 {result.analytics.financialImpact.competitorAvgScore}pt
+                          ({result.analytics.websiteHealth.totalScore >= result.analytics.financialImpact.competitorAvgScore ? '+' : ''}
+                          {result.analytics.websiteHealth.totalScore - result.analytics.financialImpact.competitorAvgScore}pt)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* ===== エグゼクティブサマリー ===== */}
                 {result.executiveSummary && (
                   <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-teal-500/20 rounded-2xl p-6">
@@ -1571,6 +1632,29 @@ export default function ShindanPage() {
                       {result.axes.length}軸評価
                     </h3>
                     <ShindanRadarChart axes={result.axes} />
+                    {/* 軸別スコア＋業界比較 */}
+                    {result.axes.length > 0 && result.benchmark.length > 0 && (
+                      <div className="mt-4 space-y-2">
+                        {result.axes.map((axis, i) => {
+                          const bm = result.benchmark.find((b) => b.category === axis.label)
+                          const diff = bm ? axis.score - bm.industryAverage : 0
+                          return (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-[11px] font-bold text-slate-400 w-20 truncate">{axis.label}</span>
+                              <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${axis.score >= 60 ? 'bg-teal-500' : axis.score >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${axis.score}%` }} />
+                              </div>
+                              <span className="text-sm font-black text-white w-8 text-right">{axis.score}</span>
+                              {bm && (
+                                <span className={`text-[10px] font-black w-14 text-right ${diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                  {diff >= 0 ? '+' : ''}{diff}pt
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
@@ -1727,6 +1811,31 @@ export default function ShindanPage() {
                       競合サイト比較
                       <span className="text-[10px] font-bold text-slate-500 ml-auto">クリックで詳細表示</span>
                     </h3>
+                    {/* 競合平均 vs 自社サマリー */}
+                    {result.analytics?.websiteHealth && (
+                      <div className="flex flex-wrap items-center gap-4 mb-4 bg-slate-800/50 rounded-xl p-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-teal-400">自社</span>
+                          <span className="text-lg font-black text-teal-400">{result.analytics.websiteHealth.totalScore}<span className="text-xs text-slate-500">pt</span></span>
+                        </div>
+                        <span className="text-slate-600">vs</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-purple-400">競合平均</span>
+                          <span className="text-lg font-black text-purple-400">
+                            {Math.round(result.analytics.competitorComparison.reduce((s, c) => s + c.totalScore, 0) / result.analytics.competitorComparison.length)}<span className="text-xs text-slate-500">pt</span>
+                          </span>
+                        </div>
+                        {(() => {
+                          const avg = Math.round(result.analytics!.competitorComparison.reduce((s, c) => s + c.totalScore, 0) / result.analytics!.competitorComparison.length)
+                          const diff = result.analytics!.websiteHealth!.totalScore - avg
+                          return (
+                            <span className={`text-sm font-black px-2 py-0.5 rounded-lg ${diff >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                              {diff >= 0 ? '+' : ''}{diff}pt
+                            </span>
+                          )
+                        })()}
+                      </div>
+                    )}
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
@@ -2011,17 +2120,19 @@ export default function ShindanPage() {
                 </div>
 
                 <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
-                  <h3 className="text-lg font-black mb-4 flex items-center gap-2">
+                  <h3 className="text-lg font-black mb-4 flex items-center gap-2 flex-wrap">
                     <AlertTriangle className="w-5 h-5 text-orange-400" />
                     ボトルネック
+                    <span className="text-xs font-bold text-slate-500 ml-auto">{result.bottlenecks.length}件検出</span>
                   </h3>
                   <BottleneckPanel bottlenecks={result.bottlenecks} />
                 </div>
 
                 <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
-                  <h3 className="text-lg font-black mb-4 flex items-center gap-2">
+                  <h3 className="text-lg font-black mb-4 flex items-center gap-2 flex-wrap">
                     <Sparkles className="w-5 h-5 text-teal-400" />
                     改善アクション提案
+                    <span className="text-xs font-bold text-slate-500 ml-auto">{result.recommendations.length}件 | Quick Win {result.recommendations.filter(r => r.quickWin).length}件</span>
                   </h3>
                   <RecommendationPanel recommendations={result.recommendations} />
                 </div>

@@ -975,6 +975,84 @@ function websiteToFrontend(ws: WebsiteAnalysis) {
 }
 
 // =============================================
+// 6f. 推定年間損失額 & 改善期待収益 算出
+// =============================================
+interface FinancialImpact {
+  estimatedAnnualLoss: number        // 推定年間機会損失（万円）
+  estimatedAnnualGain: number        // 改善後の期待年間収益増（万円）
+  competitorAvgScore: number          // 競合平均スコア
+  industryGap: number                 // 業界平均との差分（pt）
+  lossBreakdown: { area: string; amount: number }[]  // 損失内訳
+}
+
+function calculateFinancialImpact(
+  overallScore: number,
+  categoryScores: Record<string, number>,
+  selectedCategories: string[],
+  answers: Record<string, string | string[]>,
+  websiteAnalysis: WebsiteAnalysis | null,
+  competitorAnalyses: WebsiteAnalysis[],
+  benchmarkAverages: Record<string, number>,
+): FinancialImpact {
+  // 売上規模から基準額を算出
+  const revenueMap: Record<string, number> = {
+    '〜1000万': 500, '〜5000万': 2500, '〜1億': 5000,
+    '〜5億': 25000, '〜10億': 50000, '10億以上': 100000,
+  }
+  const baseRevenue = revenueMap[answers.revenueScale as string] || 5000  // 万円
+
+  // 各カテゴリのスコア不足分から損失を推定
+  const lossBreakdown: { area: string; amount: number }[] = []
+  let totalLoss = 0
+  const lossMultipliers: Record<string, number> = {
+    marketing: 0.25, sales: 0.30, customer: 0.15, organization: 0.10,
+    finance: 0.08, digital: 0.07, strategy: 0.05,
+  }
+
+  for (const catId of selectedCategories) {
+    const score = categoryScores[catId] || 50
+    const gap = Math.max(0, 60 - score) // 60点未満の部分が損失
+    const multiplier = lossMultipliers[catId] || 0.10
+    const loss = Math.round(baseRevenue * multiplier * (gap / 100) * 1.5)
+    if (loss > 0) {
+      lossBreakdown.push({ area: CATEGORY_LABELS[catId], amount: loss })
+      totalLoss += loss
+    }
+  }
+
+  // Webサイトスコアが低い場合の追加損失
+  if (websiteAnalysis && websiteAnalysis.totalScore < 50) {
+    const webLoss = Math.round(baseRevenue * 0.08 * ((50 - websiteAnalysis.totalScore) / 100))
+    lossBreakdown.push({ area: 'Webサイト', amount: webLoss })
+    totalLoss += webLoss
+  }
+
+  // 改善期待収益（損失の40-70%を改善可能と推定）
+  const improvementRate = overallScore < 30 ? 0.7 : overallScore < 50 ? 0.55 : 0.4
+  const estimatedGain = Math.round(totalLoss * improvementRate)
+
+  // 競合平均スコア
+  const competitorAvgScore = competitorAnalyses.length > 0
+    ? Math.round(competitorAnalyses.reduce((sum, c) => sum + c.totalScore, 0) / competitorAnalyses.length)
+    : 0
+
+  // 業界平均との差分
+  const benchmarkValues = Object.values(benchmarkAverages)
+  const avgBenchmark = benchmarkValues.length > 0
+    ? Math.round(benchmarkValues.reduce((a, b) => a + b, 0) / benchmarkValues.length)
+    : 50
+  const industryGap = overallScore - avgBenchmark
+
+  return {
+    estimatedAnnualLoss: totalLoss,
+    estimatedAnnualGain: estimatedGain,
+    competitorAvgScore,
+    industryGap,
+    lossBreakdown: lossBreakdown.sort((a, b) => b.amount - a.amount),
+  }
+}
+
+// =============================================
 // 7. プロンプト生成
 // =============================================
 function fmt(val: string | string[] | undefined): string {
@@ -1087,6 +1165,10 @@ ${ws.textExcerpt.slice(0, 2000)}`
 6. 競合情報がある場合は「競合はすでにやっている」と比較して危機感を煽ること
 7. 各項目で「具体的な数字」「業界統計」「一般的なKPI基準」を必ず引用すること
 8. 推測や予測には必ず根拠を添えること
+9. estimatedLossは必ず「年間●●万円〜●●万円の機会損失」のように具体的な万円金額の範囲で記述すること。売上規模に対する割合から算出すること
+10. estimatedCostは「月額●万円〜●万円」、estimatedEffectは「売上●%UP（年間約●●万円増）」のように具体金額を併記すること
+11. 全ての数値には単位（万円、%、pt、件、人）を必ず付けること
+12. summaryとexecutiveSummaryには最低3つの具体的数字を含めること
 
 【企業プロフィール】
 - 業種: ${fmt(answers.industry)}
@@ -1333,6 +1415,16 @@ export async function POST(req: NextRequest) {
         const axesComments = geminiResult.axesComments || {}
         const benchmarkAvgs = geminiResult.benchmarkAverages || {}
 
+        // ========== G. 財務インパクト算出 ==========
+        const benchmarkAvgsForCalc: Record<string, number> = {}
+        for (const id of selectedCategories) {
+          benchmarkAvgsForCalc[CATEGORY_LABELS[id]] = benchmarkAvgs[CATEGORY_LABELS[id]] || 50
+        }
+        const financialImpact = calculateFinancialImpact(
+          overallScore, categoryScores, selectedCategories, answers,
+          websiteAnalysis, competitorAnalyses, benchmarkAvgsForCalc,
+        )
+
         const result = {
           overallScore,
           overallGrade: grade,
@@ -1379,6 +1471,7 @@ export async function POST(req: NextRequest) {
             growthForecast,
             riskTimeline,
             investmentPriorities,
+            financialImpact,
           },
         }
 
