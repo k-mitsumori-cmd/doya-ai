@@ -1017,6 +1017,60 @@ function calculateFinalScore(
   return Math.max(0, Math.min(100, Math.round(base)))
 }
 
+// --- 5k. Web分析結果によるカテゴリスコア補正 ---
+function adjustScoresWithWebsite(
+  categoryScores: Record<string, number>,
+  selectedCategories: string[],
+  ws: WebsiteAnalysis | null,
+  competitorAnalyses: WebsiteAnalysis[],
+): Record<string, number> {
+  const adjusted = { ...categoryScores }
+  if (!ws) return adjusted
+
+  // 競合平均サイトスコア
+  const compAvgScore = competitorAnalyses.length > 0
+    ? competitorAnalyses.reduce((sum, c) => sum + c.totalScore, 0) / competitorAnalyses.length
+    : 50
+
+  // デジタル活用: サイト総合スコアで補正 (weight: 30%)
+  if (adjusted.digital !== undefined) {
+    const siteInfluence = ws.totalScore * 0.3
+    adjusted.digital = Math.round(adjusted.digital * 0.7 + siteInfluence)
+  }
+
+  // 集客力: SEOスコアで補正 (weight: 25%)
+  if (adjusted.marketing !== undefined) {
+    const seoInfluence = ws.seoScore * 0.25
+    adjusted.marketing = Math.round(adjusted.marketing * 0.75 + seoInfluence)
+  }
+
+  // 営業力: コンテンツスコア(CTA等)で補正 (weight: 20%)
+  if (adjusted.sales !== undefined) {
+    const contentInfluence = ws.contentScore * 0.2
+    adjusted.sales = Math.round(adjusted.sales * 0.8 + contentInfluence)
+  }
+
+  // 顧客対応力: コンテンツスコア(ブログ・SNS)で補正 (weight: 15%)
+  if (adjusted.customer !== undefined) {
+    const csInfluence = ws.contentScore * 0.15
+    adjusted.customer = Math.round(adjusted.customer * 0.85 + csInfluence)
+  }
+
+  // 経営戦略: 競合との差分で補正 (weight: 15%)
+  if (adjusted.strategy !== undefined && competitorAnalyses.length > 0) {
+    const gap = ws.totalScore - compAvgScore // positive = ahead, negative = behind
+    const strategyAdjustment = Math.round(gap * 0.15)
+    adjusted.strategy = Math.max(0, Math.min(100, adjusted.strategy + strategyAdjustment))
+  }
+
+  // スコアをクランプ
+  for (const id of selectedCategories) {
+    adjusted[id] = Math.max(0, Math.min(100, adjusted[id]))
+  }
+
+  return adjusted
+}
+
 function scoreToGrade(score: number): string {
   if (score >= 82) return 'S'
   if (score >= 68) return 'A'
@@ -1708,26 +1762,20 @@ export async function POST(req: NextRequest) {
       }
 
       try {
-        // ========== A. 多次元スコアリング ==========
-        const categoryScores: Record<string, number> = {}
+        // ========== A. ベーススコア算出（Web分析後に補正するため仮計算）==========
+        const baseCategoryScores: Record<string, number> = {}
         for (const catId of selectedCategories) {
-          categoryScores[catId] = weightedCategoryScore(catId, answers)
+          baseCategoryScores[catId] = weightedCategoryScore(catId, answers)
         }
 
-        const synergyPenalties = calculateSynergyPenalties(categoryScores)
         const riskIndex = calculateRiskIndex(answers)
         const dxIndex = selectedCategories.includes('digital') ? calculateDXIndex(answers) : -1
-        const growthPotential = calculateGrowthPotential(categoryScores, riskIndex, dxIndex >= 0 ? dxIndex : 30)
         const efficiencyScore = calculateEfficiencyScore(answers)
 
-        // >>> SSE: scoring イベント送信
-        sendEvent('scoring', {
-          categoryScores,
-          synergyPenalties,
-          riskIndex,
-          dxMaturity: dxIndex,
-          growthPotential,
-          efficiencyScore,
+        // >>> SSE: analyzing イベント送信（調査開始を通知、スコアは送らない）
+        sendEvent('analyzing', {
+          message: '調査を開始しました。Webサイト・競合を分析中...',
+          categoriesCount: selectedCategories.length,
         })
 
         // ========== B. Webサイト深掘り分析 + 競合自動発見（並列開始）==========
@@ -1764,6 +1812,23 @@ export async function POST(req: NextRequest) {
         // >>> SSE: competitors イベント送信
         sendEvent('competitors', {
           competitorComparison: competitorAnalyses.map((c) => websiteToFrontend(c)),
+        })
+
+        // ========== A2. Web分析結果でカテゴリスコアを補正 ==========
+        const categoryScores = adjustScoresWithWebsite(
+          baseCategoryScores, selectedCategories, websiteAnalysis, competitorAnalyses,
+        )
+        const synergyPenalties = calculateSynergyPenalties(categoryScores)
+        const growthPotential = calculateGrowthPotential(categoryScores, riskIndex, dxIndex >= 0 ? dxIndex : 30)
+
+        // >>> SSE: scoring イベント送信（Web分析反映済みスコア）
+        sendEvent('scoring', {
+          categoryScores,
+          synergyPenalties,
+          riskIndex,
+          dxMaturity: dxIndex,
+          growthPotential,
+          efficiencyScore,
         })
 
         // ========== D. 最終スコア算出 ==========

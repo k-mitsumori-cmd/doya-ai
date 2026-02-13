@@ -889,7 +889,10 @@ export default function ShindanPage() {
             const parsed = JSON.parse(eventData)
             setStreamPhase(eventName)
 
-            if (eventName === 'scoring') {
+            if (eventName === 'analyzing') {
+              // Just a progress notification, no data to merge
+              setStreamPhase('analyzing')
+            } else if (eventName === 'scoring') {
               setResult((prev) => prev ? {
                 ...prev,
                 analytics: {
@@ -1358,10 +1361,11 @@ export default function ShindanPage() {
                       <Loader2 className="w-5 h-5 animate-spin text-teal-400" />
                       <div>
                         <p className="text-sm font-black text-teal-400">
-                          {streamPhase === 'scoring' && '各指標をスコアリング中...'}
+                          {streamPhase === 'analyzing' && '調査を開始しました...'}
                           {streamPhase === 'website' && 'Webサイトを詳細分析中...'}
                           {streamPhase === 'discovery' && '競合企業をAIが探索中...'}
                           {streamPhase === 'competitors' && '競合サイトをクロール中...'}
+                          {streamPhase === 'scoring' && '調査結果を反映してスコアリング中...'}
                           {streamPhase === 'scores' && '最終スコアを算出中...'}
                           {streamPhase === 'complete' && 'AIが総合診断中...'}
                           {!streamPhase && '分析を開始中...'}
@@ -1372,7 +1376,7 @@ export default function ShindanPage() {
                     <div className="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden">
                       <motion.div
                         className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400"
-                        animate={{ width: streamPhase === 'scoring' ? '15%' : streamPhase === 'website' ? '30%' : streamPhase === 'discovery' ? '45%' : streamPhase === 'competitors' ? '55%' : streamPhase === 'scores' ? '70%' : streamPhase === 'complete' ? '90%' : '5%' }}
+                        animate={{ width: streamPhase === 'analyzing' ? '5%' : streamPhase === 'website' ? '25%' : streamPhase === 'discovery' ? '40%' : streamPhase === 'competitors' ? '55%' : streamPhase === 'scoring' ? '70%' : streamPhase === 'scores' ? '80%' : streamPhase === 'complete' ? '95%' : '3%' }}
                         transition={{ duration: 0.5 }}
                       />
                     </div>
