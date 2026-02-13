@@ -4,6 +4,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Material Symbols: フォント読み込み前にテキスト表示を防ぐ */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga';
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  width: 1em;
+  height: 1em;
+}
+/* フォント未読み込み時は非表示 */
+.material-symbols-outlined {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.fonts-loaded .material-symbols-outlined {
+  opacity: 1;
+}
+
 /* ============================================
    CSS Variables
    ============================================ */
