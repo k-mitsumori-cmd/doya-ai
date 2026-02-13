@@ -16,7 +16,7 @@ export const maxDuration = 300
 
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
+import { getInterviewUser, getGuestIdFromRequest, checkOwnership } from '@/lib/interview/access'
 import { getSignedFileUrl } from '@/lib/interview/storage'
 import { getInterviewGuestLimits } from '@/lib/pricing'
 import type { TranscriptionSegment } from '@/lib/interview/types'
@@ -39,9 +39,6 @@ async function resolveId(ctx: Ctx): Promise<string> {
 }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
-  const dbErr = requireDatabase()
-  if (dbErr) return dbErr
-
   const materialId = await resolveId(ctx)
 
   const stream = new ReadableStream({
@@ -57,6 +54,13 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       }
 
       try {
+        // DB接続チェック (SSEエラーとして返す — JSON応答だとEventSourceが即エラーになる)
+        if (!process.env.DATABASE_URL) {
+          sendEvent('error', { message: 'データベースに接続できません。管理者にお問い合わせください。' })
+          controller.close()
+          return
+        }
+
         // 認証
         const { userId } = await getInterviewUser()
         const guestId = !userId ? getGuestIdFromRequest(req) : null

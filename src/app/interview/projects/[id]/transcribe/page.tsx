@@ -64,6 +64,7 @@ export default function TranscribePage() {
   const isCompleteRef = useRef(false)
   const isReconnectingRef = useRef(false)
   const reconnectCountRef = useRef(0)
+  const connectRef = useRef<() => void>()
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null)
   const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
@@ -116,35 +117,35 @@ export default function TranscribePage() {
     }
   }, [])
 
-  // 再接続スケジュール（二重防止 + 指数バックオフ）
-  const scheduleReconnect = useCallback(() => {
-    if (isCompleteRef.current || isReconnectingRef.current) return
-    isReconnectingRef.current = true
-
-    const count = ++reconnectCountRef.current
-    setReconnectCount(count)
-
-    if (count > MAX_RECONNECT_ATTEMPTS) {
-      setErrorMessage('接続が何度も切断されました。ページを更新してください。')
-      setCurrentStep('error')
-      isReconnectingRef.current = false
-      return
-    }
-
-    // 指数バックオフ: 3s, 4.5s, 6.75s ... 最大15s
-    const delay = Math.min(RECONNECT_BASE_DELAY_MS * Math.pow(1.5, count - 1), 15000)
-    setStatusMessage(`再接続中... (${count}/${MAX_RECONNECT_ATTEMPTS})`)
-    setCurrentStep('analyzing')
-
-    setTimeout(() => {
-      isReconnectingRef.current = false
-      connect()
-    }, delay)
-  }, [])
-
   // SSE接続 (再接続対応)
   const connect = useCallback(() => {
     if (!materialId || isCompleteRef.current) return
+
+    // 再接続スケジュール（二重防止 + 指数バックオフ）
+    // connectRef を使って最新の connect を呼ぶ（ステールクロージャ防止）
+    function scheduleReconnect() {
+      if (isCompleteRef.current || isReconnectingRef.current) return
+      isReconnectingRef.current = true
+
+      const count = ++reconnectCountRef.current
+      setReconnectCount(count)
+
+      if (count > MAX_RECONNECT_ATTEMPTS) {
+        setErrorMessage('接続が何度も切断されました。ページを更新してください。')
+        setCurrentStep('error')
+        isReconnectingRef.current = false
+        return
+      }
+
+      const delay = Math.min(RECONNECT_BASE_DELAY_MS * Math.pow(1.5, count - 1), 15000)
+      setStatusMessage(`再接続中... (${count}/${MAX_RECONNECT_ATTEMPTS})`)
+      setCurrentStep('analyzing')
+
+      setTimeout(() => {
+        isReconnectingRef.current = false
+        connectRef.current?.()
+      }, delay)
+    }
 
     const eventSource = new EventSource(`/api/interview/materials/${materialId}/transcribe-stream`)
     eventSourceRef.current = eventSource
@@ -200,6 +201,7 @@ export default function TranscribePage() {
           scheduleReconnect()
           return
         }
+        // サーバーからの明示的エラー → 再接続しない
         setErrorMessage(data.message || '文字起こしに失敗しました')
         setCurrentStep('error')
         eventSource.close()
@@ -219,7 +221,10 @@ export default function TranscribePage() {
     }
 
     return () => eventSource.close()
-  }, [materialId, scheduleReconnect])
+  }, [materialId])
+
+  // 常に最新の connect を参照するための ref
+  connectRef.current = connect
 
   useEffect(() => {
     const cleanup = connect()
