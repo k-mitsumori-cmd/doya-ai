@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
@@ -90,6 +90,7 @@ export default function PersonaPage() {
   const [copied, setCopied] = useState<string | null>(null)
   const [portraitError, setPortraitError] = useState('')
   const [bannerError, setBannerError] = useState('')
+  const portraitAutoTriggered = useRef(false)
 
   // ローカルストレージから履歴読み込み
   useEffect(() => {
@@ -104,6 +105,22 @@ export default function PersonaPage() {
       } catch {}
     }
   }, [])
+
+  // ペルソナ生成後にポートレートを自動生成
+  useEffect(() => {
+    if (generatedData?.persona && !portraitImage && !portraitLoading && !portraitAutoTriggered.current) {
+      portraitAutoTriggered.current = true
+      // 少し遅延させてUI描画を先に完了させる
+      const timer = setTimeout(() => {
+        handleGeneratePortrait()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+    // generatedDataがリセットされたらフラグもリセット
+    if (!generatedData) {
+      portraitAutoTriggered.current = false
+    }
+  }, [generatedData, portraitImage, portraitLoading])
 
   const handleGenerate = async () => {
     if (!url.trim()) {
