@@ -34,8 +34,8 @@ const STEP_INFO: Record<TranscribeStep, { icon: string; label: string; color: st
 
 const STEP_ORDER: TranscribeStep[] = ['init', 'fetching', 'submitting', 'analyzing', 'converting', 'streaming', 'complete']
 
-const MAX_RECONNECT_ATTEMPTS = 10
-const RECONNECT_DELAY_MS = 3000
+const MAX_RECONNECT_ATTEMPTS = 20
+const RECONNECT_BASE_DELAY_MS = 3000
 
 export default function TranscribePage() {
   const params = useParams()
@@ -62,6 +62,8 @@ export default function TranscribePage() {
   const startTimeRef = useRef(Date.now())
   const eventSourceRef = useRef<EventSource | null>(null)
   const isCompleteRef = useRef(false)
+  const isReconnectingRef = useRef(false)
+  const reconnectCountRef = useRef(0)
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null)
   const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
@@ -114,6 +116,32 @@ export default function TranscribePage() {
     }
   }, [])
 
+  // 再接続スケジュール（二重防止 + 指数バックオフ）
+  const scheduleReconnect = useCallback(() => {
+    if (isCompleteRef.current || isReconnectingRef.current) return
+    isReconnectingRef.current = true
+
+    const count = ++reconnectCountRef.current
+    setReconnectCount(count)
+
+    if (count > MAX_RECONNECT_ATTEMPTS) {
+      setErrorMessage('接続が何度も切断されました。ページを更新してください。')
+      setCurrentStep('error')
+      isReconnectingRef.current = false
+      return
+    }
+
+    // 指数バックオフ: 3s, 4.5s, 6.75s ... 最大15s
+    const delay = Math.min(RECONNECT_BASE_DELAY_MS * Math.pow(1.5, count - 1), 15000)
+    setStatusMessage(`再接続中... (${count}/${MAX_RECONNECT_ATTEMPTS})`)
+    setCurrentStep('analyzing')
+
+    setTimeout(() => {
+      isReconnectingRef.current = false
+      connect()
+    }, delay)
+  }, [])
+
   // SSE接続 (再接続対応)
   const connect = useCallback(() => {
     if (!materialId || isCompleteRef.current) return
@@ -131,6 +159,7 @@ export default function TranscribePage() {
       setCurrentStep(data.step as TranscribeStep)
       setStatusMessage(data.message)
       if (data.reconnected) {
+        reconnectCountRef.current = 0
         setReconnectCount(0)
       }
     })
@@ -153,51 +182,44 @@ export default function TranscribePage() {
       setTranscriptionId(data.transcriptionId)
       setDurationMinutes(data.durationMinutes)
       setFullText(data.fullText)
+      reconnectCountRef.current = 0
       setReconnectCount(0)
       eventSource.close()
     })
 
+    // サーバーからの error イベント (event: error\ndata: {...})
     eventSource.addEventListener('error', (e) => {
+      // ネイティブ接続エラーは data がない → onerror で処理
+      const raw = (e as any).data
+      if (!raw) return
+
       try {
-        const data = JSON.parse((e as any).data)
+        const data = JSON.parse(raw)
         if (data.retryable) {
           eventSource.close()
-          setReconnectCount(prev => prev + 1)
-          setStatusMessage('再接続中...')
-          setTimeout(connect, RECONNECT_DELAY_MS)
+          scheduleReconnect()
           return
         }
         setErrorMessage(data.message || '文字起こしに失敗しました')
+        setCurrentStep('error')
+        eventSource.close()
       } catch {
-        setErrorMessage('接続が切断されました')
+        // JSON解析失敗 — onerror に任せる
       }
-      setCurrentStep('error')
-      eventSource.close()
     })
 
+    // ネイティブ接続エラー (ネットワーク切断, タイムアウト等)
     eventSource.onerror = () => {
       if (isCompleteRef.current) {
         eventSource.close()
         return
       }
       eventSource.close()
-
-      setReconnectCount(prev => {
-        const next = prev + 1
-        if (next <= MAX_RECONNECT_ATTEMPTS) {
-          setStatusMessage(`再接続中... (${next}/${MAX_RECONNECT_ATTEMPTS})`)
-          setCurrentStep('analyzing')
-          setTimeout(connect, RECONNECT_DELAY_MS)
-        } else {
-          setErrorMessage('接続が何度も切断されました。ページを更新してください。')
-          setCurrentStep('error')
-        }
-        return next
-      })
+      scheduleReconnect()
     }
 
     return () => eventSource.close()
-  }, [materialId])
+  }, [materialId, scheduleReconnect])
 
   useEffect(() => {
     const cleanup = connect()
