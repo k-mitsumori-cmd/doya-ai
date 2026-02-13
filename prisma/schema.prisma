@@ -724,14 +724,16 @@ model InterviewTranscription {
   topics  Json? // [{topic: string, startTime: number, endTime: number, summary: string}]
 
   // 処理情報
-  provider   String? // google | whisper | deepgram | manual
-  confidence Float? // 信頼度スコア
-  status     String  @default("PENDING") // PENDING | PROCESSING | COMPLETED | ERROR
+  provider       String? // google | whisper | deepgram | manual
+  externalJobId  String? // AssemblyAI transcript ID (再接続用)
+  confidence     Float? // 信頼度スコア
+  status         String  @default("PENDING") // PENDING | PROCESSING | COMPLETED | ERROR
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([projectId, createdAt])
+  @@index([materialId, status])
   @@map("interview_transcription")
 }
 

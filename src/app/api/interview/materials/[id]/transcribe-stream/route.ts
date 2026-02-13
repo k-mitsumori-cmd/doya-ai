@@ -2,6 +2,8 @@
 // GET /api/interview/materials/[id]/transcribe-stream
 // ============================================
 // SSE でリアルタイムに文字起こし進捗をストリーミング
+// 再接続対応: 既にAssemblyAIジョブが送信済みならポーリングから再開
+//
 // イベント:
 //   status  — 処理ステータス (step, message, elapsed)
 //   segment — 文字起こしセグメント (index, text, speaker, start, end)
@@ -21,6 +23,11 @@ import type { TranscriptionSegment } from '@/lib/interview/types'
 
 const ASSEMBLYAI_BASE_URL = 'https://api.assemblyai.com/v2'
 
+// ポーリング設定 — Vercelの5分制限内で最大限ポーリングする
+const POLL_INTERVAL_MS = 5000        // 固定5秒間隔 (バックオフしない)
+const MAX_POLL_DURATION_MS = 270_000 // 4分30秒 (maxDuration=5分に余裕を持たせる)
+const SEGMENT_STREAM_DELAY_MS = 80   // セグメント送信間隔
+
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
 async function resolveId(ctx: Ctx): Promise<string> {
@@ -34,13 +41,16 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
   const materialId = await resolveId(ctx)
 
-  // SSE用のReadableStream
   const stream = new ReadableStream({
     async start(controller) {
       const encoder = new TextEncoder()
 
       function sendEvent(event: string, data: any) {
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+        } catch {
+          // controller already closed
+        }
       }
 
       try {
@@ -95,87 +105,110 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           }
         }
 
-        // 既に処理中のチェック
-        const existingProcessing = await prisma.interviewTranscription.findFirst({
-          where: { materialId, status: 'PROCESSING' },
-        })
-        if (existingProcessing) {
-          sendEvent('error', { message: '文字起こしは既に処理中です' })
+        const apiKey = process.env.ASSEMBLYAI_API_KEY
+        if (!apiKey) {
+          sendEvent('error', { message: 'ASSEMBLYAI_API_KEY が設定されていません' })
           controller.close()
           return
         }
 
-        // 過去ERRORを削除
-        await prisma.interviewTranscription.deleteMany({
-          where: { materialId, status: 'ERROR' },
-        })
-
-        // ステップ1: 初期化
-        sendEvent('status', { step: 'init', message: '文字起こしを準備中...', elapsed: 0 })
-
-        // DB レコード作成
-        const transcription = await prisma.interviewTranscription.create({
-          data: {
-            projectId: material.project.id,
-            materialId: material.id,
-            text: '',
-            status: 'PROCESSING',
-            provider: null,
-          },
-        })
-        await prisma.interviewMaterial.update({
-          where: { id: materialId },
-          data: { status: 'PROCESSING' },
-        })
-
-        // ステップ2: 署名付きURL取得
-        sendEvent('status', { step: 'fetching', message: 'ファイルを取得中...', elapsed: 0 })
-
-        const apiKey = process.env.ASSEMBLYAI_API_KEY
-        if (!apiKey) {
-          throw new Error('ASSEMBLYAI_API_KEY が設定されていません')
+        // メディア情報をクライアントに送信 (再生用)
+        try {
+          const mediaUrl = await getSignedFileUrl(material.filePath, 3600)
+          sendEvent('media', {
+            url: mediaUrl,
+            type: material.type,       // 'audio' | 'video'
+            mimeType: material.mimeType,
+            fileName: material.fileName,
+          })
+        } catch {
+          // メディアURL取得失敗は致命的ではない
         }
 
-        const fileUrl = await getSignedFileUrl(material.filePath, 3600)
-
-        // ステップ3: AssemblyAI にジョブ送信
-        sendEvent('status', { step: 'submitting', message: 'AI音声認識エンジンに送信中...', elapsed: 0 })
-
-        const submitRes = await fetch(`${ASSEMBLYAI_BASE_URL}/transcript`, {
-          method: 'POST',
-          headers: { Authorization: apiKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            audio_url: fileUrl,
-            language_code: 'ja',
-            speech_models: ['universal-2'],
-            speaker_labels: true,
-          }),
+        // ===== 再接続チェック: 既にPROCESSINGのジョブがあるか =====
+        const existingTranscription = await prisma.interviewTranscription.findFirst({
+          where: { materialId, status: 'PROCESSING' },
+          orderBy: { createdAt: 'desc' },
         })
-        if (!submitRes.ok) {
-          const errText = await submitRes.text()
-          throw new Error(`音声認識エンジンへの送信に失敗しました (${submitRes.status})`)
+
+        let transcription: { id: string }
+        let assemblyAiId: string
+
+        if (existingTranscription?.externalJobId) {
+          // ===== 再接続: 既存ジョブのポーリングを再開 =====
+          transcription = existingTranscription
+          assemblyAiId = existingTranscription.externalJobId
+          sendEvent('status', { step: 'analyzing', message: '再接続中... 文字起こしを継続します', elapsed: 0, reconnected: true })
+        } else {
+          // ===== 新規: ジョブを送信 =====
+
+          // 過去ERRORを削除
+          await prisma.interviewTranscription.deleteMany({
+            where: { materialId, status: 'ERROR' },
+          })
+
+          sendEvent('status', { step: 'init', message: '文字起こしを準備中...', elapsed: 0 })
+
+          // DB レコード作成
+          transcription = await prisma.interviewTranscription.create({
+            data: {
+              projectId: material.project.id,
+              materialId: material.id,
+              text: '',
+              status: 'PROCESSING',
+              provider: null,
+            },
+          })
+          await prisma.interviewMaterial.update({
+            where: { id: materialId },
+            data: { status: 'PROCESSING' },
+          })
+
+          // 署名付きURL取得
+          sendEvent('status', { step: 'fetching', message: 'ファイルを取得中...', elapsed: 0 })
+          const fileUrl = await getSignedFileUrl(material.filePath, 3600)
+
+          // AssemblyAI にジョブ送信
+          sendEvent('status', { step: 'submitting', message: 'AI音声認識エンジンに送信中...', elapsed: 0 })
+          const submitRes = await fetch(`${ASSEMBLYAI_BASE_URL}/transcript`, {
+            method: 'POST',
+            headers: { Authorization: apiKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              audio_url: fileUrl,
+              language_code: 'ja',
+              speech_model: 'best',
+              speaker_labels: true,
+            }),
+          })
+
+          if (!submitRes.ok) {
+            throw new Error(`音声認識エンジンへの送信に失敗しました (${submitRes.status})`)
+          }
+          const submitData = await submitRes.json()
+          if (!submitData.id) throw new Error('トランスクリプトIDが返されませんでした')
+          assemblyAiId = submitData.id
+
+          // AssemblyAIジョブIDをDBに保存 (再接続用)
+          await prisma.interviewTranscription.update({
+            where: { id: transcription.id },
+            data: { externalJobId: assemblyAiId },
+          })
         }
-        const submitData = await submitRes.json()
-        if (!submitData.id) throw new Error('トランスクリプトIDが返されませんでした')
-        const transcriptId = submitData.id
 
-        // ステップ4: ポーリング (進捗をSSEで通知)
-        const startTime = Date.now()
-        let interval = 3000
-        const maxWaitMs = 10 * 60 * 1000
-
+        // ===== ポーリング =====
+        const pollStart = Date.now()
         sendEvent('status', { step: 'analyzing', message: '音声を解析中...', elapsed: 0 })
 
         let pollResult: any = null
-        while (Date.now() - startTime < maxWaitMs) {
-          await new Promise((r) => setTimeout(r, interval))
+        while (Date.now() - pollStart < MAX_POLL_DURATION_MS) {
+          await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
 
-          const pollRes = await fetch(`${ASSEMBLYAI_BASE_URL}/transcript/${transcriptId}`, {
+          const pollRes = await fetch(`${ASSEMBLYAI_BASE_URL}/transcript/${assemblyAiId}`, {
             headers: { Authorization: apiKey },
           })
           if (!pollRes.ok) throw new Error(`ポーリングエラー (${pollRes.status})`)
           const data = await pollRes.json()
-          const elapsed = Math.round((Date.now() - startTime) / 1000)
+          const elapsed = Math.round((Date.now() - pollStart) / 1000)
 
           if (data.status === 'completed') {
             pollResult = data
@@ -187,19 +220,28 @@ export async function GET(req: NextRequest, ctx: Ctx) {
             throw new Error(data.error || '音声認識に失敗しました')
           }
 
-          // 進捗を通知
+          // 進捗メッセージ
           let progressMessage = '音声を解析中...'
-          if (elapsed > 45) progressMessage = 'テキストに変換中...'
-          else if (elapsed > 15) progressMessage = '音声パターンを認識中...'
-          else if (elapsed > 5) progressMessage = '音声データを分析中...'
+          if (elapsed > 120) progressMessage = 'もう少しで完了します...'
+          else if (elapsed > 60) progressMessage = 'テキストに変換中...'
+          else if (elapsed > 30) progressMessage = '音声パターンを認識中...'
+          else if (elapsed > 10) progressMessage = '音声データを分析中...'
 
           sendEvent('status', { step: 'analyzing', message: progressMessage, elapsed })
-          interval = Math.min(interval * 1.5, 30000)
         }
 
-        if (!pollResult) throw new Error('文字起こしがタイムアウトしました (10分超過)')
+        if (!pollResult) {
+          // タイムアウト — ジョブはAssemblyAI側で継続中
+          // クライアントに再接続を促す
+          sendEvent('error', {
+            message: '処理に時間がかかっています。自動で再接続します...',
+            retryable: true,
+          })
+          controller.close()
+          return
+        }
 
-        // ステップ5: セグメント解析 & ストリーム送信
+        // ===== セグメント解析 & ストリーム送信 =====
         const segments: TranscriptionSegment[] = []
 
         if (pollResult.utterances && pollResult.utterances.length > 0) {
@@ -212,9 +254,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
               speaker: utt.speaker || undefined,
             }
             segments.push(seg)
-            // セグメントを1つずつストリーム（120ms間隔でリアルタイム感）
             sendEvent('segment', { index: i, ...seg })
-            await new Promise(r => setTimeout(r, 120))
+            await new Promise(r => setTimeout(r, SEGMENT_STREAM_DELAY_MS))
           }
         } else if (pollResult.words && pollResult.words.length > 0) {
           let segStart = pollResult.words[0].start / 1000
@@ -235,7 +276,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
               }
               segments.push(seg)
               sendEvent('segment', { index: segments.length - 1, ...seg })
-              await new Promise(r => setTimeout(r, 120))
+              await new Promise(r => setTimeout(r, SEGMENT_STREAM_DELAY_MS))
               segText = ''
               if (!isLast) segStart = pollResult.words[i + 1].start / 1000
             }
@@ -245,7 +286,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         const text = pollResult.text || ''
         if (!text) throw new Error('文字起こし結果が空です')
 
-        // ステップ6: DB保存
+        // ===== DB保存 =====
         let durationSeconds = 0
         if (segments.length > 0) {
           durationSeconds = Math.ceil(segments[segments.length - 1].end)
@@ -287,7 +328,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       } catch (err: any) {
         console.error('[interview] transcribe-stream error:', err?.message)
 
-        // DB のステータスをエラーに更新（可能であれば）
+        // DB のステータスをエラーに更新
         try {
           await prisma.interviewMaterial.updateMany({
             where: { id: materialId, status: 'PROCESSING' },
