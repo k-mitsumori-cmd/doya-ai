@@ -52,11 +52,11 @@ interface WebShindanResult {
 const WEB_AXES_LABELS: Record<string, string> = {
   seo: 'SEO対策',
   content: 'コンテンツ力',
-  cta: 'CTA・導線設計',
-  trust: '信頼性・権威性',
-  ux: 'UX・表示速度',
-  competitive: '競合優位性',
-  conversion: 'コンバージョン力',
+  conversion: 'コンバージョン設計',
+  tracking: '集客・広告基盤',
+  branding: '訴求力・ブランディング',
+  trust: '信頼性・社会的証明',
+  technical: '技術・パフォーマンス',
 }
 
 const STATUS_STYLES = {
@@ -438,12 +438,28 @@ export default function ShindanPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-gray-50 border border-gray-200 rounded-xl p-4"
+                    className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2"
                   >
                     <p className="text-xs font-bold text-teal-600 mb-1">サイト分析完了</p>
-                    <p className="text-sm text-gray-600">
-                      SEO: {sseWebsite.seoScore ?? '-'} / コンテンツ: {sseWebsite.contentScore ?? '-'} / 技術: {sseWebsite.technicalScore ?? '-'}
-                    </p>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="bg-white rounded-lg p-2 border border-gray-100">
+                        <p className="text-lg font-black text-gray-900">{sseWebsite.seoScore ?? '-'}</p>
+                        <p className="text-[10px] text-gray-500">SEO</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-2 border border-gray-100">
+                        <p className="text-lg font-black text-gray-900">{sseWebsite.contentScore ?? '-'}</p>
+                        <p className="text-[10px] text-gray-500">コンテンツ</p>
+                      </div>
+                      <div className="bg-white rounded-lg p-2 border border-gray-100">
+                        <p className="text-lg font-black text-gray-900">{sseWebsite.technicalScore ?? '-'}</p>
+                        <p className="text-[10px] text-gray-500">技術</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 text-[10px] text-gray-500">
+                      {sseWebsite.pagesCrawled && <span className="bg-white px-2 py-0.5 rounded border border-gray-100">{sseWebsite.pagesCrawled}ページ分析</span>}
+                      {sseWebsite.responseTimeMs && <span className="bg-white px-2 py-0.5 rounded border border-gray-100">{sseWebsite.responseTimeMs}ms</span>}
+                      {sseWebsite.tracking?.detectedTools?.length > 0 && <span className="bg-white px-2 py-0.5 rounded border border-gray-100">{sseWebsite.tracking.detectedTools.join(', ')}</span>}
+                    </div>
                   </motion.div>
                 )}
                 {sseDiscovered.length > 0 && (
@@ -715,6 +731,129 @@ export default function ShindanPage() {
                     competitors={result.competitorAnalyses || []}
                     detailedComparison={result.competitiveDetailedComparison}
                   />
+                </motion.div>
+              )}
+
+              {/* 技術詳細 */}
+              {result.websiteAnalysis && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.65 }}
+                  className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm"
+                >
+                  <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-teal-600" />
+                    技術詳細
+                  </h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {result.websiteAnalysis.responseTimeMs != null && (
+                      <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                        <p className={`text-xl font-black ${result.websiteAnalysis.responseTimeMs < 1000 ? 'text-emerald-600' : result.websiteAnalysis.responseTimeMs < 3000 ? 'text-amber-600' : 'text-red-600'}`}>
+                          {result.websiteAnalysis.responseTimeMs < 1000 ? `${result.websiteAnalysis.responseTimeMs}ms` : `${(result.websiteAnalysis.responseTimeMs / 1000).toFixed(1)}s`}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">レスポンス</p>
+                      </div>
+                    )}
+                    <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                      <p className="text-xl font-black text-gray-900">{result.websiteAnalysis.pagesCrawled || 0}</p>
+                      <p className="text-[10px] text-gray-500 mt-1">分析ページ数</p>
+                    </div>
+                    {result.websiteAnalysis.jsFileCount != null && (
+                      <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                        <p className={`text-xl font-black ${result.websiteAnalysis.jsFileCount > 20 ? 'text-red-600' : 'text-gray-900'}`}>{result.websiteAnalysis.jsFileCount}</p>
+                        <p className="text-[10px] text-gray-500 mt-1">JSファイル</p>
+                      </div>
+                    )}
+                    {result.websiteAnalysis.cssFileCount != null && (
+                      <div className="bg-gray-50 rounded-xl p-3 text-center border border-gray-100">
+                        <p className={`text-xl font-black ${result.websiteAnalysis.cssFileCount > 10 ? 'text-red-600' : 'text-gray-900'}`}>{result.websiteAnalysis.cssFileCount}</p>
+                        <p className="text-[10px] text-gray-500 mt-1">CSSファイル</p>
+                      </div>
+                    )}
+                  </div>
+                  {/* 検出ツール */}
+                  {result.websiteAnalysis.tracking?.detectedTools?.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs font-bold text-gray-700 mb-2">検出された広告・分析ツール</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {result.websiteAnalysis.tracking.detectedTools.map((tool: string, i: number) => (
+                          <span key={i} className="text-xs bg-teal-50 text-teal-700 px-2.5 py-1 rounded-full font-bold border border-teal-200">
+                            {tool}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* セキュリティヘッダー */}
+                  {result.websiteAnalysis.securityHeaders && result.websiteAnalysis.securityHeaders.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs font-bold text-gray-700 mb-2">セキュリティヘッダー</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {result.websiteAnalysis.securityHeaders.map((h: string, i: number) => (
+                          <span key={i} className="text-xs bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-bold border border-emerald-200">
+                            {h}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* 技術フラグ */}
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap gap-2">
+                    {[
+                      { label: 'HTTPS', active: result.websiteAnalysis.url?.startsWith('https') },
+                      { label: 'viewport', active: true },
+                      { label: '構造化データ', active: result.websiteAnalysis.hasSchema },
+                      { label: '遅延読み込み', active: result.websiteAnalysis.hasLazyLoading },
+                      { label: 'favicon', active: result.websiteAnalysis.hasFavicon },
+                      { label: 'ブログ', active: result.websiteAnalysis.hasBlog },
+                      { label: 'フォーム', active: result.websiteAnalysis.hasForm },
+                    ].map((flag, i) => (
+                      <span key={i} className={`text-xs px-2.5 py-1 rounded-full font-bold border ${flag.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                        {flag.active ? '\u2713' : '\u2717'} {flag.label}
+                      </span>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* 検出された問題点・良い点 */}
+              {result.websiteAnalysis && (result.websiteAnalysis.issues?.length > 0 || result.websiteAnalysis.positives?.length > 0) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.67 }}
+                  className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm"
+                >
+                  <h3 className="text-lg font-black text-gray-900 mb-4">自動検出結果</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {result.websiteAnalysis.issues?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-red-600 mb-2">問題点（{result.websiteAnalysis.issues.length}件）</p>
+                        <ul className="space-y-1.5">
+                          {result.websiteAnalysis.issues.map((issue: string, i: number) => (
+                            <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
+                              <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />
+                              <span>{issue}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {result.websiteAnalysis.positives?.length > 0 && (
+                      <div>
+                        <p className="text-xs font-bold text-emerald-600 mb-2">良い点（{result.websiteAnalysis.positives.length}件）</p>
+                        <ul className="space-y-1.5">
+                          {result.websiteAnalysis.positives.map((pos: string, i: number) => (
+                            <li key={i} className="text-xs text-gray-700 flex items-start gap-1.5">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0 mt-0.5" />
+                              <span>{pos}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               )}
 

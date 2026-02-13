@@ -161,6 +161,13 @@ interface WebsiteAnalysis {
   }
   discoveredSubdomains?: string[]
   crawledDirectories?: string[]
+  responseTimeMs?: number
+  securityHeaders?: string[]
+  jsFileCount?: number
+  cssFileCount?: number
+  hasLazyLoading?: boolean
+  hasFavicon?: boolean
+  redirectChain?: string  // final URL after redirects
 }
 
 // =============================================
@@ -440,7 +447,16 @@ function detectCompetitivePositioning(html: string, mainText: string) {
   }
 }
 
-async function fetchPage(url: string, timeout = 10000): Promise<string | null> {
+interface FetchResult {
+  html: string
+  headers: Record<string, string>
+  responseTimeMs: number
+  statusCode: number
+  finalUrl: string
+}
+
+async function fetchPage(url: string, timeout = 10000): Promise<FetchResult | null> {
+  const start = Date.now()
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': DOYA_USER_AGENT },
@@ -448,7 +464,11 @@ async function fetchPage(url: string, timeout = 10000): Promise<string | null> {
       redirect: 'follow',
     })
     if (!res.ok) return null
-    return await res.text()
+    const html = await res.text()
+    const elapsed = Date.now() - start
+    const headers: Record<string, string> = {}
+    res.headers.forEach((v, k) => { headers[k] = v })
+    return { html, headers, responseTimeMs: elapsed, statusCode: res.status, finalUrl: res.url }
   } catch {
     return null
   }
@@ -573,8 +593,9 @@ function discoverDirectoryPages(internalLinks: string[], baseUrl: string): strin
 }
 
 async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
-  const mainHtml = await fetchPage(url, 15000)
-  if (!mainHtml) return null
+  const mainResult = await fetchPage(url, 15000)
+  if (!mainResult) return null
+  const mainHtml = mainResult.html
 
   const meta = extractMetaTags(mainHtml)
   const headings = extractHeadings(mainHtml)
@@ -591,10 +612,10 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
     .filter((p) => /about|company|service|product|blog|news|price|feature|会社|サービス|料金|事業|特徴|実績|お客様/i.test(p))
     .slice(0, 5)
 
-  const subPages = await Promise.all(
+  const subPageResults = await Promise.all(
     priorityPaths.map((path) => fetchPage(new URL(path, url).toString(), 8000))
   )
-  const validSubPages = subPages.filter(Boolean) as string[]
+  const validSubPages = subPageResults.filter(Boolean).map((r) => r!.html) as string[]
   const pagesCrawled = 1 + validSubPages.length
 
   let totalText = mainText
@@ -616,10 +637,10 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
     ...directoryPages,
   ].slice(0, 10)
 
-  const additionalPages = await Promise.all(
+  const additionalPageResults = await Promise.all(
     additionalUrls.map((u) => fetchPage(u, 8000))
   )
-  const validAdditionalPages = additionalPages.filter(Boolean) as string[]
+  const validAdditionalPages = additionalPageResults.filter(Boolean).map((r) => r!.html) as string[]
 
   // totalText にテキストを追加
   for (const page of validAdditionalPages) {
@@ -633,7 +654,7 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
   const crawledDirectories = directoryPages.filter((_, i) => {
     // サブドメイン分のオフセットを考慮
     const offsetIdx = discoveredSubdomains.length + i
-    return offsetIdx < additionalUrls.length && additionalPages[offsetIdx] !== null
+    return offsetIdx < additionalUrls.length && additionalPageResults[offsetIdx] !== null
   })
 
   // ----- SEOスコア計算（100点満点・厳格採点）-----
@@ -702,14 +723,45 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
   }
 
   // サイトマップ確認 (5点)
-  const sitemapHtml = await fetchPage(new URL('/sitemap.xml', url).toString(), 5000)
+  const sitemapResult = await fetchPage(new URL('/sitemap.xml', url).toString(), 5000)
+  const sitemapHtml = sitemapResult?.html
   if (sitemapHtml && sitemapHtml.includes('<url>')) { seoScore += 5; positives.push('sitemap.xml設置済み') }
   else { issues.push('sitemap.xml未設置（クローラビリティに悪影響）') }
 
   // robots.txt確認 (5点)
-  const robotsTxt = await fetchPage(new URL('/robots.txt', url).toString(), 5000)
+  const robotsResult = await fetchPage(new URL('/robots.txt', url).toString(), 5000)
+  const robotsTxt = robotsResult?.html
   if (robotsTxt && robotsTxt.length > 10) { seoScore += 5 }
   else { issues.push('robots.txt未設定') }
+
+  // URL構造チェック (bonus 5点)
+  const urlObj = new URL(url)
+  const isCleanUrl = !/[?&].*=/.test(urlObj.pathname) && urlObj.pathname.length < 100
+  if (isCleanUrl) { seoScore += 3; positives.push('クリーンなURL構造') }
+
+  // meta robots チェック
+  const metaRobots = meta['robots'] || ''
+  if (metaRobots.includes('noindex')) { issues.push('meta robots: noindex（検索エンジンからインデックスされない）'); seoScore -= 10 }
+
+  // favicon存在チェック
+  const hasFavicon = /rel=["'](?:shortcut )?icon["']/i.test(mainHtml)
+  if (hasFavicon) { positives.push('faviconあり') } else { issues.push('favicon未設定（ブランド認知に影響）') }
+
+  // hreflang (国際化対応)
+  const hasHreflang = /hreflang=/i.test(mainHtml)
+  if (hasHreflang) { seoScore += 2; positives.push('多言語対応（hreflang）') }
+
+  // 重複title/descriptionチェック（複数ページのmeta比較）
+  const allPageMetas = [meta]
+  for (const page of validSubPages) {
+    allPageMetas.push(extractMetaTags(page))
+  }
+  const titles = allPageMetas.map(m => m.title).filter(Boolean)
+  const uniqueTitles = new Set(titles)
+  if (titles.length > 1 && uniqueTitles.size < titles.length) {
+    issues.push(`titleタグ重複（${titles.length}ページ中${titles.length - uniqueTitles.size}件が同一title）`)
+    seoScore -= 3
+  }
 
   // ----- コンテンツスコア計算 -----
   let contentScore = 0
@@ -775,16 +827,55 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
   if (meta['twitter:card'] || meta['twitter:site']) { technicalScore += 5 }
   if (meta['og:image'] && meta['og:title']) { technicalScore += 5 }
 
+  // レスポンスタイム分析
+  if (mainResult) {
+    if (mainResult.responseTimeMs < 1000) { technicalScore += 5; positives.push(`高速レスポンス（${mainResult.responseTimeMs}ms）`) }
+    else if (mainResult.responseTimeMs > 3000) { issues.push(`レスポンス遅延（${mainResult.responseTimeMs}ms、3秒超）`) }
+  }
+
+  // セキュリティヘッダー
+  if (mainResult?.headers) {
+    const secHeaders = ['x-frame-options', 'x-content-type-options', 'strict-transport-security', 'content-security-policy']
+    const foundSecHeaders = secHeaders.filter(h => mainResult.headers[h])
+    if (foundSecHeaders.length >= 3) { technicalScore += 5; positives.push(`セキュリティヘッダー充実（${foundSecHeaders.length}/4）`) }
+    else if (foundSecHeaders.length === 0) { issues.push('セキュリティヘッダー未設定（XSS/クリックジャッキング脆弱性）') }
+  }
+
+  // JS/CSSリソース数カウント
+  const jsCount = (mainHtml.match(/<script[^>]+src=/gi) || []).length
+  const cssCount = (mainHtml.match(/<link[^>]+stylesheet/gi) || []).length
+  if (jsCount > 20) { issues.push(`JavaScript過多（${jsCount}ファイル、表示速度に影響）`) }
+  if (cssCount > 10) { issues.push(`CSS過多（${cssCount}ファイル）`) }
+  if (jsCount <= 10 && cssCount <= 5) { technicalScore += 3; positives.push('リソース数適正') }
+
+  // 遅延読み込み
+  const hasLazyLoading = /loading=["']lazy["']|data-src=|lazyload/i.test(mainHtml)
+  if (hasLazyLoading) { technicalScore += 3; positives.push('遅延読み込み実装') }
+  else if (images.total > 5) { issues.push('遅延読み込み未実装（画像が多いため表示速度に影響）') }
+
+  // インラインスタイル量
+  const inlineStyles = (mainHtml.match(/style=["'][^"']{50,}["']/g) || []).length
+  if (inlineStyles > 20) { issues.push(`インラインスタイル過多（${inlineStyles}箇所、保守性に影響）`) }
+
+  // Web Vitals指標 (LCP候補検出)
+  const hasLargeHeroImage = /<img[^>]+(?:hero|banner|main|key|visual)[^>]*/i.test(mainHtml)
+  const heroImagePreloaded = /<link[^>]+rel=["']preload["'][^>]+as=["']image["']/i.test(mainHtml)
+  if (hasLargeHeroImage && !heroImagePreloaded) { issues.push('ヒーロー画像のpreload未設定（LCP改善の余地）') }
+
   const totalScore = Math.round(seoScore * 0.40 + contentScore * 0.35 + technicalScore * 0.25)
 
-  // ----- 拡張検出分析 -----
-  const tracking = detectTracking(mainHtml)
-  const appealAxis = detectAppealAxis(mainHtml, headings, totalText)
-  const socialProofData = detectSocialProof(mainHtml, totalText)
-  const ctaAnalysis = detectCTADetails(mainHtml)
-  const pricingSignals = detectPricingSignals(mainHtml, internalLinks)
-  const contentMarketingData = detectContentMarketing(mainHtml, internalLinks)
-  const competitivePositioningData = detectCompetitivePositioning(mainHtml, totalText)
+  // ----- 拡張検出分析（全クロールページのHTMLを結合して深い検出）-----
+  const allHtml = [mainHtml, ...validSubPages, ...validAdditionalPages].join('\n')
+  const allText = totalText // already has combined text
+  const allInternalLinks = extractInternalLinks(allHtml, url)
+
+  const tracking = detectTracking(allHtml)
+  const appealAxis = detectAppealAxis(allHtml, headings, allText)
+  const socialProofData = detectSocialProof(allHtml, allText)
+  const ctaAnalysis = detectCTADetails(allHtml)
+  const pricingSignals = detectPricingSignals(allHtml, allInternalLinks)
+  const contentMarketingData = detectContentMarketing(allHtml, allInternalLinks)
+  const competitivePositioningData = detectCompetitivePositioning(allHtml, allText)
 
   return {
     url,
@@ -816,6 +907,16 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
     competitivePositioning: competitivePositioningData,
     discoveredSubdomains,
     crawledDirectories,
+    responseTimeMs: mainResult.responseTimeMs,
+    securityHeaders: mainResult.headers
+      ? ['x-frame-options', 'x-content-type-options', 'strict-transport-security', 'content-security-policy']
+          .filter(h => mainResult.headers[h])
+      : undefined,
+    jsFileCount: jsCount,
+    cssFileCount: cssCount,
+    hasLazyLoading,
+    hasFavicon,
+    redirectChain: mainResult.finalUrl !== url ? mainResult.finalUrl : undefined,
   }
 }
 
@@ -946,6 +1047,7 @@ ${context}
 - 同業種・同規模で市場が重なる企業を優先
 - 大手〜中堅の知名度がある企業を含める（クロール可能なURL）
 - ${websiteUrl ? 'この企業のサイトと同じ市場で競合するサイトを選ぶ' : '業種から推測される代表的な競合を選ぶ'}
+- 自社サイトのタイトルやサービス内容からキーワードを推測し、同じキーワードで検索上位に表示される競合サイトを優先してください。
 
 以下のJSON形式で返してください:
 {
@@ -1003,6 +1105,12 @@ function websiteToFrontend(ws: WebsiteAnalysis) {
     competitivePositioning: ws.competitivePositioning,
     discoveredSubdomains: ws.discoveredSubdomains,
     crawledDirectories: ws.crawledDirectories,
+    responseTimeMs: ws.responseTimeMs,
+    securityHeaders: ws.securityHeaders,
+    jsFileCount: ws.jsFileCount,
+    cssFileCount: ws.cssFileCount,
+    hasLazyLoading: ws.hasLazyLoading,
+    hasFavicon: ws.hasFavicon,
   }
 }
 
@@ -1036,6 +1144,12 @@ URL: ${ws.url}
 フォーム: ${ws.hasForm ? 'あり' : 'なし'}
 SNSリンク: ${ws.socialLinks.join(', ') || 'なし'}
 見出し: ${ws.headings.slice(0, 10).join(' / ')}
+レスポンスタイム: ${ws.responseTimeMs ? ws.responseTimeMs + 'ms' : '不明'}
+セキュリティヘッダー: ${ws.securityHeaders?.join(', ') || '未検出'}
+JSファイル数: ${ws.jsFileCount ?? '不明'}
+CSSファイル数: ${ws.cssFileCount ?? '不明'}
+遅延読み込み: ${ws.hasLazyLoading ? 'あり' : 'なし'}
+favicon: ${ws.hasFavicon ? 'あり' : 'なし'}
 
 ### 検出済み広告・トラッキング
 ${ws.tracking ? `ツール: ${ws.tracking.detectedTools.join(', ') || 'なし'} (スコア: ${ws.tracking.trackingScore})` : '未検出'}
