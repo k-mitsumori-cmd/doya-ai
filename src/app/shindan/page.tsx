@@ -1,16 +1,13 @@
 'use client'
 
-import React, { useState, useRef, useCallback } from 'react'
+import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Globe,
   Loader2,
   AlertTriangle,
-  Plus,
-  X,
   AlertCircle,
   CheckCircle2,
-  ChevronDown,
   Search,
   Sparkles,
   Shield,
@@ -65,14 +62,6 @@ const STATUS_STYLES = {
   critical: { bg: 'bg-red-50 border-red-200', text: 'text-red-600', label: '要対応' },
 }
 
-// ===== 業種一覧 =====
-const INDUSTRIES = [
-  'IT・テクノロジー', 'EC・小売', '飲食・フード', '美容・健康',
-  '不動産', '教育・スクール', '金融・保険', '製造業',
-  '医療・福祉', 'コンサルティング', '人材・採用', '旅行・観光',
-  'メディア・出版', '建設・設備', '物流・運送', 'その他',
-]
-
 // ===== SSE進捗ステップ =====
 const SSE_STEPS = [
   { key: 'analyzing', label: '分析開始' },
@@ -86,9 +75,6 @@ const SSE_STEPS = [
 export default function ShindanPage() {
   // フォームstate
   const [url, setUrl] = useState('')
-  const [industry, setIndustry] = useState('')
-  const [competitorUrls, setCompetitorUrls] = useState<string[]>([])
-  const [newCompetitorUrl, setNewCompetitorUrl] = useState('')
 
   // 分析state
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -106,21 +92,9 @@ export default function ShindanPage() {
   const [expandedAxes, setExpandedAxes] = useState<Record<string, boolean>>({})
   const dashboardRef = useRef<HTMLDivElement>(null)
 
-  // 競合URL追加
-  const addCompetitorUrl = useCallback(() => {
-    const trimmed = newCompetitorUrl.trim()
-    if (!trimmed || competitorUrls.length >= 3) return
-    setCompetitorUrls((prev) => [...prev, trimmed])
-    setNewCompetitorUrl('')
-  }, [newCompetitorUrl, competitorUrls.length])
-
-  const removeCompetitorUrl = useCallback((index: number) => {
-    setCompetitorUrls((prev) => prev.filter((_, i) => i !== index))
-  }, [])
-
   // 診断実行
   const handleSubmit = async () => {
-    if (!url || !industry) return
+    if (!url) return
     setIsAnalyzing(true)
     setError(null)
     setResult(null)
@@ -134,7 +108,7 @@ export default function ShindanPage() {
       const res = await fetch('/api/shindan/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, industry, competitorUrls: competitorUrls.filter(Boolean) }),
+        body: JSON.stringify({ url }),
       })
       if (!res.ok) {
         const err = await res.json()
@@ -189,7 +163,6 @@ export default function ShindanPage() {
                     history.unshift({
                       id: Date.now().toString(),
                       url,
-                      industry,
                       overallScore: data.result.overallScore,
                       overallGrade: data.result.overallGrade,
                       createdAt: new Date().toISOString(),
@@ -267,7 +240,7 @@ export default function ShindanPage() {
               {/* URL入力 */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">
-                  診断するWebサイトURL <span className="text-red-500">*</span>
+                  診断するWebサイトURL
                 </label>
                 <div className="relative">
                   <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -275,73 +248,13 @@ export default function ShindanPage() {
                     type="url"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && url && (e.preventDefault(), handleSubmit())}
                     placeholder="https://example.com"
-                    className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                    className="w-full pl-11 pr-4 py-3.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
                   />
                 </div>
-              </div>
-
-              {/* 業種選択 */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  業種 <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <select
-                    value={industry}
-                    onChange={(e) => setIndustry(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all bg-white"
-                  >
-                    <option value="">業種を選択してください</option>
-                    {INDUSTRIES.map((ind) => (
-                      <option key={ind} value={ind}>{ind}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                </div>
-              </div>
-
-              {/* 競合URL入力 */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  競合サイトURL（任意・最大3つ）
-                </label>
-                <div className="space-y-2">
-                  {competitorUrls.map((cUrl, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="flex-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 truncate">
-                        {cUrl}
-                      </div>
-                      <button
-                        onClick={() => removeCompetitorUrl(i)}
-                        className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {competitorUrls.length < 3 && (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="url"
-                        value={newCompetitorUrl}
-                        onChange={(e) => setNewCompetitorUrl(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCompetitorUrl())}
-                        placeholder="https://competitor.com"
-                        className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
-                      />
-                      <button
-                        onClick={addCompetitorUrl}
-                        disabled={!newCompetitorUrl.trim()}
-                        className="p-2.5 bg-teal-50 text-teal-600 rounded-xl hover:bg-teal-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
                 <p className="text-xs text-gray-400 mt-1.5">
-                  未入力の場合、AIが自動で競合を発見します
+                  業種・競合サイトはAIが自動で推定・発見します
                 </p>
               </div>
 
@@ -356,7 +269,7 @@ export default function ShindanPage() {
               {/* 診断開始ボタン */}
               <button
                 onClick={handleSubmit}
-                disabled={!url || !industry}
+                disabled={!url}
                 className="w-full py-4 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-base font-black rounded-xl hover:from-teal-600 hover:to-cyan-600 transition-all shadow-lg shadow-teal-500/25 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
               >
                 <Search className="w-5 h-5" />

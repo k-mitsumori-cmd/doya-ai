@@ -1029,25 +1029,27 @@ interface DiscoveredCompetitor {
 }
 
 async function discoverCompetitors(
-  industry: string,
-  websiteUrl: string | undefined,
+  websiteUrl: string,
+  siteTitle?: string,
+  siteDescription?: string,
 ): Promise<DiscoveredCompetitor[]> {
   const context = [
-    `業種: ${industry}`,
-    websiteUrl ? `自社URL: ${websiteUrl}` : '',
+    `自社URL: ${websiteUrl}`,
+    siteTitle ? `サイトタイトル: ${siteTitle}` : '',
+    siteDescription ? `サイト説明: ${siteDescription}` : '',
   ].filter(Boolean).join('\n')
 
   const prompt = `あなたは日本のビジネス競合分析の専門家です。
-以下の企業情報から、この企業の直接的な競合となりうる日本企業のWebサイトURLを5つ推測してください。
+以下のWebサイト情報から、このサイトの直接的な競合となりうるWebサイトURLを5つ推測してください。
 
 ${context}
 
 条件:
-- 実在する日本企業のURLのみ（.co.jp, .jp, .com のドメイン）
+- 実在する企業・サービスのURLのみ（.co.jp, .jp, .com のドメイン）
+- サイトタイトルやサービス内容からキーワード・業種を推測し、同じキーワードで検索上位に表示される競合サイトを優先
 - 同業種・同規模で市場が重なる企業を優先
 - 大手〜中堅の知名度がある企業を含める（クロール可能なURL）
-- ${websiteUrl ? 'この企業のサイトと同じ市場で競合するサイトを選ぶ' : '業種から推測される代表的な競合を選ぶ'}
-- 自社サイトのタイトルやサービス内容からキーワードを推測し、同じキーワードで検索上位に表示される競合サイトを優先してください。
+- このサイトと同じ市場で競合するサイトを選ぶ
 
 以下のJSON形式で返してください:
 {
@@ -1120,7 +1122,6 @@ function websiteToFrontend(ws: WebsiteAnalysis) {
 // =============================================
 
 function buildPrompt(
-  industry: string,
   axisScores: Record<string, number>,
   overallScore: number,
   grade: string,
@@ -1199,7 +1200,6 @@ CTA: ${c.ctaAnalysis?.ctaTexts?.join(', ') || 'なし'}
 以下のデータを基に、このWebサイトの改善点を競合と比較しながら徹底的に分析してください。
 
 ## 基本情報
-業種: ${industry}
 総合スコア: ${overallScore}/100 (${grade}ランク)
 
 ## 7軸評価スコア
@@ -1272,17 +1272,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'リクエストの解析に失敗しました' }, { status: 400 })
   }
 
-  const { url: websiteUrl, industry, competitorUrls } = body as {
+  const { url: websiteUrl } = body as {
     url: string
-    industry: string
-    competitorUrls?: string[]
   }
 
   if (!websiteUrl || !websiteUrl.startsWith('http')) {
     return NextResponse.json({ error: 'WebサイトURLは必須です' }, { status: 400 })
-  }
-  if (!industry) {
-    return NextResponse.json({ error: '業種は必須です' }, { status: 400 })
   }
 
   // --- 認証 + 回数制限（既存のまま）---
@@ -1332,18 +1327,20 @@ export async function POST(req: NextRequest) {
           message: 'Webサイトの分析を開始しました...',
         })
 
-        // ========== B. Webサイト分析 + 競合自動発見（並列）==========
-        const [wsResult, discoveredResult] = await Promise.all([
-          analyzeWebsite(websiteUrl),
-          discoverCompetitors(industry, websiteUrl),
-        ])
-        const websiteAnalysis = wsResult
-        const discoveredCompetitorList = discoveredResult
+        // ========== B. Webサイト分析 ==========
+        const websiteAnalysis = await analyzeWebsite(websiteUrl)
 
         // >>> SSE: website イベント
         sendEvent('website', {
           websiteHealth: websiteAnalysis ? websiteToFrontend(websiteAnalysis) : null,
         })
+
+        // ========== B2. 競合自動発見（サイト分析結果を活用）==========
+        const discoveredCompetitorList = await discoverCompetitors(
+          websiteUrl,
+          websiteAnalysis?.meta?.title,
+          websiteAnalysis?.meta?.description || websiteAnalysis?.meta?.['og:description'],
+        )
 
         // >>> SSE: discovery イベント
         sendEvent('discovery', {
@@ -1352,9 +1349,8 @@ export async function POST(req: NextRequest) {
 
         // ========== C. 競合サイト分析 ==========
         const competitorAnalyses: WebsiteAnalysis[] = []
-        const manualUrls = (competitorUrls || []).filter((u: string) => u && u.startsWith('http')).slice(0, 3)
         const discoveredUrls = discoveredCompetitorList.map((c) => c.url)
-        const allCompetitorUrls = [...new Set([...manualUrls, ...discoveredUrls])].slice(0, 5)
+        const allCompetitorUrls = [...new Set(discoveredUrls)].slice(0, 5)
 
         if (allCompetitorUrls.length > 0) {
           const results = await Promise.all(allCompetitorUrls.map((u: string) => analyzeWebsite(u)))
@@ -1382,7 +1378,7 @@ export async function POST(req: NextRequest) {
 
         // ========== E. Gemini AI分析 ==========
         const prompt = buildPrompt(
-          industry, axisScores, overallScore, grade,
+          axisScores, overallScore, grade,
           websiteAnalysis, competitorAnalyses,
         )
         const geminiResult = await geminiGenerateJson<any>(prompt, 8192)
