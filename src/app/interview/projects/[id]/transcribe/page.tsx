@@ -206,25 +206,23 @@ export default function TranscribePage() {
       eventSource.close()
     })
 
-    eventSource.addEventListener('error', (e) => {
-      const raw = (e as any).data
-      if (!raw) return
-
-      try {
-        const data = JSON.parse(raw)
-        if (data.retryable) {
-          eventSource.close()
-          scheduleReconnect()
-          return
-        }
-        setErrorMessage(data.message || '文字起こしに失敗しました')
-        setCurrentStep('error')
+    // "fail" イベント — サーバーからのエラー通知
+    // ※ "error" ではなく "fail" を使用: EventSourceのネイティブ onerror と衝突を避けるため
+    eventSource.addEventListener('fail', (e) => {
+      const data = JSON.parse(e.data)
+      if (data.retryable) {
         eventSource.close()
-      } catch {
-        // onerror に任せる
+        scheduleReconnect()
+        return
       }
+      // 非再試行エラー — 最終エラーとして表示、再接続しない
+      isCompleteRef.current = true
+      setErrorMessage(data.message || '文字起こしに失敗しました')
+      setCurrentStep('error')
+      eventSource.close()
     })
 
+    // ネイティブ接続エラー (ネットワーク切断, Vercelタイムアウト等)
     eventSource.onerror = () => {
       if (isCompleteRef.current) {
         eventSource.close()

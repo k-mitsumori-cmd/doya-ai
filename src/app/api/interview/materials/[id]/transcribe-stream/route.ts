@@ -8,7 +8,7 @@
 //   status  — 処理ステータス (step, message, elapsed)
 //   segment — 文字起こしセグメント (index, text, speaker, start, end)
 //   complete — 完了通知 (transcriptionId, totalSegments, durationSeconds)
-//   error   — エラー通知 (message, hint)
+//   fail    — エラー通知 (message, hint)  ※ "error" はEventSourceネイティブと衝突するため "fail" を使用
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       try {
         // DB接続チェック (SSEエラーとして返す — JSON応答だとEventSourceが即エラーになる)
         if (!process.env.DATABASE_URL) {
-          sendEvent('error', { message: 'データベースに接続できません。管理者にお問い合わせください。' })
+          sendEvent('fail', { message: 'データベースに接続できません。管理者にお問い合わせください。' })
           controller.close()
           return
         }
@@ -72,26 +72,26 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         })
 
         if (!material) {
-          sendEvent('error', { message: '素材が見つかりません' })
+          sendEvent('fail', { message: '素材が見つかりません' })
           controller.close()
           return
         }
 
         const ownerErr = checkOwnership(material.project, userId, guestId)
         if (ownerErr) {
-          sendEvent('error', { message: 'アクセス権限がありません' })
+          sendEvent('fail', { message: 'アクセス権限がありません' })
           controller.close()
           return
         }
 
         if (material.type !== 'audio' && material.type !== 'video') {
-          sendEvent('error', { message: '文字起こしは音声・動画ファイルのみ対応しています' })
+          sendEvent('fail', { message: '文字起こしは音声・動画ファイルのみ対応しています' })
           controller.close()
           return
         }
 
         if (!material.filePath) {
-          sendEvent('error', { message: 'ファイルがアップロードされていません' })
+          sendEvent('fail', { message: 'ファイルがアップロードされていません' })
           controller.close()
           return
         }
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           })
           const usedSeconds = guestUsage._sum.duration || 0
           if (usedSeconds >= limitSeconds) {
-            sendEvent('error', { message: `ゲストユーザーは合計${guestLimits.transcriptionMinutes}分までの文字起こしが可能です。`, limitExceeded: true })
+            sendEvent('fail', { message: `ゲストユーザーは合計${guestLimits.transcriptionMinutes}分までの文字起こしが可能です。`, limitExceeded: true })
             controller.close()
             return
           }
@@ -114,7 +114,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
         const apiKey = process.env.ASSEMBLYAI_API_KEY
         if (!apiKey) {
-          sendEvent('error', { message: 'ASSEMBLYAI_API_KEY が設定されていません' })
+          sendEvent('fail', { message: 'ASSEMBLYAI_API_KEY が設定されていません' })
           controller.close()
           return
         }
@@ -240,7 +240,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         if (!pollResult) {
           // タイムアウト — ジョブはAssemblyAI側で継続中
           // クライアントに再接続を促す
-          sendEvent('error', {
+          sendEvent('fail', {
             message: '処理に時間がかかっています。自動で再接続します...',
             retryable: true,
           })
@@ -347,7 +347,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           })
         } catch {}
 
-        sendEvent('error', { message: err?.message || '文字起こしに失敗しました' })
+        sendEvent('fail', { message: err?.message || '文字起こしに失敗しました' })
         controller.close()
       }
     },
