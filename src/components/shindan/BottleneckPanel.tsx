@@ -15,9 +15,9 @@ interface BottleneckPanelProps {
 }
 
 const SEVERITY_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  high: { bg: 'bg-red-500/10 border-red-500/30', text: 'text-red-400', label: '重大' },
-  medium: { bg: 'bg-orange-500/10 border-orange-500/30', text: 'text-orange-400', label: '中程度' },
-  low: { bg: 'bg-yellow-500/10 border-yellow-500/30', text: 'text-yellow-400', label: '軽微' },
+  high: { bg: 'bg-red-50 border-red-200', text: 'text-red-600', label: '重大' },
+  medium: { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-600', label: '中程度' },
+  low: { bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-600', label: '軽微' },
 }
 
 export default function BottleneckPanel({ bottlenecks }: BottleneckPanelProps) {
@@ -37,14 +37,14 @@ export default function BottleneckPanel({ bottlenecks }: BottleneckPanelProps) {
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${style.text} bg-current/10`}>
                 {style.label}
               </span>
-              <h4 className="font-black text-white">{b.title}</h4>
+              <h4 className="font-black text-gray-900">{b.title}</h4>
             </div>
-            <p className="text-sm text-slate-300 leading-relaxed mb-2">{b.description}</p>
-            <p className="text-xs text-slate-500">
+            <p className="text-sm text-gray-600 leading-relaxed mb-2">{b.description}</p>
+            <p className="text-xs text-gray-500">
               <span className="font-bold">影響:</span> {b.impact}
             </p>
             {b.estimatedLoss && (
-              <p className="text-xs text-red-400 font-bold mt-1">
+              <p className="text-xs text-red-600 font-bold mt-1">
                 推定損失: {b.estimatedLoss}
               </p>
             )}

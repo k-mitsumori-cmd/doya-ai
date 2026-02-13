@@ -27,15 +27,15 @@ export default function BenchmarkChart({ benchmark }: BenchmarkChartProps) {
             className="space-y-2"
           >
             <div className="flex items-center justify-between">
-              <span className="text-sm font-bold text-slate-300">{item.category}</span>
-              <span className={`text-xs font-black ${isAbove ? 'text-emerald-400' : 'text-orange-400'}`}>
+              <span className="text-sm font-bold text-gray-600">{item.category}</span>
+              <span className={`text-xs font-black ${isAbove ? 'text-emerald-600' : 'text-orange-600'}`}>
                 {isAbove ? '+' : ''}{diff}pt
               </span>
             </div>
-            <div className="relative h-6 bg-slate-800 rounded-full overflow-hidden">
+            <div className="relative h-6 bg-gray-100 rounded-full overflow-hidden">
               {/* 業界平均 */}
               <div
-                className="absolute top-0 h-full bg-slate-700 rounded-full"
+                className="absolute top-0 h-full bg-gray-200 rounded-full"
                 style={{ width: `${item.industryAverage}%` }}
               />
               {/* あなたのスコア */}
@@ -47,12 +47,12 @@ export default function BenchmarkChart({ benchmark }: BenchmarkChartProps) {
               />
               {/* 業界平均マーカー */}
               <div
-                className="absolute top-0 h-full w-0.5 bg-white/40"
+                className="absolute top-0 h-full w-0.5 bg-gray-400"
                 style={{ left: `${item.industryAverage}%` }}
               />
             </div>
-            <div className="flex items-center justify-between text-[10px] text-slate-500">
-              <span>あなた: <span className="font-black text-white">{item.yourScore}</span></span>
+            <div className="flex items-center justify-between text-[10px] text-gray-400">
+              <span>あなた: <span className="font-black text-gray-900">{item.yourScore}</span></span>
               <span>業界平均: <span className="font-bold">{item.industryAverage}</span></span>
             </div>
           </motion.div>

@@ -17,9 +17,9 @@ interface RecommendationPanelProps {
 }
 
 const PRIORITY_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  high: { bg: 'bg-teal-500/10 border-teal-500/30', text: 'text-teal-400', label: '最優先' },
-  medium: { bg: 'bg-cyan-500/10 border-cyan-500/30', text: 'text-cyan-400', label: '推奨' },
-  low: { bg: 'bg-slate-700/50 border-slate-600', text: 'text-slate-400', label: '検討' },
+  high: { bg: 'bg-teal-50 border-teal-200', text: 'text-teal-600', label: '最優先' },
+  medium: { bg: 'bg-cyan-50 border-cyan-200', text: 'text-cyan-600', label: '推奨' },
+  low: { bg: 'bg-gray-100 border-gray-200', text: 'text-gray-500', label: '検討' },
 }
 
 export default function RecommendationPanel({ recommendations }: RecommendationPanelProps) {
@@ -43,22 +43,22 @@ export default function RecommendationPanel({ recommendations }: RecommendationP
                 {style.label}
               </span>
               {r.quickWin && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-600 border border-amber-200">
                   Quick Win
                 </span>
               )}
-              <h4 className="font-black text-white">{r.title}</h4>
+              <h4 className="font-black text-gray-900">{r.title}</h4>
             </div>
-            <p className="text-sm text-slate-300 leading-relaxed mb-3">{r.description}</p>
+            <p className="text-sm text-gray-600 leading-relaxed mb-3">{r.description}</p>
             <div className="flex flex-wrap gap-3 text-[11px]">
-              <span className="text-slate-500">
-                <span className="font-bold">コスト:</span> <span className="text-slate-300">{r.estimatedCost}</span>
+              <span className="text-gray-400">
+                <span className="font-bold">コスト:</span> <span className="text-gray-600">{r.estimatedCost}</span>
               </span>
-              <span className="text-slate-500">
-                <span className="font-bold">効果:</span> <span className="text-slate-300">{r.estimatedEffect}</span>
+              <span className="text-gray-400">
+                <span className="font-bold">効果:</span> <span className="text-gray-600">{r.estimatedEffect}</span>
               </span>
-              <span className="text-slate-500">
-                <span className="font-bold">期間:</span> <span className="text-slate-300">{r.timeframe}</span>
+              <span className="text-gray-400">
+                <span className="font-bold">期間:</span> <span className="text-gray-600">{r.timeframe}</span>
               </span>
             </div>
           </motion.div>

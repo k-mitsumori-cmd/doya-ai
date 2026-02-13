@@ -320,7 +320,7 @@ function AnalysisLoadingOverlay({
     // Phase 1: 入力データ解析
     items.push({
       icon: Building2, text: `「${answers.industry || '不明'}」業界のデータベースを参照`,
-      color: 'text-cyan-400',
+      color: 'text-cyan-600',
       detail: `売上: ${answers.revenueScale || '-'} ／ 従業員: ${answers.employeeCount || '-'} ／ 創業: ${answers.companyAge || '-'}`,
     })
 
@@ -329,15 +329,15 @@ function AnalysisLoadingOverlay({
       const hostname = new URL(websiteUrl).hostname
       items.push({
         icon: Globe, text: `${hostname} をクロール中`,
-        color: 'text-blue-400', detail: 'HTML構造・メタタグ・内部リンクを解析',
+        color: 'text-blue-600', detail: 'HTML構造・メタタグ・内部リンクを解析',
       })
       items.push({
         icon: Search, text: 'SEO / OGP / 構造化データをスキャン',
-        color: 'text-indigo-400', detail: 'title・description・sitemap・robots.txt',
+        color: 'text-indigo-600', detail: 'title・description・sitemap・robots.txt',
       })
       items.push({
         icon: FileText, text: 'コンテンツ品質 & CTA導線を評価',
-        color: 'text-purple-400', detail: 'テキスト量・見出し構造・問い合わせフォーム',
+        color: 'text-purple-600', detail: 'テキスト量・見出し構造・問い合わせフォーム',
       })
     } catch {
       // URLが無効な場合はスキップ
@@ -349,7 +349,7 @@ function AnalysisLoadingOverlay({
       if (cat) {
         items.push({
           icon: cat.icon, text: `${cat.title}をスコアリング中`,
-          color: 'text-teal-400', detail: cat.description,
+          color: 'text-teal-600', detail: cat.description,
         })
       }
     }
@@ -357,19 +357,19 @@ function AnalysisLoadingOverlay({
     // Phase 4: AI分析
     items.push({
       icon: Eye, text: '業界内の競合企業をAIが自動発見中',
-      color: 'text-violet-400', detail: '市場シェア・サービス内容・脅威度を分析',
+      color: 'text-violet-600', detail: '市場シェア・サービス内容・脅威度を分析',
     })
     items.push({
       icon: Brain, text: 'Gemini AIが総合診断を実行中',
-      color: 'text-purple-400', detail: 'ボトルネック特定・改善アクション策定',
+      color: 'text-purple-600', detail: 'ボトルネック特定・改善アクション策定',
     })
     items.push({
       icon: TrendingUp, text: '成長予測シミュレーション計算中',
-      color: 'text-emerald-400', detail: '3ヶ月 / 6ヶ月 / 12ヶ月のシナリオ分析',
+      color: 'text-emerald-600', detail: '3ヶ月 / 6ヶ月 / 12ヶ月のシナリオ分析',
     })
     items.push({
       icon: Rocket, text: 'レポートを最終フォーマット中',
-      color: 'text-amber-400', detail: 'ダッシュボード・PDF出力用データを構築',
+      color: 'text-amber-600', detail: 'ダッシュボード・PDF出力用データを構築',
     })
 
     return items
@@ -415,14 +415,14 @@ function AnalysisLoadingOverlay({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-md"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: 'spring', duration: 0.5 }}
-        className="w-full max-w-lg mx-4 bg-slate-900 border border-slate-700/50 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-teal-500/10"
+        className="w-full max-w-lg mx-4 bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-teal-500/10"
       >
         {/* ヘッダー */}
         <div className="flex items-center gap-3 mb-5">
@@ -433,20 +433,20 @@ function AnalysisLoadingOverlay({
               className="w-12 h-12 rounded-full border-2 border-dashed border-teal-500/40"
             />
             <div className="absolute inset-0 flex items-center justify-center">
-              <Brain className="w-6 h-6 text-teal-400" />
+              <Brain className="w-6 h-6 text-teal-600" />
             </div>
           </div>
           <div>
-            <h3 className="text-lg font-black text-white">AIが診断中</h3>
-            <p className="text-[11px] text-slate-500">{feedIndex + 1} / {feedItems.length} ステップ完了</p>
+            <h3 className="text-lg font-black text-gray-900">AIが診断中</h3>
+            <p className="text-[11px] text-gray-400">{feedIndex + 1} / {feedItems.length} ステップ完了</p>
           </div>
           <div className="ml-auto text-right">
-            <span className="text-2xl font-black text-teal-400">{Math.round(progress)}%</span>
+            <span className="text-2xl font-black text-teal-600">{Math.round(progress)}%</span>
           </div>
         </div>
 
         {/* プログレスバー */}
-        <div className="h-2 bg-slate-800 rounded-full overflow-hidden mb-5">
+        <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-5">
           <motion.div
             className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400"
             style={{ width: `${progress}%` }}
@@ -465,7 +465,7 @@ function AnalysisLoadingOverlay({
                 animate={{ opacity: isLatest ? 1 : 0.6, x: 0 }}
                 transition={{ duration: 0.3 }}
                 className={`flex items-start gap-2.5 px-3 py-2 rounded-xl transition-all ${
-                  isLatest ? 'bg-slate-800/80 border border-slate-700/50' : ''
+                  isLatest ? 'bg-gray-50 border border-gray-200' : ''
                 }`}
               >
                 <div className="flex-shrink-0 mt-0.5">
@@ -476,14 +476,14 @@ function AnalysisLoadingOverlay({
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-bold leading-tight ${isLatest ? 'text-white' : 'text-slate-500'}`}>
+                  <p className={`text-sm font-bold leading-tight ${isLatest ? 'text-gray-900' : 'text-gray-400'}`}>
                     {item.text}
                   </p>
                   {isLatest && item.detail && (
                     <motion.p
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="text-[11px] text-slate-500 mt-0.5 leading-relaxed"
+                      className="text-[11px] text-gray-400 mt-0.5 leading-relaxed"
                     >
                       {item.detail}
                     </motion.p>
@@ -495,18 +495,18 @@ function AnalysisLoadingOverlay({
         </div>
 
         {/* ビジネス豆知識 */}
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3">
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
           <div className="flex items-start gap-2.5">
-            <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <Lightbulb className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-bold text-amber-400/70 uppercase tracking-wider mb-0.5">豆知識</p>
+              <p className="text-[10px] font-bold text-amber-600/70 uppercase tracking-wider mb-0.5">豆知識</p>
               <AnimatePresence mode="wait">
                 <motion.p
                   key={tipIndex}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="text-xs text-slate-400 leading-relaxed"
+                  className="text-xs text-gray-500 leading-relaxed"
                 >
                   {BUSINESS_TIPS[tipIndex]}
                 </motion.p>
@@ -982,8 +982,8 @@ export default function ShindanPage() {
     if (q.type === 'scale5') {
       return (
         <div key={q.id} className="space-y-2">
-          <label className="block text-sm font-bold text-slate-300">
-            <span className="text-teal-400 mr-1.5">Q{idx + 1}.</span>
+          <label className="block text-sm font-bold text-gray-600">
+            <span className="text-teal-600 mr-1.5">Q{idx + 1}.</span>
             {q.label}
           </label>
           <div className="flex flex-wrap gap-2">
@@ -994,10 +994,10 @@ export default function ShindanPage() {
                 className={`px-3 py-2 rounded-lg text-sm font-bold transition-all border ${
                   answers[q.id] === opt
                     ? 'bg-teal-500 border-teal-500 text-white shadow-lg shadow-teal-500/20'
-                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-teal-500/50'
+                    : 'bg-white border-gray-300 text-gray-600 hover:border-teal-400'
                 }`}
               >
-                <span className="text-[10px] text-slate-500 mr-1">{i + 1}</span>
+                <span className="text-[10px] text-gray-400 mr-1">{i + 1}</span>
                 {opt}
               </button>
             ))}
@@ -1010,8 +1010,8 @@ export default function ShindanPage() {
       const selected = (answers[q.id] as string[]) || []
       return (
         <div key={q.id} className="space-y-2">
-          <label className="block text-sm font-bold text-slate-300">
-            <span className="text-teal-400 mr-1.5">Q{idx + 1}.</span>
+          <label className="block text-sm font-bold text-gray-600">
+            <span className="text-teal-600 mr-1.5">Q{idx + 1}.</span>
             {q.label}
           </label>
           <div className="flex flex-wrap gap-2">
@@ -1023,8 +1023,8 @@ export default function ShindanPage() {
                   onClick={() => toggleMultiselect(q.id, opt)}
                   className={`px-3 py-2 rounded-lg text-sm font-bold transition-all border flex items-center gap-1.5 ${
                     isSelected
-                      ? 'bg-teal-500/20 border-teal-500 text-teal-300'
-                      : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-teal-500/50'
+                      ? 'bg-teal-50 border-teal-500 text-teal-600'
+                      : 'bg-white border-gray-300 text-gray-600 hover:border-teal-400'
                   }`}
                 >
                   {isSelected && <Check className="w-3.5 h-3.5" />}
@@ -1040,8 +1040,8 @@ export default function ShindanPage() {
     // select
     return (
       <div key={q.id} className="space-y-2">
-        <label className="block text-sm font-bold text-slate-300">
-          <span className="text-teal-400 mr-1.5">Q{idx + 1}.</span>
+        <label className="block text-sm font-bold text-gray-600">
+          <span className="text-teal-600 mr-1.5">Q{idx + 1}.</span>
           {q.label}
         </label>
         <div className="flex flex-wrap gap-2">
@@ -1052,7 +1052,7 @@ export default function ShindanPage() {
               className={`px-3 py-2.5 rounded-lg text-sm font-bold transition-all border ${
                 answers[q.id] === opt
                   ? 'bg-teal-500 border-teal-500 text-white shadow-lg shadow-teal-500/20'
-                  : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-teal-500/50'
+                  : 'bg-white border-gray-300 text-gray-600 hover:border-teal-400'
               }`}
             >
               {opt}
@@ -1065,7 +1065,7 @@ export default function ShindanPage() {
 
   // ===== 描画 =====
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900">
       {/* AI分析中ポップアップ */}
       <AnimatePresence>
         {isLoading && !isStreaming && <AnalysisLoadingOverlay selectedCategories={selectedCategories} answers={answers} websiteUrl={websiteUrl} />}
@@ -1084,7 +1084,7 @@ export default function ShindanPage() {
             </div>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight">ドヤ診断AI</h1>
           </div>
-          <p className="text-slate-400 text-sm sm:text-base">
+          <p className="text-gray-500 text-sm sm:text-base">
             ビジネスの強み・ボトルネック・最適解をAIが診断
           </p>
         </motion.div>
@@ -1099,12 +1099,12 @@ export default function ShindanPage() {
               className="space-y-6"
             >
               {/* テンプレート・参考入力 */}
-              <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+              <div className="bg-white border border-gray-200 rounded-2xl p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold text-slate-400">テンプレートで入力</span>
+                  <span className="text-xs font-bold text-gray-500">テンプレートで入力</span>
                   <button
                     onClick={applyReference}
-                    className="text-[11px] font-bold text-teal-400 hover:text-teal-300 flex items-center gap-1 transition-colors"
+                    className="text-[11px] font-bold text-teal-600 hover:text-teal-500 flex items-center gap-1 transition-colors"
                   >
                     <Lightbulb className="w-3.5 h-3.5" />
                     参考値を入力
@@ -1115,10 +1115,10 @@ export default function ShindanPage() {
                     <button
                       key={tpl.name}
                       onClick={() => applyTemplate(tpl)}
-                      className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 hover:border-teal-500/50 hover:bg-teal-500/5 transition-all text-left group"
+                      className="p-3 rounded-xl bg-white border border-gray-200 hover:border-teal-400 hover:bg-teal-50 transition-all text-left group"
                     >
-                      <div className="text-sm font-black text-white group-hover:text-teal-300 transition-colors leading-tight">{tpl.name}</div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">{tpl.description}</div>
+                      <div className="text-sm font-black text-gray-900 group-hover:text-teal-600 transition-colors leading-tight">{tpl.name}</div>
+                      <div className="text-[10px] text-gray-400 mt-0.5">{tpl.description}</div>
                     </button>
                   ))}
                 </div>
@@ -1126,7 +1126,7 @@ export default function ShindanPage() {
 
               {/* プログレス */}
               <div className="space-y-3">
-                <div className="flex items-center justify-between text-xs text-slate-500">
+                <div className="flex items-center justify-between text-xs text-gray-400">
                   <span>ステップ {currentStep + 1} / {totalSteps}</span>
                   {currentStep >= 1 && <span>{answeredCount} / {totalQuestions} 問回答済み</span>}
                 </div>
@@ -1140,7 +1140,7 @@ export default function ShindanPage() {
                           ? 'bg-teal-500 w-12'
                           : i < currentStep
                           ? 'bg-teal-500/40 w-8 cursor-pointer'
-                          : 'bg-slate-700 w-8'
+                          : 'bg-gray-200 w-8'
                       }`}
                     />
                   ))}
@@ -1155,12 +1155,12 @@ export default function ShindanPage() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -30 }}
                   transition={{ duration: 0.2 }}
-                  className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-6"
+                  className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6 space-y-6"
                 >
                   {/* ステップヘッダー */}
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center">
-                      <StepIcon className="w-5 h-5 text-teal-400" />
+                    <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center">
+                      <StepIcon className="w-5 h-5 text-teal-600" />
                     </div>
                     <div>
                       <h2 className="text-lg font-black">
@@ -1168,7 +1168,7 @@ export default function ShindanPage() {
                         {stepType === 'category-selection' && '確かめたい項目'}
                         {stepType === 'questions' && questionStep?.title}
                       </h2>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-gray-400">
                         {stepType === 'basic' && 'ビジネスの基本プロフィールを教えてください'}
                         {stepType === 'category-selection' && '診断したい領域を選んでください（複数選択可）'}
                         {stepType === 'questions' && questionStep?.description}
@@ -1180,25 +1180,25 @@ export default function ShindanPage() {
                   {stepType === 'basic' && (
                     <>
                       {BASIC_STEP.questions.map((q, i) => renderQuestion(q, i))}
-                      <div className="space-y-2 pt-2 border-t border-slate-800">
-                        <label className="block text-sm font-bold text-slate-300">
+                      <div className="space-y-2 pt-2 border-t border-gray-200">
+                        <label className="block text-sm font-bold text-gray-600">
                           <Globe className="w-4 h-4 inline mr-1" />
                           WebサイトURL
-                          <span className="ml-1.5 text-[10px] font-black text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded">必須</span>
+                          <span className="ml-1.5 text-[10px] font-black text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded">必須</span>
                         </label>
                         <input
                           type="url"
                           value={websiteUrl}
                           onChange={(e) => setWebsiteUrl(e.target.value)}
                           placeholder="https://example.com"
-                          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                          className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                         />
-                        <p className="text-[11px] text-slate-500">SEO・コンテンツ・技術面を自動クロールし、競合比較も行います</p>
+                        <p className="text-[11px] text-gray-400">SEO・コンテンツ・技術面を自動クロールし、競合比較も行います</p>
                       </div>
 
                       {/* 競合URL */}
-                      <div className="space-y-2 pt-2 border-t border-slate-800">
-                        <label className="block text-sm font-bold text-slate-400">
+                      <div className="space-y-2 pt-2 border-t border-gray-200">
+                        <label className="block text-sm font-bold text-gray-500">
                           <Target className="w-4 h-4 inline mr-1" />
                           競合サイトURL（任意・最大3社）
                         </label>
@@ -1213,12 +1213,12 @@ export default function ShindanPage() {
                                 setCompetitorUrls(newUrls)
                               }}
                               placeholder={`競合${idx + 1}のURL`}
-                              className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+                              className="flex-1 bg-white border border-gray-300 rounded-xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                             />
                             {competitorUrls.length > 1 && (
                               <button
                                 onClick={() => setCompetitorUrls(competitorUrls.filter((_, i) => i !== idx))}
-                                className="p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10"
+                                className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50"
                               >
                                 <X className="w-4 h-4" />
                               </button>
@@ -1228,13 +1228,13 @@ export default function ShindanPage() {
                         {competitorUrls.length < 3 && (
                           <button
                             onClick={() => setCompetitorUrls([...competitorUrls, ''])}
-                            className="flex items-center gap-1.5 text-xs font-bold text-teal-400 hover:text-teal-300"
+                            className="flex items-center gap-1.5 text-xs font-bold text-teal-600 hover:text-teal-500"
                           >
                             <Plus className="w-3.5 h-3.5" />
                             競合を追加
                           </button>
                         )}
-                        <p className="text-[11px] text-slate-600">入力すると競合サイトもクロールし、比較分析を行います</p>
+                        <p className="text-[11px] text-gray-500">入力すると競合サイトもクロールし、比較分析を行います</p>
                       </div>
                     </>
                   )}
@@ -1251,20 +1251,20 @@ export default function ShindanPage() {
                             onClick={() => toggleCategory(cat.id)}
                             className={`flex items-center gap-3 p-4 rounded-xl border text-left transition-all ${
                               isSelected
-                                ? 'bg-teal-500/10 border-teal-500 ring-1 ring-teal-500/30'
-                                : 'bg-slate-800/50 border-slate-700 hover:border-teal-500/30'
+                                ? 'bg-teal-50 border-teal-500 ring-1 ring-teal-500/30'
+                                : 'bg-white border-gray-200 hover:border-teal-400'
                             }`}
                           >
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
-                              isSelected ? 'bg-teal-500' : 'bg-slate-700'
+                              isSelected ? 'bg-teal-500' : 'bg-gray-200'
                             }`}>
                               <CatIcon className="w-5 h-5 text-white" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="font-black text-sm text-white">{cat.title}</div>
-                              <div className="text-[11px] text-slate-400 leading-relaxed">{cat.description}</div>
+                              <div className="font-black text-sm text-gray-900">{cat.title}</div>
+                              <div className="text-[11px] text-gray-500 leading-relaxed">{cat.description}</div>
                             </div>
-                            {isSelected && <Check className="w-5 h-5 text-teal-400 flex-shrink-0" />}
+                            {isSelected && <Check className="w-5 h-5 text-teal-600 flex-shrink-0" />}
                           </button>
                         )
                       })}
@@ -1283,10 +1283,10 @@ export default function ShindanPage() {
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
+                  className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl"
                 >
-                  <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
-                  <p className="text-sm text-red-300">{error}</p>
+                  <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                  <p className="text-sm text-red-500">{error}</p>
                 </motion.div>
               )}
 
@@ -1297,7 +1297,7 @@ export default function ShindanPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={goBack}
-                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-slate-300 bg-slate-800 border border-slate-700 hover:border-slate-600 transition-all"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 border border-gray-200 hover:border-gray-300 transition-all"
                   >
                     <ChevronLeft className="w-4 h-4" />
                     戻る
@@ -1312,7 +1312,7 @@ export default function ShindanPage() {
                   className={`flex-1 flex items-center justify-center gap-3 py-3.5 rounded-xl font-black text-base transition-all ${
                     canProceed && !isLoading
                       ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:from-teal-600 hover:to-cyan-600 shadow-lg shadow-teal-500/20 cursor-pointer'
-                      : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
                   {isLoading ? (
@@ -1345,7 +1345,7 @@ export default function ShindanPage() {
                 <div className="flex items-center justify-between mb-6">
                   <button
                     onClick={() => { setResult(null); setCurrentStep(0) }}
-                    className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-white transition-colors"
+                    className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors"
                   >
                     ← 新しい診断を行う
                   </button>
@@ -1356,11 +1356,11 @@ export default function ShindanPage() {
               <div ref={dashboardRef} className="space-y-6">
                 {/* ストリーミング進捗インジケーター */}
                 {isStreaming && (
-                  <div className="mb-6 bg-slate-900/80 border border-teal-500/30 rounded-2xl p-4">
+                  <div className="mb-6 bg-white border border-teal-200 shadow-sm rounded-2xl p-4">
                     <div className="flex items-center gap-3">
-                      <Loader2 className="w-5 h-5 animate-spin text-teal-400" />
+                      <Loader2 className="w-5 h-5 animate-spin text-teal-600" />
                       <div>
-                        <p className="text-sm font-black text-teal-400">
+                        <p className="text-sm font-black text-teal-600">
                           {streamPhase === 'analyzing' && '調査を開始しました...'}
                           {streamPhase === 'website' && 'Webサイトを詳細分析中...'}
                           {streamPhase === 'discovery' && '競合企業をAIが探索中...'}
@@ -1370,10 +1370,10 @@ export default function ShindanPage() {
                           {streamPhase === 'complete' && 'AIが総合診断中...'}
                           {!streamPhase && '分析を開始中...'}
                         </p>
-                        <p className="text-[11px] text-slate-500">リアルタイムで結果が表示されます</p>
+                        <p className="text-[11px] text-gray-400">リアルタイムで結果が表示されます</p>
                       </div>
                     </div>
-                    <div className="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <motion.div
                         className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400"
                         animate={{ width: streamPhase === 'analyzing' ? '5%' : streamPhase === 'website' ? '25%' : streamPhase === 'discovery' ? '40%' : streamPhase === 'competitors' ? '55%' : streamPhase === 'scoring' ? '70%' : streamPhase === 'scores' ? '80%' : streamPhase === 'complete' ? '95%' : '3%' }}
@@ -1385,29 +1385,29 @@ export default function ShindanPage() {
 
                 {/* ===== サイトビジュアル比較（ダッシュボード先頭） ===== */}
                 {(result?.analytics?.websiteHealth?.ogImage || (result?.analytics?.competitorComparison && result.analytics.competitorComparison.some((c) => c.ogImage))) && (
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <Eye className="w-5 h-5 text-blue-400" />
+                      <Eye className="w-5 h-5 text-blue-600" />
                       サイトビジュアル比較
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* 自社サイト */}
                       {result?.analytics?.websiteHealth?.ogImage && (
                         <div>
-                          <p className="text-xs font-bold text-teal-400 mb-2 flex items-center gap-1.5">
+                          <p className="text-xs font-bold text-teal-600 mb-2 flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-teal-400" />
                             自社サイト
                           </p>
                           <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="block group">
-                            <div className="relative rounded-xl overflow-hidden border border-slate-700 group-hover:border-teal-500/50 transition-colors">
+                            <div className="relative rounded-xl overflow-hidden border border-gray-200 group-hover:border-teal-400 transition-colors">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={result.analytics.websiteHealth.ogImage}
                                 alt="自社サイト OGP"
-                                className="w-full h-40 object-cover bg-slate-800"
+                                className="w-full h-40 object-cover bg-gray-100"
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                               />
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-3">
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900/70 to-transparent p-3">
                                 <p className="text-[11px] text-white font-bold truncate flex items-center gap-1">
                                   <ExternalLink className="w-3 h-3 flex-shrink-0" />
                                   {(() => { try { return new URL(websiteUrl).hostname } catch { return websiteUrl } })()}
@@ -1420,20 +1420,20 @@ export default function ShindanPage() {
                       {/* 競合サイト */}
                       {result?.analytics?.competitorComparison?.filter((c) => c.ogImage).map((comp, i) => (
                         <div key={i}>
-                          <p className="text-xs font-bold text-slate-400 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-slate-400" />
+                          <p className="text-xs font-bold text-gray-500 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-gray-400" />
                             競合 {i + 1}
                           </p>
                           <a href={comp.url} target="_blank" rel="noopener noreferrer" className="block group">
-                            <div className="relative rounded-xl overflow-hidden border border-slate-700 group-hover:border-purple-500/50 transition-colors">
+                            <div className="relative rounded-xl overflow-hidden border border-gray-200 group-hover:border-purple-400 transition-colors">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={comp.ogImage!}
                                 alt={`競合 ${i + 1} OGP`}
-                                className="w-full h-40 object-cover bg-slate-800"
+                                className="w-full h-40 object-cover bg-gray-100"
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                               />
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-3">
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900/70 to-transparent p-3">
                                 <p className="text-[11px] text-white font-bold truncate flex items-center gap-1">
                                   <ExternalLink className="w-3 h-3 flex-shrink-0" />
                                   {(() => { try { return new URL(comp.url).hostname.replace('www.', '') } catch { return comp.url } })()}
@@ -1456,47 +1456,47 @@ export default function ShindanPage() {
                 {/* ===== 財務インパクトサマリー ===== */}
                 {result.analytics?.financialImpact && result.analytics.financialImpact.estimatedAnnualLoss > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-gradient-to-br from-red-950/80 to-red-900/40 border border-red-500/30 rounded-2xl p-5 text-center">
-                      <div className="text-[11px] font-bold text-red-400 mb-1 flex items-center justify-center gap-1.5">
+                    <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-2xl p-5 text-center">
+                      <div className="text-[11px] font-bold text-red-600 mb-1 flex items-center justify-center gap-1.5">
                         <AlertTriangle className="w-3.5 h-3.5" />
                         推定年間機会損失
                       </div>
-                      <div className="text-3xl sm:text-4xl font-black text-red-400">
+                      <div className="text-3xl sm:text-4xl font-black text-red-600">
                         ¥{result.analytics.financialImpact.estimatedAnnualLoss.toLocaleString()}<span className="text-base ml-1">万円</span>
                       </div>
-                      <div className="text-[10px] text-red-400/60 mt-1">
+                      <div className="text-[10px] text-red-600/60 mt-1">
                         このまま改善しない場合の推定損失額
                       </div>
                       {result.analytics.financialImpact.lossBreakdown.length > 0 && (
                         <div className="mt-3 space-y-1.5">
                           {result.analytics.financialImpact.lossBreakdown.slice(0, 4).map((item, i) => (
-                            <div key={i} className="flex items-center justify-between text-[11px] bg-red-500/5 rounded-lg px-3 py-1.5">
-                              <span className="text-slate-400">{item.area}</span>
-                              <span className="font-black text-red-300">-¥{item.amount.toLocaleString()}万</span>
+                            <div key={i} className="flex items-center justify-between text-[11px] bg-red-50/50 rounded-lg px-3 py-1.5">
+                              <span className="text-gray-500">{item.area}</span>
+                              <span className="font-black text-red-500">-¥{item.amount.toLocaleString()}万</span>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
-                    <div className="bg-gradient-to-br from-emerald-950/80 to-emerald-900/40 border border-emerald-500/30 rounded-2xl p-5 text-center">
-                      <div className="text-[11px] font-bold text-emerald-400 mb-1 flex items-center justify-center gap-1.5">
+                    <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 rounded-2xl p-5 text-center">
+                      <div className="text-[11px] font-bold text-emerald-600 mb-1 flex items-center justify-center gap-1.5">
                         <TrendingUp className="w-3.5 h-3.5" />
                         改善後の期待年間収益増
                       </div>
-                      <div className="text-3xl sm:text-4xl font-black text-emerald-400">
+                      <div className="text-3xl sm:text-4xl font-black text-emerald-600">
                         +¥{result.analytics.financialImpact.estimatedAnnualGain.toLocaleString()}<span className="text-base ml-1">万円</span>
                       </div>
-                      <div className="text-[10px] text-emerald-400/60 mt-1">
+                      <div className="text-[10px] text-emerald-600/60 mt-1">
                         提案アクション実行時の期待効果
                       </div>
                       {result.analytics.financialImpact.industryGap !== 0 && (
-                        <div className={`mt-3 text-sm font-black ${result.analytics.financialImpact.industryGap >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <div className={`mt-3 text-sm font-black ${result.analytics.financialImpact.industryGap >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                           業界平均比: {result.analytics.financialImpact.industryGap >= 0 ? '+' : ''}{result.analytics.financialImpact.industryGap}pt
                         </div>
                       )}
                       {result.analytics.financialImpact.competitorAvgScore > 0 && result.analytics?.websiteHealth && (
                         <div className={`text-[11px] font-bold mt-1 ${
-                          result.analytics.websiteHealth.totalScore >= result.analytics.financialImpact.competitorAvgScore ? 'text-emerald-400' : 'text-red-400'
+                          result.analytics.websiteHealth.totalScore >= result.analytics.financialImpact.competitorAvgScore ? 'text-emerald-600' : 'text-red-600'
                         }`}>
                           自社サイト {result.analytics.websiteHealth.totalScore}pt vs 競合平均 {result.analytics.financialImpact.competitorAvgScore}pt
                           ({result.analytics.websiteHealth.totalScore >= result.analytics.financialImpact.competitorAvgScore ? '+' : ''}
@@ -1509,29 +1509,29 @@ export default function ShindanPage() {
 
                 {/* ===== エグゼクティブサマリー ===== */}
                 {result.executiveSummary && (
-                  <div className="bg-gradient-to-br from-slate-900 to-slate-900/80 border border-teal-500/20 rounded-2xl p-6">
+                  <div className="bg-white border border-teal-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-3 flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-teal-400" />
+                      <FileText className="w-5 h-5 text-teal-600" />
                       エグゼクティブサマリー
                     </h3>
-                    <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{result.executiveSummary}</p>
+                    <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{result.executiveSummary}</p>
                   </div>
                 )}
 
                 {/* ===== 今すぐやること ===== */}
                 {result.immediateActions && result.immediateActions.length > 0 && (
-                  <div className="bg-amber-500/5 border border-amber-500/20 rounded-2xl p-6">
+                  <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-3 flex items-center gap-2">
-                      <Flame className="w-5 h-5 text-amber-400" />
+                      <Flame className="w-5 h-5 text-amber-600" />
                       今すぐやるべきこと
                     </h3>
                     <div className="space-y-2">
                       {result.immediateActions.map((action, i) => (
-                        <div key={i} className="flex items-start gap-3 bg-slate-900/50 rounded-xl p-3">
+                        <div key={i} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3">
                           <span className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center text-xs font-black text-white flex-shrink-0">
                             {i + 1}
                           </span>
-                          <p className="text-sm text-slate-300 leading-relaxed">{action}</p>
+                          <p className="text-sm text-gray-600 leading-relaxed">{action}</p>
                         </div>
                       ))}
                     </div>
@@ -1543,20 +1543,20 @@ export default function ShindanPage() {
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
                       { label: 'リスク指数', value: result.analytics.riskIndex, icon: ShieldAlert,
-                        color: result.analytics.riskIndex > 50 ? 'text-red-400' : result.analytics.riskIndex > 30 ? 'text-orange-400' : 'text-emerald-400',
-                        bg: result.analytics.riskIndex > 50 ? 'bg-red-500/10 border-red-500/20' : result.analytics.riskIndex > 30 ? 'bg-orange-500/10 border-orange-500/20' : 'bg-emerald-500/10 border-emerald-500/20',
+                        color: result.analytics.riskIndex > 50 ? 'text-red-600' : result.analytics.riskIndex > 30 ? 'text-orange-600' : 'text-emerald-600',
+                        bg: result.analytics.riskIndex > 50 ? 'bg-red-50 border-red-200' : result.analytics.riskIndex > 30 ? 'bg-orange-50 border-orange-200' : 'bg-emerald-50 border-emerald-200',
                         suffix: result.analytics.riskIndex > 50 ? '危険' : result.analytics.riskIndex > 30 ? '要注意' : '良好' },
                       { label: 'DX成熟度', value: result.analytics.dxMaturity >= 0 ? result.analytics.dxMaturity : null, icon: Cpu,
-                        color: (result.analytics.dxMaturity ?? 0) < 30 ? 'text-red-400' : (result.analytics.dxMaturity ?? 0) < 50 ? 'text-amber-400' : 'text-teal-400',
-                        bg: (result.analytics.dxMaturity ?? 0) < 30 ? 'bg-red-500/10 border-red-500/20' : (result.analytics.dxMaturity ?? 0) < 50 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-teal-500/10 border-teal-500/20',
+                        color: (result.analytics.dxMaturity ?? 0) < 30 ? 'text-red-600' : (result.analytics.dxMaturity ?? 0) < 50 ? 'text-amber-600' : 'text-teal-600',
+                        bg: (result.analytics.dxMaturity ?? 0) < 30 ? 'bg-red-50 border-red-200' : (result.analytics.dxMaturity ?? 0) < 50 ? 'bg-amber-50 border-amber-200' : 'bg-teal-50 border-teal-200',
                         suffix: (result.analytics.dxMaturity ?? 0) < 30 ? '後進' : (result.analytics.dxMaturity ?? 0) < 50 ? '発展途上' : '進行中' },
                       { label: '成長ポテンシャル', value: result.analytics.growthPotential, icon: Rocket,
-                        color: result.analytics.growthPotential < 35 ? 'text-red-400' : result.analytics.growthPotential < 55 ? 'text-amber-400' : 'text-teal-400',
-                        bg: result.analytics.growthPotential < 35 ? 'bg-red-500/10 border-red-500/20' : result.analytics.growthPotential < 55 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-teal-500/10 border-teal-500/20',
+                        color: result.analytics.growthPotential < 35 ? 'text-red-600' : result.analytics.growthPotential < 55 ? 'text-amber-600' : 'text-teal-600',
+                        bg: result.analytics.growthPotential < 35 ? 'bg-red-50 border-red-200' : result.analytics.growthPotential < 55 ? 'bg-amber-50 border-amber-200' : 'bg-teal-50 border-teal-200',
                         suffix: '' },
                       { label: '収益効率', value: result.analytics.efficiencyScore, icon: DollarSign,
-                        color: result.analytics.efficiencyScore < 40 ? 'text-red-400' : result.analytics.efficiencyScore < 60 ? 'text-amber-400' : 'text-teal-400',
-                        bg: result.analytics.efficiencyScore < 40 ? 'bg-red-500/10 border-red-500/20' : result.analytics.efficiencyScore < 60 ? 'bg-amber-500/10 border-amber-500/20' : 'bg-teal-500/10 border-teal-500/20',
+                        color: result.analytics.efficiencyScore < 40 ? 'text-red-600' : result.analytics.efficiencyScore < 60 ? 'text-amber-600' : 'text-teal-600',
+                        bg: result.analytics.efficiencyScore < 40 ? 'bg-red-50 border-red-200' : result.analytics.efficiencyScore < 60 ? 'bg-amber-50 border-amber-200' : 'bg-teal-50 border-teal-200',
                         suffix: '' },
                     ].map((m) => {
                       const MIcon = m.icon
@@ -1564,11 +1564,11 @@ export default function ShindanPage() {
                         <div key={m.label} className={`rounded-xl border p-4 ${m.bg}`}>
                           <div className="flex items-center gap-2 mb-2">
                             <MIcon className={`w-4 h-4 ${m.color}`} />
-                            <span className="text-[11px] font-bold text-slate-400">{m.label}</span>
+                            <span className="text-[11px] font-bold text-gray-500">{m.label}</span>
                           </div>
                           <div className="flex items-end gap-1">
                             <span className={`text-2xl font-black ${m.color}`}>{m.value}</span>
-                            <span className="text-xs text-slate-500 mb-1">/100</span>
+                            <span className="text-xs text-gray-400 mb-1">/100</span>
                           </div>
                           {m.suffix && <span className={`text-[10px] font-bold ${m.color}`}>{m.suffix}</span>}
                         </div>
@@ -1579,20 +1579,20 @@ export default function ShindanPage() {
 
                 {/* ===== シナジーペナルティ ===== */}
                 {result.analytics?.synergyPenalties && result.analytics.synergyPenalties.length > 0 && (
-                  <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5">
-                    <h3 className="text-base font-black mb-3 flex items-center gap-2 text-red-400">
+                  <div className="bg-red-50/50 border border-red-200 rounded-2xl p-5">
+                    <h3 className="text-base font-black mb-3 flex items-center gap-2 text-red-600">
                       <AlertCircle className="w-5 h-5" />
                       構造的リスク（クロスカテゴリ分析）
                     </h3>
                     <div className="space-y-3">
                       {result.analytics.synergyPenalties.map((p, i) => (
-                        <div key={i} className="flex items-start gap-3 bg-slate-900/50 rounded-xl p-3">
-                          <span className="text-xs font-black text-red-400 bg-red-500/10 px-2 py-1 rounded-lg flex-shrink-0">
+                        <div key={i} className="flex items-start gap-3 bg-gray-50 rounded-xl p-3">
+                          <span className="text-xs font-black text-red-600 bg-red-50 px-2 py-1 rounded-lg flex-shrink-0">
                             {p.penalty}pt
                           </span>
                           <div>
-                            <p className="text-sm font-black text-red-300">{p.name}</p>
-                            <p className="text-xs text-slate-400 leading-relaxed">{p.description}</p>
+                            <p className="text-sm font-black text-red-500">{p.name}</p>
+                            <p className="text-xs text-gray-500 leading-relaxed">{p.description}</p>
                           </div>
                         </div>
                       ))}
@@ -1602,9 +1602,9 @@ export default function ShindanPage() {
 
                 {/* ===== 成長予測 ===== */}
                 {result.analytics?.growthForecast && (
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-cyan-400" />
+                      <TrendingUp className="w-5 h-5 text-cyan-600" />
                       成長予測シミュレーション
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
@@ -1617,11 +1617,11 @@ export default function ShindanPage() {
                         const diff = item.value - result.analytics!.growthForecast!.current
                         const isUp = diff > 0
                         return (
-                          <div key={item.label} className="text-center bg-slate-800/50 rounded-xl p-3">
-                            <div className="text-[10px] text-slate-500 font-bold mb-1">{item.label}</div>
-                            <div className="text-2xl font-black text-cyan-400">{item.value}</div>
+                          <div key={item.label} className="text-center bg-gray-50 rounded-xl p-3">
+                            <div className="text-[10px] text-gray-400 font-bold mb-1">{item.label}</div>
+                            <div className="text-2xl font-black text-cyan-600">{item.value}</div>
                             {i > 0 && (
-                              <div className={`text-[11px] font-bold flex items-center justify-center gap-0.5 ${isUp ? 'text-emerald-400' : 'text-red-400'}`}>
+                              <div className={`text-[11px] font-bold flex items-center justify-center gap-0.5 ${isUp ? 'text-emerald-600' : 'text-red-600'}`}>
                                 {isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                                 {isUp ? '+' : ''}{diff}pt
                               </div>
@@ -1631,31 +1631,31 @@ export default function ShindanPage() {
                       })}
                     </div>
                     {/* プログレスバー風のフォーキャスト */}
-                    <div className="bg-slate-800/50 rounded-xl p-4">
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <div className="flex items-center justify-between text-[11px] text-gray-400 mb-2">
                         <span>12ヶ月後のシナリオ</span>
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] font-bold text-emerald-400 w-16">ベスト</span>
-                          <div className="flex-1 h-3 bg-slate-700 rounded-full overflow-hidden">
+                          <span className="text-[10px] font-bold text-emerald-600 w-16">ベスト</span>
+                          <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
                             <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400" style={{ width: `${result.analytics.growthForecast.bestCase12}%` }} />
                           </div>
-                          <span className="text-sm font-black text-emerald-400 w-10 text-right">{result.analytics.growthForecast.bestCase12}</span>
+                          <span className="text-sm font-black text-emerald-600 w-10 text-right">{result.analytics.growthForecast.bestCase12}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] font-bold text-cyan-400 w-16">予測値</span>
-                          <div className="flex-1 h-3 bg-slate-700 rounded-full overflow-hidden">
+                          <span className="text-[10px] font-bold text-cyan-600 w-16">予測値</span>
+                          <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
                             <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-400" style={{ width: `${result.analytics.growthForecast.month12}%` }} />
                           </div>
-                          <span className="text-sm font-black text-cyan-400 w-10 text-right">{result.analytics.growthForecast.month12}</span>
+                          <span className="text-sm font-black text-cyan-600 w-10 text-right">{result.analytics.growthForecast.month12}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] font-bold text-red-400 w-16">ワースト</span>
-                          <div className="flex-1 h-3 bg-slate-700 rounded-full overflow-hidden">
+                          <span className="text-[10px] font-bold text-red-600 w-16">ワースト</span>
+                          <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden">
                             <div className="h-full rounded-full bg-gradient-to-r from-red-500 to-orange-400" style={{ width: `${result.analytics.growthForecast.worstCase12}%` }} />
                           </div>
-                          <span className="text-sm font-black text-red-400 w-10 text-right">{result.analytics.growthForecast.worstCase12}</span>
+                          <span className="text-sm font-black text-red-600 w-10 text-right">{result.analytics.growthForecast.worstCase12}</span>
                         </div>
                       </div>
                     </div>
@@ -1664,18 +1664,18 @@ export default function ShindanPage() {
 
                 {/* ===== リスクタイムライン ===== */}
                 {result.analytics?.riskTimeline && result.analytics.riskTimeline.length > 0 && (
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <Clock className="w-5 h-5 text-red-400" />
+                      <Clock className="w-5 h-5 text-red-600" />
                       リスクタイムライン
                     </h3>
                     <div className="space-y-3">
                       {result.analytics.riskTimeline.map((item, i) => {
                         const severityStyle = {
-                          critical: { bg: 'bg-red-500/10 border-red-500/30', text: 'text-red-400', badge: 'bg-red-500', label: '緊急' },
-                          warning: { bg: 'bg-orange-500/10 border-orange-500/30', text: 'text-orange-400', badge: 'bg-orange-500', label: '警告' },
-                          watch: { bg: 'bg-yellow-500/10 border-yellow-500/30', text: 'text-yellow-400', badge: 'bg-yellow-500', label: '注視' },
-                        }[item.severity] || { bg: 'bg-slate-700/50 border-slate-600', text: 'text-slate-400', badge: 'bg-slate-500', label: '注視' }
+                          critical: { bg: 'bg-red-50 border-red-200', text: 'text-red-600', badge: 'bg-red-500', label: '緊急' },
+                          warning: { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-600', badge: 'bg-orange-500', label: '警告' },
+                          watch: { bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-600', badge: 'bg-yellow-500', label: '注視' },
+                        }[item.severity] || { bg: 'bg-gray-100 border-gray-200', text: 'text-gray-500', badge: 'bg-gray-500', label: '注視' }
                         return (
                           <div key={i} className={`${severityStyle.bg} border rounded-xl p-4`}>
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -1686,8 +1686,8 @@ export default function ShindanPage() {
                                 期限: {item.deadline}
                               </span>
                             </div>
-                            <h4 className="font-black text-white text-sm mb-1">{item.risk}</h4>
-                            <p className="text-xs text-slate-400 leading-relaxed">{item.description}</p>
+                            <h4 className="font-black text-gray-900 text-sm mb-1">{item.risk}</h4>
+                            <p className="text-xs text-gray-500 leading-relaxed">{item.description}</p>
                           </div>
                         )
                       })}
@@ -1697,41 +1697,41 @@ export default function ShindanPage() {
 
                 {/* ===== 投資優先度マトリクス ===== */}
                 {result.analytics?.investmentPriorities && result.analytics.investmentPriorities.length > 0 && (
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <DollarSign className="w-5 h-5 text-emerald-400" />
+                      <DollarSign className="w-5 h-5 text-emerald-600" />
                       投資優先度マトリクス
                     </h3>
                     <div className="space-y-3">
                       {result.analytics.investmentPriorities.map((item, i) => {
                         const difficultyStyle = {
-                          easy: { text: 'text-emerald-400', label: '容易' },
-                          medium: { text: 'text-amber-400', label: '普通' },
-                          hard: { text: 'text-red-400', label: '高難度' },
-                        }[item.difficulty] || { text: 'text-slate-400', label: '普通' }
+                          easy: { text: 'text-emerald-600', label: '容易' },
+                          medium: { text: 'text-amber-600', label: '普通' },
+                          hard: { text: 'text-red-600', label: '高難度' },
+                        }[item.difficulty] || { text: 'text-gray-500', label: '普通' }
                         return (
-                          <div key={i} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+                          <div key={i} className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                             <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-black text-white text-sm">{item.area}</h4>
+                              <h4 className="font-black text-gray-900 text-sm">{item.area}</h4>
                               <span className={`text-[10px] font-bold ${difficultyStyle.text}`}>
                                 難易度: {difficultyStyle.label}
                               </span>
                             </div>
                             <div className="grid grid-cols-3 gap-2 mb-2">
                               <div className="text-center">
-                                <div className="text-[10px] text-slate-500 mb-0.5">現在スコア</div>
-                                <div className="text-lg font-black text-slate-300">{item.currentScore}</div>
+                                <div className="text-[10px] text-gray-400 mb-0.5">現在スコア</div>
+                                <div className="text-lg font-black text-gray-600">{item.currentScore}</div>
                               </div>
                               <div className="text-center">
-                                <div className="text-[10px] text-slate-500 mb-0.5">改善余地</div>
-                                <div className="text-lg font-black text-teal-400">+{item.improvementPotential}</div>
+                                <div className="text-[10px] text-gray-400 mb-0.5">改善余地</div>
+                                <div className="text-lg font-black text-teal-600">+{item.improvementPotential}</div>
                               </div>
                               <div className="text-center">
-                                <div className="text-[10px] text-slate-500 mb-0.5">推定ROI</div>
-                                <div className="text-lg font-black text-emerald-400">{item.estimatedROI}</div>
+                                <div className="text-[10px] text-gray-400 mb-0.5">推定ROI</div>
+                                <div className="text-lg font-black text-emerald-600">{item.estimatedROI}</div>
                               </div>
                             </div>
-                            <p className="text-xs text-slate-400 leading-relaxed">{item.recommendation}</p>
+                            <p className="text-xs text-gray-500 leading-relaxed">{item.recommendation}</p>
                           </div>
                         )
                       })}
@@ -1740,9 +1740,9 @@ export default function ShindanPage() {
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <Activity className="w-5 h-5 text-teal-400" />
+                      <Activity className="w-5 h-5 text-teal-600" />
                       {result.axes.length}軸評価
                     </h3>
                     <ShindanRadarChart axes={result.axes} />
@@ -1754,13 +1754,13 @@ export default function ShindanPage() {
                           const diff = bm ? axis.score - bm.industryAverage : 0
                           return (
                             <div key={i} className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-slate-400 w-20 truncate">{axis.label}</span>
-                              <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                              <span className="text-[11px] font-bold text-gray-500 w-20 truncate">{axis.label}</span>
+                              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                                 <div className={`h-full rounded-full ${axis.score >= 60 ? 'bg-teal-500' : axis.score >= 40 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${axis.score}%` }} />
                               </div>
-                              <span className="text-sm font-black text-white w-8 text-right">{axis.score}</span>
+                              <span className="text-sm font-black text-gray-900 w-8 text-right">{axis.score}</span>
                               {bm && (
-                                <span className={`text-[10px] font-black w-14 text-right ${diff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                <span className={`text-[10px] font-black w-14 text-right ${diff >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                                   {diff >= 0 ? '+' : ''}{diff}pt
                                 </span>
                               )}
@@ -1771,22 +1771,22 @@ export default function ShindanPage() {
                     )}
                   </div>
 
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-emerald-400" />
+                      <TrendingUp className="w-5 h-5 text-emerald-600" />
                       強み
                     </h3>
                     <div className="space-y-4">
                       {result.strengths.map((s, i) => (
-                        <div key={i} className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                        <div key={i} className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
                           <div className="flex items-center gap-2 mb-2">
                             <span className="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-black text-white">{i + 1}</span>
-                            <h4 className="font-black text-emerald-300">{s.title}</h4>
+                            <h4 className="font-black text-emerald-500">{s.title}</h4>
                           </div>
-                          <p className="text-sm text-slate-300 leading-relaxed">{s.description}</p>
+                          <p className="text-sm text-gray-600 leading-relaxed">{s.description}</p>
                           {s.leverageAdvice && (
-                            <div className="mt-2 pt-2 border-t border-emerald-500/20">
-                              <p className="text-xs text-emerald-400">
+                            <div className="mt-2 pt-2 border-t border-emerald-200">
+                              <p className="text-xs text-emerald-600">
                                 <span className="font-bold">活用戦略:</span> {s.leverageAdvice}
                               </p>
                             </div>
@@ -1799,9 +1799,9 @@ export default function ShindanPage() {
 
                 {/* ===== Webサイト診断 ===== */}
                 {result.analytics?.websiteHealth && (
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <Globe className="w-5 h-5 text-blue-400" />
+                      <Globe className="w-5 h-5 text-blue-600" />
                       Webサイト診断
                     </h3>
 
@@ -1811,7 +1811,7 @@ export default function ShindanPage() {
                         href={result.analytics.websiteHealth.url || websiteUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-400 hover:text-blue-300 mb-4 transition-colors"
+                        className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600 hover:text-blue-500 mb-4 transition-colors"
                       >
                         <ExternalLink className="w-4 h-4" />
                         {(() => { try { return new URL(result.analytics.websiteHealth.url || websiteUrl).hostname } catch { return result.analytics.websiteHealth.url || websiteUrl } })()}
@@ -1820,17 +1820,17 @@ export default function ShindanPage() {
 
                     {/* Meta情報 */}
                     {result.analytics.websiteHealth.meta && (
-                      <div className="bg-slate-800/50 rounded-xl p-3 mb-4 space-y-1.5">
+                      <div className="bg-gray-50 rounded-xl p-3 mb-4 space-y-1.5">
                         {result.analytics.websiteHealth.meta.title && (
                           <div>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">Title</span>
-                            <p className="text-sm text-white font-bold leading-tight">{result.analytics.websiteHealth.meta.title}</p>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase">Title</span>
+                            <p className="text-sm text-gray-900 font-bold leading-tight">{result.analytics.websiteHealth.meta.title}</p>
                           </div>
                         )}
                         {result.analytics.websiteHealth.meta.description && (
                           <div>
-                            <span className="text-[10px] font-bold text-slate-500 uppercase">Description</span>
-                            <p className="text-xs text-slate-400 leading-relaxed">{result.analytics.websiteHealth.meta.description}</p>
+                            <span className="text-[10px] font-bold text-gray-400 uppercase">Description</span>
+                            <p className="text-xs text-gray-500 leading-relaxed">{result.analytics.websiteHealth.meta.description}</p>
                           </div>
                         )}
                       </div>
@@ -1845,10 +1845,10 @@ export default function ShindanPage() {
                       ].map((item) => (
                         <div key={item.label} className="text-center">
                           <div className={`text-2xl font-black mb-1 ${
-                            item.score >= 60 ? 'text-teal-400' : item.score >= 40 ? 'text-amber-400' : 'text-red-400'
+                            item.score >= 60 ? 'text-teal-600' : item.score >= 40 ? 'text-amber-600' : 'text-red-600'
                           }`}>{item.score}</div>
-                          <div className="text-[10px] text-slate-500 font-bold">{item.label}</div>
-                          <div className="h-1.5 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                          <div className="text-[10px] text-gray-400 font-bold">{item.label}</div>
+                          <div className="h-1.5 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
                             <div className={`h-full rounded-full ${
                               item.score >= 60 ? 'bg-teal-500' : item.score >= 40 ? 'bg-amber-500' : 'bg-red-500'
                             }`} style={{ width: `${item.score}%` }} />
@@ -1860,13 +1860,13 @@ export default function ShindanPage() {
                     {/* 統計バッジ */}
                     <div className="flex flex-wrap gap-2 mb-4">
                       {result.analytics.websiteHealth.textLength != null && (
-                        <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-bold flex items-center gap-1">
                           <FileText className="w-3 h-3" />
                           テキスト {(result.analytics.websiteHealth.textLength / 1000).toFixed(1)}K文字
                         </span>
                       )}
                       {result.analytics.websiteHealth.imageStats && (
-                        <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-bold flex items-center gap-1">
                           <Image className="w-3 h-3" />
                           画像 {result.analytics.websiteHealth.imageStats.total}枚 (alt付: {result.analytics.websiteHealth.imageStats.withAlt})
                         </span>
@@ -1874,15 +1874,15 @@ export default function ShindanPage() {
                       {result.analytics.websiteHealth.hasSchema != null && (
                         <span className={`text-[10px] px-2 py-1 rounded-lg font-bold flex items-center gap-1 ${
                           result.analytics.websiteHealth.hasSchema
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                            : 'bg-red-50 text-red-600 border border-red-200'
                         }`}>
                           <Code2 className="w-3 h-3" />
                           構造化データ {result.analytics.websiteHealth.hasSchema ? 'あり' : 'なし'}
                         </span>
                       )}
                       {result.analytics.websiteHealth.pagesCrawled > 0 && (
-                        <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold">
+                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-bold">
                           {result.analytics.websiteHealth.pagesCrawled}ページ解析
                         </span>
                       )}
@@ -1891,10 +1891,10 @@ export default function ShindanPage() {
                     {/* 見出し一覧 */}
                     {result.analytics.websiteHealth.headings && result.analytics.websiteHealth.headings.length > 0 && (
                       <div className="mb-4">
-                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1.5 block">主要見出し（TOP 10）</span>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 block">主要見出し（TOP 10）</span>
                         <div className="flex flex-wrap gap-1.5">
                           {result.analytics.websiteHealth.headings.slice(0, 10).map((h, hi) => (
-                            <span key={hi} className="text-[11px] bg-slate-800/80 border border-slate-700/50 text-slate-300 px-2 py-0.5 rounded">{h}</span>
+                            <span key={hi} className="text-[11px] bg-white border border-gray-200 text-gray-600 px-2 py-0.5 rounded">{h}</span>
                           ))}
                         </div>
                       </div>
@@ -1903,13 +1903,13 @@ export default function ShindanPage() {
                     {/* 広告・トラッキングツール */}
                     {result.analytics.websiteHealth?.tracking && (
                       <div className="mt-3">
-                        <p className="text-[10px] font-bold text-slate-500 mb-1">広告・トラッキング</p>
+                        <p className="text-[10px] font-bold text-gray-400 mb-1">広告・トラッキング</p>
                         <div className="flex flex-wrap gap-1.5">
                           {result.analytics.websiteHealth.tracking.detectedTools.length > 0
                             ? result.analytics.websiteHealth.tracking.detectedTools.map((tool: string, i: number) => (
-                                <span key={i} className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-bold">{tool}</span>
+                                <span key={i} className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full font-bold">{tool}</span>
                               ))
-                            : <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-bold">未設定</span>
+                            : <span className="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full font-bold">未設定</span>
                           }
                         </div>
                       </div>
@@ -1918,10 +1918,10 @@ export default function ShindanPage() {
                     {/* 社会的証明 */}
                     {result.analytics.websiteHealth?.socialProof && result.analytics.websiteHealth.socialProof.proofElements.length > 0 && (
                       <div className="mt-3">
-                        <p className="text-[10px] font-bold text-slate-500 mb-1">社会的証明</p>
+                        <p className="text-[10px] font-bold text-gray-400 mb-1">社会的証明</p>
                         <div className="flex flex-wrap gap-1.5">
                           {result.analytics.websiteHealth.socialProof.proofElements.map((el: string, i: number) => (
-                            <span key={i} className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">{el}</span>
+                            <span key={i} className="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full font-bold">{el}</span>
                           ))}
                         </div>
                       </div>
@@ -1930,10 +1930,10 @@ export default function ShindanPage() {
                     {/* CTA */}
                     {result.analytics.websiteHealth?.ctaAnalysis && result.analytics.websiteHealth.ctaAnalysis.ctaTexts.length > 0 && (
                       <div className="mt-3">
-                        <p className="text-[10px] font-bold text-slate-500 mb-1">CTA（コールトゥアクション）</p>
+                        <p className="text-[10px] font-bold text-gray-400 mb-1">CTA（コールトゥアクション）</p>
                         <div className="flex flex-wrap gap-1.5">
                           {result.analytics.websiteHealth.ctaAnalysis.ctaTexts.slice(0, 6).map((cta: string, i: number) => (
-                            <span key={i} className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">{cta}</span>
+                            <span key={i} className="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">{cta}</span>
                           ))}
                         </div>
                       </div>
@@ -1942,10 +1942,10 @@ export default function ShindanPage() {
                     {/* 訴求軸 */}
                     {result.analytics.websiteHealth?.appealAxis && result.analytics.websiteHealth.appealAxis.heroText && (
                       <div className="mt-3 mb-4">
-                        <p className="text-[10px] font-bold text-slate-500 mb-1">訴求軸</p>
-                        <p className="text-xs text-slate-300 italic mb-1">&quot;{result.analytics.websiteHealth.appealAxis.heroText.slice(0, 100)}&quot;</p>
+                        <p className="text-[10px] font-bold text-gray-400 mb-1">訴求軸</p>
+                        <p className="text-xs text-gray-600 italic mb-1">&quot;{result.analytics.websiteHealth.appealAxis.heroText.slice(0, 100)}&quot;</p>
                         <div className="flex flex-wrap gap-1.5">
-                          <span className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold">
+                          <span className="text-[10px] bg-violet-50 text-violet-600 border border-violet-200 px-2 py-0.5 rounded-full font-bold">
                             {result.analytics.websiteHealth.appealAxis.heroType === 'benefit' ? 'ベネフィット訴求' 
                               : result.analytics.websiteHealth.appealAxis.heroType === 'feature' ? 'フィーチャー訴求'
                               : result.analytics.websiteHealth.appealAxis.heroType === 'emotional' ? '感情訴求'
@@ -1953,7 +1953,7 @@ export default function ShindanPage() {
                               : '訴求不明確'}
                           </span>
                           {result.analytics.websiteHealth.appealAxis.uspKeywords.slice(0, 3).map((kw: string, i: number) => (
-                            <span key={i} className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold">{kw}</span>
+                            <span key={i} className="text-[10px] bg-violet-50 text-violet-600 border border-violet-200 px-2 py-0.5 rounded-full font-bold">{kw}</span>
                           ))}
                         </div>
                       </div>
@@ -1962,14 +1962,14 @@ export default function ShindanPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {result.analytics.websiteHealth.issues.slice(0, 6).map((issue, i) => (
                         <div key={i} className="flex items-start gap-2 text-xs">
-                          <AlertCircle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-400">{issue}</span>
+                          <AlertCircle className="w-3.5 h-3.5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <span className="text-gray-500">{issue}</span>
                         </div>
                       ))}
                       {result.analytics.websiteHealth.positives?.slice(0, 4).map((pos, i) => (
                         <div key={`p-${i}`} className="flex items-start gap-2 text-xs">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-400">{pos}</span>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                          <span className="text-gray-500">{pos}</span>
                         </div>
                       ))}
                     </div>
@@ -1987,31 +1987,31 @@ export default function ShindanPage() {
 
 {/* ===== 競合比較 ===== */}
                 {result.analytics?.competitorComparison && result.analytics.competitorComparison.length > 0 && (
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <Target className="w-5 h-5 text-purple-400" />
+                      <Target className="w-5 h-5 text-purple-600" />
                       競合サイト比較
-                      <span className="text-[10px] font-bold text-slate-500 ml-auto">クリックで詳細表示</span>
+                      <span className="text-[10px] font-bold text-gray-400 ml-auto">クリックで詳細表示</span>
                     </h3>
                     {/* 競合平均 vs 自社サマリー */}
                     {result.analytics?.websiteHealth && (
-                      <div className="flex flex-wrap items-center gap-4 mb-4 bg-slate-800/50 rounded-xl p-3">
+                      <div className="flex flex-wrap items-center gap-4 mb-4 bg-gray-50 rounded-xl p-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-teal-400">自社</span>
-                          <span className="text-lg font-black text-teal-400">{result.analytics.websiteHealth.totalScore}<span className="text-xs text-slate-500">pt</span></span>
+                          <span className="text-[10px] font-bold text-teal-600">自社</span>
+                          <span className="text-lg font-black text-teal-600">{result.analytics.websiteHealth.totalScore}<span className="text-xs text-gray-400">pt</span></span>
                         </div>
-                        <span className="text-slate-600">vs</span>
+                        <span className="text-gray-500">vs</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-purple-400">競合平均</span>
-                          <span className="text-lg font-black text-purple-400">
-                            {Math.round(result.analytics.competitorComparison.reduce((s, c) => s + c.totalScore, 0) / result.analytics.competitorComparison.length)}<span className="text-xs text-slate-500">pt</span>
+                          <span className="text-[10px] font-bold text-purple-600">競合平均</span>
+                          <span className="text-lg font-black text-purple-600">
+                            {Math.round(result.analytics.competitorComparison.reduce((s, c) => s + c.totalScore, 0) / result.analytics.competitorComparison.length)}<span className="text-xs text-gray-400">pt</span>
                           </span>
                         </div>
                         {(() => {
                           const avg = Math.round(result.analytics!.competitorComparison.reduce((s, c) => s + c.totalScore, 0) / result.analytics!.competitorComparison.length)
                           const diff = result.analytics!.websiteHealth!.totalScore - avg
                           return (
-                            <span className={`text-sm font-black px-2 py-0.5 rounded-lg ${diff >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                            <span className={`text-sm font-black px-2 py-0.5 rounded-lg ${diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
                               {diff >= 0 ? '+' : ''}{diff}pt
                             </span>
                           )
@@ -2021,7 +2021,7 @@ export default function ShindanPage() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="text-slate-500 text-xs border-b border-slate-800">
+                          <tr className="text-gray-400 text-xs border-b border-gray-200">
                             <th className="text-left py-2 font-bold">サイト</th>
                             <th className="text-center py-2 font-bold">SEO</th>
                             <th className="text-center py-2 font-bold">コンテンツ</th>
@@ -2032,22 +2032,22 @@ export default function ShindanPage() {
                         </thead>
                         <tbody>
                           {result.analytics.websiteHealth && (
-                            <tr className="border-b border-slate-800/50">
-                              <td className="py-2.5 font-bold text-teal-400 text-xs">自社</td>
-                              <td className="text-center font-black text-teal-400">{result.analytics.websiteHealth.seoScore}</td>
-                              <td className="text-center font-black text-teal-400">{result.analytics.websiteHealth.contentScore}</td>
-                              <td className="text-center font-black text-teal-400">{result.analytics.websiteHealth.technicalScore}</td>
-                              <td className="text-center font-black text-teal-400">{result.analytics.websiteHealth.totalScore}</td>
+                            <tr className="border-b border-gray-200">
+                              <td className="py-2.5 font-bold text-teal-600 text-xs">自社</td>
+                              <td className="text-center font-black text-teal-600">{result.analytics.websiteHealth.seoScore}</td>
+                              <td className="text-center font-black text-teal-600">{result.analytics.websiteHealth.contentScore}</td>
+                              <td className="text-center font-black text-teal-600">{result.analytics.websiteHealth.technicalScore}</td>
+                              <td className="text-center font-black text-teal-600">{result.analytics.websiteHealth.totalScore}</td>
                               <td />
                             </tr>
                           )}
                           {result.analytics.competitorComparison.map((comp, i) => (
                             <React.Fragment key={i}>
                               <tr
-                                className="border-b border-slate-800/50 cursor-pointer hover:bg-slate-800/30 transition-colors"
+                                className="border-b border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors"
                                 onClick={() => setExpandedCompetitor(expandedCompetitor === i ? null : i)}
                               >
-                                <td className="py-2.5 text-xs text-slate-400 max-w-[120px] truncate">
+                                <td className="py-2.5 text-xs text-gray-500 max-w-[120px] truncate">
                                   <span className="flex items-center gap-1">
                                     <ExternalLink className="w-3 h-3 flex-shrink-0" />
                                     {(() => { try { return new URL(comp.url).hostname.replace('www.', '') } catch { return comp.url } })()}
@@ -2061,7 +2061,7 @@ export default function ShindanPage() {
                                     result.analytics.websiteHealth.totalScore,
                                   ][j] : 0
                                   return (
-                                    <td key={j} className={`text-center font-black ${s > myScore ? 'text-red-400' : 'text-slate-300'}`}>
+                                    <td key={j} className={`text-center font-black ${s > myScore ? 'text-red-600' : 'text-gray-600'}`}>
                                       {s}
                                       {s > myScore && <span className="text-[9px] ml-0.5">↑</span>}
                                     </td>
@@ -2069,7 +2069,7 @@ export default function ShindanPage() {
                                 })}
                                 <td className="text-center">
                                   <motion.div animate={{ rotate: expandedCompetitor === i ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                                    <ChevronDown className="w-4 h-4 text-slate-500" />
+                                    <ChevronDown className="w-4 h-4 text-gray-400" />
                                   </motion.div>
                                 </td>
                               </tr>
@@ -2085,7 +2085,7 @@ export default function ShindanPage() {
                                         transition={{ duration: 0.3 }}
                                         className="overflow-hidden"
                                       >
-                                        <div className="bg-slate-800/40 border border-slate-700/30 rounded-xl p-4 my-2 space-y-4">
+                                        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 my-2 space-y-4">
                                           {/* OGP画像 */}
                                           {comp.ogImage && (
                                             <div>
@@ -2093,7 +2093,7 @@ export default function ShindanPage() {
                                               <img
                                                 src={comp.ogImage}
                                                 alt={`${(() => { try { return new URL(comp.url).hostname } catch { return comp.url } })()} OGP`}
-                                                className="w-full max-h-48 object-cover rounded-lg bg-slate-900"
+                                                className="w-full max-h-48 object-cover rounded-lg bg-gray-50"
                                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                                               />
                                             </div>
@@ -2104,14 +2104,14 @@ export default function ShindanPage() {
                                             <div className="space-y-1.5">
                                               {comp.meta.title && (
                                                 <div>
-                                                  <span className="text-[10px] font-bold text-slate-500 uppercase">Title</span>
-                                                  <p className="text-sm text-white font-bold leading-tight">{comp.meta.title}</p>
+                                                  <span className="text-[10px] font-bold text-gray-400 uppercase">Title</span>
+                                                  <p className="text-sm text-gray-900 font-bold leading-tight">{comp.meta.title}</p>
                                                 </div>
                                               )}
                                               {comp.meta.description && (
                                                 <div>
-                                                  <span className="text-[10px] font-bold text-slate-500 uppercase">Description</span>
-                                                  <p className="text-xs text-slate-400 leading-relaxed">{comp.meta.description}</p>
+                                                  <span className="text-[10px] font-bold text-gray-400 uppercase">Description</span>
+                                                  <p className="text-xs text-gray-500 leading-relaxed">{comp.meta.description}</p>
                                                 </div>
                                               )}
                                             </div>
@@ -2120,10 +2120,10 @@ export default function ShindanPage() {
                                           {/* 見出し一覧 */}
                                           {comp.headings && comp.headings.length > 0 && (
                                             <div>
-                                              <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">主要見出し</span>
+                                              <span className="text-[10px] font-bold text-gray-400 uppercase mb-1 block">主要見出し</span>
                                               <div className="flex flex-wrap gap-1.5">
                                                 {comp.headings.slice(0, 8).map((h, hi) => (
-                                                  <span key={hi} className="text-[11px] bg-slate-700/50 text-slate-300 px-2 py-0.5 rounded">{h}</span>
+                                                  <span key={hi} className="text-[11px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{h}</span>
                                                 ))}
                                               </div>
                                             </div>
@@ -2131,15 +2131,15 @@ export default function ShindanPage() {
 
                                           {/* スコア詳細バー */}
                                           <div className="space-y-2">
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase">スコア詳細</span>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase">スコア詳細</span>
                                             {[
                                               { label: 'SEO', score: comp.seoScore, color: 'from-blue-500 to-cyan-400' },
                                               { label: 'コンテンツ', score: comp.contentScore, color: 'from-purple-500 to-pink-400' },
                                               { label: '技術', score: comp.technicalScore, color: 'from-emerald-500 to-teal-400' },
                                             ].map((bar) => (
                                               <div key={bar.label} className="flex items-center gap-3">
-                                                <span className="text-[11px] font-bold text-slate-400 w-20">{bar.label}</span>
-                                                <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                                                <span className="text-[11px] font-bold text-gray-500 w-20">{bar.label}</span>
+                                                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                                                   <motion.div
                                                     initial={{ width: 0 }}
                                                     animate={{ width: `${bar.score}%` }}
@@ -2147,7 +2147,7 @@ export default function ShindanPage() {
                                                     className={`h-full rounded-full bg-gradient-to-r ${bar.color}`}
                                                   />
                                                 </div>
-                                                <span className="text-sm font-black text-slate-300 w-8 text-right">{bar.score}</span>
+                                                <span className="text-sm font-black text-gray-600 w-8 text-right">{bar.score}</span>
                                               </div>
                                             ))}
                                           </div>
@@ -2156,12 +2156,12 @@ export default function ShindanPage() {
                                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {comp.issues && comp.issues.length > 0 && (
                                               <div>
-                                                <span className="text-[10px] font-bold text-red-400 uppercase mb-1 block">課題</span>
+                                                <span className="text-[10px] font-bold text-red-600 uppercase mb-1 block">課題</span>
                                                 <div className="space-y-1">
                                                   {comp.issues.slice(0, 4).map((issue, ii) => (
                                                     <div key={ii} className="flex items-start gap-1.5 text-[11px]">
-                                                      <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />
-                                                      <span className="text-slate-400">{issue}</span>
+                                                      <AlertCircle className="w-3 h-3 text-red-600 flex-shrink-0 mt-0.5" />
+                                                      <span className="text-gray-500">{issue}</span>
                                                     </div>
                                                   ))}
                                                 </div>
@@ -2169,12 +2169,12 @@ export default function ShindanPage() {
                                             )}
                                             {comp.positives && comp.positives.length > 0 && (
                                               <div>
-                                                <span className="text-[10px] font-bold text-emerald-400 uppercase mb-1 block">評価点</span>
+                                                <span className="text-[10px] font-bold text-emerald-600 uppercase mb-1 block">評価点</span>
                                                 <div className="space-y-1">
                                                   {comp.positives.slice(0, 4).map((pos, pi) => (
                                                     <div key={pi} className="flex items-start gap-1.5 text-[11px]">
-                                                      <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0 mt-0.5" />
-                                                      <span className="text-slate-400">{pos}</span>
+                                                      <CheckCircle2 className="w-3 h-3 text-emerald-600 flex-shrink-0 mt-0.5" />
+                                                      <span className="text-gray-500">{pos}</span>
                                                     </div>
                                                   ))}
                                                 </div>
@@ -2185,37 +2185,37 @@ export default function ShindanPage() {
                                           {/* その他のステータス */}
                                           <div className="flex flex-wrap gap-2">
                                             {comp.socialLinks && comp.socialLinks.length > 0 && (
-                                              <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-1 rounded-lg font-bold">
+                                              <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-2 py-1 rounded-lg font-bold">
                                                 SNS {comp.socialLinks.length}件
                                               </span>
                                             )}
                                             {comp.hasBlog && (
-                                              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-lg font-bold">
+                                              <span className="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-1 rounded-lg font-bold">
                                                 ブログあり
                                               </span>
                                             )}
                                             {comp.hasForm && (
-                                              <span className="text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-1 rounded-lg font-bold">
+                                              <span className="text-[10px] bg-purple-50 text-purple-600 border border-purple-200 px-2 py-1 rounded-lg font-bold">
                                                 CTA/フォームあり
                                               </span>
                                             )}
                                             {comp.hasSchema && (
-                                              <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded-lg font-bold">
+                                              <span className="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 px-2 py-1 rounded-lg font-bold">
                                                 構造化データあり
                                               </span>
                                             )}
                                             {comp.pagesCrawled != null && (
-                                              <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold">
+                                              <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-bold">
                                                 {comp.pagesCrawled}ページ
                                               </span>
                                             )}
                                             {comp.textLength != null && (
-                                              <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold">
+                                              <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-bold">
                                                 テキスト {(comp.textLength / 1000).toFixed(1)}K文字
                                               </span>
                                             )}
                                             {comp.imageStats && (
-                                              <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold">
+                                              <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded-lg font-bold">
                                                 画像 {comp.imageStats.total}枚 (alt: {comp.imageStats.withAlt})
                                               </span>
                                             )}
@@ -2224,13 +2224,13 @@ export default function ShindanPage() {
                                           {/* 広告・トラッキングツール */}
                                           {comp.tracking && (
                                             <div className="mt-1">
-                                              <p className="text-[10px] font-bold text-slate-500 mb-1">広告・トラッキング</p>
+                                              <p className="text-[10px] font-bold text-gray-400 mb-1">広告・トラッキング</p>
                                               <div className="flex flex-wrap gap-1.5">
                                                 {comp.tracking.detectedTools.length > 0
                                                   ? comp.tracking.detectedTools.map((tool: string, ti: number) => (
-                                                      <span key={ti} className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-bold">{tool}</span>
+                                                      <span key={ti} className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full font-bold">{tool}</span>
                                                     ))
-                                                  : <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-bold">未設定</span>
+                                                  : <span className="text-[10px] bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full font-bold">未設定</span>
                                                 }
                                               </div>
                                             </div>
@@ -2239,10 +2239,10 @@ export default function ShindanPage() {
                                           {/* 社会的証明 */}
                                           {comp.socialProof && comp.socialProof.proofElements.length > 0 && (
                                             <div className="mt-1">
-                                              <p className="text-[10px] font-bold text-slate-500 mb-1">社会的証明</p>
+                                              <p className="text-[10px] font-bold text-gray-400 mb-1">社会的証明</p>
                                               <div className="flex flex-wrap gap-1.5">
                                                 {comp.socialProof.proofElements.map((el: string, si: number) => (
-                                                  <span key={si} className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">{el}</span>
+                                                  <span key={si} className="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full font-bold">{el}</span>
                                                 ))}
                                               </div>
                                             </div>
@@ -2251,10 +2251,10 @@ export default function ShindanPage() {
                                           {/* CTA */}
                                           {comp.ctaAnalysis && comp.ctaAnalysis.ctaTexts.length > 0 && (
                                             <div className="mt-1">
-                                              <p className="text-[10px] font-bold text-slate-500 mb-1">CTA（コールトゥアクション）</p>
+                                              <p className="text-[10px] font-bold text-gray-400 mb-1">CTA（コールトゥアクション）</p>
                                               <div className="flex flex-wrap gap-1.5">
                                                 {comp.ctaAnalysis.ctaTexts.slice(0, 6).map((cta: string, ci: number) => (
-                                                  <span key={ci} className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">{cta}</span>
+                                                  <span key={ci} className="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">{cta}</span>
                                                 ))}
                                               </div>
                                             </div>
@@ -2263,10 +2263,10 @@ export default function ShindanPage() {
                                           {/* 訴求軸 */}
                                           {comp.appealAxis && comp.appealAxis.heroText && (
                                             <div className="mt-1">
-                                              <p className="text-[10px] font-bold text-slate-500 mb-1">訴求軸</p>
-                                              <p className="text-xs text-slate-300 italic mb-1">&quot;{comp.appealAxis.heroText.slice(0, 100)}&quot;</p>
+                                              <p className="text-[10px] font-bold text-gray-400 mb-1">訴求軸</p>
+                                              <p className="text-xs text-gray-600 italic mb-1">&quot;{comp.appealAxis.heroText.slice(0, 100)}&quot;</p>
                                               <div className="flex flex-wrap gap-1.5">
-                                                <span className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold">
+                                                <span className="text-[10px] bg-violet-50 text-violet-600 border border-violet-200 px-2 py-0.5 rounded-full font-bold">
                                                   {comp.appealAxis.heroType === 'benefit' ? 'ベネフィット訴求'
                                                     : comp.appealAxis.heroType === 'feature' ? 'フィーチャー訴求'
                                                     : comp.appealAxis.heroType === 'emotional' ? '感情訴求'
@@ -2274,7 +2274,7 @@ export default function ShindanPage() {
                                                     : '訴求不明確'}
                                                 </span>
                                                 {comp.appealAxis.uspKeywords.slice(0, 3).map((kw: string, ki: number) => (
-                                                  <span key={ki} className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold">{kw}</span>
+                                                  <span key={ki} className="text-[10px] bg-violet-50 text-violet-600 border border-violet-200 px-2 py-0.5 rounded-full font-bold">{kw}</span>
                                                 ))}
                                               </div>
                                             </div>
@@ -2285,7 +2285,7 @@ export default function ShindanPage() {
                                             href={comp.url}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors"
+                                            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-500 transition-colors"
                                           >
                                             <ExternalLink className="w-3.5 h-3.5" />
                                             サイトを開く
@@ -2306,34 +2306,34 @@ export default function ShindanPage() {
 
                 {/* ===== AI発見 競合企業 ===== */}
                 {result.analytics?.discoveredCompetitors && result.analytics.discoveredCompetitors.length > 0 && (
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <Eye className="w-5 h-5 text-violet-400" />
+                      <Eye className="w-5 h-5 text-violet-600" />
                       AIが発見した競合企業
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-violet-500/20 text-violet-400 border border-violet-500/30">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-violet-50 text-violet-600 border border-violet-200">
                         AI発見
                       </span>
                     </h3>
                     <div className="space-y-3">
                       {result.analytics.discoveredCompetitors.map((comp, i) => {
                         const threatStyle = {
-                          high: { bg: 'bg-red-500/10 border-red-500/30', text: 'text-red-400', label: '高脅威' },
-                          medium: { bg: 'bg-orange-500/10 border-orange-500/30', text: 'text-orange-400', label: '中脅威' },
-                          low: { bg: 'bg-yellow-500/10 border-yellow-500/30', text: 'text-yellow-400', label: '低脅威' },
-                        }[comp.threatLevel] || { bg: 'bg-slate-700/50 border-slate-600', text: 'text-slate-400', label: '不明' }
+                          high: { bg: 'bg-red-50 border-red-200', text: 'text-red-600', label: '高脅威' },
+                          medium: { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-600', label: '中脅威' },
+                          low: { bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-600', label: '低脅威' },
+                        }[comp.threatLevel] || { bg: 'bg-gray-100 border-gray-200', text: 'text-gray-500', label: '不明' }
                         return (
                           <div key={i} className={`${threatStyle.bg} border rounded-xl p-4`}>
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${threatStyle.text}`}>
                                 {threatStyle.label}
                               </span>
-                              <h4 className="font-black text-white text-sm">{comp.name}</h4>
+                              <h4 className="font-black text-gray-900 text-sm">{comp.name}</h4>
                             </div>
-                            <a href={comp.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-400 hover:underline flex items-center gap-1 mb-1">
+                            <a href={comp.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-1 mb-1">
                               <ExternalLink className="w-3 h-3" />
                               {comp.url}
                             </a>
-                            <p className="text-xs text-slate-400 leading-relaxed">{comp.reason}</p>
+                            <p className="text-xs text-gray-500 leading-relaxed">{comp.reason}</p>
                           </div>
                         )
                       })}
@@ -2343,55 +2343,55 @@ export default function ShindanPage() {
 
                 {/* ===== 競合インテリジェンス ===== */}
                 {result.competitorIntelligence && (
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-3 flex items-center gap-2">
-                      <Search className="w-5 h-5 text-blue-400" />
+                      <Search className="w-5 h-5 text-blue-600" />
                       競合インテリジェンス
                     </h3>
-                    <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">{result.competitorIntelligence}</p>
+                    <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{result.competitorIntelligence}</p>
                   </div>
                 )}
 
-                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                   <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-cyan-400" />
+                    <Users className="w-5 h-5 text-cyan-600" />
                     業界ベンチマーク比較
                   </h3>
                   <BenchmarkChart benchmark={result.benchmark} />
                 </div>
 
-                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                   <h3 className="text-lg font-black mb-4 flex items-center gap-2 flex-wrap">
-                    <AlertTriangle className="w-5 h-5 text-orange-400" />
+                    <AlertTriangle className="w-5 h-5 text-orange-600" />
                     ボトルネック
-                    <span className="text-xs font-bold text-slate-500 ml-auto">{result.bottlenecks.length}件検出</span>
+                    <span className="text-xs font-bold text-gray-400 ml-auto">{result.bottlenecks.length}件検出</span>
                   </h3>
                   <BottleneckPanel bottlenecks={result.bottlenecks} />
                 </div>
 
-                <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                   <h3 className="text-lg font-black mb-4 flex items-center gap-2 flex-wrap">
-                    <Sparkles className="w-5 h-5 text-teal-400" />
+                    <Sparkles className="w-5 h-5 text-teal-600" />
                     改善アクション提案
-                    <span className="text-xs font-bold text-slate-500 ml-auto">{result.recommendations.length}件 | Quick Win {result.recommendations.filter(r => r.quickWin).length}件</span>
+                    <span className="text-xs font-bold text-gray-400 ml-auto">{result.recommendations.length}件 | Quick Win {result.recommendations.filter(r => r.quickWin).length}件</span>
                   </h3>
                   <RecommendationPanel recommendations={result.recommendations} />
                 </div>
 
                 {/* ===== 業界インサイト ===== */}
                 {result.industryInsights && result.industryInsights.length > 0 && (
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                  <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <Compass className="w-5 h-5 text-purple-400" />
+                      <Compass className="w-5 h-5 text-purple-600" />
                       業界インサイト
                     </h3>
                     <div className="space-y-2">
                       {result.industryInsights.map((insight, i) => (
-                        <div key={i} className="flex items-start gap-3 bg-purple-500/5 border border-purple-500/10 rounded-xl p-3">
-                          <span className="w-5 h-5 rounded-full bg-purple-500/20 flex items-center justify-center text-[10px] font-black text-purple-400 flex-shrink-0 mt-0.5">
+                        <div key={i} className="flex items-start gap-3 bg-purple-50/50 border border-purple-200 rounded-xl p-3">
+                          <span className="w-5 h-5 rounded-full bg-purple-50 flex items-center justify-center text-[10px] font-black text-purple-600 flex-shrink-0 mt-0.5">
                             {i + 1}
                           </span>
-                          <p className="text-sm text-slate-300 leading-relaxed">{insight}</p>
+                          <p className="text-sm text-gray-600 leading-relaxed">{insight}</p>
                         </div>
                       ))}
                     </div>

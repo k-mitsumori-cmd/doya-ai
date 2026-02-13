@@ -25,13 +25,13 @@ export default function ScoreCard({ score, grade, summary }: ScoreCardProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6"
+      className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm"
     >
       <div className="flex flex-col sm:flex-row items-center gap-6">
         {/* 円形スコア */}
         <div className="relative w-32 h-32 flex-shrink-0">
           <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+            <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="8" />
             <motion.circle
               cx="60" cy="60" r="54" fill="none"
               stroke="url(#scoreGradient)" strokeWidth="8" strokeLinecap="round"
@@ -48,8 +48,8 @@ export default function ScoreCard({ score, grade, summary }: ScoreCardProps) {
             </defs>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-3xl font-black text-white tabular-nums">{score}</span>
-            <span className="text-xs text-slate-400 font-bold">/ 100</span>
+            <span className="text-3xl font-black text-gray-900 tabular-nums">{score}</span>
+            <span className="text-xs text-gray-500 font-bold">/ 100</span>
           </div>
         </div>
 
@@ -59,9 +59,9 @@ export default function ScoreCard({ score, grade, summary }: ScoreCardProps) {
             <span className={`px-4 py-1.5 rounded-xl bg-gradient-to-r ${gradient} text-white text-xl font-black shadow-lg`}>
               {grade}
             </span>
-            <span className="text-sm text-slate-400 font-bold">総合評価</span>
+            <span className="text-sm text-gray-500 font-bold">総合評価</span>
           </div>
-          <p className="text-sm text-slate-300 leading-relaxed">{summary}</p>
+          <p className="text-sm text-gray-600 leading-relaxed">{summary}</p>
         </div>
       </div>
     </motion.div>

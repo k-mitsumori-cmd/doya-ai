@@ -159,6 +159,8 @@ interface WebsiteAnalysis {
     hasComparisonPage: boolean; mentionedCompetitors: string[]; differentiationClaims: string[]
     positioningType: 'leader' | 'challenger' | 'niche' | 'unclear'; positioningScore: number
   }
+  discoveredSubdomains?: string[]
+  crawledDirectories?: string[]
 }
 
 // =============================================
@@ -441,7 +443,7 @@ function detectCompetitivePositioning(html: string, mainText: string) {
 async function fetchPage(url: string, timeout = 10000): Promise<string | null> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DoyaShindanBot/2.0; +https://doya-ai.surisuta.jp)' },
+      headers: { 'User-Agent': DOYA_USER_AGENT },
       signal: AbortSignal.timeout(timeout),
       redirect: 'follow',
     })
@@ -450,6 +452,124 @@ async function fetchPage(url: string, timeout = 10000): Promise<string | null> {
   } catch {
     return null
   }
+}
+
+// =============================================
+// 2c. サブドメイン探索
+// =============================================
+const DOYA_USER_AGENT = 'Mozilla/5.0 (compatible; DoyaShindanBot/2.0; +https://doya-ai.surisuta.jp)'
+
+async function discoverSubdomains(baseUrl: string, mainHtml: string): Promise<string[]> {
+  const base = new URL(baseUrl)
+  const rootDomain = base.hostname.replace(/^www\./, '')
+  const found = new Set<string>()
+
+  // Phase A: メインHTML中の href/src 属性からサブドメインURLを抽出
+  const attrRegex = /(?:href|src)=["'](https?:\/\/([a-zA-Z0-9-]+\.[a-zA-Z0-9.-]+)[^"']*)/gi
+  let m
+  while ((m = attrRegex.exec(mainHtml)) !== null) {
+    try {
+      const hostname = m[2].toLowerCase()
+      // rootDomain のサブドメインかつメインホスト名と異なるもの
+      if (
+        hostname.endsWith('.' + rootDomain) &&
+        hostname !== base.hostname &&
+        hostname !== rootDomain
+      ) {
+        found.add(`${base.protocol}//${hostname}`)
+      }
+    } catch {}
+  }
+
+  // Phase B: 一般的なサブドメインを並列プローブ（未発見のもののみ）
+  const commonPrefixes = ['www', 'blog', 'shop', 'app', 'support', 'help', 'docs', 'api', 'cdn', 'mail', 'status']
+  const toProbe = commonPrefixes
+    .map((prefix) => `${base.protocol}//${prefix}.${rootDomain}`)
+    .filter((u) => {
+      try {
+        const h = new URL(u).hostname
+        return h !== base.hostname && !found.has(u)
+      } catch { return false }
+    })
+
+  const probeResults = await Promise.all(
+    toProbe.map(async (probeUrl) => {
+      try {
+        const res = await fetch(probeUrl, {
+          method: 'HEAD',
+          headers: { 'User-Agent': DOYA_USER_AGENT },
+          signal: AbortSignal.timeout(3000),
+          redirect: 'follow',
+        })
+        if (res.ok) return probeUrl
+      } catch {}
+      return null
+    })
+  )
+  for (const r of probeResults) {
+    if (r) found.add(r)
+  }
+
+  return [...found].slice(0, 6)
+}
+
+// =============================================
+// 2d. ディレクトリページ探索
+// =============================================
+function discoverDirectoryPages(internalLinks: string[], baseUrl: string): string[] {
+  // 重要度の高いディレクトリキーワード（優先度順）
+  const priorityDirs = [
+    'services', 'service', 'products', 'product', 'works', 'work', 'case', 'cases',
+    'recruit', 'careers', 'faq', 'privacy', 'access', 'company', 'about',
+    'features', 'feature', 'portfolio', 'clients', 'team', 'contact',
+    'サービス', '事業', '製品', '実績', '採用', 'よくある質問', 'アクセス',
+  ]
+
+  // 内部リンクをパス深度でグループ化
+  const dirGroups: Record<string, string[]> = {}
+  for (const link of internalLinks) {
+    const parts = link.split('/').filter(Boolean)
+    if (parts.length >= 1) {
+      const dir = '/' + parts[0] + '/'
+      if (!dirGroups[dir]) dirGroups[dir] = []
+      dirGroups[dir].push(link)
+    }
+  }
+
+  // スコアリング: 重要度 + サブページ数
+  const scored: { url: string; score: number }[] = []
+  for (const [dir, links] of Object.entries(dirGroups)) {
+    let score = links.length // サブページ数が多いほど高スコア
+    const dirLower = dir.toLowerCase()
+    const priorityIdx = priorityDirs.findIndex((p) => dirLower.includes(p.toLowerCase()))
+    if (priorityIdx >= 0) {
+      score += (priorityDirs.length - priorityIdx) * 2 // 優先度が高いほどボーナス大
+    }
+    scored.push({ url: dir, score })
+  }
+
+  // スコア降順でソート
+  scored.sort((a, b) => b.score - a.score)
+
+  // 上位ディレクトリから深いページも含めて収集
+  const result: string[] = []
+  const alreadyInPriority = new Set<string>()
+
+  for (const { url: dir } of scored) {
+    if (result.length >= 8) break
+    const links = dirGroups[dir] || []
+    for (const link of links) {
+      if (result.length >= 8) break
+      // 既存の優先パスクロール（about/company/service等）で拾われていないものを追加
+      const fullUrl = new URL(link, baseUrl).toString()
+      if (!alreadyInPriority.has(link)) {
+        result.push(fullUrl)
+        alreadyInPriority.add(link)
+      }
+    }
+  }
+
+  return result
 }
 
 async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
@@ -481,6 +601,40 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
   for (const page of validSubPages) {
     totalText += ' ' + extractTextFromHTML(page).slice(0, 3000)
   }
+
+  // Phase 2: サブドメイン探索
+  const discoveredSubdomains = await discoverSubdomains(url, mainHtml)
+
+  // Phase 3: ディレクトリ深掘り（既存の優先パスと重複しないURLのみ）
+  const crawledPriorityUrls = new Set(priorityPaths.map((p) => new URL(p, url).toString()))
+  const directoryPages = discoverDirectoryPages(internalLinks, url)
+    .filter((u) => !crawledPriorityUrls.has(u))
+
+  // Phase 2+3 の追加ページを並列フェッチ（最大10ページ）
+  const additionalUrls = [
+    ...discoveredSubdomains, // サブドメインのトップページ
+    ...directoryPages,
+  ].slice(0, 10)
+
+  const additionalPages = await Promise.all(
+    additionalUrls.map((u) => fetchPage(u, 8000))
+  )
+  const validAdditionalPages = additionalPages.filter(Boolean) as string[]
+
+  // totalText にテキストを追加
+  for (const page of validAdditionalPages) {
+    totalText += ' ' + extractTextFromHTML(page).slice(0, 2000)
+  }
+
+  // pagesCrawled を更新
+  const totalPagesCrawled = pagesCrawled + validAdditionalPages.length
+
+  // クロールしたディレクトリ一覧を記録
+  const crawledDirectories = directoryPages.filter((_, i) => {
+    // サブドメイン分のオフセットを考慮
+    const offsetIdx = discoveredSubdomains.length + i
+    return offsetIdx < additionalUrls.length && additionalPages[offsetIdx] !== null
+  })
 
   // ----- SEOスコア計算（100点満点・厳格採点）-----
   const issues: string[] = []
@@ -576,9 +730,9 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
   else { issues.push('CTA/問い合わせフォーム未検出（コンバージョン導線の致命的欠落）') }
 
   // サイト規模 (15点)
-  if (pagesCrawled >= 5) { contentScore += 15 }
-  else if (pagesCrawled >= 3) { contentScore += 10 }
-  else if (pagesCrawled >= 2) { contentScore += 5; issues.push('サブページが少ない（サイト規模不足）') }
+  if (totalPagesCrawled >= 5) { contentScore += 15 }
+  else if (totalPagesCrawled >= 3) { contentScore += 10 }
+  else if (totalPagesCrawled >= 2) { contentScore += 5; issues.push('サブページが少ない（サイト規模不足）') }
   else { issues.push('サブページなし（ペラサイトの可能性。信頼性に影響）') }
 
   // SNS連携 (10点)
@@ -643,7 +797,7 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
     meta,
     headings,
     textLength: wordCount,
-    pagesCrawled,
+    pagesCrawled: totalPagesCrawled,
     socialLinks,
     hasBlog: blog,
     hasForm: hasForm,
@@ -660,6 +814,8 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
     pricingSignals,
     contentMarketing: contentMarketingData,
     competitivePositioning: competitivePositioningData,
+    discoveredSubdomains,
+    crawledDirectories,
   }
 }
 
@@ -1361,6 +1517,8 @@ function websiteToFrontend(ws: WebsiteAnalysis) {
     pricingSignals: ws.pricingSignals,
     contentMarketing: ws.contentMarketing,
     competitivePositioning: ws.competitivePositioning,
+    discoveredSubdomains: ws.discoveredSubdomains,
+    crawledDirectories: ws.crawledDirectories,
   }
 }
 
@@ -1522,6 +1680,8 @@ URL: ${ws.url}
 - テクニカルスコア: ${ws.technicalScore}/100
 - 総合サイトスコア: ${ws.totalScore}/100
 - クロールページ数: ${ws.pagesCrawled}
+- 発見サブドメイン: ${ws.discoveredSubdomains && ws.discoveredSubdomains.length > 0 ? ws.discoveredSubdomains.join(', ') : 'なし'}
+- クロールしたディレクトリ: ${ws.crawledDirectories && ws.crawledDirectories.length > 0 ? ws.crawledDirectories.join(', ') : 'なし'}
 - テキスト量: ${Math.round(ws.textLength / 1000)}K文字
 - ブログ有無: ${ws.hasBlog ? 'あり' : 'なし'}
 - CTA/フォーム: ${ws.hasForm ? 'あり' : 'なし'}

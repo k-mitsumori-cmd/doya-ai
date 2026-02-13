@@ -21,7 +21,7 @@ export default function PdfExportButton({ targetRef, fileName = 'doya-shindan-re
       const canvas = await html2canvas(targetRef.current, {
         scale: 2,
         useCORS: true,
-        backgroundColor: '#0f172a',
+        backgroundColor: '#ffffff',
         logging: false,
       })
 

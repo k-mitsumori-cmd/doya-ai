@@ -40,12 +40,12 @@ export default function ShindanRadarChart({ axes }: ShindanRadarChartProps) {
             const r = (level / 100) * maxR
             const pts = Array.from({ length: count }, (_, i) => getPoint(i, r))
             const path = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ') + ' Z'
-            return <path key={level} d={path} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+            return <path key={level} d={path} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth="1" />
           })}
           {/* 軸線 */}
           {axes.map((_, i) => {
             const p = getPoint(i, maxR)
-            return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+            return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="rgba(0,0,0,0.08)" strokeWidth="1" />
           })}
           {/* データ */}
           <motion.path
@@ -61,7 +61,7 @@ export default function ShindanRadarChart({ axes }: ShindanRadarChartProps) {
           {dataPoints.map((p, i) => (
             <motion.circle
               key={i} cx={p.x} cy={p.y} r="4"
-              fill="#14b8a6" stroke="#0f172a" strokeWidth="2"
+              fill="#14b8a6" stroke="#ffffff" strokeWidth="2"
               initial={{ scale: 0 }} animate={{ scale: 1 }}
               transition={{ delay: 0.5 + i * 0.1 }}
             />
@@ -71,7 +71,7 @@ export default function ShindanRadarChart({ axes }: ShindanRadarChartProps) {
             const p = getPoint(i, maxR + 20)
             return (
               <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="central"
-                className="fill-slate-300 text-[11px] font-bold">
+                className="fill-gray-600 text-[11px] font-bold">
                 {a.label}
               </text>
             )
@@ -82,12 +82,12 @@ export default function ShindanRadarChart({ axes }: ShindanRadarChartProps) {
       {/* 軸コメント */}
       <div className="grid grid-cols-2 gap-2">
         {axes.map((a, i) => (
-          <div key={i} className="bg-slate-800/50 rounded-lg p-2.5">
+          <div key={i} className="bg-gray-50 rounded-lg p-2.5">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-bold text-slate-400">{a.label}</span>
-              <span className="text-xs font-black text-teal-400">{a.score}</span>
+              <span className="text-xs font-bold text-gray-500">{a.label}</span>
+              <span className="text-xs font-black text-teal-600">{a.score}</span>
             </div>
-            <p className="text-[10px] text-slate-500 leading-relaxed">{a.comment}</p>
+            <p className="text-[10px] text-gray-400 leading-relaxed">{a.comment}</p>
           </div>
         ))}
       </div>
