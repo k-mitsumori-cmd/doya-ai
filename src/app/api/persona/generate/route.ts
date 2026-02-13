@@ -403,12 +403,12 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
       "trialActivities": "トライアルで具体的に何を試したか",
       "decidingFactor": "最終的な決め手",
       "timeline": [
-        { "phase": "認知", "description": "どこでサービスを知ったか", "imagePrompt": "A scene in English depicting this phase for image generation" },
-        { "phase": "興味", "description": "何に惹かれたか" },
-        { "phase": "比較検討", "description": "競合と何を比べたか", "imagePrompt": "A scene in English depicting this phase" },
-        { "phase": "トライアル", "description": "無料トライアルで何をしたか" },
-        { "phase": "社内稟議", "description": "どう説得したか", "imagePrompt": "A scene in English depicting this phase" },
-        { "phase": "本導入", "description": "導入の決め手" }
+        { "phase": "認知", "description": "どこでサービスを知ったか", "imagePrompt": "A scene in English depicting how the persona first discovered the service" },
+        { "phase": "興味", "description": "何に惹かれたか", "imagePrompt": "A scene depicting the persona getting interested and exploring the service website" },
+        { "phase": "比較検討", "description": "競合と何を比べたか", "imagePrompt": "A scene of the persona comparing different services on their computer" },
+        { "phase": "トライアル", "description": "無料トライアルで何をしたか", "imagePrompt": "A scene of the persona trying out the service for the first time" },
+        { "phase": "社内稟議", "description": "どう説得したか", "imagePrompt": "A scene of the persona presenting or discussing with colleagues in a meeting" },
+        { "phase": "本導入", "description": "導入の決め手", "imagePrompt": "A scene of the persona successfully using the service in their daily work, looking satisfied" }
       ]
     },
     "dayWithService": "このペルソナがサービスを実際に使う「ある1日」の描写。朝出社してから退社するまでの流れの中で、どのタイミングで・どう使い・どんな成果が出るかを具体的に（300〜500字）"
@@ -473,7 +473,7 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
 - resonatingMessagesは5つ以上記述してください。
 - innerVoiceは5つ以上、リアルな内面の声を記述してください。
 - deepDive.objectionAnalysisは必ず10個記述してください。
-- deepDive.adoptionStory.timelineは6段階で記述してください。偶数番目（認知、比較検討、社内稟議）にimagePromptを含めてください（場面を英語で描写）。
+- deepDive.adoptionStory.timelineは6段階で記述してください。全ステップにimagePromptを含めてください（各フェーズの場面を英語で具体的に描写）。
 - deepDive.dayWithServiceは300〜500字で具体的に記述してください。
 - summary.topChallengesは優先度順に3つ記述してください。
 - summary.catchphrasesは5つ記述してください。
