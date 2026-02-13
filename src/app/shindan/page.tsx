@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Activity,
@@ -39,6 +39,9 @@ import {
   ArrowDownRight,
   Flame,
   Eye,
+  ChevronDown,
+  Image,
+  Code2,
 } from 'lucide-react'
 import ScoreCard from '@/components/shindan/ScoreCard'
 import ShindanRadarChart from '@/components/shindan/ShindanRadarChart'
@@ -75,11 +78,25 @@ interface ShindanResult {
       seoScore: number; contentScore: number; technicalScore: number; totalScore: number
       issues: string[]; positives: string[]; pagesCrawled: number
       socialLinks: string[]; hasBlog: boolean; hasForm: boolean; ogImage?: string | null
+      url?: string
+      meta?: { title?: string; description?: string }
+      headings?: string[]
+      textLength?: number
+      imageStats?: { total: number; withAlt: number }
+      hasSchema?: boolean
     } | null
     credibilityGap: number
     competitorComparison: Array<{
       url: string; seoScore: number; contentScore: number; technicalScore: number
       totalScore: number; hasBlog: boolean; hasForm: boolean; socialLinks: string[]; ogImage?: string | null
+      meta?: { title?: string; description?: string }
+      headings?: string[]
+      issues?: string[]
+      positives?: string[]
+      textLength?: number
+      imageStats?: { total: number; withAlt: number }
+      hasSchema?: boolean
+      pagesCrawled?: number
     }>
     discoveredCompetitors?: Array<{
       url: string; name: string; reason: string; threatLevel: 'high' | 'medium' | 'low'
@@ -502,6 +519,9 @@ export default function ShindanPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<ShindanResult | null>(null)
+  const [isStreaming, setIsStreaming] = useState(false)
+  const [streamPhase, setStreamPhase] = useState('')
+  const [expandedCompetitor, setExpandedCompetitor] = useState<number | null>(null)
   const dashboardRef = useRef<HTMLDivElement>(null)
 
   // ステップ数（基本情報 + 項目選択 + 選択カテゴリ数）
@@ -656,10 +676,36 @@ export default function ShindanPage() {
     if (currentStep > 0) setCurrentStep((s) => s - 1)
   }, [currentStep])
 
-  // 送信
+  // 送信 (SSE streaming)
   const handleSubmit = useCallback(async () => {
     setIsLoading(true)
+    setIsStreaming(true)
+    setStreamPhase('')
     setError('')
+    setExpandedCompetitor(null)
+
+    // 初期の空resultをセットしてダッシュボードを即表示
+    setResult({
+      overallScore: 0,
+      overallGrade: '-',
+      summary: '',
+      axes: [],
+      strengths: [],
+      bottlenecks: [],
+      recommendations: [],
+      benchmark: [],
+      analytics: {
+        categoryScores: {},
+        synergyPenalties: [],
+        riskIndex: 0,
+        dxMaturity: 0,
+        growthPotential: 0,
+        efficiencyScore: 0,
+        websiteHealth: null,
+        credibilityGap: 0,
+        competitorComparison: [],
+      },
+    })
 
     try {
       const res = await fetch('/api/shindan/generate', {
@@ -673,34 +719,141 @@ export default function ShindanPage() {
         }),
       })
 
-      const data = await res.json()
-
+      // バリデーションエラー等 (non-stream response)
       if (!res.ok) {
-        setError(data.error || '診断に失敗しました。もう一度お試しください。')
+        try {
+          const data = await res.json()
+          setError(data.error || '診断に失敗しました。もう一度お試しください。')
+        } catch {
+          setError('診断に失敗しました。もう一度お試しください。')
+        }
+        setResult(null)
+        setIsStreaming(false)
+        setIsLoading(false)
         return
       }
 
-      const r = data.result as ShindanResult
-      setResult(r)
+      const reader = res.body?.getReader()
+      if (!reader) {
+        setError('ストリーミング接続に失敗しました。')
+        setResult(null)
+        setIsStreaming(false)
+        setIsLoading(false)
+        return
+      }
 
-      // 履歴保存
-      try {
-        const existing = JSON.parse(localStorage.getItem('doya_shindan_history') || '[]')
-        const entry = {
-          id: Date.now().toString(),
-          date: new Date().toISOString(),
-          industry: answers.industry || '',
-          overallScore: r.overallScore,
-          overallGrade: r.overallGrade,
-          summary: r.summary,
-          result: r,
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() || ''
+
+        for (const part of parts) {
+          const trimmed = part.trim()
+          if (!trimmed) continue
+
+          let eventName = ''
+          let eventData = ''
+          for (const line of trimmed.split('\n')) {
+            if (line.startsWith('event:')) {
+              eventName = line.slice(6).trim()
+            } else if (line.startsWith('data:')) {
+              eventData = line.slice(5).trim()
+            }
+          }
+          if (!eventName || !eventData) continue
+
+          try {
+            const parsed = JSON.parse(eventData)
+            setStreamPhase(eventName)
+
+            if (eventName === 'scoring') {
+              setResult((prev) => prev ? {
+                ...prev,
+                analytics: {
+                  ...prev.analytics!,
+                  categoryScores: parsed.categoryScores ?? prev.analytics!.categoryScores,
+                  riskIndex: parsed.riskIndex ?? prev.analytics!.riskIndex,
+                  dxMaturity: parsed.dxMaturity ?? prev.analytics!.dxMaturity,
+                  growthPotential: parsed.growthPotential ?? prev.analytics!.growthPotential,
+                  efficiencyScore: parsed.efficiencyScore ?? prev.analytics!.efficiencyScore,
+                  synergyPenalties: parsed.synergyPenalties ?? prev.analytics!.synergyPenalties,
+                },
+              } : prev)
+            } else if (eventName === 'website') {
+              setResult((prev) => prev ? {
+                ...prev,
+                analytics: {
+                  ...prev.analytics!,
+                  websiteHealth: parsed.websiteHealth ?? null,
+                },
+              } : prev)
+            } else if (eventName === 'discovery') {
+              setResult((prev) => prev ? {
+                ...prev,
+                analytics: {
+                  ...prev.analytics!,
+                  discoveredCompetitors: parsed.discoveredCompetitors ?? [],
+                },
+              } : prev)
+            } else if (eventName === 'competitors') {
+              setResult((prev) => prev ? {
+                ...prev,
+                analytics: {
+                  ...prev.analytics!,
+                  competitorComparison: parsed.competitorComparison ?? [],
+                },
+              } : prev)
+            } else if (eventName === 'scores') {
+              setResult((prev) => prev ? {
+                ...prev,
+                overallScore: parsed.overallScore ?? prev.overallScore,
+                overallGrade: parsed.overallGrade ?? prev.overallGrade,
+                analytics: {
+                  ...prev.analytics!,
+                  growthForecast: parsed.growthForecast ?? prev.analytics!.growthForecast,
+                  riskTimeline: parsed.riskTimeline ?? prev.analytics!.riskTimeline,
+                  investmentPriorities: parsed.investmentPriorities ?? prev.analytics!.investmentPriorities,
+                },
+              } : prev)
+            } else if (eventName === 'complete') {
+              const r = (parsed.result ?? parsed) as ShindanResult
+              setResult(r)
+              // 履歴保存
+              try {
+                const existing = JSON.parse(localStorage.getItem('doya_shindan_history') || '[]')
+                const entry = {
+                  id: Date.now().toString(),
+                  date: new Date().toISOString(),
+                  industry: answers.industry || '',
+                  overallScore: r.overallScore,
+                  overallGrade: r.overallGrade,
+                  summary: r.summary,
+                  result: r,
+                }
+                localStorage.setItem('doya_shindan_history', JSON.stringify([entry, ...existing].slice(0, 20)))
+              } catch {}
+            } else if (eventName === 'error') {
+              setError(parsed.error || '診断中にエラーが発生しました。')
+              setResult(null)
+            }
+          } catch {
+            // JSON parse error — skip this event
+          }
         }
-        localStorage.setItem('doya_shindan_history', JSON.stringify([entry, ...existing].slice(0, 20)))
-      } catch {}
+      }
     } catch {
       setError('通信エラーが発生しました。ネットワーク接続を確認してください。')
+      setResult(null)
     } finally {
+      setIsStreaming(false)
       setIsLoading(false)
+      setStreamPhase('')
     }
   }, [answers, selectedCategories, websiteUrl, competitorUrls])
 
@@ -795,7 +948,7 @@ export default function ShindanPage() {
     <div className="min-h-screen bg-slate-950 text-white">
       {/* AI分析中ポップアップ */}
       <AnimatePresence>
-        {isLoading && <AnalysisLoadingOverlay selectedCategories={selectedCategories} answers={answers} websiteUrl={websiteUrl} />}
+        {isLoading && !isStreaming && <AnalysisLoadingOverlay selectedCategories={selectedCategories} answers={answers} websiteUrl={websiteUrl} />}
       </AnimatePresence>
 
       <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
@@ -817,7 +970,7 @@ export default function ShindanPage() {
         </motion.div>
 
         <AnimatePresence mode="wait">
-          {!result ? (
+          {!result && !isStreaming ? (
             <motion.div
               key="form"
               initial={{ opacity: 0, y: 20 }}
@@ -1068,21 +1221,115 @@ export default function ShindanPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className="flex items-center justify-between mb-6">
-                <button
-                  onClick={() => { setResult(null); setCurrentStep(0) }}
-                  className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-white transition-colors"
-                >
-                  ← 新しい診断を行う
-                </button>
-                <PdfExportButton targetRef={dashboardRef} fileName={`doya-shindan-${answers.industry || 'report'}`} />
-              </div>
+              {!isStreaming && (
+                <div className="flex items-center justify-between mb-6">
+                  <button
+                    onClick={() => { setResult(null); setCurrentStep(0) }}
+                    className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-white transition-colors"
+                  >
+                    ← 新しい診断を行う
+                  </button>
+                  <PdfExportButton targetRef={dashboardRef} fileName={`doya-shindan-${answers.industry || 'report'}`} />
+                </div>
+              )}
 
               <div ref={dashboardRef} className="space-y-6">
+                {/* ストリーミング進捗インジケーター */}
+                {isStreaming && (
+                  <div className="mb-6 bg-slate-900/80 border border-teal-500/30 rounded-2xl p-4">
+                    <div className="flex items-center gap-3">
+                      <Loader2 className="w-5 h-5 animate-spin text-teal-400" />
+                      <div>
+                        <p className="text-sm font-black text-teal-400">
+                          {streamPhase === 'scoring' && '各指標をスコアリング中...'}
+                          {streamPhase === 'website' && 'Webサイトを詳細分析中...'}
+                          {streamPhase === 'discovery' && '競合企業をAIが探索中...'}
+                          {streamPhase === 'competitors' && '競合サイトをクロール中...'}
+                          {streamPhase === 'scores' && '最終スコアを算出中...'}
+                          {streamPhase === 'complete' && 'AIが総合診断中...'}
+                          {!streamPhase && '分析を開始中...'}
+                        </p>
+                        <p className="text-[11px] text-slate-500">リアルタイムで結果が表示されます</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400"
+                        animate={{ width: streamPhase === 'scoring' ? '15%' : streamPhase === 'website' ? '30%' : streamPhase === 'discovery' ? '45%' : streamPhase === 'competitors' ? '55%' : streamPhase === 'scores' ? '70%' : streamPhase === 'complete' ? '90%' : '5%' }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* ===== サイトビジュアル比較（ダッシュボード先頭） ===== */}
+                {(result?.analytics?.websiteHealth?.ogImage || (result?.analytics?.competitorComparison && result.analytics.competitorComparison.some((c) => c.ogImage))) && (
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                    <h3 className="text-lg font-black mb-4 flex items-center gap-2">
+                      <Eye className="w-5 h-5 text-blue-400" />
+                      サイトビジュアル比較
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* 自社サイト */}
+                      {result?.analytics?.websiteHealth?.ogImage && (
+                        <div>
+                          <p className="text-xs font-bold text-teal-400 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-teal-400" />
+                            自社サイト
+                          </p>
+                          <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="block group">
+                            <div className="relative rounded-xl overflow-hidden border border-slate-700 group-hover:border-teal-500/50 transition-colors">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={result.analytics.websiteHealth.ogImage}
+                                alt="自社サイト OGP"
+                                className="w-full h-40 object-cover bg-slate-800"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                              />
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-3">
+                                <p className="text-[11px] text-white font-bold truncate flex items-center gap-1">
+                                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                  {(() => { try { return new URL(websiteUrl).hostname } catch { return websiteUrl } })()}
+                                </p>
+                              </div>
+                            </div>
+                          </a>
+                        </div>
+                      )}
+                      {/* 競合サイト */}
+                      {result?.analytics?.competitorComparison?.filter((c) => c.ogImage).map((comp, i) => (
+                        <div key={i}>
+                          <p className="text-xs font-bold text-slate-400 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-slate-400" />
+                            競合 {i + 1}
+                          </p>
+                          <a href={comp.url} target="_blank" rel="noopener noreferrer" className="block group">
+                            <div className="relative rounded-xl overflow-hidden border border-slate-700 group-hover:border-purple-500/50 transition-colors">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={comp.ogImage!}
+                                alt={`競合 ${i + 1} OGP`}
+                                className="w-full h-40 object-cover bg-slate-800"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                              />
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-3">
+                                <p className="text-[11px] text-white font-bold truncate flex items-center gap-1">
+                                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                  {(() => { try { return new URL(comp.url).hostname.replace('www.', '') } catch { return comp.url } })()}
+                                </p>
+                              </div>
+                            </div>
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <ScoreCard
-                  score={result.overallScore}
-                  grade={result.overallGrade}
-                  summary={result.summary}
+                  score={result?.overallScore ?? 0}
+                  grade={result?.overallGrade ?? '-'}
+                  summary={result?.summary ?? ''}
                 />
 
                 {/* ===== エグゼクティブサマリー ===== */}
@@ -1352,70 +1599,6 @@ export default function ShindanPage() {
                   </div>
                 </div>
 
-                {/* ===== サイトFV画像プレビュー ===== */}
-                {(result.analytics?.websiteHealth?.ogImage || (result.analytics?.competitorComparison && result.analytics.competitorComparison.some((c) => c.ogImage))) && (
-                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
-                    <h3 className="text-lg font-black mb-4 flex items-center gap-2">
-                      <Eye className="w-5 h-5 text-blue-400" />
-                      サイトビジュアル比較
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* 自社サイト */}
-                      {result.analytics?.websiteHealth?.ogImage && (
-                        <div>
-                          <p className="text-xs font-bold text-teal-400 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-teal-400" />
-                            自社サイト
-                          </p>
-                          <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="block group">
-                            <div className="relative rounded-xl overflow-hidden border border-slate-700 group-hover:border-teal-500/50 transition-colors">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={result.analytics.websiteHealth.ogImage}
-                                alt="自社サイト OGP"
-                                className="w-full h-40 object-cover bg-slate-800"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                              />
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-3">
-                                <p className="text-[11px] text-white font-bold truncate flex items-center gap-1">
-                                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                                  {(() => { try { return new URL(websiteUrl).hostname } catch { return websiteUrl } })()}
-                                </p>
-                              </div>
-                            </div>
-                          </a>
-                        </div>
-                      )}
-                      {/* 競合サイト */}
-                      {result.analytics?.competitorComparison?.filter((c) => c.ogImage).map((comp, i) => (
-                        <div key={i}>
-                          <p className="text-xs font-bold text-slate-400 mb-2 flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-slate-400" />
-                            競合 {i + 1}
-                          </p>
-                          <a href={comp.url} target="_blank" rel="noopener noreferrer" className="block group">
-                            <div className="relative rounded-xl overflow-hidden border border-slate-700 group-hover:border-purple-500/50 transition-colors">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={comp.ogImage!}
-                                alt={`競合 ${i + 1} OGP`}
-                                className="w-full h-40 object-cover bg-slate-800"
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                              />
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-3">
-                                <p className="text-[11px] text-white font-bold truncate flex items-center gap-1">
-                                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                                  {(() => { try { return new URL(comp.url).hostname.replace('www.', '') } catch { return comp.url } })()}
-                                </p>
-                              </div>
-                            </div>
-                          </a>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* ===== Webサイト診断 ===== */}
                 {result.analytics?.websiteHealth && (
                   <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
@@ -1423,6 +1606,38 @@ export default function ShindanPage() {
                       <Globe className="w-5 h-5 text-blue-400" />
                       Webサイト診断
                     </h3>
+
+                    {/* URL表示 */}
+                    {(result.analytics.websiteHealth.url || websiteUrl) && (
+                      <a
+                        href={result.analytics.websiteHealth.url || websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-400 hover:text-blue-300 mb-4 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        {(() => { try { return new URL(result.analytics.websiteHealth.url || websiteUrl).hostname } catch { return result.analytics.websiteHealth.url || websiteUrl } })()}
+                      </a>
+                    )}
+
+                    {/* Meta情報 */}
+                    {result.analytics.websiteHealth.meta && (
+                      <div className="bg-slate-800/50 rounded-xl p-3 mb-4 space-y-1.5">
+                        {result.analytics.websiteHealth.meta.title && (
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Title</span>
+                            <p className="text-sm text-white font-bold leading-tight">{result.analytics.websiteHealth.meta.title}</p>
+                          </div>
+                        )}
+                        {result.analytics.websiteHealth.meta.description && (
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">Description</span>
+                            <p className="text-xs text-slate-400 leading-relaxed">{result.analytics.websiteHealth.meta.description}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-4 gap-3 mb-4">
                       {[
                         { label: 'SEO', score: result.analytics.websiteHealth.seoScore },
@@ -1443,6 +1658,50 @@ export default function ShindanPage() {
                         </div>
                       ))}
                     </div>
+
+                    {/* 統計バッジ */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {result.analytics.websiteHealth.textLength != null && (
+                        <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                          <FileText className="w-3 h-3" />
+                          テキスト {(result.analytics.websiteHealth.textLength / 1000).toFixed(1)}K文字
+                        </span>
+                      )}
+                      {result.analytics.websiteHealth.imageStats && (
+                        <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold flex items-center gap-1">
+                          <Image className="w-3 h-3" />
+                          画像 {result.analytics.websiteHealth.imageStats.total}枚 (alt付: {result.analytics.websiteHealth.imageStats.withAlt})
+                        </span>
+                      )}
+                      {result.analytics.websiteHealth.hasSchema != null && (
+                        <span className={`text-[10px] px-2 py-1 rounded-lg font-bold flex items-center gap-1 ${
+                          result.analytics.websiteHealth.hasSchema
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}>
+                          <Code2 className="w-3 h-3" />
+                          構造化データ {result.analytics.websiteHealth.hasSchema ? 'あり' : 'なし'}
+                        </span>
+                      )}
+                      {result.analytics.websiteHealth.pagesCrawled > 0 && (
+                        <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold">
+                          {result.analytics.websiteHealth.pagesCrawled}ページ解析
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 見出し一覧 */}
+                    {result.analytics.websiteHealth.headings && result.analytics.websiteHealth.headings.length > 0 && (
+                      <div className="mb-4">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase mb-1.5 block">主要見出し（TOP 10）</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {result.analytics.websiteHealth.headings.slice(0, 10).map((h, hi) => (
+                            <span key={hi} className="text-[11px] bg-slate-800/80 border border-slate-700/50 text-slate-300 px-2 py-0.5 rounded">{h}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {result.analytics.websiteHealth.issues.slice(0, 6).map((issue, i) => (
                         <div key={i} className="flex items-start gap-2 text-xs">
@@ -1466,6 +1725,7 @@ export default function ShindanPage() {
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
                       <Target className="w-5 h-5 text-purple-400" />
                       競合サイト比較
+                      <span className="text-[10px] font-bold text-slate-500 ml-auto">クリックで詳細表示</span>
                     </h3>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -1476,6 +1736,7 @@ export default function ShindanPage() {
                             <th className="text-center py-2 font-bold">コンテンツ</th>
                             <th className="text-center py-2 font-bold">技術</th>
                             <th className="text-center py-2 font-bold">総合</th>
+                            <th className="w-8" />
                           </tr>
                         </thead>
                         <tbody>
@@ -1486,29 +1747,206 @@ export default function ShindanPage() {
                               <td className="text-center font-black text-teal-400">{result.analytics.websiteHealth.contentScore}</td>
                               <td className="text-center font-black text-teal-400">{result.analytics.websiteHealth.technicalScore}</td>
                               <td className="text-center font-black text-teal-400">{result.analytics.websiteHealth.totalScore}</td>
+                              <td />
                             </tr>
                           )}
                           {result.analytics.competitorComparison.map((comp, i) => (
-                            <tr key={i} className="border-b border-slate-800/50">
-                              <td className="py-2.5 text-xs text-slate-400 max-w-[120px] truncate flex items-center gap-1">
-                                <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                                {new URL(comp.url).hostname.replace('www.', '')}
-                              </td>
-                              {[comp.seoScore, comp.contentScore, comp.technicalScore, comp.totalScore].map((s, j) => {
-                                const myScore = result.analytics?.websiteHealth ? [
-                                  result.analytics.websiteHealth.seoScore,
-                                  result.analytics.websiteHealth.contentScore,
-                                  result.analytics.websiteHealth.technicalScore,
-                                  result.analytics.websiteHealth.totalScore,
-                                ][j] : 0
-                                return (
-                                  <td key={j} className={`text-center font-black ${s > myScore ? 'text-red-400' : 'text-slate-300'}`}>
-                                    {s}
-                                    {s > myScore && <span className="text-[9px] ml-0.5">↑</span>}
-                                  </td>
-                                )
-                              })}
-                            </tr>
+                            <React.Fragment key={i}>
+                              <tr
+                                className="border-b border-slate-800/50 cursor-pointer hover:bg-slate-800/30 transition-colors"
+                                onClick={() => setExpandedCompetitor(expandedCompetitor === i ? null : i)}
+                              >
+                                <td className="py-2.5 text-xs text-slate-400 max-w-[120px] truncate">
+                                  <span className="flex items-center gap-1">
+                                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                    {(() => { try { return new URL(comp.url).hostname.replace('www.', '') } catch { return comp.url } })()}
+                                  </span>
+                                </td>
+                                {[comp.seoScore, comp.contentScore, comp.technicalScore, comp.totalScore].map((s, j) => {
+                                  const myScore = result.analytics?.websiteHealth ? [
+                                    result.analytics.websiteHealth.seoScore,
+                                    result.analytics.websiteHealth.contentScore,
+                                    result.analytics.websiteHealth.technicalScore,
+                                    result.analytics.websiteHealth.totalScore,
+                                  ][j] : 0
+                                  return (
+                                    <td key={j} className={`text-center font-black ${s > myScore ? 'text-red-400' : 'text-slate-300'}`}>
+                                      {s}
+                                      {s > myScore && <span className="text-[9px] ml-0.5">↑</span>}
+                                    </td>
+                                  )
+                                })}
+                                <td className="text-center">
+                                  <motion.div animate={{ rotate: expandedCompetitor === i ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                                    <ChevronDown className="w-4 h-4 text-slate-500" />
+                                  </motion.div>
+                                </td>
+                              </tr>
+                              {/* 展開可能な詳細パネル */}
+                              <tr>
+                                <td colSpan={6} className="p-0">
+                                  <AnimatePresence>
+                                    {expandedCompetitor === i && (
+                                      <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                        className="overflow-hidden"
+                                      >
+                                        <div className="bg-slate-800/40 border border-slate-700/30 rounded-xl p-4 my-2 space-y-4">
+                                          {/* OGP画像 */}
+                                          {comp.ogImage && (
+                                            <div>
+                                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                                              <img
+                                                src={comp.ogImage}
+                                                alt={`${(() => { try { return new URL(comp.url).hostname } catch { return comp.url } })()} OGP`}
+                                                className="w-full max-h-48 object-cover rounded-lg bg-slate-900"
+                                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                              />
+                                            </div>
+                                          )}
+
+                                          {/* Meta情報 */}
+                                          {comp.meta && (
+                                            <div className="space-y-1.5">
+                                              {comp.meta.title && (
+                                                <div>
+                                                  <span className="text-[10px] font-bold text-slate-500 uppercase">Title</span>
+                                                  <p className="text-sm text-white font-bold leading-tight">{comp.meta.title}</p>
+                                                </div>
+                                              )}
+                                              {comp.meta.description && (
+                                                <div>
+                                                  <span className="text-[10px] font-bold text-slate-500 uppercase">Description</span>
+                                                  <p className="text-xs text-slate-400 leading-relaxed">{comp.meta.description}</p>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+
+                                          {/* 見出し一覧 */}
+                                          {comp.headings && comp.headings.length > 0 && (
+                                            <div>
+                                              <span className="text-[10px] font-bold text-slate-500 uppercase mb-1 block">主要見出し</span>
+                                              <div className="flex flex-wrap gap-1.5">
+                                                {comp.headings.slice(0, 8).map((h, hi) => (
+                                                  <span key={hi} className="text-[11px] bg-slate-700/50 text-slate-300 px-2 py-0.5 rounded">{h}</span>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* スコア詳細バー */}
+                                          <div className="space-y-2">
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase">スコア詳細</span>
+                                            {[
+                                              { label: 'SEO', score: comp.seoScore, color: 'from-blue-500 to-cyan-400' },
+                                              { label: 'コンテンツ', score: comp.contentScore, color: 'from-purple-500 to-pink-400' },
+                                              { label: '技術', score: comp.technicalScore, color: 'from-emerald-500 to-teal-400' },
+                                            ].map((bar) => (
+                                              <div key={bar.label} className="flex items-center gap-3">
+                                                <span className="text-[11px] font-bold text-slate-400 w-20">{bar.label}</span>
+                                                <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
+                                                  <motion.div
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: `${bar.score}%` }}
+                                                    transition={{ duration: 0.5, delay: 0.1 }}
+                                                    className={`h-full rounded-full bg-gradient-to-r ${bar.color}`}
+                                                  />
+                                                </div>
+                                                <span className="text-sm font-black text-slate-300 w-8 text-right">{bar.score}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+
+                                          {/* 問題点・評価点 */}
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {comp.issues && comp.issues.length > 0 && (
+                                              <div>
+                                                <span className="text-[10px] font-bold text-red-400 uppercase mb-1 block">課題</span>
+                                                <div className="space-y-1">
+                                                  {comp.issues.slice(0, 4).map((issue, ii) => (
+                                                    <div key={ii} className="flex items-start gap-1.5 text-[11px]">
+                                                      <AlertCircle className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />
+                                                      <span className="text-slate-400">{issue}</span>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            )}
+                                            {comp.positives && comp.positives.length > 0 && (
+                                              <div>
+                                                <span className="text-[10px] font-bold text-emerald-400 uppercase mb-1 block">評価点</span>
+                                                <div className="space-y-1">
+                                                  {comp.positives.slice(0, 4).map((pos, pi) => (
+                                                    <div key={pi} className="flex items-start gap-1.5 text-[11px]">
+                                                      <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0 mt-0.5" />
+                                                      <span className="text-slate-400">{pos}</span>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* その他のステータス */}
+                                          <div className="flex flex-wrap gap-2">
+                                            {comp.socialLinks && comp.socialLinks.length > 0 && (
+                                              <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-1 rounded-lg font-bold">
+                                                SNS {comp.socialLinks.length}件
+                                              </span>
+                                            )}
+                                            {comp.hasBlog && (
+                                              <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-1 rounded-lg font-bold">
+                                                ブログあり
+                                              </span>
+                                            )}
+                                            {comp.hasForm && (
+                                              <span className="text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-1 rounded-lg font-bold">
+                                                CTA/フォームあり
+                                              </span>
+                                            )}
+                                            {comp.hasSchema && (
+                                              <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-1 rounded-lg font-bold">
+                                                構造化データあり
+                                              </span>
+                                            )}
+                                            {comp.pagesCrawled != null && (
+                                              <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold">
+                                                {comp.pagesCrawled}ページ
+                                              </span>
+                                            )}
+                                            {comp.textLength != null && (
+                                              <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold">
+                                                テキスト {(comp.textLength / 1000).toFixed(1)}K文字
+                                              </span>
+                                            )}
+                                            {comp.imageStats && (
+                                              <span className="text-[10px] bg-slate-700/50 text-slate-400 px-2 py-1 rounded-lg font-bold">
+                                                画像 {comp.imageStats.total}枚 (alt: {comp.imageStats.withAlt})
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          {/* リンク */}
+                                          <a
+                                            href={comp.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-400 hover:text-blue-300 transition-colors"
+                                          >
+                                            <ExternalLink className="w-3.5 h-3.5" />
+                                            サイトを開く
+                                          </a>
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </td>
+                              </tr>
+                            </React.Fragment>
                           ))}
                         </tbody>
                       </table>
@@ -1609,9 +2047,11 @@ export default function ShindanPage() {
                 )}
               </div>
 
-              <div className="mt-8 flex justify-center">
-                <PdfExportButton targetRef={dashboardRef} fileName={`doya-shindan-${answers.industry || 'report'}`} />
-              </div>
+              {!isStreaming && (
+                <div className="mt-8 flex justify-center">
+                  <PdfExportButton targetRef={dashboardRef} fileName={`doya-shindan-${answers.industry || 'report'}`} />
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

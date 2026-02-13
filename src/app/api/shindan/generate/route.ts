@@ -947,6 +947,34 @@ function calculateInvestmentPriorities(
 }
 
 // =============================================
+// 6e. WebsiteAnalysis → フロントエンド用フォーマット変換
+// =============================================
+function websiteToFrontend(ws: WebsiteAnalysis) {
+  return {
+    url: ws.url,
+    seoScore: ws.seoScore,
+    contentScore: ws.contentScore,
+    technicalScore: ws.technicalScore,
+    totalScore: ws.totalScore,
+    issues: ws.issues,
+    positives: ws.positives,
+    pagesCrawled: ws.pagesCrawled,
+    socialLinks: ws.socialLinks,
+    hasBlog: ws.hasBlog,
+    hasForm: ws.hasForm,
+    hasSchema: ws.hasSchema,
+    ogImage: ws.ogImage,
+    meta: {
+      title: ws.meta.title || '',
+      description: ws.meta.description || ws.meta['og:description'] || '',
+    },
+    headings: ws.headings.slice(0, 20),
+    textLength: ws.textLength,
+    imageStats: ws.imageStats,
+  }
+}
+
+// =============================================
 // 7. プロンプト生成
 // =============================================
 function fmt(val: string | string[] | undefined): string {
@@ -1143,213 +1171,236 @@ ${axesLabels.map((l) => `    "${l}": <日本の同業種・同規模における
 }
 
 // =============================================
-// 8. POST ハンドラ
+// 8. POST ハンドラ（SSE ストリーミング版）
 // =============================================
 export async function POST(req: NextRequest) {
+  // --- バリデーション（エラー時は通常JSON応答で返す）---
+  let body: any
   try {
-    const body = await req.json()
-    const { answers, selectedCategories, websiteUrl, competitorUrls } = body as {
-      answers: Record<string, string | string[]>
-      selectedCategories: string[]
-      websiteUrl?: string
-      competitorUrls?: string[]
-    }
-
-    if (!answers || !answers.industry) {
-      return NextResponse.json({ error: '業種は必須です' }, { status: 400 })
-    }
-    if (!selectedCategories || selectedCategories.length === 0) {
-      return NextResponse.json({ error: '診断項目を1つ以上選択してください' }, { status: 400 })
-    }
-
-    // 認証 + 回数制限
-    const session = await getServerSession(authOptions)
-    const isLoggedIn = !!session?.user?.id
-
-    if (isLoggedIn) {
-      const user = session.user as any
-      const isFreeHour = isWithinFreeHour(user.firstLoginAt)
-      if (!isFreeHour) {
-        const dailyLimit = getShindanDailyLimitByUserPlan(user.plan)
-        if (dailyLimit !== -1) {
-          const sub = await prisma.userServiceSubscription.findUnique({
-            where: { userId_serviceId: { userId: user.id, serviceId: 'shindan' } },
-          })
-          const needsReset = !sub || shouldResetDailyUsage(sub.lastUsageReset)
-          const currentUsage = needsReset ? 0 : (sub?.dailyUsage ?? 0)
-          if (currentUsage >= dailyLimit) {
-            return NextResponse.json(
-              { error: `本日の診断上限（${dailyLimit}回）に達しました。明日またご利用ください。` },
-              { status: 429 }
-            )
-          }
-          const todayJST = new Date(getTodayDateJST())
-          await prisma.userServiceSubscription.upsert({
-            where: { userId_serviceId: { userId: user.id, serviceId: 'shindan' } },
-            update: { dailyUsage: needsReset ? 1 : { increment: 1 }, lastUsageReset: needsReset ? todayJST : undefined },
-            create: { userId: user.id, serviceId: 'shindan', plan: 'FREE', dailyUsage: 1, lastUsageReset: todayJST },
-          })
-        }
-      }
-    }
-    // ゲスト回数制限: 一時的に無効化
-
-    // ========== A. 多次元スコアリング ==========
-    const categoryScores: Record<string, number> = {}
-    for (const catId of selectedCategories) {
-      categoryScores[catId] = weightedCategoryScore(catId, answers)
-    }
-
-    const synergyPenalties = calculateSynergyPenalties(categoryScores)
-    const riskIndex = calculateRiskIndex(answers)
-    const dxIndex = selectedCategories.includes('digital') ? calculateDXIndex(answers) : -1
-    const growthPotential = calculateGrowthPotential(categoryScores, riskIndex, dxIndex >= 0 ? dxIndex : 30)
-    const efficiencyScore = calculateEfficiencyScore(answers)
-
-    // ========== B. Webサイト深掘り分析 + 競合自動発見（並列開始）==========
-    let websiteAnalysis: WebsiteAnalysis | null = null
-    let discoveredCompetitorList: DiscoveredCompetitor[] = []
-
-    // 自社サイト分析と競合自動発見を並列実行
-    const [wsResult, discoveredResult] = await Promise.all([
-      websiteUrl ? analyzeWebsite(websiteUrl) : Promise.resolve(null),
-      discoverCompetitors(answers.industry as string, websiteUrl, answers),
-    ])
-    websiteAnalysis = wsResult
-    discoveredCompetitorList = discoveredResult
-
-    // ========== C. 競合サイト分析（手動入力 + AI発見 を統合して並列クロール）==========
-    const competitorAnalyses: WebsiteAnalysis[] = []
-    const manualUrls = (competitorUrls || []).filter((u: string) => u && u.startsWith('http')).slice(0, 3)
-    const discoveredUrls = discoveredCompetitorList.map((c) => c.url)
-    // 手動URLを優先し、AI発見URLを追加（重複排除、最大5件）
-    const allCompetitorUrls = [...new Set([...manualUrls, ...discoveredUrls])].slice(0, 5)
-
-    if (allCompetitorUrls.length > 0) {
-      const results = await Promise.all(allCompetitorUrls.map((u: string) => analyzeWebsite(u)))
-      for (const r of results) {
-        if (r) competitorAnalyses.push(r)
-      }
-    }
-
-    // ========== D. 最終スコア算出 ==========
-    const overallScore = calculateFinalScore(
-      categoryScores, selectedCategories, synergyPenalties, websiteAnalysis, riskIndex
-    )
-    const grade = scoreToGrade(overallScore)
-
-    // ========== D2. 追加分析指標 ==========
-    const growthForecast = calculateGrowthForecast(overallScore, riskIndex, growthPotential, answers)
-    const riskTimeline = calculateRiskTimeline(answers, categoryScores, riskIndex)
-    const investmentPriorities = calculateInvestmentPriorities(categoryScores, selectedCategories, answers)
-
-    // ========== E. Gemini辛口診断（超詳細版）==========
-    const prompt = buildPrompt(
-      answers, selectedCategories, categoryScores, overallScore, grade,
-      synergyPenalties, riskIndex, dxIndex, growthPotential, efficiencyScore,
-      websiteAnalysis, competitorAnalyses,
-    )
-    const geminiResult = await geminiGenerateJson<any>(prompt, 8192)
-
-    // ========== F. 結果マージ ==========
-    const axesComments = geminiResult.axesComments || {}
-    const benchmarkAvgs = geminiResult.benchmarkAverages || {}
-
-    const result = {
-      overallScore,
-      overallGrade: grade,
-      summary: geminiResult.summary || '',
-      executiveSummary: geminiResult.executiveSummary || '',
-      axes: selectedCategories.map((id) => ({
-        label: CATEGORY_LABELS[id],
-        score: categoryScores[id],
-        comment: axesComments[CATEGORY_LABELS[id]] || '',
-      })),
-      strengths: (geminiResult.strengths || []).map((s: any) => ({
-        title: s.title || '',
-        description: s.description || '',
-        score: categoryScores[selectedCategories[0]] || 50,
-        leverageAdvice: s.leverageAdvice || '',
-      })),
-      bottlenecks: (geminiResult.bottlenecks || []).map((b: any) => ({
-        ...b,
-        estimatedLoss: b.estimatedLoss || '',
-      })),
-      recommendations: (geminiResult.recommendations || []).map((r: any) => ({
-        ...r,
-        quickWin: r.quickWin || false,
-      })),
-      benchmark: selectedCategories.map((id) => ({
-        category: CATEGORY_LABELS[id],
-        yourScore: categoryScores[id],
-        industryAverage: benchmarkAvgs[CATEGORY_LABELS[id]] || 50,
-      })),
-      industryInsights: geminiResult.industryInsights || [],
-      competitorIntelligence: geminiResult.competitorIntelligence || '',
-      immediateActions: geminiResult.immediateActions || [],
-      // 算出分析指標
-      analytics: {
-        categoryScores,
-        synergyPenalties,
-        riskIndex,
-        dxMaturity: dxIndex,
-        growthPotential,
-        efficiencyScore,
-        websiteHealth: websiteAnalysis ? {
-          seoScore: websiteAnalysis.seoScore,
-          contentScore: websiteAnalysis.contentScore,
-          technicalScore: websiteAnalysis.technicalScore,
-          totalScore: websiteAnalysis.totalScore,
-          issues: websiteAnalysis.issues,
-          positives: websiteAnalysis.positives,
-          pagesCrawled: websiteAnalysis.pagesCrawled,
-          socialLinks: websiteAnalysis.socialLinks,
-          hasBlog: websiteAnalysis.hasBlog,
-          hasForm: websiteAnalysis.hasForm,
-          ogImage: websiteAnalysis.ogImage,
-        } : null,
-        credibilityGap: calculateCredibilityGap(categoryScores, websiteAnalysis),
-        competitorComparison: competitorAnalyses.map((c) => ({
-          url: c.url,
-          seoScore: c.seoScore,
-          contentScore: c.contentScore,
-          technicalScore: c.technicalScore,
-          totalScore: c.totalScore,
-          hasBlog: c.hasBlog,
-          hasForm: c.hasForm,
-          socialLinks: c.socialLinks,
-          ogImage: c.ogImage,
-        })),
-        discoveredCompetitors: discoveredCompetitorList,
-        growthForecast,
-        riskTimeline,
-        investmentPriorities,
-      },
-    }
-
-    // ゲストCookie更新
-    if (!isLoggedIn) {
-      const today = getTodayDateJST()
-      const cookieName = 'doya_shindan_guest_usage'
-      const cookieVal = req.cookies.get(cookieName)?.value
-      let guestCount = 0
-      try {
-        const parsed = JSON.parse(cookieVal || '{}')
-        if (parsed.date === today) guestCount = parsed.count || 0
-      } catch {}
-      const response = NextResponse.json({ result })
-      response.cookies.set(cookieName, JSON.stringify({ date: today, count: guestCount + 1 }), {
-        path: '/', maxAge: 86400, httpOnly: false, sameSite: 'lax',
-      })
-      return response
-    }
-
-    return NextResponse.json({ result })
-  } catch (err: any) {
-    console.error('[shindan/generate] Error:', err)
-    return NextResponse.json(
-      { error: err?.message || '診断に失敗しました。もう一度お試しください。' },
-      { status: 500 }
-    )
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'リクエストの解析に失敗しました' }, { status: 400 })
   }
+
+  const { answers, selectedCategories, websiteUrl, competitorUrls } = body as {
+    answers: Record<string, string | string[]>
+    selectedCategories: string[]
+    websiteUrl?: string
+    competitorUrls?: string[]
+  }
+
+  if (!answers || !answers.industry) {
+    return NextResponse.json({ error: '業種は必須です' }, { status: 400 })
+  }
+  if (!selectedCategories || selectedCategories.length === 0) {
+    return NextResponse.json({ error: '診断項目を1つ以上選択してください' }, { status: 400 })
+  }
+
+  // --- 認証 + 回数制限（ストリーム開始前に処理）---
+  const session = await getServerSession(authOptions)
+  const isLoggedIn = !!session?.user?.id
+
+  if (isLoggedIn) {
+    const user = session.user as any
+    const isFreeHour = isWithinFreeHour(user.firstLoginAt)
+    if (!isFreeHour) {
+      const dailyLimit = getShindanDailyLimitByUserPlan(user.plan)
+      if (dailyLimit !== -1) {
+        const sub = await prisma.userServiceSubscription.findUnique({
+          where: { userId_serviceId: { userId: user.id, serviceId: 'shindan' } },
+        })
+        const needsReset = !sub || shouldResetDailyUsage(sub.lastUsageReset)
+        const currentUsage = needsReset ? 0 : (sub?.dailyUsage ?? 0)
+        if (currentUsage >= dailyLimit) {
+          return NextResponse.json(
+            { error: `本日の診断上限（${dailyLimit}回）に達しました。明日またご利用ください。` },
+            { status: 429 }
+          )
+        }
+        // 使用回数を先にインクリメント（ストリーミング中はCookie/DB更新不可のため）
+        const todayJST = new Date(getTodayDateJST())
+        await prisma.userServiceSubscription.upsert({
+          where: { userId_serviceId: { userId: user.id, serviceId: 'shindan' } },
+          update: { dailyUsage: needsReset ? 1 : { increment: 1 }, lastUsageReset: needsReset ? todayJST : undefined },
+          create: { userId: user.id, serviceId: 'shindan', plan: 'FREE', dailyUsage: 1, lastUsageReset: todayJST },
+        })
+      }
+    }
+  }
+  // ゲスト回数制限: ストリーミング応答ではCookie設定不可のためスキップ
+
+  // --- SSE ストリーム開始 ---
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      /** SSEイベント送信ヘルパー */
+      function sendEvent(event: string, data: any) {
+        const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+        controller.enqueue(encoder.encode(payload))
+      }
+
+      try {
+        // ========== A. 多次元スコアリング ==========
+        const categoryScores: Record<string, number> = {}
+        for (const catId of selectedCategories) {
+          categoryScores[catId] = weightedCategoryScore(catId, answers)
+        }
+
+        const synergyPenalties = calculateSynergyPenalties(categoryScores)
+        const riskIndex = calculateRiskIndex(answers)
+        const dxIndex = selectedCategories.includes('digital') ? calculateDXIndex(answers) : -1
+        const growthPotential = calculateGrowthPotential(categoryScores, riskIndex, dxIndex >= 0 ? dxIndex : 30)
+        const efficiencyScore = calculateEfficiencyScore(answers)
+
+        // >>> SSE: scoring イベント送信
+        sendEvent('scoring', {
+          categoryScores,
+          synergyPenalties,
+          riskIndex,
+          dxMaturity: dxIndex,
+          growthPotential,
+          efficiencyScore,
+        })
+
+        // ========== B. Webサイト深掘り分析 + 競合自動発見（並列開始）==========
+        const [wsResult, discoveredResult] = await Promise.all([
+          websiteUrl ? analyzeWebsite(websiteUrl) : Promise.resolve(null),
+          discoverCompetitors(answers.industry as string, websiteUrl, answers),
+        ])
+        const websiteAnalysis = wsResult
+        const discoveredCompetitorList = discoveredResult
+
+        // >>> SSE: website イベント送信
+        sendEvent('website', {
+          websiteHealth: websiteAnalysis ? websiteToFrontend(websiteAnalysis) : null,
+        })
+
+        // >>> SSE: discovery イベント送信
+        sendEvent('discovery', {
+          discoveredCompetitors: discoveredCompetitorList,
+        })
+
+        // ========== C. 競合サイト分析（手動入力 + AI発見 を統合して並列クロール）==========
+        const competitorAnalyses: WebsiteAnalysis[] = []
+        const manualUrls = (competitorUrls || []).filter((u: string) => u && u.startsWith('http')).slice(0, 3)
+        const discoveredUrls = discoveredCompetitorList.map((c) => c.url)
+        const allCompetitorUrls = [...new Set([...manualUrls, ...discoveredUrls])].slice(0, 5)
+
+        if (allCompetitorUrls.length > 0) {
+          const results = await Promise.all(allCompetitorUrls.map((u: string) => analyzeWebsite(u)))
+          for (const r of results) {
+            if (r) competitorAnalyses.push(r)
+          }
+        }
+
+        // >>> SSE: competitors イベント送信
+        sendEvent('competitors', {
+          competitorComparison: competitorAnalyses.map((c) => websiteToFrontend(c)),
+        })
+
+        // ========== D. 最終スコア算出 ==========
+        const overallScore = calculateFinalScore(
+          categoryScores, selectedCategories, synergyPenalties, websiteAnalysis, riskIndex
+        )
+        const grade = scoreToGrade(overallScore)
+
+        // ========== D2. 追加分析指標 ==========
+        const growthForecast = calculateGrowthForecast(overallScore, riskIndex, growthPotential, answers)
+        const riskTimeline = calculateRiskTimeline(answers, categoryScores, riskIndex)
+        const investmentPriorities = calculateInvestmentPriorities(categoryScores, selectedCategories, answers)
+        const credibilityGap = calculateCredibilityGap(categoryScores, websiteAnalysis)
+
+        // >>> SSE: scores イベント送信
+        sendEvent('scores', {
+          overallScore,
+          overallGrade: grade,
+          growthForecast,
+          riskTimeline,
+          investmentPriorities,
+          credibilityGap,
+        })
+
+        // ========== E. Gemini辛口診断（超詳細版）==========
+        const prompt = buildPrompt(
+          answers, selectedCategories, categoryScores, overallScore, grade,
+          synergyPenalties, riskIndex, dxIndex, growthPotential, efficiencyScore,
+          websiteAnalysis, competitorAnalyses,
+        )
+        const geminiResult = await geminiGenerateJson<any>(prompt, 8192)
+
+        // ========== F. 結果マージ ==========
+        const axesComments = geminiResult.axesComments || {}
+        const benchmarkAvgs = geminiResult.benchmarkAverages || {}
+
+        const result = {
+          overallScore,
+          overallGrade: grade,
+          summary: geminiResult.summary || '',
+          executiveSummary: geminiResult.executiveSummary || '',
+          axes: selectedCategories.map((id) => ({
+            label: CATEGORY_LABELS[id],
+            score: categoryScores[id],
+            comment: axesComments[CATEGORY_LABELS[id]] || '',
+          })),
+          strengths: (geminiResult.strengths || []).map((s: any) => ({
+            title: s.title || '',
+            description: s.description || '',
+            score: categoryScores[selectedCategories[0]] || 50,
+            leverageAdvice: s.leverageAdvice || '',
+          })),
+          bottlenecks: (geminiResult.bottlenecks || []).map((b: any) => ({
+            ...b,
+            estimatedLoss: b.estimatedLoss || '',
+          })),
+          recommendations: (geminiResult.recommendations || []).map((r: any) => ({
+            ...r,
+            quickWin: r.quickWin || false,
+          })),
+          benchmark: selectedCategories.map((id) => ({
+            category: CATEGORY_LABELS[id],
+            yourScore: categoryScores[id],
+            industryAverage: benchmarkAvgs[CATEGORY_LABELS[id]] || 50,
+          })),
+          industryInsights: geminiResult.industryInsights || [],
+          competitorIntelligence: geminiResult.competitorIntelligence || '',
+          immediateActions: geminiResult.immediateActions || [],
+          analytics: {
+            categoryScores,
+            synergyPenalties,
+            riskIndex,
+            dxMaturity: dxIndex,
+            growthPotential,
+            efficiencyScore,
+            websiteHealth: websiteAnalysis ? websiteToFrontend(websiteAnalysis) : null,
+            credibilityGap,
+            competitorComparison: competitorAnalyses.map((c) => websiteToFrontend(c)),
+            discoveredCompetitors: discoveredCompetitorList,
+            growthForecast,
+            riskTimeline,
+            investmentPriorities,
+          },
+        }
+
+        // >>> SSE: complete イベント送信
+        sendEvent('complete', { result })
+
+      } catch (err: any) {
+        console.error('[shindan/generate] SSE Error:', err)
+        // >>> SSE: error イベント送信
+        const payload = `event: error\ndata: ${JSON.stringify({ error: err?.message || '診断に失敗しました。もう一度お試しください。' })}\n\n`
+        controller.enqueue(encoder.encode(payload))
+      } finally {
+        controller.close()
+      }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+    },
+  })
 }
