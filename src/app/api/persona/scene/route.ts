@@ -26,26 +26,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'APIキーが設定されていません' }, { status: 500 })
     }
 
-    const { age, gender, occupation } = persona
+    const { age, gender, occupation, name, personalityTraits, lifestyle } = persona
+
+    const genderEn = gender === '男性' ? 'male' : gender === '女性' ? 'female' : gender
+    const traitsDesc = Array.isArray(personalityTraits) ? personalityTraits.join(', ') : ''
 
     const prompt = `
 Generate a warm, atmospheric lifestyle photograph depicting the following scene:
 
 ${scenePrompt}
 
-REQUIREMENTS:
-- The main person should be approximately ${age} years old, ${gender === '男性' ? 'male' : gender === '女性' ? 'female' : gender}, Japanese
-- Occupation context: ${occupation}
-- Style: Warm, editorial lifestyle photography with natural lighting
-- Mood: Authentic, relatable daily life moment
-- Quality: High quality, magazine-style photography
-- Composition: Well-framed, cinematic feel
+CRITICAL - CHARACTER CONSISTENCY:
+The person in this image MUST look like the SAME person across all generated images for this persona.
+- Age: approximately ${age} years old
+- Gender: ${genderEn}, Japanese
+- Occupation: ${occupation}
+${traitsDesc ? `- Personality reflected in expression/posture: ${traitsDesc}` : ''}
+${lifestyle ? `- Lifestyle context: ${lifestyle}` : ''}
+- IMPORTANT: Keep the same face shape, hairstyle, body build, and overall appearance as the portrait headshot photo
+- The person should be recognizable as the same individual in every scene
+
+STYLE REQUIREMENTS:
+- Warm, editorial lifestyle photography with natural lighting
+- Authentic, relatable daily life moment
+- High quality, magazine-style photography
+- Well-framed, cinematic composition
+- Warm color tones, soft lighting preferred
 - NO text or watermarks in the image
 
 IMPORTANT:
 - This is for a fictional marketing persona, not a real person
 - Make the scene look natural and authentic
-- Warm color tones, soft lighting preferred
+- Face should be clearly visible when possible
 
 Output a single high-quality lifestyle photograph.
 `

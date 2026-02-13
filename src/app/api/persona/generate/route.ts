@@ -110,7 +110,7 @@ async function geminiGenerateJson<T>(prompt: string): Promise<T> {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 16384,
+              maxOutputTokens: 32768,
               responseMimeType: 'application/json',
             },
           }),
@@ -159,6 +159,8 @@ interface PersonaResult {
     location: string
     familyStructure: string
     lifestyle: string
+    industry: string
+    companySize: string
     challenges: string[]
     goals: string[]
     mediaUsage: string[]
@@ -167,6 +169,12 @@ interface PersonaResult {
     personalityTraits: string[]
     dayInLife: string
     quote: string
+    painPoints: Array<{ point: string; episode: string }>
+    alternativeMethods: Array<{ method: string; dissatisfaction: string }>
+    informationGathering: Array<{ source: string; behavior: string }>
+    triggerEvents: string[]
+    resonatingMessages: string[]
+    innerVoice: string[]
     schedule: Array<{
       time: string
       activity: string
@@ -180,6 +188,27 @@ interface PersonaResult {
       weather: string
       imageScenes: string[]
     }
+  }
+  deepDive: {
+    objectionAnalysis: Array<{ objection: string; reassurance: string }>
+    adoptionStory: {
+      trigger: string
+      competitors: string[]
+      consultedPeople: string
+      trialActivities: string
+      decidingFactor: string
+      timeline: Array<{ phase: string; description: string }>
+    }
+    dayWithService: string
+  }
+  summary: {
+    oneLiner: string
+    topChallenges: Array<{ rank: number; challenge: string; episode: string }>
+    alternativesDissatisfaction: Array<{ alternative: string; dissatisfaction: string }>
+    customerJourney: Array<{ phase: string; description: string }>
+    decidingFactors: string[]
+    catchphrases: string[]
+    contentIdeas: Array<{ title: string; description: string }>
   }
   creatives: {
     catchphrases: string[]
@@ -297,8 +326,8 @@ export async function POST(req: NextRequest) {
 
     // ペルソナ生成プロンプト
     const prompt = `
-あなたは超優秀なマーケティングコンサルタントです。
-以下のウェブサイト情報から、ターゲットペルソナとマーケティング施策を生成してください。
+あなたは超優秀なマーケティングコンサルタント兼ペルソナ設計の専門家です。
+以下のウェブサイト情報から、ターゲットペルソナとマーケティング施策を包括的に生成してください。
 
 ## サイト情報
 - URL: ${url}
@@ -311,18 +340,20 @@ ${additionalInfo ? `## 追加情報\n${additionalInfo}` : ''}
 ${serviceName ? `## サービス名\n${serviceName}` : ''}
 
 ## 出力形式（JSON）
-以下の構造で出力してください。売れる素材になるよう、具体的で実践的な内容にしてください。
+以下の構造で出力してください。売れる素材になるよう、具体的で実践的な内容にしてください。すべてのフィールドを必ず含めてください。
 
 {
   "persona": {
     "name": "架空の日本人名（フルネーム）",
     "age": 35,
     "gender": "男性/女性",
-    "occupation": "職業（具体的に）",
+    "occupation": "職業（具体的な役職まで）",
     "income": "年収帯",
     "location": "居住地",
     "familyStructure": "家族構成",
     "lifestyle": "ライフスタイルの特徴",
+    "industry": "所属業界（例: IT/Web、製造業、小売業など）",
+    "companySize": "会社規模（例: 従業員50名のスタートアップ）",
     "challenges": ["課題1", "課題2", "課題3"],
     "goals": ["目標1", "目標2"],
     "mediaUsage": ["よく使うメディア/SNS"],
@@ -331,6 +362,18 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
     "personalityTraits": ["性格特性1", "性格特性2"],
     "dayInLife": "1日の過ごし方の概要",
     "quote": "ペルソナの口癖や価値観を表す一言",
+    "painPoints": [
+      { "point": "具体的な課題/ペインポイント", "episode": "それが起きた具体的なエピソード（状況・感情を含む）" }
+    ],
+    "alternativeMethods": [
+      { "method": "現在使っている代替手段", "dissatisfaction": "その手段への不満点" }
+    ],
+    "informationGathering": [
+      { "source": "情報源（SNS名、メディア名、コミュニティ名など）", "behavior": "どのように情報を収集するか" }
+    ],
+    "triggerEvents": ["導入を検討するきっかけとなるイベント1", "イベント2", "イベント3"],
+    "resonatingMessages": ["響くメッセージ・訴求ポイント1", "ポイント2"],
+    "innerVoice": ["普段心の中で考えていること1（リアルな内面の声）", "考え2"],
     "schedule": [
       { "time": "6:00", "activity": "起床・朝のルーティン", "detail": "アラームで目覚め、まずスマホでニュースチェック。シャワーを浴びてコーヒーを淹れる。", "mood": "穏やか", "imagePrompt": "A Japanese person waking up in a modern bedroom, morning light" },
       { "time": "7:30", "activity": "通勤", "detail": "...", "mood": "普通" },
@@ -348,6 +391,49 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
       "weather": "晴れ/曇り/雨など",
       "imageScenes": ["日記の内容を表す場面の英語描写1（画像生成用）", "日記の内容を表す場面の英語描写2（画像生成用）"]
     }
+  },
+  "deepDive": {
+    "objectionAnalysis": [
+      { "objection": "「でも…」と感じる不安や反論", "reassurance": "どんな情報・体験があれば安心して導入を決められるか" }
+    ],
+    "adoptionStory": {
+      "trigger": "最初にサービスを知ったきっかけ",
+      "competitors": ["比較検討した競合サービス名1", "競合2"],
+      "consultedPeople": "社内で誰に相談したか（役職・関係性を含む）",
+      "trialActivities": "トライアルで具体的に何を試したか",
+      "decidingFactor": "最終的な決め手",
+      "timeline": [
+        { "phase": "認知", "description": "どこでサービスを知ったか" },
+        { "phase": "興味", "description": "何に惹かれたか" },
+        { "phase": "比較検討", "description": "競合と何を比べたか" },
+        { "phase": "トライアル", "description": "無料トライアルで何をしたか" },
+        { "phase": "社内稟議", "description": "どう説得したか" },
+        { "phase": "本導入", "description": "導入の決め手" }
+      ]
+    },
+    "dayWithService": "このペルソナがサービスを実際に使う「ある1日」の描写。朝出社してから退社するまでの流れの中で、どのタイミングで・どう使い・どんな成果が出るかを具体的に（300〜500字）"
+  },
+  "summary": {
+    "oneLiner": "ペルソナ概要の1行サマリー",
+    "topChallenges": [
+      { "rank": 1, "challenge": "最優先課題", "episode": "具体的エピソード" },
+      { "rank": 2, "challenge": "2番目の課題", "episode": "具体的エピソード" },
+      { "rank": 3, "challenge": "3番目の課題", "episode": "具体的エピソード" }
+    ],
+    "alternativesDissatisfaction": [
+      { "alternative": "現在の代替手段", "dissatisfaction": "その不満点" }
+    ],
+    "customerJourney": [
+      { "phase": "認知", "description": "どのようにサービスを知るか" },
+      { "phase": "検討", "description": "何を比較検討するか" },
+      { "phase": "トライアル", "description": "どう試すか" },
+      { "phase": "導入", "description": "最終的にどう導入するか" }
+    ],
+    "decidingFactors": ["導入の決め手1", "決め手2", "決め手3"],
+    "catchphrases": ["キャッチコピー1", "キャッチコピー2", "キャッチコピー3", "キャッチコピー4", "キャッチコピー5"],
+    "contentIdeas": [
+      { "title": "コンテンツ企画タイトル", "description": "概要説明" }
+    ]
   },
   "creatives": {
     "catchphrases": ["キャッチコピー案1", "キャッチコピー案2", "キャッチコピー案3", "キャッチコピー案4", "キャッチコピー案5"],
@@ -377,9 +463,23 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
   ]
 }
 
-scheduleは8〜10個の時間帯を含めてください。imagePromptは全体のうち3つだけに含め、その人の生活を表す印象的な場面を英語で記述してください。
-diaryは必ずペルソナの一人称で書いてください。imageScenes は2つ含めてください。
-重要: 必ず有効なJSONのみを出力してください。マークダウンや説明文は不要です。
+## 重要な指示
+- scheduleは8〜10個の時間帯を含めてください。imagePromptは全体のうち3つだけに含め、その人の生活を表す印象的な場面を英語で記述してください。
+- diaryは必ずペルソナの一人称で書いてください。imageScenes は2つ含めてください。
+- painPointsは5つ以上、具体的なエピソード付きで記述してください。
+- alternativeMethodsは3つ以上記述してください。
+- informationGatheringは4つ以上記述してください。
+- triggerEventsは3つ以上記述してください。
+- resonatingMessagesは5つ以上記述してください。
+- innerVoiceは5つ以上、リアルな内面の声を記述してください。
+- deepDive.objectionAnalysisは必ず10個記述してください。
+- deepDive.adoptionStory.timelineは6段階で記述してください。
+- deepDive.dayWithServiceは300〜500字で具体的に記述してください。
+- summary.topChallengesは優先度順に3つ記述してください。
+- summary.catchphrasesは5つ記述してください。
+- summary.contentIdeasは3つ記述してください。
+- summary.customerJourneyは認知→検討→トライアル→導入の4段階で記述してください。
+- 重要: 必ず有効なJSONのみを出力してください。マークダウンや説明文は不要です。
 `
 
     const result = await geminiGenerateJson<PersonaResult>(prompt)
