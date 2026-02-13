@@ -156,6 +156,28 @@ interface GeneratedData {
   marketingChecklist?: any[]
 }
 
+// ローディング中のフェーズ・候補アニメーション（コンポーネント外で定義）
+const LOADING_PHASES = [
+  { label: 'サイトを分析中', icon: '🔍', detail: 'HTML構造・メタ情報・コンテンツを解析しています...' },
+  { label: 'ターゲット層を推定中', icon: '🎯', detail: '業界・サービス特性から理想的な顧客像を推定しています...' },
+  { label: 'ペルソナ候補を生成中', icon: '👥', detail: '複数のペルソナパターンを検討しています...' },
+  { label: '課題・ペインポイントを深掘り中', icon: '📊', detail: 'リアルなエピソードと心理を構築しています...' },
+  { label: '行動パターンを分析中', icon: '🧠', detail: '情報収集行動・購買心理を設計しています...' },
+  { label: '導入ストーリーを構築中', icon: '📖', detail: '認知〜導入までのカスタマージャーニーを作成しています...' },
+  { label: '最終ペルソナを選定中', icon: '✨', detail: '最もリアルなペルソナを選定・仕上げています...' },
+]
+
+const FAKE_CANDIDATES = [
+  { name: '田中 美咲', age: 32, gender: '女性', occupation: 'マーケティングマネージャー', trait: '効率重視・データドリブン' },
+  { name: '鈴木 健太', age: 28, gender: '男性', occupation: 'Webディレクター', trait: '好奇心旺盛・トレンド敏感' },
+  { name: '佐藤 由美', age: 41, gender: '女性', occupation: '経営企画部長', trait: '戦略的思考・ROI意識' },
+  { name: '山田 翔太', age: 35, gender: '男性', occupation: '事業開発リーダー', trait: '挑戦的・スピード重視' },
+  { name: '高橋 あかり', age: 29, gender: '女性', occupation: 'コンテンツプランナー', trait: '共感力・ストーリー志向' },
+  { name: '伊藤 大輔', age: 45, gender: '男性', occupation: '取締役COO', trait: '合理的判断・長期視点' },
+  { name: '渡辺 さくら', age: 37, gender: '女性', occupation: 'ブランドマネージャー', trait: '感性豊か・ユーザー中心' },
+  { name: '中村 拓也', age: 33, gender: '男性', occupation: 'プロダクトマネージャー', trait: '仮説思考・実行力' },
+]
+
 export default function PersonaPage() {
   const [url, setUrl] = useState('')
   const [serviceName, setServiceName] = useState('')
@@ -178,31 +200,14 @@ export default function PersonaPage() {
   const portraitAutoTriggered = useRef(false)
   const sceneAutoTriggered = useRef(false)
   const resumeRef = useRef<HTMLDivElement>(null)
-
-  // ローディング中のフェーズ・候補アニメーション
-  const LOADING_PHASES = [
-    { label: 'サイトを分析中', icon: '🔍', detail: 'HTML構造・メタ情報・コンテンツを解析しています...' },
-    { label: 'ターゲット層を推定中', icon: '🎯', detail: '業界・サービス特性から理想的な顧客像を推定しています...' },
-    { label: 'ペルソナ候補を生成中', icon: '👥', detail: '複数のペルソナパターンを検討しています...' },
-    { label: '課題・ペインポイントを深掘り中', icon: '📊', detail: 'リアルなエピソードと心理を構築しています...' },
-    { label: '行動パターンを分析中', icon: '🧠', detail: '情報収集行動・購買心理を設計しています...' },
-    { label: '導入ストーリーを構築中', icon: '📖', detail: '認知〜導入までのカスタマージャーニーを作成しています...' },
-    { label: '最終ペルソナを選定中', icon: '✨', detail: '最もリアルなペルソナを選定・仕上げています...' },
-  ]
-
-  const FAKE_CANDIDATES = [
-    { name: '田中 美咲', age: 32, gender: '女性', occupation: 'マーケティングマネージャー', trait: '効率重視・データドリブン' },
-    { name: '鈴木 健太', age: 28, gender: '男性', occupation: 'Webディレクター', trait: '好奇心旺盛・トレンド敏感' },
-    { name: '佐藤 由美', age: 41, gender: '女性', occupation: '経営企画部長', trait: '戦略的思考・ROI意識' },
-    { name: '山田 翔太', age: 35, gender: '男性', occupation: '事業開発リーダー', trait: '挑戦的・スピード重視' },
-    { name: '高橋 あかり', age: 29, gender: '女性', occupation: 'コンテンツプランナー', trait: '共感力・ストーリー志向' },
-    { name: '伊藤 大輔', age: 45, gender: '男性', occupation: '取締役COO', trait: '合理的判断・長期視点' },
-    { name: '渡辺 さくら', age: 37, gender: '女性', occupation: 'ブランドマネージャー', trait: '感性豊か・ユーザー中心' },
-    { name: '中村 拓也', age: 33, gender: '男性', occupation: 'プロダクトマネージャー', trait: '仮説思考・実行力' },
-  ]
+  const loadingRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!loading) { setLoadingPhase(0); setCandidateIdx(0); return }
+    // ローディングUIにスクロール
+    setTimeout(() => {
+      loadingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
     const phaseInterval = setInterval(() => {
       setLoadingPhase(prev => prev < LOADING_PHASES.length - 1 ? prev + 1 : prev)
     }, 4500)
@@ -724,123 +729,127 @@ export default function PersonaPage() {
         </div>
 
         {/* ===== Loading Animation ===== */}
-        <AnimatePresence>
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-4"
-            >
-              {/* フェーズ表示 */}
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-xl">
-                    {LOADING_PHASES[loadingPhase].icon}
-                  </div>
-                  <div className="flex-1">
+        {loading && (
+          <motion.div
+            ref={loadingRef}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            {/* フェーズ表示 */}
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-xl">
+                  {LOADING_PHASES[loadingPhase].icon}
+                </div>
+                <div className="flex-1">
+                  <AnimatePresence mode="wait">
                     <motion.p
                       key={loadingPhase}
                       initial={{ opacity: 0, x: 10 }}
                       animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
                       className="text-sm font-bold text-gray-900"
                     >
                       {LOADING_PHASES[loadingPhase].label}
                     </motion.p>
+                  </AnimatePresence>
+                  <AnimatePresence mode="wait">
                     <motion.p
                       key={`d-${loadingPhase}`}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                       transition={{ delay: 0.2 }}
                       className="text-xs text-gray-500 mt-0.5"
                     >
                       {LOADING_PHASES[loadingPhase].detail}
                     </motion.p>
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* プログレスバー */}
+              <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${Math.min(((loadingPhase + 1) / LOADING_PHASES.length) * 100, 95)}%` }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                />
+              </div>
+
+              {/* フェーズステップ */}
+              <div className="flex justify-between mt-3">
+                {LOADING_PHASES.map((phase, i) => (
+                  <div key={i} className="flex flex-col items-center" style={{ width: `${100 / LOADING_PHASES.length}%` }}>
+                    <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
+                      i < loadingPhase ? 'bg-purple-500' : i === loadingPhase ? 'bg-purple-500 ring-2 ring-purple-200' : 'bg-gray-200'
+                    }`} />
                   </div>
-                </div>
-
-                {/* プログレスバー */}
-                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
-                    initial={{ width: '0%' }}
-                    animate={{ width: `${Math.min(((loadingPhase + 1) / LOADING_PHASES.length) * 100, 95)}%` }}
-                    transition={{ duration: 1, ease: 'easeOut' }}
-                  />
-                </div>
-
-                {/* フェーズステップ */}
-                <div className="flex justify-between mt-3">
-                  {LOADING_PHASES.map((phase, i) => (
-                    <div key={i} className="flex flex-col items-center" style={{ width: `${100 / LOADING_PHASES.length}%` }}>
-                      <div className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                        i < loadingPhase ? 'bg-purple-500' : i === loadingPhase ? 'bg-purple-500 ring-2 ring-purple-200' : 'bg-gray-200'
-                      }`} />
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
+            </div>
 
-              {/* ペルソナ候補カード */}
-              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                <p className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin inline-block" />
-                  ペルソナ候補を検証中...
-                </p>
+            {/* ペルソナ候補カード */}
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+              <p className="text-xs font-bold text-gray-500 mb-3 flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin inline-block" />
+                ペルソナ候補を検証中...
+              </p>
 
-                <div className="space-y-2">
-                  {[0, 1, 2].map((offset) => {
-                    const idx = (candidateIdx + offset) % FAKE_CANDIDATES.length
-                    const candidate = FAKE_CANDIDATES[idx]
-                    const isActive = offset === 0
+              <div className="space-y-2">
+                {[0, 1, 2].map((offset) => {
+                  const idx = (candidateIdx + offset) % FAKE_CANDIDATES.length
+                  const candidate = FAKE_CANDIDATES[idx]
+                  const isActive = offset === 0
 
-                    return (
-                      <motion.div
-                        key={`${candidateIdx}-${offset}`}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: isActive ? 1 : 0.4, x: 0 }}
-                        transition={{ delay: offset * 0.1, duration: 0.4 }}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all ${
-                          isActive
-                            ? 'border-purple-300 bg-purple-50/50 shadow-sm'
-                            : 'border-gray-100 bg-gray-50/50'
-                        }`}
-                      >
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                          isActive ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
-                        }`}>
-                          {candidate.name.charAt(0)}
+                  return (
+                    <motion.div
+                      key={`${candidateIdx}-${offset}`}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: isActive ? 1 : 0.4, x: 0 }}
+                      transition={{ delay: offset * 0.1, duration: 0.4 }}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all ${
+                        isActive
+                          ? 'border-purple-300 bg-purple-50/50 shadow-sm'
+                          : 'border-gray-100 bg-gray-50/50'
+                      }`}
+                    >
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                        isActive ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                      }`}>
+                        {candidate.name.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-bold ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
+                            {candidate.name}
+                          </span>
+                          <span className={`text-xs ${isActive ? 'text-gray-500' : 'text-gray-300'}`}>
+                            {candidate.age}歳・{candidate.gender}
+                          </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-sm font-bold ${isActive ? 'text-gray-900' : 'text-gray-400'}`}>
-                              {candidate.name}
-                            </span>
-                            <span className={`text-xs ${isActive ? 'text-gray-500' : 'text-gray-300'}`}>
-                              {candidate.age}歳・{candidate.gender}
-                            </span>
-                          </div>
-                          <p className={`text-xs mt-0.5 ${isActive ? 'text-gray-600' : 'text-gray-300'}`}>
-                            {candidate.occupation} ─ {candidate.trait}
-                          </p>
-                        </div>
-                        {isActive && (
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="px-2 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-bold flex-shrink-0"
-                          >
-                            検証中
-                          </motion.div>
-                        )}
-                      </motion.div>
-                    )
-                  })}
-                </div>
+                        <p className={`text-xs mt-0.5 ${isActive ? 'text-gray-600' : 'text-gray-300'}`}>
+                          {candidate.occupation} ─ {candidate.trait}
+                        </p>
+                      </div>
+                      {isActive && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="px-2 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-bold flex-shrink-0"
+                        >
+                          検証中
+                        </motion.div>
+                      )}
+                    </motion.div>
+                  )
+                })}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
 
         {/* ===== Results ===== */}
         {generatedData && persona && (
