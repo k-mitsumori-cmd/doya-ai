@@ -74,12 +74,12 @@ interface ShindanResult {
     websiteHealth: {
       seoScore: number; contentScore: number; technicalScore: number; totalScore: number
       issues: string[]; positives: string[]; pagesCrawled: number
-      socialLinks: string[]; hasBlog: boolean; hasForm: boolean
+      socialLinks: string[]; hasBlog: boolean; hasForm: boolean; ogImage?: string | null
     } | null
     credibilityGap: number
     competitorComparison: Array<{
       url: string; seoScore: number; contentScore: number; technicalScore: number
-      totalScore: number; hasBlog: boolean; hasForm: boolean; socialLinks: string[]
+      totalScore: number; hasBlog: boolean; hasForm: boolean; socialLinks: string[]; ogImage?: string | null
     }>
     discoveredCompetitors?: Array<{
       url: string; name: string; reason: string; threatLevel: 'high' | 'medium' | 'low'
@@ -118,19 +118,43 @@ interface CategoryDef {
   description: string
 }
 
-// ===== ローディングポップアップ =====
-const ANALYSIS_STEPS = [
-  { icon: Search, label: '入力データを解析中...', color: 'text-cyan-400' },
-  { icon: Globe, label: 'Webサイトを分析中...', color: 'text-blue-400' },
-  { icon: Eye, label: '競合企業を自動発見中...', color: 'text-violet-400' },
-  { icon: Brain, label: 'AIが業界データと照合中...', color: 'text-purple-400' },
-  { icon: BarChart3, label: '各指標をスコアリング中...', color: 'text-teal-400' },
-  { icon: Target, label: 'ボトルネックを特定中...', color: 'text-orange-400' },
-  { icon: TrendingUp, label: '成長予測を算出中...', color: 'text-cyan-400' },
-  { icon: Lightbulb, label: '改善アクションを策定中...', color: 'text-amber-400' },
-  { icon: FileText, label: 'レポートを生成中...', color: 'text-emerald-400' },
+// ===== テンプレートデータ =====
+const FORM_TEMPLATES = [
+  {
+    name: 'ITスタートアップ',
+    description: 'SaaS・アプリ開発企業',
+    answers: {
+      industry: 'IT/SaaS', revenueScale: '〜5,000万円', employeeCount: '6〜20人', companyAge: '3〜5年',
+      channels: ['SEO/検索', 'Web広告', 'SNS運用'], leadCount: '月11〜50件', measurementMaturity: '定期測定', contentMarketing: '開始済み',
+      closeRate: '21〜40%', salesProcess: 'CRM/SFA活用', leadTime: '2週間〜1ヶ月', salesAnalysis: 'BI活用',
+      toolsUsed: ['CRM/SFA', 'ビジネスチャット', 'PJ管理ツール'], automationLevel: '主要業務を自動化', dataAccess: 'ダッシュボードあり',
+    } as Record<string, string | string[]>,
+    categories: ['marketing', 'sales', 'digital'],
+  },
+  {
+    name: 'EC/通販事業',
+    description: 'ECサイト・D2Cブランド',
+    answers: {
+      industry: 'EC/通販', revenueScale: '〜1億円', employeeCount: '6〜20人', companyAge: '5〜10年',
+      channels: ['SEO/検索', 'Web広告', 'SNS運用', 'メール/DM'], leadCount: '月51〜100件', measurementMaturity: '分析→改善', contentMarketing: '定期発信中',
+      repeatRate: '31〜50%', feedbackCollection: '定期収集', afterFollow: '定期連絡',
+      growthTrend: '成長中', profitMargin: '業界並み', customerConcentration: '分散',
+    } as Record<string, string | string[]>,
+    categories: ['marketing', 'customer', 'finance'],
+  },
+  {
+    name: '飲食/サービス業',
+    description: '飲食店・サロン・店舗型',
+    answers: {
+      industry: '飲食/フード', revenueScale: '〜1,000万円', employeeCount: '2〜5人', companyAge: '3〜5年',
+      repeatRate: '31〜50%', feedbackCollection: '不定期', afterFollow: '問合せ対応のみ',
+      hiringDifficulty: 'やや困難', roleClarity: 'おおむね明確', training: 'OJTのみ', visionAlignment: '一部共有',
+    } as Record<string, string | string[]>,
+    categories: ['customer', 'organization'],
+  },
 ]
 
+// ===== ビジネス豆知識 =====
 const BUSINESS_TIPS = [
   '中小企業の約60%が「人材不足」を最大の経営課題に挙げています',
   'マーケティングROIが最も高いチャネルは「メールマーケティング」（平均36倍）',
@@ -142,56 +166,115 @@ const BUSINESS_TIPS = [
   'データドリブン経営を実践する企業は意思決定スピードが5倍速いと言われています',
 ]
 
-function AnalysisLoadingOverlay({ selectedCategories }: { selectedCategories: string[] }) {
-  const [stepIndex, setStepIndex] = useState(0)
-  const [tipIndex, setTipIndex] = useState(0)
+// ===== ローディングオーバーレイ（ライブフィード式）=====
+function AnalysisLoadingOverlay({
+  selectedCategories, answers, websiteUrl,
+}: {
+  selectedCategories: string[]
+  answers: Record<string, string | string[]>
+  websiteUrl: string
+}) {
+  const [feedIndex, setFeedIndex] = useState(0)
   const [progress, setProgress] = useState(0)
+  const [tipIndex, setTipIndex] = useState(0)
+  const feedRef = useRef<HTMLDivElement>(null)
 
-  // 分析ステップを選択カテゴリに応じて動的に組み替え
-  const dynamicSteps = useMemo(() => {
-    const steps = [ANALYSIS_STEPS[0]] // 入力データ解析
-    if (selectedCategories.length > 0) {
-      steps.push(ANALYSIS_STEPS[2]) // AI照合
+  // 入力データに基づくライブフィードアイテム
+  const feedItems = useMemo(() => {
+    const items: { icon: React.ElementType; text: string; color: string; detail?: string }[] = []
+
+    // Phase 1: 入力データ解析
+    items.push({
+      icon: Building2, text: `「${answers.industry || '不明'}」業界のデータベースを参照`,
+      color: 'text-cyan-400',
+      detail: `売上: ${answers.revenueScale || '-'} ／ 従業員: ${answers.employeeCount || '-'} ／ 創業: ${answers.companyAge || '-'}`,
+    })
+
+    // Phase 2: Webサイトクロール
+    try {
+      const hostname = new URL(websiteUrl).hostname
+      items.push({
+        icon: Globe, text: `${hostname} をクロール中`,
+        color: 'text-blue-400', detail: 'HTML構造・メタタグ・内部リンクを解析',
+      })
+      items.push({
+        icon: Search, text: 'SEO / OGP / 構造化データをスキャン',
+        color: 'text-indigo-400', detail: 'title・description・sitemap・robots.txt',
+      })
+      items.push({
+        icon: FileText, text: 'コンテンツ品質 & CTA導線を評価',
+        color: 'text-purple-400', detail: 'テキスト量・見出し構造・問い合わせフォーム',
+      })
+    } catch {
+      // URLが無効な場合はスキップ
     }
-    steps.push(ANALYSIS_STEPS[3]) // スコアリング
-    steps.push(ANALYSIS_STEPS[4]) // ボトルネック特定
-    steps.push(ANALYSIS_STEPS[5]) // アクション策定
-    steps.push(ANALYSIS_STEPS[6]) // レポート生成
-    return steps
-  }, [selectedCategories])
 
-  // ステップ進行（3秒ごと）
+    // Phase 3: カテゴリ分析
+    for (const catId of selectedCategories) {
+      const cat = CATEGORIES.find((c) => c.id === catId)
+      if (cat) {
+        items.push({
+          icon: cat.icon, text: `${cat.title}をスコアリング中`,
+          color: 'text-teal-400', detail: cat.description,
+        })
+      }
+    }
+
+    // Phase 4: AI分析
+    items.push({
+      icon: Eye, text: '業界内の競合企業をAIが自動発見中',
+      color: 'text-violet-400', detail: '市場シェア・サービス内容・脅威度を分析',
+    })
+    items.push({
+      icon: Brain, text: 'Gemini AIが総合診断を実行中',
+      color: 'text-purple-400', detail: 'ボトルネック特定・改善アクション策定',
+    })
+    items.push({
+      icon: TrendingUp, text: '成長予測シミュレーション計算中',
+      color: 'text-emerald-400', detail: '3ヶ月 / 6ヶ月 / 12ヶ月のシナリオ分析',
+    })
+    items.push({
+      icon: Rocket, text: 'レポートを最終フォーマット中',
+      color: 'text-amber-400', detail: 'ダッシュボード・PDF出力用データを構築',
+    })
+
+    return items
+  }, [answers, websiteUrl, selectedCategories])
+
+  // フィードを2.5秒ごとに1項目ずつ表示
   useEffect(() => {
     const interval = setInterval(() => {
-      setStepIndex((prev) => (prev + 1) % dynamicSteps.length)
-    }, 3000)
+      setFeedIndex((prev) => (prev < feedItems.length - 1 ? prev + 1 : prev))
+    }, 2500)
     return () => clearInterval(interval)
-  }, [dynamicSteps.length])
+  }, [feedItems.length])
 
-  // ティップ切り替え（5秒ごと）
+  // 自動スクロール
   useEffect(() => {
-    setTipIndex(Math.floor(Math.random() * BUSINESS_TIPS.length))
-    const interval = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % BUSINESS_TIPS.length)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [])
+    if (feedRef.current) {
+      feedRef.current.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' })
+    }
+  }, [feedIndex])
 
-  // プログレスバー（なめらかに90%まで進む）
+  // プログレスバー（30秒で92%まで）
   useEffect(() => {
     const start = Date.now()
-    const duration = 25000 // 25秒で90%
+    const duration = 30000
     const tick = () => {
       const elapsed = Date.now() - start
-      const p = Math.min(90, (elapsed / duration) * 90)
+      const p = Math.min(92, (elapsed / duration) * 92)
       setProgress(p)
-      if (p < 90) requestAnimationFrame(tick)
+      if (p < 92) requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
   }, [])
 
-  const currentStep = dynamicSteps[stepIndex]
-  const StepIconComp = currentStep.icon
+  // ティップ切り替え
+  useEffect(() => {
+    setTipIndex(Math.floor(Math.random() * BUSINESS_TIPS.length))
+    const interval = setInterval(() => setTipIndex((prev) => (prev + 1) % BUSINESS_TIPS.length), 6000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <motion.div
@@ -205,107 +288,91 @@ function AnalysisLoadingOverlay({ selectedCategories }: { selectedCategories: st
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         transition={{ type: 'spring', duration: 0.5 }}
-        className="w-full max-w-md mx-4 bg-slate-900 border border-slate-700/50 rounded-3xl p-8 shadow-2xl shadow-teal-500/10"
+        className="w-full max-w-lg mx-4 bg-slate-900 border border-slate-700/50 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-teal-500/10"
       >
-        {/* メインアイコンアニメーション */}
-        <div className="flex justify-center mb-6">
+        {/* ヘッダー */}
+        <div className="flex items-center gap-3 mb-5">
           <div className="relative">
-            {/* 外周リング */}
             <motion.div
               animate={{ rotate: 360 }}
-              transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-              className="w-24 h-24 rounded-full border-2 border-dashed border-teal-500/30"
+              transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+              className="w-12 h-12 rounded-full border-2 border-dashed border-teal-500/40"
             />
-            {/* 内側のパルスリング */}
-            <motion.div
-              animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute inset-2 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20"
-            />
-            {/* 中央アイコン */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={stepIndex}
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  exit={{ scale: 0, rotate: 180 }}
-                  transition={{ duration: 0.4 }}
-                >
-                  <StepIconComp className={`w-10 h-10 ${currentStep.color}`} />
-                </motion.div>
-              </AnimatePresence>
+              <Brain className="w-6 h-6 text-teal-400" />
             </div>
           </div>
-        </div>
-
-        {/* 現在のステップラベル */}
-        <div className="text-center mb-6">
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={stepIndex}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-              className="text-lg font-black text-white"
-            >
-              {currentStep.label}
-            </motion.p>
-          </AnimatePresence>
+          <div>
+            <h3 className="text-lg font-black text-white">AIが診断中</h3>
+            <p className="text-[11px] text-slate-500">{feedIndex + 1} / {feedItems.length} ステップ完了</p>
+          </div>
+          <div className="ml-auto text-right">
+            <span className="text-2xl font-black text-teal-400">{Math.round(progress)}%</span>
+          </div>
         </div>
 
         {/* プログレスバー */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
-            <span>診断の進捗</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400"
-              style={{ width: `${progress}%` }}
-              transition={{ duration: 0.3 }}
-            />
-            {/* シマーエフェクト */}
-            <motion.div
-              animate={{ x: ['-100%', '200%'] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-              className="h-full w-1/3 -mt-2 bg-gradient-to-r from-transparent via-white/20 to-transparent rounded-full"
-            />
-          </div>
+        <div className="h-2 bg-slate-800 rounded-full overflow-hidden mb-5">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400"
+            style={{ width: `${progress}%` }}
+          />
         </div>
 
-        {/* ステップインジケーター */}
-        <div className="flex items-center justify-center gap-1.5 mb-6">
-          {dynamicSteps.map((_, i) => (
-            <motion.div
-              key={i}
-              animate={{
-                backgroundColor: i === stepIndex ? '#14b8a6' : i < stepIndex ? 'rgba(20,184,166,0.3)' : 'rgba(51,65,85,0.5)',
-                scale: i === stepIndex ? 1.3 : 1,
-              }}
-              className="w-2 h-2 rounded-full"
-            />
-          ))}
+        {/* ライブ分析フィード */}
+        <div ref={feedRef} className="space-y-1.5 mb-5 max-h-[260px] overflow-y-auto scrollbar-hide">
+          {feedItems.slice(0, feedIndex + 1).map((item, i) => {
+            const Icon = item.icon
+            const isLatest = i === feedIndex
+            return (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: isLatest ? 1 : 0.6, x: 0 }}
+                transition={{ duration: 0.3 }}
+                className={`flex items-start gap-2.5 px-3 py-2 rounded-xl transition-all ${
+                  isLatest ? 'bg-slate-800/80 border border-slate-700/50' : ''
+                }`}
+              >
+                <div className="flex-shrink-0 mt-0.5">
+                  {isLatest ? (
+                    <Loader2 className={`w-4 h-4 animate-spin ${item.color}`} />
+                  ) : (
+                    <CheckCircle2 className="w-4 h-4 text-teal-500/50" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-bold leading-tight ${isLatest ? 'text-white' : 'text-slate-500'}`}>
+                    {item.text}
+                  </p>
+                  {isLatest && item.detail && (
+                    <motion.p
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-[11px] text-slate-500 mt-0.5 leading-relaxed"
+                    >
+                      {item.detail}
+                    </motion.p>
+                  )}
+                </div>
+              </motion.div>
+            )
+          })}
         </div>
 
         {/* ビジネス豆知識 */}
-        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Lightbulb className="w-4 h-4 text-amber-400" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-amber-400/70 uppercase tracking-wider mb-1">豆知識</p>
+        <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-3">
+          <div className="flex items-start gap-2.5">
+            <Lightbulb className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-amber-400/70 uppercase tracking-wider mb-0.5">豆知識</p>
               <AnimatePresence mode="wait">
                 <motion.p
                   key={tipIndex}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-sm text-slate-300 leading-relaxed"
+                  className="text-xs text-slate-400 leading-relaxed"
                 >
                   {BUSINESS_TIPS[tipIndex]}
                 </motion.p>
@@ -466,9 +533,52 @@ export default function ShindanPage() {
   const StepIcon = getCurrentIcon()
 
   // 進行可能判定
+  // テンプレート適用
+  const applyTemplate = useCallback((tpl: typeof FORM_TEMPLATES[number]) => {
+    setAnswers(tpl.answers)
+    setSelectedCategories(tpl.categories)
+    setCurrentStep(0)
+  }, [])
+
+  // 参考入力（現在のステップに中間値を自動入力）
+  const applyReference = useCallback(() => {
+    if (currentStep === 0) {
+      setAnswers((prev) => ({
+        ...prev,
+        industry: prev.industry || 'IT/SaaS',
+        revenueScale: prev.revenueScale || '〜5,000万円',
+        employeeCount: prev.employeeCount || '6〜20人',
+        companyAge: prev.companyAge || '5〜10年',
+      }))
+      if (!websiteUrl) setWebsiteUrl('https://example.com')
+      return
+    }
+    if (currentStep === 1) {
+      if (selectedCategories.length === 0) setSelectedCategories(['marketing', 'sales', 'digital'])
+      return
+    }
+    const catId = selectedCategories[currentStep - 2]
+    const step = catId ? CATEGORY_QUESTIONS[catId] : null
+    if (!step) return
+    setAnswers((prev) => {
+      const ref: Record<string, string | string[]> = { ...prev }
+      for (const q of step.questions) {
+        if (ref[q.id]) continue // 既に入力済みならスキップ
+        if (q.type === 'multiselect') {
+          ref[q.id] = q.options.filter((_, i) => i < 2 && q.options[i] !== NONE_OPTION)
+        } else {
+          ref[q.id] = q.options[Math.min(2, q.options.length - 1)]
+        }
+      }
+      return ref
+    })
+  }, [currentStep, selectedCategories, websiteUrl])
+
   const canProceed = useMemo(() => {
     if (currentStep === 0) {
-      return BASIC_STEP.questions.every((q) => !!answers[q.id])
+      const allAnswered = BASIC_STEP.questions.every((q) => !!answers[q.id])
+      const hasUrl = websiteUrl.startsWith('http')
+      return allAnswered && hasUrl
     }
     if (currentStep === 1) {
       return selectedCategories.length > 0
@@ -479,7 +589,7 @@ export default function ShindanPage() {
       if (q.type === 'multiselect') return Array.isArray(a) && a.length > 0
       return !!a
     })
-  }, [currentStep, answers, selectedCategories, questionStep])
+  }, [currentStep, answers, selectedCategories, questionStep, websiteUrl])
 
   // 回答済み数
   const answeredCount = useMemo(() => {
@@ -685,7 +795,7 @@ export default function ShindanPage() {
     <div className="min-h-screen bg-slate-950 text-white">
       {/* AI分析中ポップアップ */}
       <AnimatePresence>
-        {isLoading && <AnalysisLoadingOverlay selectedCategories={selectedCategories} />}
+        {isLoading && <AnalysisLoadingOverlay selectedCategories={selectedCategories} answers={answers} websiteUrl={websiteUrl} />}
       </AnimatePresence>
 
       <div className="max-w-3xl mx-auto px-4 py-8 sm:py-12">
@@ -715,6 +825,32 @@ export default function ShindanPage() {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
+              {/* テンプレート・参考入力 */}
+              <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold text-slate-400">テンプレートで入力</span>
+                  <button
+                    onClick={applyReference}
+                    className="text-[11px] font-bold text-teal-400 hover:text-teal-300 flex items-center gap-1 transition-colors"
+                  >
+                    <Lightbulb className="w-3.5 h-3.5" />
+                    参考値を入力
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {FORM_TEMPLATES.map((tpl) => (
+                    <button
+                      key={tpl.name}
+                      onClick={() => applyTemplate(tpl)}
+                      className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 hover:border-teal-500/50 hover:bg-teal-500/5 transition-all text-left group"
+                    >
+                      <div className="text-sm font-black text-white group-hover:text-teal-300 transition-colors leading-tight">{tpl.name}</div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{tpl.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* プログレス */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs text-slate-500">
@@ -772,9 +908,10 @@ export default function ShindanPage() {
                     <>
                       {BASIC_STEP.questions.map((q, i) => renderQuestion(q, i))}
                       <div className="space-y-2 pt-2 border-t border-slate-800">
-                        <label className="block text-sm font-bold text-slate-400">
+                        <label className="block text-sm font-bold text-slate-300">
                           <Globe className="w-4 h-4 inline mr-1" />
-                          WebサイトURL（任意）
+                          WebサイトURL
+                          <span className="ml-1.5 text-[10px] font-black text-teal-400 bg-teal-500/10 px-1.5 py-0.5 rounded">必須</span>
                         </label>
                         <input
                           type="url"
@@ -783,7 +920,7 @@ export default function ShindanPage() {
                           placeholder="https://example.com"
                           className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
                         />
-                        <p className="text-[11px] text-slate-600">入力するとSEO・コンテンツ・技術面を自動クロールで詳細分析します</p>
+                        <p className="text-[11px] text-slate-500">SEO・コンテンツ・技術面を自動クロールし、競合比較も行います</p>
                       </div>
 
                       {/* 競合URL */}
@@ -1214,6 +1351,70 @@ export default function ShindanPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* ===== サイトFV画像プレビュー ===== */}
+                {(result.analytics?.websiteHealth?.ogImage || (result.analytics?.competitorComparison && result.analytics.competitorComparison.some((c) => c.ogImage))) && (
+                  <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
+                    <h3 className="text-lg font-black mb-4 flex items-center gap-2">
+                      <Eye className="w-5 h-5 text-blue-400" />
+                      サイトビジュアル比較
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* 自社サイト */}
+                      {result.analytics?.websiteHealth?.ogImage && (
+                        <div>
+                          <p className="text-xs font-bold text-teal-400 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-teal-400" />
+                            自社サイト
+                          </p>
+                          <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="block group">
+                            <div className="relative rounded-xl overflow-hidden border border-slate-700 group-hover:border-teal-500/50 transition-colors">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={result.analytics.websiteHealth.ogImage}
+                                alt="自社サイト OGP"
+                                className="w-full h-40 object-cover bg-slate-800"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                              />
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-3">
+                                <p className="text-[11px] text-white font-bold truncate flex items-center gap-1">
+                                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                  {(() => { try { return new URL(websiteUrl).hostname } catch { return websiteUrl } })()}
+                                </p>
+                              </div>
+                            </div>
+                          </a>
+                        </div>
+                      )}
+                      {/* 競合サイト */}
+                      {result.analytics?.competitorComparison?.filter((c) => c.ogImage).map((comp, i) => (
+                        <div key={i}>
+                          <p className="text-xs font-bold text-slate-400 mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-slate-400" />
+                            競合 {i + 1}
+                          </p>
+                          <a href={comp.url} target="_blank" rel="noopener noreferrer" className="block group">
+                            <div className="relative rounded-xl overflow-hidden border border-slate-700 group-hover:border-purple-500/50 transition-colors">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={comp.ogImage!}
+                                alt={`競合 ${i + 1} OGP`}
+                                className="w-full h-40 object-cover bg-slate-800"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                              />
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900/90 to-transparent p-3">
+                                <p className="text-[11px] text-white font-bold truncate flex items-center gap-1">
+                                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                  {(() => { try { return new URL(comp.url).hostname.replace('www.', '') } catch { return comp.url } })()}
+                                </p>
+                              </div>
+                            </div>
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* ===== Webサイト診断 ===== */}
                 {result.analytics?.websiteHealth && (

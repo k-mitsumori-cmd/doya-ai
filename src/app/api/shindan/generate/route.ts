@@ -122,6 +122,7 @@ interface WebsiteAnalysis {
   hasSchema: boolean
   imageStats: { total: number; withAlt: number }
   textExcerpt: string
+  ogImage: string | null
 }
 
 async function fetchPage(url: string, timeout = 10000): Promise<string | null> {
@@ -327,6 +328,9 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
     hasSchema: hasSchema,
     imageStats: images,
     textExcerpt: mainText.slice(0, 4000),
+    ogImage: meta['og:image']
+      ? (meta['og:image'].startsWith('http') ? meta['og:image'] : (() => { try { return new URL(meta['og:image'], url).toString() } catch { return null } })())
+      : null,
   }
 }
 
@@ -1302,6 +1306,7 @@ export async function POST(req: NextRequest) {
           socialLinks: websiteAnalysis.socialLinks,
           hasBlog: websiteAnalysis.hasBlog,
           hasForm: websiteAnalysis.hasForm,
+          ogImage: websiteAnalysis.ogImage,
         } : null,
         credibilityGap: calculateCredibilityGap(categoryScores, websiteAnalysis),
         competitorComparison: competitorAnalyses.map((c) => ({
@@ -1313,6 +1318,7 @@ export async function POST(req: NextRequest) {
           hasBlog: c.hasBlog,
           hasForm: c.hasForm,
           socialLinks: c.socialLinks,
+          ogImage: c.ogImage,
         })),
         discoveredCompetitors: discoveredCompetitorList,
         growthForecast,
