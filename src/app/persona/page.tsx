@@ -1,21 +1,22 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import Link from 'next/link'
 import {
   Sparkles,
   Image as ImageIcon,
-  FileText,
-  BarChart3,
   Download,
   Clipboard,
   ChevronRight,
   ChevronDown,
-  X,
   Target,
   Check,
   AlertTriangle,
+  Clock,
+  BookOpen,
+  Sun,
+  Cloud,
+  CloudRain,
 } from 'lucide-react'
 
 // バナーサイズオプション
@@ -27,6 +28,40 @@ const BANNER_SIZES = [
   { key: 'twitter', label: 'Twitter/X (1200×675)', width: 1200, height: 675 },
   { key: 'youtube', label: 'YouTube サムネイル (1280×720)', width: 1280, height: 720 },
 ]
+
+// ムード → 色
+const MOOD_COLORS: Record<string, string> = {
+  '穏やか': 'bg-green-100 text-green-700',
+  'リラックス': 'bg-blue-100 text-blue-700',
+  '集中': 'bg-orange-100 text-orange-700',
+  '幸せ': 'bg-pink-100 text-pink-700',
+  '解放感': 'bg-sky-100 text-sky-700',
+  '普通': 'bg-gray-100 text-gray-600',
+  '活力': 'bg-yellow-100 text-yellow-700',
+  '充実': 'bg-purple-100 text-purple-700',
+}
+
+// 天気アイコン
+function WeatherIcon({ weather }: { weather: string }) {
+  if (weather?.includes('雨')) return <CloudRain className="w-4 h-4" />
+  if (weather?.includes('曇')) return <Cloud className="w-4 h-4" />
+  return <Sun className="w-4 h-4" />
+}
+
+interface ScheduleItem {
+  time: string
+  activity: string
+  detail: string
+  mood: string
+  imagePrompt?: string
+}
+
+interface DiaryData {
+  title: string
+  content: string
+  weather: string
+  imageScenes: string[]
+}
 
 interface PersonaData {
   name: string
@@ -45,6 +80,8 @@ interface PersonaData {
   personalityTraits: string[]
   dayInLife: string
   quote: string
+  schedule?: ScheduleItem[]
+  diary?: DiaryData
 }
 
 interface CreativesData {
@@ -69,7 +106,7 @@ interface CreativesData {
 interface GeneratedData {
   persona: PersonaData
   creatives: CreativesData
-  marketingChecklist: { category: string; items: { task: string; priority: string }[] }[]
+  marketingChecklist?: any[]
 }
 
 export default function PersonaPage() {
@@ -86,11 +123,23 @@ export default function PersonaPage() {
   const [bannerLoading, setBannerLoading] = useState(false)
   const [selectedBannerSize, setSelectedBannerSize] = useState(BANNER_SIZES[0].key)
   const [selectedCatchphrase, setSelectedCatchphrase] = useState('')
-  const [activeTab, setActiveTab] = useState<'persona' | 'creatives' | 'checklist'>('persona')
+  const [activeTab, setActiveTab] = useState<'persona' | 'creatives'>('persona')
   const [copied, setCopied] = useState<string | null>(null)
   const [portraitError, setPortraitError] = useState('')
   const [bannerError, setBannerError] = useState('')
+  const [sceneImages, setSceneImages] = useState<Record<string, string>>({})
+  const [sceneLoading, setSceneLoading] = useState<Record<string, boolean>>({})
   const portraitAutoTriggered = useRef(false)
+  const sceneAutoTriggered = useRef(false)
+
+  // 手書きフォント読み込み
+  useEffect(() => {
+    const link = document.createElement('link')
+    link.href = 'https://fonts.googleapis.com/css2?family=Klee+One&family=Zen+Kurenaido&display=swap'
+    link.rel = 'stylesheet'
+    document.head.appendChild(link)
+    return () => { document.head.removeChild(link) }
+  }, [])
 
   // ローカルストレージから履歴読み込み
   useEffect(() => {
@@ -101,6 +150,7 @@ export default function PersonaPage() {
         if (parsed.data) {
           setGeneratedData(parsed.data)
           setPortraitImage(parsed.portrait || null)
+          if (parsed.sceneImages) setSceneImages(parsed.sceneImages)
         }
       } catch {}
     }
@@ -110,17 +160,50 @@ export default function PersonaPage() {
   useEffect(() => {
     if (generatedData?.persona && !portraitImage && !portraitLoading && !portraitAutoTriggered.current) {
       portraitAutoTriggered.current = true
-      // 少し遅延させてUI描画を先に完了させる
       const timer = setTimeout(() => {
         handleGeneratePortrait()
       }, 500)
       return () => clearTimeout(timer)
     }
-    // generatedDataがリセットされたらフラグもリセット
     if (!generatedData) {
       portraitAutoTriggered.current = false
     }
   }, [generatedData, portraitImage, portraitLoading])
+
+  // シーン画像の自動生成
+  useEffect(() => {
+    if (!generatedData?.persona || sceneAutoTriggered.current) return
+    const schedule = generatedData.persona.schedule
+    const diary = generatedData.persona.diary
+    if (!schedule && !diary) return
+
+    sceneAutoTriggered.current = true
+    let delay = 1500
+
+    // スケジュール画像
+    if (schedule) {
+      schedule.forEach((item, idx) => {
+        if (item.imagePrompt) {
+          const key = `schedule-${idx}`
+          if (!sceneImages[key]) {
+            setTimeout(() => handleGenerateScene(item.imagePrompt!, key), delay)
+            delay += 3000
+          }
+        }
+      })
+    }
+
+    // 日記画像
+    if (diary?.imageScenes) {
+      diary.imageScenes.forEach((scene, idx) => {
+        const key = `diary-${idx}`
+        if (!sceneImages[key]) {
+          setTimeout(() => handleGenerateScene(scene, key), delay)
+          delay += 3000
+        }
+      })
+    }
+  }, [generatedData])
 
   const handleGenerate = async () => {
     if (!url.trim()) {
@@ -135,6 +218,9 @@ export default function PersonaPage() {
     setGeneratedData(null)
     setPortraitImage(null)
     setBannerImage(null)
+    setSceneImages({})
+    sceneAutoTriggered.current = false
+    portraitAutoTriggered.current = false
 
     try {
       const res = await fetch('/api/persona/generate', {
@@ -143,7 +229,6 @@ export default function PersonaPage() {
         body: JSON.stringify({ url, serviceName, additionalInfo }),
       })
 
-      // NOTE: APIがHTMLや途中切れJSONを返した場合でも、ここで落とさずにメッセージ化する
       const raw = await res.text()
       let data: any = null
       try {
@@ -166,10 +251,8 @@ export default function PersonaPage() {
 
       setGeneratedData(data.data)
 
-      // ローカルストレージに保存
       localStorage.setItem('doya_persona_last', JSON.stringify({ data: data.data, url, timestamp: Date.now() }))
 
-      // 履歴に追加
       const history = JSON.parse(localStorage.getItem('doya_persona_history') || '[]')
       history.unshift({ data: data.data, url, timestamp: Date.now() })
       localStorage.setItem('doya_persona_history', JSON.stringify(history.slice(0, 20)))
@@ -201,8 +284,7 @@ export default function PersonaPage() {
       }
 
       if (!res.ok || !data) {
-        const msg = data?.error || 'ポートレート生成に失敗しました。もう一度お試しください。'
-        throw new Error(msg)
+        throw new Error(data?.error || 'ポートレート生成に失敗しました')
       }
 
       if (data.success && data.image) {
@@ -214,11 +296,48 @@ export default function PersonaPage() {
         throw new Error(data.error || 'ポートレート画像の取得に失敗しました')
       }
     } catch (e) {
-      setPortraitError(e instanceof Error ? e.message : 'ポートレート生成エラーが発生しました')
+      setPortraitError(e instanceof Error ? e.message : 'ポートレート生成エラー')
     } finally {
       setPortraitLoading(false)
     }
   }
+
+  const handleGenerateScene = useCallback(async (scenePrompt: string, sceneKey: string) => {
+    setSceneLoading(prev => ({ ...prev, [sceneKey]: true }))
+    try {
+      const res = await fetch('/api/persona/scene', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenePrompt,
+          persona: generatedData?.persona
+            ? { age: generatedData.persona.age, gender: generatedData.persona.gender, occupation: generatedData.persona.occupation }
+            : undefined,
+        }),
+      })
+
+      const raw = await res.text()
+      let data: any = null
+      try { data = raw ? JSON.parse(raw) : null } catch { data = null }
+
+      if (data?.success && data?.image) {
+        setSceneImages(prev => {
+          const updated = { ...prev, [sceneKey]: data.image }
+          // localStorageにも保存
+          try {
+            const stored = JSON.parse(localStorage.getItem('doya_persona_last') || '{}')
+            stored.sceneImages = updated
+            localStorage.setItem('doya_persona_last', JSON.stringify(stored))
+          } catch {}
+          return updated
+        })
+      }
+    } catch (e) {
+      console.error('Scene generation error:', e)
+    } finally {
+      setSceneLoading(prev => ({ ...prev, [sceneKey]: false }))
+    }
+  }, [generatedData])
 
   const handleGenerateBanner = async () => {
     if (!generatedData?.persona || !selectedCatchphrase) {
@@ -242,15 +361,10 @@ export default function PersonaPage() {
 
       const raw = await res.text()
       let data: any = null
-      try {
-        data = raw ? JSON.parse(raw) : null
-      } catch {
-        data = null
-      }
+      try { data = raw ? JSON.parse(raw) : null } catch { data = null }
 
       if (!res.ok || !data) {
-        const msg = data?.error || 'バナー生成に失敗しました。もう一度お試しください。'
-        throw new Error(msg)
+        throw new Error(data?.error || 'バナー生成に失敗しました')
       }
 
       if (data.success && data.image) {
@@ -259,7 +373,7 @@ export default function PersonaPage() {
         throw new Error(data.error || 'バナー画像の取得に失敗しました')
       }
     } catch (e) {
-      setBannerError(e instanceof Error ? e.message : 'バナー生成エラーが発生しました')
+      setBannerError(e instanceof Error ? e.message : 'バナー生成エラー')
     } finally {
       setBannerLoading(false)
     }
@@ -278,6 +392,33 @@ export default function PersonaPage() {
     link.click()
   }
 
+  // シーン画像プレースホルダー
+  const SceneImageSlot = ({ sceneKey, className = '' }: { sceneKey: string; className?: string }) => {
+    const img = sceneImages[sceneKey]
+    const isLoading = sceneLoading[sceneKey]
+
+    if (img) {
+      return (
+        <div className={`rounded-lg overflow-hidden shadow-md ${className}`}>
+          <img src={img} alt="" className="w-full h-full object-cover object-center" />
+        </div>
+      )
+    }
+    if (isLoading) {
+      return (
+        <div className={`rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 flex items-center justify-center ${className}`}>
+          <div className="text-center">
+            <div className="w-6 h-6 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin mx-auto mb-2" />
+            <p className="text-purple-400 text-xs">画像生成中...</p>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
+  const persona = generatedData?.persona
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30">
       <div className="max-w-6xl mx-auto p-4 lg:p-8">
@@ -292,7 +433,6 @@ export default function PersonaPage() {
 
         {/* Input Section */}
         <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 mb-6">
-          {/* URL Input - Primary */}
           <div className="mb-4">
             <label className="block text-sm font-bold text-white mb-2">
               サイトURL <span className="text-purple-400">*</span>
@@ -306,7 +446,6 @@ export default function PersonaPage() {
             />
           </div>
 
-          {/* Advanced Settings Toggle */}
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors mb-4"
@@ -315,7 +454,6 @@ export default function PersonaPage() {
             詳細設定（任意）
           </button>
 
-          {/* Advanced Settings */}
           <AnimatePresence>
             {showAdvanced && (
               <motion.div
@@ -326,9 +464,7 @@ export default function PersonaPage() {
               >
                 <div className="space-y-4 pb-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      サービス名（任意）
-                    </label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">サービス名（任意）</label>
                     <input
                       type="text"
                       value={serviceName}
@@ -338,9 +474,7 @@ export default function PersonaPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      追加情報（任意）
-                    </label>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">追加情報（任意）</label>
                     <textarea
                       value={additionalInfo}
                       onChange={(e) => setAdditionalInfo(e.target.value)}
@@ -354,7 +488,6 @@ export default function PersonaPage() {
             )}
           </AnimatePresence>
 
-          {/* Generate Button */}
           <button
             onClick={handleGenerate}
             disabled={loading || !url.trim()}
@@ -380,15 +513,14 @@ export default function PersonaPage() {
           )}
         </div>
 
-        {/* Results */}
+        {/* ===== Results ===== */}
         {generatedData && (
           <div className="space-y-6">
-            {/* Tabs */}
+            {/* Tabs: ペルソナ履歴書 / クリエイティブ */}
             <div className="flex gap-1 bg-slate-900/50 p-1 rounded-xl border border-slate-800">
               {[
-                { key: 'persona', label: 'ペルソナ', icon: Target },
+                { key: 'persona', label: 'ペルソナ履歴書', icon: Target },
                 { key: 'creatives', label: 'クリエイティブ', icon: Sparkles },
-                { key: 'checklist', label: 'チェックリスト', icon: BarChart3 },
               ].map((tab) => {
                 const Icon = tab.icon
                 return (
@@ -408,228 +540,353 @@ export default function PersonaPage() {
               })}
             </div>
 
-            {/* Persona Tab — 日本式履歴書スタイル */}
-            {activeTab === 'persona' && generatedData.persona && (
-              <div className="bg-white rounded-lg shadow-2xl overflow-hidden max-w-4xl mx-auto text-gray-900" style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}>
-                {/* ===== 上部: タイトル + 日付 ===== */}
-                <div className="px-6 pt-5 pb-3 flex items-end justify-between">
-                  <h2 className="text-2xl font-bold tracking-widest">ペルソナ履歴書</h2>
-                  <p className="text-xs text-gray-500">{new Date().getFullYear()}年{new Date().getMonth() + 1}月{new Date().getDate()}日 現在</p>
-                </div>
-
-                {/* ===== メイン: 名前 + 基本情報 + 写真 ===== */}
-                <div className="mx-6 border border-gray-400">
-                  {/* 名前行 + 写真 */}
-                  <div className="flex">
-                    {/* 左: 名前 + 基本情報テーブル */}
-                    <div className="flex-1 min-w-0">
-                      {/* ふりがな + 氏名 */}
-                      <div className="border-b border-gray-300 px-3 py-1">
-                        <p className="text-[10px] text-gray-400">ふりがな</p>
-                      </div>
-                      <div className="border-b border-gray-400 px-3 py-2">
-                        <p className="text-xl font-bold">{generatedData.persona.name}</p>
-                      </div>
-                      {/* 生年月日・性別 */}
-                      <div className="border-b border-gray-400 px-3 py-2 flex items-center gap-4 text-sm">
-                        <span>{generatedData.persona.age}歳</span>
-                        <span className="text-gray-300">|</span>
-                        <span>{generatedData.persona.gender}</span>
-                      </div>
-                      {/* 居住地 */}
-                      <div className="border-b border-gray-300 px-3 py-1">
-                        <p className="text-[10px] text-gray-400">現住所</p>
-                      </div>
-                      <div className="border-b border-gray-400 px-3 py-2 text-sm">
-                        {generatedData.persona.location}
-                      </div>
-                      {/* 職業 */}
-                      <div className="border-b border-gray-300 px-3 py-1">
-                        <p className="text-[10px] text-gray-400">職業</p>
-                      </div>
-                      <div className="px-3 py-2 text-sm">
-                        {generatedData.persona.occupation}
-                      </div>
-                    </div>
-                    {/* 右: 写真欄 */}
-                    <div className="w-[130px] flex-shrink-0 border-l border-gray-400 flex flex-col items-center justify-center p-2 bg-gray-50">
-                      <div className="w-[105px] h-[140px] border border-gray-300 bg-white overflow-hidden flex items-center justify-center">
-                        {portraitImage ? (
-                          <img src={portraitImage} alt="Persona" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="text-center text-gray-300 text-xs leading-relaxed">
-                            <p className="text-3xl mb-1">👤</p>
-                            <p>写真</p>
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-2">
-                        {!portraitImage ? (
-                          <button
-                            onClick={handleGeneratePortrait}
-                            disabled={portraitLoading}
-                            className="px-2 py-1 rounded bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-500 disabled:opacity-50 inline-flex items-center gap-1"
-                          >
-                            {portraitLoading ? (
-                              <>
-                                <div className="w-2.5 h-2.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                生成中
-                              </>
-                            ) : (
-                              <>
-                                <ImageIcon className="w-2.5 h-2.5" />
-                                写真を生成
-                              </>
-                            )}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => downloadImage(portraitImage, `persona-${generatedData.persona.name}.png`)}
-                            className="px-2 py-1 rounded bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-500 inline-flex items-center gap-1"
-                          >
-                            <Download className="w-2.5 h-2.5" />
-                            保存
-                          </button>
-                        )}
-                      </div>
-                      {portraitError && (
-                        <p className="mt-1 text-red-500 text-[10px] text-center">{portraitError}</p>
-                      )}
-                    </div>
+            {/* ========================================== */}
+            {/* ペルソナ履歴書タブ                          */}
+            {/* ========================================== */}
+            {activeTab === 'persona' && persona && (
+              <div className="space-y-0">
+                {/* ======= 履歴書本体 ======= */}
+                <div
+                  className="bg-white rounded-t-lg shadow-2xl overflow-hidden max-w-4xl mx-auto text-gray-900"
+                  style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
+                >
+                  {/* タイトル + 日付 */}
+                  <div className="px-6 pt-5 pb-3 flex items-end justify-between">
+                    <h2 className="text-2xl font-bold tracking-widest">ペルソナ履歴書</h2>
+                    <p className="text-xs text-gray-500">
+                      {new Date().getFullYear()}年{new Date().getMonth() + 1}月{new Date().getDate()}日 現在
+                    </p>
                   </div>
-                </div>
 
-                {/* ===== 基本属性テーブル ===== */}
-                <div className="mx-6 mt-4 border border-gray-400">
-                  <table className="w-full text-sm border-collapse">
-                    <tbody>
-                      <tr>
-                        <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs w-[100px] text-center whitespace-nowrap">年収</td>
-                        <td className="border border-gray-300 px-3 py-2">{generatedData.persona.income}</td>
-                        <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs w-[100px] text-center whitespace-nowrap">家族構成</td>
-                        <td className="border border-gray-300 px-3 py-2">{generatedData.persona.familyStructure}</td>
-                      </tr>
-                      <tr>
-                        <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs text-center whitespace-nowrap">ライフスタイル</td>
-                        <td colSpan={3} className="border border-gray-300 px-3 py-2">{generatedData.persona.lifestyle}</td>
-                      </tr>
-                      <tr>
-                        <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs text-center whitespace-nowrap">一日の過ごし方</td>
-                        <td colSpan={3} className="border border-gray-300 px-3 py-2">{generatedData.persona.dayInLife}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* ===== 座右の銘（quote） ===== */}
-                {generatedData.persona.quote && (
-                  <div className="mx-6 mt-4 border border-gray-400">
+                  {/* 名前 + 基本情報 + 写真 */}
+                  <div className="mx-6 border border-gray-400">
                     <div className="flex">
-                      <div className="bg-gray-100 border-r border-gray-300 px-3 py-2 font-bold text-xs w-[100px] flex items-center justify-center whitespace-nowrap">座右の銘</div>
-                      <div className="px-3 py-2 text-sm italic flex-1">&ldquo;{generatedData.persona.quote}&rdquo;</div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ===== 課題・悩み / 目標・願望 ===== */}
-                <div className="mx-6 mt-4 border border-gray-400">
-                  <div className="bg-gray-100 border-b border-gray-400 px-3 py-1.5 font-bold text-xs text-center">課題・悩み</div>
-                  <div className="px-3 py-2">
-                    {generatedData.persona.challenges?.map((c, i) => (
-                      <div key={i} className="flex items-start gap-2 py-1 text-sm border-b border-gray-200 last:border-b-0">
-                        <span className="text-gray-400 mt-0.5 flex-shrink-0 text-xs">{i + 1}.</span>
-                        <span>{c}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mx-6 mt-4 border border-gray-400">
-                  <div className="bg-gray-100 border-b border-gray-400 px-3 py-1.5 font-bold text-xs text-center">目標・願望</div>
-                  <div className="px-3 py-2">
-                    {generatedData.persona.goals?.map((g, i) => (
-                      <div key={i} className="flex items-start gap-2 py-1 text-sm border-b border-gray-200 last:border-b-0">
-                        <span className="text-gray-400 mt-0.5 flex-shrink-0 text-xs">{i + 1}.</span>
-                        <span>{g}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ===== 購買動機 / 懸念・反論 ===== */}
-                {generatedData.persona.purchaseMotivation?.length > 0 && (
-                  <div className="mx-6 mt-4 border border-gray-400">
-                    <div className="bg-gray-100 border-b border-gray-400 px-3 py-1.5 font-bold text-xs text-center">購買動機</div>
-                    <div className="px-3 py-2">
-                      {generatedData.persona.purchaseMotivation.map((m, i) => (
-                        <div key={i} className="flex items-start gap-2 py-1 text-sm border-b border-gray-200 last:border-b-0">
-                          <span className="text-gray-400 mt-0.5 flex-shrink-0 text-xs">{i + 1}.</span>
-                          <span>{m}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="border-b border-gray-300 px-3 py-1">
+                          <p className="text-[10px] text-gray-400">ふりがな</p>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {generatedData.persona.objections?.length > 0 && (
-                  <div className="mx-6 mt-4 border border-gray-400">
-                    <div className="bg-gray-100 border-b border-gray-400 px-3 py-1.5 font-bold text-xs text-center">懸念・反論</div>
-                    <div className="px-3 py-2">
-                      {generatedData.persona.objections.map((o, i) => (
-                        <div key={i} className="flex items-start gap-2 py-1 text-sm border-b border-gray-200 last:border-b-0">
-                          <span className="text-gray-400 mt-0.5 flex-shrink-0 text-xs">{i + 1}.</span>
-                          <span>{o}</span>
+                        <div className="border-b border-gray-400 px-3 py-2">
+                          <p className="text-xl font-bold">{persona.name}</p>
                         </div>
-                      ))}
+                        <div className="border-b border-gray-400 px-3 py-2 flex items-center gap-4 text-sm">
+                          <span>{persona.age}歳</span>
+                          <span className="text-gray-300">|</span>
+                          <span>{persona.gender}</span>
+                        </div>
+                        <div className="border-b border-gray-300 px-3 py-1">
+                          <p className="text-[10px] text-gray-400">現住所</p>
+                        </div>
+                        <div className="border-b border-gray-400 px-3 py-2 text-sm">{persona.location}</div>
+                        <div className="border-b border-gray-300 px-3 py-1">
+                          <p className="text-[10px] text-gray-400">職業</p>
+                        </div>
+                        <div className="px-3 py-2 text-sm">{persona.occupation}</div>
+                      </div>
+                      {/* 写真欄 */}
+                      <div className="w-[130px] flex-shrink-0 border-l border-gray-400 flex flex-col items-center justify-center p-2 bg-gray-50">
+                        <div className="w-[105px] h-[140px] border border-gray-300 bg-white overflow-hidden flex items-center justify-center">
+                          {portraitImage ? (
+                            <img src={portraitImage} alt="Persona" className="w-full h-full object-cover object-center" />
+                          ) : portraitLoading ? (
+                            <div className="text-center">
+                              <div className="w-5 h-5 border-2 border-gray-300 border-t-purple-600 rounded-full animate-spin mx-auto mb-1" />
+                              <p className="text-gray-400 text-[10px]">生成中</p>
+                            </div>
+                          ) : (
+                            <div className="text-center text-gray-300 text-xs leading-relaxed">
+                              <p className="text-3xl mb-1">👤</p>
+                              <p>写真</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-2">
+                          {portraitImage ? (
+                            <button
+                              onClick={() => downloadImage(portraitImage, `persona-${persona.name}.png`)}
+                              className="px-2 py-1 rounded bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-500 inline-flex items-center gap-1"
+                            >
+                              <Download className="w-2.5 h-2.5" />
+                              保存
+                            </button>
+                          ) : !portraitLoading ? (
+                            <button
+                              onClick={handleGeneratePortrait}
+                              disabled={portraitLoading}
+                              className="px-2 py-1 rounded bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-500 disabled:opacity-50 inline-flex items-center gap-1"
+                            >
+                              <ImageIcon className="w-2.5 h-2.5" />
+                              写真を生成
+                            </button>
+                          ) : null}
+                        </div>
+                        {portraitError && (
+                          <p className="mt-1 text-red-500 text-[10px] text-center">{portraitError}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                )}
 
-                {/* ===== メディア利用 / 性格特性 ===== */}
-                <div className="mx-6 mt-4 border border-gray-400">
-                  <table className="w-full text-sm border-collapse">
-                    <tbody>
-                      <tr>
-                        <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs w-[100px] text-center whitespace-nowrap align-top">メディア利用</td>
-                        <td className="border border-gray-300 px-3 py-2">
-                          <div className="flex flex-wrap gap-1.5">
-                            {generatedData.persona.mediaUsage?.map((m, i) => (
-                              <span key={i} className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">
-                                {m}
-                              </span>
-                            ))}
+                  {/* 基本属性テーブル */}
+                  <div className="mx-6 mt-4 border border-gray-400">
+                    <table className="w-full text-sm border-collapse">
+                      <tbody>
+                        <tr>
+                          <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs w-[100px] text-center whitespace-nowrap">年収</td>
+                          <td className="border border-gray-300 px-3 py-2">{persona.income}</td>
+                          <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs w-[100px] text-center whitespace-nowrap">家族構成</td>
+                          <td className="border border-gray-300 px-3 py-2">{persona.familyStructure}</td>
+                        </tr>
+                        <tr>
+                          <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs text-center whitespace-nowrap">ライフスタイル</td>
+                          <td colSpan={3} className="border border-gray-300 px-3 py-2">{persona.lifestyle}</td>
+                        </tr>
+                        <tr>
+                          <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs text-center whitespace-nowrap">一日の過ごし方</td>
+                          <td colSpan={3} className="border border-gray-300 px-3 py-2">{persona.dayInLife}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 座右の銘 */}
+                  {persona.quote && (
+                    <div className="mx-6 mt-4 border border-gray-400">
+                      <div className="flex">
+                        <div className="bg-gray-100 border-r border-gray-300 px-3 py-2 font-bold text-xs w-[100px] flex items-center justify-center whitespace-nowrap">座右の銘</div>
+                        <div className="px-3 py-2 text-sm italic flex-1">&ldquo;{persona.quote}&rdquo;</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 課題・目標 */}
+                  <div className="mx-6 mt-4 grid grid-cols-2 gap-0 border border-gray-400">
+                    <div className="border-r border-gray-400">
+                      <div className="bg-red-50 border-b border-gray-400 px-3 py-1.5 font-bold text-xs text-center text-red-700">課題・悩み</div>
+                      <div className="px-3 py-2">
+                        {persona.challenges?.map((c, i) => (
+                          <div key={i} className="flex items-start gap-2 py-1 text-sm border-b border-gray-100 last:border-b-0">
+                            <span className="text-red-400 mt-0.5 flex-shrink-0 text-xs">{i + 1}.</span>
+                            <span>{c}</span>
                           </div>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs text-center whitespace-nowrap align-top">性格特性</td>
-                        <td className="border border-gray-300 px-3 py-2">
-                          <div className="flex flex-wrap gap-1.5">
-                            {generatedData.persona.personalityTraits?.map((t, i) => (
-                              <span key={i} className="px-2 py-0.5 bg-gray-100 border border-gray-300 rounded text-xs">
-                                {t}
-                              </span>
-                            ))}
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="bg-green-50 border-b border-gray-400 px-3 py-1.5 font-bold text-xs text-center text-green-700">目標・願望</div>
+                      <div className="px-3 py-2">
+                        {persona.goals?.map((g, i) => (
+                          <div key={i} className="flex items-start gap-2 py-1 text-sm border-b border-gray-100 last:border-b-0">
+                            <span className="text-green-500 mt-0.5 flex-shrink-0 text-xs">{i + 1}.</span>
+                            <span>{g}</span>
                           </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 購買動機 / 懸念 */}
+                  {(persona.purchaseMotivation?.length > 0 || persona.objections?.length > 0) && (
+                    <div className="mx-6 mt-4 grid grid-cols-2 gap-0 border border-gray-400">
+                      <div className="border-r border-gray-400">
+                        <div className="bg-blue-50 border-b border-gray-400 px-3 py-1.5 font-bold text-xs text-center text-blue-700">購買動機</div>
+                        <div className="px-3 py-2">
+                          {persona.purchaseMotivation?.map((m, i) => (
+                            <div key={i} className="flex items-start gap-2 py-1 text-sm border-b border-gray-100 last:border-b-0">
+                              <span className="text-blue-400 mt-0.5 flex-shrink-0 text-xs">{i + 1}.</span>
+                              <span>{m}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="bg-orange-50 border-b border-gray-400 px-3 py-1.5 font-bold text-xs text-center text-orange-700">懸念・反論</div>
+                        <div className="px-3 py-2">
+                          {persona.objections?.map((o, i) => (
+                            <div key={i} className="flex items-start gap-2 py-1 text-sm border-b border-gray-100 last:border-b-0">
+                              <span className="text-orange-400 mt-0.5 flex-shrink-0 text-xs">{i + 1}.</span>
+                              <span>{o}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* メディア / 性格 */}
+                  <div className="mx-6 mt-4 border border-gray-400">
+                    <table className="w-full text-sm border-collapse">
+                      <tbody>
+                        <tr>
+                          <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs w-[100px] text-center whitespace-nowrap align-top">メディア利用</td>
+                          <td className="border border-gray-300 px-3 py-2">
+                            <div className="flex flex-wrap gap-1.5">
+                              {persona.mediaUsage?.map((m, i) => (
+                                <span key={i} className="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded text-xs">{m}</span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="bg-gray-100 border border-gray-300 px-3 py-2 font-bold text-xs text-center whitespace-nowrap align-top">性格特性</td>
+                          <td className="border border-gray-300 px-3 py-2">
+                            <div className="flex flex-wrap gap-1.5">
+                              {persona.personalityTraits?.map((t, i) => (
+                                <span key={i} className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded text-xs">{t}</span>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="h-6" />
                 </div>
 
-                {/* 余白 */}
-                <div className="h-6" />
+                {/* ======= 一日のスケジュール ======= */}
+                {persona.schedule && persona.schedule.length > 0 && (
+                  <div
+                    className="bg-gradient-to-b from-white to-amber-50/50 max-w-4xl mx-auto shadow-2xl overflow-hidden text-gray-900"
+                    style={{ fontFamily: '"Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif' }}
+                  >
+                    {/* セクションヘッダー */}
+                    <div className="bg-gradient-to-r from-amber-600 to-orange-500 px-6 py-3 flex items-center gap-3">
+                      <Clock className="w-5 h-5 text-white" />
+                      <h3 className="text-white font-bold text-base tracking-wider">一日のスケジュール</h3>
+                    </div>
+
+                    <div className="px-6 py-6">
+                      <div className="relative">
+                        {/* タイムライン中央線 */}
+                        <div className="absolute left-[52px] top-0 bottom-0 w-0.5 bg-amber-200" />
+
+                        {persona.schedule.map((item, idx) => {
+                          const sceneKey = `schedule-${idx}`
+                          const hasImage = !!item.imagePrompt
+                          const moodColor = MOOD_COLORS[item.mood] || MOOD_COLORS['普通']
+                          const imageIdx = persona.schedule!.filter((s, j) => s.imagePrompt && j < idx).length
+
+                          return (
+                            <div key={idx} className="relative flex items-start gap-4 mb-6 last:mb-0">
+                              {/* 時刻 */}
+                              <div className="w-[44px] flex-shrink-0 text-right">
+                                <span className="text-sm font-bold text-amber-700">{item.time}</span>
+                              </div>
+                              {/* ドット */}
+                              <div className="relative z-10 w-4 h-4 rounded-full bg-amber-400 border-2 border-white shadow mt-1 flex-shrink-0" />
+                              {/* 内容カード */}
+                              <div className="flex-1 min-w-0">
+                                <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h4 className="font-bold text-sm text-gray-900">{item.activity}</h4>
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${moodColor}`}>{item.mood}</span>
+                                  </div>
+                                  <p className="text-gray-600 text-xs leading-relaxed">{item.detail}</p>
+
+                                  {/* シーン画像 */}
+                                  {hasImage && (
+                                    <div className="mt-3">
+                                      <SceneImageSlot sceneKey={sceneKey} className="w-full h-40 sm:h-48" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ======= 日記セクション ======= */}
+                {persona.diary && (
+                  <div
+                    className="bg-amber-50 max-w-4xl mx-auto shadow-2xl rounded-b-lg overflow-hidden"
+                    style={{ fontFamily: '"Klee One", "Zen Kurenaido", "Noto Sans JP", cursive, sans-serif' }}
+                  >
+                    {/* セクションヘッダー */}
+                    <div className="bg-gradient-to-r from-emerald-700 to-teal-600 px-6 py-3 flex items-center gap-3">
+                      <BookOpen className="w-5 h-5 text-white" />
+                      <h3 className="text-white font-bold text-base tracking-wider">ペルソナの日記</h3>
+                    </div>
+
+                    {/* ノート風デザイン */}
+                    <div className="mx-4 sm:mx-8 my-6 bg-white rounded-lg shadow-lg border border-amber-200 overflow-hidden">
+                      {/* ノートヘッダー */}
+                      <div className="bg-gradient-to-r from-amber-100 to-yellow-50 px-5 py-3 border-b border-amber-200 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <WeatherIcon weather={persona.diary.weather || ''} />
+                          <span className="text-amber-700 text-sm">{persona.diary.weather}</span>
+                        </div>
+                        <span className="text-amber-500 text-xs">
+                          {new Date().getFullYear()}/{new Date().getMonth() + 1}/{new Date().getDate()}
+                        </span>
+                      </div>
+
+                      {/* 日記タイトル */}
+                      <div className="px-5 pt-4 pb-2">
+                        <h4 className="text-lg font-bold text-gray-800" style={{ fontFamily: '"Klee One", cursive' }}>
+                          {persona.diary.title}
+                        </h4>
+                      </div>
+
+                      {/* 日記画像1 */}
+                      {persona.diary.imageScenes?.[0] && (
+                        <div className="px-5 pb-3">
+                          <SceneImageSlot sceneKey="diary-0" className="w-full h-44 sm:h-56" />
+                        </div>
+                      )}
+
+                      {/* 日記本文（罫線つき） */}
+                      <div
+                        className="px-5 pb-4 text-gray-700 text-[15px] leading-[2rem]"
+                        style={{
+                          fontFamily: '"Klee One", "Zen Kurenaido", cursive',
+                          backgroundImage: 'repeating-linear-gradient(transparent, transparent 1.9rem, #e8dfd0 1.9rem, #e8dfd0 2rem)',
+                          backgroundPosition: '0 0.5rem',
+                        }}
+                      >
+                        {persona.diary.content}
+                      </div>
+
+                      {/* 日記画像2 */}
+                      {persona.diary.imageScenes?.[1] && (
+                        <div className="px-5 pb-4">
+                          <SceneImageSlot sceneKey="diary-1" className="w-full h-44 sm:h-56" />
+                        </div>
+                      )}
+
+                      {/* ノートフッター */}
+                      <div className="px-5 pb-4 flex justify-end">
+                        <p className="text-amber-400 text-sm italic" style={{ fontFamily: '"Klee One", cursive' }}>
+                          — {persona.name}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="h-4" />
+                  </div>
+                )}
+
+                {/* スケジュール・日記なしの場合のフッター余白 */}
+                {!persona.schedule && !persona.diary && (
+                  <div className="max-w-4xl mx-auto h-2" />
+                )}
               </div>
             )}
 
-            {/* Creatives Tab */}
+            {/* ========================================== */}
+            {/* クリエイティブタブ                          */}
+            {/* ========================================== */}
             {activeTab === 'creatives' && generatedData.creatives && (
               <div className="space-y-6">
-                {/* Catchphrases with Banner Generation */}
+                {/* キャッチコピー + バナー */}
                 <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
                   <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
-                    ✨ キャッチコピー候補
-                    <span className="text-xs text-slate-500 font-normal">（クリックで選択→バナー生成）</span>
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    キャッチコピー候補
+                    <span className="text-xs text-slate-500 font-normal">（クリックで選択 → バナー生成）</span>
                   </h3>
                   <div className="space-y-2 mb-5">
                     {generatedData.creatives.catchphrases?.map((c, i) => (
@@ -659,7 +916,10 @@ export default function PersonaPage() {
 
                   {selectedCatchphrase && (
                     <div className="border-t border-slate-700 pt-5">
-                      <h4 className="text-sm font-bold text-white mb-3">🎨 バナー画像生成</h4>
+                      <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-purple-400" />
+                        バナー画像生成
+                      </h4>
                       <div className="flex flex-wrap gap-3 mb-4">
                         <select
                           value={selectedBannerSize}
@@ -712,9 +972,9 @@ export default function PersonaPage() {
                   )}
                 </div>
 
-                {/* LP Structure */}
+                {/* LP構成案 */}
                 <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
-                  <h3 className="text-base font-bold text-white mb-4">📄 LP構成案</h3>
+                  <h3 className="text-base font-bold text-white mb-4">LP構成案</h3>
                   <div className="space-y-3">
                     <div className="p-3 bg-slate-800/50 rounded-lg border-l-4 border-purple-500">
                       <p className="text-xs text-purple-400 font-bold mb-1">ヒーローセクション</p>
@@ -747,13 +1007,13 @@ export default function PersonaPage() {
                   </div>
                 </div>
 
-                {/* Ad Copy */}
+                {/* 広告コピー */}
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
-                    <h3 className="text-base font-bold text-white mb-3">🔍 Google検索広告</h3>
+                    <h3 className="text-base font-bold text-white mb-3">Google検索広告</h3>
                     <div className="space-y-2">
                       {generatedData.creatives.adCopy?.google?.map((ad, i) => (
-                        <div key={i} className="p-3 bg-slate-800/50 rounded-lg group">
+                        <div key={i} className="p-3 bg-slate-800/50 rounded-lg">
                           <p className="text-slate-300 text-sm">{ad}</p>
                           <button
                             onClick={() => copyToClipboard(ad, `google-${i}`)}
@@ -767,7 +1027,7 @@ export default function PersonaPage() {
                     </div>
                   </div>
                   <div className="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
-                    <h3 className="text-base font-bold text-white mb-3">📱 Meta/SNS広告</h3>
+                    <h3 className="text-base font-bold text-white mb-3">Meta/SNS広告</h3>
                     <div className="space-y-2">
                       {generatedData.creatives.adCopy?.meta?.map((ad, i) => (
                         <div key={i} className="p-3 bg-slate-800/50 rounded-lg">
@@ -786,43 +1046,9 @@ export default function PersonaPage() {
                 </div>
               </div>
             )}
-
-            {/* Checklist Tab */}
-            {activeTab === 'checklist' && generatedData.marketingChecklist && (
-              <div className="space-y-4">
-                {generatedData.marketingChecklist.map((category, i) => (
-                  <div key={i} className="bg-slate-900/80 border border-slate-700 rounded-xl p-5">
-                    <h3 className="text-base font-bold text-white mb-3 flex items-center gap-2">
-                      <BarChart3 className="w-4 h-4 text-purple-400" />
-                      {category.category}
-                    </h3>
-                    <div className="space-y-2">
-                      {category.items?.map((item, j) => (
-                        <div key={j} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
-                          <span
-                            className={`px-2 py-0.5 text-xs font-bold rounded ${
-                              item.priority === 'high'
-                                ? 'bg-red-900/50 text-red-400'
-                                : item.priority === 'medium'
-                                ? 'bg-yellow-900/50 text-yellow-400'
-                                : 'bg-slate-700 text-slate-400'
-                            }`}
-                          >
-                            {item.priority === 'high' ? '高' : item.priority === 'medium' ? '中' : '低'}
-                          </span>
-                          <span className="text-slate-300 text-sm">{item.task}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
-
-
     </div>
   )
 }

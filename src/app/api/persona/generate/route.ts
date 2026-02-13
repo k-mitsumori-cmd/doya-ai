@@ -110,7 +110,7 @@ async function geminiGenerateJson<T>(prompt: string): Promise<T> {
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
               temperature: 0.7,
-              maxOutputTokens: 8192,
+              maxOutputTokens: 16384,
               responseMimeType: 'application/json',
             },
           }),
@@ -167,6 +167,19 @@ interface PersonaResult {
     personalityTraits: string[]
     dayInLife: string
     quote: string
+    schedule: Array<{
+      time: string
+      activity: string
+      detail: string
+      mood: string
+      imagePrompt?: string
+    }>
+    diary: {
+      title: string
+      content: string
+      weather: string
+      imageScenes: string[]
+    }
   }
   creatives: {
     catchphrases: string[]
@@ -317,7 +330,24 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
     "objections": ["購入しない理由/反論"],
     "personalityTraits": ["性格特性1", "性格特性2"],
     "dayInLife": "1日の過ごし方の概要",
-    "quote": "ペルソナの口癖や価値観を表す一言"
+    "quote": "ペルソナの口癖や価値観を表す一言",
+    "schedule": [
+      { "time": "6:00", "activity": "起床・朝のルーティン", "detail": "アラームで目覚め、まずスマホでニュースチェック。シャワーを浴びてコーヒーを淹れる。", "mood": "穏やか", "imagePrompt": "A Japanese person waking up in a modern bedroom, morning light" },
+      { "time": "7:30", "activity": "通勤", "detail": "...", "mood": "普通" },
+      { "time": "9:00", "activity": "仕事開始", "detail": "...", "mood": "集中" },
+      { "time": "12:00", "activity": "ランチ", "detail": "...", "mood": "リラックス", "imagePrompt": "..." },
+      { "time": "13:00", "activity": "午後の業務", "detail": "...", "mood": "集中" },
+      { "time": "18:00", "activity": "退勤", "detail": "...", "mood": "解放感" },
+      { "time": "19:00", "activity": "夕食・家族の時間", "detail": "...", "mood": "幸せ", "imagePrompt": "..." },
+      { "time": "21:00", "activity": "自分の時間", "detail": "...", "mood": "リラックス" },
+      { "time": "23:00", "activity": "就寝準備", "detail": "...", "mood": "穏やか" }
+    ],
+    "diary": {
+      "title": "日記のタイトル（例：忙しかったけど充実した一日）",
+      "content": "一人称（私/僕）で書いた200〜300字の日記。その日の出来事、感情、考えを自然な口語体で書く。ペルソナの性格や価値観が反映された内容にする。",
+      "weather": "晴れ/曇り/雨など",
+      "imageScenes": ["日記の内容を表す場面の英語描写1（画像生成用）", "日記の内容を表す場面の英語描写2（画像生成用）"]
+    }
   },
   "creatives": {
     "catchphrases": ["キャッチコピー案1", "キャッチコピー案2", "キャッチコピー案3", "キャッチコピー案4", "キャッチコピー案5"],
@@ -347,6 +377,8 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
   ]
 }
 
+scheduleは8〜10個の時間帯を含めてください。imagePromptは全体のうち3つだけに含め、その人の生活を表す印象的な場面を英語で記述してください。
+diaryは必ずペルソナの一人称で書いてください。imageScenes は2つ含めてください。
 重要: 必ず有効なJSONのみを出力してください。マークダウンや説明文は不要です。
 `
 
