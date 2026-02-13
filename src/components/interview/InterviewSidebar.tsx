@@ -17,6 +17,7 @@ import {
   ChevronRight,
   FolderOpen,
   Settings,
+  LayoutTemplate,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs, INTERVIEW_PRICING } from '@/lib/pricing'
@@ -32,6 +33,7 @@ type NavItem = {
 const INTERVIEW_NAV: NavItem[] = [
   { href: '/interview', label: '記事作成', icon: Mic },
   { href: '/interview/projects', label: '記事一覧', icon: FolderOpen },
+  { href: '/interview/templates', label: 'テンプレート', icon: LayoutTemplate },
   { href: '/interview/skills', label: 'スキル', icon: BookOpen },
   { href: '/interview/settings', label: '設定', icon: Settings },
 ]
@@ -216,6 +218,7 @@ function InterviewSidebarImpl({
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isUpgrading, setIsUpgrading] = useState(false)
+  const [showTrialEndModal, setShowTrialEndModal] = useState(false)
 
   // プラン判定
   const planLabel = useMemo(() => {
@@ -246,6 +249,13 @@ function InterviewSidebarImpl({
     }, 1000)
     return () => clearInterval(interval)
   }, [isFreeHourActive, firstLoginAt])
+
+  // トライアル終了時にアップセルモーダルを表示
+  useEffect(() => {
+    if (isFreeHourActive && freeHourRemainingMs <= 0) {
+      setShowTrialEndModal(true)
+    }
+  }, [isFreeHourActive, freeHourRemainingMs])
 
   const formatRemainingTime = (ms: number): string => {
     const totalSeconds = Math.floor(ms / 1000)
@@ -486,6 +496,18 @@ function InterviewSidebarImpl({
         {/* 1時間生成し放題バナー（アクティブ時のみ表示） */}
         <FreeHourBanner />
 
+        {/* トライアル中PRO機能バッジ */}
+        {isFreeHourActive && freeHourRemainingMs > 0 && showLabel && (
+          <div className="mx-3 mb-2 flex flex-wrap gap-1.5">
+            {['ファクトチェック', '翻訳', 'SNS生成'].map(f => (
+              <span key={f} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">
+                <span className="material-symbols-outlined text-[10px]">workspace_premium</span>
+                {f}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* ゲスト向け登録プロモ */}
         <GuestPromo />
 
@@ -649,6 +671,100 @@ function InterviewSidebarImpl({
                   {isLoggingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   ログアウト
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* トライアル終了アップセルモーダル */}
+      <AnimatePresence>
+        {showTrialEndModal && (
+          <motion.div
+            key="trial-end-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowTrialEndModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0, y: 24 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0, y: 24 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-[#7f19e6]/10 via-blue-500/5 to-transparent pointer-events-none" />
+              <div className="relative p-8">
+                {/* アイコン */}
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', delay: 0.15, damping: 15 }}
+                  className="mx-auto w-20 h-20 rounded-full flex items-center justify-center mb-5 bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/30"
+                >
+                  <span className="material-symbols-outlined text-white text-[40px]">timer_off</span>
+                </motion.div>
+
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="text-center mb-6">
+                  <h2 className="text-xl font-black text-slate-900 mb-2">トライアル期間が終了しました</h2>
+                  <p className="text-sm text-slate-600 leading-relaxed">1時間の無料体験お疲れさまでした！PROプランにアップグレードすると、すべての機能を引き続きご利用いただけます。</p>
+                </motion.div>
+
+                {/* PRO機能 */}
+                <div className="bg-slate-50 rounded-2xl p-4 mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="material-symbols-outlined text-[16px] text-[#7f19e6]">workspace_premium</span>
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">PROプランの機能</span>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {[
+                      { icon: 'mic', text: '毎月150分まで文字起こし' },
+                      { icon: 'fact_check', text: 'ファクトチェック・校正' },
+                      { icon: 'translate', text: '10言語への翻訳' },
+                      { icon: 'share', text: 'SNS投稿文の自動生成' },
+                    ].map((f, i) => (
+                      <motion.li key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.4 + i * 0.07 }} className="flex items-center gap-3 p-2 rounded-xl bg-white">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#7f19e6] text-white shrink-0">
+                          <span className="material-symbols-outlined text-[16px]">{f.icon}</span>
+                        </div>
+                        <span className="text-sm font-bold text-slate-900">{f.text}</span>
+                        <span className="material-symbols-outlined text-[16px] ml-auto text-[#7f19e6]">check_circle</span>
+                      </motion.li>
+                    ))}
+                  </ul>
+                  <div className="mt-3 pt-3 border-t border-slate-200 text-center">
+                    <span className="text-lg font-black text-[#7f19e6]">¥9,980</span>
+                    <span className="text-xs text-slate-500">　/月</span>
+                  </div>
+                </div>
+
+                {/* CTA */}
+                <div className="space-y-3">
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.8 }}
+                    onClick={() => { setShowTrialEndModal(false); handleUpgrade('interview-pro') }}
+                    className="w-full py-4 px-6 rounded-2xl font-bold text-white bg-gradient-to-r from-[#7f19e6] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#7f19e6]/30 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
+                      PROプランにアップグレード
+                    </span>
+                  </motion.button>
+                  <motion.button
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.9 }}
+                    onClick={() => setShowTrialEndModal(false)}
+                    className="w-full py-3 px-6 rounded-2xl text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    無料プランで続ける
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           </motion.div>

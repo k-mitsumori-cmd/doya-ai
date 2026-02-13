@@ -492,6 +492,69 @@ export function getInterviewGuestLimits(): {
   }
 }
 
+// ========================================
+// ドヤ診断AI 料金設定
+// ========================================
+// テキスト中心の診断でAPIコストは低め
+export const SHINDAN_PRICING: ServicePricing = {
+  serviceId: 'shindan',
+  serviceName: 'ドヤ診断AI',
+  serviceIcon: '📊',
+  guestLimit: 1,      // ゲスト: 1日1回
+  freeLimit: 3,       // ログイン無料: 1日3回
+  proLimit: 20,       // PRO: 1日20回
+  historyDays: {
+    free: 7,
+    pro: -1,
+  },
+  plans: [
+    {
+      id: 'shindan-free',
+      name: '無料',
+      price: 0,
+      priceLabel: '¥0',
+      period: '',
+      description: 'まずはビジネス診断を体験',
+      features: [
+        { text: 'ゲスト: 1日1回まで', included: true },
+        { text: 'ログイン: 1日3回まで', included: true },
+        { text: '6軸レーダーチャート診断', included: true },
+        { text: '業界ベンチマーク比較', included: true },
+        { text: '履歴保存（7日間）', included: true },
+      ],
+      cta: '無料で試す',
+    },
+    {
+      id: 'shindan-pro',
+      name: 'プロ',
+      price: 9980,
+      priceLabel: '¥9,980',
+      period: '/月（税込）',
+      description: 'ビジネス診断を本格活用',
+      popular: true,
+      color: 'teal',
+      features: [
+        { text: '1日20回まで診断', included: true },
+        { text: 'WebサイトURL自動解析', included: true },
+        { text: 'PDF書き出し', included: true },
+        { text: '履歴保存（無制限）', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+  ],
+}
+
+// Shindan: user.plan から日次上限を決定
+export function getShindanDailyLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.SHINDAN_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'BUNDLE') return SHINDAN_PRICING.proLimit
+  if (p === 'ENTERPRISE') return SHINDAN_PRICING.proLimit
+  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return SHINDAN_PRICING.proLimit
+  return SHINDAN_PRICING.freeLimit
+}
+
 // 30枚/日を超える利用（チーム/法人/大量生成など）の相談導線
 export const HIGH_USAGE_CONTACT_URL =
   process.env.NEXT_PUBLIC_HIGH_USAGE_CONTACT_URL ||
@@ -551,6 +614,8 @@ export function getPricingByService(serviceId: string): ServicePricing | null {
       return PERSONA_PRICING
     case 'interview':
       return INTERVIEW_PRICING as any
+    case 'shindan':
+      return SHINDAN_PRICING
     default:
       return null
   }
@@ -578,7 +643,7 @@ export function getDailyLimit(serviceId: string, userType: 'guest' | 'free' | 'p
 
 // プランを取得（無料版/有料版など）
 export function getPlanById(planId: string): Plan | null {
-  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...PERSONA_PRICING.plans, ...INTERVIEW_PRICING.plans]
+  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...PERSONA_PRICING.plans, ...INTERVIEW_PRICING.plans, ...SHINDAN_PRICING.plans]
   return allPlans.find(p => p.id === planId) || null
 }
 

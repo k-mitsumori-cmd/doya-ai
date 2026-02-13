@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
+import InterviewUpsellModal from '@/components/interview/InterviewUpsellModal'
 
 interface Project {
   id: string
@@ -102,6 +103,11 @@ export default function InterviewDashboard() {
   const [uploads, setUploads] = useState<Map<string, UploadingFile>>(new Map())
   const [tipIndex, setTipIndex] = useState(0)
 
+  // アップセルモーダル
+  const [upsellOpen, setUpsellOpen] = useState(false)
+  const [upsellLimitType, setUpsellLimitType] = useState<'transcription' | 'upload' | 'generation'>('generation')
+  const [upsellIsGuest, setUpsellIsGuest] = useState(false)
+
   // プロジェクト一覧取得（ログインユーザーのみ）
   useEffect(() => {
     if (!session?.user) {
@@ -161,7 +167,14 @@ export default function InterviewDashboard() {
         body: JSON.stringify({ title }),
       })
       const projectData = await projectRes.json()
-      if (!projectData.success) throw new Error(projectData.error || 'プロジェクト作成失敗')
+      if (!projectData.success) {
+        if (projectRes.status === 429) {
+          setUpsellLimitType('generation')
+          setUpsellIsGuest(projectData.code === 'GUEST_LIMIT')
+          setUpsellOpen(true)
+        }
+        throw new Error(projectData.error || 'プロジェクト作成失敗')
+      }
 
       const projectId = projectData.project.id
 
@@ -185,6 +198,11 @@ export default function InterviewDashboard() {
       })
       const urlData = await urlRes.json()
       if (!urlData.success) {
+        if (urlData.code === 'GUEST_UPLOAD_LIMIT' || urlData.code === 'PLAN_UPLOAD_LIMIT') {
+          setUpsellLimitType('upload')
+          setUpsellIsGuest(urlData.code === 'GUEST_UPLOAD_LIMIT')
+          setUpsellOpen(true)
+        }
         const err: any = new Error(urlData.error || 'アップロードURL取得失敗')
         err.actionUrl = urlData.actionUrl
         err.actionLabel = urlData.actionLabel
@@ -277,21 +295,19 @@ export default function InterviewDashboard() {
       const confirmData = await confirmRes.json()
       if (!confirmData.success) throw new Error(confirmData.error || '確認処理失敗')
 
-      // Step 5: 音声/動画なら自動文字起こし
+      // Step 5: 音声/動画ならリアルタイム文字起こしページへ遷移
       const isAudioVideo = file.type.startsWith('audio/') || file.type.startsWith('video/')
       if (isAudioVideo && materialId) {
         setUploads((prev) => {
           const next = new Map(prev)
           const item = next.get(uploadKey)
-          if (item) next.set(uploadKey, { ...item, status: 'transcribing' })
+          if (item) next.set(uploadKey, { ...item, status: 'done' })
           return next
         })
 
-        fetch(`/api/interview/materials/${materialId}/transcribe`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        }).catch(console.error)
+        // リアルタイム文字起こしページへ遷移
+        router.push(`/interview/projects/${projectId}/transcribe?materialId=${materialId}`)
+        return
       }
 
       // 完了
@@ -1006,6 +1022,13 @@ export default function InterviewDashboard() {
           </motion.div>
         )}
       </div>
+      {/* アップセルモーダル */}
+      <InterviewUpsellModal
+        isOpen={upsellOpen}
+        onClose={() => setUpsellOpen(false)}
+        limitType={upsellLimitType}
+        isGuest={upsellIsGuest}
+      />
     </motion.div>
   )
 }

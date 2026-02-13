@@ -205,8 +205,10 @@ export default function PersonaPage() {
   const [bannerError, setBannerError] = useState('')
   const [sceneImages, setSceneImages] = useState<Record<string, string>>({})
   const [sceneLoading, setSceneLoading] = useState<Record<string, boolean>>({})
+  const [exporting, setExporting] = useState(false)
   const portraitAutoTriggered = useRef(false)
   const sceneAutoTriggered = useRef(false)
+  const resumeRef = useRef<HTMLDivElement>(null)
 
   // 手書きフォント読み込み
   useEffect(() => {
@@ -512,6 +514,66 @@ export default function PersonaPage() {
     link.click()
   }
 
+  // PDF / PNG エクスポート
+  const handleExport = async (format: 'pdf' | 'png') => {
+    if (!resumeRef.current || exporting) return
+    setExporting(true)
+
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const el = resumeRef.current
+
+      // キャプチャ
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 896, // max-w-4xl = 896px
+      })
+
+      if (format === 'png') {
+        const dataUrl = canvas.toDataURL('image/png')
+        downloadImage(dataUrl, `persona-${persona?.name || 'export'}.png`)
+      } else {
+        const { jsPDF } = await import('jspdf')
+
+        const imgWidth = canvas.width
+        const imgHeight = canvas.height
+
+        // A4比率で計算（横幅ベース）
+        const pdfWidth = 210 // A4 mm
+        const pdfHeight = (imgHeight * pdfWidth) / imgWidth
+        const pageHeight = 297 // A4 mm
+
+        const pdf = new jsPDF({
+          orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
+          unit: 'mm',
+          format: 'a4',
+        })
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.92)
+
+        // 複数ページに分割
+        let yOffset = 0
+        let page = 0
+        while (yOffset < pdfHeight) {
+          if (page > 0) pdf.addPage()
+          pdf.addImage(imgData, 'JPEG', 0, -yOffset, pdfWidth, pdfHeight)
+          yOffset += pageHeight
+          page++
+        }
+
+        pdf.save(`persona-${persona?.name || 'export'}.pdf`)
+      }
+    } catch (e) {
+      console.error('Export error:', e)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   // シーン画像プレースホルダー
   const SceneImageSlot = ({ sceneKey, className = '' }: { sceneKey: string; className?: string }) => {
     const img = sceneImages[sceneKey]
@@ -665,6 +727,27 @@ export default function PersonaPage() {
             {/* ========================================== */}
             {activeTab === 'persona' && persona && (
               <div className="space-y-0">
+                {/* エクスポートボタン */}
+                <div className="max-w-4xl mx-auto mb-3 flex justify-end gap-2">
+                  <button
+                    onClick={() => handleExport('png')}
+                    disabled={exporting}
+                    className="px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    {exporting ? '書き出し中...' : 'PNG書き出し'}
+                  </button>
+                  <button
+                    onClick={() => handleExport('pdf')}
+                    disabled={exporting}
+                    className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-500 disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                  >
+                    <Download className="w-4 h-4" />
+                    {exporting ? '書き出し中...' : 'PDF書き出し'}
+                  </button>
+                </div>
+
+                <div ref={resumeRef}>
                 {/* ======= 履歴書本体 ======= */}
                 <div
                   className="bg-white rounded-t-lg shadow-2xl overflow-hidden max-w-4xl mx-auto text-gray-900"
@@ -1499,6 +1582,7 @@ export default function PersonaPage() {
 
                 {/* フッター余白 */}
                 <div className="max-w-4xl mx-auto h-2" />
+                </div>{/* /resumeRef */}
               </div>
             )}
 

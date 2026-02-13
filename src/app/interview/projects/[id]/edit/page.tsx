@@ -172,7 +172,10 @@ function inlineToHtml(s: string): string {
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m: string, text: string, url: string) => {
+      const safeUrl = /^(https?:\/\/|mailto:)/i.test(url) ? url : '#'
+      return `<a href="${safeUrl}" target="_blank" rel="noopener">${text}</a>`
+    })
 }
 
 function stripCodeFences(md: string): string {
@@ -438,7 +441,7 @@ export default function EditPage() {
       const res = await fetch(`/api/interview/projects/${projectId}/thumbnail`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleContent: content.slice(0, 2000) }),
+        body: JSON.stringify({ articleContent: content.slice(0, 2000), articleTitle: title }),
       })
       const data = await res.json()
       if (data.success && data.thumbnailUrl) {
@@ -495,6 +498,97 @@ export default function EditPage() {
     a.download = `${title || 'article'}.txt`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const handleExportHtml = () => {
+    const htmlBody = markdownToHtml(content)
+    const fullHtml = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${(title || 'article').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+<style>
+body { max-width: 800px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+${RICH_EDITOR_STYLES.replace(/\.rich-editor /g, '')}
+</style>
+</head>
+<body>
+<h1>${(title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
+${htmlBody}
+</body>
+</html>`
+    const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${title || 'article'}.html`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleExportWpXml = () => {
+    const htmlContent = markdownToHtml(content)
+    const now = new Date()
+    const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`
+    const wxr = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+  xmlns:excerpt="http://wordpress.org/export/1.2/excerpt/"
+  xmlns:content="http://purl.org/rss/1.0/modules/content/"
+  xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+  xmlns:dc="http://purl.org/dc/elements/1.1/"
+  xmlns:wp="http://wordpress.org/export/1.2/"
+>
+<channel>
+  <wp:wxr_version>1.2</wp:wxr_version>
+  <item>
+    <title><![CDATA[${title || 'article'}]]></title>
+    <dc:creator><![CDATA[admin]]></dc:creator>
+    <content:encoded><![CDATA[${htmlContent}]]></content:encoded>
+    <excerpt:encoded><![CDATA[]]></excerpt:encoded>
+    <wp:post_date><![CDATA[${dateStr}]]></wp:post_date>
+    <wp:post_type><![CDATA[post]]></wp:post_type>
+    <wp:status><![CDATA[draft]]></wp:status>
+  </item>
+</channel>
+</rss>`
+    const blob = new Blob([wxr], { type: 'application/xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${title || 'article'}_wordpress.xml`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleExportPdf = () => {
+    const htmlBody = markdownToHtml(content)
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      alert('ポップアップがブロックされました。ブラウザの設定を確認してください。')
+      return
+    }
+    printWindow.document.write(`<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>${(title || 'article').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+<style>
+body { max-width: 800px; margin: 0 auto; padding: 2rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+${RICH_EDITOR_STYLES.replace(/\.rich-editor /g, '')}
+@media print {
+  body { padding: 0; max-width: 100%; }
+  @page { margin: 2cm; }
+}
+</style>
+</head>
+<body>
+<h1>${(title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</h1>
+${htmlBody}
+<script>window.onload = function() { window.print(); }<\/script>
+</body>
+</html>`)
+    printWindow.document.close()
   }
 
   // 校正
@@ -863,7 +957,7 @@ export default function EditPage() {
                     <span className="material-symbols-outlined text-[14px]">expand_more</span>
                   </button>
                   {exportDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl py-1 z-20 min-w-[180px]">
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl py-1 z-20 min-w-[200px]">
                       <button
                         onClick={() => { handleExportMd(); setExportDropdownOpen(false) }}
                         className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
@@ -882,6 +976,37 @@ export default function EditPage() {
                         <div>
                           <p className="font-medium">テキスト (.txt)</p>
                           <p className="text-[11px] text-slate-400">プレーンテキストでエクスポート</p>
+                        </div>
+                      </button>
+                      <div className="border-t border-slate-100 my-1" />
+                      <button
+                        onClick={() => { handleExportHtml(); setExportDropdownOpen(false) }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                      >
+                        <span className="material-symbols-outlined text-[18px] text-slate-500">code</span>
+                        <div>
+                          <p className="font-medium">HTML (.html)</p>
+                          <p className="text-[11px] text-slate-400">ウェブページとしてエクスポート</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => { handleExportWpXml(); setExportDropdownOpen(false) }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                      >
+                        <span className="material-symbols-outlined text-[18px] text-slate-500">language</span>
+                        <div>
+                          <p className="font-medium">WordPress (.xml)</p>
+                          <p className="text-[11px] text-slate-400">WordPressにインポート可能</p>
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => { handleExportPdf(); setExportDropdownOpen(false) }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left"
+                      >
+                        <span className="material-symbols-outlined text-[18px] text-slate-500">picture_as_pdf</span>
+                        <div>
+                          <p className="font-medium">PDF (印刷)</p>
+                          <p className="text-[11px] text-slate-400">印刷・PDF保存</p>
                         </div>
                       </button>
                     </div>

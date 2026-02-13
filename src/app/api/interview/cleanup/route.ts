@@ -15,7 +15,10 @@ export async function POST(req: NextRequest) {
     // 認証チェック（Vercel Cronまたはシークレットトークン）
     const authHeader = req.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!cronSecret) {
+      return NextResponse.json({ success: false, error: 'CRON_SECRETが未設定です' }, { status: 503 })
+    }
+    if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ success: false, error: '認証エラー' }, { status: 401 })
     }
 

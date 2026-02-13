@@ -4,6 +4,8 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 
 function getGeminiApiKey(): string {
   const key = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY
@@ -12,13 +14,33 @@ function getGeminiApiKey(): string {
 }
 
 export async function POST(req: NextRequest) {
+  const dbErr = requireDatabase()
+  if (dbErr) return dbErr
+
   try {
+    const { userId } = await getInterviewUser()
+    const guestId = !userId ? getGuestIdFromRequest(req) : null
+    if (!userId && !guestId) {
+      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 })
+    }
+
     const body = await req.json()
     const { draftId, articleContent, instruction } = body
 
     if (!draftId || typeof draftId !== 'string') {
       return NextResponse.json({ success: false, error: 'ドラフトIDが指定されていません' }, { status: 400 })
     }
+
+    // ドラフトの所有者チェック
+    const draft = await prisma.interviewDraft.findUnique({
+      where: { id: draftId },
+      include: { project: { select: { userId: true, guestId: true } } },
+    })
+    if (!draft) {
+      return NextResponse.json({ success: false, error: 'ドラフトが見つかりません' }, { status: 404 })
+    }
+    const ownerErr = checkOwnership(draft.project, userId, guestId)
+    if (ownerErr) return ownerErr
     if (!articleContent || typeof articleContent !== 'string' || articleContent.trim().length < 10) {
       return NextResponse.json({ success: false, error: '修正対象の記事内容が短すぎます' }, { status: 400 })
     }

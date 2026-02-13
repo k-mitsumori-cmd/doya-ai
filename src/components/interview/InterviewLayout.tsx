@@ -45,6 +45,7 @@ export default function InterviewLayout({
             {/* ページタイトル */}
             <h2 className="text-base font-black text-slate-900 whitespace-nowrap">
               {pathname === '/interview' ? '記事作成' :
+               pathname?.startsWith('/interview/templates') ? 'テンプレート' :
                pathname?.startsWith('/interview/projects') ? '記事一覧' :
                pathname?.startsWith('/interview/skills') ? 'スキル' :
                pathname?.startsWith('/interview/settings') ? '設定' :

@@ -11,29 +11,39 @@ interface InterviewUpsellModalProps {
   limitType: 'transcription' | 'upload' | 'generation'
   currentUsage?: number
   limit?: number
+  isGuest?: boolean
 }
 
 const LIMIT_INFO: Record<
   InterviewUpsellModalProps['limitType'],
-  { icon: string; title: string; description: string }
+  { icon: string; title: string; description: string; guestTitle: string; guestDescription: string }
 > = {
   transcription: {
     icon: 'mic',
     title: '文字起こしの上限に達しました',
     description:
       '今月の文字起こし分数の上限に達しました。PROプランにアップグレードすると、毎月150分まで利用できます。',
+    guestTitle: '文字起こしの上限に達しました',
+    guestDescription:
+      'ゲスト利用の上限に達しました。無料登録するだけで毎月30分まで文字起こしが利用できます。',
   },
   upload: {
     icon: 'cloud_upload',
     title: 'アップロード容量の上限に達しました',
     description:
       'アップロード容量の上限に達しました。PROプランにアップグレードすると、最大2GBまでアップロードできます。',
+    guestTitle: 'アップロード容量の上限を超えています',
+    guestDescription:
+      'ゲスト利用ではアップロード容量に制限があります。無料登録するだけで最大500MBまでアップロードできます。',
   },
   generation: {
     icon: 'auto_awesome',
     title: '生成回数の上限に達しました',
     description:
       '本日の記事生成回数の上限に達しました。PROプランにアップグレードすると、1日30回まで利用できます。',
+    guestTitle: 'ゲスト利用の上限に達しました',
+    guestDescription:
+      'ゲスト利用の上限に達しました。無料登録するだけで1日5回まで利用でき、すべての基本機能が使えます。',
   },
 }
 
@@ -47,18 +57,31 @@ const PRO_FEATURES = [
   { icon: 'support_agent', text: '優先サポート', highlight: false },
 ]
 
+const FREE_FEATURES = [
+  { icon: 'mic', text: '毎月30分の文字起こし', highlight: true },
+  { icon: 'cloud_upload', text: 'アップロード最大500MB', highlight: true },
+  { icon: 'auto_awesome', text: '1日5回まで記事生成', highlight: false },
+  { icon: 'edit_note', text: 'リッチエディタで記事編集', highlight: false },
+  { icon: 'spellcheck', text: 'AI校正・校閲', highlight: false },
+  { icon: 'title', text: 'タイトル提案', highlight: false },
+]
+
 export default function InterviewUpsellModal({
   isOpen,
   onClose,
   limitType,
   currentUsage,
   limit,
+  isGuest = false,
 }: InterviewUpsellModalProps) {
   const router = useRouter()
   const [showFeatures, setShowFeatures] = useState(false)
 
   const info = LIMIT_INFO[limitType]
   const proPlan = INTERVIEW_PRICING.plans.find((p) => p.id === 'interview-pro')
+  const features = isGuest ? FREE_FEATURES : PRO_FEATURES
+  const displayTitle = isGuest ? info.guestTitle : info.title
+  const displayDescription = isGuest ? info.guestDescription : info.description
 
   useEffect(() => {
     if (isOpen) {
@@ -135,8 +158,8 @@ export default function InterviewUpsellModal({
               transition={{ delay: 0.25 }}
               className="text-center mb-5"
             >
-              <h2 className="text-xl font-black text-slate-900 mb-2">{info.title}</h2>
-              <p className="text-sm text-slate-600 leading-relaxed">{info.description}</p>
+              <h2 className="text-xl font-black text-slate-900 mb-2">{displayTitle}</h2>
+              <p className="text-sm text-slate-600 leading-relaxed">{displayDescription}</p>
             </motion.div>
 
             {/* 使用状況バー */}
@@ -180,15 +203,15 @@ export default function InterviewUpsellModal({
             >
               <div className="flex items-center gap-2 mb-3">
                 <span className="material-symbols-outlined text-[16px] text-[#7f19e6]">
-                  workspace_premium
+                  {isGuest ? 'person_add' : 'workspace_premium'}
                 </span>
                 <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                  PROプランの機能
+                  {isGuest ? '無料プランの機能' : 'PROプランの機能'}
                 </span>
               </div>
 
               <ul className="space-y-1.5">
-                {PRO_FEATURES.map((feature, index) => (
+                {features.map((feature, index) => (
                   <motion.li
                     key={index}
                     initial={{ opacity: 0, x: -10 }}
@@ -225,14 +248,19 @@ export default function InterviewUpsellModal({
                 ))}
               </ul>
 
-              {proPlan && (
+              {isGuest ? (
+                <div className="mt-3 pt-3 border-t border-slate-200 text-center">
+                  <span className="text-lg font-black text-[#7f19e6]">¥0</span>
+                  <span className="text-xs text-slate-500">　Googleアカウントで即登録</span>
+                </div>
+              ) : proPlan ? (
                 <div className="mt-3 pt-3 border-t border-slate-200 text-center">
                   <span className="text-lg font-black text-[#7f19e6]">
                     {proPlan.priceLabel}
                   </span>
                   <span className="text-xs text-slate-500">{proPlan.period}</span>
                 </div>
-              )}
+              ) : null}
             </motion.div>
 
             {/* CTAボタン */}
@@ -243,13 +271,15 @@ export default function InterviewUpsellModal({
                 transition={{ delay: 0.9 }}
                 onClick={() => {
                   onClose()
-                  router.push('/interview/settings')
+                  router.push(isGuest ? '/api/auth/signin' : '/interview/settings')
                 }}
                 className="w-full py-4 px-6 rounded-2xl font-bold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-[#7f19e6] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#7f19e6]/30"
               >
                 <span className="flex items-center justify-center gap-2">
-                  <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
-                  プロプランにアップグレード
+                  <span className="material-symbols-outlined text-[20px]">
+                    {isGuest ? 'person_add' : 'rocket_launch'}
+                  </span>
+                  {isGuest ? '無料で登録する' : 'プロプランにアップグレード'}
                 </span>
               </motion.button>
 

@@ -22,9 +22,15 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 
   try {
     const id = await resolveId(ctx)
+    const { userId } = await getInterviewUser()
     const recipe = await prisma.interviewRecipe.findUnique({ where: { id } })
 
     if (!recipe) {
+      return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+    }
+
+    // テンプレート・公開以外は所有者のみアクセス可
+    if (!recipe.isTemplate && !recipe.isPublic && recipe.userId !== userId) {
       return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
     }
 
@@ -59,6 +65,10 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
   try {
     const id = await resolveId(ctx)
     const { userId } = await getInterviewUser()
+
+    if (!userId) {
+      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 })
+    }
 
     const recipe = await prisma.interviewRecipe.findUnique({ where: { id } })
     if (!recipe) {
@@ -105,6 +115,10 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   try {
     const id = await resolveId(ctx)
     const { userId } = await getInterviewUser()
+
+    if (!userId) {
+      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 })
+    }
 
     const recipe = await prisma.interviewRecipe.findUnique({ where: { id } })
     if (!recipe) {

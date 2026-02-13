@@ -313,6 +313,60 @@ export const SERVICES: Service[] = [
   },
 
   // ----------------------------------------
+  // ドヤ診断AI（ビジネス診断ダッシュボード）
+  // ----------------------------------------
+  {
+    id: 'shindan',
+    name: 'ドヤ診断AI',
+    shortName: '診断',
+    description: '業種・予算・課題からビジネスの現状をAIが診断',
+    longDescription:
+      '業種・職種・予算・課題・目標を入力するだけで、AIがビジネスの強み・ボトルネック・最適解をダッシュボード形式で可視化。PDF書き出しにも対応し、経営会議や提案資料にそのまま使えます。',
+    icon: '📊',
+    color: 'teal',
+    gradient: 'from-teal-500 to-cyan-500',
+    bgGradient: 'from-teal-50 to-cyan-50',
+    href: '/shindan',
+    dashboardHref: '/shindan',
+    pricingHref: '/shindan',
+    guideHref: '/shindan',
+    features: [
+      '6軸レーダーチャートで現状を可視化',
+      '業界ベンチマーク比較',
+      'ボトルネック自動検出',
+      '具体的なアクション提案（コスト・効果・期間付き）',
+      'WebサイトURL自動解析',
+      'PDF書き出し対応',
+    ],
+    useCases: [
+      '自社の強み・弱みを客観的に把握したい',
+      '経営会議用の資料を素早く作りたい',
+      'マーケティング予算の最適配分を知りたい',
+      '採用・営業の改善ポイントを見つけたい',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '1日3回まで',
+        dailyLimit: 3,
+        price: 0,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '1日20回まで',
+        dailyLimit: 20,
+        price: 9980,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_SHINDAN_PRO_PRICE_ID,
+      },
+    },
+    status: 'active',
+    category: 'other',
+    order: 6,
+    requiresAuth: false,
+    isNew: true,
+  },
+
+  // ----------------------------------------
   // LP作成AI（近日公開）
   // ----------------------------------------
   {
