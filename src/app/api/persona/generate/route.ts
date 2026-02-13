@@ -169,7 +169,7 @@ interface PersonaResult {
     personalityTraits: string[]
     dayInLife: string
     quote: string
-    painPoints: Array<{ point: string; episode: string }>
+    painPoints: Array<{ point: string; episode: string; imagePrompt?: string }>
     alternativeMethods: Array<{ method: string; dissatisfaction: string }>
     informationGathering: Array<{ source: string; behavior: string }>
     triggerEvents: string[]
@@ -197,7 +197,7 @@ interface PersonaResult {
       consultedPeople: string
       trialActivities: string
       decidingFactor: string
-      timeline: Array<{ phase: string; description: string }>
+      timeline: Array<{ phase: string; description: string; imagePrompt?: string }>
     }
     dayWithService: string
   }
@@ -363,7 +363,7 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
     "dayInLife": "1日の過ごし方の概要",
     "quote": "ペルソナの口癖や価値観を表す一言",
     "painPoints": [
-      { "point": "具体的な課題/ペインポイント", "episode": "それが起きた具体的なエピソード（状況・感情を含む）" }
+      { "point": "具体的な課題/ペインポイント", "episode": "それが起きた具体的なエピソード（状況・感情を含む）", "imagePrompt": "A scene depicting this pain point in English for image generation" }
     ],
     "alternativeMethods": [
       { "method": "現在使っている代替手段", "dissatisfaction": "その手段への不満点" }
@@ -403,11 +403,11 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
       "trialActivities": "トライアルで具体的に何を試したか",
       "decidingFactor": "最終的な決め手",
       "timeline": [
-        { "phase": "認知", "description": "どこでサービスを知ったか" },
+        { "phase": "認知", "description": "どこでサービスを知ったか", "imagePrompt": "A scene in English depicting this phase for image generation" },
         { "phase": "興味", "description": "何に惹かれたか" },
-        { "phase": "比較検討", "description": "競合と何を比べたか" },
+        { "phase": "比較検討", "description": "競合と何を比べたか", "imagePrompt": "A scene in English depicting this phase" },
         { "phase": "トライアル", "description": "無料トライアルで何をしたか" },
-        { "phase": "社内稟議", "description": "どう説得したか" },
+        { "phase": "社内稟議", "description": "どう説得したか", "imagePrompt": "A scene in English depicting this phase" },
         { "phase": "本導入", "description": "導入の決め手" }
       ]
     },
@@ -466,14 +466,14 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}
 ## 重要な指示
 - scheduleは8〜10個の時間帯を含めてください。imagePromptは全体のうち3つだけに含め、その人の生活を表す印象的な場面を英語で記述してください。
 - diaryは必ずペルソナの一人称で書いてください。imageScenes は2つ含めてください。
-- painPointsは5つ以上、具体的なエピソード付きで記述してください。
+- painPointsは5つ以上、具体的なエピソード付きで記述してください。最初の3つにimagePromptを含めてください（その課題の場面を英語で描写）。
 - alternativeMethodsは3つ以上記述してください。
 - informationGatheringは4つ以上記述してください。
 - triggerEventsは3つ以上記述してください。
 - resonatingMessagesは5つ以上記述してください。
 - innerVoiceは5つ以上、リアルな内面の声を記述してください。
 - deepDive.objectionAnalysisは必ず10個記述してください。
-- deepDive.adoptionStory.timelineは6段階で記述してください。
+- deepDive.adoptionStory.timelineは6段階で記述してください。偶数番目（認知、比較検討、社内稟議）にimagePromptを含めてください（場面を英語で描写）。
 - deepDive.dayWithServiceは300〜500字で具体的に記述してください。
 - summary.topChallengesは優先度順に3つ記述してください。
 - summary.catchphrasesは5つ記述してください。
