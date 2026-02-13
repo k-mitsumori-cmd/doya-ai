@@ -12,6 +12,8 @@ import {
   Sparkles,
   Shield,
   TrendingUp,
+  ChevronDown,
+  Zap,
 } from 'lucide-react'
 import ScoreCard from '@/components/shindan/ScoreCard'
 import ShindanRadarChart from '@/components/shindan/ShindanRadarChart'
@@ -43,6 +45,23 @@ interface WebShindanResult {
   competitorAnalyses: any[]
   discoveredCompetitors: Array<{ url: string; name: string; reason: string; threatLevel: string }>
   competitiveDetailedComparison: any
+  pageSpeed?: {
+    performanceScore: number
+    accessibilityScore: number
+    bestPracticesScore: number
+    seoScore: number
+    lcp: number | null
+    fcp: number | null
+    cls: number | null
+    tbt: number | null
+    si: number | null
+    tti: number | null
+    cruxLcp: number | null
+    cruxFid: number | null
+    cruxCls: number | null
+    cruxInp: number | null
+    strategy: 'mobile' | 'desktop'
+  }
 }
 
 // ===== 7Web軸ラベル =====
@@ -66,6 +85,7 @@ const STATUS_STYLES = {
 const SSE_STEPS = [
   { key: 'analyzing', label: '分析開始' },
   { key: 'website', label: 'サイト分析' },
+  { key: 'pagespeed', label: '速度測定' },
   { key: 'discovery', label: '競合発見' },
   { key: 'competitors', label: '競合分析' },
   { key: 'scoring', label: 'スコア算出' },
@@ -86,6 +106,7 @@ export default function ShindanPage() {
   const [sseCompetitors, setSseCompetitors] = useState<any[]>([])
   const [sseDiscovered, setSseDiscovered] = useState<any[]>([])
   const [sseScoring, setSseScoring] = useState<any>(null)
+  const [ssePageSpeed, setSsePageSpeed] = useState<any>(null)
   const [ssePhase, setSsePhase] = useState<string>('')
 
   // ダッシュボード用
@@ -102,6 +123,7 @@ export default function ShindanPage() {
     setSseCompetitors([])
     setSseDiscovered([])
     setSseScoring(null)
+    setSsePageSpeed(null)
     setSsePhase('analyzing')
 
     try {
@@ -141,6 +163,10 @@ export default function ShindanPage() {
                 case 'website':
                   setSsePhase('website')
                   setSseWebsite(data.websiteHealth)
+                  break
+                case 'pagespeed':
+                  setSsePhase('pagespeed')
+                  setSsePageSpeed(data.pageSpeed)
                   break
                 case 'discovery':
                   setSsePhase('discovery')
@@ -372,6 +398,30 @@ export default function ShindanPage() {
                       {sseWebsite.pagesCrawled && <span className="bg-white px-2 py-0.5 rounded border border-gray-100">{sseWebsite.pagesCrawled}ページ分析</span>}
                       {sseWebsite.responseTimeMs && <span className="bg-white px-2 py-0.5 rounded border border-gray-100">{sseWebsite.responseTimeMs}ms</span>}
                       {sseWebsite.tracking?.detectedTools?.length > 0 && <span className="bg-white px-2 py-0.5 rounded border border-gray-100">{sseWebsite.tracking.detectedTools.join(', ')}</span>}
+                    </div>
+                  </motion.div>
+                )}
+                {ssePageSpeed && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-2"
+                  >
+                    <p className="text-xs font-bold text-teal-600 mb-1">PageSpeed Insights</p>
+                    <div className="grid grid-cols-4 gap-2 text-center">
+                      {[
+                        { label: 'パフォーマンス', score: ssePageSpeed.performanceScore },
+                        { label: 'アクセシビリティ', score: ssePageSpeed.accessibilityScore },
+                        { label: 'ベストプラクティス', score: ssePageSpeed.bestPracticesScore },
+                        { label: 'SEO', score: ssePageSpeed.seoScore },
+                      ].map((cat, i) => (
+                        <div key={i} className="bg-white rounded-lg p-2 border border-gray-100">
+                          <p className={`text-lg font-black ${cat.score >= 90 ? 'text-emerald-600' : cat.score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                            {cat.score}
+                          </p>
+                          <p className="text-[10px] text-gray-500 leading-tight">{cat.label}</p>
+                        </div>
+                      ))}
                     </div>
                   </motion.div>
                 )}
@@ -646,6 +696,142 @@ export default function ShindanPage() {
                   />
                 </motion.div>
               )}
+
+              {/* PageSpeed Insights */}
+              {(result.websiteAnalysis?.pageSpeed || result.pageSpeed) && (() => {
+                const ps = result.websiteAnalysis?.pageSpeed || result.pageSpeed
+                if (!ps) return null
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.62 }}
+                    className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm"
+                  >
+                    <h3 className="text-lg font-black text-gray-900 mb-4 flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-teal-600" />
+                      PageSpeed Insights
+                      <span className="text-xs font-bold text-gray-400 ml-auto">{ps.strategy === 'mobile' ? 'モバイル' : 'デスクトップ'}</span>
+                    </h3>
+
+                    {/* Lighthouse 4カテゴリスコア */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                      {[
+                        { label: 'パフォーマンス', score: ps.performanceScore },
+                        { label: 'アクセシビリティ', score: ps.accessibilityScore },
+                        { label: 'ベストプラクティス', score: ps.bestPracticesScore },
+                        { label: 'SEO', score: ps.seoScore },
+                      ].map((cat, i) => (
+                        <div key={i} className="relative bg-gray-50 rounded-xl p-4 text-center border border-gray-100">
+                          <div className="relative w-16 h-16 mx-auto mb-2">
+                            <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                              <circle cx="32" cy="32" r="28" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="4" />
+                              <circle
+                                cx="32" cy="32" r="28" fill="none"
+                                stroke={cat.score >= 90 ? '#10b981' : cat.score >= 50 ? '#f59e0b' : '#ef4444'}
+                                strokeWidth="4" strokeLinecap="round"
+                                strokeDasharray={`${2 * Math.PI * 28}`}
+                                strokeDashoffset={`${2 * Math.PI * 28 * (1 - cat.score / 100)}`}
+                              />
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className={`text-lg font-black ${cat.score >= 90 ? 'text-emerald-600' : cat.score >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                                {cat.score}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-[11px] font-bold text-gray-600">{cat.label}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Core Web Vitals */}
+                    <div className="border-t border-gray-100 pt-4">
+                      <p className="text-xs font-bold text-gray-700 mb-3">Core Web Vitals</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {ps.lcp != null && (
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <p className="text-[10px] text-gray-500 mb-1">LCP (読込速度)</p>
+                            <p className={`text-xl font-black ${ps.lcp <= 2500 ? 'text-emerald-600' : ps.lcp <= 4000 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {(ps.lcp / 1000).toFixed(1)}<span className="text-xs font-bold">秒</span>
+                            </p>
+                            <p className="text-[9px] text-gray-400 mt-0.5">{ps.lcp <= 2500 ? '良好 (≤2.5s)' : ps.lcp <= 4000 ? '要改善 (≤4.0s)' : '不良 (>4.0s)'}</p>
+                          </div>
+                        )}
+                        {ps.cls != null && (
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <p className="text-[10px] text-gray-500 mb-1">CLS (安定性)</p>
+                            <p className={`text-xl font-black ${ps.cls <= 0.1 ? 'text-emerald-600' : ps.cls <= 0.25 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {ps.cls.toFixed(3)}
+                            </p>
+                            <p className="text-[9px] text-gray-400 mt-0.5">{ps.cls <= 0.1 ? '良好 (≤0.1)' : ps.cls <= 0.25 ? '要改善 (≤0.25)' : '不良 (>0.25)'}</p>
+                          </div>
+                        )}
+                        {ps.tbt != null && (
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <p className="text-[10px] text-gray-500 mb-1">TBT (応答性)</p>
+                            <p className={`text-xl font-black ${ps.tbt <= 200 ? 'text-emerald-600' : ps.tbt <= 600 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {Math.round(ps.tbt)}<span className="text-xs font-bold">ms</span>
+                            </p>
+                            <p className="text-[9px] text-gray-400 mt-0.5">{ps.tbt <= 200 ? '良好 (≤200ms)' : ps.tbt <= 600 ? '要改善 (≤600ms)' : '不良 (>600ms)'}</p>
+                          </div>
+                        )}
+                        {ps.fcp != null && (
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <p className="text-[10px] text-gray-500 mb-1">FCP (初回描画)</p>
+                            <p className={`text-xl font-black ${ps.fcp <= 1800 ? 'text-emerald-600' : ps.fcp <= 3000 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {(ps.fcp / 1000).toFixed(1)}<span className="text-xs font-bold">秒</span>
+                            </p>
+                          </div>
+                        )}
+                        {ps.si != null && (
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <p className="text-[10px] text-gray-500 mb-1">SI (速度指標)</p>
+                            <p className={`text-xl font-black ${ps.si <= 3400 ? 'text-emerald-600' : ps.si <= 5800 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {(ps.si / 1000).toFixed(1)}<span className="text-xs font-bold">秒</span>
+                            </p>
+                          </div>
+                        )}
+                        {ps.tti != null && (
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <p className="text-[10px] text-gray-500 mb-1">TTI (操作可能)</p>
+                            <p className={`text-xl font-black ${ps.tti <= 3800 ? 'text-emerald-600' : ps.tti <= 7300 ? 'text-amber-600' : 'text-red-600'}`}>
+                              {(ps.tti / 1000).toFixed(1)}<span className="text-xs font-bold">秒</span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* CrUX real-world data */}
+                    {(ps.cruxLcp != null || ps.cruxCls != null || ps.cruxInp != null) && (
+                      <div className="border-t border-gray-100 pt-4 mt-4">
+                        <p className="text-xs font-bold text-gray-700 mb-3">実ユーザーデータ (CrUX)</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          {ps.cruxLcp != null && (
+                            <div className="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center">
+                              <p className="text-[10px] text-blue-500 mb-1">LCP (実測)</p>
+                              <p className="text-lg font-black text-blue-700">{(ps.cruxLcp / 1000).toFixed(1)}s</p>
+                            </div>
+                          )}
+                          {ps.cruxCls != null && (
+                            <div className="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center">
+                              <p className="text-[10px] text-blue-500 mb-1">CLS (実測)</p>
+                              <p className="text-lg font-black text-blue-700">{(ps.cruxCls / 100).toFixed(2)}</p>
+                            </div>
+                          )}
+                          {ps.cruxInp != null && (
+                            <div className="bg-blue-50 rounded-lg p-3 border border-blue-100 text-center">
+                              <p className="text-[10px] text-blue-500 mb-1">INP (実測)</p>
+                              <p className="text-lg font-black text-blue-700">{ps.cruxInp}ms</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )
+              })()}
 
               {/* 技術詳細 */}
               {result.websiteAnalysis && (

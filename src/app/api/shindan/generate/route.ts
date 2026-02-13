@@ -168,6 +168,29 @@ interface WebsiteAnalysis {
   hasLazyLoading?: boolean
   hasFavicon?: boolean
   redirectChain?: string  // final URL after redirects
+  pageSpeed?: PageSpeedData
+}
+
+interface PageSpeedData {
+  // Lighthouse scores (0-100)
+  performanceScore: number
+  accessibilityScore: number
+  bestPracticesScore: number
+  seoScore: number  // Lighthouse's own SEO score
+  // Core Web Vitals
+  lcp: number | null  // Largest Contentful Paint (ms)
+  fcp: number | null  // First Contentful Paint (ms)
+  cls: number | null  // Cumulative Layout Shift
+  tbt: number | null  // Total Blocking Time (ms, proxy for INP)
+  si: number | null   // Speed Index (ms)
+  tti: number | null  // Time to Interactive (ms)
+  // CrUX real-world data (when available)
+  cruxLcp: number | null
+  cruxFid: number | null
+  cruxCls: number | null
+  cruxInp: number | null
+  // raw strategy
+  strategy: 'mobile' | 'desktop'
 }
 
 // =============================================
@@ -474,6 +497,49 @@ async function fetchPage(url: string, timeout = 10000): Promise<FetchResult | nu
   }
 }
 
+async function fetchPageSpeedInsights(url: string, strategy: 'mobile' | 'desktop' = 'mobile'): Promise<PageSpeedData | null> {
+  try {
+    const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY || ''
+    // PSI accepts multiple category params by appending
+    const endpoint = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&strategy=${strategy}&category=performance&category=accessibility&category=best-practices&category=seo${apiKey ? `&key=${apiKey}` : ''}`
+
+    const res = await fetch(endpoint, {
+      signal: AbortSignal.timeout(30000),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+
+    const lighthouse = data.lighthouseResult
+    if (!lighthouse) return null
+
+    const categories = lighthouse.categories || {}
+    const audits = lighthouse.audits || {}
+
+    // Extract CrUX data if available
+    const crux = data.loadingExperience?.metrics || {}
+
+    return {
+      performanceScore: Math.round((categories.performance?.score || 0) * 100),
+      accessibilityScore: Math.round((categories.accessibility?.score || 0) * 100),
+      bestPracticesScore: Math.round((categories['best-practices']?.score || 0) * 100),
+      seoScore: Math.round((categories.seo?.score || 0) * 100),
+      lcp: audits['largest-contentful-paint']?.numericValue ?? null,
+      fcp: audits['first-contentful-paint']?.numericValue ?? null,
+      cls: audits['cumulative-layout-shift']?.numericValue ?? null,
+      tbt: audits['total-blocking-time']?.numericValue ?? null,
+      si: audits['speed-index']?.numericValue ?? null,
+      tti: audits['interactive']?.numericValue ?? null,
+      cruxLcp: crux['LARGEST_CONTENTFUL_PAINT_MS']?.percentile ?? null,
+      cruxFid: crux['FIRST_INPUT_DELAY_MS']?.percentile ?? null,
+      cruxCls: crux['CUMULATIVE_LAYOUT_SHIFT_SCORE']?.percentile ?? null,
+      cruxInp: crux['INTERACTION_TO_NEXT_PAINT']?.percentile ?? null,
+      strategy,
+    }
+  } catch {
+    return null
+  }
+}
+
 // =============================================
 // 2c. サブドメイン探索
 // =============================================
@@ -611,6 +677,9 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
   const priorityPaths = internalLinks
     .filter((p) => /about|company|service|product|blog|news|price|feature|会社|サービス|料金|事業|特徴|実績|お客様/i.test(p))
     .slice(0, 5)
+
+  // PageSpeed Insights を並列実行（結果は後で使う）
+  const pageSpeedPromise = fetchPageSpeedInsights(url)
 
   const subPageResults = await Promise.all(
     priorityPaths.map((path) => fetchPage(new URL(path, url).toString(), 8000))
@@ -862,6 +931,41 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
   const heroImagePreloaded = /<link[^>]+rel=["']preload["'][^>]+as=["']image["']/i.test(mainHtml)
   if (hasLargeHeroImage && !heroImagePreloaded) { issues.push('ヒーロー画像のpreload未設定（LCP改善の余地）') }
 
+  // PageSpeed Insights 結果を取得
+  const pageSpeedData = await pageSpeedPromise
+
+  // PageSpeed Insights スコアをテクニカルスコアに反映
+  if (pageSpeedData) {
+    // Performance score bonus (up to 15 points, replacing some of the simpler checks)
+    const psiPerfBonus = Math.round(pageSpeedData.performanceScore * 0.15)
+    technicalScore += psiPerfBonus
+
+    if (pageSpeedData.performanceScore >= 90) positives.push(`Lighthouseパフォーマンス優秀（${pageSpeedData.performanceScore}点）`)
+    else if (pageSpeedData.performanceScore < 50) issues.push(`Lighthouseパフォーマンス低スコア（${pageSpeedData.performanceScore}点、改善が急務）`)
+
+    // LCP check
+    if (pageSpeedData.lcp != null) {
+      if (pageSpeedData.lcp > 4000) issues.push(`LCP遅延（${(pageSpeedData.lcp / 1000).toFixed(1)}秒、推奨2.5秒以下）`)
+      else if (pageSpeedData.lcp <= 2500) positives.push(`LCP良好（${(pageSpeedData.lcp / 1000).toFixed(1)}秒）`)
+    }
+
+    // CLS check
+    if (pageSpeedData.cls != null) {
+      if (pageSpeedData.cls > 0.25) issues.push(`CLS高（${pageSpeedData.cls.toFixed(3)}、推奨0.1以下。レイアウトシフトが多い）`)
+      else if (pageSpeedData.cls <= 0.1) positives.push(`CLS良好（${pageSpeedData.cls.toFixed(3)}）`)
+    }
+
+    // TBT check (proxy for INP)
+    if (pageSpeedData.tbt != null) {
+      if (pageSpeedData.tbt > 600) issues.push(`TBT高（${Math.round(pageSpeedData.tbt)}ms、インタラクション応答が遅い）`)
+      else if (pageSpeedData.tbt <= 200) positives.push(`TBT良好（${Math.round(pageSpeedData.tbt)}ms）`)
+    }
+
+    // Accessibility bonus
+    if (pageSpeedData.accessibilityScore >= 90) positives.push(`アクセシビリティ優秀（Lighthouse ${pageSpeedData.accessibilityScore}点）`)
+    else if (pageSpeedData.accessibilityScore < 50) issues.push(`アクセシビリティ低スコア（Lighthouse ${pageSpeedData.accessibilityScore}点）`)
+  }
+
   const totalScore = Math.round(seoScore * 0.40 + contentScore * 0.35 + technicalScore * 0.25)
 
   // ----- 拡張検出分析（全クロールページのHTMLを結合して深い検出）-----
@@ -917,6 +1021,7 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
     hasLazyLoading,
     hasFavicon,
     redirectChain: mainResult.finalUrl !== url ? mainResult.finalUrl : undefined,
+    pageSpeed: pageSpeedData || undefined,
   }
 }
 
@@ -1113,6 +1218,7 @@ function websiteToFrontend(ws: WebsiteAnalysis) {
     cssFileCount: ws.cssFileCount,
     hasLazyLoading: ws.hasLazyLoading,
     hasFavicon: ws.hasFavicon,
+    pageSpeed: ws.pageSpeed,
   }
 }
 
@@ -1151,6 +1257,17 @@ JSファイル数: ${ws.jsFileCount ?? '不明'}
 CSSファイル数: ${ws.cssFileCount ?? '不明'}
 遅延読み込み: ${ws.hasLazyLoading ? 'あり' : 'なし'}
 favicon: ${ws.hasFavicon ? 'あり' : 'なし'}
+${ws.pageSpeed ? `
+### PageSpeed Insights (Lighthouse)
+パフォーマンス: ${ws.pageSpeed.performanceScore}/100
+アクセシビリティ: ${ws.pageSpeed.accessibilityScore}/100
+ベストプラクティス: ${ws.pageSpeed.bestPracticesScore}/100
+SEO: ${ws.pageSpeed.seoScore}/100
+LCP: ${ws.pageSpeed.lcp ? (ws.pageSpeed.lcp / 1000).toFixed(1) + '秒' : '不明'}
+FCP: ${ws.pageSpeed.fcp ? (ws.pageSpeed.fcp / 1000).toFixed(1) + '秒' : '不明'}
+CLS: ${ws.pageSpeed.cls?.toFixed(3) ?? '不明'}
+TBT: ${ws.pageSpeed.tbt ? Math.round(ws.pageSpeed.tbt) + 'ms' : '不明'}
+TTI: ${ws.pageSpeed.tti ? (ws.pageSpeed.tti / 1000).toFixed(1) + '秒' : '不明'}` : ''}
 
 ### 検出済み広告・トラッキング
 ${ws.tracking ? `ツール: ${ws.tracking.detectedTools.join(', ') || 'なし'} (スコア: ${ws.tracking.trackingScore})` : '未検出'}
@@ -1334,6 +1451,13 @@ export async function POST(req: NextRequest) {
         sendEvent('website', {
           websiteHealth: websiteAnalysis ? websiteToFrontend(websiteAnalysis) : null,
         })
+
+        // >>> SSE: pagespeed イベント（websiteAnalysisに含まれるPSIデータ）
+        if (websiteAnalysis?.pageSpeed) {
+          sendEvent('pagespeed', {
+            pageSpeed: websiteAnalysis.pageSpeed,
+          })
+        }
 
         // ========== B2. 競合自動発見（サイト分析結果を活用）==========
         const discoveredCompetitorList = await discoverCompetitors(
