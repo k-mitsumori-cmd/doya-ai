@@ -2,7 +2,7 @@
 // SEO設定
 // ============================================
 
-import { SEO_PRICING, BANNER_PRICING, KANTAN_PRICING } from './pricing'
+import { SEO_PRICING, BANNER_PRICING, KANTAN_PRICING, PERSONA_PRICING } from './pricing'
 
 export const SITE_CONFIG = {
   name: 'ドヤAI',
@@ -101,6 +101,20 @@ export const SERVICE_SEO = {
     },
   },
   
+  // ドヤペルソナAI
+  persona: {
+    title: 'ドヤペルソナAI | URLからマーケティングペルソナを自動生成',
+    description: 'URLを入れるだけでターゲットペルソナを自動生成。履歴書・日記・スケジュール・深掘りインタビュー・導入ストーリーまで一括作成。',
+    keywords: ['ペルソナ生成', 'マーケティングペルソナ', 'ターゲット分析', 'AI', 'カスタマージャーニー', '顧客分析', 'ペルソナ設計'],
+    ogImage: '/persona/opengraph-image',
+    sections: {
+      history: {
+        title: '生成履歴 | ドヤペルソナAI',
+        description: '過去に生成したペルソナの一覧。再表示・編集が可能。',
+      },
+    },
+  },
+
   // 管理画面
   admin: {
     title: '管理画面 | ドヤAIポータル',
