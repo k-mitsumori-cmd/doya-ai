@@ -123,6 +123,319 @@ interface WebsiteAnalysis {
   imageStats: { total: number; withAlt: number }
   textExcerpt: string
   ogImage: string | null
+  // --- 拡張分析フィールド（後方互換のためオプショナル）---
+  tracking?: {
+    hasGA4: boolean; hasGTM: boolean; hasGoogleAds: boolean; hasFBPixel: boolean
+    hasLinkedInInsight: boolean; hasHotjar: boolean; hasClarityMs: boolean
+    hasHubspot: boolean; hasPardot: boolean; hasMarketo: boolean
+    detectedTools: string[]; maturityLevel: 'none' | 'basic' | 'intermediate' | 'advanced'; trackingScore: number
+  }
+  appealAxis?: {
+    heroText: string; heroType: 'benefit' | 'feature' | 'emotional' | 'social-proof' | 'unclear'
+    valueProposition: string; uspKeywords: string[]; benefitStatements: string[]
+    featureStatements: string[]; emotionalTriggers: string[]; appealScore: number
+  }
+  socialProof?: {
+    hasTestimonials: boolean; hasClientLogos: boolean; hasCaseStudies: boolean
+    hasCertifications: boolean; hasUserCount: boolean; hasMediaMentions: boolean; hasAwards: boolean
+    userCountText: string | null; proofElements: string[]; socialProofScore: number
+  }
+  ctaAnalysis?: {
+    ctaTexts: string[]; ctaCount: number; hasLeadMagnet: boolean; hasLiveChat: boolean
+    hasPopup: boolean; ctaPlacement: 'hero-only' | 'distributed' | 'footer-only' | 'none'
+    primaryCTA: string | null; ctaEffectivenessScore: number
+  }
+  pricingSignals?: {
+    hasPricingPage: boolean; hasFreeTrial: boolean; hasFreeplan: boolean
+    hasMoneyBackGuarantee: boolean; pricingModel: 'visible' | 'hidden' | 'contact-required' | 'none'
+    pricingPageUrl: string | null; priceIndicators: string[]; pricingTransparencyScore: number
+  }
+  contentMarketing?: {
+    blogPostIndicators: number; hasResourceCenter: boolean; hasNewsletterSignup: boolean
+    hasVideo: boolean; hasWebinar: boolean; hasPodcast: boolean
+    contentTypes: string[]; topicClusters: string[]; contentDepthScore: number
+  }
+  competitivePositioning?: {
+    hasComparisonPage: boolean; mentionedCompetitors: string[]; differentiationClaims: string[]
+    positioningType: 'leader' | 'challenger' | 'niche' | 'unclear'; positioningScore: number
+  }
+}
+
+// =============================================
+// 2b. 拡張検出関数群（HTML パターンマッチング）
+// =============================================
+
+function detectTracking(html: string) {
+  const hasGA4 = /gtag\s*\(\s*['"]config['"]\s*,\s*['"]G-|GA_MEASUREMENT_ID/i.test(html)
+  const hasGTM = /googletagmanager\.com\/gtm|GTM-[A-Z0-9]+/i.test(html)
+  const hasGoogleAds = /googleads\.g\.doubleclick|google_conversion_id|AW-\d+/i.test(html)
+  const hasFBPixel = /fbq\s*\(|facebook\.com\/tr\?|connect\.facebook\.net.*fbevents/i.test(html)
+  const hasLinkedInInsight = /snap\.licdn\.com|_linkedin_data_partner_id/i.test(html)
+  const hasHotjar = /hotjar\.com|_hjSettings/i.test(html)
+  const hasClarityMs = /clarity\.ms/i.test(html)
+  const hasHubspot = /js\.hs-scripts\.com|_hsq\s*=/i.test(html)
+  const hasPardot = /pardot\.com|pi\.pardot/i.test(html)
+  const hasMarketo = /marketo\.com|munchkin/i.test(html)
+
+  const detectedTools: string[] = []
+  if (hasGA4) detectedTools.push('GA4')
+  if (hasGTM) detectedTools.push('GTM')
+  if (hasGoogleAds) detectedTools.push('Google Ads')
+  if (hasFBPixel) detectedTools.push('Facebook Pixel')
+  if (hasLinkedInInsight) detectedTools.push('LinkedIn Insight')
+  if (hasHotjar) detectedTools.push('Hotjar')
+  if (hasClarityMs) detectedTools.push('Microsoft Clarity')
+  if (hasHubspot) detectedTools.push('HubSpot')
+  if (hasPardot) detectedTools.push('Pardot')
+  if (hasMarketo) detectedTools.push('Marketo')
+
+  const count = detectedTools.length
+  const trackingScore = Math.min(100, count * 15 + (hasGA4 ? 10 : 0) + (hasGTM ? 5 : 0) + ((hasHubspot || hasPardot || hasMarketo) ? 15 : 0))
+
+  const maturityLevel: 'none' | 'basic' | 'intermediate' | 'advanced' =
+    count === 0 ? 'none' : count <= 2 ? 'basic' : count <= 4 ? 'intermediate' : 'advanced'
+
+  return {
+    hasGA4, hasGTM, hasGoogleAds, hasFBPixel, hasLinkedInInsight,
+    hasHotjar, hasClarityMs, hasHubspot, hasPardot, hasMarketo,
+    detectedTools, maturityLevel, trackingScore,
+  }
+}
+
+function detectAppealAxis(html: string, headings: string[], mainText: string) {
+  // ヒーローテキスト: 最初のh1タグのコンテンツ
+  const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)
+  const heroText = h1Match ? h1Match[1].replace(/<[^>]+>/g, '').trim() : ''
+
+  // バリュープロポジション: h1直後の最初のpタグ
+  const afterH1 = h1Match ? html.slice(html.indexOf(h1Match[0]) + h1Match[0].length) : ''
+  const firstPMatch = afterH1.match(/<p[^>]*>([\s\S]*?)<\/p>/i)
+  const valueProposition = firstPMatch ? firstPMatch[1].replace(/<[^>]+>/g, '').trim() : ''
+
+  const combinedText = heroText + ' ' + valueProposition + ' ' + headings.join(' ')
+
+  // パターンマッチング
+  const benefitPattern = /(?:で|が)(?:できる|向上|改善|アップ|削減|効率化|実現|解決|成功)/gi
+  const featurePattern = /(?:搭載|対応|機能|スペック|仕様|最新|業界標準)/gi
+  const emotionalPattern = /(?:今だけ|限定|残りわずか|急いで|見逃すな|ご安心|信頼|安心|実績No\.1|業界初)/gi
+  const uspPattern = /(?:唯一|オンリーワン|独自|特許|日本初|業界初|No\.1|最安|最速|圧倒的)/gi
+
+  const benefitStatements = (mainText.match(benefitPattern) || []).map(s => s)
+  const featureStatements = (mainText.match(featurePattern) || []).map(s => s)
+  const emotionalTriggers = (mainText.match(emotionalPattern) || []).map(s => s)
+  const uspKeywords = (mainText.match(uspPattern) || []).map(s => s)
+
+  // ヒーローテキストのタイプ判定
+  let heroType: 'benefit' | 'feature' | 'emotional' | 'social-proof' | 'unclear' = 'unclear'
+  if (benefitPattern.test(combinedText)) heroType = 'benefit'
+  else if (emotionalPattern.test(combinedText)) heroType = 'emotional'
+  else if (/導入実績|お客様の声|利用者/.test(combinedText)) heroType = 'social-proof'
+  else if (featurePattern.test(combinedText)) heroType = 'feature'
+
+  const appealScore = Math.min(100,
+    (heroText ? 20 : 0) +
+    (valueProposition ? 15 : 0) +
+    Math.min(25, benefitStatements.length * 5) +
+    Math.min(20, uspKeywords.length * 10) +
+    Math.min(10, emotionalTriggers.length * 5) +
+    (heroType !== 'unclear' ? 10 : 0)
+  )
+
+  return {
+    heroText, heroType, valueProposition, uspKeywords,
+    benefitStatements, featureStatements, emotionalTriggers, appealScore,
+  }
+}
+
+function detectSocialProof(html: string, mainText: string) {
+  const hasTestimonials = /お客様の声|導入実績|ユーザーの声|利用者の声|testimonial|voice|review/i.test(html)
+  const hasClientLogos = /導入企業|取引先|パートナー企業|主要取引先|client|partner/i.test(html)
+  const hasCaseStudies = /成功事例|導入事例|活用事例|case.?stud/i.test(html)
+  const hasCertifications = /認証|認定|ISO|プライバシーマーク|Pマーク/i.test(html)
+  const hasMediaMentions = /メディア掲載|取材|掲載実績/i.test(html)
+  const hasAwards = /受賞|アワード|award|グランプリ|表彰/i.test(html)
+
+  const userCountMatch = mainText.match(/(?:導入|累計|利用|登録)\s*(?:実績\s*)?[\d,\.]+\s*(?:社|件|名|ユーザー|人|企業|店舗)/i)
+  const hasUserCount = !!userCountMatch
+  const userCountText = userCountMatch ? userCountMatch[0] : null
+
+  const proofElements: string[] = []
+  if (hasTestimonials) proofElements.push('お客様の声')
+  if (hasClientLogos) proofElements.push('導入企業ロゴ')
+  if (hasCaseStudies) proofElements.push('導入事例')
+  if (hasCertifications) proofElements.push('認証・認定')
+  if (hasUserCount) proofElements.push('利用実績数')
+  if (hasMediaMentions) proofElements.push('メディア掲載')
+  if (hasAwards) proofElements.push('受賞歴')
+
+  const socialProofScore = Math.min(100,
+    (hasTestimonials ? 20 : 0) + (hasClientLogos ? 15 : 0) + (hasCaseStudies ? 20 : 0) +
+    (hasCertifications ? 10 : 0) + (hasUserCount ? 15 : 0) + (hasMediaMentions ? 10 : 0) + (hasAwards ? 10 : 0)
+  )
+
+  return {
+    hasTestimonials, hasClientLogos, hasCaseStudies, hasCertifications,
+    hasUserCount, hasMediaMentions, hasAwards, userCountText, proofElements, socialProofScore,
+  }
+}
+
+function detectCTADetails(html: string) {
+  // CTA要素の抽出（aタグ、buttonタグからCTAキーワードを含むテキストを取得）
+  const ctaPattern = /お問い合わせ|資料請求|無料|体験|デモ|申し込み|相談|登録|ダウンロード|見積|トライアル/i
+  const ctaTexts: string[] = []
+
+  const linkRegex = /<a[^>]*>([\s\S]*?)<\/a>/gi
+  let m
+  while ((m = linkRegex.exec(html)) !== null) {
+    const text = m[1].replace(/<[^>]+>/g, '').trim()
+    if (text && ctaPattern.test(text) && text.length < 100) ctaTexts.push(text)
+  }
+  const btnRegex = /<button[^>]*>([\s\S]*?)<\/button>/gi
+  while ((m = btnRegex.exec(html)) !== null) {
+    const text = m[1].replace(/<[^>]+>/g, '').trim()
+    if (text && ctaPattern.test(text) && text.length < 100) ctaTexts.push(text)
+  }
+
+  const ctaCount = ctaTexts.length
+  const hasLeadMagnet = /ダウンロード|ホワイトペーパー|eBook|資料請求|無料レポート/i.test(html)
+  const hasLiveChat = /chat|チャット|intercom|zendesk|crisp|drift|livechat|tawk/i.test(html)
+  const hasPopup = /popup|modal|overlay|exit.?intent/i.test(html)
+
+  // CTA配置の判定
+  const heroArea = html.slice(0, 5000)
+  const footerIndex = html.search(/<footer/i)
+  const footerArea = footerIndex >= 0 ? html.slice(footerIndex) : ''
+  const heroHasCTA = ctaPattern.test(heroArea)
+  const footerHasCTA = ctaPattern.test(footerArea)
+
+  let ctaPlacement: 'hero-only' | 'distributed' | 'footer-only' | 'none' = 'none'
+  if (heroHasCTA && footerHasCTA) ctaPlacement = 'distributed'
+  else if (heroHasCTA) ctaPlacement = 'hero-only'
+  else if (footerHasCTA) ctaPlacement = 'footer-only'
+
+  const primaryCTA = ctaTexts.length > 0 ? ctaTexts[0] : null
+
+  const ctaEffectivenessScore = Math.min(100,
+    Math.min(30, ctaCount * 8) +
+    (hasLeadMagnet ? 20 : 0) +
+    (hasLiveChat ? 15 : 0) +
+    (ctaPlacement === 'distributed' ? 25 : ctaPlacement === 'hero-only' ? 15 : ctaPlacement === 'footer-only' ? 5 : 0) +
+    (hasPopup ? 10 : 0)
+  )
+
+  return {
+    ctaTexts: ctaTexts.slice(0, 10), ctaCount, hasLeadMagnet, hasLiveChat,
+    hasPopup, ctaPlacement, primaryCTA, ctaEffectivenessScore,
+  }
+}
+
+function detectPricingSignals(html: string, internalLinks: string[]) {
+  const pricingLink = internalLinks.find(l => /pricing|price|料金|プラン|plan/i.test(l))
+  const hasPricingPage = !!pricingLink
+  const hasFreeTrial = /free.?trial|無料.?(?:トライアル|お試し|体験|期間)/i.test(html)
+  const hasFreeplan = /free.?plan|無料プラン|フリープラン|0円/i.test(html)
+  const hasMoneyBackGuarantee = /返金保証|money.?back|全額返金/i.test(html)
+
+  // 料金表示モデル判定
+  const hasVisiblePrice = /(?:月額|年額|¥|￥)\s*[\d,\.]+/i.test(html)
+  const hasContactRequired = /お問い合わせ.*料金|料金.*お問い合わせ|要見積|個別見積/i.test(html)
+
+  let pricingModel: 'visible' | 'hidden' | 'contact-required' | 'none' = 'none'
+  if (hasVisiblePrice) pricingModel = 'visible'
+  else if (hasContactRequired) pricingModel = 'contact-required'
+  else if (hasPricingPage) pricingModel = 'hidden'
+
+  const priceIndicators = (html.match(/(?:月額|年額|¥|￥)\s*[\d,\.]+\s*(?:円|\/月|\/年)?/gi) || []).slice(0, 10)
+  const pricingPageUrl = pricingLink || null
+
+  const pricingTransparencyScore = Math.min(100,
+    (hasPricingPage ? 25 : 0) +
+    (hasVisiblePrice ? 30 : 0) +
+    (hasFreeTrial ? 20 : 0) +
+    (hasFreeplan ? 10 : 0) +
+    (hasMoneyBackGuarantee ? 15 : 0)
+  )
+
+  return {
+    hasPricingPage, hasFreeTrial, hasFreeplan, hasMoneyBackGuarantee,
+    pricingModel, pricingPageUrl, priceIndicators, pricingTransparencyScore,
+  }
+}
+
+function detectContentMarketing(html: string, internalLinks: string[]) {
+  const blogLinks = internalLinks.filter(l => /blog|article|post|column|news/i.test(l))
+  const blogPostIndicators = blogLinks.length
+  const hasResourceCenter = /リソース|ダウンロード資料|お役立ち|ナレッジ/i.test(html)
+  const hasNewsletterSignup = /メルマガ|メールマガジン|購読|subscribe|配信登録/i.test(html)
+  const hasVideo = /youtube\.com\/embed|vimeo\.com|動画|ウェビナー/i.test(html)
+  const hasWebinar = /ウェビナー|webinar|オンラインセミナー/i.test(html)
+  const hasPodcast = /podcast|ポッドキャスト|音声配信/i.test(html)
+
+  const contentTypes: string[] = []
+  if (blogPostIndicators > 0) contentTypes.push('ブログ')
+  if (hasVideo) contentTypes.push('動画')
+  if (hasWebinar) contentTypes.push('ウェビナー')
+  if (hasResourceCenter) contentTypes.push('資料DL')
+  if (internalLinks.some(l => /news|お知らせ/i.test(l))) contentTypes.push('ニュース')
+  if (internalLinks.some(l => /case|事例/i.test(l))) contentTypes.push('事例')
+
+  // トピッククラスター: カテゴリ/タグURLパターンから抽出
+  const topicClusters: string[] = []
+  for (const link of internalLinks) {
+    const catMatch = link.match(/(?:category|tag|topics?)\/([^\/]+)/i)
+    if (catMatch && catMatch[1]) {
+      const topic = decodeURIComponent(catMatch[1]).replace(/-/g, ' ')
+      if (!topicClusters.includes(topic)) topicClusters.push(topic)
+    }
+  }
+
+  const contentDepthScore = Math.min(100,
+    Math.min(30, blogPostIndicators * 5) +
+    (hasResourceCenter ? 15 : 0) +
+    (hasNewsletterSignup ? 15 : 0) +
+    (hasVideo ? 15 : 0) +
+    (hasWebinar ? 10 : 0) +
+    (hasPodcast ? 5 : 0) +
+    Math.min(10, topicClusters.length * 3)
+  )
+
+  return {
+    blogPostIndicators, hasResourceCenter, hasNewsletterSignup,
+    hasVideo, hasWebinar, hasPodcast, contentTypes,
+    topicClusters: topicClusters.slice(0, 10), contentDepthScore,
+  }
+}
+
+function detectCompetitivePositioning(html: string, mainText: string) {
+  const hasComparisonPage = /比較|vs\.?|他社との違い|乗り換え/i.test(html)
+
+  const differentiationMatches = mainText.match(/業界初|No\.?\s*1|日本初|唯一|国内シェア|特許|圧倒的|他社にない/gi) || []
+  const differentiationClaims = [...new Set(differentiationMatches)]
+
+  // 競合メンション検出（一般的な比較表現の近傍から企業名は抽出困難なため空配列）
+  const mentionedCompetitors: string[] = []
+
+  // ポジショニングタイプ判定
+  let positioningType: 'leader' | 'challenger' | 'niche' | 'unclear' = 'unclear'
+  const leaderPattern = /No\.?\s*1|シェア.?1位|業界トップ|国内最大|最大手/i
+  const challengerPattern = /乗り換え|比較|よりも|他社より|切り替え/i
+  const nichePattern = /専門|特化|ニッチ|唯一の|独自の/i
+
+  if (leaderPattern.test(mainText)) positioningType = 'leader'
+  else if (challengerPattern.test(mainText)) positioningType = 'challenger'
+  else if (nichePattern.test(mainText)) positioningType = 'niche'
+
+  const positioningScore = Math.min(100,
+    (hasComparisonPage ? 20 : 0) +
+    Math.min(40, differentiationClaims.length * 10) +
+    (positioningType !== 'unclear' ? 25 : 0) +
+    (mentionedCompetitors.length > 0 ? 15 : 0)
+  )
+
+  return {
+    hasComparisonPage, mentionedCompetitors, differentiationClaims,
+    positioningType, positioningScore,
+  }
 }
 
 async function fetchPage(url: string, timeout = 10000): Promise<string | null> {
@@ -310,6 +623,15 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
 
   const totalScore = Math.round(seoScore * 0.40 + contentScore * 0.35 + technicalScore * 0.25)
 
+  // ----- 拡張検出分析 -----
+  const tracking = detectTracking(mainHtml)
+  const appealAxis = detectAppealAxis(mainHtml, headings, totalText)
+  const socialProofData = detectSocialProof(mainHtml, totalText)
+  const ctaAnalysis = detectCTADetails(mainHtml)
+  const pricingSignals = detectPricingSignals(mainHtml, internalLinks)
+  const contentMarketingData = detectContentMarketing(mainHtml, internalLinks)
+  const competitivePositioningData = detectCompetitivePositioning(mainHtml, totalText)
+
   return {
     url,
     seoScore: Math.min(100, seoScore),
@@ -331,6 +653,13 @@ async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
     ogImage: meta['og:image']
       ? (meta['og:image'].startsWith('http') ? meta['og:image'] : (() => { try { return new URL(meta['og:image'], url).toString() } catch { return null } })())
       : null,
+    tracking,
+    appealAxis,
+    socialProof: socialProofData,
+    ctaAnalysis,
+    pricingSignals,
+    contentMarketing: contentMarketingData,
+    competitivePositioning: competitivePositioningData,
   }
 }
 
@@ -971,6 +1300,13 @@ function websiteToFrontend(ws: WebsiteAnalysis) {
     headings: ws.headings.slice(0, 20),
     textLength: ws.textLength,
     imageStats: ws.imageStats,
+    tracking: ws.tracking,
+    appealAxis: ws.appealAxis,
+    socialProof: ws.socialProof,
+    ctaAnalysis: ws.ctaAnalysis,
+    pricingSignals: ws.pricingSignals,
+    contentMarketing: ws.contentMarketing,
+    competitivePositioning: ws.competitivePositioning,
   }
 }
 
@@ -1153,6 +1489,44 @@ ${ws.textExcerpt.slice(0, 2000)}`
 - 問題点: ${c.issues.slice(0, 3).join('; ')}`).join('\n')
   }
 
+  // ----- 拡張分析データセクション -----
+  let detailedAnalysisSection = ''
+  const formatDetailed = (label: string, analysis: WebsiteAnalysis) => {
+    const lines: string[] = [`[${label}] ${analysis.url}`]
+    if (analysis.tracking) {
+      lines.push(`  トラッキング: ${analysis.tracking.detectedTools.join(', ') || 'なし'} (成熟度: ${analysis.tracking.maturityLevel}, スコア: ${analysis.tracking.trackingScore})`)
+    }
+    if (analysis.appealAxis) {
+      lines.push(`  訴求軸: タイプ=${analysis.appealAxis.heroType}, ヒーロー="${analysis.appealAxis.heroText.slice(0, 60)}", USP=[${analysis.appealAxis.uspKeywords.slice(0, 5).join(', ')}], スコア: ${analysis.appealAxis.appealScore}`)
+    }
+    if (analysis.socialProof) {
+      lines.push(`  社会的証明: ${analysis.socialProof.proofElements.join(', ') || 'なし'}${analysis.socialProof.userCountText ? ' (' + analysis.socialProof.userCountText + ')' : ''}, スコア: ${analysis.socialProof.socialProofScore}`)
+    }
+    if (analysis.ctaAnalysis) {
+      lines.push(`  CTA: ${analysis.ctaAnalysis.ctaCount}個, 配置=${analysis.ctaAnalysis.ctaPlacement}, リードマグネット=${analysis.ctaAnalysis.hasLeadMagnet ? 'あり' : 'なし'}, チャット=${analysis.ctaAnalysis.hasLiveChat ? 'あり' : 'なし'}, スコア: ${analysis.ctaAnalysis.ctaEffectivenessScore}`)
+    }
+    if (analysis.pricingSignals) {
+      lines.push(`  料金表示: モデル=${analysis.pricingSignals.pricingModel}, 無料トライアル=${analysis.pricingSignals.hasFreeTrial ? 'あり' : 'なし'}, 返金保証=${analysis.pricingSignals.hasMoneyBackGuarantee ? 'あり' : 'なし'}, スコア: ${analysis.pricingSignals.pricingTransparencyScore}`)
+    }
+    if (analysis.contentMarketing) {
+      lines.push(`  コンテンツ: タイプ=[${analysis.contentMarketing.contentTypes.join(', ')}], ブログ指標=${analysis.contentMarketing.blogPostIndicators}, 動画=${analysis.contentMarketing.hasVideo ? 'あり' : 'なし'}, スコア: ${analysis.contentMarketing.contentDepthScore}`)
+    }
+    if (analysis.competitivePositioning) {
+      lines.push(`  競争ポジション: タイプ=${analysis.competitivePositioning.positioningType}, 差別化=[${analysis.competitivePositioning.differentiationClaims.slice(0, 5).join(', ')}], スコア: ${analysis.competitivePositioning.positioningScore}`)
+    }
+    return lines.join('\n')
+  }
+
+  if (ws || competitorAnalyses.length > 0) {
+    detailedAnalysisSection = '\n【詳細Web競合分析データ】\n'
+    if (ws) {
+      detailedAnalysisSection += formatDetailed('自社', ws) + '\n'
+    }
+    for (let i = 0; i < competitorAnalyses.length; i++) {
+      detailedAnalysisSection += formatDetailed(`競合${i + 1}`, competitorAnalyses[i]) + '\n'
+    }
+  }
+
   const axesLabels = selectedCategories.map((id) => CATEGORY_LABELS[id])
 
   return `あなたは日本トップクラスの辛口経営コンサルタントであり、データアナリスト・マーケティング戦略家・財務アドバイザーを兼ねています。
@@ -1193,6 +1567,7 @@ ${penaltyLines}
 ${answerSections}
 ${websiteSection}
 ${competitorSection}
+${detailedAnalysisSection}
 
 以下のJSON形式で返してください。スコアはすでに算出済みなので、axesのscoreには手を加えないでください。commentだけ記入してください。
 
@@ -1238,7 +1613,16 @@ ${axesLabels.map((l) => `    "${l}": <日本の同業種・同規模における
     "<今週中にやるべきこと1（無料で今すぐできる施策）>",
     "<今週中にやるべきこと2>",
     "<今週中にやるべきこと3>"
-  ]
+  ],
+  "competitiveDetailedComparison": {
+    "trackingComparison": "<自社 vs 競合のトラッキング活用度比較>",
+    "appealAxisComparison": "<訴求軸の比較分析>",
+    "socialProofComparison": "<社会的証明の充実度比較>",
+    "ctaComparison": "<CTA設計の比較>",
+    "pricingComparison": "<料金表示戦略の比較>",
+    "contentComparison": "<コンテンツ戦略の比較>",
+    "overallWebPositioning": "<総合的なWeb競争力分析>"
+  }
 }
 
 重要:
@@ -1249,6 +1633,7 @@ ${axesLabels.map((l) => `    "${l}": <日本の同業種・同規模における
 - industryInsightsは業界の最新トレンド・統計を引用
 - competitorIntelligenceは競合サイトの分析結果がある場合はそれを参照
 - immediateActionsは「無料」「今週中」「1人でできる」レベルの即効施策
+- competitiveDetailedComparisonは詳細Web競合分析データがある場合にそのデータを参照し、各項目で自社と競合を具体的に比較すること
 - JSONのみ返すこと`
 }
 
@@ -1457,6 +1842,7 @@ export async function POST(req: NextRequest) {
           industryInsights: geminiResult.industryInsights || [],
           competitorIntelligence: geminiResult.competitorIntelligence || '',
           immediateActions: geminiResult.immediateActions || [],
+          competitiveDetailedComparison: geminiResult.competitiveDetailedComparison || null,
           analytics: {
             categoryScores,
             synergyPenalties,

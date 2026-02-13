@@ -49,6 +49,7 @@ import BenchmarkChart from '@/components/shindan/BenchmarkChart'
 import BottleneckPanel from '@/components/shindan/BottleneckPanel'
 import RecommendationPanel from '@/components/shindan/RecommendationPanel'
 import PdfExportButton from '@/components/shindan/PdfExportButton'
+import CompetitiveMatrix from '@/components/shindan/CompetitiveMatrix'
 
 // ===== 型定義 =====
 interface ShindanResult {
@@ -84,6 +85,56 @@ interface ShindanResult {
       textLength?: number
       imageStats?: { total: number; withAlt: number }
       hasSchema?: boolean
+      tracking?: {
+        detectedTools: string[]
+        maturityLevel: string
+        trackingScore: number
+      }
+      appealAxis?: {
+        heroText: string
+        heroType: string
+        valueProposition: string
+        uspKeywords: string[]
+        benefitStatements: string[]
+        emotionalTriggers: string[]
+        appealScore: number
+      }
+      socialProof?: {
+        proofElements: string[]
+        userCountText: string | null
+        socialProofScore: number
+      }
+      ctaAnalysis?: {
+        ctaTexts: string[]
+        ctaCount: number
+        ctaPlacement: string
+        primaryCTA: string | null
+        hasLeadMagnet: boolean
+        hasLiveChat: boolean
+        ctaEffectivenessScore: number
+      }
+      pricingSignals?: {
+        pricingModel: string
+        hasPricingPage: boolean
+        hasFreeTrial: boolean
+        priceIndicators: string[]
+        pricingTransparencyScore: number
+      }
+      contentMarketing?: {
+        contentTypes: string[]
+        blogPostIndicators: number
+        hasNewsletterSignup: boolean
+        hasVideo: boolean
+        contentDepthScore: number
+        topicClusters: string[]
+      }
+      competitivePositioning?: {
+        positioningType: string
+        hasComparisonPage: boolean
+        differentiationClaims: string[]
+        mentionedCompetitors: string[]
+        positioningScore: number
+      }
     } | null
     credibilityGap: number
     competitorComparison: Array<{
@@ -97,6 +148,56 @@ interface ShindanResult {
       imageStats?: { total: number; withAlt: number }
       hasSchema?: boolean
       pagesCrawled?: number
+      tracking?: {
+        detectedTools: string[]
+        maturityLevel: string
+        trackingScore: number
+      }
+      appealAxis?: {
+        heroText: string
+        heroType: string
+        valueProposition: string
+        uspKeywords: string[]
+        benefitStatements: string[]
+        emotionalTriggers: string[]
+        appealScore: number
+      }
+      socialProof?: {
+        proofElements: string[]
+        userCountText: string | null
+        socialProofScore: number
+      }
+      ctaAnalysis?: {
+        ctaTexts: string[]
+        ctaCount: number
+        ctaPlacement: string
+        primaryCTA: string | null
+        hasLeadMagnet: boolean
+        hasLiveChat: boolean
+        ctaEffectivenessScore: number
+      }
+      pricingSignals?: {
+        pricingModel: string
+        hasPricingPage: boolean
+        hasFreeTrial: boolean
+        priceIndicators: string[]
+        pricingTransparencyScore: number
+      }
+      contentMarketing?: {
+        contentTypes: string[]
+        blogPostIndicators: number
+        hasNewsletterSignup: boolean
+        hasVideo: boolean
+        contentDepthScore: number
+        topicClusters: string[]
+      }
+      competitivePositioning?: {
+        positioningType: string
+        hasComparisonPage: boolean
+        differentiationClaims: string[]
+        mentionedCompetitors: string[]
+        positioningScore: number
+      }
     }>
     discoveredCompetitors?: Array<{
       url: string; name: string; reason: string; threatLevel: 'high' | 'medium' | 'low'
@@ -119,6 +220,15 @@ interface ShindanResult {
       industryGap: number
       lossBreakdown: { area: string; amount: number }[]
     }
+  }
+  competitiveDetailedComparison?: {
+    trackingComparison: string
+    appealAxisComparison: string
+    socialProofComparison: string
+    ctaComparison: string
+    pricingComparison: string
+    contentComparison: string
+    overallWebPositioning: string
   }
 }
 
@@ -1786,6 +1896,65 @@ export default function ShindanPage() {
                       </div>
                     )}
 
+                    {/* 広告・トラッキングツール */}
+                    {result.analytics.websiteHealth?.tracking && (
+                      <div className="mt-3">
+                        <p className="text-[10px] font-bold text-slate-500 mb-1">広告・トラッキング</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {result.analytics.websiteHealth.tracking.detectedTools.length > 0
+                            ? result.analytics.websiteHealth.tracking.detectedTools.map((tool: string, i: number) => (
+                                <span key={i} className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-bold">{tool}</span>
+                              ))
+                            : <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-bold">未設定</span>
+                          }
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 社会的証明 */}
+                    {result.analytics.websiteHealth?.socialProof && result.analytics.websiteHealth.socialProof.proofElements.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-[10px] font-bold text-slate-500 mb-1">社会的証明</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {result.analytics.websiteHealth.socialProof.proofElements.map((el: string, i: number) => (
+                            <span key={i} className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">{el}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* CTA */}
+                    {result.analytics.websiteHealth?.ctaAnalysis && result.analytics.websiteHealth.ctaAnalysis.ctaTexts.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-[10px] font-bold text-slate-500 mb-1">CTA（コールトゥアクション）</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {result.analytics.websiteHealth.ctaAnalysis.ctaTexts.slice(0, 6).map((cta: string, i: number) => (
+                            <span key={i} className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">{cta}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 訴求軸 */}
+                    {result.analytics.websiteHealth?.appealAxis && result.analytics.websiteHealth.appealAxis.heroText && (
+                      <div className="mt-3 mb-4">
+                        <p className="text-[10px] font-bold text-slate-500 mb-1">訴求軸</p>
+                        <p className="text-xs text-slate-300 italic mb-1">&quot;{result.analytics.websiteHealth.appealAxis.heroText.slice(0, 100)}&quot;</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold">
+                            {result.analytics.websiteHealth.appealAxis.heroType === 'benefit' ? 'ベネフィット訴求' 
+                              : result.analytics.websiteHealth.appealAxis.heroType === 'feature' ? 'フィーチャー訴求'
+                              : result.analytics.websiteHealth.appealAxis.heroType === 'emotional' ? '感情訴求'
+                              : result.analytics.websiteHealth.appealAxis.heroType === 'social-proof' ? '実績訴求'
+                              : '訴求不明確'}
+                          </span>
+                          {result.analytics.websiteHealth.appealAxis.uspKeywords.slice(0, 3).map((kw: string, i: number) => (
+                            <span key={i} className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold">{kw}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {result.analytics.websiteHealth.issues.slice(0, 6).map((issue, i) => (
                         <div key={i} className="flex items-start gap-2 text-xs">
@@ -1803,7 +1972,16 @@ export default function ShindanPage() {
                   </div>
                 )}
 
-                {/* ===== 競合比較 ===== */}
+                                {/* ===== 詳細競合分析マトリクス ===== */}
+                {result?.analytics?.websiteHealth?.tracking && (
+                  <CompetitiveMatrix
+                    websiteHealth={result.analytics.websiteHealth}
+                    competitors={result.analytics.competitorComparison || []}
+                    detailedComparison={result.competitiveDetailedComparison}
+                  />
+                )}
+
+{/* ===== 競合比較 ===== */}
                 {result.analytics?.competitorComparison && result.analytics.competitorComparison.length > 0 && (
                   <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6">
                     <h3 className="text-lg font-black mb-4 flex items-center gap-2">
@@ -2038,6 +2216,65 @@ export default function ShindanPage() {
                                               </span>
                                             )}
                                           </div>
+
+                                          {/* 広告・トラッキングツール */}
+                                          {comp.tracking && (
+                                            <div className="mt-1">
+                                              <p className="text-[10px] font-bold text-slate-500 mb-1">広告・トラッキング</p>
+                                              <div className="flex flex-wrap gap-1.5">
+                                                {comp.tracking.detectedTools.length > 0
+                                                  ? comp.tracking.detectedTools.map((tool: string, ti: number) => (
+                                                      <span key={ti} className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full font-bold">{tool}</span>
+                                                    ))
+                                                  : <span className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-full font-bold">未設定</span>
+                                                }
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* 社会的証明 */}
+                                          {comp.socialProof && comp.socialProof.proofElements.length > 0 && (
+                                            <div className="mt-1">
+                                              <p className="text-[10px] font-bold text-slate-500 mb-1">社会的証明</p>
+                                              <div className="flex flex-wrap gap-1.5">
+                                                {comp.socialProof.proofElements.map((el: string, si: number) => (
+                                                  <span key={si} className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">{el}</span>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* CTA */}
+                                          {comp.ctaAnalysis && comp.ctaAnalysis.ctaTexts.length > 0 && (
+                                            <div className="mt-1">
+                                              <p className="text-[10px] font-bold text-slate-500 mb-1">CTA（コールトゥアクション）</p>
+                                              <div className="flex flex-wrap gap-1.5">
+                                                {comp.ctaAnalysis.ctaTexts.slice(0, 6).map((cta: string, ci: number) => (
+                                                  <span key={ci} className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">{cta}</span>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* 訴求軸 */}
+                                          {comp.appealAxis && comp.appealAxis.heroText && (
+                                            <div className="mt-1">
+                                              <p className="text-[10px] font-bold text-slate-500 mb-1">訴求軸</p>
+                                              <p className="text-xs text-slate-300 italic mb-1">&quot;{comp.appealAxis.heroText.slice(0, 100)}&quot;</p>
+                                              <div className="flex flex-wrap gap-1.5">
+                                                <span className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold">
+                                                  {comp.appealAxis.heroType === 'benefit' ? 'ベネフィット訴求'
+                                                    : comp.appealAxis.heroType === 'feature' ? 'フィーチャー訴求'
+                                                    : comp.appealAxis.heroType === 'emotional' ? '感情訴求'
+                                                    : comp.appealAxis.heroType === 'social-proof' ? '実績訴求'
+                                                    : '訴求不明確'}
+                                                </span>
+                                                {comp.appealAxis.uspKeywords.slice(0, 3).map((kw: string, ki: number) => (
+                                                  <span key={ki} className="text-[10px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded-full font-bold">{kw}</span>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
 
                                           {/* リンク */}
                                           <a
