@@ -1,5 +1,6 @@
 // ========================================
-// ドヤ診断AI - ビジネス診断API（選択カテゴリ対応）
+// ドヤ診断AI - ビジネス診断API（徹底分析版）
+// 多次元スコアリング + Webサイト深掘り + 辛口AI診断
 // ========================================
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
@@ -17,15 +18,19 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-// ===== HTML解析ユーティリティ =====
+// =============================================
+// 1. HTML解析ユーティリティ（強化版）
+// =============================================
 function extractTextFromHTML(html: string): string {
   return html
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .slice(0, 8000)
+    .slice(0, 12000)
 }
 
 function extractMetaTags(html: string): Record<string, string> {
@@ -33,9 +38,9 @@ function extractMetaTags(html: string): Record<string, string> {
   const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i)
   if (titleMatch) meta.title = titleMatch[1].trim()
   const metaRegex = /<meta[^>]+>/gi
-  let match
-  while ((match = metaRegex.exec(html)) !== null) {
-    const tag = match[0]
+  let m
+  while ((m = metaRegex.exec(html)) !== null) {
+    const tag = m[0]
     const nameMatch = tag.match(/(?:name|property)=["']([^"']+)["']/i)
     const contentMatch = tag.match(/content=["']([^"']+)["']/i)
     if (nameMatch && contentMatch) meta[nameMatch[1]] = contentMatch[1]
@@ -45,13 +50,289 @@ function extractMetaTags(html: string): Record<string, string> {
 
 function extractHeadings(html: string): string[] {
   const headings: string[] = []
-  const regex = /<h[1-3][^>]*>([^<]+)<\/h[1-3]>/gi
-  let match
-  while ((match = regex.exec(html)) !== null) headings.push(match[1].trim())
-  return headings.slice(0, 10)
+  const regex = /<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi
+  let m
+  while ((m = regex.exec(html)) !== null) {
+    const text = m[1].replace(/<[^>]+>/g, '').trim()
+    if (text) headings.push(text)
+  }
+  return headings.slice(0, 30)
 }
 
-// ===== JSON修復 =====
+function extractInternalLinks(html: string, baseUrl: string): string[] {
+  const links: string[] = []
+  const regex = /href=["'](\/[^"'#?]*|https?:\/\/[^"'#?]*)/gi
+  let m
+  const base = new URL(baseUrl)
+  while ((m = regex.exec(html)) !== null) {
+    try {
+      const url = new URL(m[1], baseUrl)
+      if (url.hostname === base.hostname && !links.includes(url.pathname)) {
+        links.push(url.pathname)
+      }
+    } catch {}
+  }
+  return links.filter((p) => p !== '/' && p.length > 1).slice(0, 30)
+}
+
+function countImages(html: string): { total: number; withAlt: number } {
+  const imgs = html.match(/<img[^>]+>/gi) || []
+  const withAlt = imgs.filter((tag) => /alt=["'][^"']+["']/i.test(tag)).length
+  return { total: imgs.length, withAlt }
+}
+
+function hasCTA(html: string): boolean {
+  return /<form[^>]*>/i.test(html) || /contact|お問い合わせ|資料請求|無料|体験|デモ|申し込み|相談/i.test(html)
+}
+
+function hasBlogSection(links: string[]): boolean {
+  return links.some((l) => /blog|news|column|journal|記事|お知らせ|コラム|ブログ/i.test(l))
+}
+
+function detectSocialLinks(html: string): string[] {
+  const socials: string[] = []
+  if (/twitter\.com|x\.com/i.test(html)) socials.push('X')
+  if (/facebook\.com/i.test(html)) socials.push('Facebook')
+  if (/instagram\.com/i.test(html)) socials.push('Instagram')
+  if (/youtube\.com/i.test(html)) socials.push('YouTube')
+  if (/linkedin\.com/i.test(html)) socials.push('LinkedIn')
+  if (/line\.me|lin\.ee/i.test(html)) socials.push('LINE')
+  if (/tiktok\.com/i.test(html)) socials.push('TikTok')
+  return socials
+}
+
+// =============================================
+// 2. Webサイト深掘り分析エンジン
+// =============================================
+interface WebsiteAnalysis {
+  url: string
+  seoScore: number
+  contentScore: number
+  technicalScore: number
+  totalScore: number
+  issues: string[]
+  positives: string[]
+  meta: Record<string, string>
+  headings: string[]
+  textLength: number
+  pagesCrawled: number
+  socialLinks: string[]
+  hasBlog: boolean
+  hasForm: boolean
+  hasSchema: boolean
+  imageStats: { total: number; withAlt: number }
+  textExcerpt: string
+}
+
+async function fetchPage(url: string, timeout = 10000): Promise<string | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DoyaShindanBot/2.0; +https://doya-ai.surisuta.jp)' },
+      signal: AbortSignal.timeout(timeout),
+      redirect: 'follow',
+    })
+    if (!res.ok) return null
+    return await res.text()
+  } catch {
+    return null
+  }
+}
+
+async function analyzeWebsite(url: string): Promise<WebsiteAnalysis | null> {
+  const mainHtml = await fetchPage(url, 15000)
+  if (!mainHtml) return null
+
+  const meta = extractMetaTags(mainHtml)
+  const headings = extractHeadings(mainHtml)
+  const mainText = extractTextFromHTML(mainHtml)
+  const internalLinks = extractInternalLinks(mainHtml, url)
+  const images = countImages(mainHtml)
+  const hasSchema = /application\/ld\+json/i.test(mainHtml)
+  const hasForm = hasCTA(mainHtml)
+  const socialLinks = detectSocialLinks(mainHtml)
+  const blog = hasBlogSection(internalLinks)
+
+  // 追加ページクロール（重要ページを優先、並列実行）
+  const priorityPaths = internalLinks
+    .filter((p) => /about|company|service|product|blog|news|price|feature|会社|サービス|料金|事業|特徴|実績|お客様/i.test(p))
+    .slice(0, 5)
+
+  const subPages = await Promise.all(
+    priorityPaths.map((path) => fetchPage(new URL(path, url).toString(), 8000))
+  )
+  const validSubPages = subPages.filter(Boolean) as string[]
+  const pagesCrawled = 1 + validSubPages.length
+
+  let totalText = mainText
+  for (const page of validSubPages) {
+    totalText += ' ' + extractTextFromHTML(page).slice(0, 3000)
+  }
+
+  // ----- SEOスコア計算（100点満点・厳格採点）-----
+  const issues: string[] = []
+  const positives: string[] = []
+  let seoScore = 0
+
+  // title (15点)
+  if (meta.title && meta.title.length >= 10 && meta.title.length <= 60) {
+    seoScore += 15; positives.push(`titleタグ最適（${meta.title.length}文字）`)
+  } else if (meta.title) {
+    seoScore += 8; issues.push(`titleタグの長さが不適切（${meta.title.length}文字、推奨10-60文字）`)
+  } else {
+    issues.push('titleタグ未設定（SEO最重要項目の欠落）')
+  }
+
+  // meta description (12点)
+  const desc = meta.description || meta['og:description']
+  if (desc && desc.length >= 50 && desc.length <= 160) {
+    seoScore += 12; positives.push('meta description最適')
+  } else if (desc) {
+    seoScore += 5; issues.push(`meta description長が不適切（${desc.length}文字、推奨50-160文字）`)
+  } else {
+    issues.push('meta description未設定（検索結果でのCTR低下）')
+  }
+
+  // OGP完全性 (15点)
+  let ogpCount = 0
+  if (meta['og:title']) ogpCount++
+  if (meta['og:description']) ogpCount++
+  if (meta['og:image']) ogpCount++
+  if (meta['og:url']) ogpCount++
+  if (meta['og:type']) ogpCount++
+  seoScore += Math.round((ogpCount / 5) * 15)
+  if (ogpCount >= 4) positives.push(`OGP設定充実（${ogpCount}/5項目）`)
+  else if (ogpCount <= 2) issues.push(`OGP設定不足（${ogpCount}/5項目、SNSシェア時の露出機会損失）`)
+
+  // h1 (10点)
+  const h1Count = (mainHtml.match(/<h1[^>]*>/gi) || []).length
+  if (h1Count === 1) { seoScore += 10; positives.push('h1タグ適切（1つ）') }
+  else if (h1Count === 0) { issues.push('h1タグなし（検索エンジンにページ主題を伝えられていない）') }
+  else { seoScore += 3; issues.push(`h1タグ${h1Count}個（1つに統一すべき）`) }
+
+  // 見出し構造 (8点)
+  const h2Count = (mainHtml.match(/<h2[^>]*>/gi) || []).length
+  if (h2Count >= 3 && headings.length >= 5) { seoScore += 8; positives.push(`見出し構造良好（h2: ${h2Count}個）`) }
+  else if (h2Count >= 1) { seoScore += 4; issues.push('見出し構造が不十分（コンテンツ構成力が弱い）') }
+  else { issues.push('h2見出しなし（ページ内構成が致命的に弱い）') }
+
+  // 構造化データ (10点)
+  if (hasSchema) { seoScore += 10; positives.push('構造化データ（JSON-LD）実装済み') }
+  else { issues.push('構造化データなし（リッチスニペット表示の機会損失）') }
+
+  // canonical (8点)
+  if (meta.canonical || /rel=["']canonical["']/i.test(mainHtml)) { seoScore += 8 }
+  else { issues.push('canonicalタグ未設定（重複コンテンツリスク）') }
+
+  // 画像alt (7点)
+  if (images.total > 0) {
+    const altRatio = images.withAlt / images.total
+    seoScore += Math.round(altRatio * 7)
+    if (altRatio < 0.5) issues.push(`画像alt属性不足（${images.withAlt}/${images.total}枚）`)
+    else if (altRatio >= 0.8) positives.push('画像alt属性充実')
+  } else {
+    seoScore += 3 // 画像なし（良くも悪くもない）
+  }
+
+  // サイトマップ確認 (5点)
+  const sitemapHtml = await fetchPage(new URL('/sitemap.xml', url).toString(), 5000)
+  if (sitemapHtml && sitemapHtml.includes('<url>')) { seoScore += 5; positives.push('sitemap.xml設置済み') }
+  else { issues.push('sitemap.xml未設置（クローラビリティに悪影響）') }
+
+  // robots.txt確認 (5点)
+  const robotsTxt = await fetchPage(new URL('/robots.txt', url).toString(), 5000)
+  if (robotsTxt && robotsTxt.length > 10) { seoScore += 5 }
+  else { issues.push('robots.txt未設定') }
+
+  // ----- コンテンツスコア計算 -----
+  let contentScore = 0
+  const wordCount = totalText.length
+
+  // テキスト量 (25点)
+  if (wordCount > 15000) { contentScore += 25; positives.push(`豊富なコンテンツ量（${Math.round(wordCount / 1000)}K文字）`) }
+  else if (wordCount > 8000) { contentScore += 18 }
+  else if (wordCount > 3000) { contentScore += 10; issues.push('コンテンツ量が少ない（情報発信力不足）') }
+  else { contentScore += 3; issues.push('コンテンツ量が非常に少ない（集客力に深刻な影響）') }
+
+  // ブログ・コラム (20点)
+  if (blog) { contentScore += 20; positives.push('ブログ/コラムセクション確認') }
+  else { issues.push('ブログ/コラムなし（コンテンツマーケティング未実施。集客手段が限定的）') }
+
+  // CTA・コンバージョン導線 (20点)
+  if (hasForm) { contentScore += 20; positives.push('CTA/問い合わせ導線あり') }
+  else { issues.push('CTA/問い合わせフォーム未検出（コンバージョン導線の致命的欠落）') }
+
+  // サイト規模 (15点)
+  if (pagesCrawled >= 5) { contentScore += 15 }
+  else if (pagesCrawled >= 3) { contentScore += 10 }
+  else if (pagesCrawled >= 2) { contentScore += 5; issues.push('サブページが少ない（サイト規模不足）') }
+  else { issues.push('サブページなし（ペラサイトの可能性。信頼性に影響）') }
+
+  // SNS連携 (10点)
+  if (socialLinks.length >= 3) { contentScore += 10; positives.push(`SNS連携充実（${socialLinks.join(', ')}）`) }
+  else if (socialLinks.length >= 1) { contentScore += 5 }
+  else { issues.push('SNSリンクなし（ソーシャルメディア活用ゼロ）') }
+
+  // 内部リンク密度 (10点)
+  if (internalLinks.length >= 15) { contentScore += 10 }
+  else if (internalLinks.length >= 8) { contentScore += 6 }
+  else { contentScore += 2; issues.push(`内部リンクが少ない（${internalLinks.length}本、回遊性低い）`) }
+
+  // ----- テクニカルスコア計算 -----
+  let technicalScore = 0
+
+  // SSL (25点)
+  if (url.startsWith('https')) { technicalScore += 25; positives.push('HTTPS対応') }
+  else { issues.push('HTTP非暗号化通信（セキュリティ・SEO・ブラウザ警告で三重苦）') }
+
+  // モバイル対応 (25点)
+  if (/name=["']viewport["']/i.test(mainHtml)) { technicalScore += 25; positives.push('モバイルviewport設定') }
+  else { issues.push('viewport未設定（モバイル非対応の可能性。検索順位に致命的影響）') }
+
+  // HTMLサイズ (15点)
+  const htmlSize = mainHtml.length
+  if (htmlSize < 200000) { technicalScore += 15 }
+  else if (htmlSize < 500000) { technicalScore += 8; issues.push('HTMLサイズが大きい（表示速度に影響）') }
+  else { issues.push('HTMLサイズ過大（表示速度が著しく遅い可能性）') }
+
+  // 内部リンク構造 (15点)
+  if (internalLinks.length >= 10) { technicalScore += 15 }
+  else if (internalLinks.length >= 5) { technicalScore += 8 }
+  else { technicalScore += 2 }
+
+  // サブページ到達性 (10点)
+  if (validSubPages.length >= 3) { technicalScore += 10 }
+  else if (validSubPages.length >= 1) { technicalScore += 5 }
+
+  // Twitter Card / OGP (10点)
+  if (meta['twitter:card'] || meta['twitter:site']) { technicalScore += 5 }
+  if (meta['og:image'] && meta['og:title']) { technicalScore += 5 }
+
+  const totalScore = Math.round(seoScore * 0.40 + contentScore * 0.35 + technicalScore * 0.25)
+
+  return {
+    url,
+    seoScore: Math.min(100, seoScore),
+    contentScore: Math.min(100, contentScore),
+    technicalScore: Math.min(100, technicalScore),
+    totalScore: Math.min(100, totalScore),
+    issues,
+    positives,
+    meta,
+    headings,
+    textLength: wordCount,
+    pagesCrawled,
+    socialLinks,
+    hasBlog: blog,
+    hasForm: hasForm,
+    hasSchema: hasSchema,
+    imageStats: images,
+    textExcerpt: mainText.slice(0, 4000),
+  }
+}
+
+// =============================================
+// 3. JSON修復ユーティリティ
+// =============================================
 function repairJson(str: string): string {
   let jsonStr = str.trim()
   const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
@@ -71,7 +352,9 @@ function repairJson(str: string): string {
   return jsonStr
 }
 
-// ===== カテゴリ定義 =====
+// =============================================
+// 4. カテゴリ定義・重み
+// =============================================
 const CATEGORY_LABELS: Record<string, string> = {
   marketing: '集客力',
   sales: '営業力',
@@ -92,7 +375,14 @@ const CATEGORY_WEIGHTS: Record<string, number> = {
   strategy: 0.10,
 }
 
-// ===== スコアリング =====
+// =============================================
+// 5. 多次元スコアリングエンジン
+// =============================================
+
+// --- 5a. 非線形スケール採点（甘い採点を排除）---
+// 旧: 0/25/50/75/100 → 新: 10/25/45/70/88
+const SCALE5_SCORES = [10, 25, 45, 70, 88]
+
 const SCALE5_OPTIONS: Record<string, string[]> = {
   leadCount: ['ほぼなし', '月1〜10件', '月11〜50件', '月51〜100件', '月100件以上'],
   measurementMaturity: ['未実施', '一部実施', '定期測定', '分析→改善', '高度に最適化'],
@@ -116,7 +406,34 @@ const SCALE5_OPTIONS: Record<string, string[]> = {
   competitiveAdvantage: ['特になし', '価格競争力', '品質・技術力', 'スピード・柔軟性', 'ブランド+独自性'],
 }
 
-// カテゴリごとのスコア計算に使う質問ID
+function enhancedScale5Score(value: string, qId: string): number {
+  const opts = SCALE5_OPTIONS[qId]
+  if (!opts) return 30
+  const idx = opts.indexOf(value)
+  return idx >= 0 ? SCALE5_SCORES[idx] : 30
+}
+
+// --- 5b. マルチセレクト採点（逓減収益）---
+function enhancedMultiselectScore(selected: string | string[]): number {
+  if (!selected || !Array.isArray(selected) || selected.length === 0) return 5
+  if (selected.includes('特になし')) return 5
+  const count = selected.filter((v) => v !== '特になし').length
+  // 逓減: 1→18, 2→32, 3→48, 4→62, 5→74, 6+→84
+  const scores = [5, 18, 32, 48, 62, 74, 84]
+  return scores[Math.min(count, 6)]
+}
+
+// --- 5c. カテゴリ内質問別重み付け ---
+const QUESTION_WEIGHTS: Record<string, Record<string, number>> = {
+  marketing: { channels: 0.25, leadCount: 0.30, measurementMaturity: 0.25, contentMarketing: 0.20 },
+  sales: { closeRate: 0.30, salesProcess: 0.25, leadTime: 0.20, salesAnalysis: 0.25 },
+  customer: { repeatRate: 0.40, feedbackCollection: 0.30, afterFollow: 0.30 },
+  organization: { hiringDifficulty: 0.20, roleClarity: 0.25, training: 0.25, visionAlignment: 0.30 },
+  finance: { growthTrend: 0.40, profitMargin: 0.35, customerConcentration: 0.25 },
+  digital: { toolsUsed: 0.25, automationLevel: 0.40, dataAccess: 0.35 },
+  strategy: { competitiveAdvantage: 1.0 },
+}
+
 const CATEGORY_QUESTION_IDS: Record<string, { scale5: string[]; multiselect: string[] }> = {
   marketing: { scale5: ['leadCount', 'measurementMaturity', 'contentMarketing'], multiselect: ['channels'] },
   sales: { scale5: ['closeRate', 'salesProcess', 'leadTime', 'salesAnalysis'], multiselect: [] },
@@ -127,45 +444,258 @@ const CATEGORY_QUESTION_IDS: Record<string, { scale5: string[]; multiselect: str
   strategy: { scale5: ['competitiveAdvantage'], multiselect: [] },
 }
 
-function scale5Score(value: string, qId: string): number {
-  const opts = SCALE5_OPTIONS[qId]
-  if (!opts) return 50
-  const idx = opts.indexOf(value)
-  return idx >= 0 ? idx * 25 : 50
-}
-
-function multiselectScore(selected: string | string[]): number {
-  if (!selected || !Array.isArray(selected) || selected.length === 0) return 0
-  if (selected.includes('特になし')) return 0
-  return Math.round((selected.filter((v) => v !== '特になし').length / 6) * 100)
-}
-
-function avg(...values: number[]): number {
-  return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0
-}
-
-function calculateCategoryScore(catId: string, answers: Record<string, string | string[]>): number {
+function weightedCategoryScore(catId: string, answers: Record<string, string | string[]>): number {
   const def = CATEGORY_QUESTION_IDS[catId]
-  if (!def) return 0
-  const scores: number[] = []
-  for (const qId of def.scale5) scores.push(scale5Score(answers[qId] as string, qId))
-  for (const qId of def.multiselect) scores.push(multiselectScore(answers[qId]))
-  return avg(...scores)
-}
-
-function calculateOverallScore(categoryScores: Record<string, number>, selected: string[]): number {
-  let totalWeight = 0
-  let weightedSum = 0
-  for (const id of selected) {
-    const w = CATEGORY_WEIGHTS[id] || 0
-    weightedSum += (categoryScores[id] || 0) * w
-    totalWeight += w
+  const weights = QUESTION_WEIGHTS[catId]
+  if (!def || !weights) return 0
+  let totalW = 0
+  let wSum = 0
+  for (const qId of def.scale5) {
+    const w = weights[qId] || 0
+    if (w === 0) continue
+    wSum += enhancedScale5Score(answers[qId] as string, qId) * w
+    totalW += w
   }
-  return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0
+  for (const qId of def.multiselect) {
+    const w = weights[qId] || 0
+    if (w === 0) continue
+    wSum += enhancedMultiselectScore(answers[qId]) * w
+    totalW += w
+  }
+  return totalW > 0 ? Math.round(wSum / totalW) : 0
 }
 
-// ===== Gemini API =====
-async function geminiGenerateJson<T>(prompt: string): Promise<T> {
+// --- 5d. クロスカテゴリ・シナジーペナルティ ---
+interface SynergyPenalty {
+  name: string
+  penalty: number
+  description: string
+}
+
+function calculateSynergyPenalties(scores: Record<string, number>): SynergyPenalty[] {
+  const penalties: SynergyPenalty[] = []
+  const has = (id: string) => scores[id] !== undefined
+
+  if (has('marketing') && has('sales') && scores.marketing > 55 && scores.sales < 35) {
+    penalties.push({
+      name: 'リード取りこぼし',
+      penalty: -8,
+      description: '集客力はあるが営業プロセスが脆弱。獲得リードの大半が成約に至っていない可能性',
+    })
+  }
+
+  if (has('digital') && scores.digital < 30) {
+    const highOthers = Object.entries(scores).filter(([k, v]) => k !== 'digital' && v > 55).length
+    if (highOthers >= 2) {
+      penalties.push({
+        name: 'デジタル化の足枷',
+        penalty: -6,
+        description: '事業の一部は成長しているがDX未着手が全体効率を押し下げている',
+      })
+    }
+  }
+
+  if (has('organization') && scores.organization < 35) {
+    const highOthers = Object.entries(scores).filter(([k, v]) => k !== 'organization' && v > 50).length
+    if (highOthers >= 2) {
+      penalties.push({
+        name: '組織崩壊リスク',
+        penalty: -7,
+        description: '事業は伸びているが組織の仕組みが追いついていない。属人化・離職の温床',
+      })
+    }
+  }
+
+  if (has('customer') && has('marketing') && scores.customer < 35 && scores.marketing > 50) {
+    penalties.push({
+      name: 'バケツの穴問題',
+      penalty: -6,
+      description: '新規獲得偏重で既存顧客がザル落ち。顧客獲得コストが無駄遣い状態',
+    })
+  }
+
+  if (has('finance') && scores.finance < 30) {
+    penalties.push({
+      name: '財務基盤の脆弱性',
+      penalty: -5,
+      description: '売上停滞・薄利・顧客集中のいずれかが深刻。事業継続性にリスク',
+    })
+  }
+
+  if (has('strategy') && scores.strategy < 30) {
+    penalties.push({
+      name: '戦略不在',
+      penalty: -4,
+      description: '差別化戦略がなく価格競争に巻き込まれるリスクが高い',
+    })
+  }
+
+  if (has('sales') && has('customer') && scores.sales > 60 && scores.customer < 30) {
+    penalties.push({
+      name: '焼畑営業リスク',
+      penalty: -5,
+      description: '成約率は高いが顧客維持が弱い。一度きりの取引で終わる構造',
+    })
+  }
+
+  return penalties
+}
+
+// --- 5e. リスク指数（0-100, 高い=危険）---
+function calculateRiskIndex(answers: Record<string, string | string[]>): number {
+  let risk = 0
+
+  const riskMap: Record<string, Record<string, number>> = {
+    customerConcentration: { '1社依存': 30, '上位3社で過半': 20, 'やや集中': 8 },
+    growthTrend: { '大幅減少': 28, 'やや減少': 15, '横ばい': 5 },
+    profitMargin: { '赤字': 22, '薄利': 12 },
+    hiringDifficulty: { '非常に困難': 15, 'やや困難': 8 },
+    visionAlignment: { '未策定': 10, '経営層のみ': 5 },
+  }
+
+  for (const [qId, mapping] of Object.entries(riskMap)) {
+    const val = answers[qId] as string
+    if (val && mapping[val]) risk += mapping[val]
+  }
+
+  // 複合リスク加算: 赤字 + 減少のダブルパンチ
+  if (answers.profitMargin === '赤字' && (answers.growthTrend === '大幅減少' || answers.growthTrend === 'やや減少')) {
+    risk += 10
+  }
+
+  return Math.min(100, risk)
+}
+
+// --- 5f. DX成熟度指数 ---
+function calculateDXIndex(answers: Record<string, string | string[]>): number {
+  let score = 0
+  const tools = answers.toolsUsed
+  if (Array.isArray(tools)) {
+    const valid = tools.filter((t) => t !== '特になし')
+    score += Math.min(30, valid.length * 7)
+    if (valid.includes('AI/自動化ツール')) score += 10
+    if (valid.includes('MA（マーケ自動化）')) score += 8
+    if (valid.includes('CRM/SFA')) score += 5
+  }
+
+  const autoMap: Record<string, number> = { 'ほぼ手作業': 0, '一部自動化': 8, '主要業務を自動化': 20, '全体最適化': 30, 'AI活用自動化': 38 }
+  const dataMap: Record<string, number> = { 'バラバラ管理': 0, '一部統合': 5, 'ダッシュボードあり': 12, 'リアルタイム可視化': 20, '予測分析可能': 27 }
+
+  score += autoMap[answers.automationLevel as string] || 0
+  score += dataMap[answers.dataAccess as string] || 0
+
+  return Math.min(100, score)
+}
+
+// --- 5g. 成長ポテンシャル ---
+function calculateGrowthPotential(
+  categoryScores: Record<string, number>,
+  riskIndex: number,
+  dxIndex: number
+): number {
+  const factors = [
+    (categoryScores.marketing || 40) * 0.22,
+    dxIndex * 0.22,
+    (categoryScores.strategy || 40) * 0.18,
+    (categoryScores.sales || 40) * 0.18,
+    (categoryScores.finance || 40) * 0.20,
+  ]
+  const base = factors.reduce((a, b) => a + b, 0)
+  const riskDampen = riskIndex * 0.25
+  return Math.max(0, Math.min(100, Math.round(base - riskDampen)))
+}
+
+// --- 5h. 収益効率スコア（一人あたり売上 vs 業界ベンチマーク）---
+function calculateEfficiencyScore(answers: Record<string, string | string[]>): number {
+  const revenueMap: Record<string, number> = {
+    '〜1,000万円': 700, '〜5,000万円': 3000, '〜1億円': 7500,
+    '〜5億円': 25000, '〜10億円': 75000, '10億以上': 200000,
+  }
+  const employeeMap: Record<string, number> = {
+    '1人（個人）': 1, '2〜5人': 3.5, '6〜20人': 13,
+    '21〜50人': 35, '51〜100人': 75, '101〜300人': 200, '300人以上': 500,
+  }
+  const industryBenchmark: Record<string, number> = {
+    'IT/SaaS': 1200, 'EC/通販': 800, '飲食/フード': 400, '不動産': 1500,
+    '教育/スクール': 600, '医療/ヘルスケア': 800, '製造/メーカー': 700,
+    '士業/コンサル': 1000, '美容/サロン': 350, '人材/HR': 900,
+    '金融/保険': 1500, '広告/メディア': 900, 'その他': 700,
+  }
+
+  const rev = revenueMap[answers.revenueScale as string] || 3000
+  const emp = employeeMap[answers.employeeCount as string] || 10
+  const perEmp = rev / emp
+  const bench = industryBenchmark[answers.industry as string] || 700
+  const ratio = perEmp / bench
+
+  if (ratio >= 1.8) return 92
+  if (ratio >= 1.5) return 80
+  if (ratio >= 1.2) return 68
+  if (ratio >= 1.0) return 55
+  if (ratio >= 0.8) return 42
+  if (ratio >= 0.6) return 28
+  return 15
+}
+
+// --- 5i. Webサイト乖離度（自己評価 vs 実態）---
+function calculateCredibilityGap(
+  selfScores: Record<string, number>,
+  ws: WebsiteAnalysis | null
+): number {
+  if (!ws) return 0
+  const selfMarketing = selfScores.marketing || 0
+  const gap = selfMarketing - ws.totalScore
+  if (gap > 40) return -15
+  if (gap > 30) return -10
+  if (gap > 20) return -5
+  return 0
+}
+
+// --- 5j. 最終リアリティスコア ---
+function calculateFinalScore(
+  categoryScores: Record<string, number>,
+  selectedCategories: string[],
+  synergyPenalties: SynergyPenalty[],
+  ws: WebsiteAnalysis | null,
+  riskIndex: number,
+): number {
+  let totalW = 0, wSum = 0
+  for (const id of selectedCategories) {
+    const w = CATEGORY_WEIGHTS[id] || 0
+    wSum += (categoryScores[id] || 0) * w
+    totalW += w
+  }
+  let base = totalW > 0 ? wSum / totalW : 0
+
+  // シナジーペナルティ
+  base += synergyPenalties.reduce((s, p) => s + p.penalty, 0)
+
+  // Webサイト乖離補正
+  base += calculateCredibilityGap(categoryScores, ws)
+
+  // リスク減衰
+  if (riskIndex > 60) base -= 10
+  else if (riskIndex > 40) base -= 5
+  else if (riskIndex > 25) base -= 2
+
+  // Webサイト品質がかなり低い場合
+  if (ws && ws.totalScore < 25) base -= 5
+
+  return Math.max(0, Math.min(100, Math.round(base)))
+}
+
+function scoreToGrade(score: number): string {
+  if (score >= 82) return 'S'
+  if (score >= 68) return 'A'
+  if (score >= 52) return 'B'
+  if (score >= 35) return 'C'
+  return 'D'
+}
+
+// =============================================
+// 6. Gemini API
+// =============================================
+async function geminiGenerateJson<T>(prompt: string, maxTokens = 6144): Promise<T> {
   const apiKey = process.env.GOOGLE_GENAI_API_KEY
   if (!apiKey) throw new Error('GOOGLE_GENAI_API_KEY not configured')
   const models = ['gemini-2.0-flash', 'gemini-1.5-flash']
@@ -178,13 +708,10 @@ async function geminiGenerateJson<T>(prompt: string): Promise<T> {
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 4096, responseMimeType: 'application/json' },
+          generationConfig: { temperature: 0.5, maxOutputTokens: maxTokens, responseMimeType: 'application/json' },
         }),
       })
-      if (!res.ok) {
-        lastError = new Error(`Gemini ${model}: ${res.status} ${(await res.text()).slice(0, 200)}`)
-        continue
-      }
+      if (!res.ok) { lastError = new Error(`Gemini ${model}: ${res.status}`); continue }
       const data = await res.json()
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text
       if (!rawText) { lastError = new Error(`Gemini ${model}: empty`); continue }
@@ -194,14 +721,236 @@ async function geminiGenerateJson<T>(prompt: string): Promise<T> {
   throw lastError || new Error('All Gemini models failed')
 }
 
-// ===== ヘルパー =====
+// =============================================
+// 6b. AI競合自動発見
+// =============================================
+interface DiscoveredCompetitor {
+  url: string
+  name: string
+  reason: string
+  threatLevel: 'high' | 'medium' | 'low'
+}
+
+async function discoverCompetitors(
+  industry: string,
+  websiteUrl: string | undefined,
+  answers: Record<string, string | string[]>,
+): Promise<DiscoveredCompetitor[]> {
+  const context = [
+    `業種: ${industry}`,
+    answers.revenueScale ? `売上規模: ${answers.revenueScale}` : '',
+    answers.employeeCount ? `従業員数: ${answers.employeeCount}` : '',
+    answers.priorityGoal ? `成長目標: ${answers.priorityGoal}` : '',
+    websiteUrl ? `自社URL: ${websiteUrl}` : '',
+  ].filter(Boolean).join('\n')
+
+  const prompt = `あなたは日本のビジネス競合分析の専門家です。
+以下の企業情報から、この企業の直接的な競合となりうる日本企業のWebサイトURLを5つ推測してください。
+
+${context}
+
+条件:
+- 実在する日本企業のURLのみ（.co.jp, .jp, .com のドメイン）
+- 同業種・同規模で市場が重なる企業を優先
+- 大手〜中堅の知名度がある企業を含める（クロール可能なURL）
+- ${websiteUrl ? 'この企業のサイトと同じ市場で競合するサイトを選ぶ' : '業種から推測される代表的な競合を選ぶ'}
+
+以下のJSON形式で返してください:
+{
+  "competitors": [
+    { "url": "https://example.co.jp", "name": "企業名", "reason": "なぜ競合か（1文）", "threatLevel": "high" },
+    { "url": "https://example2.jp", "name": "企業名2", "reason": "理由", "threatLevel": "medium" }
+  ]
+}
+
+threatLevel: high=直接競合、medium=間接競合、low=潜在的競合`
+
+  try {
+    const result = await geminiGenerateJson<{ competitors: DiscoveredCompetitor[] }>(prompt, 2048)
+    return (result.competitors || [])
+      .filter((c) => c.url && c.url.startsWith('http'))
+      .slice(0, 5)
+  } catch {
+    return []
+  }
+}
+
+// =============================================
+// 6c. 成長予測・リスクタイムライン算出
+// =============================================
+interface GrowthForecast {
+  current: number
+  month3: number
+  month6: number
+  month12: number
+  bestCase12: number
+  worstCase12: number
+}
+
+function calculateGrowthForecast(
+  overallScore: number,
+  riskIndex: number,
+  growthPotential: number,
+  answers: Record<string, string | string[]>,
+): GrowthForecast {
+  const trend = answers.growthTrend as string
+  const trendFactor = trend === '急成長' ? 1.15 : trend === '成長中' ? 1.08 : trend === '横ばい' ? 1.0
+    : trend === 'やや減少' ? 0.92 : 0.82
+
+  // 自然減衰 or 自然成長（何もしなかった場合）
+  const natural3 = Math.round(overallScore * (trendFactor > 1 ? 1.02 : 0.97))
+  const natural6 = Math.round(overallScore * (trendFactor > 1 ? 1.03 : 0.93))
+  const natural12 = Math.round(overallScore * (trendFactor > 1 ? 1.05 : 0.85))
+
+  // ベストケース: 改善施策を全実行した場合
+  const improvementCeiling = Math.min(40, growthPotential * 0.5)
+  const best12 = Math.min(100, Math.round(overallScore + improvementCeiling))
+
+  // ワーストケース: リスクが全て顕在化した場合
+  const riskDrop = Math.round(riskIndex * 0.4)
+  const worst12 = Math.max(0, Math.round(overallScore - riskDrop))
+
+  return {
+    current: overallScore,
+    month3: Math.max(0, Math.min(100, natural3)),
+    month6: Math.max(0, Math.min(100, natural6)),
+    month12: Math.max(0, Math.min(100, natural12)),
+    bestCase12: best12,
+    worstCase12: worst12,
+  }
+}
+
+interface RiskTimelineItem {
+  risk: string
+  severity: 'critical' | 'warning' | 'watch'
+  deadline: string
+  description: string
+}
+
+function calculateRiskTimeline(
+  answers: Record<string, string | string[]>,
+  categoryScores: Record<string, number>,
+  riskIndex: number,
+): RiskTimelineItem[] {
+  const timeline: RiskTimelineItem[] = []
+
+  if (answers.customerConcentration === '1社依存') {
+    timeline.push({ risk: '売上集中リスク', severity: 'critical', deadline: '即時',
+      description: '主要顧客1社の取引停止で売上の過半が消失。新規顧客開拓が急務' })
+  } else if (answers.customerConcentration === '上位3社で過半') {
+    timeline.push({ risk: '顧客集中リスク', severity: 'warning', deadline: '6ヶ月以内',
+      description: '上位顧客への依存が高く、値下げ圧力や取引条件変更に弱い' })
+  }
+
+  if (answers.profitMargin === '赤字') {
+    timeline.push({ risk: '資金ショートリスク', severity: 'critical', deadline: '3ヶ月以内',
+      description: '赤字体質が続くとキャッシュフロー枯渇。早急なコスト構造改革が必要' })
+  }
+
+  if (answers.growthTrend === '大幅減少') {
+    timeline.push({ risk: '市場退出リスク', severity: 'critical', deadline: '6ヶ月以内',
+      description: '売上大幅減少のトレンドが継続すれば事業存続が困難に' })
+  }
+
+  if ((categoryScores.digital || 100) < 25) {
+    timeline.push({ risk: 'DX遅延による競争力喪失', severity: 'warning', deadline: '1年以内',
+      description: '競合のデジタル化が進む中、手作業中心の業務が生産性格差を拡大' })
+  }
+
+  if ((categoryScores.marketing || 100) < 30) {
+    timeline.push({ risk: 'リード枯渇', severity: 'warning', deadline: '6ヶ月以内',
+      description: '集客チャネルが脆弱で新規リードが減少傾向。パイプラインが枯渇するリスク' })
+  }
+
+  if ((categoryScores.organization || 100) < 30) {
+    timeline.push({ risk: 'キーマン退職リスク', severity: 'warning', deadline: '1年以内',
+      description: '組織体制が未整備で属人化が進行。キーマン離脱で事業に深刻な影響' })
+  }
+
+  if (answers.hiringDifficulty === '非常に困難') {
+    timeline.push({ risk: '人材確保困難', severity: 'warning', deadline: '継続',
+      description: '採用市場の競争激化で必要人材の確保がさらに困難に' })
+  }
+
+  if ((categoryScores.customer || 100) < 30 && (categoryScores.marketing || 0) > 50) {
+    timeline.push({ risk: 'LTV悪化', severity: 'watch', deadline: '1年以内',
+      description: '新規偏重で顧客離反率が高い。CAC回収前に解約が発生するリスク' })
+  }
+
+  if (riskIndex > 60) {
+    timeline.push({ risk: '複合リスク連鎖', severity: 'critical', deadline: '即時',
+      description: '複数のリスク要因が相互作用し、連鎖的に経営を圧迫する可能性' })
+  }
+
+  return timeline.sort((a, b) => {
+    const order = { critical: 0, warning: 1, watch: 2 }
+    return order[a.severity] - order[b.severity]
+  })
+}
+
+// =============================================
+// 6d. 投資優先度マトリクス算出
+// =============================================
+interface InvestmentPriority {
+  area: string
+  currentScore: number
+  improvementPotential: number
+  estimatedROI: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  recommendation: string
+}
+
+function calculateInvestmentPriorities(
+  categoryScores: Record<string, number>,
+  selectedCategories: string[],
+  answers: Record<string, string | string[]>,
+): InvestmentPriority[] {
+  const priorities: InvestmentPriority[] = []
+
+  const areaConfig: Record<string, { roiMultiplier: number; difficulty: 'easy' | 'medium' | 'hard'; rec: string }> = {
+    marketing: { roiMultiplier: 3.5, difficulty: 'medium', rec: 'コンテンツSEO + リスティング広告で月間リード数を3倍に' },
+    sales: { roiMultiplier: 4.0, difficulty: 'medium', rec: 'CRM導入 + 営業プロセス標準化で成約率15%改善' },
+    customer: { roiMultiplier: 5.0, difficulty: 'easy', rec: 'CS専任配置 + NPS調査でLTV30%向上' },
+    organization: { roiMultiplier: 2.0, difficulty: 'hard', rec: '評価制度整備 + 1on1導入で離職率半減' },
+    finance: { roiMultiplier: 2.5, difficulty: 'hard', rec: '管理会計導入 + 顧客ポートフォリオ分散' },
+    digital: { roiMultiplier: 3.0, difficulty: 'medium', rec: 'RPA/AIツール導入で工数30%削減' },
+    strategy: { roiMultiplier: 2.0, difficulty: 'hard', rec: '3C分析→差別化戦略の明文化→全社浸透' },
+  }
+
+  for (const catId of selectedCategories) {
+    const score = categoryScores[catId] || 50
+    const config = areaConfig[catId]
+    if (!config) continue
+
+    const gap = 100 - score
+    const potential = Math.round(gap * 0.6) // 実現可能な改善幅
+    const roiEstimate = score < 30 ? `${Math.round(config.roiMultiplier * 1.5)}倍`
+      : score < 50 ? `${config.roiMultiplier}倍`
+      : `${Math.round(config.roiMultiplier * 0.7)}倍`
+
+    priorities.push({
+      area: CATEGORY_LABELS[catId],
+      currentScore: score,
+      improvementPotential: potential,
+      estimatedROI: roiEstimate,
+      difficulty: score < 20 ? 'easy' : config.difficulty, // スコアが極端に低い = 基礎が未整備 = 改善しやすい
+      recommendation: config.rec,
+    })
+  }
+
+  // 改善ポテンシャル × ROI倍率でソート
+  return priorities.sort((a, b) => b.improvementPotential - a.improvementPotential)
+}
+
+// =============================================
+// 7. プロンプト生成
+// =============================================
 function fmt(val: string | string[] | undefined): string {
   if (!val) return '未回答'
   if (Array.isArray(val)) return val.length > 0 ? val.join(', ') : '未回答'
   return val
 }
 
-// カテゴリごとの回答セクション生成
 const CATEGORY_ANSWER_SECTIONS: Record<string, (a: Record<string, string | string[]>) => string> = {
   marketing: (a) => `■ 集客・マーケティング
 - 主な集客チャネル: ${fmt(a.channels)}
@@ -236,14 +985,170 @@ const CATEGORY_ANSWER_SECTIONS: Record<string, (a: Record<string, string | strin
 - 競争優位性: ${fmt(a.competitiveAdvantage)}`,
 }
 
-// ===== POST ハンドラ =====
+function buildPrompt(
+  answers: Record<string, string | string[]>,
+  selectedCategories: string[],
+  categoryScores: Record<string, number>,
+  overallScore: number,
+  grade: string,
+  synergyPenalties: SynergyPenalty[],
+  riskIndex: number,
+  dxIndex: number,
+  growthPotential: number,
+  efficiencyScore: number,
+  ws: WebsiteAnalysis | null,
+  competitorAnalyses: WebsiteAnalysis[],
+): string {
+  const scoreLines = selectedCategories
+    .map((id) => `- ${CATEGORY_LABELS[id]}: ${categoryScores[id]}/100`)
+    .join('\n')
+
+  const answerSections = selectedCategories
+    .map((id) => CATEGORY_ANSWER_SECTIONS[id]?.(answers) || '')
+    .filter(Boolean)
+    .join('\n\n')
+
+  const penaltyLines = synergyPenalties.length > 0
+    ? synergyPenalties.map((p) => `- ${p.name}: ${p.penalty}pt（${p.description}）`).join('\n')
+    : '- なし'
+
+  let websiteSection = ''
+  if (ws) {
+    websiteSection = `
+【Webサイト分析結果（自動クロール）】
+URL: ${ws.url}
+- SEOスコア: ${ws.seoScore}/100
+- コンテンツスコア: ${ws.contentScore}/100
+- テクニカルスコア: ${ws.technicalScore}/100
+- 総合サイトスコア: ${ws.totalScore}/100
+- クロールページ数: ${ws.pagesCrawled}
+- テキスト量: ${Math.round(ws.textLength / 1000)}K文字
+- ブログ有無: ${ws.hasBlog ? 'あり' : 'なし'}
+- CTA/フォーム: ${ws.hasForm ? 'あり' : 'なし'}
+- 構造化データ: ${ws.hasSchema ? 'あり' : 'なし'}
+- SNS連携: ${ws.socialLinks.length > 0 ? ws.socialLinks.join(', ') : 'なし'}
+- 検出された問題点:
+${ws.issues.map((i) => `  ❌ ${i}`).join('\n')}
+- サイト本文抜粋（最初の2000文字）:
+${ws.textExcerpt.slice(0, 2000)}`
+  }
+
+  let competitorSection = ''
+  if (competitorAnalyses.length > 0) {
+    competitorSection = '\n【競合サイト分析結果】\n' + competitorAnalyses.map((c, i) => `
+[競合${i + 1}] ${c.url}
+- SEO: ${c.seoScore}/100, コンテンツ: ${c.contentScore}/100, 技術: ${c.technicalScore}/100, 総合: ${c.totalScore}/100
+- ブログ: ${c.hasBlog ? 'あり' : 'なし'}, CTA: ${c.hasForm ? 'あり' : 'なし'}, SNS: ${c.socialLinks.join(', ') || 'なし'}
+- 見出し: ${c.headings.slice(0, 5).join(' / ')}
+- 問題点: ${c.issues.slice(0, 3).join('; ')}`).join('\n')
+  }
+
+  const axesLabels = selectedCategories.map((id) => CATEGORY_LABELS[id])
+
+  return `あなたは日本トップクラスの辛口経営コンサルタントであり、データアナリスト・マーケティング戦略家・財務アドバイザーを兼ねています。
+以下のルールを厳守してください:
+1. お世辞は一切不要。問題点は容赦なく指摘すること
+2. 「頑張っている」「素晴らしい」などの褒め言葉は禁止。事実と数字だけで語ること
+3. スコアが低い項目は「致命的」「危険水域」「早急に対応が必要」などの強い表現を使うこと
+4. 業界の統計データや一般的なベンチマークを引用して論拠を示すこと（例: 「同業種の平均成約率は25%だが…」）
+5. 自己評価とWebサイトの実態に乖離がある場合は「自己評価が甘い」と明確に指摘すること
+6. 競合情報がある場合は「競合はすでにやっている」と比較して危機感を煽ること
+7. 各項目で「具体的な数字」「業界統計」「一般的なKPI基準」を必ず引用すること
+8. 推測や予測には必ず根拠を添えること
+
+【企業プロフィール】
+- 業種: ${fmt(answers.industry)}
+- 年間売上規模: ${fmt(answers.revenueScale)}
+- 従業員数: ${fmt(answers.employeeCount)}
+- 創業年数: ${fmt(answers.companyAge)}
+
+【サーバーサイド算出スコア（計算式による厳格採点）】
+${scoreLines}
+- ★総合リアリティスコア: ${overallScore}/100 (グレード: ${grade})
+
+【検出されたクロスカテゴリ・ペナルティ】
+${penaltyLines}
+
+【算出リスク指標】
+- 事業リスク指数: ${riskIndex}/100 ${riskIndex > 50 ? '⚠️ 危険水域' : riskIndex > 30 ? '⚡ 要注意' : '✓ 許容範囲'}
+- DX成熟度: ${dxIndex}/100 ${dxIndex < 30 ? '⚠️ DX後進' : dxIndex < 50 ? '△ 発展途上' : '○ 進行中'}
+- 成長ポテンシャル: ${growthPotential}/100
+- 収益効率（一人あたり売上/業界比）: ${efficiencyScore}/100
+
+【具体的な回答内容】
+${answerSections}
+${websiteSection}
+${competitorSection}
+
+以下のJSON形式で返してください。スコアはすでに算出済みなので、axesのscoreには手を加えないでください。commentだけ記入してください。
+
+{
+  "summary": "<辛口の総合診断。最初に最大の問題点を述べ、このまま改善しないとどうなるかを具体的数字で警告。4-5文。例:「現在の成約率10%は業界平均の25%を大幅に下回り…」>",
+  "executiveSummary": "<経営者向けの超要約。3つの最重要課題と、今すぐやるべき1つのアクション。2-3文。>",
+  "axesComments": {
+${axesLabels.map((l) => `    "${l}": "<${l}について辛口に評価。業界平均との数値比較、競合との差、このままのリスク予測を含む。3-4文。>"`).join(',\n')}
+  },
+  "strengths": [
+    { "title": "<強み1>", "description": "<回答・データから特定された事実ベースの強み。競合との差別化にどう活かせるかも言及>", "leverageAdvice": "<この強みを最大活用するための具体的施策>" },
+    { "title": "<強み2>", "description": "<説明>", "leverageAdvice": "<活用施策>" },
+    { "title": "<強み3>", "description": "<説明>", "leverageAdvice": "<活用施策>" }
+  ],
+  "bottlenecks": [
+    { "title": "<ボトルネック1>", "description": "<最重要の問題。具体的にどう致命的か。業界データを引用>", "severity": "high", "impact": "<このまま放置すると起きる最悪のシナリオ。具体的な数字で>", "estimatedLoss": "<放置した場合の推定損失額・機会損失>" },
+    { "title": "<ボトルネック2>", "description": "<説明>", "severity": "high", "impact": "<影響>", "estimatedLoss": "<損失>" },
+    { "title": "<ボトルネック3>", "description": "<説明>", "severity": "high", "impact": "<影響>", "estimatedLoss": "<損失>" },
+    { "title": "<ボトルネック4>", "description": "<説明>", "severity": "medium", "impact": "<影響>", "estimatedLoss": "<損失>" },
+    { "title": "<ボトルネック5>", "description": "<説明>", "severity": "medium", "impact": "<影響>", "estimatedLoss": "<損失>" },
+    { "title": "<ボトルネック6>", "description": "<説明>", "severity": "low", "impact": "<影響>", "estimatedLoss": "<損失>" },
+    { "title": "<ボトルネック7>", "description": "<説明>", "severity": "low", "impact": "<影響>", "estimatedLoss": "<損失>" }
+  ],
+  "recommendations": [
+    { "title": "<アクション1>", "description": "<具体的な施策。ツール名・手法名・導入ステップを含む。例:「1. HubSpot CRM無料版を導入 2. 商談パイプラインを設定 3. 週次レビューを開始」>", "priority": "high", "estimatedCost": "<月額XX万円〜>", "estimatedEffect": "<XX%改善見込み（根拠: 業界統計）>", "timeframe": "<期間>", "quickWin": true },
+    { "title": "<アクション2>", "description": "<施策>", "priority": "high", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>", "quickWin": false },
+    { "title": "<アクション3>", "description": "<施策>", "priority": "high", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>", "quickWin": false },
+    { "title": "<アクション4>", "description": "<施策>", "priority": "medium", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>", "quickWin": false },
+    { "title": "<アクション5>", "description": "<施策>", "priority": "medium", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>", "quickWin": false },
+    { "title": "<アクション6>", "description": "<施策>", "priority": "low", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>", "quickWin": false },
+    { "title": "<アクション7>", "description": "<施策>", "priority": "low", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>", "quickWin": false }
+  ],
+  "benchmarkAverages": {
+${axesLabels.map((l) => `    "${l}": <日本の同業種・同規模における平均スコア（厳しめに設定）>`).join(',\n')}
+  },
+  "industryInsights": [
+    "<この業種特有のトレンドや課題に関する洞察1（統計データ引用）>",
+    "<業界動向2>",
+    "<業界動向3>"
+  ],
+  "competitorIntelligence": "<競合分析サマリー。サイトクロール結果を踏まえ、競合が実施していて自社が未実施の施策を具体的に列挙。3-4文。>",
+  "immediateActions": [
+    "<今週中にやるべきこと1（無料で今すぐできる施策）>",
+    "<今週中にやるべきこと2>",
+    "<今週中にやるべきこと3>"
+  ]
+}
+
+重要:
+- summaryは必ず具体的数字を含めること（「成約率が業界平均の半分」等）
+- bottlenecksは必ず7件。severityのhighを最低3件入れる
+- recommendationsは必ず7件。quickWin=trueは1-2件（今すぐ低コストで始められるもの）
+- estimatedLossは「年間○○万円の機会損失」のように具体的金額で記述
+- industryInsightsは業界の最新トレンド・統計を引用
+- competitorIntelligenceは競合サイトの分析結果がある場合はそれを参照
+- immediateActionsは「無料」「今週中」「1人でできる」レベルの即効施策
+- JSONのみ返すこと`
+}
+
+// =============================================
+// 8. POST ハンドラ
+// =============================================
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { answers, selectedCategories, websiteUrl } = body as {
+    const { answers, selectedCategories, websiteUrl, competitorUrls } = body as {
       answers: Record<string, string | string[]>
       selectedCategories: string[]
       websiteUrl?: string
+      competitorUrls?: string[]
     }
 
     if (!answers || !answers.industry) {
@@ -285,108 +1190,136 @@ export async function POST(req: NextRequest) {
     }
     // ゲスト回数制限: 一時的に無効化
 
-    // カテゴリスコア計算（選択カテゴリのみ）
+    // ========== A. 多次元スコアリング ==========
     const categoryScores: Record<string, number> = {}
     for (const catId of selectedCategories) {
-      categoryScores[catId] = calculateCategoryScore(catId, answers)
-    }
-    const overallScore = calculateOverallScore(categoryScores, selectedCategories)
-
-    // WebサイトURL解析
-    let websiteInfo = ''
-    if (websiteUrl) {
-      try {
-        const fetchRes = await fetch(websiteUrl, {
-          headers: { 'User-Agent': 'DoyaShindanBot/1.0' },
-          signal: AbortSignal.timeout(10000),
-        })
-        if (fetchRes.ok) {
-          const html = await fetchRes.text()
-          const text = extractTextFromHTML(html)
-          const meta = extractMetaTags(html)
-          const headings = extractHeadings(html)
-          websiteInfo = `\n【Webサイト情報】\nURL: ${websiteUrl}\nタイトル: ${meta.title || '不明'}\n説明: ${meta.description || meta['og:description'] || '不明'}\n見出し: ${headings.join(' / ')}\n本文抜粋: ${text.slice(0, 2000)}\n`
-        }
-      } catch {}
+      categoryScores[catId] = weightedCategoryScore(catId, answers)
     }
 
-    // 動的プロンプト構築
-    const scoreLines = selectedCategories
-      .map((id) => `- ${CATEGORY_LABELS[id]}: ${categoryScores[id]}/100`)
-      .join('\n')
+    const synergyPenalties = calculateSynergyPenalties(categoryScores)
+    const riskIndex = calculateRiskIndex(answers)
+    const dxIndex = selectedCategories.includes('digital') ? calculateDXIndex(answers) : -1
+    const growthPotential = calculateGrowthPotential(categoryScores, riskIndex, dxIndex >= 0 ? dxIndex : 30)
+    const efficiencyScore = calculateEfficiencyScore(answers)
 
-    const answerSections = selectedCategories
-      .map((id) => CATEGORY_ANSWER_SECTIONS[id]?.(answers) || '')
-      .filter(Boolean)
-      .join('\n\n')
+    // ========== B. Webサイト深掘り分析 + 競合自動発見（並列開始）==========
+    let websiteAnalysis: WebsiteAnalysis | null = null
+    let discoveredCompetitorList: DiscoveredCompetitor[] = []
 
-    const axesTemplate = selectedCategories
-      .map((id) => `    { "label": "${CATEGORY_LABELS[id]}", "score": <0-100>, "comment": "<回答データに基づく具体的な短評>" }`)
-      .join(',\n')
+    // 自社サイト分析と競合自動発見を並列実行
+    const [wsResult, discoveredResult] = await Promise.all([
+      websiteUrl ? analyzeWebsite(websiteUrl) : Promise.resolve(null),
+      discoverCompetitors(answers.industry as string, websiteUrl, answers),
+    ])
+    websiteAnalysis = wsResult
+    discoveredCompetitorList = discoveredResult
 
-    const benchmarkTemplate = selectedCategories
-      .map((id) => `    { "category": "${CATEGORY_LABELS[id]}", "yourScore": <0-100>, "industryAverage": <0-100> }`)
-      .join(',\n')
+    // ========== C. 競合サイト分析（手動入力 + AI発見 を統合して並列クロール）==========
+    const competitorAnalyses: WebsiteAnalysis[] = []
+    const manualUrls = (competitorUrls || []).filter((u: string) => u && u.startsWith('http')).slice(0, 3)
+    const discoveredUrls = discoveredCompetitorList.map((c) => c.url)
+    // 手動URLを優先し、AI発見URLを追加（重複排除、最大5件）
+    const allCompetitorUrls = [...new Set([...manualUrls, ...discoveredUrls])].slice(0, 5)
 
-    const prompt = `あなたは一流のビジネスコンサルタントAIです。以下の診断データをもとに、ビジネスの現状を詳細に診断してください。
+    if (allCompetitorUrls.length > 0) {
+      const results = await Promise.all(allCompetitorUrls.map((u: string) => analyzeWebsite(u)))
+      for (const r of results) {
+        if (r) competitorAnalyses.push(r)
+      }
+    }
 
-【企業プロフィール】
-- 業種: ${fmt(answers.industry)}
-- 年間売上規模: ${fmt(answers.revenueScale)}
-- 従業員数: ${fmt(answers.employeeCount)}
-- 創業年数: ${fmt(answers.companyAge)}
+    // ========== D. 最終スコア算出 ==========
+    const overallScore = calculateFinalScore(
+      categoryScores, selectedCategories, synergyPenalties, websiteAnalysis, riskIndex
+    )
+    const grade = scoreToGrade(overallScore)
 
-【診断対象カテゴリ】
-${selectedCategories.map((id) => `- ${CATEGORY_LABELS[id]}`).join('\n')}
+    // ========== D2. 追加分析指標 ==========
+    const growthForecast = calculateGrowthForecast(overallScore, riskIndex, growthPotential, answers)
+    const riskTimeline = calculateRiskTimeline(answers, categoryScores, riskIndex)
+    const investmentPriorities = calculateInvestmentPriorities(categoryScores, selectedCategories, answers)
 
-【カテゴリ別自己評価スコア（質問回答から算出）】
-${scoreLines}
-- 加重平均総合スコア: ${overallScore}/100
+    // ========== E. Gemini辛口診断（超詳細版）==========
+    const prompt = buildPrompt(
+      answers, selectedCategories, categoryScores, overallScore, grade,
+      synergyPenalties, riskIndex, dxIndex, growthPotential, efficiencyScore,
+      websiteAnalysis, competitorAnalyses,
+    )
+    const geminiResult = await geminiGenerateJson<any>(prompt, 8192)
 
-【具体的な回答内容】
-${answerSections}
-${websiteInfo}
+    // ========== F. 結果マージ ==========
+    const axesComments = geminiResult.axesComments || {}
+    const benchmarkAvgs = geminiResult.benchmarkAverages || {}
 
-以下のJSON形式で診断結果を返してください。すべて日本語で記述してください。
-診断対象カテゴリのみのaxesとbenchmarkを返してください。
-
-{
-  "overallScore": <0-100の総合スコア>,
-  "overallGrade": "<S/A/B/C/Dのいずれか。S=90以上, A=75-89, B=60-74, C=40-59, D=39以下>",
-  "summary": "<総合的な診断コメント。3-4文で。業種・規模を踏まえた具体的な強みと最重要改善点を含める>",
-  "axes": [
-${axesTemplate}
-  ],
-  "strengths": [
-    { "title": "<強み1>", "description": "<回答データから読み取れる具体的な強み>", "score": <0-100> },
-    { "title": "<強み2>", "description": "<説明>", "score": <0-100> },
-    { "title": "<強み3>", "description": "<説明>", "score": <0-100> }
-  ],
-  "bottlenecks": [
-    { "title": "<ボトルネック1>", "description": "<回答から特定された具体的な問題>", "severity": "high", "impact": "<ビジネスへの影響>" },
-    { "title": "<ボトルネック2>", "description": "<説明>", "severity": "medium", "impact": "<影響>" },
-    { "title": "<ボトルネック3>", "description": "<説明>", "severity": "low", "impact": "<影響>" }
-  ],
-  "recommendations": [
-    { "title": "<アクション1>", "description": "<具体的な施策>", "priority": "high", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>" },
-    { "title": "<アクション2>", "description": "<施策>", "priority": "high", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>" },
-    { "title": "<アクション3>", "description": "<施策>", "priority": "medium", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>" },
-    { "title": "<アクション4>", "description": "<施策>", "priority": "medium", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>" },
-    { "title": "<アクション5>", "description": "<施策>", "priority": "low", "estimatedCost": "<コスト>", "estimatedEffect": "<効果>", "timeframe": "<期間>" }
-  ],
-  "benchmark": [
-${benchmarkTemplate}
-  ]
-}
-
-重要:
-- 回答データの具体的な内容に基づいて、この企業固有の診断をしてください
-- 自己評価スコアを参考にしつつ、AI独自の分析を加味してスコアを調整
-- 売上規模・従業員数に見合った現実的なコスト・効果を提案
-- benchmarkの業界平均は日本の同業種・同規模の水準を想定
-- JSONのみを返してください`
-
-    const result = await geminiGenerateJson(prompt)
+    const result = {
+      overallScore,
+      overallGrade: grade,
+      summary: geminiResult.summary || '',
+      executiveSummary: geminiResult.executiveSummary || '',
+      axes: selectedCategories.map((id) => ({
+        label: CATEGORY_LABELS[id],
+        score: categoryScores[id],
+        comment: axesComments[CATEGORY_LABELS[id]] || '',
+      })),
+      strengths: (geminiResult.strengths || []).map((s: any) => ({
+        title: s.title || '',
+        description: s.description || '',
+        score: categoryScores[selectedCategories[0]] || 50,
+        leverageAdvice: s.leverageAdvice || '',
+      })),
+      bottlenecks: (geminiResult.bottlenecks || []).map((b: any) => ({
+        ...b,
+        estimatedLoss: b.estimatedLoss || '',
+      })),
+      recommendations: (geminiResult.recommendations || []).map((r: any) => ({
+        ...r,
+        quickWin: r.quickWin || false,
+      })),
+      benchmark: selectedCategories.map((id) => ({
+        category: CATEGORY_LABELS[id],
+        yourScore: categoryScores[id],
+        industryAverage: benchmarkAvgs[CATEGORY_LABELS[id]] || 50,
+      })),
+      industryInsights: geminiResult.industryInsights || [],
+      competitorIntelligence: geminiResult.competitorIntelligence || '',
+      immediateActions: geminiResult.immediateActions || [],
+      // 算出分析指標
+      analytics: {
+        categoryScores,
+        synergyPenalties,
+        riskIndex,
+        dxMaturity: dxIndex,
+        growthPotential,
+        efficiencyScore,
+        websiteHealth: websiteAnalysis ? {
+          seoScore: websiteAnalysis.seoScore,
+          contentScore: websiteAnalysis.contentScore,
+          technicalScore: websiteAnalysis.technicalScore,
+          totalScore: websiteAnalysis.totalScore,
+          issues: websiteAnalysis.issues,
+          positives: websiteAnalysis.positives,
+          pagesCrawled: websiteAnalysis.pagesCrawled,
+          socialLinks: websiteAnalysis.socialLinks,
+          hasBlog: websiteAnalysis.hasBlog,
+          hasForm: websiteAnalysis.hasForm,
+        } : null,
+        credibilityGap: calculateCredibilityGap(categoryScores, websiteAnalysis),
+        competitorComparison: competitorAnalyses.map((c) => ({
+          url: c.url,
+          seoScore: c.seoScore,
+          contentScore: c.contentScore,
+          technicalScore: c.technicalScore,
+          totalScore: c.totalScore,
+          hasBlog: c.hasBlog,
+          hasForm: c.hasForm,
+          socialLinks: c.socialLinks,
+        })),
+        discoveredCompetitors: discoveredCompetitorList,
+        growthForecast,
+        riskTimeline,
+        investmentPriorities,
+      },
+    }
 
     // ゲストCookie更新
     if (!isLoggedIn) {

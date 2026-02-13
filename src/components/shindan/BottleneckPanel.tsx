@@ -7,6 +7,7 @@ interface Bottleneck {
   description: string
   severity: string
   impact: string
+  estimatedLoss?: string
 }
 
 interface BottleneckPanelProps {
@@ -42,6 +43,11 @@ export default function BottleneckPanel({ bottlenecks }: BottleneckPanelProps) {
             <p className="text-xs text-slate-500">
               <span className="font-bold">影響:</span> {b.impact}
             </p>
+            {b.estimatedLoss && (
+              <p className="text-xs text-red-400 font-bold mt-1">
+                推定損失: {b.estimatedLoss}
+              </p>
+            )}
           </motion.div>
         )
       })}

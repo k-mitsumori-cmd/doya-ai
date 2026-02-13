@@ -9,6 +9,7 @@ interface Recommendation {
   estimatedCost: string
   estimatedEffect: string
   timeframe: string
+  quickWin?: boolean
 }
 
 interface RecommendationPanelProps {
@@ -34,13 +35,18 @@ export default function RecommendationPanel({ recommendations }: RecommendationP
             transition={{ delay: i * 0.1 }}
             className={`${style.bg} border rounded-xl p-4`}
           >
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="w-6 h-6 rounded-full bg-teal-500 flex items-center justify-center text-xs font-black text-white flex-shrink-0">
                 {i + 1}
               </span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${style.text}`}>
                 {style.label}
               </span>
+              {r.quickWin && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                  Quick Win
+                </span>
+              )}
               <h4 className="font-black text-white">{r.title}</h4>
             </div>
             <p className="text-sm text-slate-300 leading-relaxed mb-3">{r.description}</p>
