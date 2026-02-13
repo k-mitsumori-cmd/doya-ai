@@ -35,7 +35,7 @@ interface NavItem {
 }
 
 const shindanNavItems: NavItem[] = [
-  { href: '/shindan', label: 'ビジネス診断', icon: Activity, hot: true },
+  { href: '/shindan', label: 'Web診断', icon: Activity, hot: true },
   { href: '/shindan/history', label: '診断履歴', icon: Clock },
 ]
 
@@ -216,7 +216,7 @@ function ShindanSidebarImpl({
                 exit={{ opacity: 0, x: -10 }}
                 className="overflow-hidden"
               >
-                <h1 className="text-xl sm:text-lg font-black text-white tracking-tighter leading-none">ドヤ診断AI</h1>
+                <h1 className="text-xl sm:text-lg font-black text-white tracking-tighter leading-none">ドヤWeb診断AI</h1>
               </motion.div>
             )}
           </AnimatePresence>
@@ -225,7 +225,7 @@ function ShindanSidebarImpl({
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 sm:py-6 px-3 space-y-1 custom-scrollbar">
           <div className="space-y-1">
-            <SectionTitle title="ドヤ診断AI" />
+            <SectionTitle title="ドヤWeb診断AI" />
             {shindanNavItems.map((item) => (
               <NavLink key={item.href} item={item} />
             ))}
@@ -277,14 +277,14 @@ function ShindanSidebarImpl({
                   <div className="p-2 space-y-1">
                     <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider">ツール一覧</p>
 
-                    {/* ドヤ診断AI - 現在使用中 */}
+                    {/* ドヤWeb診断AI - 現在使用中 */}
                     <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-teal-50 border border-teal-100">
                       <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-sm">
                         <Activity className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-teal-600">ドヤ診断AI</p>
-                        <p className="text-[10px] font-bold text-teal-500">ビジネス診断（現在使用中）</p>
+                        <p className="text-sm font-black text-teal-600">ドヤWeb診断AI</p>
+                        <p className="text-[10px] font-bold text-teal-500">Web診断（現在使用中）</p>
                       </div>
                     </div>
 
@@ -462,7 +462,7 @@ function ShindanSidebarImpl({
               exit={{ opacity: 0 }}
               className="px-4 py-4 text-center border-t border-white/5"
             >
-              <p className="text-[10px] text-teal-100/30 font-bold tracking-widest">ドヤ診断AI</p>
+              <p className="text-[10px] text-teal-100/30 font-bold tracking-widest">ドヤWeb診断AI</p>
             </motion.div>
           )}
         </AnimatePresence>

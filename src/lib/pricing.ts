@@ -505,7 +505,7 @@ export function getInterviewGuestLimits(): {
 // テキスト中心の診断でAPIコストは低め
 export const SHINDAN_PRICING: ServicePricing = {
   serviceId: 'shindan',
-  serviceName: 'ドヤ診断AI',
+  serviceName: 'ドヤWeb診断AI',
   serviceIcon: '📊',
   guestLimit: 1,      // ゲスト: 1日1回
   freeLimit: 3,       // ログイン無料: 1日3回
@@ -521,12 +521,12 @@ export const SHINDAN_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '¥0',
       period: '',
-      description: 'まずはビジネス診断を体験',
+      description: 'まずはWeb診断を体験',
       features: [
         { text: 'ゲスト: 1日1回まで', included: true },
         { text: 'ログイン: 1日3回まで', included: true },
-        { text: '6軸レーダーチャート診断', included: true },
-        { text: '業界ベンチマーク比較', included: true },
+        { text: '7軸レーダーチャート診断', included: true },
+        { text: '競合サイト自動発見・比較', included: true },
         { text: '履歴保存（7日間）', included: true },
       ],
       cta: '無料で試す',
@@ -537,12 +537,12 @@ export const SHINDAN_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '¥9,980',
       period: '/月（税込）',
-      description: 'ビジネス診断を本格活用',
+      description: 'Web診断を本格活用',
       popular: true,
       color: 'teal',
       features: [
         { text: '1日20回まで診断', included: true },
-        { text: 'WebサイトURL自動解析', included: true },
+        { text: '7軸Webサイト分析', included: true },
         { text: 'PDF書き出し', included: true },
         { text: '履歴保存（無制限）', included: true },
         { text: '優先サポート', included: true },
