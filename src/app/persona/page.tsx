@@ -11,7 +11,6 @@ import {
   ChevronDown,
   Target,
   Check,
-  AlertTriangle,
   Clock,
   BookOpen,
   Sun,
@@ -31,15 +30,6 @@ import {
   User,
 } from 'lucide-react'
 
-// バナーサイズオプション
-const BANNER_SIZES = [
-  { key: 'google-responsive', label: 'Google レスポンシブ (1200×628)', width: 1200, height: 628 },
-  { key: 'google-square', label: 'Google スクエア (1200×1200)', width: 1200, height: 1200 },
-  { key: 'meta-feed', label: 'Meta フィード (1080×1080)', width: 1080, height: 1080 },
-  { key: 'meta-story', label: 'Meta ストーリー (1080×1920)', width: 1080, height: 1920 },
-  { key: 'twitter', label: 'Twitter/X (1200×675)', width: 1200, height: 675 },
-  { key: 'youtube', label: 'YouTube サムネイル (1280×720)', width: 1280, height: 720 },
-]
 
 // ムード → 色
 const MOOD_COLORS: Record<string, string> = {
@@ -158,30 +148,11 @@ interface SummaryData {
   contentIdeas?: Array<{ title: string; description: string }>
 }
 
-interface CreativesData {
-  catchphrases: string[]
-  lpStructure: {
-    hero: string
-    problem: string
-    solution: string
-    benefits: string[]
-    cta: string
-  }
-  adCopy: {
-    google: string[]
-    meta: string[]
-  }
-  emailDraft: {
-    subject: string
-    body: string
-  }
-}
-
 interface GeneratedData {
   persona: PersonaData
   deepDive?: DeepDiveData
   summary?: SummaryData
-  creatives: CreativesData
+  creatives?: any
   marketingChecklist?: any[]
 }
 
@@ -195,14 +166,10 @@ export default function PersonaPage() {
   const [generatedData, setGeneratedData] = useState<GeneratedData | null>(null)
   const [portraitImage, setPortraitImage] = useState<string | null>(null)
   const [portraitLoading, setPortraitLoading] = useState(false)
-  const [bannerImage, setBannerImage] = useState<string | null>(null)
-  const [bannerLoading, setBannerLoading] = useState(false)
-  const [selectedBannerSize, setSelectedBannerSize] = useState(BANNER_SIZES[0].key)
-  const [selectedCatchphrase, setSelectedCatchphrase] = useState('')
-  const [activeTab, setActiveTab] = useState<'persona' | 'creatives'>('persona')
   const [copied, setCopied] = useState<string | null>(null)
   const [portraitError, setPortraitError] = useState('')
-  const [bannerError, setBannerError] = useState('')
+  const [modificationInput, setModificationInput] = useState('')
+  const [modifying, setModifying] = useState(false)
   const [sceneImages, setSceneImages] = useState<Record<string, string>>({})
   const [sceneLoading, setSceneLoading] = useState<Record<string, boolean>>({})
   const [exporting, setExporting] = useState(false)
@@ -330,10 +297,8 @@ export default function PersonaPage() {
     setLoading(true)
     setError('')
     setPortraitError('')
-    setBannerError('')
     setGeneratedData(null)
     setPortraitImage(null)
-    setBannerImage(null)
     setSceneImages({})
     sceneAutoTriggered.current = false
     portraitAutoTriggered.current = false
@@ -461,23 +426,21 @@ export default function PersonaPage() {
     }
   }, [generatedData])
 
-  const handleGenerateBanner = async () => {
-    if (!generatedData?.persona || !selectedCatchphrase) {
-      setBannerError('キャッチコピーを選択してください')
-      return
-    }
+  // ペルソナ変更
+  const handleModify = async () => {
+    if (!generatedData || !modificationInput.trim() || modifying) return
 
-    setBannerLoading(true)
-    setBannerError('')
+    setModifying(true)
+    setError('')
+    setPortraitError('')
+
     try {
-      const res = await fetch('/api/persona/banner', {
+      const res = await fetch('/api/persona/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          persona: generatedData.persona,
-          serviceName,
-          catchphrase: selectedCatchphrase,
-          sizeKey: selectedBannerSize,
+          existingPersona: generatedData,
+          modifications: modificationInput,
         }),
       })
 
@@ -485,19 +448,29 @@ export default function PersonaPage() {
       let data: any = null
       try { data = raw ? JSON.parse(raw) : null } catch { data = null }
 
-      if (!res.ok || !data) {
-        throw new Error(data?.error || 'バナー生成に失敗しました')
+      if (!res.ok) {
+        const msg = (data && (data.error || data.message)) || 'ペルソナ変更に失敗しました'
+        throw new Error(msg)
       }
 
-      if (data.success && data.image) {
-        setBannerImage(data.image)
-      } else {
-        throw new Error(data.error || 'バナー画像の取得に失敗しました')
+      if (!data?.data?.persona) {
+        throw new Error('変更後のペルソナデータの取得に失敗しました')
       }
+
+      // 画像リセット・再生成
+      setPortraitImage(null)
+      setSceneImages({})
+      portraitAutoTriggered.current = false
+      sceneAutoTriggered.current = false
+
+      setGeneratedData(data.data)
+      setModificationInput('')
+
+      localStorage.setItem('doya_persona_last', JSON.stringify({ data: data.data, url, timestamp: Date.now() }))
     } catch (e) {
-      setBannerError(e instanceof Error ? e.message : 'バナー生成エラー')
+      setError(e instanceof Error ? e.message : 'エラーが発生しました')
     } finally {
-      setBannerLoading(false)
+      setModifying(false)
     }
   }
 
@@ -716,36 +689,47 @@ export default function PersonaPage() {
         </div>
 
         {/* ===== Results ===== */}
-        {generatedData && (
+        {generatedData && persona && (
           <div className="space-y-6">
-            {/* Tabs: ペルソナ履歴書 / クリエイティブ */}
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200">
-              {[
-                { key: 'persona', label: 'ペルソナ履歴書', icon: Target },
-                { key: 'creatives', label: 'クリエイティブ', icon: Sparkles },
-              ].map((tab) => {
-                const Icon = tab.icon
-                return (
-                  <button
-                    key={tab.key}
-                    onClick={() => setActiveTab(tab.key as any)}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${
-                      activeTab === tab.key
-                        ? 'bg-purple-600 text-white shadow-lg'
-                        : 'text-gray-500 hover:text-gray-800 hover:bg-white/50'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                  </button>
-                )
-              })}
+            {/* ペルソナ変更入力エリア */}
+            <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+              <h3 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-purple-600" />
+                ペルソナを変更する
+              </h3>
+              <div className="flex gap-2">
+                <textarea
+                  value={modificationInput}
+                  onChange={(e) => setModificationInput(e.target.value)}
+                  placeholder="例: 年齢を45歳にして / BtoB向けに変更して / 女性のペルソナにして / もっと具体的なエピソードを追加して"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none bg-gray-50"
+                  rows={2}
+                  disabled={modifying}
+                />
+                <button
+                  onClick={handleModify}
+                  disabled={modifying || !modificationInput.trim()}
+                  className="px-5 py-2 rounded-lg bg-purple-600 text-white text-sm font-bold hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap self-end"
+                >
+                  {modifying ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      変更中...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      変更を適用
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* ========================================== */}
-            {/* ペルソナ履歴書タブ                          */}
+            {/* ペルソナ履歴書                              */}
             {/* ========================================== */}
-            {activeTab === 'persona' && persona && (
+            {persona && (
               <div className="space-y-0">
                 {/* エクスポートボタン */}
                 <div className="max-w-4xl mx-auto mb-3 flex justify-end gap-2">
@@ -1606,176 +1590,6 @@ export default function PersonaPage() {
               </div>
             )}
 
-            {/* ========================================== */}
-            {/* クリエイティブタブ                          */}
-            {/* ========================================== */}
-            {activeTab === 'creatives' && generatedData.creatives && (
-              <div className="space-y-6">
-                {/* キャッチコピー + バナー */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-purple-600" />
-                    キャッチコピー候補
-                    <span className="text-xs text-gray-400 font-normal">（クリックで選択 → バナー生成）</span>
-                  </h3>
-                  <div className="space-y-2 mb-5">
-                    {generatedData.creatives.catchphrases?.map((c, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setSelectedCatchphrase(c)}
-                        className={`w-full text-left p-3 rounded-lg border transition-all flex items-center justify-between ${
-                          selectedCatchphrase === c
-                            ? 'bg-purple-50 border-purple-400 text-purple-800'
-                            : 'bg-gray-50 border-gray-200 text-gray-800 hover:border-gray-300 hover:bg-gray-100'
-                        }`}
-                      >
-                        <span className="font-medium text-sm">{c}</span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(c, `catch-${i}`) }}
-                            className="p-1 hover:bg-gray-200 rounded"
-                            title="コピー"
-                          >
-                            {copied === `catch-${i}` ? <Check className="w-4 h-4 text-green-500" /> : <Clipboard className="w-4 h-4 text-gray-400" />}
-                          </button>
-                          {selectedCatchphrase === c && <ChevronRight className="w-4 h-4 text-purple-500" />}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {selectedCatchphrase && (
-                    <div className="border-t border-gray-200 pt-5">
-                      <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
-                        <ImageIcon className="w-4 h-4 text-purple-600" />
-                        バナー画像生成
-                      </h4>
-                      <div className="flex flex-wrap gap-3 mb-4">
-                        <select
-                          value={selectedBannerSize}
-                          onChange={(e) => setSelectedBannerSize(e.target.value)}
-                          className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                        >
-                          {BANNER_SIZES.map((size) => (
-                            <option key={size.key} value={size.key}>{size.label}</option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={handleGenerateBanner}
-                          disabled={bannerLoading}
-                          className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm font-bold hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 flex items-center gap-2"
-                        >
-                          {bannerLoading ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              生成中...
-                            </>
-                          ) : (
-                            <>
-                              <ImageIcon className="w-4 h-4" />
-                              バナー生成
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                      {bannerError && (
-                        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-500 text-xs flex items-start gap-2">
-                          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                          <span>{bannerError}</span>
-                        </div>
-                      )}
-
-                      {bannerImage && (
-                        <div className="mt-4">
-                          <img src={bannerImage} alt="Generated Banner" className="max-w-full h-auto rounded-lg border border-gray-200" />
-                          <button
-                            onClick={() => downloadImage(bannerImage, `banner-${selectedBannerSize}.png`)}
-                            className="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 flex items-center gap-2 text-sm font-bold"
-                          >
-                            <Download className="w-4 h-4" />
-                            ダウンロード
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* LP構成案 */}
-                <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                  <h3 className="text-base font-bold text-gray-900 mb-4">LP構成案</h3>
-                  <div className="space-y-3">
-                    <div className="p-3 bg-gray-50 rounded-lg border-l-4 border-purple-500">
-                      <p className="text-xs text-purple-600 font-bold mb-1">ヒーローセクション</p>
-                      <p className="text-gray-800 text-sm">{generatedData.creatives.lpStructure?.hero}</p>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg border-l-4 border-red-500">
-                      <p className="text-xs text-red-500 font-bold mb-1">課題提起</p>
-                      <p className="text-gray-800 text-sm">{generatedData.creatives.lpStructure?.problem}</p>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg border-l-4 border-green-500">
-                      <p className="text-xs text-green-600 font-bold mb-1">解決策</p>
-                      <p className="text-gray-800 text-sm">{generatedData.creatives.lpStructure?.solution}</p>
-                    </div>
-                    {generatedData.creatives.lpStructure?.benefits && (
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="text-xs text-blue-600 font-bold mb-2">ベネフィット</p>
-                        <ul className="space-y-1">
-                          {generatedData.creatives.lpStructure.benefits.map((b, i) => (
-                            <li key={i} className="text-gray-700 text-sm">✓ {b}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {generatedData.creatives.lpStructure?.cta && (
-                      <div className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg text-center">
-                        <p className="text-xs text-gray-500 mb-1">CTA</p>
-                        <p className="text-lg font-bold text-gray-900">{generatedData.creatives.lpStructure.cta}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* 広告コピー */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                    <h3 className="text-base font-bold text-gray-900 mb-3">Google検索広告</h3>
-                    <div className="space-y-2">
-                      {generatedData.creatives.adCopy?.google?.map((ad, i) => (
-                        <div key={i} className="p-3 bg-gray-50 rounded-lg">
-                          <p className="text-gray-700 text-sm">{ad}</p>
-                          <button
-                            onClick={() => copyToClipboard(ad, `google-${i}`)}
-                            className="mt-2 text-xs text-gray-400 hover:text-purple-600 flex items-center gap-1"
-                          >
-                            {copied === `google-${i}` ? <Check className="w-3 h-3 text-green-500" /> : <Clipboard className="w-3 h-3" />}
-                            コピー
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-                    <h3 className="text-base font-bold text-gray-900 mb-3">Meta/SNS広告</h3>
-                    <div className="space-y-2">
-                      {generatedData.creatives.adCopy?.meta?.map((ad, i) => (
-                        <div key={i} className="p-3 bg-gray-50 rounded-lg">
-                          <p className="text-gray-700 text-sm">{ad}</p>
-                          <button
-                            onClick={() => copyToClipboard(ad, `meta-${i}`)}
-                            className="mt-2 text-xs text-gray-400 hover:text-purple-600 flex items-center gap-1"
-                          >
-                            {copied === `meta-${i}` ? <Check className="w-3 h-3 text-green-500" /> : <Clipboard className="w-3 h-3" />}
-                            コピー
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

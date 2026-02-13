@@ -237,9 +237,12 @@ interface PersonaResult {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { url, additionalInfo, serviceName } = body
+    const { url, additionalInfo, serviceName, existingPersona, modifications } = body
 
-    if (!url || typeof url !== 'string') {
+    // 修正モード: existingPersona + modifications がある場合
+    const isModifyMode = !!existingPersona && !!modifications
+
+    if (!isModifyMode && (!url || typeof url !== 'string')) {
       return NextResponse.json({ error: 'URLが必要です' }, { status: 400 })
     }
 
@@ -308,24 +311,46 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // URLからHTML取得
-    let html = ''
-    try {
-      const fetchRes = await fetch(url, {
-        headers: { 'User-Agent': 'DoyaPersonaBot/1.0' },
-        signal: AbortSignal.timeout(10000),
-      })
-      html = await fetchRes.text()
-    } catch (e) {
-      return NextResponse.json({ error: 'URLからコンテンツを取得できませんでした' }, { status: 400 })
-    }
+    let prompt: string
+    let meta: Record<string, string> = {}
 
-    const meta = extractMetaTags(html)
-    const headings = extractHeadings(html)
-    const plainText = extractTextFromHTML(html)
+    if (isModifyMode) {
+      // ===== 修正モード =====
+      meta = {}
+      prompt = `
+あなたは超優秀なマーケティングコンサルタント兼ペルソナ設計の専門家です。
+以下の既存ペルソナに対して、ユーザーの指示に従って変更を加えてください。
 
-    // ペルソナ生成プロンプト
-    const prompt = `
+## 重要ルール
+- ユーザーの変更指示に該当する部分のみを変更してください
+- 変更指示に関係ない部分はそのまま維持してください
+- 変更に伴い整合性が必要な場合は、関連する他のフィールドも調整してください
+  （例: 年齢を変更した場合、日記やスケジュールの内容も年齢に合わせて微調整）
+- 出力は既存と同じJSON構造で返してください
+
+## 既存ペルソナデータ
+${JSON.stringify(existingPersona, null, 2)}
+
+## ユーザーの変更指示
+${modifications}`
+    } else {
+      // ===== 新規生成モード =====
+      let html = ''
+      try {
+        const fetchRes = await fetch(url, {
+          headers: { 'User-Agent': 'DoyaPersonaBot/1.0' },
+          signal: AbortSignal.timeout(10000),
+        })
+        html = await fetchRes.text()
+      } catch (e) {
+        return NextResponse.json({ error: 'URLからコンテンツを取得できませんでした' }, { status: 400 })
+      }
+
+      meta = extractMetaTags(html)
+      const headings = extractHeadings(html)
+      const plainText = extractTextFromHTML(html)
+
+      prompt = `
 あなたは超優秀なマーケティングコンサルタント兼ペルソナ設計の専門家です。
 以下のウェブサイト情報から、ターゲットペルソナとマーケティング施策を包括的に生成してください。
 
@@ -337,7 +362,10 @@ export async function POST(req: NextRequest) {
 - コンテンツ抜粋: ${plainText.slice(0, 3000)}
 
 ${additionalInfo ? `## 追加情報\n${additionalInfo}` : ''}
-${serviceName ? `## サービス名\n${serviceName}` : ''}
+${serviceName ? `## サービス名\n${serviceName}` : ''}`
+    }
+
+    prompt += `
 
 ## 出力形式（JSON）
 以下の構造で出力してください。売れる素材になるよう、具体的で実践的な内容にしてください。すべてのフィールドを必ず含めてください。
