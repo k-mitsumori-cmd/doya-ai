@@ -396,6 +396,7 @@ export default function InterviewSettingsPage() {
                       <div className="grid grid-cols-2 gap-3 mb-5">
                         {[
                           { icon: 'speed', text: `文字起こし 150分/月（${plan === 'GUEST' ? '30倍' : '5倍'}）` },
+                          { icon: 'timer', text: '1回の文字起こし: 最大約3時間' },
                           { icon: 'cloud_upload', text: 'アップロード上限 2GB' },
                           { icon: 'fact_check', text: 'ファクトチェック・翻訳' },
                           { icon: 'support_agent', text: '優先サポート・履歴無制限' },
@@ -448,7 +449,7 @@ export default function InterviewSettingsPage() {
                         </div>
                       </div>
                       <div className="space-y-2 mb-5">
-                        {['文字起こし 1,000分/月（約7倍）', 'アップロード上限 5GB', 'チーム運用・大量制作対応'].map((t, i) => (
+                        {['文字起こし 1,000分/月（約7倍）', '1回の文字起こし: 最大約3時間', 'アップロード上限 5GB', 'チーム運用・大量制作対応'].map((t, i) => (
                           <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
                             <span className="material-symbols-outlined text-[16px] text-amber-300">star</span>
                             {t}
@@ -589,6 +590,7 @@ export default function InterviewSettingsPage() {
                     {[
                       { label: '月額料金', free: '¥0', pro: '¥9,980', enterprise: '¥49,980', isBold: true },
                       { label: '文字起こし', free: '30分/月', pro: '150分/月', enterprise: '1,000分/月' },
+                      { label: '1回の上限', free: '約3時間', pro: '約3時間', enterprise: '約3時間' },
                       { label: 'アップロード上限', free: '500MB', pro: '2GB', enterprise: '5GB' },
                       { label: 'AI記事生成', free: '5回/日', pro: '30回/日', enterprise: '100回/日' },
                     ].map((row, i) => (

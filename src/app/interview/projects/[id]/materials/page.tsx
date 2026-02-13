@@ -705,7 +705,7 @@ export default function MaterialsPage() {
             <h3 className="relative z-10 text-xl font-black mb-2 text-slate-900">
               {dragOver ? 'ここにドロップ！' : 'ファイルをドラッグ&ドロップ'}
             </h3>
-            <p className="relative z-10 text-slate-500 text-sm mb-4">または下のボタンから選択（最大5GB）</p>
+            <p className="relative z-10 text-slate-500 text-sm mb-4">または下のボタンから選択（最大5GB・1回の文字起こしは約3時間まで）</p>
 
             {/* 対応フォーマットバッジ */}
             <div className="relative z-10 flex flex-wrap justify-center gap-1.5 mb-6">
@@ -768,7 +768,7 @@ export default function MaterialsPage() {
       >
         {[
           { icon: 'speed', title: '高速アップロード', desc: 'Supabase Storage直接転送で大容量ファイルも高速にアップロード。', gradient: 'from-blue-500 to-cyan-500' },
-          { icon: 'closed_caption', title: '高精度文字起こし', desc: 'AssemblyAI搭載のAIモデルが95%以上の精度で文字起こし。', gradient: 'from-[#7f19e6] to-[#a855f7]' },
+          { icon: 'closed_caption', title: '高精度文字起こし', desc: 'AssemblyAI搭載のAIモデルが95%以上の精度で文字起こし。1回あたり最大約3時間まで対応。', gradient: 'from-[#7f19e6] to-[#a855f7]' },
           { icon: 'security', title: '安全・セキュア', desc: 'SSL/TLS暗号化転送。音声データはセキュアに保管されます。', gradient: 'from-emerald-500 to-green-500' },
         ].map((feature, i) => (
           <motion.div

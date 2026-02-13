@@ -24,6 +24,9 @@ import type { TranscriptionSegment } from '@/lib/interview/types'
 const ASSEMBLYAI_BASE_URL = 'https://api.assemblyai.com/v2'
 
 // ポーリング設定 — Vercelの5分制限内で最大限ポーリングする
+// ※ 1回の文字起こし上限: 約3時間（180分）
+//   POLL_INTERVAL=5s × MAX_POLL_DURATION=4m30s/回 × 自動再接続最大10回 ≒ 45分のポーリング
+//   AssemblyAI処理速度（実時間の1/4〜1/5）→ 約3時間が実質上限
 const POLL_INTERVAL_MS = 5000        // 固定5秒間隔 (バックオフしない)
 const MAX_POLL_DURATION_MS = 270_000 // 4分30秒 (maxDuration=5分に余裕を持たせる)
 const SEGMENT_STREAM_DELAY_MS = 80   // セグメント送信間隔

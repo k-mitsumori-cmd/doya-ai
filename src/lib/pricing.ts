@@ -379,6 +379,10 @@ export const INTERVIEW_PRICING = {
   serviceId: 'interview',
   serviceName: 'ドヤインタビュー',
   serviceIcon: '🎙️',
+  // 1回の文字起こし上限（約3時間 = 180分）
+  // ※ Vercel maxDuration=5分 × 自動再接続最大10回 ≒ 45分のポーリング時間
+  // AssemblyAI処理速度（実時間の1/4〜1/5）から約3時間が実質上限
+  maxSingleTranscriptionMinutes: 180,
   // 月次文字起こし分数制限
   transcriptionMinutes: {
     guest: 5,          // ゲスト: 合計5分
@@ -414,6 +418,7 @@ export const INTERVIEW_PRICING = {
       features: [
         { text: 'ゲスト: 文字起こし合計5分まで / 100MBまで', included: true },
         { text: 'ログイン: 毎月30分まで / 500MBまで', included: true },
+        { text: '1回の文字起こし: 最大約3時間', included: true },
         { text: 'AI記事生成 + スキル選択', included: true },
         { text: '校正・タイトル提案', included: true },
         { text: 'データ保存（30日間）', included: true },
@@ -431,6 +436,7 @@ export const INTERVIEW_PRICING = {
       color: 'purple',
       features: [
         { text: '毎月150分まで文字起こし', included: true },
+        { text: '1回の文字起こし: 最大約3時間', included: true },
         { text: 'アップロード最大2GB', included: true },
         { text: 'ファクトチェック・翻訳', included: true },
         { text: 'SNS投稿文生成', included: true },
@@ -449,6 +455,7 @@ export const INTERVIEW_PRICING = {
       color: 'slate',
       features: [
         { text: '毎月1,000分まで文字起こし', included: true },
+        { text: '1回の文字起こし: 最大約3時間', included: true },
         { text: 'アップロード最大5GB', included: true },
         { text: '全機能利用可能', included: true },
         { text: 'チーム運用・大量制作', included: true },
