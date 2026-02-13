@@ -523,6 +523,12 @@ export default function PersonaPage() {
       const html2canvas = (await import('html2canvas')).default
       const el = resumeRef.current
 
+      // エクスポート中はUI要素を非表示
+      el.classList.add('exporting')
+
+      // 少し待ってDOMを更新
+      await new Promise(r => setTimeout(r, 100))
+
       // キャプチャ
       const canvas = await html2canvas(el, {
         scale: 2,
@@ -530,8 +536,11 @@ export default function PersonaPage() {
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
-        windowWidth: 896, // max-w-4xl = 896px
+        windowWidth: 896,
       })
+
+      // エクスポートクラスを除去
+      el.classList.remove('exporting')
 
       if (format === 'png') {
         const dataUrl = canvas.toDataURL('image/png')
@@ -539,30 +548,39 @@ export default function PersonaPage() {
       } else {
         const { jsPDF } = await import('jspdf')
 
-        const imgWidth = canvas.width
-        const imgHeight = canvas.height
+        const pdfWidthMm = 210  // A4 mm
+        const pdfHeightMm = 297 // A4 mm
 
-        // A4比率で計算（横幅ベース）
-        const pdfWidth = 210 // A4 mm
-        const pdfHeight = (imgHeight * pdfWidth) / imgWidth
-        const pageHeight = 297 // A4 mm
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
-        const pdf = new jsPDF({
-          orientation: pdfHeight > pdfWidth ? 'portrait' : 'landscape',
-          unit: 'mm',
-          format: 'a4',
-        })
+        // キャンバスをページ単位でスライスして貼り付け
+        const canvasW = canvas.width
+        const canvasH = canvas.height
+        const scale = pdfWidthMm / canvasW // mm per pixel
+        const pageHeightPx = Math.floor(pdfHeightMm / scale) // 1ページ分のピクセル高さ
+        const totalPages = Math.ceil(canvasH / pageHeightPx)
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.92)
+        for (let p = 0; p < totalPages; p++) {
+          if (p > 0) pdf.addPage()
 
-        // 複数ページに分割
-        let yOffset = 0
-        let page = 0
-        while (yOffset < pdfHeight) {
-          if (page > 0) pdf.addPage()
-          pdf.addImage(imgData, 'JPEG', 0, -yOffset, pdfWidth, pdfHeight)
-          yOffset += pageHeight
-          page++
+          const srcY = p * pageHeightPx
+          const sliceH = Math.min(pageHeightPx, canvasH - srcY)
+
+          // スライス用キャンバス
+          const sliceCanvas = document.createElement('canvas')
+          sliceCanvas.width = canvasW
+          sliceCanvas.height = sliceH
+          const ctx = sliceCanvas.getContext('2d')
+          if (ctx) {
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, 0, canvasW, sliceH)
+            ctx.drawImage(canvas, 0, srcY, canvasW, sliceH, 0, 0, canvasW, sliceH)
+          }
+
+          const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.92)
+          const sliceHeightMm = sliceH * scale
+
+          pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidthMm, sliceHeightMm)
         }
 
         pdf.save(`persona-${persona?.name || 'export'}.pdf`)
@@ -570,6 +588,8 @@ export default function PersonaPage() {
     } catch (e) {
       console.error('Export error:', e)
     } finally {
+      // 念のためクラスも除去
+      resumeRef.current?.classList.remove('exporting')
       setExporting(false)
     }
   }
@@ -588,7 +608,7 @@ export default function PersonaPage() {
     }
     if (isLoading) {
       return (
-        <div className={`rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 flex items-center justify-center ${className}`}>
+        <div className={`rounded-lg bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-100 flex items-center justify-center export-hide ${className}`}>
           <div className="text-center">
             <div className="w-6 h-6 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin mx-auto mb-2" />
             <p className="text-purple-400 text-xs">画像生成中...</p>
@@ -791,7 +811,7 @@ export default function PersonaPage() {
                           {portraitImage ? (
                             <img src={portraitImage} alt="Persona" className="w-full h-full object-cover object-center" />
                           ) : portraitLoading ? (
-                            <div className="text-center">
+                            <div className="text-center export-hide">
                               <div className="w-5 h-5 border-2 border-gray-300 border-t-purple-600 rounded-full animate-spin mx-auto mb-1" />
                               <p className="text-gray-400 text-[10px]">生成中</p>
                             </div>
@@ -802,7 +822,7 @@ export default function PersonaPage() {
                             </div>
                           )}
                         </div>
-                        <div className="mt-2">
+                        <div className="mt-2 export-hide">
                           {portraitImage ? (
                             <button
                               onClick={() => downloadImage(portraitImage, `persona-${persona.name}.png`)}
@@ -1547,7 +1567,7 @@ export default function PersonaPage() {
                                 <span className="text-sm font-medium text-gray-800 flex-1">{cp}</span>
                                 <button
                                   onClick={() => copyToClipboard(cp, `summary-cp-${i}`)}
-                                  className="p-1 hover:bg-purple-100 rounded text-gray-400 hover:text-purple-600 transition-colors"
+                                  className="p-1 hover:bg-purple-100 rounded text-gray-400 hover:text-purple-600 transition-colors export-hide"
                                   title="コピー"
                                 >
                                   {copied === `summary-cp-${i}` ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Clipboard className="w-3.5 h-3.5" />}

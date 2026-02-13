@@ -417,8 +417,18 @@
     background: white !important;
     color: black !important;
   }
-  
+
   .no-print {
     display: none !important;
   }
+}
+
+/* ============================================
+   Export (html2canvas) Styles
+   ============================================ */
+.exporting .export-hide {
+  display: none !important;
+}
+.exporting .animate-spin {
+  animation: none !important;
 }
