@@ -183,7 +183,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
             body: JSON.stringify({
               audio_url: fileUrl,
               language_code: 'ja',
-              speech_model: 'best',
+              speech_models: ['universal-2'],
               speaker_labels: true,
             }),
           })
