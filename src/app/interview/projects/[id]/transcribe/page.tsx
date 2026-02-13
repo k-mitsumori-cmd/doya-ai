@@ -34,6 +34,19 @@ const STEP_INFO: Record<TranscribeStep, { icon: string; label: string; color: st
 
 const STEP_ORDER: TranscribeStep[] = ['init', 'fetching', 'submitting', 'analyzing', 'converting', 'streaming', 'complete']
 
+// 解析中に表示するメッセージ（時間経過で切り替え）
+const ANALYZING_MESSAGES = [
+  { after: 0, text: '音声データを分析しています...' },
+  { after: 10, text: '音声パターンを認識中...' },
+  { after: 25, text: 'AIが音声を解析しています...' },
+  { after: 45, text: '話者を識別しています...' },
+  { after: 70, text: 'テキストに変換中...' },
+  { after: 100, text: '高精度モードで処理中...' },
+  { after: 140, text: 'もう少しで完了します...' },
+  { after: 200, text: '長い音声ファイルを処理中...' },
+  { after: 280, text: '最終処理を実行中...' },
+]
+
 const MAX_RECONNECT_ATTEMPTS = 20
 const RECONNECT_BASE_DELAY_MS = 3000
 
@@ -52,7 +65,6 @@ export default function TranscribePage() {
   const [transcriptionId, setTranscriptionId] = useState<string | null>(null)
   const [durationMinutes, setDurationMinutes] = useState<number | null>(null)
   const [fullText, setFullText] = useState('')
-  const [reconnectCount, setReconnectCount] = useState(0)
   const [mediaInfo, setMediaInfo] = useState<MediaInfo | null>(null)
   const [mediaCurrentTime, setMediaCurrentTime] = useState(0)
   const [isMediaPlaying, setIsMediaPlaying] = useState(false)
@@ -68,11 +80,17 @@ export default function TranscribePage() {
   const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null)
   const segmentRefs = useRef<Map<number, HTMLDivElement>>(new Map())
 
-  // 経過時間カウンター
+  // 経過時間カウンター + 解析中メッセージ自動更新
   useEffect(() => {
     if (currentStep === 'complete' || currentStep === 'error') return
     const timer = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000))
+      const sec = Math.floor((Date.now() - startTimeRef.current) / 1000)
+      setElapsed(sec)
+      // 解析中のメッセージを経過時間に応じて更新
+      if (currentStep === 'analyzing') {
+        const msg = [...ANALYZING_MESSAGES].reverse().find(m => sec >= m.after)
+        if (msg) setStatusMessage(msg.text)
+      }
     }, 1000)
     return () => clearInterval(timer)
   }, [currentStep])
@@ -92,7 +110,6 @@ export default function TranscribePage() {
     )
     if (active !== -1 && active !== activeSegmentIndex) {
       setActiveSegmentIndex(active)
-      // 完了後はアクティブセグメントにスクロール
       if (currentStep === 'complete') {
         const el = segmentRefs.current.get(active)
         el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -100,46 +117,37 @@ export default function TranscribePage() {
     }
   }, [mediaCurrentTime, segments, activeSegmentIndex, currentStep])
 
-  // メディア timeupdate
   const handleTimeUpdate = useCallback(() => {
-    if (mediaRef.current) {
-      setMediaCurrentTime(mediaRef.current.currentTime)
-    }
+    if (mediaRef.current) setMediaCurrentTime(mediaRef.current.currentTime)
   }, [])
 
-  // セグメントクリックでメディアをシーク
   const handleSegmentClick = useCallback((seg: TranscriptionSegment) => {
     if (mediaRef.current) {
       mediaRef.current.currentTime = seg.start
-      if (mediaRef.current.paused) {
-        mediaRef.current.play().catch(() => {})
-      }
+      if (mediaRef.current.paused) mediaRef.current.play().catch(() => {})
     }
   }, [])
 
-  // SSE接続 (再接続対応)
+  // SSE接続 (再接続は完全透過 — UIに影響を与えない)
   const connect = useCallback(() => {
     if (!materialId || isCompleteRef.current) return
 
-    // 再接続スケジュール（二重防止 + 指数バックオフ）
-    // connectRef を使って最新の connect を呼ぶ（ステールクロージャ防止）
     function scheduleReconnect() {
       if (isCompleteRef.current || isReconnectingRef.current) return
       isReconnectingRef.current = true
 
       const count = ++reconnectCountRef.current
-      setReconnectCount(count)
 
       if (count > MAX_RECONNECT_ATTEMPTS) {
-        setErrorMessage('接続が何度も切断されました。ページを更新してください。')
+        setErrorMessage('処理に失敗しました。もう一度お試しください。')
         setCurrentStep('error')
         isReconnectingRef.current = false
         return
       }
 
+      // 再接続は透過的 — ステップやメッセージを変更しない
+      // analyzing のままキープすることでUIの連続性を保つ
       const delay = Math.min(RECONNECT_BASE_DELAY_MS * Math.pow(1.5, count - 1), 15000)
-      setStatusMessage(`再接続中... (${count}/${MAX_RECONNECT_ATTEMPTS})`)
-      setCurrentStep('analyzing')
 
       setTimeout(() => {
         isReconnectingRef.current = false
@@ -157,11 +165,22 @@ export default function TranscribePage() {
 
     eventSource.addEventListener('status', (e) => {
       const data = JSON.parse(e.data)
-      setCurrentStep(data.step as TranscribeStep)
-      setStatusMessage(data.message)
+      // 再接続時の status イベントではステップを戻さない
+      // (例: analyzing → init に戻らないようにする)
+      const newStep = data.step as TranscribeStep
+      setCurrentStep(prev => {
+        const prevIdx = STEP_ORDER.indexOf(prev)
+        const newIdx = STEP_ORDER.indexOf(newStep)
+        // 完了・エラー以外は、進行方向のみ許可（後退しない）
+        if (prev === 'complete' || prev === 'error') return prev
+        if (reconnectCountRef.current > 0 && newIdx < prevIdx) return prev
+        return newStep
+      })
+      if (!data.reconnected) {
+        setStatusMessage(data.message)
+      }
       if (data.reconnected) {
         reconnectCountRef.current = 0
-        setReconnectCount(0)
       }
     })
 
@@ -184,13 +203,10 @@ export default function TranscribePage() {
       setDurationMinutes(data.durationMinutes)
       setFullText(data.fullText)
       reconnectCountRef.current = 0
-      setReconnectCount(0)
       eventSource.close()
     })
 
-    // サーバーからの error イベント (event: error\ndata: {...})
     eventSource.addEventListener('error', (e) => {
-      // ネイティブ接続エラーは data がない → onerror で処理
       const raw = (e as any).data
       if (!raw) return
 
@@ -201,16 +217,14 @@ export default function TranscribePage() {
           scheduleReconnect()
           return
         }
-        // サーバーからの明示的エラー → 再接続しない
         setErrorMessage(data.message || '文字起こしに失敗しました')
         setCurrentStep('error')
         eventSource.close()
       } catch {
-        // JSON解析失敗 — onerror に任せる
+        // onerror に任せる
       }
     })
 
-    // ネイティブ接続エラー (ネットワーク切断, タイムアウト等)
     eventSource.onerror = () => {
       if (isCompleteRef.current) {
         eventSource.close()
@@ -223,7 +237,6 @@ export default function TranscribePage() {
     return () => eventSource.close()
   }, [materialId])
 
-  // 常に最新の connect を参照するための ref
   connectRef.current = connect
 
   useEffect(() => {
@@ -250,6 +263,7 @@ export default function TranscribePage() {
   const handleGoToGenerate = () => router.push(`/interview/projects/${projectId}/generate`)
 
   const currentStepIndex = STEP_ORDER.indexOf(currentStep)
+  const isProcessing = currentStep !== 'complete' && currentStep !== 'error'
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -263,8 +277,25 @@ export default function TranscribePage() {
           プロジェクトに戻る
         </button>
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-blue-600 flex items-center justify-center shadow-lg shadow-[#7f19e6]/20">
-            <span className="material-symbols-outlined text-white text-2xl">mic</span>
+          <div className="relative">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-blue-600 flex items-center justify-center shadow-lg shadow-[#7f19e6]/20">
+              <span className="material-symbols-outlined text-white text-2xl">mic</span>
+            </div>
+            {/* 処理中パルス */}
+            {isProcessing && (
+              <>
+                <motion.div
+                  className="absolute inset-0 rounded-2xl border-2 border-[#7f19e6]"
+                  animate={{ scale: [1, 1.4], opacity: [0.6, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+                />
+                <motion.div
+                  className="absolute inset-0 rounded-2xl border-2 border-[#7f19e6]"
+                  animate={{ scale: [1, 1.4], opacity: [0.6, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut', delay: 0.5 }}
+                />
+              </>
+            )}
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900">文字起こし</h1>
@@ -360,7 +391,13 @@ export default function TranscribePage() {
             </div>
           ) : (
             <div className="p-6 flex flex-col items-center justify-center h-48 text-slate-400">
-              <span className="material-symbols-outlined text-4xl mb-2">videocam</span>
+              <motion.span
+                className="material-symbols-outlined text-4xl mb-2"
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                videocam
+              </motion.span>
               <span className="text-sm font-bold">メディアを読み込み中...</span>
             </div>
           )}
@@ -369,14 +406,7 @@ export default function TranscribePage() {
         {/* ステッププログレス */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-700">進行状況</span>
-              {reconnectCount > 0 && currentStep !== 'error' && currentStep !== 'complete' && (
-                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
-                  再接続 {reconnectCount}回
-                </span>
-              )}
-            </div>
+            <span className="text-sm font-bold text-slate-700">進行状況</span>
             <span className="text-sm font-bold text-slate-500 tabular-nums">{formatTime(elapsed)}</span>
           </div>
 
@@ -417,7 +447,14 @@ export default function TranscribePage() {
             {currentStep === 'error' ? (
               <span className="material-symbols-outlined text-red-500 text-xl">error</span>
             ) : currentStep === 'complete' ? (
-              <span className="material-symbols-outlined text-emerald-500 text-xl">check_circle</span>
+              <motion.span
+                className="material-symbols-outlined text-emerald-500 text-xl"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', damping: 10 }}
+              >
+                check_circle
+              </motion.span>
             ) : (
               <div className="relative w-5 h-5">
                 <div className="absolute inset-0 rounded-full border-2 border-[#7f19e6]/20" />
@@ -428,35 +465,79 @@ export default function TranscribePage() {
                 />
               </div>
             )}
-            <span className={`text-sm font-bold ${
-              currentStep === 'error' ? 'text-red-600' : currentStep === 'complete' ? 'text-emerald-600' : 'text-slate-700'
-            }`}>
-              {currentStep === 'error' ? errorMessage : statusMessage}
-            </span>
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={statusMessage}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.3 }}
+                className={`text-sm font-bold ${
+                  currentStep === 'error' ? 'text-red-600' : currentStep === 'complete' ? 'text-emerald-600' : 'text-slate-700'
+                }`}
+              >
+                {currentStep === 'error' ? errorMessage : statusMessage}
+              </motion.span>
+            </AnimatePresence>
           </div>
 
-          {/* 波形アニメーション（解析中、セグメント未到着） */}
-          {(currentStep === 'analyzing' || currentStep === 'submitting') && segments.length === 0 && (
-            <div className="mt-4 flex items-end justify-center gap-[3px] h-12">
-              {Array.from({ length: 30 }).map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="w-1 bg-gradient-to-t from-[#7f19e6] to-blue-400 rounded-full"
-                  animate={{ height: [6, Math.random() * 36 + 12, 6] }}
-                  transition={{
-                    duration: 0.8 + Math.random() * 0.6,
-                    repeat: Infinity,
-                    delay: i * 0.03,
-                    ease: 'easeInOut',
-                  }}
-                />
-              ))}
+          {/* 解析中ビジュアライザー */}
+          {(currentStep === 'analyzing' || currentStep === 'submitting' || currentStep === 'init' || currentStep === 'fetching') && segments.length === 0 && (
+            <div className="mt-5">
+              {/* 波形アニメーション */}
+              <div className="flex items-end justify-center gap-[2px] h-14 mb-3">
+                {Array.from({ length: 40 }).map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-[3px] rounded-full"
+                    style={{
+                      background: `linear-gradient(to top, #7f19e6, ${i % 3 === 0 ? '#3b82f6' : i % 3 === 1 ? '#a855f7' : '#6366f1'})`,
+                    }}
+                    animate={{
+                      height: [4, Math.random() * 40 + 14, 6, Math.random() * 30 + 8, 4],
+                    }}
+                    transition={{
+                      duration: 1.2 + Math.random() * 0.8,
+                      repeat: Infinity,
+                      delay: i * 0.025,
+                      ease: 'easeInOut',
+                    }}
+                  />
+                ))}
+              </div>
+              {/* 処理中の追加インジケーター */}
+              <div className="flex items-center justify-center gap-4 text-[10px] text-slate-400">
+                <div className="flex items-center gap-1.5">
+                  <motion.div
+                    className="w-1.5 h-1.5 rounded-full bg-[#7f19e6]"
+                    animate={{ opacity: [1, 0.3, 1] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                  <span>AI処理中</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <motion.div
+                    className="w-1.5 h-1.5 rounded-full bg-blue-500"
+                    animate={{ opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                  <span>音声認識</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <motion.div
+                    className="w-1.5 h-1.5 rounded-full bg-purple-500"
+                    animate={{ opacity: [0.6, 1, 0.6] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  />
+                  <span>話者分離</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* 文字起こし結果（リアルタイム表示 + セグメントクリックでシーク） */}
+      {/* 文字起こし結果 */}
       {segments.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -467,6 +548,22 @@ export default function TranscribePage() {
             <div className="flex items-center gap-2">
               <span className="material-symbols-outlined text-[#7f19e6] text-lg">subtitles</span>
               <span className="text-sm font-bold text-slate-700">文字起こし結果</span>
+              {isProcessing && (
+                <motion.div
+                  className="flex items-center gap-[2px]"
+                  animate={{ opacity: [0.5, 1, 0.5] }}
+                  transition={{ duration: 1.5, repeat: Infinity }}
+                >
+                  {[0, 1, 2].map((j) => (
+                    <motion.div
+                      key={j}
+                      className="w-1 bg-[#7f19e6] rounded-full"
+                      animate={{ height: [3, 10, 3] }}
+                      transition={{ duration: 0.6, repeat: Infinity, delay: j * 0.12, ease: 'easeInOut' }}
+                    />
+                  ))}
+                </motion.div>
+              )}
             </div>
             <div className="flex items-center gap-3">
               {currentStep === 'complete' && (
@@ -494,7 +591,6 @@ export default function TranscribePage() {
                         : 'hover:bg-slate-50 border border-transparent'
                     }`}
                   >
-                    {/* タイムスタンプ */}
                     <div className="flex-shrink-0 pt-1">
                       <span className={`text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded ${
                         isActive ? 'bg-[#7f19e6] text-white' : 'bg-slate-50 text-slate-400'
@@ -503,7 +599,6 @@ export default function TranscribePage() {
                       </span>
                     </div>
 
-                    {/* スピーカー & テキスト */}
                     <div className="flex-1 min-w-0">
                       {seg.speaker && (
                         <span className={`inline-block text-[10px] font-black px-1.5 py-0.5 rounded-full mb-1 ${
@@ -519,7 +614,6 @@ export default function TranscribePage() {
                       </p>
                     </div>
 
-                    {/* 再生中インジケーター */}
                     {isActive && isMediaPlaying && (
                       <div className="flex-shrink-0 flex items-center gap-[2px] pt-1">
                         {[0, 1, 2].map((j) => (
@@ -551,9 +645,14 @@ export default function TranscribePage() {
           >
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center">
+                <motion.div
+                  className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', delay: 0.2, damping: 10 }}
+                >
                   <span className="material-symbols-outlined text-white text-2xl">check</span>
-                </div>
+                </motion.div>
                 <div>
                   <h2 className="text-lg font-black text-slate-900">文字起こし完了</h2>
                   <p className="text-sm text-slate-600">
