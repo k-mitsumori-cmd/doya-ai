@@ -299,6 +299,13 @@ export default function GeneratePage() {
   const displayFormat = searchParams.get('displayFormat') || 'MONOLOGUE'
   const customInstructions = searchParams.get('instructions') || ''
 
+  // recipeId が未指定の場合はスキル選択ページへリダイレクト
+  useEffect(() => {
+    if (!recipeId) {
+      router.replace(`/interview/projects/${projectId}/skill`)
+    }
+  }, [recipeId, projectId, router])
+
   const [status, setStatus] = useState<'idle' | 'generating' | 'done' | 'error'>('idle')
   const [progress, setProgress] = useState('')
   const [generatedText, setGeneratedText] = useState('')

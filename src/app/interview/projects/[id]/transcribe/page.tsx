@@ -258,7 +258,7 @@ export default function TranscribePage() {
   }
 
   const handleGoToEditor = () => router.push(`/interview/projects/${projectId}/edit`)
-  const handleGoToGenerate = () => router.push(`/interview/projects/${projectId}/generate`)
+  const handleGoToGenerate = () => router.push(`/interview/projects/${projectId}/skill`)
 
   const currentStepIndex = STEP_ORDER.indexOf(currentStep)
   const isProcessing = currentStep !== 'complete' && currentStep !== 'error'
