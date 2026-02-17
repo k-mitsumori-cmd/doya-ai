@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 
 // ============================================
@@ -37,7 +38,7 @@ const PLANS: Plan[] = [
     description: 'お試し利用に最適',
     recommended: false,
     features: {
-      generations: '月3回',
+      generations: '月10回',
       platforms: '3プラットフォーム',
       inputChars: '5,000文字',
       videoInput: false,
@@ -58,8 +59,8 @@ const PLANS: Plan[] = [
     description: '個人クリエイター向け',
     recommended: false,
     features: {
-      generations: '月30回',
-      platforms: '6プラットフォーム',
+      generations: '月50回',
+      platforms: '5プラットフォーム',
       inputChars: '20,000文字',
       videoInput: false,
       brandVoice: '3つ',
@@ -79,7 +80,7 @@ const PLANS: Plan[] = [
     description: 'ビジネス利用に最適',
     recommended: true,
     features: {
-      generations: '月100回',
+      generations: '月200回',
       platforms: '9プラットフォーム',
       inputChars: '50,000文字',
       videoInput: true,
@@ -132,9 +133,30 @@ const FEATURE_ROWS = [
 // ============================================
 export default function PricingTable({ currentPlan = 'FREE' }: PricingTableProps) {
   const [isAnnual, setIsAnnual] = useState(false)
+  const router = useRouter()
 
   // 現在のプランを正規化
   const normalizedPlan = currentPlan.toUpperCase()
+
+  const handleUpgrade = async (planKey: string) => {
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: `tenkai_${planKey}` }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.url) {
+          window.location.href = data.url
+          return
+        }
+      }
+      alert('決済ページの取得に失敗しました')
+    } catch {
+      alert('エラーが発生しました')
+    }
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -242,6 +264,7 @@ export default function PricingTable({ currentPlan = 'FREE' }: PricingTableProps
                   </div>
                 ) : (
                   <button
+                    onClick={() => handleUpgrade(plan.key)}
                     className={`w-full py-3 rounded-xl text-sm font-bold transition-all ${
                       plan.recommended
                         ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40'

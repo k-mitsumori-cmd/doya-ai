@@ -53,9 +53,13 @@ export async function POST(req: NextRequest) {
     })
 
     // Gemini API呼び出し（リトライ付き）
-    const geminiApiKey = process.env.GEMINI_API_KEY
+    // 既存サービスと同じフォールバック順でGemini APIキーを取得
+    const geminiApiKey =
+      process.env.GOOGLE_AI_API_KEY ||
+      process.env.GOOGLE_GENAI_API_KEY ||
+      process.env.GEMINI_API_KEY
     if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY が設定されていません')
+      throw new Error('Gemini APIキーが設定されていません（GOOGLE_AI_API_KEY / GOOGLE_GENAI_API_KEY / GEMINI_API_KEY）')
     }
 
     const prompt = buildAnalysisPrompt(text, project.title)
@@ -120,7 +124,7 @@ export async function POST(req: NextRequest) {
     await prisma.tenkaiProject.update({
       where: { id: projectId },
       data: {
-        analysis: analysis as Record<string, unknown>,
+        analysis: analysis as any,
         status: 'ready',
       },
     })

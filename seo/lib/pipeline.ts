@@ -10,7 +10,7 @@ import { hasSerpApiKey, serpapiSearchGoogle } from '@seo/lib/serpapi'
 type ResearchEvent = {
   id: string
   at: number
-  kind: 'search' | 'candidates' | 'discover' | 'queue' | 'fetch' | 'summarize' | 'store' | 'warn' | 'error'
+  kind: 'search' | 'candidates' | 'discover' | 'queue' | 'fetch' | 'summarize' | 'store' | 'warn' | 'error' | 'info' | 'success'
   title: string
   detail?: string
   url?: string
@@ -663,9 +663,9 @@ async function extractCandidatesFromSerpOrganic(args: {
   ].join('\n')
 
   try {
-    const result = await geminiGenerateJson({
+    const result = await geminiGenerateJson<any>({
       model: GEMINI_TEXT_MODEL_DEFAULT,
-      parts: [{ text: prompt }],
+      prompt,
       generationConfig: { temperature: 0.2, maxOutputTokens: 4000 },
     })
     if (!Array.isArray(result)) return []
@@ -1123,9 +1123,9 @@ async function extractServicesFromComparisonArticle(
       'Example: [{"name":"ServiceA","websiteUrl":"https://example.com","notes":"Description here"}]',
     ].join('\n')
 
-    const result = await geminiGenerateJson({
+    const result = await geminiGenerateJson<any>({
       model: GEMINI_TEXT_MODEL_DEFAULT,
-      parts: [{ text: prompt }],
+      prompt,
       generationConfig: { temperature: 0.2, maxOutputTokens: 4000 },
     })
 
@@ -1342,9 +1342,9 @@ async function enrichCandidatesWithDetails(
         'Example: {"pricing":"月額10万円〜","features":["機能A","機能B"],"description":"説明","officialUrl":"https://..."}',
       ].join('\n')
 
-      const result = await geminiGenerateJson({
+      const result = await geminiGenerateJson<any>({
         model: GEMINI_TEXT_MODEL_DEFAULT,
-        parts: [{ text: prompt }],
+        prompt,
         generationConfig: { temperature: 0.2, maxOutputTokens: 500 },
       })
 
@@ -3814,7 +3814,7 @@ async function integrate(jobId: string) {
       '',
       `Primary keyword: ${primaryKw || '（不明）'}`,
       `Article title: ${article.title}`,
-      requestText ? `User primary info (must be treated as differentiator):\n${clampText(String(requestText || ''), 900)}` : '',
+      article.requestText ? `User primary info (must be treated as differentiator):\n${clampText(String(article.requestText || ''), 900)}` : '',
       '',
       'Our article headings (partial):',
       ownHeadings || '（見出し取得不可）',

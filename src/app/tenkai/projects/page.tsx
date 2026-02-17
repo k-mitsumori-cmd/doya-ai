@@ -65,7 +65,7 @@ export default function ProjectsPage() {
   const [hasMore, setHasMore] = useState(false)
   const [page, setPage] = useState(1)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [notifications, setNotifications] = useState(3)
+  const [notifications] = useState(0)
 
   // ============================================
   // データ取得
@@ -113,6 +113,21 @@ export default function ProjectsPage() {
     const nextPage = page + 1
     setPage(nextPage)
     fetchProjects(nextPage, true)
+  }
+
+  // ============================================
+  // 削除
+  // ============================================
+  const handleDelete = async (projectId: string) => {
+    try {
+      const res = await fetch(`/api/tenkai/projects/${projectId}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('プロジェクトの削除に失敗しました')
+      setProjects((prev) => prev.filter((p) => p.id !== projectId))
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : '削除に失敗しました')
+    }
   }
 
   // ============================================
@@ -300,7 +315,7 @@ export default function ProjectsPage() {
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3, delay: index * 0.05 }}
                   >
-                    <ProjectCard {...project} />
+                    <ProjectCard {...project} onDelete={handleDelete} />
                   </motion.div>
                 ))}
               </AnimatePresence>

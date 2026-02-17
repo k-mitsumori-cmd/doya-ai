@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { geminiGenerateText } from '@seo/lib/gemini'
+import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 
 // POST: セクションをSEO強化
 export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
@@ -42,7 +42,7 @@ ${keywords.join(', ') || '（未設定）'}
 強化後の本文のみを出力してください。見出しは含めないでください。
 **や*などの記号は使わないでください。`
 
-    const enhanced = await geminiGenerateText(prompt)
+    const enhanced = await geminiGenerateText({ model: GEMINI_TEXT_MODEL_DEFAULT, parts: [{ text: prompt }] })
 
     await prisma.seoSection.update({
       where: { id },

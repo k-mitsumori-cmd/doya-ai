@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ============================================
@@ -28,6 +28,7 @@ export default function StepAnalysis({ projectId, onComplete }: StepAnalysisProp
   const [error, setError] = useState<string | null>(null)
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null)
   const [progress, setProgress] = useState(0)
+  const progressIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // ============================================
   // 分析実行
@@ -37,11 +38,19 @@ export default function StepAnalysis({ projectId, onComplete }: StepAnalysisProp
     setError(null)
     setProgress(0)
 
+    // 前回のintervalが残っていたらクリア
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current)
+    }
+
     // プログレスアニメーション
-    const progressInterval = setInterval(() => {
+    progressIntervalRef.current = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 90) {
-          clearInterval(progressInterval)
+          if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current)
+            progressIntervalRef.current = null
+          }
           return 90
         }
         return prev + Math.random() * 15
@@ -61,7 +70,10 @@ export default function StepAnalysis({ projectId, onComplete }: StepAnalysisProp
       }
 
       const data = await res.json()
-      clearInterval(progressInterval)
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
       setProgress(100)
 
       const a = data.analysis || data
@@ -76,16 +88,25 @@ export default function StepAnalysis({ projectId, onComplete }: StepAnalysisProp
 
       setAnalysisData(result)
     } catch (err: unknown) {
-      clearInterval(progressInterval)
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
       setError(err instanceof Error ? err.message : '分析中にエラーが発生しました')
     } finally {
       setIsLoading(false)
     }
   }, [projectId])
 
-  // マウント時に自動実行
+  // マウント時に自動実行 + アンマウント時にintervalクリーンアップ
   useEffect(() => {
     runAnalysis()
+    return () => {
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current)
+        progressIntervalRef.current = null
+      }
+    }
   }, [runAnalysis])
 
   // ============================================

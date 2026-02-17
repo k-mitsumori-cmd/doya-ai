@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getUploadSignedUrl, buildStoragePath, getDownloadSignedUrl } from '@/lib/tenkai/storage'
+import { getUploadSignedUrl, buildStoragePath } from '@/lib/tenkai/storage'
 import { incrementProjectCount } from '@/lib/tenkai/access'
 
 export async function POST(req: NextRequest) {
@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
 
     // ファイルサイズ制限 (500MB)
     const maxSize = 500 * 1024 * 1024
-    if (fileSize && fileSize > maxSize) {
+    const numericSize = typeof fileSize === 'number' ? fileSize : 0
+    if (numericSize > maxSize) {
       return NextResponse.json(
         { error: 'ファイルサイズが上限 (500MB) を超えています' },
         { status: 400 }

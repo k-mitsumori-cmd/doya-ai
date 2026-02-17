@@ -102,23 +102,28 @@ ${JSON.stringify(existingOutput.content, null, 2).slice(0, 2000)}`
     }
 
     const result = await generateForPlatform(
-      project.analysis,
+      project.analysis as Record<string, unknown>,
       existingOutput.platform,
       options
     )
 
     // 新バージョンとして保存
-    const nextVersion = existingOutput.version + 1
+    const lastOutput = await prisma.tenkaiOutput.findFirst({
+      where: { projectId: project.id, platform: existingOutput.platform },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    })
+    const nextVersion = (lastOutput?.version ?? 0) + 1
 
     const newOutput = await prisma.tenkaiOutput.create({
       data: {
         projectId: project.id,
         platform: existingOutput.platform,
-        content: result.content,
-        charCount: result.charCount,
-        qualityScore: result.qualityScore,
+        content: result.content as any,
+        charCount: result.charCount as number,
+        qualityScore: result.qualityScore as number,
         status: 'completed',
-        tokensUsed: result.tokensUsed,
+        tokensUsed: result.tokensUsed as number,
         brandVoiceId: bvId || null,
         feedback,
         version: nextVersion,

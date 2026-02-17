@@ -53,7 +53,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     const updated = await prisma.tenkaiOutput.update({
       where: { id: outputId },
       data: {
-        content: content as Record<string, unknown>,
+        content: content as any,
         isEdited: true,
       },
     })

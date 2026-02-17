@@ -69,6 +69,7 @@ export default function StepGeneration({
     if (isCancelled) return
 
     const abortController = new AbortController()
+    abortRef.current = abortController
 
     async function startGeneration() {
       try {

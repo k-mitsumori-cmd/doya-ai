@@ -137,24 +137,26 @@ export async function POST(req: NextRequest) {
 
         try {
           const generator = generateForMultiplePlatforms(
-            project.analysis,
+            project.analysis as Record<string, unknown>,
             platforms,
             options
           )
 
           for await (const event of generator) {
-            if (streamClosed) break
+            // ストリームが閉じてもDB保存のため生成は継続する
+            // （クライアントがページ遷移しても全プラットフォームを生成完了させる）
 
-            // SSEイベントを送信
+            // SSEイベントを送信（ストリーム切断時はサイレントにスキップ）
             safeEnqueue(`data: ${JSON.stringify(event)}\n\n`)
 
             // 各プラットフォームの生成完了時にDBに保存
-            if (event.type === 'generation_complete' && event.data) {
+            if (event.type === 'generation_complete' && event.data && event.platform) {
               const result = event.data
+              const eventPlatform = event.platform
               try {
                 // 既存の出力の最新バージョンを取得
                 const lastOutput = await prisma.tenkaiOutput.findFirst({
-                  where: { projectId, platform: event.platform! },
+                  where: { projectId, platform: eventPlatform },
                   orderBy: { version: 'desc' },
                   select: { version: true },
                 })
@@ -163,18 +165,18 @@ export async function POST(req: NextRequest) {
                 await prisma.tenkaiOutput.create({
                   data: {
                     projectId,
-                    platform: event.platform!,
-                    content: result.content,
-                    charCount: result.charCount,
-                    qualityScore: result.qualityScore,
+                    platform: eventPlatform,
+                    content: result.content as any,
+                    charCount: result.charCount as number,
+                    qualityScore: result.qualityScore as number,
                     status: 'completed',
-                    tokensUsed: result.tokensUsed,
+                    tokensUsed: result.tokensUsed as number,
                     brandVoiceId: brandVoiceId || null,
                     version: nextVersion,
                   },
                 })
 
-                await incrementTenkaiUsage(userId, result.tokensUsed)
+                await incrementTenkaiUsage(userId, result.tokensUsed as number)
               } catch (dbErr: unknown) {
                 const dbMessage = dbErr instanceof Error ? dbErr.message : 'unknown'
                 console.error('[tenkai] Output save error:', dbMessage)

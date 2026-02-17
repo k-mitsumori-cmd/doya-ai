@@ -170,7 +170,7 @@ async function callClaude(
     },
     body: JSON.stringify({
       model: CLAUDE_MODEL,
-      max_tokens: 4096,
+      max_tokens: 16384,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     }),
@@ -224,17 +224,17 @@ function estimateCharCount(platform: string, content: Record<string, unknown>): 
     case 'blog':
       return String(content.body_markdown || content.body_html || '').length
     case 'x':
-      return (content.tweets || []).reduce(
+      return Array.isArray(content.tweets) ? (content.tweets as Record<string, unknown>[]).reduce(
         (sum: number, t: Record<string, unknown>) => sum + String(t.text || '').length,
         0
-      )
+      ) : 0
     case 'instagram':
       return String(content.caption || '').length
     case 'line':
-      return (content.messages || []).reduce(
+      return Array.isArray(content.messages) ? (content.messages as Record<string, unknown>[]).reduce(
         (sum: number, m: Record<string, unknown>) => sum + String(m.text || '').length,
         0
-      )
+      ) : 0
     case 'facebook':
       return String(content.post_text || '').length
     case 'linkedin':

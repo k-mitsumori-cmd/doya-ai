@@ -11,7 +11,7 @@ export function buildAnalysisPrompt(text: string, title?: string): string {
 ## 分析対象
 ${title ? `タイトル: ${title}\n` : ''}
 ---
-${text.slice(0, 30000)}
+${text.slice(0, 50000)}
 ---
 
 ## 分析項目

@@ -20,8 +20,8 @@ export interface PlatformPromptModule {
     maxChars: number
     recommendedChars: number
   }
-  buildSystemPrompt: (analysis: Record<string, unknown>, brandVoice?: Record<string, unknown>) => string
-  buildUserPrompt: (analysis: Record<string, unknown>, customInstructions?: string) => string
+  buildSystemPrompt: (analysis: Record<string, unknown>, brandVoice?: Record<string, unknown> | null) => string
+  buildUserPrompt: (analysis: Record<string, unknown>, customInstructions?: string | null) => string
 }
 
 /**

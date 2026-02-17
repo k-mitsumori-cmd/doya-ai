@@ -38,9 +38,8 @@ export async function GET() {
       where: { userId },
     })
 
-    // 今月の出力数
-    const monthStart = new Date(jst.getUTCFullYear(), jst.getUTCMonth(), 1)
-    const monthStartUtc = new Date(monthStart.getTime() - 9 * 60 * 60 * 1000)
+    // 今月の出力数（JST月初をUTCに変換）
+    const monthStartUtc = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1) - 9 * 60 * 60 * 1000)
     const totalOutputsThisMonth = await prisma.tenkaiOutput.count({
       where: {
         project: { userId },

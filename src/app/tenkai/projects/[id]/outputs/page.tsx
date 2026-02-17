@@ -31,9 +31,9 @@ interface OutputItem {
   platform: string
   platformIcon: string
   platformLabel: string
-  content: string
+  content: string // テキスト変換済みの表示用コンテンツ
   status: 'completed' | 'generating' | 'pending' | 'failed'
-  qualityScore?: number
+  qualityScore?: number // 0-100 スケール
   wordCount?: number
   version?: number
   createdAt: string
@@ -43,6 +43,36 @@ interface OutputItem {
 interface ProjectInfo {
   id: string
   title: string
+}
+
+/**
+ * プラットフォーム別のJSON contentをテキストに変換
+ */
+function contentToText(platform: string, content: Record<string, unknown>): string {
+  if (!content || typeof content !== 'object') return ''
+  const c = content
+  switch (platform) {
+    case 'note':
+      return `${c.title || ''}\n\n${c.body || ''}\n\nタグ: ${(c.tags as string[] || []).join(', ')}`
+    case 'blog':
+      return `${(c.seo as Record<string, unknown>)?.title || ''}\n\n${c.body_markdown || c.body_html || ''}`
+    case 'x':
+      return ((c.tweets as Record<string, unknown>[]) || []).map((t, i: number) => `${i + 1}. ${t.text}`).join('\n\n')
+    case 'instagram':
+      return `${c.caption || ''}\n\n${(c.hashtags as string[] || []).join(' ')}`
+    case 'line':
+      return ((c.messages as Record<string, unknown>[]) || []).map((m) => String(m.text || '')).join('\n\n')
+    case 'facebook':
+      return String(c.post_text || '')
+    case 'linkedin':
+      return String(c.post_text || '')
+    case 'newsletter':
+      return `件名: ${c.subject_line || ''}\n\n${c.body_text || c.body_html || ''}`
+    case 'press_release':
+      return `${c.headline || ''}\n\n${c.lead_paragraph || ''}\n\n${c.body || ''}`
+    default:
+      return JSON.stringify(c, null, 2)
+  }
 }
 
 // ============================================
@@ -138,11 +168,32 @@ export default function ProjectOutputsPage() {
   const fetchOutputs = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await fetch(`/api/tenkai/projects/${projectId}/outputs`)
+      const res = await fetch(`/api/tenkai/projects/${projectId}`)
       if (!res.ok) throw new Error('出力データの取得に失敗しました')
       const data = await res.json()
-      setProject(data.project || { id: projectId, title: 'プロジェクト' })
-      setOutputs(data.outputs || [])
+      const proj = data.project
+      setProject({ id: proj.id, title: proj.title })
+
+      // APIのJSON contentをテキストに変換し、OutputItem形式にマッピング
+      const mapped: OutputItem[] = (proj.outputs || []).map((o: Record<string, unknown>) => {
+        const platform = String(o.platform || '')
+        const meta = PLATFORMS.find((p) => p.key === platform)
+        const rawContent = o.content as Record<string, unknown> | null
+        return {
+          id: String(o.id),
+          platform,
+          platformIcon: meta?.icon || 'description',
+          platformLabel: meta?.label || platform,
+          content: rawContent ? contentToText(platform, rawContent) : '',
+          status: (o.status as OutputItem['status']) || 'pending',
+          qualityScore: typeof o.qualityScore === 'number' ? Math.round(o.qualityScore * 100) : undefined,
+          wordCount: typeof o.charCount === 'number' ? o.charCount : undefined,
+          version: typeof o.version === 'number' ? o.version : undefined,
+          createdAt: String(o.createdAt || ''),
+          updatedAt: String(o.updatedAt || ''),
+        }
+      })
+      setOutputs(mapped)
       setError(null)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'エラーが発生しました')
@@ -186,6 +237,29 @@ export default function ProjectOutputsPage() {
     }
   }
 
+  const handleExportSingle = async (output: OutputItem) => {
+    try {
+      const res = await fetch(`/api/tenkai/outputs/${output.id}/export`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: 'markdown' }),
+      })
+      if (!res.ok) throw new Error('エクスポートに失敗しました')
+      const text = await res.text()
+      const blob = new Blob([text], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${output.platform}_v${output.version || 1}.md`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('エクスポートに失敗しました')
+    }
+  }
+
   const handleBulkExport = async () => {
     try {
       const targetOutputs = activeFilter === 'all'
@@ -193,22 +267,7 @@ export default function ProjectOutputsPage() {
         : outputs.filter((o) => o.platform === activeFilter && o.status === 'completed')
 
       for (const output of targetOutputs) {
-        const res = await fetch(`/api/tenkai/outputs/${output.id}/export`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ format: 'markdown' }),
-        })
-        if (!res.ok) continue
-        const text = await res.text()
-        const blob = new Blob([text], { type: 'text/markdown' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${output.platform}_v${output.version || 1}.md`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
+        await handleExportSingle(output)
       }
     } catch {
       alert('エクスポートに失敗しました')
@@ -485,6 +544,7 @@ export default function ProjectOutputsPage() {
                             <span className="material-symbols-outlined text-sm">content_copy</span>
                           </button>
                           <button
+                            onClick={() => handleExportSingle(output)}
                             className="py-2 px-3 rounded-lg text-xs font-semibold text-slate-500 bg-slate-50 hover:bg-slate-100 transition-colors"
                             title="エクスポート"
                           >
@@ -591,6 +651,7 @@ export default function ProjectOutputsPage() {
                               <span className="material-symbols-outlined text-lg">content_copy</span>
                             </button>
                             <button
+                              onClick={() => handleExportSingle(output)}
                               className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                               title="エクスポート"
                             >

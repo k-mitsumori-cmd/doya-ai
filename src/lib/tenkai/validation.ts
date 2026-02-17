@@ -149,8 +149,9 @@ function validateNote(
   warnings: string[]
 ) {
   if (!content.title) errors.push('タイトルが未設定です')
-  if (content.title && content.title.length > c.titleMaxChars!) {
-    warnings.push(`タイトルが${c.titleMaxChars}文字を超えています (${content.title.length}文字)`)
+  const title = String(content.title || '')
+  if (content.title && title.length > c.titleMaxChars!) {
+    warnings.push(`タイトルが${c.titleMaxChars}文字を超えています (${title.length}文字)`)
   }
   if (!content.body) errors.push('本文が未設定です')
   const bodyLen = String(content.body || '').length
@@ -164,7 +165,8 @@ function validateBlog(
   errors: string[],
   warnings: string[]
 ) {
-  if (!content.seo?.title) errors.push('SEOタイトルが未設定です')
+  const seo = content.seo as Record<string, unknown> | undefined
+  if (!seo?.title) errors.push('SEOタイトルが未設定です')
   if (!content.body_markdown && !content.body_html) errors.push('本文が未設定です')
   const bodyLen = String(content.body_markdown || content.body_html || '').length
   if (bodyLen < c.minChars!) warnings.push(`本文が短すぎます (${bodyLen}文字)`)
@@ -185,11 +187,14 @@ function validateX(
     errors.push('ツイート配列が未設定です')
     return
   }
-  if (content.tweets.length < c.tweetMin!) warnings.push(`ツイート数が少なすぎます (${content.tweets.length}個)`)
-  if (content.tweets.length > c.tweetMax!) warnings.push(`ツイート数が多すぎます (${content.tweets.length}個)`)
-  for (const tweet of content.tweets) {
-    if (tweet.text && tweet.text.length > c.tweetMaxChars!) {
-      errors.push(`ツイート${tweet.index}が${c.tweetMaxChars}文字を超えています (${tweet.text.length}文字)`)
+  const tweets = content.tweets as Record<string, unknown>[]
+  if (tweets.length < c.tweetMin!) warnings.push(`ツイート数が少なすぎます (${tweets.length}個)`)
+  if (tweets.length > c.tweetMax!) warnings.push(`ツイート数が多すぎます (${tweets.length}個)`)
+  for (let i = 0; i < tweets.length; i++) {
+    const tweet = tweets[i]
+    const text = String(tweet.text || '')
+    if (tweet.text && text.length > c.tweetMaxChars!) {
+      errors.push(`ツイート${tweet.index ?? i + 1}が${c.tweetMaxChars}文字を超えています (${text.length}文字)`)
     }
   }
 }
@@ -204,7 +209,8 @@ function validateInstagram(
   const captionLen = String(content.caption || '').length
   if (captionLen < c.minChars!) warnings.push(`キャプションが短すぎます (${captionLen}文字)`)
   if (captionLen > c.maxChars!) warnings.push(`キャプションが長すぎます (${captionLen}文字)`)
-  const hashtagCount = content.hashtags?.length || 0
+  const hashtags = Array.isArray(content.hashtags) ? content.hashtags : []
+  const hashtagCount = hashtags.length
   if (hashtagCount < c.hashtagMin!) warnings.push(`ハッシュタグが少なすぎます (${hashtagCount}個)`)
   if (hashtagCount > c.hashtagMax!) warnings.push(`ハッシュタグが多すぎます (${hashtagCount}個)`)
 }
@@ -219,10 +225,11 @@ function validateLine(
     errors.push('メッセージ配列が未設定です')
     return
   }
-  if (content.messages.length < c.messageMin!) warnings.push(`メッセージ数が少なすぎます`)
-  if (content.messages.length > c.messageMax!) warnings.push(`メッセージ数が多すぎます (${content.messages.length}個)`)
-  for (let i = 0; i < content.messages.length; i++) {
-    const msgLen = String(content.messages[i].text || '').length
+  const messages = content.messages as Record<string, unknown>[]
+  if (messages.length < c.messageMin!) warnings.push(`メッセージ数が少なすぎます`)
+  if (messages.length > c.messageMax!) warnings.push(`メッセージ数が多すぎます (${messages.length}個)`)
+  for (let i = 0; i < messages.length; i++) {
+    const msgLen = String(messages[i].text || '').length
     if (msgLen < c.messageMinChars!) warnings.push(`メッセージ${i + 1}が短すぎます (${msgLen}文字)`)
     if (msgLen > c.messageMaxChars!) warnings.push(`メッセージ${i + 1}が長すぎます (${msgLen}文字)`)
   }
@@ -250,7 +257,8 @@ function validateLinkedin(
   const textLen = String(content.post_text || '').length
   if (textLen < c.minChars!) warnings.push(`投稿文が短すぎます (${textLen}文字)`)
   if (textLen > c.maxChars!) warnings.push(`投稿文が長すぎます (${textLen}文字)`)
-  const hashtagCount = content.hashtags?.length || 0
+  const hashtags = Array.isArray(content.hashtags) ? content.hashtags : []
+  const hashtagCount = hashtags.length
   if (hashtagCount < c.hashtagMin!) warnings.push(`ハッシュタグが少なすぎます (${hashtagCount}個)`)
   if (hashtagCount > c.hashtagMax!) warnings.push(`ハッシュタグが多すぎます (${hashtagCount}個)`)
 }

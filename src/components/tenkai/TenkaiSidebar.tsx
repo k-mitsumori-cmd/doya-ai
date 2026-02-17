@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -21,7 +21,7 @@ const NAV_ITEMS = [
 ]
 
 const SUPPORT_ITEMS = [
-  { href: '/tenkai/pricing', icon: 'help', label: 'ヘルプ' },
+  { href: '/tenkai/help', icon: 'help', label: 'ヘルプ' },
   { href: '/tenkai/settings', icon: 'settings', label: '設定' },
 ]
 
@@ -35,6 +35,17 @@ export default function TenkaiSidebar({
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+
+  // 月末リセットまでの残り日数を計算
+  const daysUntilReset = useMemo(() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = now.getMonth()
+    // 翌月1日を取得して、今日との差分を計算
+    const nextMonth = new Date(year, month + 1, 1)
+    const diffMs = nextMonth.getTime() - now.getTime()
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+  }, [])
 
   const isActive = (href: string) => {
     if (href === '/tenkai/projects') {
@@ -121,11 +132,11 @@ export default function TenkaiSidebar({
             <motion.div
               className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
               initial={{ width: 0 }}
-              animate={{ width: `${(creditsUsed / creditsTotal) * 100}%` }}
+              animate={{ width: `${(creditsUsed / Math.max(creditsTotal, 1)) * 100}%` }}
               transition={{ duration: 0.8, ease: 'easeOut' }}
             />
           </div>
-          <p className="text-[10px] text-slate-400 mb-2">月末リセットまであと4日</p>
+          <p className="text-[10px] text-slate-400 mb-2">月末リセットまであと{daysUntilReset}日</p>
           <Link
             href="/tenkai/pricing"
             className="block w-full py-2 text-center text-xs font-semibold text-blue-600 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"

@@ -41,6 +41,7 @@ export interface ProjectCardProps {
   score?: number          // 0-100 (qualityScore の平均など)
   platformStatuses: PlatformStatus[]
   outputCount: number
+  onDelete?: (id: string) => void
 }
 
 // ============================================
@@ -107,8 +108,10 @@ export default function ProjectCard({
   score,
   platformStatuses,
   outputCount,
+  onDelete,
 }: ProjectCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
 
   // PF ステータスマップ
   const statusMap = new Map<string, PlatformStatus['status']>()
@@ -305,7 +308,7 @@ export default function ProjectCard({
                     className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
                     onClick={() => {
                       setMenuOpen(false)
-                      // 削除処理は親コンポーネントから渡すか、確認ダイアログを挟む
+                      setDeleteConfirm(true)
                     }}
                   >
                     <span className="material-symbols-outlined text-base">
@@ -317,6 +320,41 @@ export default function ProjectCard({
               </>
             )}
           </div>
+
+          {/* 削除確認ダイアログ */}
+          {deleteConfirm && (
+            <>
+              <div
+                className="fixed inset-0 z-30"
+                onClick={() => setDeleteConfirm(false)}
+              />
+              <div className="absolute right-0 bottom-12 z-40 w-56 bg-white rounded-xl border border-slate-200 shadow-xl p-4">
+                <p className="text-sm font-semibold text-slate-900 mb-1">
+                  削除しますか？
+                </p>
+                <p className="text-xs text-slate-400 mb-3">
+                  この操作は取り消せません
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDeleteConfirm(false)}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeleteConfirm(false)
+                      onDelete?.(id)
+                    }}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                  >
+                    削除
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </motion.div>

@@ -107,7 +107,7 @@ function convertToMarkdown(platform: string, content: Record<string, unknown>): 
       return `# ${(content.seo as Record<string, unknown>)?.title || ''}\n\n${content.body_markdown || ''}`
     case 'x':
       return ((content.tweets as Record<string, unknown>[]) || [])
-        .map((t) => `**ツイート ${t.index}** (${t.char_count}文字)\n${t.text}`)
+        .map((t, i) => `**ツイート ${t.index ?? i + 1}** (${t.char_count ?? String(t.text || '').length}文字)\n${t.text}`)
         .join('\n\n---\n\n')
     case 'instagram':
       return `${content.caption || ''}\n\n---\nハッシュタグ: ${((content.hashtags as string[]) || []).map((h: string) => `#${h}`).join(' ')}`
@@ -131,7 +131,9 @@ function convertToMarkdown(platform: string, content: Record<string, unknown>): 
 function convertToHtml(platform: string, content: Record<string, unknown>): string {
   switch (platform) {
     case 'blog':
-      return (content.body_html as string) || `<h1>${(content.seo as Record<string, unknown>)?.title || ''}</h1>\n${content.body_markdown || ''}`
+      if (content.body_html) return content.body_html as string
+      const seoTitle = (content.seo as Record<string, unknown>)?.title || ''
+      return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><h1>${escapeHtml(String(seoTitle))}</h1><pre>${escapeHtml(String(content.body_markdown || ''))}</pre></body></html>`
     case 'newsletter':
       return (content.body_html as string) || (content.body_text as string) || ''
     default: {

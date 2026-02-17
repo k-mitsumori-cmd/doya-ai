@@ -64,13 +64,36 @@ export default function SettingsPage() {
   const [newlyGeneratedKey, setNewlyGeneratedKey] = useState<string | null>(null)
   const [loadingApiKey, setLoadingApiKey] = useState(false)
 
-  // 通知設定
-  const [notifyGenComplete, setNotifyGenComplete] = useState(true)
-  const [notifyWeeklyReport, setNotifyWeeklyReport] = useState(true)
-  const [notifyProduct, setNotifyProduct] = useState(false)
+  // プロフィール保存
+  const [profileName, setProfileName] = useState(session?.user?.name || '')
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profileToast, setProfileToast] = useState<string | null>(null)
+
+  // 通知設定（localStorageから復元）
+  const [notifyGenComplete, setNotifyGenComplete] = useState(() => {
+    if (typeof window === 'undefined') return true
+    try {
+      const saved = localStorage.getItem('tenkai_notify_genComplete')
+      return saved !== null ? JSON.parse(saved) === true : true
+    } catch { return true }
+  })
+  const [notifyWeeklyReport, setNotifyWeeklyReport] = useState(() => {
+    if (typeof window === 'undefined') return true
+    try {
+      const saved = localStorage.getItem('tenkai_notify_weeklyReport')
+      return saved !== null ? JSON.parse(saved) === true : true
+    } catch { return true }
+  })
+  const [notifyProduct, setNotifyProduct] = useState(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      const saved = localStorage.getItem('tenkai_notify_product')
+      return saved !== null ? JSON.parse(saved) === true : false
+    } catch { return false }
+  })
 
   const plan = session?.user?.plan || 'FREE'
-  const planLabel = plan === 'PRO' ? 'Pro' : plan === 'STARTER' ? 'Starter' : plan === 'ENTERPRISE' ? 'Enterprise' : 'Free'
+  const planLabel = plan === 'PRO' ? 'Pro' : plan === 'STARTER' ? 'Starter' : plan === 'ENTERPRISE' ? 'Enterprise' : plan === 'PREMIUM' ? 'Premium' : 'Free'
   const isPro = plan === 'PRO' || plan === 'ENTERPRISE' || plan === 'PREMIUM'
 
   // ============================================
@@ -131,6 +154,56 @@ export default function SettingsPage() {
     fetchUsage()
     fetchApiKey()
   }, [fetchUsage, fetchApiKey])
+
+  // セッションからプロフィール名を同期
+  useEffect(() => {
+    if (session?.user?.name) {
+      setProfileName(session.user.name)
+    }
+  }, [session?.user?.name])
+
+  // ============================================
+  // プロフィール更新
+  // ============================================
+  const handleProfileUpdate = async () => {
+    const trimmedName = profileName.trim()
+    if (!trimmedName) return
+    try {
+      setSavingProfile(true)
+      const res = await fetch('/api/tenkai/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmedName }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'プロフィールの更新に失敗しました' }))
+        setProfileToast(err.error || 'プロフィールの更新に失敗しました')
+      } else {
+        setProfileToast('設定を保存しました')
+      }
+    } catch {
+      setProfileToast('ネットワークエラーが発生しました')
+    } finally {
+      setSavingProfile(false)
+      setTimeout(() => setProfileToast(null), 3000)
+    }
+  }
+
+  // ============================================
+  // 通知設定のlocalStorage永続化
+  // ============================================
+  const handleNotifyGenComplete = (val: boolean) => {
+    setNotifyGenComplete(val)
+    localStorage.setItem('tenkai_notify_genComplete', JSON.stringify(val))
+  }
+  const handleNotifyWeeklyReport = (val: boolean) => {
+    setNotifyWeeklyReport(val)
+    localStorage.setItem('tenkai_notify_weeklyReport', JSON.stringify(val))
+  }
+  const handleNotifyProduct = (val: boolean) => {
+    setNotifyProduct(val)
+    localStorage.setItem('tenkai_notify_product', JSON.stringify(val))
+  }
 
   const usagePercent = usage
     ? Math.min((usage.generationsThisMonth / usage.generationsLimit) * 100, 100)
@@ -279,7 +352,8 @@ export default function SettingsPage() {
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">名前</label>
                 <input
                   type="text"
-                  defaultValue={session?.user?.name || ''}
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 text-sm text-slate-700 transition-all outline-none"
                 />
               </div>
@@ -303,9 +377,18 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="flex justify-end mt-5 pt-4 border-t border-slate-100">
-            <button className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all">
-              プロフィールを更新
+          <div className="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-slate-100">
+            {profileToast && (
+              <span className="text-sm font-semibold text-emerald-600 animate-pulse">
+                {profileToast}
+              </span>
+            )}
+            <button
+              onClick={handleProfileUpdate}
+              disabled={savingProfile || !profileName.trim()}
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {savingProfile ? '保存中...' : 'プロフィールを更新'}
             </button>
           </div>
         </motion.div>
@@ -459,7 +542,7 @@ export default function SettingsPage() {
                   コンテンツの生成が完了した時にメールでお知らせ
                 </p>
               </div>
-              <Toggle checked={notifyGenComplete} onChange={setNotifyGenComplete} />
+              <Toggle checked={notifyGenComplete} onChange={handleNotifyGenComplete} />
             </div>
 
             <div className="border-t border-slate-100" />
@@ -471,7 +554,7 @@ export default function SettingsPage() {
                   毎週月曜日に利用状況レポートをメールで送信
                 </p>
               </div>
-              <Toggle checked={notifyWeeklyReport} onChange={setNotifyWeeklyReport} />
+              <Toggle checked={notifyWeeklyReport} onChange={handleNotifyWeeklyReport} />
             </div>
 
             <div className="border-t border-slate-100" />
@@ -483,7 +566,7 @@ export default function SettingsPage() {
                   新機能や改善のお知らせを受け取る
                 </p>
               </div>
-              <Toggle checked={notifyProduct} onChange={setNotifyProduct} />
+              <Toggle checked={notifyProduct} onChange={handleNotifyProduct} />
             </div>
           </div>
         </motion.div>

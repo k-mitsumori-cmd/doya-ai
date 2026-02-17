@@ -39,6 +39,13 @@ function validateUrlSafety(url: string): void {
       throw new Error('内部ネットワークのURLにはアクセスできません')
     }
   }
+  // Additional SSRF protections
+  if (/^0x/i.test(hostname) || /^0\d/.test(hostname) || /^\d+$/.test(hostname)) {
+    throw new Error('内部ネットワークのURLにはアクセスできません')
+  }
+  if (hostname.includes('::') || hostname.includes('ffff:')) {
+    throw new Error('内部ネットワークのURLにはアクセスできません')
+  }
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
     throw new Error('HTTP/HTTPS以外のプロトコルは使用できません')
   }

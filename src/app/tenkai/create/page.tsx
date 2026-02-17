@@ -83,6 +83,7 @@ export default function CreatePage() {
       case 1:
         if (inputType === 'text') return sourceContent.trim().length > 50
         if (inputType === 'url' || inputType === 'youtube') return sourceUrl.trim().length > 0
+        if (inputType === 'video') return false // v2で対応予定
         return false
       case 2:
         return selectedPlatforms.length > 0
@@ -136,7 +137,8 @@ export default function CreatePage() {
           body: JSON.stringify({ url: sourceUrl, projectId }),
         })
         if (!ingestRes.ok) {
-          console.warn('URL取り込みに失敗しました')
+          const errData = await ingestRes.json().catch(() => ({ error: '' }))
+          throw new Error(errData.error || 'URLからのコンテンツ取得に失敗しました')
         }
       } else if (inputType === 'youtube') {
         const ingestRes = await fetch('/api/tenkai/content/ingest/youtube', {
@@ -145,14 +147,41 @@ export default function CreatePage() {
           body: JSON.stringify({ url: sourceUrl, projectId }),
         })
         if (!ingestRes.ok) {
-          console.warn('YouTube取り込みに失敗しました')
+          const errData = await ingestRes.json().catch(() => ({ error: '' }))
+          throw new Error(errData.error || 'YouTube動画の取り込みに失敗しました')
         }
       }
 
-      // 3. プロジェクト詳細ページへ遷移
+      // 3. コンテンツ分析を実行
+      const analyzeRes = await fetch('/api/tenkai/content/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      })
+      if (!analyzeRes.ok) {
+        const errData = await analyzeRes.json().catch(() => ({ error: '' }))
+        throw new Error(errData.error || 'コンテンツ分析に失敗しました。もう一度お試しください。')
+      }
+
+      // 4. 選択プラットフォームで一括生成を開始（バックグラウンド）
+      // 分析が完了しているため、生成APIは正常に動作するはず
+      fetch('/api/tenkai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          platforms: selectedPlatforms,
+          brandVoiceId: selectedVoice !== 'default' && selectedVoice !== 'casual' ? selectedVoice : undefined,
+          customInstructions: selectedVoice === 'casual' ? 'カジュアルで親しみやすいトーンで生成してください' : undefined,
+        }),
+      }).catch((err) => {
+        console.error('[tenkai] 生成開始エラー:', err)
+      })
+
+      // 5. プロジェクト詳細ページへ遷移
       window.location.href = `/tenkai/projects/${projectId}`
     } catch (err) {
-      alert('エラーが発生しました。もう一度お試しください。')
+      alert(err instanceof Error ? err.message : 'エラーが発生しました。もう一度お試しください。')
     } finally {
       setIsSubmitting(false)
     }

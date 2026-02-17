@@ -124,7 +124,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     }
     if (inputText !== undefined) {
       data.inputText = inputText
-      data.wordCount = inputText.length
+      data.wordCount = typeof inputText === 'string' ? inputText.length : 0
     }
 
     const updated = await prisma.tenkaiProject.update({

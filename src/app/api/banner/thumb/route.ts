@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
     // sharpで変換成功したらJPEG、失敗してそのままならPNG/元形式
     const contentType = buf === input ? 'image/png' : 'image/jpeg'
 
-    return new NextResponse(buf, {
+    return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         'Content-Type': contentType,

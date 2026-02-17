@@ -1038,7 +1038,7 @@ model TenkaiOutput {
   status        String   @default("pending") // pending | generating | completed | failed
   tokensUsed    Int?
   brandVoiceId  String?
-  brandVoice    TenkaiBrandVoice? @relation(fields: [brandVoiceId], references: [id])
+  brandVoice    TenkaiBrandVoice? @relation(fields: [brandVoiceId], references: [id], onDelete: SetNull)
   templateId    String?
   feedback      String?  @db.Text // 再生成時のフィードバック
   version       Int      @default(1)

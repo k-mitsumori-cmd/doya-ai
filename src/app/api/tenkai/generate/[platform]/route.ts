@@ -94,7 +94,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       customInstructions,
     }
 
-    const result = await generateForPlatform(project.analysis, platform, options)
+    const result = await generateForPlatform(project.analysis as Record<string, unknown>, platform, options)
 
     // 既存の出力の最新バージョンを取得
     const lastOutput = await prisma.tenkaiOutput.findFirst({
@@ -109,11 +109,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       data: {
         projectId,
         platform,
-        content: result.content,
-        charCount: result.charCount,
-        qualityScore: result.qualityScore,
+        content: result.content as any,
+        charCount: result.charCount as number,
+        qualityScore: result.qualityScore as number,
         status: 'completed',
-        tokensUsed: result.tokensUsed,
+        tokensUsed: result.tokensUsed as number,
         brandVoiceId: brandVoiceId || null,
         version: nextVersion,
       },

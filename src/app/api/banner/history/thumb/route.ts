@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
           },
         })
       }
-      return new NextResponse(cached.buf, {
+      return new NextResponse(new Uint8Array(cached.buf), {
         status: 200,
         headers: {
           'Content-Type': 'image/jpeg',
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    return new NextResponse(buf, {
+    return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         'Content-Type': 'image/jpeg',
@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
     console.error('[banner history thumb] failed:', e)
     // <img> を壊さないため、エラーでも画像を返す
     const buf = await getPlaceholderJpeg()
-    return new NextResponse(buf, {
+    return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
         'Content-Type': 'image/jpeg',

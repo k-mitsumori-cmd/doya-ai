@@ -86,12 +86,16 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     } = body
 
     const data: Record<string, unknown> = {}
-    if (name !== undefined) data.name = name.trim()
+    if (name !== undefined) {
+      const trimmed = typeof name === 'string' ? name.trim() : ''
+      if (!trimmed) return NextResponse.json({ error: '名前は空にできません' }, { status: 400 })
+      data.name = trimmed
+    }
     if (firstPerson !== undefined) data.firstPerson = firstPerson
-    if (formalityLevel !== undefined) data.formalityLevel = Math.min(5, Math.max(1, formalityLevel))
-    if (enthusiasmLevel !== undefined) data.enthusiasmLevel = Math.min(5, Math.max(1, enthusiasmLevel))
-    if (technicalLevel !== undefined) data.technicalLevel = Math.min(5, Math.max(1, technicalLevel))
-    if (humorLevel !== undefined) data.humorLevel = Math.min(5, Math.max(1, humorLevel))
+    if (formalityLevel !== undefined) data.formalityLevel = Math.min(5, Math.max(1, Number(formalityLevel) || 3))
+    if (enthusiasmLevel !== undefined) data.enthusiasmLevel = Math.min(5, Math.max(1, Number(enthusiasmLevel) || 3))
+    if (technicalLevel !== undefined) data.technicalLevel = Math.min(5, Math.max(1, Number(technicalLevel) || 3))
+    if (humorLevel !== undefined) data.humorLevel = Math.min(5, Math.max(1, Number(humorLevel) || 3))
     if (targetAudience !== undefined) data.targetAudience = targetAudience
     if (sampleText !== undefined) data.sampleText = sampleText
     if (preferredExpressions !== undefined) data.preferredExpressions = preferredExpressions

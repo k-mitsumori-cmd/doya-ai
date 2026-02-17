@@ -12,6 +12,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { randomBytes, createHash } from 'crypto'
+import { getTenkaiPlan } from '@/lib/tenkai/access'
 
 /**
  * APIキーを生成（表示は生成時のみ）
@@ -33,9 +34,9 @@ export async function GET() {
     }
     const userId = session.user.id
 
-    // Pro以上のプランチェック
-    const plan = session.user.plan || 'FREE'
-    if (plan !== 'PRO' && plan !== 'ENTERPRISE' && plan !== 'PREMIUM') {
+    // Pro以上のプランチェック（tenkai固有プランを使用）
+    const plan = await getTenkaiPlan(userId)
+    if (plan !== 'PRO' && plan !== 'ENTERPRISE') {
       return NextResponse.json(
         { error: 'APIアクセスはPro以上のプランで利用可能です' },
         { status: 403 }
@@ -55,7 +56,7 @@ export async function GET() {
       apiKey: {
         id: apiKey.id,
         prefix: apiKey.keyPrefix,
-        maskedKey: `${apiKey.keyPrefix}${'•'.repeat(52)}`,
+        maskedKey: `${apiKey.keyPrefix}${'•'.repeat(60)}`,
         lastUsedAt: apiKey.lastUsedAt?.toISOString() || null,
         createdAt: apiKey.createdAt.toISOString(),
       },
@@ -76,9 +77,9 @@ export async function POST() {
     }
     const userId = session.user.id
 
-    // Pro以上のプランチェック
-    const plan = session.user.plan || 'FREE'
-    if (plan !== 'PRO' && plan !== 'ENTERPRISE' && plan !== 'PREMIUM') {
+    // Pro以上のプランチェック（tenkai固有プランを使用）
+    const plan = await getTenkaiPlan(userId)
+    if (plan !== 'PRO' && plan !== 'ENTERPRISE') {
       return NextResponse.json(
         { error: 'APIアクセスはPro以上のプランで利用可能です' },
         { status: 403 }

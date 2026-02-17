@@ -86,7 +86,11 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     const { name, description, promptOverride, structureHint } = body
 
     const data: Record<string, unknown> = {}
-    if (name !== undefined) data.name = name.trim()
+    if (name !== undefined) {
+      const trimmed = typeof name === 'string' ? name.trim() : ''
+      if (!trimmed) return NextResponse.json({ error: '名前は空にできません' }, { status: 400 })
+      data.name = trimmed
+    }
     if (description !== undefined) data.description = description
     if (promptOverride !== undefined) data.promptOverride = promptOverride
     if (structureHint !== undefined) data.structureHint = structureHint

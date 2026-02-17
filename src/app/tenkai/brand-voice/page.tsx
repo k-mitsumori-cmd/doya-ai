@@ -10,10 +10,10 @@ interface BrandVoice {
   id: string
   name: string
   isDefault: boolean
-  formality: number     // 0-100: カジュアル → フォーマル
-  enthusiasm: number    // 0-100: 落ち着き → 熱意
-  technicality: number  // 0-100: 簡潔 → 専門的
-  humor: number         // 0-100: シリアス → ユーモア
+  formalityLevel: number     // 1-5: カジュアル → フォーマル
+  enthusiasmLevel: number    // 1-5: 落ち着き → 熱意
+  technicalLevel: number     // 1-5: 簡潔 → 専門的
+  humorLevel: number         // 1-5: シリアス → ユーモア
   description?: string
   createdAt: string
 }
@@ -22,18 +22,19 @@ interface BrandVoice {
 // レベルインジケーターバー
 // ============================================
 function LevelBar({ value, label, colorClass }: { value: number; label: string; colorClass: string }) {
+  const pct = (value / 5) * 100
   return (
     <div className="flex items-center gap-2">
       <span className="text-[10px] text-slate-400 w-14 text-right truncate">{label}</span>
       <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${value}%` }}
+          animate={{ width: `${pct}%` }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
           className={`h-full rounded-full ${colorClass}`}
         />
       </div>
-      <span className="text-[10px] text-slate-400 w-6">{value}</span>
+      <span className="text-[10px] text-slate-400 w-6">{value}/5</span>
     </div>
   )
 }
@@ -52,26 +53,31 @@ function BrandVoiceEditor({
 }) {
   const [name, setName] = useState(voice?.name || '')
   const [description, setDescription] = useState(voice?.description || '')
-  const [formality, setFormality] = useState(voice?.formality ?? 50)
-  const [enthusiasm, setEnthusiasm] = useState(voice?.enthusiasm ?? 50)
-  const [technicality, setTechnicality] = useState(voice?.technicality ?? 50)
-  const [humor, setHumor] = useState(voice?.humor ?? 30)
+  const [formality, setFormality] = useState(voice?.formalityLevel ?? 3)
+  const [enthusiasm, setEnthusiasm] = useState(voice?.enthusiasmLevel ?? 3)
+  const [technicality, setTechnicality] = useState(voice?.technicalLevel ?? 3)
+  const [humor, setHumor] = useState(voice?.humorLevel ?? 2)
   const [isDefault, setIsDefault] = useState(voice?.isDefault ?? false)
   const [saving, setSaving] = useState(false)
 
   const handleSubmit = async () => {
     if (!name.trim()) return
     setSaving(true)
-    await onSave({
-      name: name.trim(),
-      description: description.trim(),
-      isDefault,
-      formality,
-      enthusiasm,
-      technicality,
-      humor,
-    })
-    setSaving(false)
+    try {
+      await onSave({
+        name: name.trim(),
+        description: description.trim(),
+        isDefault,
+        formalityLevel: formality,
+        enthusiasmLevel: enthusiasm,
+        technicalLevel: technicality,
+        humorLevel: humor,
+      })
+    } catch {
+      // エラーは親コンポーネントで処理
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -126,18 +132,19 @@ function BrandVoiceEditor({
               />
             </div>
 
-            {/* スライダー: フォーマル度 */}
+            {/* スライダー: フォーマル度 (1-5) */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-semibold text-slate-700">フォーマル度</label>
-                <span className="text-xs text-slate-400">{formality}</span>
+                <span className="text-xs text-slate-400">{formality}/5</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-slate-400">カジュアル</span>
                 <input
                   type="range"
-                  min="0"
-                  max="100"
+                  min="1"
+                  max="5"
+                  step="1"
                   value={formality}
                   onChange={(e) => setFormality(Number(e.target.value))}
                   className="flex-1 accent-blue-500"
@@ -146,18 +153,19 @@ function BrandVoiceEditor({
               </div>
             </div>
 
-            {/* スライダー: 熱意度 */}
+            {/* スライダー: 熱意度 (1-5) */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-semibold text-slate-700">熱意度</label>
-                <span className="text-xs text-slate-400">{enthusiasm}</span>
+                <span className="text-xs text-slate-400">{enthusiasm}/5</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-slate-400">落ち着き</span>
                 <input
                   type="range"
-                  min="0"
-                  max="100"
+                  min="1"
+                  max="5"
+                  step="1"
                   value={enthusiasm}
                   onChange={(e) => setEnthusiasm(Number(e.target.value))}
                   className="flex-1 accent-blue-500"
@@ -166,18 +174,19 @@ function BrandVoiceEditor({
               </div>
             </div>
 
-            {/* スライダー: 専門性 */}
+            {/* スライダー: 専門性 (1-5) */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-semibold text-slate-700">専門性</label>
-                <span className="text-xs text-slate-400">{technicality}</span>
+                <span className="text-xs text-slate-400">{technicality}/5</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-slate-400">簡潔</span>
                 <input
                   type="range"
-                  min="0"
-                  max="100"
+                  min="1"
+                  max="5"
+                  step="1"
                   value={technicality}
                   onChange={(e) => setTechnicality(Number(e.target.value))}
                   className="flex-1 accent-blue-500"
@@ -186,18 +195,19 @@ function BrandVoiceEditor({
               </div>
             </div>
 
-            {/* スライダー: ユーモア */}
+            {/* スライダー: ユーモア (1-5) */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-semibold text-slate-700">ユーモア</label>
-                <span className="text-xs text-slate-400">{humor}</span>
+                <span className="text-xs text-slate-400">{humor}/5</span>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-slate-400">シリアス</span>
                 <input
                   type="range"
-                  min="0"
-                  max="100"
+                  min="1"
+                  max="5"
+                  step="1"
                   value={humor}
                   onChange={(e) => setHumor(Number(e.target.value))}
                   className="flex-1 accent-blue-500"
@@ -470,10 +480,10 @@ export default function BrandVoicePage() {
 
                   {/* レベルインジケーター */}
                   <div className="space-y-2 mb-4">
-                    <LevelBar value={voice.formality} label="フォーマル" colorClass="bg-blue-500" />
-                    <LevelBar value={voice.enthusiasm} label="熱意" colorClass="bg-amber-500" />
-                    <LevelBar value={voice.technicality} label="専門性" colorClass="bg-emerald-500" />
-                    <LevelBar value={voice.humor} label="ユーモア" colorClass="bg-purple-500" />
+                    <LevelBar value={voice.formalityLevel} label="フォーマル" colorClass="bg-blue-500" />
+                    <LevelBar value={voice.enthusiasmLevel} label="熱意" colorClass="bg-amber-500" />
+                    <LevelBar value={voice.technicalLevel} label="専門性" colorClass="bg-emerald-500" />
+                    <LevelBar value={voice.humorLevel} label="ユーモア" colorClass="bg-purple-500" />
                   </div>
 
                   {/* アクション */}

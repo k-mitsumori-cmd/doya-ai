@@ -26,6 +26,7 @@ type PlatformKey = (typeof PLATFORMS)[number]['key']
 // 型定義
 // ============================================
 interface PlatformOutput {
+  id: string
   platform: PlatformKey
   content: Record<string, unknown> // JSON object (platform-specific structure)
   status: 'completed' | 'generating' | 'pending' | 'failed'
@@ -116,6 +117,9 @@ export default function ProjectDetailPage() {
   const [showEditor, setShowEditor] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle')
+  const [refineFeedback, setRefineFeedback] = useState('')
+  const [editorContent, setEditorContent] = useState('')
+  const [isRegenerating, setIsRegenerating] = useState(false)
 
   // ============================================
   // データ取得
@@ -138,6 +142,21 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     if (projectId) fetchProject()
   }, [projectId, fetchProject])
+
+  // ============================================
+  // 生成中・分析中のポーリング
+  // ============================================
+  useEffect(() => {
+    if (!project) return
+    const isInProgress = project.status === 'generating' || project.status === 'analyzing'
+    if (!isInProgress) return
+
+    const interval = setInterval(() => {
+      fetchProject()
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [project?.status, fetchProject])
 
   // ============================================
   // 現在のタブの出力取得
@@ -184,22 +203,146 @@ export default function ProjectDetailPage() {
       setCopySuccess(true)
       setTimeout(() => setCopySuccess(false), 2000)
     } catch {
-      // fallback
+      // clipboard API fallback (older browsers, iframe restrictions)
+      try {
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+        setCopySuccess(true)
+        setTimeout(() => setCopySuccess(false), 2000)
+      } catch {
+        alert('コピーに失敗しました。手動でテキストを選択してコピーしてください。')
+      }
     }
   }
 
-  const handleRegenerate = async () => {
+  const handleRegenerate = async (feedback?: string) => {
     if (!projectId) return
+    setIsRegenerating(true)
     try {
-      await fetch(`/api/tenkai/generate/${activeTab}`, {
+      if (feedback && currentOutput?.id) {
+        // フィードバック付き再生成
+        const res = await fetch('/api/tenkai/generate/regenerate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            outputId: currentOutput.id,
+            feedback,
+          }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          alert(data.error || '再生成に失敗しました')
+        }
+      } else {
+        // 新規生成
+        const res = await fetch(`/api/tenkai/generate/${activeTab}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId }),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          alert(data.error || '生成に失敗しました')
+        }
+      }
+      await fetchProject()
+    } catch {
+      alert('生成中にエラーが発生しました')
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
+  const handleEditorSave = async () => {
+    if (!currentOutput?.id || !editorContent) return
+    setAutoSaveStatus('saving')
+    try {
+      // テキストエディタの内容をプラットフォーム別のJSON構造に再構築
+      const updatedContent = rebuildContentJson(currentOutput.platform, currentOutput.content, editorContent)
+      const res = await fetch(`/api/tenkai/outputs/${currentOutput.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: updatedContent, isEdited: true }),
+      })
+      if (res.ok) {
+        setAutoSaveStatus('saved')
+        await fetchProject()
+      } else {
+        setAutoSaveStatus('idle')
+        alert('保存に失敗しました')
+      }
+    } catch {
+      setAutoSaveStatus('idle')
+      alert('保存中にエラーが発生しました')
+    }
+    setShowEditor(false)
+  }
+
+  // テキスト編集内容をプラットフォーム別JSONに再構築
+  const rebuildContentJson = (
+    platform: PlatformKey,
+    originalContent: Record<string, unknown>,
+    editedText: string
+  ): Record<string, unknown> => {
+    const c = { ...originalContent }
+    switch (platform) {
+      case 'note':
+        c.body = editedText.replace(/^.*?\n\n/, '').replace(/\n\nタグ:.*$/, '')
+        return c
+      case 'blog':
+        c.body_markdown = editedText.replace(/^.*?\n\n/, '')
+        return c
+      case 'facebook':
+        c.post_text = editedText
+        return c
+      case 'linkedin':
+        c.post_text = editedText.split('\n\n').slice(0, -1).join('\n\n') || editedText
+        return c
+      case 'instagram':
+        c.caption = editedText.split('\n\n')[0] || editedText
+        return c
+      default:
+        // 他のプラットフォームはテキストとして主要フィールドを更新
+        return c
+    }
+  }
+
+  const handleExport = async (format: string) => {
+    if (!currentOutput?.id) return
+    if (format === 'clipboard') {
+      handleCopy()
+      setShowExportModal(false)
+      return
+    }
+    try {
+      const res = await fetch(`/api/tenkai/outputs/${currentOutput.id}/export`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId }),
+        body: JSON.stringify({ format: format === 'txt' ? 'text' : format }),
       })
-      fetchProject()
+      if (!res.ok) {
+        alert('エクスポートに失敗しました')
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || `export.${format}`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
     } catch {
-      // error handling
+      alert('エクスポート中にエラーが発生しました')
     }
+    setShowExportModal(false)
   }
 
   // ============================================
@@ -428,7 +571,7 @@ export default function ProjectDetailPage() {
                         もう一度お試しください
                       </p>
                       <button
-                        onClick={handleRegenerate}
+                        onClick={() => handleRegenerate()}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-semibold hover:bg-blue-600 transition-colors"
                       >
                         <span className="material-symbols-outlined text-base">refresh</span>
@@ -451,7 +594,7 @@ export default function ProjectDetailPage() {
                         このプラットフォーム向けのコンテンツはまだ生成されていません
                       </p>
                       <button
-                        onClick={handleRegenerate}
+                        onClick={() => handleRegenerate()}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all"
                       >
                         <span className="material-symbols-outlined text-base">auto_awesome</span>
@@ -485,7 +628,10 @@ export default function ProjectDetailPage() {
             {/* Edit */}
             <div className="group relative">
               <button
-                onClick={() => setShowEditor(true)}
+                onClick={() => {
+                  setEditorContent(getContentText(currentOutput))
+                  setShowEditor(true)
+                }}
                 disabled={!currentOutput?.content}
                 className="w-12 h-12 rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-blue-600 hover:border-blue-200 hover:shadow-md disabled:opacity-40 disabled:cursor-not-allowed transition-all"
               >
@@ -604,7 +750,10 @@ export default function ProjectDetailPage() {
                 <span className="material-symbols-outlined text-xl">content_copy</span>
               </button>
               <button
-                onClick={() => setShowEditor(true)}
+                onClick={() => {
+                  setEditorContent(getContentText(currentOutput))
+                  setShowEditor(true)
+                }}
                 disabled={!currentOutput?.content}
                 className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-40 transition-colors"
               >
@@ -662,22 +811,24 @@ export default function ProjectDetailPage() {
                       改善の方向性
                     </label>
                     <textarea
+                      value={refineFeedback}
+                      onChange={(e) => setRefineFeedback(e.target.value)}
                       placeholder="例: もう少しカジュアルなトーンにしてください。冒頭のフックを強くしてください。"
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 text-sm text-slate-700 placeholder-slate-400 transition-all outline-none resize-none h-28"
                     />
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <button className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 font-medium hover:bg-slate-200 transition-colors">
+                    <button onClick={() => setRefineFeedback((prev) => prev + (prev ? '\n' : '') + 'もう少しカジュアルなトーンにしてください')} className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 font-medium hover:bg-slate-200 transition-colors">
                       トーンを変更
                     </button>
-                    <button className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 font-medium hover:bg-slate-200 transition-colors">
+                    <button onClick={() => setRefineFeedback((prev) => prev + (prev ? '\n' : '') + '全体的にもっと短くコンパクトにしてください')} className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 font-medium hover:bg-slate-200 transition-colors">
                       短くする
                     </button>
-                    <button className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 font-medium hover:bg-slate-200 transition-colors">
+                    <button onClick={() => setRefineFeedback((prev) => prev + (prev ? '\n' : '') + 'もっと詳しく、具体例を追加して長くしてください')} className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 font-medium hover:bg-slate-200 transition-colors">
                       長くする
                     </button>
-                    <button className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 font-medium hover:bg-slate-200 transition-colors">
+                    <button onClick={() => setRefineFeedback((prev) => prev + (prev ? '\n' : '') + '末尾に明確なCTA（行動喚起）を追加してください')} className="px-3 py-1.5 rounded-lg bg-slate-100 text-xs text-slate-600 font-medium hover:bg-slate-200 transition-colors">
                       CTA追加
                     </button>
                   </div>
@@ -685,19 +836,24 @@ export default function ProjectDetailPage() {
 
                 <div className="flex justify-end gap-3 mt-6">
                   <button
-                    onClick={() => setShowRefineModal(false)}
+                    onClick={() => {
+                      setShowRefineModal(false)
+                      setRefineFeedback('')
+                    }}
                     className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                   >
                     キャンセル
                   </button>
                   <button
+                    disabled={!refineFeedback.trim() || isRegenerating}
                     onClick={() => {
-                      handleRegenerate()
+                      handleRegenerate(refineFeedback.trim())
                       setShowRefineModal(false)
+                      setRefineFeedback('')
                     }}
-                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 transition-all"
+                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 disabled:opacity-50 transition-all"
                   >
-                    再生成する
+                    {isRegenerating ? '再生成中...' : '再生成する'}
                   </button>
                 </div>
               </div>
@@ -737,18 +893,13 @@ export default function ProjectDetailPage() {
                 <div className="space-y-3">
                   {[
                     { icon: 'description', label: 'テキスト (.txt)', format: 'txt' },
-                    { icon: 'code', label: 'Markdown (.md)', format: 'md' },
-                    { icon: 'picture_as_pdf', label: 'PDF (.pdf)', format: 'pdf' },
+                    { icon: 'code', label: 'Markdown (.md)', format: 'markdown' },
+                    { icon: 'data_object', label: 'JSON (.json)', format: 'json' },
                     { icon: 'content_copy', label: 'クリップボードにコピー', format: 'clipboard' },
                   ].map((option) => (
                     <button
                       key={option.format}
-                      onClick={() => {
-                        if (option.format === 'clipboard') {
-                          handleCopy()
-                        }
-                        setShowExportModal(false)
-                      }}
+                      onClick={() => handleExport(option.format)}
                       className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 hover:border-blue-200 hover:bg-blue-50/50 text-left transition-all"
                     >
                       <span className="material-symbols-outlined text-xl text-slate-500">
@@ -800,11 +951,7 @@ export default function ProjectDetailPage() {
                     キャンセル
                   </button>
                   <button
-                    onClick={() => {
-                      setAutoSaveStatus('saving')
-                      setTimeout(() => setAutoSaveStatus('saved'), 1000)
-                      setShowEditor(false)
-                    }}
+                    onClick={handleEditorSave}
                     className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-semibold shadow-lg shadow-blue-500/20 transition-all"
                   >
                     保存
@@ -813,7 +960,8 @@ export default function ProjectDetailPage() {
               </div>
               <div className="flex-1 p-6 overflow-auto">
                 <textarea
-                  defaultValue={getContentText(currentOutput)}
+                  value={editorContent}
+                  onChange={(e) => setEditorContent(e.target.value)}
                   className="w-full h-full min-h-[400px] px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-300 focus:ring-2 focus:ring-blue-100 text-sm text-slate-700 leading-relaxed transition-all outline-none resize-none"
                 />
               </div>

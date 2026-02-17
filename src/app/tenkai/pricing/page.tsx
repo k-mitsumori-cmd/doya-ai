@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 
@@ -38,7 +39,7 @@ const PLANS = [
     description: '個人クリエイター向け',
     features: [
       { text: '月50回の生成', included: true },
-      { text: '全9プラットフォーム対応', included: true },
+      { text: '5プラットフォーム対応', included: true },
       { text: 'テキスト・URL入力', included: true },
       { text: '全テンプレート', included: true },
       { text: 'ブランドボイス（3つ）', included: true },
@@ -54,7 +55,7 @@ const PLANS = [
   {
     key: 'pro',
     name: 'Pro',
-    price: '¥7,980',
+    price: '¥9,800',
     period: '/月',
     description: 'ビジネスで本格活用',
     features: [
@@ -75,8 +76,8 @@ const PLANS = [
   {
     key: 'enterprise',
     name: 'Enterprise',
-    price: 'カスタム',
-    period: '',
+    price: '¥29,800〜',
+    period: '/月',
     description: '大規模チーム向け',
     features: [
       { text: '無制限の生成', included: true },
@@ -170,7 +171,32 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 // ============================================
 export default function PricingPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const currentPlan = session?.user?.plan?.toLowerCase() || 'free'
+
+  const handleUpgrade = async (planKey: string) => {
+    if (!session?.user) {
+      router.push('/auth/signin')
+      return
+    }
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: `tenkai_${planKey}` }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.url) {
+          window.location.href = data.url
+          return
+        }
+      }
+      alert('決済ページの取得に失敗しました。しばらく後に再試行してください。')
+    } catch {
+      alert('エラーが発生しました。しばらく後に再試行してください。')
+    }
+  }
 
   return (
     <motion.div
@@ -251,6 +277,7 @@ export default function PricingPage() {
                     </div>
                   ) : (
                     <button
+                      onClick={() => handleUpgrade(plan.key)}
                       className={`w-full py-3 text-center rounded-xl text-sm font-bold bg-gradient-to-r ${plan.gradient} text-white shadow-lg transition-all hover:shadow-xl`}
                     >
                       {plan.cta}
