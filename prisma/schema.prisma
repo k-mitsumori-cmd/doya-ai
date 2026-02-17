@@ -86,6 +86,13 @@ model User {
   // ドヤ戦略AI
   strategyProjects StrategyProject[]
 
+  // ドヤ展開AI
+  tenkaiProjects   TenkaiProject[]
+  tenkaiBrandVoices TenkaiBrandVoice[]
+  tenkaiTemplates  TenkaiTemplate[]
+  tenkaiUsages     TenkaiUsage[]
+  tenkaiApiKeys    TenkaiApiKey[]
+
   // Stripe関連（ポータル全体の顧客情報）
   stripeCustomerId       String?   @unique
   stripeSubscriptionId   String?   @unique
@@ -989,4 +996,133 @@ model BannerTemplate {
   @@index([isFeatured])
   @@index([isActive])
   @@map("banner_template")
+}
+
+// ============================================
+// ドヤ展開AI
+// ============================================
+
+model TenkaiProject {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  inputType     String   // "url" | "text" | "youtube" | "video"
+  inputUrl      String?
+  inputText     String?  @db.Text
+  inputVideoUrl String?  // Supabase Storage URL
+  transcript    String?  @db.Text
+  analysis      Json?    // コンテンツ分析結果
+  status        String   @default("draft") // draft | analyzing | ready | generating | completed
+  wordCount     Int?
+  language      String   @default("ja")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  outputs       TenkaiOutput[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("tenkai_projects")
+}
+
+model TenkaiOutput {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       TenkaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  platform      String   // "note" | "blog" | "x" | "instagram" | "line" | "facebook" | "linkedin" | "newsletter" | "press_release"
+  content       Json     // プラットフォーム固有のJSON構造
+  charCount     Int?
+  qualityScore  Float?   // 0.0-1.0
+  isEdited      Boolean  @default(false)
+  status        String   @default("pending") // pending | generating | completed | failed
+  tokensUsed    Int?
+  brandVoiceId  String?
+  brandVoice    TenkaiBrandVoice? @relation(fields: [brandVoiceId], references: [id])
+  templateId    String?
+  feedback      String?  @db.Text // 再生成時のフィードバック
+  version       Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([projectId, platform, version])
+  @@index([projectId, status])
+  @@index([projectId, platform])
+  @@index([status, createdAt])
+  @@map("tenkai_outputs")
+}
+
+model TenkaiBrandVoice {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  firstPerson        String   @default("私")
+  formalityLevel     Int      @default(3) // 1-5
+  enthusiasmLevel    Int      @default(3)
+  technicalLevel     Int      @default(3)
+  humorLevel         Int      @default(2)
+  targetAudience     String?
+  sampleText         String?  @db.Text
+  preferredExpressions String[] // 好んで使う表現
+  prohibitedWords    String[] // 禁止ワード
+  isDefault          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  outputs            TenkaiOutput[]
+
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@map("tenkai_brand_voices")
+}
+
+model TenkaiTemplate {
+  id            String   @id @default(cuid())
+  userId        String?  // null = システムテンプレート
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform      String
+  name          String
+  description   String?
+  promptOverride String? @db.Text // プロンプト上書き
+  structureHint Json?    // 構造指定
+  isSystem      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([platform])
+  @@map("tenkai_templates")
+}
+
+model TenkaiUsage {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  yearMonth       String   // "2026-02" 形式
+  creditsUsed     Int      @default(0)
+  tokensTotal     Int      @default(0)
+  projectsCreated Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, yearMonth])
+  @@index([userId])
+  @@map("tenkai_usage")
+}
+
+model TenkaiApiKey {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyPrefix     String    // "sk-doya-xxxx" の先頭8文字（表示用）
+  keyHash       String    // SHA-256ハッシュ（認証用）
+  lastUsedAt    DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("tenkai_api_keys")
 }

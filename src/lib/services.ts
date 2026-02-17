@@ -457,6 +457,67 @@ export const SERVICES: Service[] = [
   },
   
   // ----------------------------------------
+  // ドヤ展開AI（コンテンツ展開）
+  // ----------------------------------------
+  {
+    id: 'tenkai',
+    name: 'ドヤ展開AI',
+    shortName: '展開',
+    description: '1つのコンテンツを9プラットフォームに最適化して自動変換',
+    longDescription: '記事URL・テキスト・YouTube・動画から、note/Blog/X/Instagram/LINE/Facebook/LinkedIn/メルマガ/プレスリリースに最適化されたコンテンツをAIが自動生成。ブランドボイス設定で統一感のある発信を実現。',
+    icon: '🔄',
+    color: 'blue',
+    gradient: 'from-blue-500 to-indigo-500',
+    bgGradient: 'from-blue-50 to-indigo-50',
+    href: '/tenkai',
+    dashboardHref: '/tenkai/projects',
+    pricingHref: '/tenkai/pricing',
+    guideHref: '/tenkai/guide',
+    features: [
+      '9プラットフォーム同時生成',
+      'URL/テキスト/YouTube/動画入力',
+      'AI分析でコンテンツ最適化',
+      'ブランドボイス設定',
+      'テンプレート管理',
+      'SSEリアルタイム生成',
+    ],
+    useCases: [
+      'SNS運用の工数を削減したい',
+      '記事をSNS投稿に展開したい',
+      '複数PFへの投稿を一括化したい',
+      'ブランドの統一感を保ちたい',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '月10回まで',
+        dailyLimit: 3,
+        price: 0,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '月200回まで',
+        dailyLimit: -1,
+        price: 9800,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_TENKAI_PRO_PRICE_ID,
+      },
+      enterprise: {
+        name: 'エンタープライズ',
+        limit: '無制限',
+        dailyLimit: -1,
+        price: 29800,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_TENKAI_ENTERPRISE_PRICE_ID,
+      },
+    },
+    status: 'active',
+    category: 'text',
+    order: 3,
+    requiresAuth: true,
+    isNew: true,
+    badge: 'NEW',
+  },
+
+  // ----------------------------------------
   // プレゼン資料AI（近日公開）
   // ----------------------------------------
   {
