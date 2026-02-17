@@ -88,7 +88,7 @@ function repairJson(str: string): string {
   return jsonStr
 }
 
-// Gemini JSON生成
+// Gemini JSON生成（responseMimeType非対応モデルへのフォールバック付き）
 async function geminiGenerateJson<T>(prompt: string): Promise<T> {
   const apiKey = process.env.GOOGLE_GENAI_API_KEY
   if (!apiKey) throw new Error('GOOGLE_GENAI_API_KEY not configured')
@@ -97,51 +97,67 @@ async function geminiGenerateJson<T>(prompt: string): Promise<T> {
   let lastError: Error | null = null
 
   for (const model of models) {
-    try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 8192,
-              responseMimeType: 'application/json',
-            },
-          }),
-        }
-      )
-
-      if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(`Gemini API error: ${res.status} - ${errText.slice(0, 200)}`)
-      }
-
-      const data = await res.json()
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-      
-      if (!text || text.trim().length === 0) {
-        throw new Error('Empty response from Gemini')
-      }
-      
-      // JSON修復と解析
-      const jsonStr = repairJson(text)
-      
+    // JSONモード→通常モードの2段階で試行
+    for (const useJsonMode of [true, false]) {
       try {
-        return JSON.parse(jsonStr) as T
-      } catch (parseErr) {
-        console.error('JSON parse error, raw text:', text.slice(0, 500))
-        throw new Error(`JSON parse failed: ${(parseErr as Error).message}`)
+        const generationConfig: Record<string, any> = {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        }
+        if (useJsonMode) {
+          generationConfig.responseMimeType = 'application/json'
+        }
+
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': apiKey,
+            },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig,
+            }),
+          }
+        )
+
+        if (!res.ok) {
+          const errText = await res.text()
+          // responseMimeType非対応の場合はJSONモードなしでリトライ
+          if (useJsonMode && res.status === 400 &&
+            (errText.includes('responseMimeType') || errText.includes('INVALID_ARGUMENT'))) {
+            console.warn(`[persona] ${model}: responseMimeType not supported, retrying without it`)
+            continue
+          }
+          throw new Error(`Gemini API error: ${res.status} - ${errText.slice(0, 200)}`)
+        }
+
+        const data = await res.json()
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+
+        if (!text || text.trim().length === 0) {
+          throw new Error('Empty response from Gemini')
+        }
+
+        // JSON修復と解析
+        const jsonStr = repairJson(text)
+
+        try {
+          return JSON.parse(jsonStr) as T
+        } catch (parseErr) {
+          console.error('JSON parse error, raw text:', text.slice(0, 500))
+          throw new Error(`JSON parse failed: ${(parseErr as Error).message}`)
+        }
+      } catch (e) {
+        lastError = e as Error
+        console.warn(`Model ${model} (jsonMode=${useJsonMode}) failed:`, e)
+        // JSONモードでの失敗はcontinueでフォールバックする
+        if (useJsonMode) continue
+        // 通常モードでも失敗したら次のモデルへ
+        break
       }
-    } catch (e) {
-      lastError = e as Error
-      console.warn(`Model ${model} failed:`, e)
-      continue
     }
   }
 
@@ -248,8 +264,9 @@ export async function POST(req: NextRequest) {
         }
       }
     } else {
-      // ゲスト: 無制限アクセス
-      isUnlimited = true
+      // ゲスト: 日次制限あり
+      dailyLimit = PERSONA_PRICING.guestLimit
+      isUnlimited = false
     }
 
     // 制限チェック

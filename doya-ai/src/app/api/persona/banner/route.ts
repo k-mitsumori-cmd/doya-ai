@@ -3,6 +3,8 @@
 // ========================================
 import { NextRequest, NextResponse } from 'next/server'
 import { callGeminiImageAPI } from '@/lib/resolve-image-model'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 // バナーサイズプリセット
 const BANNER_SIZES: Record<string, { width: number; height: number; label: string }> = {
@@ -20,6 +22,12 @@ const BANNER_SIZES: Record<string, { width: number; height: number; label: strin
 
 export async function POST(req: NextRequest) {
   try {
+    // 認証チェック
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+    }
+
     const body = await req.json()
     const { persona, serviceName, catchphrase, sizeKey, customWidth, customHeight } = body
 

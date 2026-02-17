@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { createCheckoutSession, STRIPE_PRICE_IDS } from '@/lib/stripe'
+import { createCheckoutSession, getOrCreateCustomer, STRIPE_PRICE_IDS } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
 function getStripeKeyMode(): 'test' | 'live' | 'unknown' {
@@ -58,6 +58,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // ダミー価格ID（環境変数未設定時のフォールバック）を拒否
+    if (!priceId.startsWith('price_')) {
+      console.error(`[checkout] Invalid Stripe price ID for plan "${planId}": "${priceId}" — 環境変数が未設定です`)
+      return NextResponse.json(
+        { error: 'このプランの決済設定が完了していません。管理者にお問い合わせください。' },
+        { status: 503 }
+      )
+    }
+
     // ベースURL（環境変数が未設定でも現ドメインで成立させる）
     const baseUrl = String(process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin)
       .trim()
@@ -86,11 +95,38 @@ export async function POST(request: NextRequest) {
     const successUrl = `${baseUrl}${successPath}?success=true&plan=${planLabel}&session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${baseUrl}${cancelPath}`
 
+    // 既存のStripe Customerを取得（重複Customer防止）
+    let customerId: string | undefined
+    const dbUserFull = await prisma.user.findUnique({
+      where: { id: dbUser.id },
+      select: { stripeCustomerId: true },
+    })
+    if (dbUserFull?.stripeCustomerId) {
+      customerId = dbUserFull.stripeCustomerId
+    } else {
+      // DB未登録の場合、Stripeから検索/作成して事前にDB保存
+      try {
+        const customer = await getOrCreateCustomer({
+          email: session.user.email,
+          name: session.user.name || undefined,
+          userId: dbUser.id,
+        })
+        customerId = customer.id
+        await prisma.user.update({
+          where: { id: dbUser.id },
+          data: { stripeCustomerId: customer.id },
+        })
+      } catch (e) {
+        console.warn('[checkout] getOrCreateCustomer failed, falling back to customer_email:', e)
+      }
+    }
+
     // Checkout Session作成
     const checkoutSession = await createCheckoutSession({
       priceId,
       userId: dbUser.id,
       userEmail: session.user.email,
+      customerId,
       successUrl,
       cancelUrl,
       metadata: {

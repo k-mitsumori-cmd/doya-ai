@@ -66,13 +66,18 @@ export const authOptions: NextAuthOptions = {
             // 初回ログイン時刻（1時間生成し放題の判定用）
             ;(session.user as any).firstLoginAt = dbUser.firstLoginAt?.toISOString() || null
           }
-        } catch (error) {
-          console.error('Session callback DB error:', error)
-          // フォールバック: userオブジェクトの情報を使用
-          (session.user as any).id = user.id;
+        } catch (dbErr: unknown) {
+          // eslint-disable-next-line no-console
+          void (console).error('Session callback DB error:', dbErr);
+          // フォールバック: userオブジェクトの情報を使用（全サービスプランを初期化）
+          ;(session.user as any).id = user.id;
           (session.user as any).role = (user as any).role || 'USER';
           (session.user as any).plan = (user as any).plan || 'FREE';
-          (session.user as any).bannerPlan = 'FREE'
+          (session.user as any).bannerPlan = 'FREE';
+          (session.user as any).interviewPlan = undefined;
+          (session.user as any).seoPlan = undefined;
+          (session.user as any).kantanPlan = undefined;
+          (session.user as any).firstLoginAt = null
         }
       }
       return session;

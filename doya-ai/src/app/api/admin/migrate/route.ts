@@ -13,8 +13,15 @@ export async function POST(request: NextRequest) {
   try {
     // セキュリティチェック（本番環境では環境変数で保護）
     const authHeader = request.headers.get('authorization')
-    const expectedToken = process.env.ADMIN_MIGRATE_TOKEN || 'dev-token'
-    
+    const expectedToken = (process.env.ADMIN_MIGRATE_TOKEN || '').trim()
+    if (!expectedToken) {
+      console.error('[admin/migrate] ADMIN_MIGRATE_TOKEN is not configured')
+      return NextResponse.json(
+        { error: 'ADMIN_MIGRATE_TOKEN is not configured' },
+        { status: 500 }
+      )
+    }
+
     if (authHeader !== `Bearer ${expectedToken}`) {
       return NextResponse.json(
         { error: 'Unauthorized' },

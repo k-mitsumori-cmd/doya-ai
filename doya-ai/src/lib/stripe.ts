@@ -133,6 +133,7 @@ export async function createCheckoutSession({
   priceId,
   userId,
   userEmail,
+  customerId,
   successUrl,
   cancelUrl,
   metadata,
@@ -141,6 +142,7 @@ export async function createCheckoutSession({
   priceId: string
   userId: string
   userEmail: string
+  customerId?: string
   successUrl: string
   cancelUrl: string
   metadata?: Record<string, string>
@@ -157,7 +159,9 @@ export async function createCheckoutSession({
     ],
     success_url: successUrl,
     cancel_url: cancelUrl,
-    customer_email: userEmail,
+    // 既存Customer IDがあれば使用（重複Customer防止）
+    // なければemailで自動作成
+    ...(customerId ? { customer: customerId } : { customer_email: userEmail }),
     client_reference_id: userId,
     metadata: {
       userId,
@@ -241,19 +245,19 @@ async function getOrCreateCustomerPortalConfigurationId(): Promise<string | null
           enabled: true,
           mode: 'at_period_end',
           // Stripeがサポートしている範囲で理由入力を有効化
-          cancellation_reason: { enabled: true },
+          cancellation_reason: { enabled: true, options: ['too_expensive', 'missing_features', 'switched_service', 'unused', 'other'] },
         },
         // サブスクのプラン変更（アップ/ダウン両方）
         subscription_update: {
           enabled: true,
           default_allowed_updates: ['price'],
           // 変更候補をこのアプリの価格に絞る（他商品を誤って表示しない）
-          products: [
-            {
-              product: process.env.STRIPE_PRODUCT_BANNER_ID || undefined,
-              prices: realPriceIds,
-            },
-          ].filter((p: any) => !!p.product || (p.prices?.length || 0) > 0),
+          products: (process.env.STRIPE_PRODUCT_BANNER_ID
+            ? [{
+                product: process.env.STRIPE_PRODUCT_BANNER_ID,
+                prices: realPriceIds,
+              }]
+            : []) as any,
         },
       },
       metadata: {

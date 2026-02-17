@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2, GENRES } from '@/lib/banner-prompts-v2'
+import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
+import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,6 +12,12 @@ const v2PromptsMap = new Map(BANNER_PROMPTS_V2.map(p => [p.id, p]))
 // カテゴリ一覧取得（V2プロンプトのgenreを使用）
 export async function GET(request: NextRequest) {
   try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get(COOKIE_NAME)?.value || null
+    const session = await verifyAdminSession(token)
+    if (!session.valid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     const { searchParams } = new URL(request.url)
     const includeStats = searchParams.get('includeStats') === 'true'
 
@@ -62,7 +70,7 @@ export async function GET(request: NextRequest) {
     }))
 
     // GENRES定義の順序でソート（定義されていないものは最後）
-    const genreOrder = GENRES.map(g => g.name)
+    const genreOrder = GENRES.map(g => g.name) as string[]
     categories.sort((a, b) => {
       const aIndex = genreOrder.indexOf(a.name)
       const bIndex = genreOrder.indexOf(b.name)

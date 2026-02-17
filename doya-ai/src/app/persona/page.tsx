@@ -149,13 +149,21 @@ export default function PersonaPage() {
 
       setGeneratedData(data.data)
 
-      // ローカルストレージに保存
-      localStorage.setItem('doya_persona_last', JSON.stringify({ data: data.data, url, timestamp: Date.now() }))
+      // ローカルストレージに保存（QuotaExceededError対策付き）
+      try {
+        localStorage.setItem('doya_persona_last', JSON.stringify({ data: data.data, url, timestamp: Date.now() }))
+      } catch (storageErr) {
+        console.warn('localStorage save failed:', storageErr)
+      }
 
-      // 履歴に追加
-      const history = JSON.parse(localStorage.getItem('doya_persona_history') || '[]')
-      history.unshift({ data: data.data, url, timestamp: Date.now() })
-      localStorage.setItem('doya_persona_history', JSON.stringify(history.slice(0, 20)))
+      // 履歴に追加（画像は含めず、最大10件）
+      try {
+        const history = JSON.parse(localStorage.getItem('doya_persona_history') || '[]')
+        history.unshift({ data: data.data, url, timestamp: Date.now() })
+        localStorage.setItem('doya_persona_history', JSON.stringify(history.slice(0, 10)))
+      } catch (storageErr) {
+        console.warn('localStorage history save failed:', storageErr)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'エラーが発生しました')
     } finally {
@@ -190,9 +198,13 @@ export default function PersonaPage() {
 
       if (data.success && data.image) {
         setPortraitImage(data.image)
-        const stored = JSON.parse(localStorage.getItem('doya_persona_last') || '{}')
-        stored.portrait = data.image
-        localStorage.setItem('doya_persona_last', JSON.stringify(stored))
+        try {
+          const stored = JSON.parse(localStorage.getItem('doya_persona_last') || '{}')
+          stored.portrait = data.image
+          localStorage.setItem('doya_persona_last', JSON.stringify(stored))
+        } catch (storageErr) {
+          console.warn('localStorage portrait save failed:', storageErr)
+        }
       } else {
         throw new Error(data.error || 'ポートレート画像の取得に失敗しました')
       }

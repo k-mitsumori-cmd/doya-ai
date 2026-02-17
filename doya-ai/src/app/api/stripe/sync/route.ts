@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, getPlanIdFromStripePriceId, getServiceIdFromPlanId } from '@/lib/stripe'
+import { stripe, getPlanIdFromStripePriceId, getServiceIdFromPlanId, type PlanId } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
 // ========================================
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const planId = (planIdFromPrice || planIdFromMeta) as any
 
     if (planId && typeof planId === 'string' && planId.includes('-')) {
-      const serviceId = getServiceIdFromPlanId(planId)
+      const serviceId = getServiceIdFromPlanId(planId as PlanId)
       if (serviceId !== 'bundle') {
         const isBannerPaid =
           serviceId === 'banner' &&

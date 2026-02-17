@@ -133,7 +133,7 @@ export const SEO_PRICING: ServicePricing = {
   serviceIcon: '🧠',
   guestLimit: 1,      // ゲスト: 合計1回（記事作成）まで
   freeLimit: 1,       // ログイン無料: 1日1回まで
-  proLimit: 3,        // PRO: 1日3回まで
+  proLimit: 5,        // PRO: 1日5回まで（seoAccess.ts と一致）
   enterpriseLimit: 30, // Enterprise: 1日30回まで
   // 文字数制限（1記事あたり）
   charLimit: {
@@ -169,11 +169,11 @@ export const SEO_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '¥9,980',
       period: '/月（税込）',
-      description: '月額9,980円：1日3回 / 20,000字まで',
+      description: '月額9,980円：1日5回 / 20,000字まで',
       popular: true,
       color: 'slate',
       features: [
-        { text: '1日3回まで生成', included: true },
+        { text: '1日5回まで生成', included: true },
         { text: '1記事20,000字まで生成可能', included: true },
         { text: '分割生成（安定化）', included: true },
         { text: '監査（二重チェック）', included: true },

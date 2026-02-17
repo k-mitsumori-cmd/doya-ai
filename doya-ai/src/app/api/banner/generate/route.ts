@@ -16,15 +16,41 @@ const RATE_LIMIT_WINDOW = 60 * 1000 // 1分
 const RATE_LIMIT_MAX_GUEST = 3 // ゲストは1分あたり3リクエストまで
 const RATE_LIMIT_MAX_USER = 10 // ログインユーザーは1分あたり10リクエストまで
 
-// ゲストの日次上限（Cookieで簡易管理）
+// ゲストの日次上限（Cookieで簡易管理 + HMAC署名で改ざん防止）
 const BANNER_GUEST_USAGE_COOKIE = 'doya_banner_guest_usage'
 type GuestDailyUsage = { date: string; count: number }
+
+const COOKIE_SECRET = process.env.COOKIE_SIGNATURE_SECRET || process.env.NEXTAUTH_SECRET || ''
+
+function signCookieValue(value: string): string {
+  const hmac = crypto.createHmac('sha256', COOKIE_SECRET)
+  hmac.update(value)
+  return `${value}.${hmac.digest('base64url')}`
+}
+
+function verifyCookieValue(signed: string): string | null {
+  const lastDot = signed.lastIndexOf('.')
+  if (lastDot === -1) return null
+  const value = signed.slice(0, lastDot)
+  const sig = signed.slice(lastDot + 1)
+  if (!value || !sig) return null
+  const hmac = crypto.createHmac('sha256', COOKIE_SECRET)
+  hmac.update(value)
+  const expected = hmac.digest('base64url')
+  if (sig.length !== expected.length) return null
+  // タイミング攻撃対策
+  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null
+  return value
+}
 
 function readGuestDailyUsage(request: NextRequest, today: string): GuestDailyUsage {
   try {
     const raw = request.cookies.get(BANNER_GUEST_USAGE_COOKIE)?.value
     if (!raw) return { date: today, count: 0 }
-    const parsed = JSON.parse(raw) as any
+    // 署名検証（署名なし旧フォーマットは無効→リセット）
+    const value = verifyCookieValue(raw)
+    if (!value) return { date: today, count: 0 }
+    const parsed = JSON.parse(value) as any
     const date = typeof parsed?.date === 'string' ? parsed.date : today
     const count = Number(parsed?.count)
     if (date !== today) return { date: today, count: 0 }
@@ -36,18 +62,26 @@ function readGuestDailyUsage(request: NextRequest, today: string): GuestDailyUsa
 
 function checkRateLimit(ip: string, isGuest: boolean): boolean {
   const now = Date.now()
+
+  // 古いエントリを定期的に削除（メモリリーク防止）
+  if (rateLimitMap.size > 1000) {
+    for (const [key, val] of rateLimitMap) {
+      if (val.resetTime < now) rateLimitMap.delete(key)
+    }
+  }
+
   const record = rateLimitMap.get(ip)
   const maxRequests = isGuest ? RATE_LIMIT_MAX_GUEST : RATE_LIMIT_MAX_USER
-  
+
   if (!record || record.resetTime < now) {
     rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
     return true
   }
-  
+
   if (record.count >= maxRequests) {
     return false
   }
-  
+
   record.count++
   return true
 }
@@ -409,7 +443,7 @@ export async function POST(request: NextRequest) {
     })
 
     if (!disableLimits && isGuest && guestUsage) {
-      res.cookies.set(BANNER_GUEST_USAGE_COOKIE, JSON.stringify(guestUsage), {
+      res.cookies.set(BANNER_GUEST_USAGE_COOKIE, signCookieValue(JSON.stringify(guestUsage)), {
         httpOnly: true,
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',

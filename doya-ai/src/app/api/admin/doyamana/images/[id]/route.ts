@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
+import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
+
+// 管理者認証ヘルパー
+async function requireAdmin() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(COOKIE_NAME)?.value || null
+  const session = await verifyAdminSession(token)
+  if (!session.valid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  return null
+}
 
 // 画像詳細取得
 export async function GET(
@@ -9,6 +22,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authError = await requireAdmin()
+    if (authError) return authError
     const { id } = await params
 
     const image = await prisma.bannerTemplate.findUnique({
@@ -55,6 +70,8 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authError = await requireAdmin()
+    if (authError) return authError
     const { id } = await params
     const body = await request.json()
     const { templateId, industry, category, prompt, size, imageUrl, previewUrl, isFeatured, isActive } = body
@@ -90,6 +107,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authError = await requireAdmin()
+    if (authError) return authError
     const { id } = await params
 
     await prisma.bannerTemplate.delete({

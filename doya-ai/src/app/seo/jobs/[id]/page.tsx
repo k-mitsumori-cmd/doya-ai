@@ -879,7 +879,7 @@ export default function SeoJobPage() {
           dontShowAgainRef.current = false
           setCompletionOpen(false)
         }}
-        onDontShowAgainChange={(v) => {
+        onDontShowAgainChange={(v: boolean) => {
           dontShowAgainRef.current = v
         }}
       />

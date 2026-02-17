@@ -1,8 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2, GENRES } from '@/lib/banner-prompts-v2'
+import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
+import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
+
+// 管理者認証ヘルパー
+async function requireAdmin() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(COOKIE_NAME)?.value || null
+  const session = await verifyAdminSession(token)
+  if (!session.valid) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  return null
+}
 
 // V2プロンプトのマップを作成（templateId -> V2プロンプト情報）
 const v2PromptsMap = new Map(BANNER_PROMPTS_V2.map(p => [p.id, p]))
@@ -10,6 +23,8 @@ const v2PromptsMap = new Map(BANNER_PROMPTS_V2.map(p => [p.id, p]))
 // 画像一覧取得（BannerTemplateテーブルを使用、V2プロンプトのgenreを参照）
 export async function GET(request: NextRequest) {
   try {
+    const authError = await requireAdmin()
+    if (authError) return authError
     const { searchParams } = new URL(request.url)
     const genre = searchParams.get('category') // フロントエンドからはcategoryとして送られるが、実際はgenre
     const status = searchParams.get('status') // 'active' | 'inactive' | 'all'
@@ -109,6 +124,8 @@ export async function GET(request: NextRequest) {
 // 画像新規作成
 export async function POST(request: NextRequest) {
   try {
+    const authError = await requireAdmin()
+    if (authError) return authError
     const body = await request.json()
     const { templateId, industry, category, prompt, size, imageUrl, previewUrl, isFeatured, isActive } = body
 
@@ -146,6 +163,8 @@ export async function POST(request: NextRequest) {
 // 一括操作
 export async function PATCH(request: NextRequest) {
   try {
+    const authError = await requireAdmin()
+    if (authError) return authError
     const body = await request.json()
     const { action, ids } = body
 

@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
       success: true,
       generated: results.length,
       skipped: results.filter((r) => r.status === 'skipped').length,
-      errors: errors.length,
+      errorCount: errors.length,
       results,
       errors: errors.length > 0 ? errors : undefined,
     })

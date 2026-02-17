@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { constructWebhookEvent, getPlanIdFromStripePriceId, getServiceIdFromPlanId, stripe } from '@/lib/stripe'
+import { constructWebhookEvent, getPlanIdFromStripePriceId, getServiceIdFromPlanId, stripe, type PlanId } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 
@@ -200,12 +200,16 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   // サービス別プランもフリーに戻す（どのサービスの解約かは価格ID/metadataから推定）
   try {
-    const priceId = subscription.items.data[0]?.price.id
+    if (!subscription.items?.data?.length) {
+      console.warn(`No subscription items for canceled subscription ${subscription.id}`)
+      return
+    }
+    const priceId = subscription.items.data[0].price.id
     const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
     const planIdFromMeta = (subscription.metadata?.planId as any) || null
     const planId = (planIdFromPrice || planIdFromMeta) as any
     if (planId && typeof planId === 'string') {
-      const serviceId = getServiceIdFromPlanId(planId)
+      const serviceId = getServiceIdFromPlanId(planId as PlanId)
       if (serviceId !== 'bundle') {
         await prisma.userServiceSubscription.update({
           where: { userId_serviceId: { userId: user.id, serviceId } },
@@ -237,14 +241,18 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 // ユーザーサブスクリプション更新
 // ========================================
 async function updateUserSubscription(userId: string, subscription: Stripe.Subscription) {
-  const priceId = subscription.items.data[0]?.price.id
+  if (!subscription.items?.data?.length) {
+    console.error(`No subscription items found for user ${userId}, subscription ${subscription.id}`)
+    return
+  }
+  const priceId = subscription.items.data[0].price.id
   const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
   const planIdFromMeta = (subscription.metadata?.planId as any) || null
   const planId = (planIdFromPrice || planIdFromMeta) as any
 
   // まずはサービス別に確実に反映
   if (planId && typeof planId === 'string' && planId.includes('-')) {
-    const serviceId = getServiceIdFromPlanId(planId)
+    const serviceId = getServiceIdFromPlanId(planId as PlanId)
     if (serviceId !== 'bundle') {
       const isBannerPaid =
         serviceId === 'banner' &&

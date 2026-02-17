@@ -135,12 +135,12 @@ async function submitJob(
 
 /**
  * ポーリングで完了を待つ
- * 指数バックオフ: 3秒→最大30秒、合計最大10分
+ * 指数バックオフ: 3秒→最大30秒、合計最大4分（APIルートのmaxDuration=300秒に収める）
  */
 async function pollTranscript(
   transcriptId: string,
   apiKey: string,
-  maxWaitMs = 10 * 60 * 1000
+  maxWaitMs = 4 * 60 * 1000
 ): Promise<any> {
   const startTime = Date.now()
   let interval = 3000
@@ -170,5 +170,5 @@ async function pollTranscript(
     interval = Math.min(interval * 1.5, 30000)
   }
 
-  throw new Error('文字起こしがタイムアウトしました (10分超過)')
+  throw new Error(`文字起こしがタイムアウトしました (${Math.round(maxWaitMs / 60000)}分超過)`)
 }

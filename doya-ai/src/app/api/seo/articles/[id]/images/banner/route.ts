@@ -4,6 +4,8 @@ import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPlan'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,11 +14,23 @@ export const maxDuration = 60
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   const params = 'then' in ctx.params ? await ctx.params : ctx.params
   const articleId = params.id
-  
+
   try {
+    // 認証チェック
+    const session = await getServerSession(authOptions)
+    const userId = (session?.user as any)?.id as string | undefined
+    if (!userId) {
+      return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 })
+    }
+
     await ensureSeoSchema()
     const article = await (prisma as any).seoArticle.findUnique({ where: { id: articleId } })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
+
+    // 所有者確認
+    if (article.userId && article.userId !== userId) {
+      return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
+    }
 
     await ensureSeoStorage()
 

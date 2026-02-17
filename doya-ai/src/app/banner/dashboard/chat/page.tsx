@@ -637,7 +637,7 @@ export default function BannerChatPage() {
                     <div className="space-y-4 sm:space-y-6">
                       <div className="p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-slate-50 border border-slate-100 space-y-3 sm:space-y-4">
                         <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                          {summary.split(' / ').map((s, i) => (
+                          {summary?.split(' / ').map((s, i) => (
                             <span key={i} className="px-2 sm:px-3 py-1 sm:py-1.5 bg-white rounded-lg sm:rounded-xl text-[10px] sm:text-[11px] font-bold text-slate-600 border border-slate-100 shadow-sm">
                               {s}
                             </span>

@@ -42,7 +42,7 @@ function isProFromSession(session: any): boolean {
   const globalPlan = String(session?.user?.plan || '').toUpperCase()
   // bannerPlan があればそれを優先。無ければ global plan を見る
   if (bannerPlan) return bannerPlan !== 'FREE'
-  return globalPlan && globalPlan !== 'FREE'
+  return globalPlan !== '' && globalPlan !== 'FREE'
 }
 
 // クリーンアップ頻度を抑えてレスポンスを軽くする（サーバレスでも一定効果）
