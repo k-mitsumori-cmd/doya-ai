@@ -264,7 +264,7 @@ export default function TranscribePage() {
   const isProcessing = currentStep !== 'complete' && currentStep !== 'error'
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-0">
       {/* ヘッダー */}
       <div className="mb-6">
         <button
@@ -275,9 +275,9 @@ export default function TranscribePage() {
           プロジェクトに戻る
         </button>
         <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-blue-600 flex items-center justify-center shadow-lg shadow-[#7f19e6]/20">
-              <span className="material-symbols-outlined text-white text-2xl">mic</span>
+          <div className="relative shrink-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-blue-600 flex items-center justify-center shadow-lg shadow-[#7f19e6]/20">
+              <span className="material-symbols-outlined text-white text-xl sm:text-2xl">mic</span>
             </div>
             {/* 処理中パルス */}
             {isProcessing && (
@@ -295,9 +295,9 @@ export default function TranscribePage() {
               </>
             )}
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900">文字起こし</h1>
-            <p className="text-sm text-slate-500">
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900">文字起こし</h1>
+            <p className="text-sm text-slate-500 truncate">
               {mediaInfo?.fileName || 'リアルタイムで音声をテキストに変換しています'}
             </p>
             <p className="text-xs text-slate-400 mt-0.5">1回の文字起こし上限: 約3時間（180分）</p>
@@ -402,21 +402,21 @@ export default function TranscribePage() {
         </div>
 
         {/* ステッププログレス */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <span className="text-sm font-bold text-slate-700">進行状況</span>
             <span className="text-sm font-bold text-slate-500 tabular-nums">{formatTime(elapsed)}</span>
           </div>
 
           {/* ステップインジケーター */}
-          <div className="flex items-center gap-1 mb-6">
+          <div className="flex items-center gap-1 mb-6 overflow-x-auto">
             {STEP_ORDER.map((step, i) => {
               if (step === 'complete') return null
               const isActive = currentStepIndex === i
               const isDone = currentStepIndex > i
               const info = STEP_INFO[step]
               return (
-                <div key={step} className="flex-1 flex flex-col items-center">
+                <div key={step} className="flex-1 flex flex-col items-center min-w-[48px]">
                   <div className={`w-full h-1.5 rounded-full mb-2 transition-all duration-500 ${
                     isDone ? 'bg-[#7f19e6]' : isActive ? 'bg-[#7f19e6]/50' : 'bg-slate-100'
                   }`}>
@@ -432,7 +432,7 @@ export default function TranscribePage() {
                   <span className={`material-symbols-outlined text-[14px] ${isDone ? 'text-[#7f19e6]' : isActive ? info.color : 'text-slate-300'}`}>
                     {isDone ? 'check_circle' : info.icon}
                   </span>
-                  <span className={`text-[10px] font-bold mt-0.5 ${isDone ? 'text-[#7f19e6]' : isActive ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <span className={`text-[10px] font-bold mt-0.5 whitespace-nowrap ${isDone ? 'text-[#7f19e6]' : isActive ? 'text-slate-700' : 'text-slate-300'}`}>
                     {info.label}
                   </span>
                 </div>
@@ -542,8 +542,8 @@ export default function TranscribePage() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
         >
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
+          <div className="p-3 sm:p-4 border-b border-slate-100 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <span className="material-symbols-outlined text-[#7f19e6] text-lg">subtitles</span>
               <span className="text-sm font-bold text-slate-700">文字起こし結果</span>
               {isProcessing && (
@@ -563,15 +563,15 @@ export default function TranscribePage() {
                 </motion.div>
               )}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               {currentStep === 'complete' && (
-                <span className="text-[10px] text-slate-400">クリックで再生位置にジャンプ</span>
+                <span className="text-[10px] text-slate-400 hidden sm:inline">クリックで再生位置にジャンプ</span>
               )}
-              <span className="text-xs font-bold text-slate-400">{segments.length} セグメント</span>
+              <span className="text-xs font-bold text-slate-400 whitespace-nowrap">{segments.length} セグメント</span>
             </div>
           </div>
 
-          <div className="max-h-[500px] overflow-y-auto p-4 space-y-2">
+          <div className="max-h-[400px] sm:max-h-[500px] overflow-y-auto p-3 sm:p-4 space-y-2">
             <AnimatePresence>
               {segments.map((seg) => {
                 const isActive = activeSegmentIndex === seg.index
@@ -641,7 +641,7 @@ export default function TranscribePage() {
             animate={{ opacity: 1, y: 0 }}
             className="mt-6 bg-white rounded-2xl border border-emerald-200 shadow-sm overflow-hidden"
           >
-            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6">
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
                 <motion.div
                   className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center"

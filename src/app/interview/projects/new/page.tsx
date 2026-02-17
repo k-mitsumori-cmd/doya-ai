@@ -95,7 +95,7 @@ export default function NewProject() {
   }
 
   return (
-    <motion.div className="max-w-2xl mx-auto" variants={pageVariants} initial="hidden" animate="show">
+    <motion.div className="max-w-2xl mx-auto px-4 sm:px-0" variants={pageVariants} initial="hidden" animate="show">
       {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-8">
         <button
@@ -105,7 +105,7 @@ export default function NewProject() {
           <span className="material-symbols-outlined text-slate-600">arrow_back</span>
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">新規プロジェクト作成</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">新規プロジェクト作成</h1>
           <p className="text-sm text-slate-500 mt-0.5">インタビュー記事プロジェクトの設定</p>
         </div>
       </div>
@@ -132,7 +132,7 @@ export default function NewProject() {
             <span className="material-symbols-outlined text-[#7f19e6] text-lg">category</span>
             ジャンル
           </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             {GENRES.map((g) => (
               <button
                 key={g.value}
@@ -256,11 +256,11 @@ export default function NewProject() {
         )}
 
         {/* 送信 */}
-        <div className="flex gap-3 pt-2">
+        <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
           <button
             type="button"
             onClick={() => router.back()}
-            className="flex items-center gap-2 px-6 py-2.5 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 text-sm transition-colors"
+            className="flex items-center justify-center gap-2 px-6 py-2.5 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 text-sm transition-colors"
           >
             <span className="material-symbols-outlined text-lg">close</span>
             キャンセル

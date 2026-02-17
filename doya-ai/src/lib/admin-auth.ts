@@ -2,8 +2,12 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { prisma } from './prisma'
 
-// JWT秘密鍵（環境変数から取得、なければ警告）
-export const JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret-change-in-production'
+// JWT秘密鍵（環境変数から取得）
+const _jwtSecret = process.env.ADMIN_JWT_SECRET || process.env.NEXTAUTH_SECRET
+if (!_jwtSecret && process.env.NODE_ENV === 'production') {
+  console.error('CRITICAL: ADMIN_JWT_SECRET または NEXTAUTH_SECRET が未設定です。管理画面認証が機能しません。')
+}
+export const JWT_SECRET = _jwtSecret || 'dev-only-secret-do-not-use-in-production'
 export const JWT_EXPIRES_IN = '24h'
 export const COOKIE_NAME = 'admin_session_token'
 export const MAX_LOGIN_ATTEMPTS = 5

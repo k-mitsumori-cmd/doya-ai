@@ -24,9 +24,9 @@ export default async function Layout({ children }: { children: React.ReactNode }
 
   return (
     <>
-      {/* Material Symbols Outlined font */}
+      {/* Material Symbols Outlined font（root layout と同じ URL パラメータ） */}
       <link
-        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
         rel="stylesheet"
       />
       {/* Noto Sans JP — リッチなフォント */}
@@ -41,22 +41,25 @@ export default async function Layout({ children }: { children: React.ReactNode }
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
-        .interview-root * {
+        .interview-root *:not(.material-symbols-outlined) {
           font-family: inherit !important;
         }
         .interview-root .material-symbols-outlined {
           font-family: 'Material Symbols Outlined' !important;
+          font-weight: normal !important;
+          font-style: normal !important;
+          opacity: 1 !important;
         }
-        /* 全体的にフォントウェイトを底上げ */
-        .interview-root p,
-        .interview-root span,
-        .interview-root div,
-        .interview-root a,
-        .interview-root button,
-        .interview-root label,
-        .interview-root input,
-        .interview-root textarea,
-        .interview-root select {
+        /* 全体的にフォントウェイトを底上げ（アイコンは除外） */
+        .interview-root p:not(.material-symbols-outlined),
+        .interview-root span:not(.material-symbols-outlined),
+        .interview-root div:not(.material-symbols-outlined),
+        .interview-root a:not(.material-symbols-outlined),
+        .interview-root button:not(.material-symbols-outlined),
+        .interview-root label:not(.material-symbols-outlined),
+        .interview-root input:not(.material-symbols-outlined),
+        .interview-root textarea:not(.material-symbols-outlined),
+        .interview-root select:not(.material-symbols-outlined) {
           font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif !important;
         }
         /* font-normal (400) → 500, font-medium (500) → 600 に底上げ */

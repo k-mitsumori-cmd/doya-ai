@@ -86,17 +86,23 @@ export function isTrialActive(firstLoginAtIso: string | null | undefined): boole
 }
 
 /**
- * 日次利用上限
+ * 日次利用上限（操作回数ベース）
+ * pricing.ts の INTERVIEW_PRICING と一致させること
  */
-export function interviewDailyLimit(_plan: InterviewPlanCode): number {
-  return -1 // 開発中: 全プラン無制限
+export function interviewDailyLimit(plan: InterviewPlanCode): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.INTERVIEW_DISABLE_LIMITS === '1') return -1
+  if (plan === 'ENTERPRISE') return 100
+  if (plan === 'PRO') return 30
+  if (plan === 'FREE') return 5
+  return 3 // GUEST
 }
 
 /**
  * ゲスト累計利用上限
  */
 export function interviewGuestTotalLimit(): number {
-  return 999999 // 開発中: 実質無制限
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.INTERVIEW_DISABLE_LIMITS === '1') return -1
+  return 5
 }
 
 /**

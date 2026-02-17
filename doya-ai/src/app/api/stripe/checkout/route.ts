@@ -65,18 +65,20 @@ export async function POST(request: NextRequest) {
     
     // サービスに応じたリダイレクトURL
     const service = planId.split('-')[0] // 'seo-pro' -> 'seo'
-    const successPath =
-      service === 'seo'
-        ? '/seo'
-        : service === 'banner'
-          ? '/banner'
-          : '/'
-    const cancelPath =
-      service === 'seo'
-        ? '/seo/pricing?payment=cancelled'
-        : service === 'banner'
-          ? '/banner?payment=cancelled'
-          : '/pricing?payment=cancelled'
+    const successPathMap: Record<string, string> = {
+      seo: '/seo',
+      banner: '/banner',
+      interview: '/interview',
+      persona: '/persona',
+    }
+    const cancelPathMap: Record<string, string> = {
+      seo: '/seo/pricing?payment=cancelled',
+      banner: '/banner?payment=cancelled',
+      interview: '/interview?payment=cancelled',
+      persona: '/persona?payment=cancelled',
+    }
+    const successPath = successPathMap[service] || '/'
+    const cancelPath = cancelPathMap[service] || '/pricing?payment=cancelled'
 
     // 成功URLにプラン情報/Checkout Session IDを追加（決済直後にアプリ側で同期して即反映させる）
     // NOTE: {CHECKOUT_SESSION_ID} はStripeが自動で実IDに置換する
@@ -139,6 +141,11 @@ function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string
     'banner-basic': STRIPE_PRICE_IDS.banner.basic,
     'banner-pro': STRIPE_PRICE_IDS.banner.pro,
     'banner-enterprise': STRIPE_PRICE_IDS.banner.enterprise,
+    // ドヤインタビュー
+    'interview-pro': STRIPE_PRICE_IDS.interview.pro,
+    'interview-enterprise': STRIPE_PRICE_IDS.interview.enterprise,
+    // ドヤペルソナAI
+    'persona-pro': STRIPE_PRICE_IDS.persona.pro,
     // セットプラン
     'bundle': STRIPE_PRICE_IDS.bundle,
   }

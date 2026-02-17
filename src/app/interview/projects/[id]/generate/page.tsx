@@ -316,6 +316,7 @@ export default function GeneratePage() {
   const [showCelebration, setShowCelebration] = useState(false)
   const [proofScore, setProofScore] = useState<number | null>(null)
   const [proofScoreLoading, setProofScoreLoading] = useState(false)
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -456,7 +457,125 @@ export default function GeneratePage() {
 
       <div className="flex flex-1 -mx-4 md:-mx-8 -my-6 md:-my-8 h-[calc(100vh-4rem)] bg-gradient-to-br from-slate-50 to-blue-50/30 overflow-hidden">
 
-        {/* ── Left Sidebar ── */}
+        {/* ── Mobile slide-out drawer backdrop ── */}
+        <AnimatePresence>
+          {mobileDrawerOpen && (
+            <motion.div
+              className="fixed inset-0 bg-black/40 z-30 md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileDrawerOpen(false)}
+            />
+          )}
+        </AnimatePresence>
+
+        {/* ── Mobile slide-out drawer ── */}
+        <AnimatePresence>
+          {mobileDrawerOpen && (
+            <motion.aside
+              className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] border-r border-blue-100 bg-white/95 backdrop-blur-md p-6 overflow-y-auto flex flex-col z-40 md:hidden"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            >
+              <button
+                onClick={() => setMobileDrawerOpen(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+              <div className="mb-8">
+                <div className="flex items-center gap-2 text-blue-500 text-xs font-semibold uppercase tracking-wider mb-4">
+                  <span className="material-symbols-outlined text-sm">auto_awesome</span>
+                  <span>AI記事生成</span>
+                </div>
+                <h3 className="text-xl font-bold tracking-tight mb-1 text-slate-900">
+                  {status === 'done' ? '記事が完成しました' : '記事を生成中'}
+                </h3>
+                <p className="text-slate-500 text-sm">
+                  {status === 'generating' && (progress || 'AI記事を生成中...')}
+                  {status === 'done' && `完了 — ${wordCount.toLocaleString()}文字`}
+                  {status === 'error' && 'エラーが発生しました'}
+                  {status === 'idle' && '準備中...'}
+                </p>
+              </div>
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-bold text-slate-900">生成進捗</span>
+                  <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent text-sm font-bold">
+                    {progressPercent}%
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-blue-50 rounded-full overflow-hidden mb-6">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"
+                    animate={{ width: `${progressPercent}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </div>
+                <div className="space-y-6">
+                  {[
+                    { label: '文字起こし解析', stepStatus: 'completed' },
+                    { label: '構成マッピング', stepStatus: status === 'idle' ? 'pending' : 'completed' },
+                    { label: 'コンテンツ執筆', stepStatus: status === 'generating' ? 'active' : status === 'done' ? 'completed' : 'pending' },
+                    { label: '最終仕上げ', stepStatus: status === 'done' ? 'completed' : 'pending' },
+                  ].map((step, idx) => (
+                    <div key={idx} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all ${
+                          step.stepStatus === 'completed' ? 'bg-emerald-500 border-emerald-500 text-white' :
+                          step.stepStatus === 'active' ? 'border-blue-500 text-blue-500 shadow-md shadow-blue-200' :
+                          'border-slate-300'
+                        }`}>
+                          <span className="material-symbols-outlined text-sm">
+                            {step.stepStatus === 'completed' ? 'check' : step.stepStatus === 'active' ? 'sync' : 'radio_button_unchecked'}
+                          </span>
+                        </div>
+                        {idx < 3 && <div className={`w-px h-full my-1 ${step.stepStatus === 'completed' ? 'bg-emerald-300' : 'bg-slate-200'}`} />}
+                      </div>
+                      <p className={`text-sm font-bold tracking-tight ${
+                        step.stepStatus === 'active' ? 'text-blue-600' : step.stepStatus === 'completed' ? 'text-slate-900' : 'text-slate-400'
+                      }`}>{step.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-auto pt-4">
+                {status === 'generating' && (
+                  <button
+                    onClick={() => { cancelGeneration(); setMobileDrawerOpen(false) }}
+                    className="w-full px-4 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-lg">cancel</span>
+                    キャンセル
+                  </button>
+                )}
+                {status === 'done' && draftId && (
+                  <button
+                    onClick={() => { setMobileDrawerOpen(false); router.push(`/interview/projects/${projectId}/edit?draftId=${draftId}`) }}
+                    className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg text-sm font-medium hover:from-blue-700 hover:to-blue-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20"
+                  >
+                    <span className="material-symbols-outlined text-lg">edit_note</span>
+                    エディタで編集
+                  </button>
+                )}
+                {status === 'error' && (
+                  <button
+                    onClick={() => { startGeneration(); setMobileDrawerOpen(false) }}
+                    className="w-full px-4 py-2.5 bg-red-100 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span className="material-symbols-outlined text-lg">refresh</span>
+                    再試行
+                  </button>
+                )}
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
+
+        {/* ── Left Sidebar (desktop) ── */}
         <aside className="w-80 border-r border-blue-100 bg-white/80 backdrop-blur-sm p-6 overflow-y-auto hidden md:flex md:flex-col">
           <div className="mb-8">
             <div className="flex items-center gap-2 text-blue-500 text-xs font-semibold uppercase tracking-wider mb-4">
@@ -552,7 +671,7 @@ export default function GeneratePage() {
         </aside>
 
         {/* ── Main Canvas ── */}
-        <main className="flex-1 p-8 overflow-y-auto relative" ref={contentRef}>
+        <main className="flex-1 p-3 sm:p-6 md:p-8 pb-24 md:pb-8 overflow-y-auto relative" ref={contentRef}>
           {/* Error display */}
           {status === 'error' && (
             <div className="max-w-[850px] mx-auto bg-red-50 text-red-600 rounded-xl px-5 py-4 text-sm border border-red-200 mb-6">
@@ -588,7 +707,7 @@ export default function GeneratePage() {
             </AnimatePresence>
 
             {/* Article content */}
-            <div className="p-10 md:p-16">
+            <div className="p-4 sm:p-8 md:p-16">
               {generatedText ? (
                 <article className="prose-article">
                   {renderRichContent(generatedText)}
@@ -602,8 +721,8 @@ export default function GeneratePage() {
                   animate={status === 'generating' ? { opacity: [0.5, 1, 0.5] } : {}}
                   transition={status === 'generating' ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
                 >
-                  {/* Skeleton header image */}
-                  <div className="w-full aspect-[16/9] bg-gradient-to-br from-blue-50 to-slate-50 rounded-xl flex items-center justify-center -mx-16 -mt-16" style={{ width: 'calc(100% + 8rem)' }}>
+                  {/* Skeleton header image — negative margins match parent padding per breakpoint */}
+                  <div className="aspect-[16/9] bg-gradient-to-br from-blue-50 to-slate-50 rounded-xl flex items-center justify-center -mx-4 -mt-4 sm:-mx-8 sm:-mt-8 md:-mx-16 md:-mt-16 w-[calc(100%+2rem)] sm:w-[calc(100%+4rem)] md:w-[calc(100%+8rem)]">
                     <span className="material-symbols-outlined text-blue-200 text-[64px]">image</span>
                   </div>
                   <div className="border-b border-slate-100 pb-8 pt-4">
@@ -633,11 +752,11 @@ export default function GeneratePage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.3 }}
-                className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-white/90 backdrop-blur-md px-6 py-3 rounded-full border border-blue-100 shadow-xl shadow-blue-500/10 z-20"
+                className="fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-4 bg-white/90 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3 rounded-full border border-blue-100 shadow-xl shadow-blue-500/10 z-20 max-w-[calc(100%-2rem)]"
               >
-                <div className="flex items-center gap-3 pr-4 border-r border-slate-200">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
-                  <span className="text-sm font-semibold text-slate-700">{progress || 'AIがコンテンツを執筆中...'}</span>
+                <div className="flex items-center gap-2 sm:gap-3 pr-2 sm:pr-4 border-r border-slate-200 min-w-0">
+                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping flex-shrink-0" />
+                  <span className="text-xs sm:text-sm font-semibold text-slate-700 truncate">{progress || 'AIがコンテンツを執筆中...'}</span>
                 </div>
                 <button
                   onClick={cancelGeneration}
@@ -653,14 +772,14 @@ export default function GeneratePage() {
           <AnimatePresence>
             {status === 'done' && (
               <motion.div
-                className="max-w-[850px] mx-auto mt-6 flex gap-3"
+                className="max-w-[850px] mx-auto mt-6 mb-20 md:mb-6 flex flex-col sm:flex-row gap-3"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
               >
                 <button
                   onClick={() => router.push(`/interview/projects/${projectId}/skill`)}
-                  className="px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm"
+                  className="px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 shadow-sm"
                 >
                   <span className="material-symbols-outlined text-lg">arrow_back</span>
                   スキルを変えて再生成
@@ -677,6 +796,70 @@ export default function GeneratePage() {
             )}
           </AnimatePresence>
         </main>
+
+        {/* ── Mobile sticky bottom bar ── */}
+        <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white/95 backdrop-blur-md border-t border-blue-100 px-4 py-3 z-20 safe-area-pb">
+          <div className="flex items-center gap-3">
+            {/* Progress info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                {status === 'generating' && <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />}
+                {status === 'done' && <span className="material-symbols-outlined text-emerald-500 text-sm flex-shrink-0">check_circle</span>}
+                {status === 'error' && <span className="material-symbols-outlined text-red-500 text-sm flex-shrink-0">error</span>}
+                {status === 'idle' && <div className="w-2 h-2 rounded-full bg-slate-300 flex-shrink-0" />}
+                <span className="text-xs font-semibold text-slate-700 truncate">
+                  {status === 'generating' && (progress || 'AI記事を生成中...')}
+                  {status === 'done' && `完了 — ${wordCount.toLocaleString()}文字`}
+                  {status === 'error' && 'エラーが発生しました'}
+                  {status === 'idle' && '準備中...'}
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-blue-50 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+            </div>
+            {/* Action buttons */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {status === 'done' && draftId && (
+                <button
+                  onClick={() => router.push(`/interview/projects/${projectId}/edit?draftId=${draftId}`)}
+                  className="px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg text-xs font-medium shadow-md shadow-blue-500/20 flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-sm">edit_note</span>
+                  編集
+                </button>
+              )}
+              {status === 'generating' && (
+                <button
+                  onClick={cancelGeneration}
+                  className="px-3 py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-sm">stop</span>
+                  停止
+                </button>
+              )}
+              {status === 'error' && (
+                <button
+                  onClick={startGeneration}
+                  className="px-3 py-2 bg-red-100 text-red-700 rounded-lg text-xs font-semibold flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-sm">refresh</span>
+                  再試行
+                </button>
+              )}
+              <button
+                onClick={() => setMobileDrawerOpen(true)}
+                className="p-2 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">menu</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Celebration Popup ── */}

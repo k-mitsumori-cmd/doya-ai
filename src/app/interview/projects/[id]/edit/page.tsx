@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import Script from 'next/script'
 
 type RightPanel = 'preview' | 'proofread' | 'titles' | 'factcheck' | 'sns' | 'translate' | 'revise'
 
@@ -836,7 +835,7 @@ ${htmlBody}
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50">
-        <div className="max-w-[1800px] mx-auto px-6 py-6">
+        <div className="max-w-[1800px] mx-auto px-3 sm:px-6 py-6">
           <div className="space-y-4">
             <div className="h-8 bg-slate-200 rounded-lg w-1/3 animate-pulse" />
             <div className="h-[600px] bg-white border border-slate-200 rounded-xl animate-pulse" />
@@ -889,23 +888,23 @@ ${htmlBody}
 
   return (
     <>
-      <Script src="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
       <div className="min-h-screen bg-slate-50">
         {/* ツールバー */}
         <div className="sticky top-0 z-10 bg-slate-50 border-b border-slate-200">
-          <div className="max-w-[1800px] mx-auto px-6 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+          <div className="max-w-[1800px] mx-auto px-3 sm:px-6 py-2 sm:py-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0">
                 <button
                   onClick={() => router.push(`/interview/projects/${projectId}`)}
-                  className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors"
+                  className="flex items-center gap-1 sm:gap-2 text-slate-600 hover:text-blue-600 transition-colors shrink-0"
                 >
                   <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-                  <span className="text-sm font-medium">戻る</span>
+                  <span className="text-sm font-medium hidden sm:inline">戻る</span>
                 </button>
-                <div className="h-5 w-px bg-slate-200"></div>
-                <div>
-                  <h1 className="text-xl font-bold tracking-tight text-slate-900">記事エディタ</h1>
+                <div className="h-5 w-px bg-slate-200 hidden sm:block"></div>
+                <div className="min-w-0">
+                  <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 truncate">記事エディタ</h1>
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <span className="flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px]">text_fields</span>
@@ -921,7 +920,8 @@ ${htmlBody}
                         <span>·</span>
                         <span className="flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                          {lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} 保存
+                          <span className="hidden sm:inline">{lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} 保存</span>
+                          <span className="sm:hidden">保存済</span>
                         </span>
                       </>
                     )}
@@ -930,7 +930,7 @@ ${htmlBody}
                         <span>·</span>
                         <span className="flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px] animate-spin">sync</span>
-                          保存中...
+                          <span className="hidden sm:inline">保存中...</span>
                         </span>
                       </>
                     )}
@@ -938,22 +938,22 @@ ${htmlBody}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                <button onClick={handleSave} className="flex items-center gap-1.5 px-2 sm:px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
                   <span className="material-symbols-outlined text-[18px]">save</span>
-                  <span>保存</span>
+                  <span className="hidden sm:inline">保存</span>
                 </button>
-                <button onClick={handleCopy} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
+                <button onClick={handleCopy} className="flex items-center gap-1.5 px-2 sm:px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm">
                   <span className="material-symbols-outlined text-[18px]">content_copy</span>
-                  <span>コピー</span>
+                  <span className="hidden sm:inline">コピー</span>
                 </button>
                 <div className="relative" ref={exportDropdownRef}>
                   <button
                     onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm"
+                    className="flex items-center gap-1.5 px-2 sm:px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors shadow-sm"
                   >
                     <span className="material-symbols-outlined text-[18px]">download</span>
-                    <span>エクスポート</span>
+                    <span className="hidden md:inline">エクスポート</span>
                     <span className="material-symbols-outlined text-[14px]">expand_more</span>
                   </button>
                   {exportDropdownOpen && (
@@ -1012,10 +1012,10 @@ ${htmlBody}
                     </div>
                   )}
                 </div>
-                <div className="h-8 w-px bg-slate-200 mx-1"></div>
-                <button onClick={handleProofread} disabled={proofLoading} className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-lg shadow-blue-500/20">
+                <div className="h-8 w-px bg-slate-200 mx-0.5 sm:mx-1 hidden sm:block"></div>
+                <button onClick={handleProofread} disabled={proofLoading} className="flex items-center gap-1.5 px-2 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-lg shadow-blue-500/20">
                   <span className="material-symbols-outlined text-[18px]">spellcheck</span>
-                  <span>校正</span>
+                  <span className="hidden sm:inline">校正</span>
                 </button>
               </div>
             </div>
@@ -1023,9 +1023,9 @@ ${htmlBody}
         </div>
 
         {/* メインコンテンツエリア */}
-        <div className="max-w-[1800px] mx-auto px-6 py-6">
+        <div className="max-w-[1800px] mx-auto px-3 sm:px-6 py-4 sm:py-6">
           {/* ステッパー */}
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2 mb-4 sm:mb-6 overflow-x-auto pb-1 scrollbar-hide">
             {[
               { label: '素材アップ', icon: 'upload_file' },
               { label: '文字起こし', icon: 'transcribe' },
@@ -1033,8 +1033,8 @@ ${htmlBody}
               { label: 'AI生成', icon: 'auto_awesome' },
               { label: '編集', icon: 'edit' },
             ].map((step, i) => (
-              <div key={step.label} className="flex items-center gap-2">
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+              <div key={step.label} className="flex items-center gap-2 shrink-0">
+                <div className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs transition-colors whitespace-nowrap ${
                   i === 4
                     ? 'bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20'
                     : 'bg-green-50 text-green-600 border border-green-200 font-medium'
@@ -1048,11 +1048,11 @@ ${htmlBody}
             ))}
           </div>
 
-          <div className="flex gap-6">
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
             {/* エディタエリア */}
             <div className="flex-1 min-w-0">
               {/* モード切替バー */}
-              <div className="bg-white border border-slate-200 rounded-t-xl px-4 py-2.5 shadow-sm flex items-center justify-between">
+              <div className="bg-white border border-slate-200 rounded-t-xl px-3 sm:px-4 py-2 sm:py-2.5 shadow-sm flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-0.5">
                   <button
                     onClick={() => setLeftMode('edit')}
@@ -1079,7 +1079,7 @@ ${htmlBody}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-400">
                   <span className="material-symbols-outlined text-[14px]">info</span>
-                  {leftMode === 'edit' ? '記事プレビュー' : 'Markdownソースを編集'}
+                  <span className="hidden sm:inline">{leftMode === 'edit' ? '記事プレビュー' : 'Markdownソースを編集'}</span>
                 </div>
               </div>
 
@@ -1087,10 +1087,10 @@ ${htmlBody}
                 /* リッチテキストエディタ */
                 <div className="bg-white border border-slate-200 border-t-0 shadow-sm min-h-[calc(100vh-400px)] overflow-y-auto">
                   <style dangerouslySetInnerHTML={{ __html: RICH_EDITOR_STYLES }} />
-                  <div className="max-w-[720px] mx-auto px-8 py-10">
+                  <div className="max-w-[720px] mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-10">
                     {/* バナー画像 (Nano Banana Pro) */}
                     {bannerUrl ? (
-                      <div className="relative group mb-8 -mx-8 -mt-10 overflow-hidden">
+                      <div className="relative group mb-8 -mx-4 sm:-mx-6 md:-mx-8 -mt-6 sm:-mt-10 overflow-hidden">
                         <img
                           src={bannerUrl}
                           alt="記事バナー"
@@ -1108,7 +1108,7 @@ ${htmlBody}
                         </button>
                       </div>
                     ) : content.trim() ? (
-                      <div className="mb-8 -mx-8 -mt-10">
+                      <div className="mb-8 -mx-4 sm:-mx-6 md:-mx-8 -mt-6 sm:-mt-10">
                         <button
                           onClick={generateBanner}
                           disabled={bannerGenerating}
@@ -1135,7 +1135,7 @@ ${htmlBody}
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="記事タイトルを入力..."
-                      className="w-full text-3xl font-black tracking-tight text-slate-900 outline-none placeholder:text-slate-300 leading-[1.3] mb-8 pb-6 border-b-2 border-slate-100"
+                      className="w-full text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-slate-900 outline-none placeholder:text-slate-300 leading-[1.3] mb-6 sm:mb-8 pb-4 sm:pb-6 border-b-2 border-slate-100"
                     />
 
                     {/* レンダリング済みプレビュー */}
@@ -1183,12 +1183,12 @@ ${htmlBody}
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-white border-t border-blue-100">
-                        <div className="flex items-center justify-between">
+                      <div className="px-3 sm:px-4 py-3 bg-gradient-to-r from-blue-50 to-white border-t border-blue-100">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-blue-600 text-[18px]">check_circle</span>
                             <span className="text-sm font-semibold text-slate-900">AI修正が完了</span>
-                            <span className="text-xs text-slate-500">
+                            <span className="text-xs text-slate-500 hidden sm:inline">
                               ({content.length.toLocaleString()} → {revisedContent.length.toLocaleString()}文字)
                             </span>
                           </div>
@@ -1215,7 +1215,7 @@ ${htmlBody}
                 </AnimatePresence>
 
                 {/* 入力バー */}
-                <div className="px-4 py-3 border-t border-slate-100 flex items-center gap-3">
+                <div className="px-3 sm:px-4 py-3 border-t border-slate-100 flex items-center gap-2 sm:gap-3">
                   <span className="material-symbols-outlined text-blue-600 text-[20px] shrink-0">auto_fix_high</span>
                   <input
                     type="text"
@@ -1227,14 +1227,14 @@ ${htmlBody}
                         handleRevise()
                       }
                     }}
-                    placeholder="AI修正指示を入力... 例:「です・ます調に統一して」「冒頭をもっと印象的に」"
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-blue-600 transition-all placeholder:text-slate-400"
+                    placeholder="AI修正指示を入力..."
+                    className="flex-1 min-w-0 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-blue-600 transition-all placeholder:text-slate-400"
                     disabled={reviseLoading}
                   />
                   <button
                     onClick={handleRevise}
                     disabled={reviseLoading || !reviseInstruction.trim()}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm shrink-0"
+                    className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm shrink-0"
                   >
                     {reviseLoading ? (
                       <>
@@ -1253,9 +1253,9 @@ ${htmlBody}
             </div>
 
             {/* 右サイドパネル */}
-            <div className="w-[420px] shrink-0">
+            <div className="w-full lg:w-[420px] lg:shrink-0">
               {/* タブナビゲーション */}
-              <div className="bg-white border border-slate-200 rounded-t-xl flex shadow-sm">
+              <div className="bg-white border border-slate-200 rounded-t-xl flex shadow-sm overflow-x-auto scrollbar-hide">
                 {[
                   { key: 'proofread' as RightPanel, label: '校正', icon: 'spellcheck' },
                   { key: 'preview' as RightPanel, label: 'MD', icon: 'code' },
@@ -1269,20 +1269,20 @@ ${htmlBody}
                     key={tab.key}
                     onClick={() => setRightPanel(tab.key)}
                     title={tab.label}
-                    className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 text-xs transition-all ${
+                    className={`flex-1 shrink-0 min-w-[48px] flex flex-col items-center justify-center gap-1 py-3 text-xs transition-all ${
                       rightPanel === tab.key
                         ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50 font-semibold'
                         : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50 font-medium'
                     }`}
                   >
                     <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
-                    <span className="text-[10px]">{tab.label}</span>
+                    <span className="text-[10px] whitespace-nowrap">{tab.label}</span>
                   </button>
                 ))}
               </div>
 
               {/* パネルコンテンツ */}
-              <div className="bg-white border border-slate-200 border-t-0 rounded-b-xl p-6 overflow-y-auto shadow-sm" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+              <div className="bg-white border border-slate-200 border-t-0 rounded-b-xl p-4 sm:p-6 overflow-y-auto shadow-sm" style={{ maxHeight: 'calc(100vh - 320px)' }}>
                 <AnimatePresence mode="wait">
 
                 {/* ===== Markdownソース ===== */}

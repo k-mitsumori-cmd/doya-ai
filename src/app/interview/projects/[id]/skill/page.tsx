@@ -191,25 +191,27 @@ export default function SkillSelectionPage() {
   }
 
   return (
-    <motion.div className="space-y-8" variants={pageVariants} initial="hidden" animate="show">
+    <motion.div className="space-y-6 sm:space-y-8 px-4 sm:px-6 lg:px-0" variants={pageVariants} initial="hidden" animate="show">
       {/* ヘッダー */}
       <div>
-        <h1 className="text-3xl font-black tracking-tight text-slate-900">スキル選択</h1>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">スキル選択</h1>
         <p className="text-sm text-slate-500 mt-0.5 leading-relaxed">記事の構成テンプレートを選んでください</p>
       </div>
 
       {/* ステッパー */}
-      <div className="flex items-center gap-2 text-xs">
-        {['素材アップ', '文字起こし', 'スキル選択', 'AI生成', '編集'].map((step, i) => (
-          <div key={step} className="flex items-center gap-2">
-            <div className={`px-3 py-1 rounded-full tracking-tight ${
-              i === 2 ? 'bg-[#7f19e6] text-white font-bold shadow-md shadow-[#7f19e6]/20' : i < 2 ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'
-            }`}>
-              {i < 2 ? '✓ ' : ''}{step}
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
+        <div className="flex items-center gap-2 text-xs min-w-max">
+          {['素材アップ', '文字起こし', 'スキル選択', 'AI生成', '編集'].map((step, i) => (
+            <div key={step} className="flex items-center gap-2 shrink-0">
+              <div className={`px-3 py-1 rounded-full tracking-tight whitespace-nowrap ${
+                i === 2 ? 'bg-[#7f19e6] text-white font-bold shadow-md shadow-[#7f19e6]/20' : i < 2 ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'
+              }`}>
+                {i < 2 ? '✓ ' : ''}{step}
+              </div>
+              {i < 4 && <span className="text-slate-300">→</span>}
             </div>
-            {i < 4 && <span className="text-slate-300">→</span>}
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* カテゴリフィルター */}
@@ -237,7 +239,7 @@ export default function SkillSelectionPage() {
       </div>
 
       {/* Two-Column Layout */}
-      <div className="flex flex-col lg:flex-row gap-8 items-start">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
         {/* Left: Recipe Grid */}
         <div className="flex-1 w-full">
           {loading ? (
@@ -313,7 +315,7 @@ export default function SkillSelectionPage() {
 
         {/* Right: Preview Panel - sticky sidebar */}
         <motion.div
-          className="w-full lg:w-[400px] shrink-0 sticky top-24"
+          className="w-full lg:w-[400px] shrink-0 lg:sticky lg:top-24"
           variants={slideInVariants}
           initial="hidden"
           animate="show"
@@ -327,7 +329,7 @@ export default function SkillSelectionPage() {
                 </span>
               )}
             </div>
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-5 sm:space-y-6">
               {selectedRecipe ? (
                 <>
                   {/* Show editing guidelines if available */}
@@ -389,11 +391,11 @@ export default function SkillSelectionPage() {
                 </div>
               )}
             </div>
-            <div className="p-6 border-t border-slate-100 bg-slate-50/30">
+            <div className="p-4 sm:p-6 border-t border-slate-100 bg-slate-50/30">
               <button
                 onClick={handleGenerate}
                 disabled={!selectedId}
-                className="w-full py-4 bg-[#7f19e6] text-white rounded-xl font-bold text-lg shadow-2xl hover:shadow-lg hover:shadow-[#7f19e6]/20 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 sm:py-4 bg-[#7f19e6] text-white rounded-xl font-bold text-base sm:text-lg shadow-2xl hover:shadow-lg hover:shadow-[#7f19e6]/20 transition-all flex items-center justify-center gap-2 sm:gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="material-symbols-outlined">rocket_launch</span>
                 AI記事を生成する

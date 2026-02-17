@@ -171,10 +171,10 @@ export default function ProjectOverviewPage() {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
         />
-        <motion.div className="space-y-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
-          <div className="h-8 bg-slate-200 rounded w-1/3 animate-pulse" />
-          <div className="h-40 bg-slate-100 rounded-xl animate-pulse" />
-          <div className="grid grid-cols-2 gap-4">
+        <motion.div className="space-y-6 sm:space-y-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+          <div className="h-7 sm:h-8 bg-slate-200 rounded w-2/3 sm:w-1/3 animate-pulse" />
+          <div className="h-32 sm:h-40 bg-slate-100 rounded-xl animate-pulse" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="h-32 bg-slate-100 rounded-xl animate-pulse" />
             <div className="h-32 bg-slate-100 rounded-xl animate-pulse" />
           </div>
@@ -212,11 +212,11 @@ export default function ProjectOverviewPage() {
       />
       <div className="space-y-8">
         {/* ヘッダー */}
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-3xl font-black tracking-tight text-slate-900">{project.title}</h1>
-              <span className={`px-3 py-1 rounded-full text-[11px] font-medium flex items-center gap-1 ${st.color}`}>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-slate-900 break-words">{project.title}</h1>
+              <span className={`px-3 py-1 rounded-full text-[11px] font-medium flex items-center gap-1 shrink-0 ${st.color}`}>
                 <span className="material-symbols-outlined text-sm">{st.icon}</span>
                 {st.label}
               </span>
@@ -233,7 +233,7 @@ export default function ProjectOverviewPage() {
               </span>
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setShowDeleteConfirm(true)}
               className="px-3 py-2 text-sm text-red-500 bg-red-50 rounded-lg hover:bg-red-100 flex items-center gap-1"
@@ -246,7 +246,7 @@ export default function ProjectOverviewPage() {
 
       {/* 進捗ステッパー */}
       <motion.div
-        className="bg-white rounded-xl p-5 border border-slate-200 shadow-sm"
+        className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200 shadow-sm"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
@@ -255,41 +255,43 @@ export default function ProjectOverviewPage() {
           <span className="material-symbols-outlined text-[#7f19e6]">trending_up</span>
           プロジェクトの進捗
         </p>
-        <div className="flex items-center gap-3">
-          {STEPS.map((step, i) => {
-            const status = getStepStatus(step.key)
-            const currentStep = status === 'active'
-            const completedStep = status === 'done'
+        <div className="overflow-x-auto pb-2 -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex items-center gap-2 sm:gap-3 min-w-max md:min-w-0">
+            {STEPS.map((step, i) => {
+              const status = getStepStatus(step.key)
+              const currentStep = status === 'active'
+              const completedStep = status === 'done'
 
-            return (
-              <div key={step.key} className="flex items-center gap-3 flex-1">
-                <Link
-                  href={`/interview/projects/${projectId}/${step.route}`}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all flex-1 ${
-                    completedStep
-                      ? 'bg-[#7f19e6] text-white hover:bg-[#6b12c9]'
-                      : currentStep
-                        ? 'bg-[#7f19e6]/10 text-[#7f19e6] border-2 border-[#7f19e6] hover:bg-[#7f19e6]/20'
-                        : 'bg-slate-50 text-slate-400 border border-slate-200'
-                  }`}
-                >
-                  <span className={`material-symbols-outlined text-xl ${
-                    completedStep ? 'filled' : ''
-                  }`}>
-                    {completedStep ? 'check_circle' : step.icon}
-                  </span>
-                  <span className="text-sm font-medium tracking-tight">{step.label}</span>
-                </Link>
-                {i < STEPS.length - 1 && (
-                  <span className={`material-symbols-outlined text-2xl ${
-                    completedStep ? 'text-[#7f19e6]' : 'text-slate-300'
-                  }`}>
-                    arrow_forward
-                  </span>
-                )}
-              </div>
-            )
-          })}
+              return (
+                <div key={step.key} className="flex items-center gap-2 sm:gap-3 flex-1">
+                  <Link
+                    href={`/interview/projects/${projectId}/${step.route}`}
+                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl transition-all flex-1 whitespace-nowrap ${
+                      completedStep
+                        ? 'bg-[#7f19e6] text-white hover:bg-[#6b12c9]'
+                        : currentStep
+                          ? 'bg-[#7f19e6]/10 text-[#7f19e6] border-2 border-[#7f19e6] hover:bg-[#7f19e6]/20'
+                          : 'bg-slate-50 text-slate-400 border border-slate-200'
+                    }`}
+                  >
+                    <span className={`material-symbols-outlined text-lg sm:text-xl ${
+                      completedStep ? 'filled' : ''
+                    }`}>
+                      {completedStep ? 'check_circle' : step.icon}
+                    </span>
+                    <span className="text-xs sm:text-sm font-medium tracking-tight">{step.label}</span>
+                  </Link>
+                  {i < STEPS.length - 1 && (
+                    <span className={`material-symbols-outlined text-xl sm:text-2xl shrink-0 ${
+                      completedStep ? 'text-[#7f19e6]' : 'text-slate-300'
+                    }`}>
+                      arrow_forward
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         {/* Progress Bar */}
@@ -382,12 +384,12 @@ export default function ProjectOverviewPage() {
               </div>
             )}
             {project.theme && (
-              <div className="flex justify-between items-center">
-                <span className="text-slate-500 flex items-center gap-1">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-0.5 sm:gap-2">
+                <span className="text-slate-500 flex items-center gap-1 shrink-0">
                   <span className="material-symbols-outlined text-base">lightbulb</span>
                   テーマ
                 </span>
-                <span className="text-slate-900 text-right max-w-[200px] truncate">{project.theme}</span>
+                <span className="text-slate-900 sm:text-right sm:max-w-[200px] truncate pl-5 sm:pl-0">{project.theme}</span>
               </div>
             )}
           </div>
@@ -399,27 +401,27 @@ export default function ProjectOverviewPage() {
             <span className="material-symbols-outlined text-[#7f19e6]">analytics</span>
             統計
           </p>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-4 text-center border border-[#7f19e6]/10">
-              <span className="material-symbols-outlined text-3xl text-[#7f19e6] mb-1">folder_open</span>
-              <p className="text-2xl font-black text-slate-900">{project.materials.length}</p>
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#7f19e6]/10">
+              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#7f19e6] mb-1">folder_open</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900">{project.materials.length}</p>
               <p className="text-xs text-slate-500">素材</p>
             </div>
-            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-4 text-center border border-[#7f19e6]/10">
-              <span className="material-symbols-outlined text-3xl text-[#7f19e6] mb-1">transcribe</span>
-              <p className="text-2xl font-black text-slate-900">
+            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#7f19e6]/10">
+              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#7f19e6] mb-1">transcribe</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900">
                 {project.transcriptions.filter((t) => t.status === 'COMPLETED').length}
               </p>
               <p className="text-xs text-slate-500">文字起こし済</p>
             </div>
-            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-4 text-center border border-[#7f19e6]/10">
-              <span className="material-symbols-outlined text-3xl text-[#7f19e6] mb-1">draft</span>
-              <p className="text-2xl font-black text-slate-900">{project.drafts.length}</p>
+            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#7f19e6]/10">
+              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#7f19e6] mb-1">draft</span>
+              <p className="text-xl sm:text-2xl font-black text-slate-900">{project.drafts.length}</p>
               <p className="text-xs text-slate-500">ドラフト</p>
             </div>
-            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-4 text-center border border-[#7f19e6]/10">
-              <span className="material-symbols-outlined text-3xl text-[#7f19e6] mb-1">article</span>
-              <p className="text-2xl font-black text-[#7f19e6]">
+            <div className="bg-gradient-to-br from-[#7f19e6]/5 to-blue-50 rounded-xl p-3 sm:p-4 text-center border border-[#7f19e6]/10">
+              <span className="material-symbols-outlined text-2xl sm:text-3xl text-[#7f19e6] mb-1">article</span>
+              <p className="text-xl sm:text-2xl font-black text-[#7f19e6]">
                 {latestDraft?.wordCount?.toLocaleString() || '-'}
               </p>
               <p className="text-xs text-slate-500">文字数</p>
@@ -460,9 +462,9 @@ export default function ProjectOverviewPage() {
             {project.materials.map((m) => {
               const trans = project.transcriptions.find((t) => t.materialId === m.id)
               return (
-                <div key={m.id} className="flex items-center justify-between py-3 px-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-[#7f19e6]/30 transition-all">
+                <div key={m.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 py-3 px-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-[#7f19e6]/30 transition-all">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="material-symbols-outlined text-2xl text-[#7f19e6]">
+                    <span className="material-symbols-outlined text-2xl text-[#7f19e6] shrink-0">
                       {m.type === 'AUDIO' ? 'audio_file' : m.type === 'VIDEO' ? 'videocam' : 'description'}
                     </span>
                     <div className="min-w-0">
@@ -470,7 +472,7 @@ export default function ProjectOverviewPage() {
                       <p className="text-xs text-slate-400 font-mono">{formatFileSize(m.fileSize)}</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 sm:shrink-0 pl-9 sm:pl-0">
                     {trans ? (
                       <span className={`text-xs px-3 py-1 rounded-full flex items-center gap-1 ${
                         trans.status === 'COMPLETED' ? 'bg-green-100 text-green-600 border border-green-600/20' :
@@ -530,13 +532,13 @@ export default function ProjectOverviewPage() {
               <Link
                 key={d.id}
                 href={`/interview/projects/${projectId}/edit?draftId=${d.id}`}
-                className="flex items-center justify-between py-3 px-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-[#7f19e6]/30 transition-all"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 py-3 px-4 bg-gradient-to-r from-slate-50 to-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-[#7f19e6]/30 transition-all"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="material-symbols-outlined text-2xl text-[#7f19e6]">article</span>
+                  <span className="material-symbols-outlined text-2xl text-[#7f19e6] shrink-0">article</span>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded font-mono">v{d.version}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded font-mono shrink-0">v{d.version}</span>
                       <span className="text-sm text-slate-900 truncate font-bold leading-snug">{d.title || '（タイトル未設定）'}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
@@ -552,7 +554,7 @@ export default function ProjectOverviewPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 shrink-0 pl-9 sm:pl-0">
                   <span className={`text-xs px-3 py-1 rounded-full flex items-center gap-1 ${
                     d.status === 'PUBLISHED' ? 'bg-green-100 text-green-600 border border-green-600/20' :
                     d.status === 'REVIEW' ? 'bg-cyan-100 text-cyan-600 border border-cyan-600/20' :
@@ -584,41 +586,41 @@ export default function ProjectOverviewPage() {
       </div>
 
       {/* クイックアクション */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
         <Link
           href={`/interview/projects/${projectId}/materials`}
-          className="bg-white border border-slate-200 rounded-xl p-5 text-center shadow-sm hover:border-[#7f19e6] hover:shadow-lg transition-all group"
+          className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 text-center shadow-sm hover:border-[#7f19e6] hover:shadow-lg transition-all group"
         >
-          <span className="material-symbols-outlined text-4xl text-[#7f19e6] mb-2 group-hover:scale-110 transition-transform inline-block">folder_open</span>
-          <p className="text-sm text-slate-700 font-medium">素材管理</p>
+          <span className="material-symbols-outlined text-3xl sm:text-4xl text-[#7f19e6] mb-2 group-hover:scale-110 transition-transform inline-block">folder_open</span>
+          <p className="text-xs sm:text-sm text-slate-700 font-medium">素材管理</p>
         </Link>
         <Link
           href={`/interview/projects/${projectId}/skill`}
-          className="bg-white border border-slate-200 rounded-xl p-5 text-center shadow-sm hover:border-[#7f19e6] hover:shadow-lg transition-all group"
+          className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 text-center shadow-sm hover:border-[#7f19e6] hover:shadow-lg transition-all group"
         >
-          <span className="material-symbols-outlined text-4xl text-[#7f19e6] mb-2 group-hover:scale-110 transition-transform inline-block">menu_book</span>
-          <p className="text-sm text-slate-700 font-medium">スキル選択</p>
+          <span className="material-symbols-outlined text-3xl sm:text-4xl text-[#7f19e6] mb-2 group-hover:scale-110 transition-transform inline-block">menu_book</span>
+          <p className="text-xs sm:text-sm text-slate-700 font-medium">スキル選択</p>
         </Link>
         {latestDraft ? (
           <Link
             href={`/interview/projects/${projectId}/edit?draftId=${latestDraft.id}`}
-            className="bg-white border border-slate-200 rounded-xl p-5 text-center shadow-sm hover:border-[#7f19e6] hover:shadow-lg transition-all group"
+            className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5 text-center shadow-sm hover:border-[#7f19e6] hover:shadow-lg transition-all group"
           >
-            <span className="material-symbols-outlined text-4xl text-[#7f19e6] mb-2 group-hover:scale-110 transition-transform inline-block">edit</span>
-            <p className="text-sm text-slate-700 font-medium">記事編集</p>
+            <span className="material-symbols-outlined text-3xl sm:text-4xl text-[#7f19e6] mb-2 group-hover:scale-110 transition-transform inline-block">edit</span>
+            <p className="text-xs sm:text-sm text-slate-700 font-medium">記事編集</p>
           </Link>
         ) : (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-center opacity-50">
-            <span className="material-symbols-outlined text-4xl text-slate-400 mb-2 inline-block">edit</span>
-            <p className="text-sm text-slate-400 font-medium">記事編集</p>
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 text-center opacity-50">
+            <span className="material-symbols-outlined text-3xl sm:text-4xl text-slate-400 mb-2 inline-block">edit</span>
+            <p className="text-xs sm:text-sm text-slate-400 font-medium">記事編集</p>
           </div>
         )}
         <Link
           href={`/interview/projects/${projectId}/skill`}
-          className="bg-gradient-to-br from-[#7f19e6] to-blue-700 border border-[#7f19e6] rounded-xl p-5 text-center hover:shadow-xl transition-all group"
+          className="bg-gradient-to-br from-[#7f19e6] to-blue-700 border border-[#7f19e6] rounded-xl p-4 sm:p-5 text-center hover:shadow-xl transition-all group"
         >
-          <span className="material-symbols-outlined text-4xl text-white mb-2 group-hover:scale-110 transition-transform inline-block">auto_awesome</span>
-          <p className="text-sm text-white font-medium">再生成</p>
+          <span className="material-symbols-outlined text-3xl sm:text-4xl text-white mb-2 group-hover:scale-110 transition-transform inline-block">auto_awesome</span>
+          <p className="text-xs sm:text-sm text-white font-medium">再生成</p>
         </Link>
       </div>
 

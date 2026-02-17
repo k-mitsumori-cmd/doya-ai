@@ -559,49 +559,51 @@ export default function MaterialsPage() {
   const currentWorkflowStep = materials.length === 0 ? 0 : transcribedMaterials > 0 ? 2 : completedMaterials > 0 ? 1 : 0
 
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-0 py-6 sm:py-8 space-y-6 sm:space-y-8">
       {/* ワークフローステッパー */}
       <motion.div
-        className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6"
+        className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-6"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="flex items-center justify-between">
-          {WORKFLOW_STEPS.map((step, i) => (
-            <div key={i} className="flex items-center flex-1">
-              <div className="flex flex-col items-center flex-1">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500 ${
-                  i < currentWorkflowStep
-                    ? 'bg-green-500 shadow-lg shadow-green-500/30'
-                    : i === currentWorkflowStep
-                    ? 'bg-[#7f19e6] shadow-lg shadow-[#7f19e6]/30 scale-110'
-                    : 'bg-slate-100'
-                }`}>
-                  <span className={`material-symbols-outlined text-2xl ${
-                    i <= currentWorkflowStep ? 'text-white' : 'text-slate-400'
+        <div className="overflow-x-auto -mx-1">
+          <div className="flex items-center justify-between min-w-[360px] px-1">
+            {WORKFLOW_STEPS.map((step, i) => (
+              <div key={i} className="flex items-center flex-1">
+                <div className="flex flex-col items-center flex-1">
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center transition-all duration-500 ${
+                    i < currentWorkflowStep
+                      ? 'bg-green-500 shadow-lg shadow-green-500/30'
+                      : i === currentWorkflowStep
+                      ? 'bg-[#7f19e6] shadow-lg shadow-[#7f19e6]/30 scale-110'
+                      : 'bg-slate-100'
                   }`}>
-                    {i < currentWorkflowStep ? 'check_circle' : step.icon}
-                  </span>
+                    <span className={`material-symbols-outlined text-xl sm:text-2xl ${
+                      i <= currentWorkflowStep ? 'text-white' : 'text-slate-400'
+                    }`}>
+                      {i < currentWorkflowStep ? 'check_circle' : step.icon}
+                    </span>
+                  </div>
+                  <p className={`text-[10px] sm:text-xs font-bold mt-1.5 sm:mt-2 whitespace-nowrap ${
+                    i === currentWorkflowStep ? 'text-[#7f19e6]' : i < currentWorkflowStep ? 'text-green-600' : 'text-slate-400'
+                  }`}>{step.label}</p>
+                  <p className="text-[10px] text-slate-400 hidden md:block">{step.desc}</p>
                 </div>
-                <p className={`text-xs font-bold mt-2 ${
-                  i === currentWorkflowStep ? 'text-[#7f19e6]' : i < currentWorkflowStep ? 'text-green-600' : 'text-slate-400'
-                }`}>{step.label}</p>
-                <p className="text-[10px] text-slate-400 hidden md:block">{step.desc}</p>
+                {i < WORKFLOW_STEPS.length - 1 && (
+                  <div className={`h-0.5 w-full max-w-[40px] sm:max-w-[60px] mx-0.5 sm:mx-1 rounded-full transition-all duration-500 ${
+                    i < currentWorkflowStep ? 'bg-green-400' : 'bg-slate-200'
+                  }`} />
+                )}
               </div>
-              {i < WORKFLOW_STEPS.length - 1 && (
-                <div className={`h-0.5 w-full max-w-[60px] mx-1 rounded-full transition-all duration-500 ${
-                  i < currentWorkflowStep ? 'bg-green-400' : 'bg-slate-200'
-                }`} />
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </motion.div>
 
       {/* ヘッダー */}
       <motion.div
-        className="text-center mb-12"
+        className="text-center mb-8 sm:mb-12"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
@@ -610,8 +612,8 @@ export default function MaterialsPage() {
           <span className="material-symbols-outlined text-sm">cloud_upload</span>
           STEP 1
         </div>
-        <h1 className="text-4xl font-black tracking-tight mb-4">素材アップロード</h1>
-        <p className="text-slate-500 text-lg max-w-2xl mx-auto leading-relaxed">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight mb-4">素材アップロード</h1>
+        <p className="text-slate-500 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
           {projectTitle || 'インタビュー素材をアップロードして、AIが高精度の文字起こしと記事を自動生成します。'}
         </p>
         {materials.some((m) => m.status === 'COMPLETED') && (
@@ -633,14 +635,14 @@ export default function MaterialsPage() {
         initial="hidden"
         animate="show"
       >
-        <div className="p-8 md:p-12">
+        <div className="p-5 sm:p-8 md:p-12">
           {/* ドラッグ&ドロップゾーン */}
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`relative border-2 border-dashed flex flex-col items-center justify-center py-20 px-6 transition-all group cursor-pointer rounded-2xl overflow-hidden ${
+            className={`relative border-2 border-dashed flex flex-col items-center justify-center py-12 sm:py-16 md:py-20 px-4 sm:px-6 transition-all group cursor-pointer rounded-2xl overflow-hidden ${
               dragOver
                 ? 'border-[#7f19e6] bg-[#7f19e6]/10 scale-[1.01]'
                 : 'border-[#7f19e6]/20 bg-gradient-to-b from-[#7f19e6]/5 to-[#7f19e6]/[0.02] hover:bg-[#7f19e6]/10 hover:border-[#7f19e6]/40'
@@ -729,30 +731,30 @@ export default function MaterialsPage() {
           {/* Transcription Settings */}
           <div className="mt-8 pt-6 border-t border-slate-100">
             <h5 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-4">文字起こし設定</h5>
-            <div className="grid md:grid-cols-2 gap-6">
-              <label className="flex items-center justify-between p-4 rounded-xl border-2 border-[#7f19e6] bg-[#7f19e6]/5 cursor-pointer">
-                <div className="flex gap-4 items-center">
-                  <div className="size-10 bg-[#7f19e6] text-white rounded-lg flex items-center justify-center">
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+              <label className="flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 border-[#7f19e6] bg-[#7f19e6]/5 cursor-pointer">
+                <div className="flex gap-3 sm:gap-4 items-center min-w-0">
+                  <div className="size-10 bg-[#7f19e6] text-white rounded-lg flex items-center justify-center flex-shrink-0">
                     <span className="material-symbols-outlined">record_voice_over</span>
                   </div>
-                  <div>
-                    <p className="font-bold">話者分離</p>
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm sm:text-base">話者分離</p>
                     <p className="text-xs text-slate-500">複数の話者を自動識別</p>
                   </div>
                 </div>
-                <input type="checkbox" defaultChecked className="form-checkbox h-5 w-5 text-[#7f19e6] rounded border-slate-300 focus:ring-[#7f19e6]" />
+                <input type="checkbox" defaultChecked className="form-checkbox h-5 w-5 text-[#7f19e6] rounded border-slate-300 focus:ring-[#7f19e6] flex-shrink-0 ml-2" />
               </label>
-              <label className="flex items-center justify-between p-4 rounded-xl border-2 border-slate-100 hover:border-[#7f19e6]/30 transition-all cursor-pointer">
-                <div className="flex gap-4 items-center">
-                  <div className="size-10 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center">
+              <label className="flex items-center justify-between p-3 sm:p-4 rounded-xl border-2 border-slate-100 hover:border-[#7f19e6]/30 transition-all cursor-pointer">
+                <div className="flex gap-3 sm:gap-4 items-center min-w-0">
+                  <div className="size-10 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center flex-shrink-0">
                     <span className="material-symbols-outlined">auto_awesome</span>
                   </div>
-                  <div>
-                    <p className="font-bold">自動記事生成</p>
+                  <div className="min-w-0">
+                    <p className="font-bold text-sm sm:text-base">自動記事生成</p>
                     <p className="text-xs text-slate-500">文字起こし後に即座に記事生成</p>
                   </div>
                 </div>
-                <input type="checkbox" className="form-checkbox h-5 w-5 text-[#7f19e6] rounded border-slate-300 focus:ring-[#7f19e6]" />
+                <input type="checkbox" className="form-checkbox h-5 w-5 text-[#7f19e6] rounded border-slate-300 focus:ring-[#7f19e6] flex-shrink-0 ml-2" />
               </label>
             </div>
           </div>
@@ -761,7 +763,7 @@ export default function MaterialsPage() {
 
       {/* フィーチャーハイライト */}
       <motion.div
-        className="grid md:grid-cols-3 gap-5 mt-12"
+        className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-5 mt-8 sm:mt-12"
         variants={containerVariants}
         initial="hidden"
         animate="show"
@@ -786,14 +788,14 @@ export default function MaterialsPage() {
       </motion.div>
 
       {/* セキュリティ・プライバシーポリシー */}
-      <div className="mt-12 bg-slate-50 rounded-2xl border border-slate-200 p-8">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="mt-8 sm:mt-12 bg-slate-50 rounded-2xl border border-slate-200 p-5 sm:p-8">
+        <div className="flex items-center gap-3 mb-4 sm:mb-6">
           <div className="w-10 h-10 bg-[#7f19e6]/10 rounded-xl flex items-center justify-center">
             <span className="material-symbols-outlined text-[#7f19e6] text-xl">shield</span>
           </div>
           <h3 className="text-lg font-bold text-slate-900">セキュリティ・プライバシーについて</h3>
         </div>
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
           <div className="space-y-4">
             <div className="flex items-start gap-3">
               <span className="material-symbols-outlined text-emerald-500 text-lg mt-0.5">verified_user</span>
@@ -998,17 +1000,17 @@ export default function MaterialsPage() {
                 }`}
               >
                 {/* ヘッダー */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                <div className="flex items-start sm:items-center justify-between gap-2 mb-4">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                       info.status === 'completed' ? 'bg-green-500' :
                       info.status === 'error' ? 'bg-red-500' : 'bg-[#7f19e6]'
                     }`}>
-                      <span className="material-symbols-outlined text-white text-2xl">
+                      <span className="material-symbols-outlined text-white text-xl sm:text-2xl">
                         {info.status === 'completed' ? 'check_circle' : info.status === 'error' ? 'error' : 'mic'}
                       </span>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-black text-slate-900">
                         {info.status === 'completed'
                           ? '文字起こし完了!'
@@ -1016,30 +1018,30 @@ export default function MaterialsPage() {
                           ? '文字起こしエラー'
                           : '文字起こし中...'}
                       </p>
-                      <p className="text-xs text-slate-600">
+                      <p className="text-xs text-slate-600 truncate">
                         {info.fileName}
                         {info.status === 'completed' && info.durationMinutes && (
-                          <span className="ml-2 text-green-600 font-bold">
-                            ({info.durationMinutes}分の文字起こしが完了しました)
+                          <span className="ml-1 sm:ml-2 text-green-600 font-bold">
+                            ({info.durationMinutes}分完了)
                           </span>
                         )}
                       </p>
                     </div>
                   </div>
                   {isActive && (
-                    <div className="text-right">
-                      <p className="text-lg font-mono font-bold text-[#7f19e6]">{elapsed}</p>
-                      <p className="text-xs text-slate-500">経過時間</p>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-base sm:text-lg font-mono font-bold text-[#7f19e6]">{elapsed}</p>
+                      <p className="text-[10px] sm:text-xs text-slate-500">経過時間</p>
                     </div>
                   )}
                 </div>
 
                 {/* エラー表示 */}
                 {info.status === 'error' && info.error && (
-                  <div className="flex items-center justify-between mb-3 bg-red-100 rounded-lg px-4 py-3">
-                    <div className="flex items-center gap-2 text-xs text-red-700">
-                      <span className="material-symbols-outlined text-base">error</span>
-                      <p>{info.error}</p>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 mb-3 bg-red-100 rounded-lg px-3 sm:px-4 py-3">
+                    <div className="flex items-start sm:items-center gap-2 text-xs text-red-700 min-w-0">
+                      <span className="material-symbols-outlined text-base flex-shrink-0 mt-0.5 sm:mt-0">error</span>
+                      <p className="break-words">{info.error}</p>
                     </div>
                     <button
                       onClick={() => {
@@ -1051,7 +1053,7 @@ export default function MaterialsPage() {
                         })
                         startTranscription(id)
                       }}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors shadow-sm shrink-0 ml-3"
+                      className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-medium hover:bg-red-600 transition-colors shadow-sm shrink-0 self-start sm:self-auto"
                     >
                       <span className="material-symbols-outlined text-sm">refresh</span>
                       再試行
@@ -1122,18 +1124,18 @@ export default function MaterialsPage() {
 
       {/* 素材一覧 */}
       <div>
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#7f19e6] to-[#a855f7] rounded-xl flex items-center justify-center shadow-lg shadow-[#7f19e6]/20">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#7f19e6] to-[#a855f7] rounded-xl flex items-center justify-center shadow-lg shadow-[#7f19e6]/20 flex-shrink-0">
               <span className="material-symbols-outlined text-white text-xl">folder</span>
             </div>
             <div>
-              <h2 className="text-base font-black text-slate-900">アップロード済み素材</h2>
+              <h2 className="text-sm sm:text-base font-black text-slate-900">アップロード済み素材</h2>
               <p className="text-xs text-slate-500">{materials.length}件のファイル{transcribedMaterials > 0 && ` · ${transcribedMaterials}件文字起こし済み`}</p>
             </div>
           </div>
           {materials.length > 0 && (
-            <div className="flex items-center gap-3 text-xs text-slate-500">
+            <div className="flex items-center gap-3 text-xs text-slate-500 pl-[52px] sm:pl-0">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-green-500" />完了
               </span>
@@ -1201,55 +1203,113 @@ export default function MaterialsPage() {
                   }`}
                   whileHover={{ y: -1 }}
                 >
-                  <div className="flex items-center gap-4 p-5">
-                    {/* ファイルタイプアイコン（左ボーダーグラデーション付き） */}
-                    <div className="relative">
-                      <div className={`w-14 h-14 ${ft.bg} rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform`}>
-                        <span className={`material-symbols-outlined ${ft.color} text-2xl`}>{ft.icon}</span>
-                      </div>
-                      {/* ステータスバッジ */}
-                      {m.transcriptionStatus === 'COMPLETED' && (
-                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center shadow-md">
-                          <span className="material-symbols-outlined text-white text-sm">check</span>
+                  <div className="p-4 sm:p-5">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      {/* ファイルタイプアイコン（左ボーダーグラデーション付き） */}
+                      <div className="relative flex-shrink-0">
+                        <div className={`w-11 h-11 sm:w-14 sm:h-14 ${ft.bg} rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:scale-105 transition-transform`}>
+                          <span className={`material-symbols-outlined ${ft.color} text-xl sm:text-2xl`}>{ft.icon}</span>
                         </div>
-                      )}
-                      {m.status === 'ERROR' && (
-                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-red-500 rounded-lg flex items-center justify-center shadow-md">
-                          <span className="material-symbols-outlined text-white text-sm">priority_high</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate mb-1.5">{m.fileName}</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{formatFileSize(m.fileSize)}</span>
-                        <span className="text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md capitalize">{m.type}</span>
+                        {/* ステータスバッジ */}
                         {m.transcriptionStatus === 'COMPLETED' && (
-                          <span className="text-[11px] text-green-700 font-bold bg-green-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                            <span className="material-symbols-outlined text-xs">check_circle</span>
-                            文字起こし完了
-                          </span>
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-lg flex items-center justify-center shadow-md">
+                            <span className="material-symbols-outlined text-white text-xs sm:text-sm">check</span>
+                          </div>
                         )}
                         {m.status === 'ERROR' && (
-                          <span className="text-[11px] text-red-700 font-medium bg-red-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                            <span className="material-symbols-outlined text-xs">error</span>
-                            {m.error || 'エラー'}
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-red-500 rounded-lg flex items-center justify-center shadow-md">
+                            <span className="material-symbols-outlined text-white text-xs sm:text-sm">priority_high</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-900 truncate mb-1.5">{m.fileName}</p>
+                        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                          <span className="text-[10px] sm:text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 sm:px-2 py-0.5 rounded-md">{formatFileSize(m.fileSize)}</span>
+                          <span className="text-[10px] sm:text-[11px] text-slate-500 bg-slate-100 px-1.5 sm:px-2 py-0.5 rounded-md capitalize">{m.type}</span>
+                          {m.transcriptionStatus === 'COMPLETED' && (
+                            <span className="text-[10px] sm:text-[11px] text-green-700 font-bold bg-green-100 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                              <span className="material-symbols-outlined text-xs">check_circle</span>
+                              <span className="hidden sm:inline">文字起こし完了</span>
+                              <span className="sm:hidden">完了</span>
+                            </span>
+                          )}
+                          {m.status === 'ERROR' && (
+                            <span className="text-[10px] sm:text-[11px] text-red-700 font-medium bg-red-100 px-2 sm:px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                              <span className="material-symbols-outlined text-xs">error</span>
+                              {m.error || 'エラー'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* デスクトップ: 削除ボタンのみ横に表示 */}
+                      <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                        {/* 素材自体がERRORの場合の再アップロードボタン */}
+                        {m.status === 'ERROR' && (
+                          <motion.button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-4 py-2.5 text-xs font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-all flex items-center gap-1.5 shadow-lg shadow-red-500/20"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                          >
+                            <span className="material-symbols-outlined text-base">refresh</span>
+                            再アップロード
+                          </motion.button>
+                        )}
+                        {(m.type === 'audio' || m.type === 'video') &&
+                          (m.status === 'COMPLETED' || m.status === 'ERROR') &&
+                          m.transcriptionStatus !== 'COMPLETED' &&
+                          m.transcriptionStatus !== 'PROCESSING' &&
+                          !isTranscribing && (
+                            <motion.button
+                              onClick={() => startTranscription(m.id)}
+                              className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl transition-all flex items-center gap-1.5 ${
+                                m.transcriptionStatus === 'ERROR'
+                                  ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20'
+                                  : 'bg-gradient-to-r from-[#7f19e6] to-[#a855f7] hover:shadow-xl shadow-lg shadow-[#7f19e6]/20'
+                              }`}
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
+                            >
+                              <span className="material-symbols-outlined text-base">
+                                {m.transcriptionStatus === 'ERROR' ? 'refresh' : 'transcribe'}
+                              </span>
+                              {m.transcriptionStatus === 'ERROR' ? '再試行' : '文字起こし'}
+                            </motion.button>
+                          )}
+                        {(isTranscribing && transcriptionInfo?.status !== 'completed') && (
+                          <span className="px-4 py-2.5 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-xl flex items-center gap-1.5 border border-[#7f19e6]/20">
+                            <span className="material-symbols-outlined text-base animate-spin">sync</span>
+                            処理中
                           </span>
                         )}
+                        {!isTranscribing && m.transcriptionStatus === 'PROCESSING' && (
+                          <span className="px-4 py-2.5 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-xl flex items-center gap-1.5 border border-[#7f19e6]/20">
+                            <span className="material-symbols-outlined text-base animate-spin">sync</span>
+                            処理中
+                          </span>
+                        )}
+                        <button
+                          onClick={() => deleteMaterial(m.id)}
+                          className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors opacity-0 group-hover:opacity-100"
+                          title="削除"
+                        >
+                          <span className="material-symbols-outlined text-xl">delete</span>
+                        </button>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* 素材自体がERRORの場合の再アップロードボタン */}
+                    {/* モバイル: アクションボタンを下に配置 */}
+                    <div className="flex sm:hidden items-center gap-2 mt-3 pl-14">
                       {m.status === 'ERROR' && (
                         <motion.button
                           onClick={() => fileInputRef.current?.click()}
-                          className="px-4 py-2.5 text-xs font-bold text-white bg-red-500 rounded-xl hover:bg-red-600 transition-all flex items-center gap-1.5 shadow-lg shadow-red-500/20"
-                          whileHover={{ scale: 1.03 }}
+                          className="px-3 py-2 text-xs font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-all flex items-center gap-1 shadow-sm"
                           whileTap={{ scale: 0.97 }}
                         >
-                          <span className="material-symbols-outlined text-base">refresh</span>
+                          <span className="material-symbols-outlined text-sm">refresh</span>
                           再アップロード
                         </motion.button>
                       )}
@@ -1260,38 +1320,37 @@ export default function MaterialsPage() {
                         !isTranscribing && (
                           <motion.button
                             onClick={() => startTranscription(m.id)}
-                            className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl transition-all flex items-center gap-1.5 ${
+                            className={`px-3 py-2 text-xs font-bold text-white rounded-lg transition-all flex items-center gap-1 ${
                               m.transcriptionStatus === 'ERROR'
-                                ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/20'
-                                : 'bg-gradient-to-r from-[#7f19e6] to-[#a855f7] hover:shadow-xl shadow-lg shadow-[#7f19e6]/20'
+                                ? 'bg-red-500 hover:bg-red-600 shadow-sm'
+                                : 'bg-gradient-to-r from-[#7f19e6] to-[#a855f7] shadow-sm'
                             }`}
-                            whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                           >
-                            <span className="material-symbols-outlined text-base">
+                            <span className="material-symbols-outlined text-sm">
                               {m.transcriptionStatus === 'ERROR' ? 'refresh' : 'transcribe'}
                             </span>
                             {m.transcriptionStatus === 'ERROR' ? '再試行' : '文字起こし'}
                           </motion.button>
                         )}
                       {(isTranscribing && transcriptionInfo?.status !== 'completed') && (
-                        <span className="px-4 py-2.5 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-xl flex items-center gap-1.5 border border-[#7f19e6]/20">
-                          <span className="material-symbols-outlined text-base animate-spin">sync</span>
+                        <span className="px-3 py-2 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-lg flex items-center gap-1 border border-[#7f19e6]/20">
+                          <span className="material-symbols-outlined text-sm animate-spin">sync</span>
                           処理中
                         </span>
                       )}
                       {!isTranscribing && m.transcriptionStatus === 'PROCESSING' && (
-                        <span className="px-4 py-2.5 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-xl flex items-center gap-1.5 border border-[#7f19e6]/20">
-                          <span className="material-symbols-outlined text-base animate-spin">sync</span>
+                        <span className="px-3 py-2 text-[11px] bg-[#7f19e6]/10 text-[#7f19e6] font-bold rounded-lg flex items-center gap-1 border border-[#7f19e6]/20">
+                          <span className="material-symbols-outlined text-sm animate-spin">sync</span>
                           処理中
                         </span>
                       )}
                       <button
                         onClick={() => deleteMaterial(m.id)}
-                        className="p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors ml-auto"
                         title="削除"
                       >
-                        <span className="material-symbols-outlined text-xl">delete</span>
+                        <span className="material-symbols-outlined text-lg">delete</span>
                       </button>
                     </div>
                   </div>

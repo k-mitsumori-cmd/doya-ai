@@ -408,7 +408,7 @@ export default function InterviewDashboard() {
       {/* Welcome Section */}
       <div className="text-center pt-4 pb-2">
         <motion.h1
-          className="text-3xl font-black tracking-tight text-slate-900 mb-2"
+          className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 mb-2"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -432,14 +432,14 @@ export default function InterviewDashboard() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        <div className="p-8 md:p-12">
+        <div className="p-4 sm:p-8 md:p-12">
           {/* Drop Zone */}
           <div
             onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
             onDragLeave={() => setDragOver(false)}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl flex flex-col items-center justify-center py-14 px-6 transition-all cursor-pointer group ${
+            className={`border-2 border-dashed rounded-xl flex flex-col items-center justify-center py-8 sm:py-14 px-4 sm:px-6 transition-all cursor-pointer group ${
               dragOver
                 ? 'border-[#7f19e6] bg-[#7f19e6]/10 scale-[1.01]'
                 : 'border-[#7f19e6]/25 bg-[#7f19e6]/[0.03] hover:bg-[#7f19e6]/[0.06] hover:border-[#7f19e6]/40'
@@ -459,26 +459,26 @@ export default function InterviewDashboard() {
             <div className="w-14 h-14 bg-[#7f19e6] rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform shadow-lg shadow-[#7f19e6]/20">
               <span className="material-symbols-outlined text-white text-3xl">cloud_upload</span>
             </div>
-            <h3 className="text-xl font-black text-slate-900 mb-1.5">インタビュー記事を作成する</h3>
-            <p className="text-slate-500 text-sm mb-6">
+            <h3 className="text-base sm:text-xl font-black text-slate-900 mb-1.5 text-center">インタビュー記事を作成する</h3>
+            <p className="text-slate-500 text-xs sm:text-sm mb-6 text-center">
               動画・音声ファイルをドラッグ&ドロップ。MP4, MOV, MP3 最大10GBまで
             </p>
-            <span className="bg-[#7f19e6] text-white px-8 py-3 rounded-xl font-black text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25 inline-flex items-center gap-2">
+            <span className="bg-[#7f19e6] text-white px-6 sm:px-8 py-3 rounded-xl font-black text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25 inline-flex items-center gap-2 min-h-[44px]">
               <span className="material-symbols-outlined text-lg">add_circle</span>
               ファイルを選択
             </span>
           </div>
 
           {/* Feature Badges */}
-          <div className="flex flex-wrap justify-center gap-4 mt-6">
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-4 sm:mt-6">
+            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 min-h-[44px]">
               <span className="material-symbols-outlined text-[#7f19e6] text-xl">record_voice_over</span>
               <div>
                 <p className="text-xs font-black text-slate-900">話者分離</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">自動対応</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200">
+            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 min-h-[44px]">
               <span className="material-symbols-outlined text-[#7f19e6] text-xl">auto_awesome</span>
               <div>
                 <p className="text-xs font-black text-slate-900">AI記事下書き</p>
@@ -564,7 +564,7 @@ export default function InterviewDashboard() {
               className="relative bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden"
             >
               {/* グラデーション背景トップ */}
-              <div className="relative bg-gradient-to-br from-[#7f19e6] via-[#9b3ae6] to-[#b366f0] px-6 pt-8 pb-6 overflow-hidden">
+              <div className="relative bg-gradient-to-br from-[#7f19e6] via-[#9b3ae6] to-[#b366f0] px-4 sm:px-6 pt-6 sm:pt-8 pb-5 sm:pb-6 overflow-hidden">
                 {/* パーティクル装飾 */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
                   {[...Array(6)].map((_, i) => (
@@ -592,8 +592,8 @@ export default function InterviewDashboard() {
 
                 <div className="relative flex flex-col items-center">
                   {/* 円形プログレスリング */}
-                  <div className="relative w-36 h-36 mb-4">
-                    <svg className="w-36 h-36 -rotate-90" viewBox="0 0 120 120">
+                  <div className="relative w-28 h-28 sm:w-36 sm:h-36 mb-4">
+                    <svg className="w-28 h-28 sm:w-36 sm:h-36 -rotate-90" viewBox="0 0 120 120">
                       <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="6" />
                       <motion.circle
                         cx="60" cy="60" r="54" fill="none"
@@ -663,7 +663,7 @@ export default function InterviewDashboard() {
 
               {/* ステップインジケーター */}
               {primaryUpload && !isAllDone && (
-                <div className="px-6 pt-5 pb-2">
+                <div className="px-3 sm:px-6 pt-4 sm:pt-5 pb-2">
                   <div className="flex items-center justify-between">
                     {UPLOAD_STEPS.filter(s => s.key !== 'done').map((step, i) => {
                       const stepIdx = UPLOAD_STEPS.findIndex(s => s.key === step.key)
@@ -708,7 +708,7 @@ export default function InterviewDashboard() {
               )}
 
               {/* ファイル別進捗 */}
-              <div className="px-6 py-4 space-y-3 max-h-[200px] overflow-y-auto">
+              <div className="px-4 sm:px-6 py-4 space-y-3 max-h-[200px] overflow-y-auto">
                 {allUploads.map(([key, upload]) => {
                   const speedInfo = uploadSpeedRef.current.get(key)
                   const speed = speedInfo?.speed || 0
@@ -790,7 +790,7 @@ export default function InterviewDashboard() {
                               setUploads((prev) => { const next = new Map(prev); next.delete(key); return next })
                               uploadFromDashboard(file)
                             }}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors shadow-sm"
+                            className="flex items-center gap-1.5 px-4 py-2.5 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-colors shadow-sm min-h-[44px]"
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                           >
@@ -800,7 +800,7 @@ export default function InterviewDashboard() {
                           {upload.errorActionUrl && (
                             <motion.a
                               href={upload.errorActionUrl}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white rounded-lg text-xs font-bold hover:bg-[#6b12c9] transition-colors shadow-sm"
+                              className="flex items-center gap-1.5 px-4 py-2.5 bg-[#7f19e6] text-white rounded-lg text-xs font-bold hover:bg-[#6b12c9] transition-colors shadow-sm min-h-[44px]"
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
                             >
@@ -819,7 +819,7 @@ export default function InterviewDashboard() {
 
               {/* 豆知識セクション */}
               {!isAllDone && (
-                <div className="mx-6 mb-5 p-4 bg-gradient-to-r from-[#7f19e6]/5 via-[#9b3ae6]/5 to-[#b366f0]/5 rounded-xl border border-[#7f19e6]/10">
+                <div className="mx-4 sm:mx-6 mb-5 p-3 sm:p-4 bg-gradient-to-r from-[#7f19e6]/5 via-[#9b3ae6]/5 to-[#b366f0]/5 rounded-xl border border-[#7f19e6]/10">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={tipIndex}
@@ -853,7 +853,7 @@ export default function InterviewDashboard() {
 
               {/* 完了時のアクション */}
               {isAllDone && doneUploads.length > 0 && (
-                <div className="px-6 pb-6 space-y-3">
+                <div className="px-4 sm:px-6 pb-6 space-y-3">
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -867,13 +867,13 @@ export default function InterviewDashboard() {
                       文字起こしはバックグラウンドで進行中です
                     </p>
                   </motion.div>
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <motion.button
                       onClick={() => {
                         setUploads(new Map())
                         uploadSpeedRef.current.clear()
                       }}
-                      className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors text-sm"
+                      className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors text-sm min-h-[44px]"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
@@ -882,7 +882,7 @@ export default function InterviewDashboard() {
                     {doneUploads[0]?.[1]?.projectId && (
                       <motion.button
                         onClick={() => router.push(`/interview/projects/${doneUploads[0][1].projectId}/materials`)}
-                        className="flex-1 px-4 py-3 rounded-xl bg-[#7f19e6] text-white font-bold hover:bg-[#6b12c9] transition-colors text-sm inline-flex items-center justify-center gap-2 shadow-lg shadow-[#7f19e6]/25"
+                        className="flex-1 px-4 py-3 rounded-xl bg-[#7f19e6] text-white font-bold hover:bg-[#6b12c9] transition-colors text-sm inline-flex items-center justify-center gap-2 shadow-lg shadow-[#7f19e6]/25 min-h-[44px]"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -910,7 +910,7 @@ export default function InterviewDashboard() {
           {session?.user && (
             <Link
               href="/interview/projects"
-              className="text-sm font-bold text-[#7f19e6] hover:underline"
+              className="text-sm font-bold text-[#7f19e6] hover:underline py-2 min-h-[44px] inline-flex items-center"
             >
               すべて表示
             </Link>
@@ -918,7 +918,7 @@ export default function InterviewDashboard() {
         </div>
 
         {!session?.user ? (
-          <div className="bg-white rounded-xl p-12 border border-slate-200 text-center">
+          <div className="bg-white rounded-xl p-6 sm:p-12 border border-slate-200 text-center">
             <div className="w-16 h-16 bg-[#7f19e6]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="material-symbols-outlined text-[#7f19e6] text-3xl">lock</span>
             </div>
@@ -926,7 +926,7 @@ export default function InterviewDashboard() {
             <p className="text-slate-500 text-sm mb-4">ログインすると、過去のプロジェクト一覧の閲覧や管理ができます</p>
             <Link
               href="/api/auth/signin"
-              className="inline-flex items-center gap-2 bg-[#7f19e6] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25"
+              className="inline-flex items-center gap-2 bg-[#7f19e6] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25 min-h-[44px]"
             >
               <span className="material-symbols-outlined text-lg">login</span>
               ログインする
@@ -947,7 +947,7 @@ export default function InterviewDashboard() {
             ))}
           </div>
         ) : recentProjects.length === 0 ? (
-          <div className="bg-white rounded-xl p-12 border border-slate-200 text-center">
+          <div className="bg-white rounded-xl p-6 sm:p-12 border border-slate-200 text-center">
             <div className="w-16 h-16 bg-[#7f19e6]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <span className="material-symbols-outlined text-[#7f19e6] text-3xl">mic</span>
             </div>
@@ -969,7 +969,7 @@ export default function InterviewDashboard() {
                 <motion.div key={project.id} variants={cardVariants}>
                   <Link
                     href={getProjectLink(project)}
-                    className="group bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-3.5 hover:border-[#7f19e6]/30 hover:shadow-md transition-all"
+                    className="group bg-white rounded-xl border border-slate-200 p-3 sm:p-4 flex items-center gap-3 sm:gap-3.5 hover:border-[#7f19e6]/30 hover:shadow-md transition-all min-h-[44px]"
                   >
                     {/* Thumbnail */}
                     {project.thumbnailUrl ? (

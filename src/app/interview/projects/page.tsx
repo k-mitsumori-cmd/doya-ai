@@ -181,9 +181,9 @@ export default function ProjectsPage() {
       transition={{ duration: 0.4 }}
     >
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">記事一覧</h1>
+          <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">記事一覧</h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {projects.length > 0
               ? `${projects.length}件の記事`

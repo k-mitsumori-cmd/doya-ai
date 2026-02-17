@@ -1,5 +1,23 @@
 # ドヤAI プロジェクト — Claude Code ガイド
 
+## 詳細リファレンス
+
+タスクに取り掛かる前に、関連する reference/ ドキュメントを読むこと:
+
+| ファイル | 内容 |
+|---------|------|
+| `reference/01-overview.md` | プロジェクト概要・ディレクトリ構成 |
+| `reference/02-architecture.md` | アーキテクチャ・データフロー |
+| `reference/03-api-reference.md` | 全APIエンドポイント一覧 |
+| `reference/04-database.md` | Prismaスキーマ・テーブル設計 (38モデル) |
+| `reference/05-auth-payments.md` | 認証・管理者認証・Stripe決済・アクセス制御 |
+| `reference/06-ui-patterns.md` | UIコンポーネント・デザインパターン |
+| `reference/07-dev-guide.md` | 開発パターン・デプロイ・トラブルシューティング |
+| `reference/08-environment.md` | 環境変数一覧・セットアップ手順 |
+| `reference/09-bootstrap.md` | バナーテンプレート一括生成 |
+| `reference/10-service-status.md` | サービスステータス一元管理 (実装・課金・ドキュメント状態) |
+| `reference/services/*.md` | 各サービスの詳細仕様 |
+
 ## 技術スタック
 - Next.js 14 (App Router) + React 18 + TypeScript
 - Prisma ORM + PostgreSQL (Supabase)
@@ -9,13 +27,23 @@
 - Payment: Stripe
 
 ## サービス一覧
+
+### services.ts 登録済み (Active)
+| パス | サービス名 | 説明 | PRO月額 |
+|------|-----------|------|---------|
+| `/kantan` | カンタンマーケAI | チャット型AIマーケアシスタント | ¥4,980 |
+| `/banner` | ドヤバナーAI | A/B/C 3案同時バナー生成 | ¥9,980 |
+| `/logo` | ドヤロゴ | ロゴ3パターン生成 | 暫定無料 |
+| `/seo` | ドヤ記事作成 | SEO+LLMO長文記事生成 | 暫定無料 |
+| `/interview` | ドヤインタビュー | 音声→文字起こし→記事生成 | ¥9,980 |
+
+### ページ・API存在 (services.ts未登録)
 | パス | サービス名 | 説明 |
 |------|-----------|------|
-| `/seo` | ドヤ記事作成 | SEO長文記事生成 |
-| `/banner` | ドヤバナーAI | バナー画像生成 |
-| `/logo` | ドヤロゴ | ロゴ生成 |
-| `/interview` | ドヤインタビュー | インタビュー記事AI生成 (Phase 1-3 完了) |
 | `/persona` | ドヤペルソナAI | URL→ペルソナ+クリエイティブ生成 |
+| `/slide` | ドヤスライドAI | AI→Googleスライド生成 |
+| `/slashslide` | SlashSlide | スライド別ブランド |
+| `/seo` 内 swipe | ドヤSwipe | Tinder風UI→記事生成 |
 
 ## 重要な開発パターン
 

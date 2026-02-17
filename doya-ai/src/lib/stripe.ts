@@ -72,6 +72,24 @@ export const STRIPE_PRICE_IDS = {
       yearly: process.env.STRIPE_PRICE_BANNER_ENTERPRISE_YEARLY || 'price_banner_enterprise_yearly',
     },
   },
+  // ドヤインタビュー
+  interview: {
+    pro: {
+      monthly: process.env.STRIPE_PRICE_INTERVIEW_PRO_MONTHLY || 'price_interview_pro_monthly',
+      yearly: process.env.STRIPE_PRICE_INTERVIEW_PRO_YEARLY || 'price_interview_pro_yearly',
+    },
+    enterprise: {
+      monthly: process.env.STRIPE_PRICE_INTERVIEW_ENTERPRISE_MONTHLY || 'price_interview_enterprise_monthly',
+      yearly: process.env.STRIPE_PRICE_INTERVIEW_ENTERPRISE_YEARLY || 'price_interview_enterprise_yearly',
+    },
+  },
+  // ドヤペルソナAI
+  persona: {
+    pro: {
+      monthly: process.env.STRIPE_PRICE_PERSONA_PRO_MONTHLY || 'price_persona_pro_monthly',
+      yearly: process.env.STRIPE_PRICE_PERSONA_PRO_YEARLY || 'price_persona_pro_yearly',
+    },
+  },
   // セットプラン
   bundle: {
     monthly: process.env.STRIPE_PRICE_BUNDLE_MONTHLY || 'price_bundle_monthly',
@@ -82,8 +100,8 @@ export const STRIPE_PRICE_IDS = {
 // ========================================
 // 価格ID ↔ プランID 変換（厳密マッピング）
 // ========================================
-export type PlanId = 'seo-pro' | 'seo-enterprise' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'bundle'
-export type ServiceId = 'seo' | 'banner' | 'bundle'
+export type PlanId = 'seo-pro' | 'seo-enterprise' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'interview-pro' | 'interview-enterprise' | 'persona-pro' | 'bundle'
+export type ServiceId = 'seo' | 'banner' | 'interview' | 'persona' | 'bundle'
 
 export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
   return (planId.split('-')[0] as ServiceId) || 'bundle'
@@ -97,6 +115,9 @@ export function getPlanIdFromStripePriceId(priceId: string | null | undefined): 
     ['banner-basic', STRIPE_PRICE_IDS.banner.basic],
     ['banner-pro', STRIPE_PRICE_IDS.banner.pro],
     ['banner-enterprise', STRIPE_PRICE_IDS.banner.enterprise],
+    ['interview-pro', STRIPE_PRICE_IDS.interview.pro],
+    ['interview-enterprise', STRIPE_PRICE_IDS.interview.enterprise],
+    ['persona-pro', STRIPE_PRICE_IDS.persona.pro],
     ['bundle', STRIPE_PRICE_IDS.bundle],
   ]
   for (const [planId, prices] of entries) {
@@ -265,6 +286,14 @@ function collectRealPriceIds(): string[] {
     process.env.STRIPE_PRICE_BANNER_STARTER_YEARLY,
     process.env.STRIPE_PRICE_BANNER_BUSINESS_MONTHLY,
     process.env.STRIPE_PRICE_BANNER_BUSINESS_YEARLY,
+    // Interview
+    process.env.STRIPE_PRICE_INTERVIEW_PRO_MONTHLY,
+    process.env.STRIPE_PRICE_INTERVIEW_PRO_YEARLY,
+    process.env.STRIPE_PRICE_INTERVIEW_ENTERPRISE_MONTHLY,
+    process.env.STRIPE_PRICE_INTERVIEW_ENTERPRISE_YEARLY,
+    // Persona
+    process.env.STRIPE_PRICE_PERSONA_PRO_MONTHLY,
+    process.env.STRIPE_PRICE_PERSONA_PRO_YEARLY,
     // Bundle
     process.env.STRIPE_PRICE_BUNDLE_MONTHLY,
     process.env.STRIPE_PRICE_BUNDLE_YEARLY,

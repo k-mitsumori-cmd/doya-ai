@@ -179,13 +179,13 @@ export default function InterviewSettingsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
       >
-        <h1 className="text-3xl font-black tracking-tight text-slate-900">設定</h1>
+        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">設定</h1>
         <p className="text-sm text-slate-500 mt-1">アカウント情報、プラン、使用状況を管理</p>
       </motion.div>
 
       {/* タブナビゲーション — アニメーション付き */}
       <motion.div
-        className="flex gap-2 relative"
+        className="flex gap-2 relative overflow-x-auto pb-1 -mx-2 px-2 scrollbar-hide"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.15 }}
@@ -200,14 +200,14 @@ export default function InterviewSettingsPage() {
             onClick={() => setActiveTab(tab.key)}
             whileHover={{ scale: 1.04 }}
             whileTap={{ scale: 0.96 }}
-            className={`relative flex items-center gap-2 px-5 py-3 rounded-xl border transition-colors ${
+            className={`relative flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 sm:py-3 rounded-xl border transition-colors whitespace-nowrap shrink-0 ${
               activeTab === tab.key
                 ? 'bg-[#7f19e6] text-white border-[#7f19e6] shadow-lg shadow-[#7f19e6]/25'
                 : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:shadow-md'
             }`}
           >
             <span className="material-symbols-outlined text-[20px]">{tab.icon}</span>
-            <span className="text-sm font-semibold">{tab.label}</span>
+            <span className="text-xs sm:text-sm font-semibold">{tab.label}</span>
           </motion.button>
         ))}
       </motion.div>
@@ -246,7 +246,7 @@ export default function InterviewSettingsPage() {
                       )}
                     </motion.div>
                     <div className="flex-1">
-                      <p className="font-black text-slate-900 text-xl tracking-tight">{user.name || 'ユーザー'}</p>
+                      <p className="font-black text-slate-900 text-lg sm:text-xl tracking-tight">{user.name || 'ユーザー'}</p>
                       <p className="text-sm text-slate-500 mt-0.5">{user.email}</p>
                       <motion.div
                         className="flex items-center gap-2 mt-3"
@@ -302,7 +302,7 @@ export default function InterviewSettingsPage() {
               </div>
               <div className="p-6">
                 {/* 制限サマリー — 浮き上がるカード */}
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
                   {[
                     { icon: 'mic', value: currentPlan.transcription, label: '文字起こし', gradient: 'from-blue-500 to-indigo-600' },
                     { icon: 'cloud_upload', value: currentPlan.upload, label: 'アップロード上限', gradient: 'from-emerald-500 to-teal-600' },
@@ -378,22 +378,22 @@ export default function InterviewSettingsPage() {
                     <div className="absolute inset-0 bg-gradient-to-br from-[#7f19e6] via-blue-700 to-indigo-800" />
                     <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIxIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9zdmc+')] opacity-50" />
 
-                    <div className="relative z-10 p-7">
-                      <div className="flex items-center gap-4 mb-4">
+                    <div className="relative z-10 p-5 sm:p-7">
+                      <div className="flex items-center gap-3 sm:gap-4 mb-4">
                         <motion.div
                           animate={{ rotate: [0, 10, -10, 0] }}
                           transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                          className="w-14 h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20 shadow-lg"
+                          className="w-12 h-12 sm:w-14 sm:h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20 shadow-lg shrink-0"
                         >
-                          <span className="material-symbols-outlined text-white text-3xl">rocket_launch</span>
+                          <span className="material-symbols-outlined text-white text-2xl sm:text-3xl">rocket_launch</span>
                         </motion.div>
                         <div>
-                          <p className="font-black text-xl text-white tracking-tight">PROプランにアップグレード</p>
-                          <p className="text-blue-200 text-sm font-semibold">月額 ¥9,980 で全機能を解放</p>
+                          <p className="font-black text-lg sm:text-xl text-white tracking-tight">PROプランにアップグレード</p>
+                          <p className="text-blue-200 text-xs sm:text-sm font-semibold">月額 ¥9,980 で全機能を解放</p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 mb-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                         {[
                           { icon: 'speed', text: `文字起こし 150分/月（${plan === 'GUEST' ? '30倍' : '5倍'}）` },
                           { icon: 'timer', text: '1回の文字起こし: 最大約3時間' },
@@ -438,14 +438,14 @@ export default function InterviewSettingsPage() {
                     className="relative rounded-2xl overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900" />
-                    <div className="relative z-10 p-7">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-14 h-14 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20">
-                          <span className="material-symbols-outlined text-white text-3xl">corporate_fare</span>
+                    <div className="relative z-10 p-5 sm:p-7">
+                      <div className="flex items-center gap-3 sm:gap-4 mb-4">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
+                          <span className="material-symbols-outlined text-white text-2xl sm:text-3xl">corporate_fare</span>
                         </div>
                         <div>
-                          <p className="font-black text-xl text-white tracking-tight">ENTERPRISEプラン</p>
-                          <p className="text-slate-300 text-sm font-semibold">月額 ¥49,980 で大規模運用に対応</p>
+                          <p className="font-black text-lg sm:text-xl text-white tracking-tight">ENTERPRISEプラン</p>
+                          <p className="text-slate-300 text-xs sm:text-sm font-semibold">月額 ¥49,980 で大規模運用に対応</p>
                         </div>
                       </div>
                       <div className="space-y-2 mb-5">
@@ -514,7 +514,7 @@ export default function InterviewSettingsPage() {
                 利用統計
               </h2>
               {loading ? (
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {[1, 2, 3].map((i) => (
                     <div key={i} className="rounded-2xl p-6 animate-pulse bg-gradient-to-br from-slate-100 to-slate-50">
                       <div className="h-10 bg-slate-200 rounded w-1/2 mb-3" />
@@ -523,7 +523,7 @@ export default function InterviewSettingsPage() {
                   ))}
                 </div>
               ) : stats ? (
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {[
                     { icon: 'folder', value: stats.totalProjects, label: 'プロジェクト', gradient: 'from-blue-500 to-indigo-600', bg: 'from-blue-50 to-indigo-50' },
                     { icon: 'description', value: stats.totalDrafts, label: '生成記事', gradient: 'from-emerald-500 to-teal-600', bg: 'from-emerald-50 to-teal-50' },
@@ -561,7 +561,7 @@ export default function InterviewSettingsPage() {
                 </h2>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm min-w-[560px]">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200">
                       <th className="text-left px-6 py-4 font-bold text-slate-600">機能</th>

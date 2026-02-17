@@ -291,22 +291,22 @@ export default function RecipeManagementPage() {
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
 
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900">スキル管理</h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">スキル管理</h1>
           <p className="text-sm text-slate-500 mt-1">記事構成テンプレートの管理・カスタマイズ</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => { setShowAiModal(true); setAiPreview(null); setAiSampleText(''); setAiName('') }}
-            className="px-4 py-2.5 bg-white text-[#7f19e6] border border-[#7f19e6] rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors flex items-center gap-2"
+            className="px-3 sm:px-4 py-2.5 bg-white text-[#7f19e6] border border-[#7f19e6] rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-50 transition-colors flex items-center gap-1.5 sm:gap-2"
           >
             <span className="material-symbols-outlined text-lg">auto_awesome</span>
-            AIで自動生成
+            <span className="hidden xs:inline">AIで</span>自動生成
           </button>
           <button
             onClick={openCreateModal}
-            className="px-4 py-2.5 bg-[#7f19e6] text-white rounded-lg text-sm font-bold hover:bg-[#6b12c9] transition-colors flex items-center gap-2 shadow-lg shadow-[#7f19e6]/20"
+            className="px-3 sm:px-4 py-2.5 bg-[#7f19e6] text-white rounded-lg text-xs sm:text-sm font-bold hover:bg-[#6b12c9] transition-colors flex items-center gap-1.5 sm:gap-2 shadow-lg shadow-[#7f19e6]/20"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             新規作成
@@ -394,12 +394,12 @@ export default function RecipeManagementPage() {
         </aside>
 
         {/* Right: Recipe detail */}
-        <main className="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <main className="lg:col-span-8 bg-white rounded-xl border border-slate-200 shadow-sm p-4 sm:p-6">
           {selectedRecipe ? (
             <>
               <div className="border-b border-slate-100 pb-6 mb-6">
                 <div className="flex justify-between items-start">
-                  <h2 className="text-2xl font-bold tracking-tight">{selectedRecipe.name}</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight">{selectedRecipe.name}</h2>
                   <div className="flex gap-2">
                     {!selectedRecipe.isTemplate ? (
                       <>
@@ -550,14 +550,14 @@ export default function RecipeManagementPage() {
             className="bg-white rounded-2xl p-6 shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-[#7f19e6]">auto_awesome</span>
-              <h2 className="text-lg font-bold text-slate-900">サンプル記事からスキルを自動生成</h2>
+            <div className="flex items-start sm:items-center gap-2 mb-1">
+              <span className="material-symbols-outlined text-[#7f19e6] shrink-0 mt-0.5 sm:mt-0">auto_awesome</span>
+              <h2 className="text-base sm:text-lg font-bold text-slate-900">サンプル記事からスキルを自動生成</h2>
             </div>
             <p className="text-xs text-slate-500 mb-4">お手本にしたい記事を貼り付けると、AIが構成パターンを分析してスキルを作成します</p>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-medium text-slate-700 mb-1 block">スキル名（任意）</label>
                   <input

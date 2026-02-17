@@ -57,10 +57,11 @@ export function jstDayRange(now = new Date()): { start: Date; end: Date } {
 }
 
 export function seoDailyArticleLimit(plan: SeoPlanCode): number {
+  // pricing.ts の SEO_PRICING と一致させること
   // -1 = 無制限
-  if (plan === 'PRO') return 5
-  if (plan === 'ENTERPRISE') return 30
-  if (plan === 'FREE') return 1
+  if (plan === 'PRO') return 5        // PRO: 1日5記事
+  if (plan === 'ENTERPRISE') return 30 // pricing.ts: enterpriseLimit = 30
+  if (plan === 'FREE') return 1        // pricing.ts: freeLimit = 1
   // GUESTは日次ではなく累計（別ロジック）
   return 0
 }

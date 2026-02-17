@@ -250,13 +250,11 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
         serviceId === 'banner' &&
         (planId === 'banner-basic' || planId === 'banner-pro' || planId === 'banner-enterprise' || planId === 'banner-starter' || planId === 'banner-business')
       const servicePlan =
-        serviceId === 'seo' && planId === 'seo-enterprise'
+        planId.endsWith('-enterprise')
           ? 'ENTERPRISE'
-          : serviceId === 'banner' && planId === 'banner-enterprise'
-            ? 'ENTERPRISE'
-            : (planId.endsWith('-pro') || isBannerPaid)
-              ? 'PRO'
-              : 'FREE'
+          : (planId.endsWith('-pro') || isBannerPaid)
+            ? 'PRO'
+            : 'FREE'
       await prisma.userServiceSubscription.upsert({
         where: { userId_serviceId: { userId, serviceId } },
         create: {
