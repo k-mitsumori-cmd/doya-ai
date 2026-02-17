@@ -897,12 +897,8 @@ function BannerTestPageInner() {
 
   // バナー生成
   const handleGenerate = async () => {
-    // 未ログインの場合はログインモーダルを表示
-    if (!session?.user) {
-      setLockModalType('login')
-      setShowLockModal(true)
-      return
-    }
+    // ゲストでも生成可能（PLAN_CONFIG.GUEST: dailyLimit 5）
+    // ログインチェックは不要（日次制限で制御）
 
     if (!selectedTemplate) {
       toast.error('テンプレートを選択してください')
