@@ -29,13 +29,24 @@ const BRANDED_TEMPLATE_IDS = [
   'reference-software-dev-001',
 ]
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
   try {
+    // リクエストボディからIDリストを取得（指定がなければデフォルトリストを使用）
+    let targetIds = BRANDED_TEMPLATE_IDS
+    try {
+      const body = await request.json()
+      if (body.templateIds && Array.isArray(body.templateIds) && body.templateIds.length > 0) {
+        targetIds = body.templateIds
+      }
+    } catch {
+      // bodyが空の場合はデフォルトリストを使用
+    }
+
     // 削除対象のテンプレートを検索
     const templatesToDelete = await prisma.bannerTemplate.findMany({
       where: {
         templateId: {
-          in: BRANDED_TEMPLATE_IDS
+          in: targetIds
         }
       },
       select: {
@@ -47,7 +58,7 @@ export async function DELETE() {
 
     if (templatesToDelete.length === 0) {
       return NextResponse.json({
-        message: 'ブランド名を含むテンプレートは見つかりませんでした',
+        message: '削除対象のテンプレートは見つかりませんでした',
         deleted: 0,
         templates: []
       })
@@ -57,13 +68,13 @@ export async function DELETE() {
     const result = await prisma.bannerTemplate.deleteMany({
       where: {
         templateId: {
-          in: BRANDED_TEMPLATE_IDS
+          in: targetIds
         }
       }
     })
 
     return NextResponse.json({
-      message: `${result.count}件のブランド名を含むテンプレートを削除しました`,
+      message: `${result.count}件のテンプレートを削除しました`,
       deleted: result.count,
       templates: templatesToDelete
     })
