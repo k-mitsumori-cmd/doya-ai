@@ -1378,7 +1378,7 @@ function BannerTestPageInner() {
                       <span className="text-blue-400">▶</span> {categoryName}
                       <span className="text-gray-600 text-[10px]">({categoryTemplates.length})</span>
                     </h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-[3px] sm:gap-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 sm:gap-1.5">
                       {categoryTemplates.map((template, index) => {
                         const hasError = imageErrors.has(template.id)
                         const isLoaded = loadedImages.has(template.id)
@@ -1460,7 +1460,7 @@ function BannerTestPageInner() {
                 )
               })
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-[3px] sm:gap-1">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 sm:gap-1.5">
                 {filteredTemplates.map((template) => {
                   const catIndex = getCategoryIndex(template)
                   const hasError = imageErrors.has(template.id)
