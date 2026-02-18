@@ -43,7 +43,7 @@ export async function GET(
     // DBから画像を取得
     const template = await prisma.bannerTemplate.findUnique({
       where: { templateId },
-      select: { imageUrl: true, category: true },
+      select: { imageUrl: true, category: true, updatedAt: true },
     })
     
     // DBに画像がない場合またはエラープレースホルダーの場合
@@ -71,7 +71,7 @@ export async function GET(
       return new NextResponse(buffer, {
         headers: {
           'Content-Type': `image/${mimeType}`,
-          'Cache-Control': 'public, max-age=31536000, immutable',
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
         },
       })
     }

@@ -830,6 +830,7 @@ export async function GET(request: NextRequest) {
           isFeatured: true,
           industry: true,
           category: true,
+          updatedAt: true, // キャッシュバスター用
           // minimalモードでは不要なフィールドを省略
           ...(minimal ? {} : { prompt: true }),
         },
@@ -899,7 +900,9 @@ export async function GET(request: NextRequest) {
     // DBからデータがある場合
     if (dbTemplates.length > 0) {
       const templates = dbTemplates.map((t) => {
-        const imageApiUrl = `/api/banner/test/image/${t.templateId}`
+        // キャッシュバスター: updatedAtのタイムスタンプを付与してCDNの古いキャッシュを回避
+        const cacheBuster = t.updatedAt ? `?v=${new Date(t.updatedAt).getTime()}` : `?v=${Date.now()}`
+        const imageApiUrl = `/api/banner/test/image/${t.templateId}${cacheBuster}`
         const v2Prompt = v2PromptsMap.get(t.templateId)
         
         // V2プロンプトがある場合は完全なプロンプトを使用、なければDBのプロンプトを使用
