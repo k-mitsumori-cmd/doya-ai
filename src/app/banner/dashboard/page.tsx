@@ -183,8 +183,8 @@ function BannerTestPageInner() {
   const [isFormVisible, setIsFormVisible] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
 
-  // ヒーロー画像の縮小状態（ギャラリーを広く表示）
-  const [isHeroCollapsed, setIsHeroCollapsed] = useState(false)
+  // ヒーロー画像の縮小状態（デフォルト: 閉じてギャラリー全体表示）
+  const [isHeroCollapsed, setIsHeroCollapsed] = useState(true)
 
   // ギャラリーのジャンルフィルタ
   const [activeFilter, setActiveFilter] = useState<string>('すべて')
@@ -1132,7 +1132,7 @@ function BannerTestPageInner() {
           <div
             className={`fixed ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} left-0 md:left-[240px] right-0 z-20 overflow-hidden transition-all duration-500 ease-in-out ${
               isHeroCollapsed
-                ? 'h-[8vh] sm:h-[8vh] md:h-[8vh] lg:h-[8vh]'
+                ? 'h-[0vh] sm:h-[0vh] md:h-[0vh] lg:h-[0vh]'
                 : isFormVisible
                   ? 'h-[15vh] sm:h-[18vh] md:h-[20vh] lg:h-[22vh]'
                   : 'h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh]'
@@ -1212,9 +1212,11 @@ function BannerTestPageInner() {
               </div>
             )}
             
-            {/* オーバーレイ情報（Netflix風）- フォーム表示時は縮小 */}
-            <div className={`absolute bottom-0 left-0 right-0 z-20 transition-all duration-300 ease-in-out ${
-              isFormVisible ? 'p-1 sm:p-2' : 'p-2 sm:p-4 md:p-6 lg:p-8'
+            {/* オーバーレイ情報（Netflix風）- ヒーロー閉じ時は非表示、フォーム表示時は縮小 */}
+            <div className={`absolute bottom-0 left-0 right-0 z-20 transition-all duration-500 ease-in-out ${
+              isHeroCollapsed
+                ? 'opacity-0 pointer-events-none translate-y-4'
+                : isFormVisible ? 'opacity-100 p-1 sm:p-2' : 'opacity-100 p-2 sm:p-4 md:p-6 lg:p-8'
             }`}>
               <div className="max-w-6xl mx-auto">
                 {/* メインタイトル：日本語の短いタイトルを優先表示 */}
@@ -1281,10 +1283,14 @@ function BannerTestPageInner() {
                         ) : (
                           <button
                             onClick={() => {
-                              const formElement = document.getElementById('banner-form')
-                              if (formElement) {
-                                formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                              }
+                              // ヒーローを閉じてからフォームにスクロール
+                              setIsHeroCollapsed(true)
+                              setTimeout(() => {
+                                const formElement = document.getElementById('banner-form')
+                                if (formElement) {
+                                  formElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                }
+                              }, 400)
                             }}
                             className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
                           >
@@ -1347,24 +1353,24 @@ function BannerTestPageInner() {
               </div>
             </div>
 
-            {/* ヒーロー縮小/展開トグルボタン（右下に配置） */}
-            <button
-              onClick={() => setIsHeroCollapsed(!isHeroCollapsed)}
-              className="absolute bottom-2 sm:bottom-4 right-3 sm:right-6 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg border border-white/30 group/toggle"
-              title={isHeroCollapsed ? 'バナーを表示' : 'ギャラリーを広げる'}
-            >
-              {isHeroCollapsed ? (
-                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover/toggle:text-white transition-colors" />
-              ) : (
-                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover/toggle:text-white transition-colors" />
-              )}
-            </button>
+            {/* ギャラリーに戻るボタン（ヒーロー展開時のみ表示） */}
+            {!isHeroCollapsed && (
+              <button
+                onClick={() => setIsHeroCollapsed(true)}
+                className="absolute top-2 sm:top-4 right-3 sm:right-6 z-30 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm flex items-center gap-1.5 transition-all duration-300 hover:scale-105 shadow-lg border border-white/20 text-white text-xs sm:text-sm font-medium"
+                title="ギャラリーに戻る"
+              >
+                <ChevronUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">ギャラリーに戻る</span>
+                <span className="sm:hidden">戻る</span>
+              </button>
+            )}
           </div>
 
           {/* ジャンルフィルタタブ */}
           <div className={`w-full relative z-10 bg-black/90 backdrop-blur-sm border-b border-gray-800/50 transition-all duration-500 ease-in-out ${
               isHeroCollapsed
-                ? 'pt-[10vh] sm:pt-[10vh] md:pt-[10vh] lg:pt-[10vh]'
+                ? 'pt-[6vh] sm:pt-[6vh] md:pt-[4vh] lg:pt-[4vh]'
                 : isFormVisible
                   ? 'pt-[17vh] sm:pt-[20vh] md:pt-[22vh] lg:pt-[24vh]'
                   : 'pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh]'
@@ -1422,6 +1428,8 @@ function BannerTestPageInner() {
                                 setSelectedTemplate(template)
                                 setSelectedBanner(null)
                                 setSelectedTemplateLockType(null)
+                                setIsHeroCollapsed(false)
+                                window.scrollTo({ top: 0, behavior: 'smooth' })
                               }
                             }}
                             className={`group relative aspect-[16/10] rounded overflow-hidden cursor-pointer ${
@@ -1505,6 +1513,8 @@ function BannerTestPageInner() {
                           setSelectedTemplate(template)
                           setSelectedBanner(null)
                           setSelectedTemplateLockType(null)
+                          setIsHeroCollapsed(false)
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
                         }
                       }}
                       className={`group relative aspect-[16/10] rounded overflow-hidden cursor-pointer ${
