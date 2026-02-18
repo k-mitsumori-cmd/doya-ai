@@ -668,43 +668,43 @@ function DashboardSidebarImpl({
           ...(isBanner
             ? [
                 {
-                  id: 'url-input',
-                  label: 'URLを入力するだけでスタート',
+                  id: 'gallery-grid',
+                  label: 'ギャラリーからスタイルを選ぶ',
                   description:
-                    'バナーを作りたいサイトのURLを入力します。AIが内容を解析し、最適なバナーを自動生成します。',
-                  targetSelector: '[data-tour="url-input"]',
+                    'プロ品質のバナーテンプレートが一覧で並んでいます。好みのデザインをクリックしてプレビューしましょう。',
+                  targetSelector: '[data-tour="gallery-grid"]',
                   allowMissing: true,
                 },
                 {
-                  id: 'advanced-settings',
-                  label: '詳細設定を開く',
+                  id: 'filter-tabs',
+                  label: 'ジャンルで絞り込む',
                   description:
-                    '生成枚数やサイズを指定できます。有料プランなら最大10枚・サイズ指定が可能です。',
-                  targetSelector: '[data-tour="advanced-settings"]',
+                    '上部のタブで「食品・飲料」「ビジネス」「美容」などジャンル別に絞り込めます。',
+                  targetSelector: '[data-tour="filter-tabs"]',
                   allowMissing: true,
                 },
                 {
-                  id: 'generate-button',
-                  label: '生成ボタンを押す',
+                  id: 'hero-preview',
+                  label: 'クリックでプレビュー表示',
                   description:
-                    'ボタンを押すとAIがサイトを分析し、バナーを自動生成します。30秒〜1分ほどお待ちください。',
-                  targetSelector: '[data-tour="generate-button"]',
+                    'テンプレートをクリックすると上部にプレビューが表示されます。「このスタイルで生成」ボタンから生成に進めます。',
+                  targetSelector: '[data-tour="hero-preview"]',
                   allowMissing: true,
                 },
                 {
-                  id: 'analysis-result',
-                  label: '解析結果を確認',
+                  id: 'generate-style',
+                  label: '「このスタイルで生成」で生成開始',
                   description:
-                    'AIが読み取ったサイトのポイントが表示されます。コピーや配色の根拠に使われます。',
-                  targetSelector: '[data-tour="analysis-result"]',
+                    'プレビュー表示中に青いボタンを押すと、生成フォームが表示されます。テキストやサイズをカスタマイズできます。',
+                  targetSelector: '[data-tour="generate-style"]',
                   allowMissing: true,
                 },
                 {
-                  id: 'generated-results',
-                  label: '生成されたバナーをダウンロード',
+                  id: 'generation-form',
+                  label: 'テキスト・サイズを設定して生成',
                   description:
-                    '完成したバナーはここに表示されます。各画像のダウンロードボタンから保存できます。',
-                  targetSelector: '[data-tour="generated-results"]',
+                    '見出しテキスト、バナーサイズ、生成枚数を設定して「バナーを生成する」を押すとAIが自動生成します。',
+                  targetSelector: '[data-tour="generation-form"]',
                   allowMissing: true,
                 },
                 {
@@ -717,7 +717,7 @@ function DashboardSidebarImpl({
                 },
               ]
             : []),
-          // サイドバー系（既存）
+          // サイドバー系
           {
             id: 'intro',
             label: 'サイドバーから機能を選ぶ',
@@ -728,9 +728,15 @@ function DashboardSidebarImpl({
             id: it.href,
             label: it.label,
             description:
-              it.href.startsWith('/banner')
-                ? 'この機能でバナー制作を進めます。クリックして画面を確認してみてください。'
-                : 'この機能でSEO制作を進めます。クリックして画面を確認してみてください。',
+              it.href === '/banner/dashboard'
+                ? 'テンプレートギャラリーからスタイルを選んでバナーを生成します。'
+                : it.href === '/banner/dashboard/create'
+                  ? 'テンプレートを使わず、ゼロからバナーを自由に作成できます。'
+                  : it.href === '/banner/dashboard/plan'
+                    ? '現在のプランの確認やアップグレードができます。'
+                    : it.href.startsWith('/banner')
+                      ? 'この機能でバナー制作を進めます。'
+                      : 'この機能でSEO制作を進めます。クリックして画面を確認してみてください。',
             targetSelector: `[data-tour-nav="${it.href.split('#')[0]}"]`,
           })),
         ]}

@@ -1130,6 +1130,7 @@ function BannerTestPageInner() {
         <div className={`relative ${isTrialActive ? 'pt-20 md:pt-10' : 'pt-12 md:pt-0'}`}>
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- 固定表示、フォーム表示時は縮小 */}
           <div
+            data-tour="hero-preview"
             className={`fixed ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} left-0 md:left-[240px] right-0 z-20 overflow-hidden transition-all duration-500 ease-in-out ${
               isHeroCollapsed
                 ? 'h-[0vh] sm:h-[0vh] md:h-[0vh] lg:h-[0vh]'
@@ -1292,6 +1293,7 @@ function BannerTestPageInner() {
                                 }
                               }, 400)
                             }}
+                            data-tour="generate-style"
                             className="px-5 sm:px-7 md:px-10 py-2.5 sm:py-3.5 bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white font-black rounded-xl transition-all flex items-center gap-2 sm:gap-2.5 text-sm sm:text-base md:text-lg shadow-[0_4px_20px_rgba(59,130,246,0.5)] hover:shadow-[0_6px_30px_rgba(59,130,246,0.7)] hover:scale-105 active:scale-95"
                           >
                             <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
@@ -1378,7 +1380,7 @@ function BannerTestPageInner() {
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-1 px-2 sm:px-4 md:px-8 lg:px-12 py-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            <div data-tour="filter-tabs" className="flex items-center gap-1 px-2 sm:px-4 md:px-8 lg:px-12 py-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {galleryFilterTabs.map((tab) => (
                 <button
                   key={tab}
@@ -1396,7 +1398,7 @@ function BannerTestPageInner() {
           </div>
 
           {/* グリッドギャラリー */}
-          <div className="w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 bg-black relative z-10">
+          <div data-tour="gallery-grid" className="w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 bg-black relative z-10">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -1582,7 +1584,8 @@ function BannerTestPageInner() {
           {selectedTemplate && !selectedBanner && (
             <div 
               ref={formRef}
-              id="banner-form" 
+              id="banner-form"
+              data-tour="generation-form"
               className="w-full overflow-x-hidden px-3 sm:px-4 md:px-8 lg:px-12 py-6 sm:py-8 md:py-12 bg-black/95 backdrop-blur-sm scroll-mt-4"
             >
               <div className="max-w-5xl mx-auto w-full">
