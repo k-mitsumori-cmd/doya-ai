@@ -1292,9 +1292,9 @@ function BannerTestPageInner() {
                                 }
                               }, 400)
                             }}
-                            className="px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 bg-white text-black font-bold rounded-md hover:bg-gray-200 transition-all flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm shadow-lg hover:shadow-xl"
+                            className="px-5 sm:px-7 md:px-10 py-2.5 sm:py-3.5 bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white font-black rounded-xl transition-all flex items-center gap-2 sm:gap-2.5 text-sm sm:text-base md:text-lg shadow-[0_4px_20px_rgba(59,130,246,0.5)] hover:shadow-[0_6px_30px_rgba(59,130,246,0.7)] hover:scale-105 active:scale-95"
                           >
-                            <Play className="w-3 h-3 sm:w-4 sm:h-4 fill-current" />
+                            <Play className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
                             <span className="whitespace-nowrap">このスタイルで生成</span>
                           </button>
                         )}
@@ -1353,21 +1353,9 @@ function BannerTestPageInner() {
               </div>
             </div>
 
-            {/* ギャラリーに戻るボタン（ヒーロー展開時のみ表示） */}
-            {!isHeroCollapsed && (
-              <button
-                onClick={() => setIsHeroCollapsed(true)}
-                className="absolute top-2 sm:top-4 right-3 sm:right-6 z-30 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm flex items-center gap-1.5 transition-all duration-300 hover:scale-105 shadow-lg border border-white/20 text-white text-xs sm:text-sm font-medium"
-                title="ギャラリーに戻る"
-              >
-                <ChevronUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">ギャラリーに戻る</span>
-                <span className="sm:hidden">戻る</span>
-              </button>
-            )}
           </div>
 
-          {/* ジャンルフィルタタブ */}
+          {/* ジャンルフィルタタブ + ギャラリーに戻るボタン */}
           <div className={`w-full relative z-10 bg-black/90 backdrop-blur-sm border-b border-gray-800/50 transition-all duration-500 ease-in-out ${
               isHeroCollapsed
                 ? 'pt-[6vh] sm:pt-[6vh] md:pt-[4vh] lg:pt-[4vh]'
@@ -1375,6 +1363,21 @@ function BannerTestPageInner() {
                   ? 'pt-[17vh] sm:pt-[20vh] md:pt-[22vh] lg:pt-[24vh]'
                   : 'pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh]'
           }`}>
+            {/* ギャラリーに戻るバー（ヒーロー展開時のみ表示） */}
+            {!isHeroCollapsed && (
+              <div className="flex items-center justify-between px-2 sm:px-4 md:px-8 lg:px-12 py-2 border-b border-gray-800/30">
+                <span className="text-xs sm:text-sm text-gray-400 font-medium truncate mr-2">
+                  選択中: {selectedTemplate?.displayTitle || selectedTemplate?.name || selectedTemplate?.industry || ''}
+                </span>
+                <button
+                  onClick={() => setIsHeroCollapsed(true)}
+                  className="flex-shrink-0 px-4 py-2 sm:px-5 sm:py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 flex items-center gap-2 transition-all duration-200 shadow-md border border-gray-700 text-white text-xs sm:text-sm font-bold"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                  ギャラリーに戻る
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-1 px-2 sm:px-4 md:px-8 lg:px-12 py-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {galleryFilterTabs.map((tab) => (
                 <button
