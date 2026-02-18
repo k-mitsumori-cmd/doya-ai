@@ -7,38 +7,26 @@ export const runtime = 'nodejs'
 
 // テンプレートIDに基づくフォールバック画像
 const TEMPLATE_FALLBACKS: Record<string, string> = {
-  // 初心者向け（青系）
-  'intro-1': '/banner-samples/purpose-webinar.png',
-  'intro-2': '/banner-samples/purpose-display.png',
-  'intro-3': '/banner-samples/purpose-campaign.png',
-  'intro-4': '/banner-samples/purpose-lp_hero.png',
-  'intro-5': '/banner-samples/cat-finance.png',
-  'intro-6': '/banner-samples/purpose-sns_ad.png',
-  'intro-7': '/banner-samples/cat-other.png',
-  'intro-8': '/banner-samples/purpose-campaign.png',
-  // 比較・検討向け
-  'compare-1': '/banner-samples/cat-it.png',
-  'compare-2': '/banner-samples/cat-finance.png',
-  'compare-3': '/banner-samples/purpose-youtube.png',
-  'compare-4': '/banner-samples/cat-education.png',
-  'compare-5': '/banner-samples/cat-marketing.png',
-  'compare-6': '/banner-samples/cat-ec.png',
-  // 構造タイプ別
-  'structure-1': '/banner-samples/purpose-display.png',
-  'structure-2': '/banner-samples/cat-finance.png',
-  'structure-3': '/banner-samples/cat-it.png',
-  'structure-4': '/banner-samples/purpose-lp_hero.png',
-  'structure-5': '/banner-samples/cat-marketing.png',
-  'structure-6': '/banner-samples/purpose-webinar.png',
-  'structure-7': '/banner-samples/purpose-campaign.png',
-  // 鉄板テンプレ
-  'template-1': '/banner-samples/purpose-sns_ad.png',
-  'template-2': '/banner-samples/cat-marketing.png',
-  'template-3': '/banner-samples/purpose-display.png',
-  'template-4': '/banner-samples/cat-ec.png',
-  'template-5': '/banner-samples/purpose-lp_hero.png',
-  'template-6': '/banner-samples/purpose-campaign.png',
-  'template-7': '/banner-samples/cat-it.png',
+  // 入門・解説（guide）
+  'guide-1': '/banner-samples/cat-it.png',        // ChatGPTの使い方
+  'guide-2': '/banner-samples/cat-finance.png',    // 副業の始め方
+  'guide-3': '/banner-samples/cat-marketing.png',  // マーケティング
+  'guide-4': '/banner-samples/purpose-webinar.png', // DX推進
+  // 比較・ランキング（compare）
+  'compare-1': '/banner-samples/purpose-display.png', // プロジェクト管理ツール
+  'compare-2': '/banner-samples/cat-it.png',          // AIライティングツール
+  'compare-3': '/banner-samples/cat-finance.png',     // クラウド会計ソフト
+  'compare-4': '/banner-samples/purpose-campaign.png', // CRMツール
+  // HowTo・実践（howto）
+  'howto-1': '/banner-samples/purpose-lp_hero.png',   // LP制作
+  'howto-2': '/banner-samples/cat-marketing.png',      // コンテンツマーケティング
+  'howto-3': '/banner-samples/cat-recruit.png',        // 採用ブランディング
+  'howto-4': '/banner-samples/cat-ec.png',             // ECサイトCVR改善
+  // 事例・トレンド（case）
+  'case-1': '/banner-samples/purpose-sns_ad.png',      // BtoB営業成功事例
+  'case-2': '/banner-samples/purpose-youtube.png',     // SNSマーケティング
+  'case-3': '/banner-samples/cat-telecom.png',         // SaaSトレンド
+  'case-4': '/banner-samples/cat-education.png',       // データドリブン経営
   default: '/banner-samples/cat-other.png',
 }
 

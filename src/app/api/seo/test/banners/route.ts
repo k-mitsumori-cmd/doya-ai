@@ -6,11 +6,11 @@ export const runtime = 'nodejs'
 export const maxDuration = 300
 
 // 記事タイプに基づいてカテゴリをマッピング
-function getCategoryFromTemplate(template: { phase: string; category: string; usage: string }): string {
-  if (template.phase === 'CV' || template.usage === 'LP補助向け' || template.usage === 'DL誘導向け') {
+function getCategoryFromTemplate(template: typeof articleTemplates[0]): string {
+  if (template.category === 'howto' || template.category === 'case') {
     return 'marketing'
   }
-  if (template.category === '比較型' || template.phase === '比較') {
+  if (template.category === 'compare' || template.articleType === 'comparison' || template.articleType === 'ranking') {
     return 'it'
   }
   return 'it'
@@ -142,39 +142,43 @@ function getGenreColors(genre: string): string[] {
 function getImageDescription(template: typeof articleTemplates[0]): string {
   const descriptions: string[] = []
   const genre = detectGenre(template.title)
-  
+
   // ジャンル固有のビジュアル
   descriptions.push(getGenreVisuals(genre))
-  
-  if (template.category === '解説型') {
+
+  // カテゴリに基づく説明
+  if (template.category === 'guide') {
     descriptions.push('解説・ガイド記事の雰囲気、知識を伝えるクリーンなデザイン')
-  } else if (template.category === '比較型') {
+  } else if (template.category === 'compare') {
     descriptions.push('比較・検討記事の雰囲気、複数の選択肢を整理したビジュアル')
-  } else if (template.category === '一覧型') {
-    descriptions.push('一覧・まとめ記事の雰囲気、情報を整理したグリッド・リスト表現')
+  } else if (template.category === 'howto') {
+    descriptions.push('実践的なHowTo記事の雰囲気、ステップバイステップのビジュアル')
+  } else if (template.category === 'case') {
+    descriptions.push('事例・トレンド記事の雰囲気、データと実績を伝えるビジュアル')
   }
-  
-  if (template.phase === '認知') {
+
+  // 記事タイプに基づく説明
+  if (template.articleType === 'explanation') {
     descriptions.push('初心者にもわかりやすい、親しみやすいデザイン')
-  } else if (template.phase === '比較') {
+  } else if (template.articleType === 'comparison' || template.articleType === 'ranking') {
     descriptions.push('比較検討をサポートする、信頼感のあるデザイン')
-  } else if (template.phase === 'CV') {
-    descriptions.push('コンバージョンを意識した、行動を促すデザイン')
+  } else if (template.articleType === 'howto') {
+    descriptions.push('手順を追って実践できる、行動を促すデザイン')
+  } else if (template.articleType === 'case') {
+    descriptions.push('実績・成功事例を伝える、説得力のあるデザイン')
   }
-  
-  if (template.usage === 'ブログ向け') {
-    descriptions.push('ブログ記事用の読みやすい、情報重視のデザイン')
-  } else if (template.usage === 'DL誘導向け') {
-    descriptions.push('ダウンロード誘導を意識した、価値を伝えるデザイン')
-  } else if (template.usage === 'LP補助向け') {
-    descriptions.push('ランディングページ補助用の、コンバージョン重視のデザイン')
-  }
-  
+
   return descriptions.join('、')
 }
 
 // 記事タイプに応じたブランドカラーを取得
 function getBrandColors(template: typeof articleTemplates[0]): string[] {
+  // まずカテゴリベースのカラーを試す
+  if (template.category === 'guide') return ['#2563EB', '#3B82F6']
+  if (template.category === 'compare') return ['#F59E0B', '#F97316']
+  if (template.category === 'howto') return ['#10B981', '#059669']
+  if (template.category === 'case') return ['#8B5CF6', '#A855F7']
+  // フォールバック: ジャンルから推定
   const genre = detectGenre(template.title)
   return getGenreColors(genre)
 }

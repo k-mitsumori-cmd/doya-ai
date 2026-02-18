@@ -177,7 +177,7 @@ export default function SeoTestPage() {
       const referenceUrls = parseUrlListText(referenceUrlsText, 20).urls
       const related = relatedKeywords.split(/[,、\n]/).map((s) => s.trim()).filter(Boolean)
       const persona = audiencePreset === 'custom' ? customAudience : AUDIENCE_PRESETS.find((a) => a.id === audiencePreset)?.label || ''
-      const toneMap: Record<string, string> = { logical: 'ビジネス', friendly: 'やさしい', professional: '専門的', casual: 'カジュアル' }
+      const toneMap: Record<string, string> = { logical: 'ビジネス', friendly: '丁寧', professional: '専門的', casual: 'フランク' }
       const isComparisonMode = articleType === 'comparison' || articleType === 'ranking'
       const mode = isComparisonMode ? 'comparison_research' : 'standard'
       const comparisonConfig = isComparisonMode ? { template: articleType === 'ranking' ? 'ranking' : 'tools', count: 10, region: 'JP', requireOfficial: true, includeThirdParty: true } : undefined
@@ -191,12 +191,15 @@ export default function SeoTestPage() {
       if (articleType === 'comparison' || articleType === 'ranking') seoIntent = '比較検討'
       if (mainKeyword.includes('おすすめ') || mainKeyword.includes('比較')) seoIntent = '購買検討'
 
+      const forbidden = constraints.trim().split(/[,、\n]/).map((s) => s.trim()).filter(Boolean)
+
       const res = await fetch('/api/seo/articles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: finalTitle, keywords: [mainKeyword, ...related], persona, tone: toneMap[tone] || '丁寧',
           targetChars, searchIntent: seoIntent, referenceUrls,
+          forbidden: forbidden.length > 0 ? forbidden : undefined,
           llmoOptions: { tldr: true, conclusionFirst: true, faq: true, glossary: false, comparison: isComparisonMode, quotes: true, templates: false, objections: false },
           autoBundle: true, createJob: true, requestText: requestText || undefined, mode, comparisonConfig,
         }),
@@ -233,10 +236,10 @@ export default function SeoTestPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-                SEO記事テンプレート
+                SEO記事をかんたん作成
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                テンプレートを選んで、すぐにSEO記事を作成
+                記事の型を選んで、3ステップでSEO記事を完成
               </p>
             </div>
             {selectedTemplate && (
@@ -255,7 +258,7 @@ export default function SeoTestPage() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <AnimatePresence mode="wait">
           {!selectedTemplate ? (
-            /* ==================== テンプレート選択画面 ==================== */
+            /* ==================== 記事の型 選択画面 ==================== */
             <motion.div
               key="select"
               initial={{ opacity: 0, y: 12 }}
@@ -290,7 +293,7 @@ export default function SeoTestPage() {
                 ))}
               </div>
 
-              {/* カテゴリごとのテンプレート表示 */}
+              {/* カテゴリごとの記事プラン表示 */}
               {categories
                 .filter((cat) => !activeCategoryId || cat.id === activeCategoryId)
                 .map((cat) => {
@@ -308,7 +311,7 @@ export default function SeoTestPage() {
                         <div className="flex-1 h-px bg-slate-200 ml-2" />
                       </div>
 
-                      {/* テンプレートグリッド（4列） */}
+                      {/* 記事プラングリッド（4列） */}
                       <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                         {cat.templates.map((tmpl, idx) => (
                           <motion.button
@@ -319,10 +322,19 @@ export default function SeoTestPage() {
                             onClick={() => handleSelectTemplate(tmpl)}
                             className={`group text-left bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:border-blue-200/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200`}
                           >
-                            {/* カードヘッダー（グラデーション） */}
-                            <div className={`h-20 sm:h-24 ${colors.bg} relative flex items-center justify-center`}>
-                              <span className="text-3xl sm:text-4xl">{tmpl.icon}</span>
-                              <span className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-[9px] font-black text-white ${colors.badge}`}>
+                            {/* カードヘッダー（バナー画像 or グラデーション） */}
+                            <div className={`h-20 sm:h-24 ${colors.bg} relative flex items-center justify-center overflow-hidden`}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={`/api/seo/test/image/template/${tmpl.id}`}
+                                alt=""
+                                className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
+                                loading="lazy"
+                                onLoad={(e) => { (e.target as HTMLImageElement).classList.replace('opacity-0', 'opacity-100') }}
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                              />
+                              <span className="text-3xl sm:text-4xl relative z-10 drop-shadow-sm">{tmpl.icon}</span>
+                              <span className={`absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full text-[9px] font-black text-white ${colors.badge}`}>
                                 {tmpl.recommendedChars >= 15000 ? '長文' : tmpl.recommendedChars >= 10000 ? '標準' : '短文'}
                               </span>
                             </div>
@@ -360,13 +372,13 @@ export default function SeoTestPage() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25 }}
             >
-              {/* 選択中テンプレート表示 */}
+              {/* 選択中の記事プラン表示 */}
               <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 mb-6 flex items-center gap-4">
                 <div className={`w-14 h-14 rounded-xl ${CATEGORY_COLORS[categories.find(c => c.id === selectedTemplate.category)?.color || 'blue']?.bg || 'bg-blue-50'} flex items-center justify-center text-2xl flex-shrink-0`}>
                   {selectedTemplate.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">選択中のテンプレート</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">選択中の記事プラン</p>
                   <h3 className="text-sm sm:text-base font-black text-slate-900 truncate">{selectedTemplate.title}</h3>
                   <p className="text-xs text-slate-500 mt-0.5">{selectedTemplate.description}</p>
                 </div>
@@ -377,6 +389,13 @@ export default function SeoTestPage() {
                   変更
                 </button>
               </div>
+
+              {/* グローバルエラー表示 */}
+              {error && (
+                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-4 bg-red-50 border border-red-200 rounded-xl p-4">
+                  <p className="text-sm font-bold text-red-600">{error}</p>
+                </motion.div>
+              )}
 
               {/* ステップウィザード */}
               <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
@@ -623,11 +642,6 @@ export default function SeoTestPage() {
                           </div>
                         </div>
 
-                        {error && (
-                          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                            <p className="text-sm font-bold text-red-600">{error}</p>
-                          </div>
-                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
