@@ -185,6 +185,9 @@ function BannerTestPageInner() {
 
   // ヒーロー画像の縮小状態（ギャラリーを広く表示）
   const [isHeroCollapsed, setIsHeroCollapsed] = useState(false)
+
+  // ギャラリーのジャンルフィルタ
+  const [activeFilter, setActiveFilter] = useState<string>('すべて')
   
   // トライアル判定（ログイン後1時間）
   useEffect(() => {
@@ -691,7 +694,39 @@ function BannerTestPageInner() {
     })
     return grouped
   }, [templates])
-  
+
+  // グリッドギャラリー用：全カテゴリグループ（表示数制限なし）
+  const allTemplatesByCategory = useMemo((): { [key: string]: BannerTemplate[] } => {
+    if (!templates || !Array.isArray(templates) || templates.length === 0) return {}
+    const grouped: { [key: string]: BannerTemplate[] } = {}
+    const categoryOrder = ['ビジネス / SaaS', 'IT・AI', '採用', 'イベント', 'EC', '高級・ラグジュアリー']
+    templates.forEach((t) => {
+      if (!t) return
+      const category = categoryMapping[t.industry] || t.industry || 'その他'
+      if (!grouped[category]) grouped[category] = []
+      grouped[category].push(t)
+    })
+    const sorted: { [key: string]: BannerTemplate[] } = {}
+    categoryOrder.forEach((cat) => { if (grouped[cat]?.length) sorted[cat] = grouped[cat] })
+    Object.keys(grouped).forEach((cat) => { if (!categoryOrder.includes(cat) && grouped[cat]?.length) sorted[cat] = grouped[cat] })
+    return sorted
+  }, [templates])
+
+  // フィルタ適用後のテンプレート
+  const filteredTemplates = useMemo(() => {
+    if (activeFilter === 'すべて') return templates
+    return allTemplatesByCategory[activeFilter] || []
+  }, [activeFilter, templates, allTemplatesByCategory])
+
+  // カテゴリ内indexを取得（ロック判定用）
+  const getCategoryIndex = useCallback((template: BannerTemplate): number => {
+    const category = categoryMapping[template.industry] || template.industry || 'その他'
+    const categoryTemplates = allTemplatesByCategory[category] || []
+    return categoryTemplates.findIndex((t) => t.id === template.id)
+  }, [allTemplatesByCategory])
+
+  const galleryFilterTabs = ['すべて', 'ビジネス / SaaS', 'IT・AI', '採用', 'イベント', 'EC', '高級・ラグジュアリー']
+
   // カテゴリの表示数を増やす（スクロール時に呼び出し）
   const loadMoreTemplates = useCallback((category: string) => {
     setVisibleCounts((prev) => {
@@ -1303,304 +1338,207 @@ function BannerTestPageInner() {
             </button>
           </div>
 
-          {/* テンプレート一覧（Netflix風の横スクロール） - 固定ヒーローの下にパディング、フォーム表示時は縮小 */}
-          <div className={`w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8 transition-all duration-500 ease-in-out ${
+          {/* ジャンルフィルタタブ */}
+          <div className={`w-full relative z-10 bg-black/90 backdrop-blur-sm border-b border-gray-800/50 transition-all duration-500 ease-in-out ${
               isHeroCollapsed
                 ? 'pt-[10vh] sm:pt-[10vh] md:pt-[10vh] lg:pt-[10vh]'
                 : isFormVisible
                   ? 'pt-[17vh] sm:pt-[20vh] md:pt-[22vh] lg:pt-[24vh]'
                   : 'pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh]'
           }`}>
+            <div className="flex items-center gap-1 px-2 sm:px-4 md:px-8 lg:px-12 py-2 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {galleryFilterTabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveFilter(tab)}
+                  className={`flex-shrink-0 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                    activeFilter === tab
+                      ? 'bg-white text-black shadow-lg'
+                      : 'bg-gray-800/60 text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* グリッドギャラリー */}
+          <div className="w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 bg-black relative z-10">
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
               </div>
-            ) : (
-              Object.entries(templatesByCategory).map(([categoryName, categoryTemplates]) => {
-                if (!categoryTemplates || categoryTemplates.length === 0) return null
-                
+            ) : activeFilter === 'すべて' ? (
+              Object.entries(allTemplatesByCategory).map(([categoryName, categoryTemplates]) => {
+                if (!categoryTemplates?.length) return null
                 return (
-                  <div key={categoryName} className="space-y-1.5 sm:space-y-3">
-                    <h2 className="text-sm sm:text-lg md:text-2xl lg:text-3xl font-bold px-3 sm:px-2 md:px-4 text-white flex items-center gap-1.5 sm:gap-2">
-                      <span className="text-blue-400 text-xs sm:text-base">▶</span> {categoryName}
-                    </h2>
-                    <div className="relative group/scroll">
-                      {/* 左側グラデーションオーバーレイ（スクロール可能な場合のみ表示） */}
-                      {scrollPositions[categoryName]?.canScrollLeft && (
-                        <div className="absolute left-0 top-0 bottom-0 w-12 sm:w-16 md:w-20 bg-gradient-to-r from-black via-black/50 to-transparent z-10 pointer-events-none" />
-                      )}
-                      
-                      {/* 左スクロールボタン（スクロール可能な場合のみ表示） */}
-                      <button
-                        onClick={() => scroll('left', categoryName)}
-                        className={`absolute left-0 top-0 bottom-0 z-20 w-8 sm:w-10 md:w-16 bg-transparent flex items-center justify-center transition-all duration-300 ${
-                          scrollPositions[categoryName]?.canScrollLeft
-                            ? 'opacity-60 sm:opacity-40 md:opacity-0 group-hover/scroll:opacity-100'
-                            : 'opacity-0 pointer-events-none'
-                        }`}
-                        aria-label="左にスクロール"
-                      >
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 shadow-lg border border-white/20">
-                          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 text-white" />
-                        </div>
-                      </button>
-                      
-                      {/* 横スクロールコンテナ（タッチ/マウススワイプ対応） */}
-                      <div
-                        ref={(el) => { scrollRefs.current[categoryName] = el }}
-                        className="flex gap-2 sm:gap-3 md:gap-4 overflow-x-auto scrollbar-hide px-0 sm:px-10 md:px-16 py-1.5 sm:py-2 md:py-4 cursor-grab active:cursor-grabbing select-none"
-                        style={{ 
-                          scrollbarWidth: 'none', 
-                          msOverflowStyle: 'none',
-                          WebkitOverflowScrolling: 'touch',
-                          scrollPaddingLeft: '12px',
-                          scrollPaddingRight: '12px',
-                          willChange: 'scroll-position',
-                        }}
-                        onScroll={() => handleScroll(categoryName)}
-                        onTouchStart={(e) => handleTouchStart(e, categoryName)}
-                        onTouchMove={(e) => handleTouchMove(e, categoryName)}
-                        onTouchEnd={(e) => handleTouchEnd(e, categoryName)}
-                        onMouseDown={(e) => handleMouseDown(e, categoryName)}
-                        onMouseMove={(e) => handleMouseMove(e, categoryName)}
-                        onMouseUp={() => handleMouseUp(categoryName)}
-                        onMouseLeave={() => handleMouseLeave(categoryName)}
-                        onWheel={(e) => handleWheel(e, categoryName)}
-                      >
-                        {categoryTemplates.map((template, index) => {
-                          const hasError = imageErrors.has(template.id)
-                          const isLoaded = loadedImages.has(template.id)
-                          const isVisible = visibleImages.has(template.id)
-                          const showImage = template.imageUrl && !hasError
-                          const isFirst = index === 0
-                          const isLast = index === categoryTemplates.length - 1
-                          
-                          // ロック状態を判定
-                          const lockType = getImageLockType(template, index)
-                          const isLocked = lockType !== null
-                          
-                          return (
-                            <motion.div
-                              key={template.id}
-                              ref={(el) => observeImage(el, template.id)}
-                              whileHover={{ scale: isLocked ? 1.02 : 1.08, y: isLocked ? -4 : -12, zIndex: 10 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => {
-                                if (isLocked) {
-                                  handleLockedImageClick(template, lockType)
-                                } else {
-                                  setSelectedTemplate(template)
-                                  setSelectedBanner(null)
-                                  setSelectedTemplateLockType(null) // ロック状態をリセット
-                                }
-                              }}
-                              className={`group flex-shrink-0 w-36 h-20 sm:w-48 sm:h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer transition-all duration-300 relative ${
-                                isFirst ? 'ml-3 sm:ml-0' : ''
-                              } ${
-                                isLast ? 'mr-3 sm:mr-0' : ''
-                              } ${
-                                isLocked
-                                  ? 'ring-1 ring-gray-700 opacity-70 hover:opacity-90'
-                                  : selectedTemplate?.id === template.id
-                                    ? 'ring-3 ring-white scale-105 shadow-2xl'
-                                    : 'ring-1 ring-gray-800 hover:ring-gray-600'
-                              }`}
-                            >
-                              {showImage && isVisible && imageErrors.has(template.id) ? (
-                                // 画像読み込みエラー時
-                                <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex flex-col items-center justify-center p-2 sm:p-3">
-                                  <div className="text-center">
-                                    <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 rounded-full bg-red-500/20 flex items-center justify-center">
-                                      <X className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
-                                    </div>
-                                    <p className="text-[8px] sm:text-[10px] text-gray-400 mb-1.5">画像を読み込めませんでした</p>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        // エラーをクリアして再読み込み
-                                        setImageErrors(prev => {
-                                          const next = new Set(prev)
-                                          next.delete(template.id)
-                                          return next
-                                        })
-                                        setLoadedImages(prev => {
-                                          const next = new Set(prev)
-                                          next.delete(template.id)
-                                          return next
-                                        })
-                                      }}
-                                      className="text-[8px] sm:text-[10px] text-blue-400 hover:text-blue-300 underline"
-                                    >
-                                      再読み込み
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : showImage && isVisible ? (
-                                <>
-                                  {/* 読み込み中のプレースホルダー */}
-                                  {!isLoaded && (
-                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-900 to-black flex items-center justify-center">
-                                      <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
-                                    </div>
-                                  )}
-                                  <img
-                                    src={template.imageUrl!}
-                                    alt={template.displayTitle || template.industry}
-                                    loading="lazy"
-                                    decoding="async"
-                                    onLoad={() => handleImageLoad(template.id)}
-                                    onError={() => handleImageError(template.id)}
-                                    className={`w-full h-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
-                                  />
-                                </>
-                              ) : showImage && !isVisible ? (
-                                // ビューポート外：プレースホルダー表示（画像は読み込まない）
-                                <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex items-center justify-center">
-                                  <div className="w-8 h-8 rounded-full bg-gray-700/50" />
-                                </div>
-                              ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black flex flex-col items-center justify-center p-3 md:p-4 relative overflow-hidden">
-                                  <div className="absolute inset-0 opacity-20">
-                                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20" />
-                                  </div>
-                                  <ImageIcon className="w-8 h-8 md:w-12 md:h-12 text-gray-500 mb-2 relative z-10" />
-                                  <p className="text-xs md:text-sm text-gray-500 text-center relative z-10 line-clamp-2 px-2">
-                                    {template.displayTitle || template.industry}
-                                  </p>
-                                </div>
-                              )}
-                              {/* 画像名ラベル（常に表示） */}
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-1.5 sm:p-2 md:p-3 z-10">
-                                <p className="text-[8px] sm:text-[10px] md:text-sm font-bold text-white line-clamp-1 drop-shadow-lg">
-                                  {template.displayTitle || template.name || template.industry}
-                                </p>
-                                <p className="text-[6px] sm:text-[8px] md:text-[10px] text-gray-300 line-clamp-1 hidden sm:block">
-                                  {categoryMapping[template.industry] || template.industry}
-                                </p>
-                              </div>
-                              {/* 拡大ボタン（ホバー時に表示） */}
-                              {showImage && isLoaded && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    if (template.imageUrl) {
-                                      setZoomImage({
-                                        url: template.imageUrl,
-                                        title: template.displayTitle || template.name || template.industry
-                                      })
-                                    }
-                                  }}
-                                  className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-md opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                                  title="画像を拡大表示"
-                                >
-                                  <Maximize2 className="w-4 h-4 text-white" />
-                                </button>
-                              )}
-                              {selectedTemplate?.id === template.id && !isLocked && (
-                                <div className="absolute -inset-2 ring-4 ring-blue-400 rounded-xl pointer-events-none z-20 shadow-[0_0_30px_rgba(59,130,246,0.6)] animate-pulse">
-                                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-1.5 rounded-full shadow-lg">
-                                    <p className="text-xs font-bold text-white whitespace-nowrap flex items-center gap-1">
-                                      <span className="w-2 h-2 bg-white rounded-full animate-ping"></span>
-                                      選択中
-                                    </p>
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {/* ロックUI */}
-                              {isLocked && (
-                                <>
-                                  {/* 暗いオーバーレイ */}
-                                  <div className="absolute inset-0 bg-black/50 z-15 pointer-events-none" />
-                                  
-                                  {/* ロックアイコン（右上） */}
-                                  <div className={`absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-20 flex items-center gap-1 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md ${
-                                    lockType === 'login' 
-                                      ? 'bg-red-500/90' 
-                                      : lockType === 'pro'
-                                        ? 'bg-amber-500/90'
-                                        : 'bg-purple-500/90'
-                                  }`}>
-                                    <Lock className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
-                                    <span className="text-[8px] sm:text-[10px] font-bold text-white">
-                                      {lockType === 'login' ? 'ログイン' : lockType === 'pro' ? 'PRO' : 'ENTERPRISE'}
-                                    </span>
-                                  </div>
-                                  
-                                  {/* ホバー時のメッセージ */}
-                                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none">
-                                    <div className="bg-black/80 px-3 py-2 rounded-lg text-center max-w-[90%]">
-                                      <p className="text-[10px] sm:text-xs text-white font-medium">
-                                        {lockType === 'login' 
-                                          ? 'ログインすると使えます' 
-                                          : lockType === 'pro'
-                                            ? 'PROプランで解放されます'
-                                            : 'Enterpriseで解放されます'}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </>
-                              )}
-                            </motion.div>
-                          )
-                        })}
-                        
-                        {/* 「もっと見る」ボタン（残りのテンプレートがある場合のみ表示） */}
-                        {(() => {
-                          const totalCount = (totalTemplatesByCategory[categoryName] || []).length
-                          const visibleCount = visibleCounts[categoryName] || INITIAL_VISIBLE_COUNT
-                          const hasMore = totalCount > visibleCount
-                          
-                          if (!hasMore) return null
-                          
-                          return (
-                            <motion.div
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              className="flex-shrink-0 w-36 h-20 sm:w-48 sm:h-28 md:w-64 md:h-36 lg:w-80 lg:h-44 rounded-md md:rounded-lg overflow-hidden cursor-pointer mr-3 sm:mr-0"
-                            >
-                              <button
-                                onClick={() => loadMoreTemplates(categoryName)}
-                                className="w-full h-full bg-gradient-to-br from-gray-800 via-gray-900 to-black border-2 border-gray-700 hover:border-gray-500 transition-all flex flex-col items-center justify-center gap-1 sm:gap-2 md:gap-3 group"
-                              >
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-white/10 group-hover:bg-white/20 transition-all flex items-center justify-center">
-                                  <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white" />
-                                </div>
-                                <p className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
-                                  もっと見る
-                                </p>
-                                <p className="text-[8px] sm:text-[10px] md:text-xs text-gray-400">
-                                  +{totalCount - visibleCount}件
-                                </p>
-                              </button>
-                            </motion.div>
-                          )
-                        })()}
-                      </div>
+                  <div key={categoryName} className="mb-3">
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-400 px-1 sm:px-2 py-1.5 flex items-center gap-1.5">
+                      <span className="text-blue-400">▶</span> {categoryName}
+                      <span className="text-gray-600 text-[10px]">({categoryTemplates.length})</span>
+                    </h3>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-[3px] sm:gap-1">
+                      {categoryTemplates.map((template, index) => {
+                        const hasError = imageErrors.has(template.id)
+                        const isLoaded = loadedImages.has(template.id)
+                        const showImage = template.imageUrl && !hasError
+                        const lockType = getImageLockType(template, index)
+                        const isLocked = lockType !== null
 
-                      {/* 右側グラデーションオーバーレイ（スクロール可能な場合のみ表示） */}
-                      {scrollPositions[categoryName]?.canScrollRight && (
-                        <div className="absolute right-0 top-0 bottom-0 w-12 sm:w-16 md:w-20 bg-gradient-to-l from-black via-black/50 to-transparent z-10 pointer-events-none" />
-                      )}
-                      
-                      {/* 右スクロールボタン（スクロール可能な場合のみ表示） */}
-                      <button
-                        onClick={() => scroll('right', categoryName)}
-                        className={`absolute right-0 top-0 bottom-0 z-20 w-8 sm:w-10 md:w-16 bg-transparent flex items-center justify-center transition-all duration-300 ${
-                          scrollPositions[categoryName]?.canScrollRight
-                            ? 'opacity-60 sm:opacity-40 md:opacity-0 group-hover/scroll:opacity-100'
-                            : 'opacity-0 pointer-events-none'
-                        }`}
-                        aria-label="右にスクロール"
-                      >
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 md:w-12 md:h-12 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110 shadow-lg border border-white/20">
-                          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 md:w-8 md:h-8 text-white" />
-                        </div>
-                      </button>
+                        return (
+                          <motion.div
+                            key={template.id}
+                            ref={(el) => observeImage(el, template.id)}
+                            whileHover={{ scale: 1.04, zIndex: 10 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => {
+                              if (isLocked) {
+                                handleLockedImageClick(template, lockType)
+                              } else {
+                                setSelectedTemplate(template)
+                                setSelectedBanner(null)
+                                setSelectedTemplateLockType(null)
+                              }
+                            }}
+                            className={`group relative aspect-[16/10] rounded overflow-hidden cursor-pointer ${
+                              isLocked
+                                ? 'opacity-70 hover:opacity-90'
+                                : selectedTemplate?.id === template.id
+                                  ? 'ring-2 ring-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
+                                  : 'ring-1 ring-gray-800/50 hover:ring-gray-600'
+                            }`}
+                          >
+                            {showImage ? (
+                              <>
+                                {!isLoaded && (
+                                  <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                                    <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                                  </div>
+                                )}
+                                <img
+                                  src={template.imageUrl!}
+                                  alt={template.displayTitle || template.industry}
+                                  loading="lazy"
+                                  decoding="async"
+                                  onLoad={() => handleImageLoad(template.id)}
+                                  onError={() => handleImageError(template.id)}
+                                  className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                                />
+                              </>
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                                <Sparkles className="w-4 h-4 text-gray-600" />
+                              </div>
+                            )}
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 sm:p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <p className="text-[7px] sm:text-[9px] font-bold text-white line-clamp-1 drop-shadow">
+                                {template.displayTitle || template.name || template.industry}
+                              </p>
+                            </div>
+                            {selectedTemplate?.id === template.id && !isLocked && (
+                              <div className="absolute top-1 left-1 bg-blue-500 px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] font-bold text-white shadow z-20">
+                                選択中
+                              </div>
+                            )}
+                            {isLocked && (
+                              <>
+                                <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+                                <div className={`absolute top-1 right-1 flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-bold text-white z-20 ${
+                                  lockType === 'login' ? 'bg-red-500/90' : 'bg-amber-500/90'
+                                }`}>
+                                  <Lock className="w-2 h-2" />
+                                  {lockType === 'login' ? 'ログイン' : 'PRO'}
+                                </div>
+                              </>
+                            )}
+                          </motion.div>
+                        )
+                      })}
                     </div>
                   </div>
                 )
-              }).filter(Boolean)
+              })
+            ) : (
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-[3px] sm:gap-1">
+                {filteredTemplates.map((template) => {
+                  const catIndex = getCategoryIndex(template)
+                  const hasError = imageErrors.has(template.id)
+                  const isLoaded = loadedImages.has(template.id)
+                  const showImage = template.imageUrl && !hasError
+                  const lockType = getImageLockType(template, catIndex)
+                  const isLocked = lockType !== null
+
+                  return (
+                    <motion.div
+                      key={template.id}
+                      ref={(el) => observeImage(el, template.id)}
+                      whileHover={{ scale: 1.04, zIndex: 10 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => {
+                        if (isLocked) {
+                          handleLockedImageClick(template, lockType)
+                        } else {
+                          setSelectedTemplate(template)
+                          setSelectedBanner(null)
+                          setSelectedTemplateLockType(null)
+                        }
+                      }}
+                      className={`group relative aspect-[16/10] rounded overflow-hidden cursor-pointer ${
+                        isLocked
+                          ? 'opacity-70 hover:opacity-90'
+                          : selectedTemplate?.id === template.id
+                            ? 'ring-2 ring-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
+                            : 'ring-1 ring-gray-800/50 hover:ring-gray-600'
+                      }`}
+                    >
+                      {showImage ? (
+                        <>
+                          {!isLoaded && (
+                            <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                              <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                            </div>
+                          )}
+                          <img
+                            src={template.imageUrl!}
+                            alt={template.displayTitle || template.industry}
+                            loading="lazy"
+                            decoding="async"
+                            onLoad={() => handleImageLoad(template.id)}
+                            onError={() => handleImageError(template.id)}
+                            className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+                          />
+                        </>
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                          <Sparkles className="w-4 h-4 text-gray-600" />
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 sm:p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <p className="text-[7px] sm:text-[9px] font-bold text-white line-clamp-1 drop-shadow">
+                          {template.displayTitle || template.name || template.industry}
+                        </p>
+                      </div>
+                      {selectedTemplate?.id === template.id && !isLocked && (
+                        <div className="absolute top-1 left-1 bg-blue-500 px-1.5 py-0.5 rounded text-[7px] sm:text-[8px] font-bold text-white shadow z-20">
+                          選択中
+                        </div>
+                      )}
+                      {isLocked && (
+                        <>
+                          <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+                          <div className={`absolute top-1 right-1 flex items-center gap-0.5 px-1 py-0.5 rounded text-[7px] font-bold text-white z-20 ${
+                            lockType === 'login' ? 'bg-red-500/90' : 'bg-amber-500/90'
+                          }`}>
+                            <Lock className="w-2 h-2" />
+                            {lockType === 'login' ? 'ログイン' : 'PRO'}
+                          </div>
+                        </>
+                      )}
+                    </motion.div>
+                  )
+                })}
+              </div>
             )}
           </div>
 
