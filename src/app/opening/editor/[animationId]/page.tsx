@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { RotateCcw, Download, ArrowLeft, ChevronDown, ChevronUp, Sparkles } from 'lucide-react'
+import { getTemplateComponent } from '@/components/opening/templates'
 
 export default function EditorPage() {
   const params = useParams()
@@ -14,6 +15,7 @@ export default function EditorPage() {
   const [loading, setLoading] = useState(true)
   const [openSection, setOpenSection] = useState<string>('text')
   const [saving, setSaving] = useState(false)
+  const [previewKey, setPreviewKey] = useState(0)
 
   useEffect(() => {
     fetch(`/api/opening/animations/${animationId}`)
@@ -81,56 +83,51 @@ export default function EditorPage() {
 
   return (
     <div className="flex flex-col lg:flex-row min-h-[calc(100vh-4rem)]">
-      {/* Preview (70%) */}
-      <div className="flex-1 flex items-center justify-center p-8 relative" style={{ backgroundColor: config.colors?.background || '#0A0505' }}>
-        <div className="absolute top-4 left-4">
-          <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors">
+      {/* Preview (70%) - render actual template */}
+      <div className="flex-1 relative overflow-hidden" style={{ backgroundColor: config.colors?.background || '#0A0505' }}>
+        <div className="absolute top-4 left-4 z-20">
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-lg">
             <ArrowLeft className="h-4 w-4" />
             戻る
           </button>
         </div>
-        <div className="absolute top-4 right-4">
-          <button onClick={() => {}} className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+        <div className="absolute top-4 right-4 z-20">
+          <button onClick={() => setPreviewKey(k => k + 1)} className="p-2 rounded-lg bg-black/30 backdrop-blur-sm hover:bg-white/20 transition-colors">
             <RotateCcw className="h-4 w-4" />
           </button>
         </div>
 
-        <motion.div
-          className="text-center max-w-2xl"
-          key={JSON.stringify(config.texts)}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <motion.h1
-            className="text-5xl md:text-6xl font-black mb-4"
-            style={{ color: config.colors?.primary || '#EF4343' }}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            {config.texts?.headline || 'Headline'}
-          </motion.h1>
-          <motion.p
-            className="text-lg text-white/60 mb-8"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.6 }}
-            transition={{ delay: 0.5 }}
-          >
-            {config.texts?.subtext || 'Subtext'}
-          </motion.p>
-          {config.showCTA && (
-            <motion.button
-              className="px-8 py-3 rounded-xl font-bold text-white"
-              style={{ backgroundColor: config.colors?.accent || '#FFD700' }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8 }}
-            >
-              {config.texts?.cta || 'Get Started'}
-            </motion.button>
-          )}
-        </motion.div>
+        {(() => {
+          const TemplateComponent = animation?.templateId ? getTemplateComponent(animation.templateId) : null
+          if (TemplateComponent) {
+            return (
+              <TemplateComponent
+                key={previewKey}
+                colors={config.colors || { primary: '#EF4343', secondary: '#DC2626', accent: '#FFD700', background: '#0A0505', text: '#FFFFFF' }}
+                texts={config.texts || { headline: 'Headline', subtext: 'Subtext', cta: 'Get Started' }}
+                logo={config.logo || { url: null, base64: null, alt: null }}
+                timing={config.timing || { duration: 3.5, stagger: 0.2, easing: 'easeInOut' }}
+                showLogo={config.showLogo ?? false}
+                showCTA={config.showCTA ?? true}
+                isPlaying={true}
+                onComplete={() => {}}
+                containerMode="contained"
+              />
+            )
+          }
+          return (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.h1
+                className="text-5xl font-black"
+                style={{ color: config.colors?.primary || '#EF4343' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                {config.texts?.headline || 'Headline'}
+              </motion.h1>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Settings Panel (30%) */}

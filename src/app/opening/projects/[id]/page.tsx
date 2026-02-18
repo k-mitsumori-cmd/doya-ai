@@ -139,9 +139,9 @@ export default function ProjectDetailPage() {
           isOpen={!!previewId}
           onClose={() => setPreviewId(null)}
           onSelect={() => router.push(`/opening/editor/${previewAnim.id}`)}
+          templateId={previewAnim.templateId}
           templateName={previewAnim.name}
-          colors={previewAnim.config.colors}
-          texts={previewAnim.config.texts}
+          config={previewAnim.config}
         />
       )}
     </div>

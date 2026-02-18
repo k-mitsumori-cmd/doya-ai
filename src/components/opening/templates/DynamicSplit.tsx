@@ -12,9 +12,10 @@ interface TemplateProps {
   showCTA: boolean
   isPlaying: boolean
   onComplete?: () => void
+  containerMode?: 'fullscreen' | 'contained'
 }
 
-export default function DynamicSplit({ colors, texts, logo, timing, showLogo, showCTA, isPlaying, onComplete }: TemplateProps) {
+export default function DynamicSplit({ colors, texts, logo, timing, showLogo, showCTA, isPlaying, onComplete, containerMode = 'fullscreen' }: TemplateProps) {
   useEffect(() => {
     if (isPlaying) {
       const t = setTimeout(() => onComplete?.(), timing.duration * 1000)
@@ -26,7 +27,7 @@ export default function DynamicSplit({ colors, texts, logo, timing, showLogo, sh
 
   return (
     <motion.div
-      className="fixed inset-0 flex items-center justify-center z-50 overflow-hidden"
+      className={`${containerMode === 'contained' ? 'absolute inset-0' : 'fixed inset-0 z-50'} flex items-center justify-center overflow-hidden`}
       style={{ backgroundColor: colors.background }}
     >
       {/* Left panel */}

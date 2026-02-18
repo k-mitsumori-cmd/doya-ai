@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Play, Lock } from 'lucide-react'
+import MiniPreview from './MiniPreview'
 
 interface AnimationCardProps {
   templateId: string
@@ -16,6 +17,7 @@ interface AnimationCardProps {
 }
 
 export default function AnimationCard({
+  templateId,
   name,
   nameEn,
   description,
@@ -36,23 +38,9 @@ export default function AnimationCard({
     >
       {/* Preview area */}
       <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
-        {/* Mini animation preview */}
-        <div
-          className={`absolute inset-0 ${isLocked ? 'blur-[4px] grayscale-[0.5]' : ''}`}
-          style={{
-            background: `linear-gradient(135deg, ${colors.primary}20, ${colors.secondary}20, ${colors.background})`,
-          }}
-        >
-          <div className="absolute inset-0 flex items-center justify-center">
-            <motion.div
-              className="text-2xl font-bold"
-              style={{ color: colors.primary }}
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              {nameEn}
-            </motion.div>
-          </div>
+        {/* Template-specific mini animation preview */}
+        <div className={`absolute inset-0 ${isLocked ? 'blur-[4px] grayscale-[0.5]' : ''}`}>
+          <MiniPreview templateId={templateId} colors={colors} nameEn={nameEn} />
         </div>
 
         {/* Hover overlay */}

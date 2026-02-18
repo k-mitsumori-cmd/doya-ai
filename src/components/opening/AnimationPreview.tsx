@@ -3,40 +3,55 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Pause, X, RotateCcw, Check } from 'lucide-react'
+import { getTemplateComponent } from './templates'
 
 interface AnimationPreviewProps {
   isOpen: boolean
   onClose: () => void
   onSelect: () => void
+  templateId: string
   templateName: string
-  colors: { primary: string; secondary: string; accent: string; background: string }
-  texts: { headline: string; subtext: string }
+  config: {
+    colors: { primary: string; secondary: string; accent: string; background: string; text: string }
+    texts: { headline: string; subtext: string; cta: string }
+    logo: { url: string | null; base64: string | null; alt: string | null }
+    timing: { duration: number; stagger: number; easing: string }
+    showLogo: boolean
+    showCTA: boolean
+  }
 }
 
 export default function AnimationPreview({
   isOpen,
   onClose,
   onSelect,
+  templateId,
   templateName,
-  colors,
-  texts,
+  config,
 }: AnimationPreviewProps) {
   const [isPlaying, setIsPlaying] = useState(true)
   const [speed, setSpeed] = useState(1)
+  const [playKey, setPlayKey] = useState(0)
 
   const replay = useCallback(() => {
     setIsPlaying(false)
-    setTimeout(() => setIsPlaying(true), 100)
+    setTimeout(() => {
+      setPlayKey(k => k + 1)
+      setIsPlaying(true)
+    }, 100)
   }, [])
 
   useEffect(() => {
     if (isOpen) {
       setIsPlaying(true)
       setSpeed(1)
+      setPlayKey(k => k + 1)
     }
   }, [isOpen])
 
   if (!isOpen) return null
+
+  const TemplateComponent = getTemplateComponent(templateId)
 
   return (
     <AnimatePresence>
@@ -50,59 +65,46 @@ export default function AnimationPreview({
         <div className="absolute inset-0 bg-black" />
 
         {/* Header */}
-        <div className="relative z-10 flex items-center justify-between px-6 py-4">
+        <div className="relative z-[110] flex items-center justify-between px-6 py-4">
           <h2 className="text-white font-bold">{templateName}</h2>
           <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Animation Canvas */}
-        <div className="relative z-10 flex-1 flex items-center justify-center">
-          {/* Ambient glow */}
-          <div
-            className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full blur-[120px] opacity-5"
-            style={{ backgroundColor: colors.primary }}
-          />
-
-          {isPlaying ? (
-            <motion.div
-              className="text-center"
-              key={isPlaying ? 'playing' : 'stopped'}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.8 / speed }}
-            >
-              <motion.h1
-                className="text-6xl md:text-8xl font-black mb-4"
-                style={{ color: colors.primary }}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 / speed, duration: 0.8 / speed }}
+        {/* Animation Canvas - render actual template */}
+        <div className="relative flex-1">
+          {TemplateComponent && isPlaying ? (
+            <TemplateComponent
+              key={playKey}
+              colors={config.colors}
+              texts={config.texts}
+              logo={config.logo}
+              timing={{
+                duration: config.timing.duration / speed,
+                stagger: config.timing.stagger / speed,
+                easing: config.timing.easing,
+              }}
+              showLogo={config.showLogo}
+              showCTA={config.showCTA}
+              isPlaying={true}
+              onComplete={() => setIsPlaying(false)}
+              containerMode="contained"
+            />
+          ) : !isPlaying ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <button
+                onClick={replay}
+                className="flex h-24 w-24 items-center justify-center rounded-full bg-[#EF4343]/90 text-white shadow-[0_0_20px_rgba(239,67,67,0.4)] hover:shadow-[0_0_30px_rgba(239,67,67,0.6)] transition-shadow"
               >
-                {texts.headline}
-              </motion.h1>
-              <motion.p
-                className="text-xl md:text-2xl text-white/60"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.6 }}
-                transition={{ delay: 0.8 / speed, duration: 0.6 / speed }}
-              >
-                {texts.subtext}
-              </motion.p>
-            </motion.div>
-          ) : (
-            <button
-              onClick={replay}
-              className="flex h-24 w-24 items-center justify-center rounded-full bg-[#EF4343]/90 text-white shadow-[0_0_20px_rgba(239,67,67,0.4)] hover:shadow-[0_0_30px_rgba(239,67,67,0.6)] transition-shadow"
-            >
-              <Play className="h-12 w-12 ml-1" />
-            </button>
-          )}
+                <Play className="h-12 w-12 ml-1" />
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {/* Control Bar */}
-        <div className="relative z-10 px-6 pb-6">
+        <div className="relative z-[110] px-6 pb-6">
           <div className="mx-auto max-w-2xl rounded-2xl border border-[#EF4343]/20 bg-[#221010]/70 backdrop-blur-[20px] px-6 py-4 shadow-2xl">
             <div className="flex items-center justify-between gap-4">
               {/* Playback controls */}

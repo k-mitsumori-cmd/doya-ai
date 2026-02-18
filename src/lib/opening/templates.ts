@@ -2,6 +2,8 @@
 // ドヤオープニングAI - テンプレート定義
 // ============================================
 
+import { lighten, darken, saturate, desaturate, toWarmGold } from './color-utils'
+
 export interface AnimationConfig {
   colors: {
     primary: string
@@ -119,12 +121,79 @@ export function getDefaultConfig(
   siteTexts: { headline: string; subtext: string; cta: string }
 ): AnimationConfig {
   return {
-    colors: siteColors,
+    colors: generateColorVariation(template.category, siteColors),
     logo: siteLogo,
     texts: siteTexts,
     timing: { ...template.defaultTiming },
     showLogo: !!siteLogo.url || !!siteLogo.base64,
     showCTA: true,
     backgroundType: template.defaultBackgroundType,
+  }
+}
+
+/**
+ * テンプレートカテゴリに応じた色のバリエーション生成
+ */
+function generateColorVariation(
+  category: TemplateDefinition['category'],
+  base: AnimationConfig['colors']
+): AnimationConfig['colors'] {
+  switch (category) {
+    case 'minimal':
+      // 余白・明るさ重視：白系背景にprimary色テキスト
+      return {
+        primary: base.primary,
+        secondary: lighten(base.secondary, 0.3),
+        accent: base.accent,
+        background: lighten(base.background, 0.85),
+        text: darken(base.primary, 0.2),
+      }
+    case 'dynamic':
+      // 高コントラスト：暗い背景に鮮やかな色
+      return {
+        primary: saturate(base.primary, 1.2),
+        secondary: saturate(base.secondary, 1.1),
+        accent: saturate(base.accent, 1.3),
+        background: darken(base.background, 0.4),
+        text: '#FFFFFF',
+      }
+    case 'cinematic':
+      // 映画的：真っ黒背景にprimaryが光る
+      return {
+        primary: base.primary,
+        secondary: darken(base.secondary, 0.3),
+        accent: lighten(base.accent, 0.2),
+        background: '#000000',
+        text: '#FFFFFF',
+      }
+    case 'playful':
+      // 遊び心：高彩度、accentを強調
+      return {
+        primary: saturate(base.primary, 1.4),
+        secondary: saturate(base.secondary, 1.3),
+        accent: saturate(base.accent, 1.5),
+        background: darken(base.background, 0.25),
+        text: '#FFFFFF',
+      }
+    case 'corporate':
+      // ビジネス：落ち着いた配色、紺系背景
+      return {
+        primary: desaturate(base.primary, 0.25),
+        secondary: desaturate(base.secondary, 0.3),
+        accent: base.accent,
+        background: '#0A1628',
+        text: '#E8ECF0',
+      }
+    case 'luxury':
+      // 高級感：深い背景、ゴールドaccent
+      return {
+        primary: base.primary,
+        secondary: darken(base.secondary, 0.2),
+        accent: toWarmGold(base.accent),
+        background: '#0A0508',
+        text: '#F0E6D8',
+      }
+    default:
+      return base
   }
 }

@@ -12,9 +12,10 @@ interface TemplateProps {
   showCTA: boolean
   isPlaying: boolean
   onComplete?: () => void
+  containerMode?: 'fullscreen' | 'contained'
 }
 
-export default function ElegantFade({ colors, texts, logo, timing, showLogo, showCTA, isPlaying, onComplete }: TemplateProps) {
+export default function ElegantFade({ colors, texts, logo, timing, showLogo, showCTA, isPlaying, onComplete, containerMode = 'fullscreen' }: TemplateProps) {
   useEffect(() => {
     if (isPlaying) {
       const t = setTimeout(() => onComplete?.(), timing.duration * 1000)
@@ -26,7 +27,7 @@ export default function ElegantFade({ colors, texts, logo, timing, showLogo, sho
 
   return (
     <motion.div
-      className="fixed inset-0 flex flex-col items-center justify-center z-50"
+      className={`${containerMode === 'contained' ? 'absolute inset-0' : 'fixed inset-0 z-50'} flex flex-col items-center justify-center`}
       style={{ backgroundColor: colors.background }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
