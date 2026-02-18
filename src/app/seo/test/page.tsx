@@ -363,7 +363,6 @@ export default function SeoTestPage() {
                                 onLoad={(e) => { (e.target as HTMLImageElement).classList.replace('opacity-0', 'opacity-100') }}
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                               />
-                              <span className="text-3xl sm:text-4xl relative z-10 drop-shadow-sm">{tmpl.icon}</span>
                               <span className={`absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full text-[9px] font-black text-white ${colors.badge}`}>
                                 {tmpl.recommendedChars >= 15000 ? '長文' : tmpl.recommendedChars >= 10000 ? '標準' : '短文'}
                               </span>
