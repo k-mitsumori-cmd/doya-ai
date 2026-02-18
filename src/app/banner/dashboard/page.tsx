@@ -183,8 +183,8 @@ function BannerTestPageInner() {
   const [isFormVisible, setIsFormVisible] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
 
-  // ギャラリーの開閉状態
-  const [isGalleryCollapsed, setIsGalleryCollapsed] = useState(false)
+  // ヒーロー画像の縮小状態（ギャラリーを広く表示）
+  const [isHeroCollapsed, setIsHeroCollapsed] = useState(false)
   
   // トライアル判定（ログイン後1時間）
   useEffect(() => {
@@ -1073,8 +1073,8 @@ function BannerTestPageInner() {
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- 固定表示、フォーム表示時は縮小 */}
           <div
             className={`fixed ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} left-0 md:left-[240px] right-0 z-20 overflow-hidden transition-all duration-500 ease-in-out ${
-              isGalleryCollapsed
-                ? 'h-[85vh] sm:h-[88vh] md:h-[90vh] lg:h-[92vh]'
+              isHeroCollapsed
+                ? 'h-[8vh] sm:h-[8vh] md:h-[8vh] lg:h-[8vh]'
                 : isFormVisible
                   ? 'h-[15vh] sm:h-[18vh] md:h-[20vh] lg:h-[22vh]'
                   : 'h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh]'
@@ -1289,13 +1289,13 @@ function BannerTestPageInner() {
               </div>
             </div>
 
-            {/* ギャラリー開閉トグルボタン（右下に配置） */}
+            {/* ヒーロー縮小/展開トグルボタン（右下に配置） */}
             <button
-              onClick={() => setIsGalleryCollapsed(!isGalleryCollapsed)}
+              onClick={() => setIsHeroCollapsed(!isHeroCollapsed)}
               className="absolute bottom-2 sm:bottom-4 right-3 sm:right-6 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg border border-white/30 group/toggle"
-              title={isGalleryCollapsed ? 'ギャラリーを表示' : 'ギャラリーを隠す'}
+              title={isHeroCollapsed ? 'バナーを表示' : 'ギャラリーを広げる'}
             >
-              {isGalleryCollapsed ? (
+              {isHeroCollapsed ? (
                 <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover/toggle:text-white transition-colors" />
               ) : (
                 <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover/toggle:text-white transition-colors" />
@@ -1304,22 +1304,13 @@ function BannerTestPageInner() {
           </div>
 
           {/* テンプレート一覧（Netflix風の横スクロール） - 固定ヒーローの下にパディング、フォーム表示時は縮小 */}
-          <div
-            className={`w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 relative z-10 bg-black transition-all duration-500 ease-in-out ${
-              isGalleryCollapsed
-                ? 'max-h-0 overflow-hidden opacity-0 pb-0'
-                : 'max-h-[5000px] opacity-100 pb-6 sm:pb-8 space-y-4 sm:space-y-6 md:space-y-10'
-            } ${
-              isFormVisible
-                ? 'pt-[17vh] sm:pt-[20vh] md:pt-[22vh] lg:pt-[24vh]'
-                : 'pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh]'
-            }`}
-            style={{
-              transitionProperty: 'max-height, opacity, padding-bottom',
-              transitionDuration: '500ms',
-              transitionTimingFunction: 'ease-in-out',
-            }}
-          >
+          <div className={`w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8 transition-all duration-500 ease-in-out ${
+              isHeroCollapsed
+                ? 'pt-[10vh] sm:pt-[10vh] md:pt-[10vh] lg:pt-[10vh]'
+                : isFormVisible
+                  ? 'pt-[17vh] sm:pt-[20vh] md:pt-[22vh] lg:pt-[24vh]'
+                  : 'pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh]'
+          }`}>
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
