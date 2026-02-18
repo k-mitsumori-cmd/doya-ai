@@ -266,6 +266,36 @@ export default function SeoTestPage() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25 }}
             >
+              {/* テンプレート説明 */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 mb-6 sm:mb-8">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                  <div className="flex-1">
+                    <h2 className="text-base sm:text-lg font-black text-slate-900 mb-1">
+                      まずは「記事の型」を選びましょう
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-500">
+                      下の記事プランはすべて<span className="font-bold text-blue-600">テンプレート</span>です。選んだ後にキーワードや内容を自由にカスタマイズできます。
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400 flex-shrink-0">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full">
+                      <Search className="w-3 h-3" />
+                      型を選ぶ
+                    </span>
+                    <ArrowRight className="w-3 h-3" />
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full">
+                      <FileText className="w-3 h-3" />
+                      カスタマイズ
+                    </span>
+                    <ArrowRight className="w-3 h-3" />
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full">
+                      <Zap className="w-3 h-3" />
+                      AI生成
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               {/* カテゴリタブ */}
               <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8 overflow-x-auto pb-1">
                 <button
@@ -326,7 +356,7 @@ export default function SeoTestPage() {
                             <div className={`h-20 sm:h-24 ${colors.bg} relative flex items-center justify-center overflow-hidden`}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={`/api/seo/test/image/template/${tmpl.id}?v=2`}
+                                src={`/api/seo/test/image/template/${tmpl.id}?v=3`}
                                 alt=""
                                 className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
                                 loading="lazy"
@@ -355,6 +385,12 @@ export default function SeoTestPage() {
                                   {tmpl.recommendedChars.toLocaleString()}字
                                 </span>
                               </div>
+                              <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
+                                <span className="text-[9px] text-slate-400 font-bold">テンプレート</span>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-black text-blue-600 group-hover:text-blue-700">
+                                  この型を使う <ArrowRight className="w-3 h-3" />
+                                </span>
+                              </div>
                             </div>
                           </motion.button>
                         ))}
@@ -378,7 +414,10 @@ export default function SeoTestPage() {
                   {selectedTemplate.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">選択中の記事プラン</p>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">選択中のテンプレート</p>
+                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 text-[9px] font-black rounded">カスタマイズ可能</span>
+                  </div>
                   <h3 className="text-sm sm:text-base font-black text-slate-900 truncate">{selectedTemplate.title}</h3>
                   <p className="text-xs text-slate-500 mt-0.5">{selectedTemplate.description}</p>
                 </div>
