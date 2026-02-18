@@ -43,6 +43,10 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
       model: GEMINI_IMAGE_MODEL_DEFAULT,
     })
 
+    if (!img?.dataBase64) {
+      return NextResponse.json({ success: false, error: '図解画像の生成に失敗しました（空のレスポンス）' }, { status: 500 })
+    }
+
     const filename = `seo_${articleId}_${Date.now()}_diagram.png`
     const saved = await saveBase64ToFile({ base64: img.dataBase64, filename, subdir: 'images' })
 

@@ -806,6 +806,17 @@ function SeoArticleInner() {
     }
   }, [load])
 
+  // 記事が完成済み（DONE/ERROR/EXPORTED）になったらポーリングを停止
+  useEffect(() => {
+    const status = String((article as any)?.status || '').toUpperCase()
+    if (status === 'DONE' || status === 'ERROR' || status === 'EXPORTED') {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+        pollingIntervalRef.current = null
+      }
+    }
+  }, [(article as any)?.status])
+
   useEffect(() => {
     setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
   }, [])

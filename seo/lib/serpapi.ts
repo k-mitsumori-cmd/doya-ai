@@ -63,7 +63,17 @@ export async function serpapiSearchGoogle(args: {
   url.searchParams.set('gl', gl)
   url.searchParams.set('safe', 'active')
 
-  const res = await fetch(url.toString(), { method: 'GET', cache: 'no-store' as any })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 30_000)
+  let res: Response
+  try {
+    res = await fetch(url.toString(), { method: 'GET', cache: 'no-store' as any, signal: controller.signal })
+  } catch (e: any) {
+    clearTimeout(timer)
+    if (e?.name === 'AbortError') throw new Error('SerpAPI request timed out (30s)')
+    throw e
+  }
+  clearTimeout(timer)
   const json = (await res.json().catch(() => ({}))) as SerpApiResponse
   if (!res.ok) {
     throw new Error(`SerpAPI error: ${res.status} ${JSON.stringify(json).slice(0, 300)}`)

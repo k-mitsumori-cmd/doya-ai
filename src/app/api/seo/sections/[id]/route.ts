@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 // PUT: セクションの内容を直接編集
-export async function PUT(req: NextRequest, ctx: { params: { id: string } }) {
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   try {
-    const id = ctx.params.id
+    const params = 'then' in ctx.params ? await ctx.params : ctx.params
+    const id = params.id
     const { content } = await req.json()
 
     const section = await prisma.seoSection.findUnique({ where: { id } })

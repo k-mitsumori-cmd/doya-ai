@@ -54,6 +54,7 @@ export default function SeoRichEditPage() {
 
   // 自動保存タイマー
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const saveRef = useRef<(isAutoSave?: boolean) => Promise<void>>(async () => {})
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -85,14 +86,14 @@ export default function SeoRichEditPage() {
     setHasUnsaved(content !== originalContent)
   }, [content, originalContent])
 
-  // 自動保存（30秒ごと）
+  // 自動保存（30秒ごと） — saveRefを使ってstale closureを回避
   useEffect(() => {
     if (autoSaveTimerRef.current) {
       clearInterval(autoSaveTimerRef.current)
     }
     autoSaveTimerRef.current = setInterval(() => {
       if (hasUnsaved && !saving) {
-        save(true)
+        saveRef.current(true)
       }
     }, 30000)
     return () => {
@@ -141,6 +142,8 @@ export default function SeoRichEditPage() {
       setSaving(false)
     }
   }
+  // saveRef を常に最新のsaveに更新（自動保存のstale closure防止）
+  saveRef.current = save
 
   // ツールバーアクション（Markdown記法挿入）
   const insertMarkdown = (prefix: string, suffix: string = '') => {
@@ -172,7 +175,10 @@ export default function SeoRichEditPage() {
       .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-gray-700">$1</li>')
       .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal text-gray-700">$1</li>')
       .replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-gray-300 pl-4 py-2 my-4 text-gray-600 italic bg-gray-50 rounded-r-lg">$1</blockquote>')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 underline hover:text-blue-800" target="_blank" rel="noopener">$1</a>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text, href) => {
+        const safeHref = /^https?:\/\//i.test(href) ? href.replace(/"/g, '&quot;') : '#'
+        return `<a href="${safeHref}" class="text-blue-600 underline hover:text-blue-800" target="_blank" rel="noopener">${text}</a>`
+      })
       .replace(/\n\n/g, '</p><p class="text-gray-700 leading-relaxed my-4">')
       .replace(/\n/g, '<br/>')
     return `<p class="text-gray-700 leading-relaxed my-4">${html}</p>`

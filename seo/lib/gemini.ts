@@ -1,5 +1,50 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
+// Claude API用のヘルパー関数
+async function generateTextWithClaude(prompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY環境変数が設定されていません。Claude APIを使用するにはANTHROPIC_API_KEYが必要です。')
+  }
+
+  // Haiku 4.5はSonnet 4.5の1/3のコストで十分な品質。SEO記事生成に最適。
+  // SEO_CLAUDE_MODEL で上書き可能（例: claude-sonnet-4-5-20250929, claude-opus-4-6）
+  const model = process.env.SEO_CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: options?.maxTokens ?? 64000,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      system: 'あなたはプロフェッショナルなコンテンツ作成アシスタントです。日本語で高品質なコンテンツを生成してください。',
+      temperature: options?.temperature ?? 0.4,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Claude API Error: ${response.status} - ${errorText.substring(0, 500)}`)
+  }
+
+  const json = await response.json()
+  const content = json?.content
+  if (Array.isArray(content)) {
+    return content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('')
+  }
+  return ''
+}
+
 // OpenAI API用のヘルパー関数
 async function generateTextWithChatGPT(prompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
   const openaiApiKey = process.env.OPENAI_API_KEY
@@ -7,8 +52,8 @@ async function generateTextWithChatGPT(prompt: string, options?: { temperature?:
     throw new Error('OPENAI_API_KEY環境変数が設定されていません。ChatGPTフォールバックを使用するにはOPENAI_API_KEYが必要です。')
   }
 
-  const model = process.env.CHATGPT_FALLBACK_MODEL || 'gpt-4o' // デフォルトはgpt-4o、環境変数でchatgpt-5.2-proなどを指定可能
-  
+  const model = process.env.CHATGPT_FALLBACK_MODEL || 'gpt-4o'
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -29,6 +74,7 @@ async function generateTextWithChatGPT(prompt: string, options?: { temperature?:
       ],
       temperature: options?.temperature ?? 0.4,
       max_tokens: options?.maxTokens ?? 16384,
+      // GPT-4oは最大16384トークン出力。それ以上はgpt-4o-2024-11-20等が必要
     }),
   })
 
@@ -41,13 +87,44 @@ async function generateTextWithChatGPT(prompt: string, options?: { temperature?:
   return json.choices?.[0]?.message?.content || ''
 }
 
-// SEO用途は Gemini 3 系（品質要件）
-// - テキスト: Gemini 3 Pro Preview（公式モデルID: gemini-3-pro-preview）
-//   - 環境変数 SEO_GEMINI_TEXT_MODEL で gemini-3-pro-preview または gemini-3-flash-preview を指定可能
+// 外部LLMフォールバック（Claude → ChatGPT の順で試行）
+async function generateTextWithExternalLLM(prompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
+  // Claude APIが設定されていれば優先
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      const result = await generateTextWithClaude(prompt, options)
+      if (result) {
+        console.log('[LLM] Successfully used Claude API')
+        return result
+      }
+    } catch (e: any) {
+      console.warn('[LLM] Claude API failed:', e?.message?.substring(0, 200))
+    }
+  }
+
+  // ChatGPTにフォールバック
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const result = await generateTextWithChatGPT(prompt, options)
+      if (result) {
+        console.log('[LLM] Successfully used ChatGPT fallback')
+        return result
+      }
+    } catch (e: any) {
+      console.warn('[LLM] ChatGPT fallback failed:', e?.message?.substring(0, 200))
+    }
+  }
+
+  throw new Error('外部LLM（Claude/ChatGPT）がすべて失敗しました。ANTHROPIC_API_KEY または OPENAI_API_KEY を設定してください。')
+}
+
+// SEO用途のデフォルトモデル
+// - テキスト: gemini-2.5-flash（高速・安定・高品質）
+//   - 環境変数 SEO_GEMINI_TEXT_MODEL で任意のモデルを指定可能
 //   - 未対応環境では自動でChatGPT APIにフォールバック
-// - 画像(図解/サムネ): Nano Banana Pro（運用上の事故防止）
+// - 画像(図解/サムネ): nano-banana-pro-preview（Gemini ネイティブ画像生成）
 export const GEMINI_TEXT_MODEL_DEFAULT =
-  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-3-pro-preview'
+  process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-2.5-flash'
 export const GEMINI_IMAGE_MODEL_DEFAULT =
   process.env.SEO_GEMINI_IMAGE_MODEL || process.env.SEO_GEMINI_NANO_BANANA_MODEL || 'nano-banana-pro-preview'
 
@@ -101,8 +178,12 @@ function isNanoBananaFamily(modelId: string): boolean {
     lower === 'nanobanana-pro' ||
     lower === 'nano_banana_pro' ||
     lower === 'nano-banana'
-  const isGemini3ImagePreview = lower === 'gemini-3-pro-image-preview'
-  return lower.includes('banana') || isAlias || isGemini3ImagePreview
+  const isGeminiImageModel =
+    lower === 'gemini-3-pro-image-preview' ||
+    lower === 'gemini-2.5-flash-image' ||
+    lower === 'gemini-2.5-flash-preview-image' ||
+    lower === 'gemini-2.0-flash-exp'
+  return lower.includes('banana') || lower.includes('image') || isAlias || isGeminiImageModel
 }
 
 function nanoBananaModelCandidates(configured: string): string[] {
@@ -113,16 +194,12 @@ function nanoBananaModelCandidates(configured: string): string[] {
   // 設定値そのもの
   if (m) out.push(m)
 
-  // エイリアスの自動解決
-  // NOTE: v1beta では nano-banana-pro が存在しないことがあるため、preview系へ寄せる
-  if (lower === 'nano-banana-pro') {
-    out.unshift('nano-banana-pro-preview')
-  }
+  // nano-banana-pro-preview を最優先で使用
+  if (!out.includes('nano-banana-pro-preview')) out.unshift('nano-banana-pro-preview')
 
-  // Nano Banana Pro系の安全なフォールバック
-  // banner側でも利用している候補（generateContent対応）
-  if (!out.includes('nano-banana-pro-preview')) out.push('nano-banana-pro-preview')
+  // フォールバック候補
   if (!out.includes('gemini-3-pro-image-preview')) out.push('gemini-3-pro-image-preview')
+  if (!out.includes('gemini-2.5-flash-image')) out.push('gemini-2.5-flash-image')
 
   // 重複排除
   return Array.from(new Set(out.filter(Boolean)))
@@ -267,38 +344,40 @@ function closeIncompleteJson(input: string): string {
 }
 
 // 空のテキストやエラー時のフォールバックモデル（順番に試行）
+// NOTE: gemini-2.0-flash は 2026-03-31 廃止予定のため最後に配置
 const FALLBACK_MODELS: string[] = [
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
   'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-pro',
 ]
 
 // レート制限(429)やサーバーエラー(5xx)時にリトライ
+// 404はリトライせず即返し（モデル未提供は待っても変わらない）
 async function fetchWithRetry(
   endpoint: string,
   options: RequestInit,
-  maxRetries = 3,
-  baseDelay = 2000
+  maxRetries = 2,
+  baseDelay = 1500
 ): Promise<Response> {
   let lastError: Error | null = null
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const res = await fetch(endpoint, options)
-      
-      // 成功または4xx(429以外)はそのまま返す
+
+      // 成功または4xx(429以外)はそのまま返す（404含む = リトライ不要）
       if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) {
         return res
       }
-      
+
       // 429またはサーバーエラーはリトライ
       if (res.status === 429 || res.status >= 500) {
-        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 1000
+        const delay = baseDelay * Math.pow(2, attempt) + Math.random() * 500
         console.log(`[Gemini] Rate limited or server error (${res.status}), retrying in ${Math.round(delay)}ms... (attempt ${attempt + 1}/${maxRetries})`)
         await new Promise(r => setTimeout(r, delay))
         lastError = new Error(`Gemini API Error: ${res.status}`)
         continue
       }
-      
+
       return res
     } catch (e: any) {
       lastError = e
@@ -310,16 +389,27 @@ async function fetchWithRetry(
 }
 
 export async function geminiGenerateText(req: GenerateContentRequest): Promise<string> {
+  // SEO_PRIMARY_LLM=claude の場合、Geminiを経由せず直接Claude APIを使用
+  const primaryLlm = (process.env.SEO_PRIMARY_LLM || '').trim().toLowerCase()
+  if (primaryLlm === 'claude' && process.env.ANTHROPIC_API_KEY) {
+    const promptText = joinPartsText(req.parts)
+    if (promptText) {
+      try {
+        return await generateTextWithClaude(promptText, {
+          temperature: req.generationConfig?.temperature ?? 0.4,
+          maxTokens: Math.min(req.generationConfig?.maxOutputTokens ?? 65536, 64000),
+        })
+      } catch (e: any) {
+        console.warn('[LLM] Claude primary failed, falling back to Gemini:', e?.message?.substring(0, 200))
+      }
+    }
+  }
+
   const apiKey = getApiKey()
-  
+
   // 試行するモデルのリストを作成
   const modelsToTry = [req.model, ...FALLBACK_MODELS.filter(m => m !== req.model)]
-  
-  // gemini-3-proの利用可能性をログに記録（初回のみ）
-  if (req.model === 'gemini-3-pro') {
-    console.log('[Gemini] Attempting to use gemini-3-pro model...')
-  }
-  
+
   for (const model of modelsToTry) {
     const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
     
@@ -347,15 +437,9 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
 
         // 404(モデル未提供)やレート制限の場合は次のモデルを試す
         if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
-          if (isNotFound && (model === 'gemini-3-pro-preview' || model === 'gemini-3-pro')) {
-            console.log(
-              `[Gemini] ⚠️  ${model} is NOT_FOUND (404) - Model is not available. Falling back to ChatGPT...`
-            )
-          } else {
-            console.log(
-              `[Gemini] Model ${model} failed (${res.status}${isNotFound ? ', NOT_FOUND' : ''}), trying next model...`
-            )
-          }
+          console.log(
+            `[Gemini] Model ${model} failed (${res.status}${isNotFound ? ', NOT_FOUND' : ''}), trying next model...`
+          )
           continue
         }
         throw new Error(`Gemini API Error: ${res.status} - ${t.substring(0, 500)}`)
@@ -379,9 +463,7 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
         break // ループを抜けてChatGPTフォールバックへ
       }
       
-      if (model === 'gemini-3-pro-preview' || model === 'gemini-3-pro') {
-        console.log(`[Gemini] ✅ ${model} is working correctly`)
-      } else if (model !== req.model) {
+      if (model !== req.model) {
         console.log(`[Gemini] Successfully used fallback model: ${model}`)
       }
       return text
@@ -399,22 +481,20 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
     }
   }
   
-  // すべてのGeminiモデルが失敗した場合、ChatGPTにフォールバック
+  // すべてのGeminiモデルが失敗した場合、外部LLM（Claude/ChatGPT）にフォールバック
   const promptText = joinPartsText(req.parts)
   if (!promptText) {
-    throw new Error('All Gemini models exhausted and no prompt text available for ChatGPT fallback')
+    throw new Error('All Gemini models exhausted and no prompt text available for LLM fallback')
   }
-  
-  console.log('[Gemini] All models failed, falling back to ChatGPT...')
+
+  console.log('[Gemini] All models failed, falling back to external LLM (Claude/ChatGPT)...')
   try {
-    const chatgptResult = await generateTextWithChatGPT(promptText, {
+    return await generateTextWithExternalLLM(promptText, {
       temperature: req.generationConfig?.temperature ?? 0.4,
-      maxTokens: Math.min(Math.floor((req.generationConfig?.maxOutputTokens ?? 65536) / 4), 16384), // OpenAIはトークン単位なので概算変換
+      maxTokens: Math.min(req.generationConfig?.maxOutputTokens ?? 65536, 64000),
     })
-    console.log('[Gemini] Successfully used ChatGPT fallback')
-    return chatgptResult
-  } catch (chatgptError: any) {
-    throw new Error(`All Gemini models exhausted and ChatGPT fallback failed: ${chatgptError?.message || 'unknown error'}`)
+  } catch (fallbackError: any) {
+    throw new Error(`All Gemini models exhausted and external LLM fallback failed: ${fallbackError?.message || 'unknown error'}`)
   }
 }
 
@@ -497,11 +577,11 @@ export async function geminiGenerateImagePng(args: {
   const apiKey = getApiKey()
   const configured = args.model ?? GEMINI_IMAGE_MODEL_DEFAULT
 
-  // Nano Banana Pro only（運用上の事故防止）
+  // 画像生成対応モデルのみ許可（運用上の事故防止）
   if (!isNanoBananaFamily(configured)) {
     throw new Error(
-      `SEO画像生成モデル（${configured}）は Nano Banana Pro 系ではありません。` +
-        ` 環境変数 SEO_GEMINI_IMAGE_MODEL を 'nano-banana-pro-preview' または 'gemini-3-pro-image-preview' に設定してください。`
+      `SEO画像生成モデル（${configured}）は画像生成対応モデルではありません。` +
+        ` 環境変数 SEO_GEMINI_IMAGE_MODEL を 'nano-banana-pro-preview' に設定してください。`
     )
   }
 
@@ -522,8 +602,8 @@ export async function geminiGenerateImagePng(args: {
       body: JSON.stringify({
         contents: [{ parts: [{ text: args.prompt }] }],
         generationConfig: {
-          // 画像のみ要求（TEXT混在だと画像が返らないケースがある）
-          responseModalities: ['IMAGE'],
+          // Gemini ネイティブ画像生成は TEXT + IMAGE の両方が必要
+          responseModalities: ['TEXT', 'IMAGE'],
           imageConfig: {
             aspectRatio: args.aspectRatio ?? '16:9',
             imageSize: args.imageSize ?? '2K',
@@ -572,7 +652,7 @@ export async function geminiGenerateImagePng(args: {
   throw (
     lastErr ||
     new Error(
-      `Gemini 画像生成に失敗しました。SEO_GEMINI_IMAGE_MODEL を 'nano-banana-pro-preview' または 'gemini-3-pro-image-preview' に設定してください。`
+      `Gemini 画像生成に失敗しました。SEO_GEMINI_IMAGE_MODEL を 'gemini-2.5-flash-image' または 'gemini-3-pro-image-preview' に設定してください。`
     )
   )
 }

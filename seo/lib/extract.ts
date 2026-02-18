@@ -11,9 +11,35 @@ export type ExtractedPage = {
 }
 
 /**
+ * SSRF対策: プライベートIP/localhost/非HTTPプロトコルをブロック
+ */
+function isUnsafeUrl(urlStr: string): boolean {
+  try {
+    const u = new URL(urlStr)
+    // http/httpsのみ許可
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return true
+    const host = u.hostname.toLowerCase()
+    // localhost
+    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '0.0.0.0') return true
+    // プライベートIPレンジ
+    if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|169\.254\.)/.test(host)) return true
+    // AWS/GCPメタデータ
+    if (host === '169.254.169.254' || host === 'metadata.google.internal') return true
+    return false
+  } catch {
+    return true
+  }
+}
+
+/**
  * URLからHTMLを取得し、テキストとメタデータを抽出する
  */
 export async function fetchAndExtract(url: string): Promise<ExtractedPage> {
+  // SSRF対策
+  if (isUnsafeUrl(url)) {
+    return { url, title: '', description: '', text: '', headings: [] }
+  }
+
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30_000)
 

@@ -7,10 +7,11 @@ import { getGuestIdFromRequest } from '@/lib/seoAccess'
 
 export const runtime = 'nodejs'
 
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   try {
     await ensureSeoSchema()
-    const id = ctx.params.id
+    const params = 'then' in ctx.params ? await ctx.params : ctx.params
+    const id = params.id
     const session = await getServerSession(authOptions)
     const user: any = session?.user || null
     const userId = String(user?.id || '').trim()
@@ -87,7 +88,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     return NextResponse.json({ success: true, job: jobWithRefs })
   } catch (e: any) {
     const msg = e?.message || '不明なエラー'
-    console.error('[seo job get] failed', { jobId: ctx.params.id, msg })
+    console.error('[seo job get] failed', { msg })
     return NextResponse.json(
       { success: false, error: msg },
       { status: 500 }
