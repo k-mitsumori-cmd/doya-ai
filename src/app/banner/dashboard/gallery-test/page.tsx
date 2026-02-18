@@ -286,7 +286,7 @@ function GalleryTestInner() {
                   <span className="text-blue-400">▶</span> {categoryName}
                   <span className="text-gray-600 text-[10px]">({categoryTemplates.length})</span>
                 </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 sm:gap-1.5">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
                   {categoryTemplates.map((template, index) => (
                     <TemplateCard
                       key={template.id}
@@ -307,7 +307,7 @@ function GalleryTestInner() {
           })
         ) : (
           // フィルタ適用時：フラットグリッド
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 sm:gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
             {filteredTemplates.map((template) => {
               const catIndex = getCategoryIndex(template)
               return (
