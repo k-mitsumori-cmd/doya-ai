@@ -454,19 +454,37 @@ function BannerTestPageInner() {
 
   // カテゴリマッピング（要求に合わせて明確化）
   const categoryMapping: { [key: string]: string } = {
-    'ビジネス / ブランディング': 'ビジネス / SaaS',
-    'UX / デザイン / テクノロジー': 'IT・AI',
-    'Web / IT / スクール / 教育': 'IT・AI',
-    '転職・採用・人材': '採用',
+    // 旧プロンプトの industry 値
+    'ビジネス / ブランディング': 'ビジネス',
+    'UX / デザイン / テクノロジー': 'IT・テクノロジー',
+    'Web / IT / スクール / 教育': 'IT・テクノロジー',
     '人物写真 / ポートレート': '採用',
     '季節感 / イベント': 'イベント',
     'セール / キャンペーン': 'イベント',
     'EC・小売業のデジタルマーケティング戦略': 'EC',
     'カジュアル / 親しみやすい': 'EC',
     'にぎやか / ポップ': 'EC',
-    '高級感 / きれいめ': '高級・ラグジュアリー',
-    'かわいい / ポップ': '高級・ラグジュアリー',
-    'ナチュラル / 爽やか': '高級・ラグジュアリー',
+    '高級感 / きれいめ': '美容・ファッション',
+    'かわいい / ポップ': '美容・ファッション',
+    'ナチュラル / 爽やか': '美容・ファッション',
+    // 実際のDB industry 値
+    'ビジネス・SaaS': 'ビジネス',
+    'business': 'ビジネス',
+    'marketing': 'ビジネス',
+    'IT・テクノロジー': 'IT・テクノロジー',
+    'it': 'IT・テクノロジー',
+    '転職・採用・人材': '採用',
+    'イベント・メディア': 'イベント',
+    '食品': '食品・飲料',
+    '飲料': '食品・飲料',
+    '美容・コスメ': '美容・ファッション',
+    'ファッション・アパレル': '美容・ファッション',
+    '住宅・不動産': '不動産・旅行',
+    '旅行・観光': '不動産・旅行',
+    '教育・学習・セミナー': '教育',
+    '医療・ヘルスケア': '医療・金融',
+    '金融・保険': '医療・金融',
+    'EC・セール': 'EC',
   }
 
   // テンプレートを取得（高速化: 最小限のデータを最初に取得）
@@ -635,7 +653,7 @@ function BannerTestPageInner() {
     }
     
     const grouped: { [key: string]: BannerTemplate[] } = {}
-    const categoryOrder = ['ビジネス / SaaS', 'IT・AI', '採用', 'イベント', 'EC', '高級・ラグジュアリー']
+    const categoryOrder = ['食品・飲料', 'イベント', '美容・ファッション', 'ビジネス', '不動産・旅行', '採用', 'IT・テクノロジー', '教育', '医療・金融', 'EC']
     
     // すべてのテンプレートを処理（画像URLがないものも含む）
     templates.forEach((template) => {
@@ -699,7 +717,7 @@ function BannerTestPageInner() {
   const allTemplatesByCategory = useMemo((): { [key: string]: BannerTemplate[] } => {
     if (!templates || !Array.isArray(templates) || templates.length === 0) return {}
     const grouped: { [key: string]: BannerTemplate[] } = {}
-    const categoryOrder = ['ビジネス / SaaS', 'IT・AI', '採用', 'イベント', 'EC', '高級・ラグジュアリー']
+    const categoryOrder = ['食品・飲料', 'イベント', '美容・ファッション', 'ビジネス', '不動産・旅行', '採用', 'IT・テクノロジー', '教育', '医療・金融', 'EC']
     templates.forEach((t) => {
       if (!t) return
       const category = categoryMapping[t.industry] || t.industry || 'その他'
@@ -725,7 +743,7 @@ function BannerTestPageInner() {
     return categoryTemplates.findIndex((t) => t.id === template.id)
   }, [allTemplatesByCategory])
 
-  const galleryFilterTabs = ['すべて', 'ビジネス / SaaS', 'IT・AI', '採用', 'イベント', 'EC', '高級・ラグジュアリー']
+  const galleryFilterTabs = ['すべて', '食品・飲料', 'イベント', '美容・ファッション', 'ビジネス', '不動産・旅行', '採用', 'IT・テクノロジー', '教育', '医療・金融', 'EC']
 
   // カテゴリの表示数を増やす（スクロール時に呼び出し）
   const loadMoreTemplates = useCallback((category: string) => {
