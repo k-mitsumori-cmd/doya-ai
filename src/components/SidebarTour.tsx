@@ -17,6 +17,17 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n))
 }
 
+/** 要素がビューポート内に十分見えているかを判定 */
+function isInViewport(el: HTMLElement, threshold = 0.5): boolean {
+  const r = el.getBoundingClientRect()
+  const visibleH = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0)
+  const visibleW = Math.min(r.right, window.innerWidth) - Math.max(r.left, 0)
+  if (visibleH <= 0 || visibleW <= 0) return false
+  const visibleArea = visibleH * visibleW
+  const totalArea = r.width * r.height
+  return totalArea > 0 && visibleArea / totalArea >= threshold
+}
+
 export default function SidebarTour({
   storageKey,
   autoStart,
@@ -49,7 +60,6 @@ export default function SidebarTour({
   }
 
   const open = () => {
-    onEnsureExpanded?.()
     // その画面に存在するステップだけに絞る（ただし allowMissing は残す）
     try {
       const filtered = items.filter((it) => it.allowMissing || !!document.querySelector(it.targetSelector))
@@ -78,7 +88,12 @@ export default function SidebarTour({
   // 現在ステップの対象要素を計測してスポットライト表示
   useEffect(() => {
     if (!isOpen || !current) return
-    onEnsureExpanded?.()
+
+    // サイドバー内のステップ（allowMissing でないもの）のみサイドバーを展開
+    const isSidebarStep = !current.allowMissing
+    if (isSidebarStep) {
+      onEnsureExpanded?.()
+    }
 
     let cancelled = false
     let retry = 0
@@ -99,11 +114,15 @@ export default function SidebarTour({
         return
       }
 
-      try {
-        el.scrollIntoView({ block: 'center', behavior: 'smooth' })
-      } catch {}
+      // allowMissing（ダッシュボード要素）はスクロールしない
+      // サイドバー要素のみ、ビューポート外なら控えめにスクロール
+      if (isSidebarStep && !isInViewport(el, 0.3)) {
+        try {
+          el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+        } catch {}
+      }
 
-      // smooth scroll の完了を少し待ってから座標取得
+      // 少し待ってから座標取得
       t = window.setTimeout(() => {
         if (cancelled) return
         const r = el.getBoundingClientRect()
@@ -113,7 +132,7 @@ export default function SidebarTour({
           w: r.width,
           h: r.height,
         })
-      }, 220)
+      }, isSidebarStep ? 220 : 50)
     }
 
     // レイアウト安定後に計測
@@ -136,14 +155,33 @@ export default function SidebarTour({
   }, [isOpen, current, onEnsureExpanded])
 
   const tooltipPos = useMemo(() => {
-    if (!targetRect) return { left: 24, top: 24 }
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1024
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 768
+    const tooltipW = 360
+
+    if (!targetRect) {
+      // ターゲットが無い場合は画面中央に表示
+      return {
+        left: Math.max(16, (vw - tooltipW) / 2),
+        top: Math.max(80, vh * 0.3),
+      }
+    }
     const margin = 12
-    const width = 360
-    const height = 168
+    const tooltipH = 168
+
+    // ターゲットが画面幅の半分以上を占める場合（ギャラリーグリッドなど）→ 下に表示
+    const isWideTarget = targetRect.w > vw * 0.5
+    if (isWideTarget) {
+      const left = clamp(targetRect.x + targetRect.w / 2 - tooltipW / 2, 16, vw - tooltipW - 16)
+      const top = clamp(targetRect.y + targetRect.h + margin, 16, vh - tooltipH - 16)
+      return { left, top }
+    }
+
+    // 通常: ターゲットの右側に表示
     const preferredLeft = targetRect.x + targetRect.w + margin
     const preferredTop = targetRect.y
-    const left = clamp(preferredLeft, 16, window.innerWidth - width - 16)
-    const top = clamp(preferredTop, 16, window.innerHeight - height - 16)
+    const left = clamp(preferredLeft, 16, vw - tooltipW - 16)
+    const top = clamp(preferredTop, 16, vh - tooltipH - 16)
     return { left, top }
   }, [targetRect])
 
@@ -169,7 +207,6 @@ export default function SidebarTour({
           >
             {/* 背景（クリックで閉じる） */}
             <div
-              // 「ボケて分かりづらい」を避けるため、背景のぼかしは使わず暗転のみ
               className="absolute inset-0 bg-black/60 pointer-events-auto"
               onClick={() => close(true)}
             />
@@ -188,9 +225,10 @@ export default function SidebarTour({
               />
             )}
 
-            {/* “ここ！”が分かるアニメ（矢印＋バウンス） */}
+            {/* "ここ！"が分かるアニメ（矢印＋バウンス） */}
             {targetRect && (
               <motion.div
+                key={current?.id}
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="absolute pointer-events-none"
@@ -211,6 +249,7 @@ export default function SidebarTour({
 
             {/* ツールチップ */}
             <motion.div
+              key={`tooltip-${step}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
@@ -222,7 +261,7 @@ export default function SidebarTour({
                 <div>
                   <div className="inline-flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
                     <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                    機能紹介
+                    使い方ガイド
                   </div>
                   <div className="mt-1 text-lg font-black text-slate-900">{current?.label}</div>
                 </div>
@@ -272,5 +311,3 @@ export default function SidebarTour({
     </>
   )
 }
-
-
