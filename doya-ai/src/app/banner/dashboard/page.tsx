@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu, Lock, LogIn, FileText, Copy, Check } from 'lucide-react'
+import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu, Lock, LogIn, FileText, Copy, Check } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
@@ -182,6 +182,9 @@ function BannerTestPageInner() {
   // フォームエリアの可視性（ヒーローセクションの縮小制御用）
   const [isFormVisible, setIsFormVisible] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
+
+  // ギャラリーの開閉状態
+  const [isGalleryCollapsed, setIsGalleryCollapsed] = useState(false)
   
   // トライアル判定（ログイン後1時間）
   useEffect(() => {
@@ -1068,11 +1071,13 @@ function BannerTestPageInner() {
         {/* Netflix風のメインコンテンツ */}
         <div className={`relative ${isTrialActive ? 'pt-20 md:pt-10' : 'pt-12 md:pt-0'}`}>
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- 固定表示、フォーム表示時は縮小 */}
-          <div 
-            className={`fixed ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} left-0 md:left-[240px] right-0 z-20 overflow-hidden transition-all duration-300 ease-in-out ${
-              isFormVisible 
-                ? 'h-[15vh] sm:h-[18vh] md:h-[20vh] lg:h-[22vh]' 
-                : 'h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh]'
+          <div
+            className={`fixed ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} left-0 md:left-[240px] right-0 z-20 overflow-hidden transition-all duration-500 ease-in-out ${
+              isGalleryCollapsed
+                ? 'h-[85vh] sm:h-[88vh] md:h-[90vh] lg:h-[92vh]'
+                : isFormVisible
+                  ? 'h-[15vh] sm:h-[18vh] md:h-[20vh] lg:h-[22vh]'
+                  : 'h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh]'
             }`}
           >
             {/* グラデーション: 下は黒、上は明るく */}
@@ -1283,14 +1288,38 @@ function BannerTestPageInner() {
                 )}
               </div>
             </div>
+
+            {/* ギャラリー開閉トグルボタン（右下に配置） */}
+            <button
+              onClick={() => setIsGalleryCollapsed(!isGalleryCollapsed)}
+              className="absolute bottom-2 sm:bottom-4 right-3 sm:right-6 z-30 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-sm flex items-center justify-center transition-all duration-300 hover:scale-110 shadow-lg border border-white/30 group/toggle"
+              title={isGalleryCollapsed ? 'ギャラリーを表示' : 'ギャラリーを隠す'}
+            >
+              {isGalleryCollapsed ? (
+                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover/toggle:text-white transition-colors" />
+              ) : (
+                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5 text-white group-hover/toggle:text-white transition-colors" />
+              )}
+            </button>
           </div>
 
           {/* テンプレート一覧（Netflix風の横スクロール） - 固定ヒーローの下にパディング、フォーム表示時は縮小 */}
-          <div className={`w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 relative z-10 space-y-4 sm:space-y-6 md:space-y-10 bg-black pb-6 sm:pb-8 transition-all duration-300 ease-in-out ${
-            isFormVisible 
-              ? 'pt-[17vh] sm:pt-[20vh] md:pt-[22vh] lg:pt-[24vh]' 
-              : 'pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh]'
-          }`}>
+          <div
+            className={`w-full overflow-x-hidden px-0 sm:px-4 md:px-8 lg:px-12 relative z-10 bg-black transition-all duration-500 ease-in-out ${
+              isGalleryCollapsed
+                ? 'max-h-0 overflow-hidden opacity-0 pb-0'
+                : 'max-h-[5000px] opacity-100 pb-6 sm:pb-8 space-y-4 sm:space-y-6 md:space-y-10'
+            } ${
+              isFormVisible
+                ? 'pt-[17vh] sm:pt-[20vh] md:pt-[22vh] lg:pt-[24vh]'
+                : 'pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh]'
+            }`}
+            style={{
+              transitionProperty: 'max-height, opacity, padding-bottom',
+              transitionDuration: '500ms',
+              transitionTimingFunction: 'ease-in-out',
+            }}
+          >
             {isLoadingTemplates ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
