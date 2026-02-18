@@ -115,6 +115,28 @@ export const SERVICE_SEO = {
     },
   },
 
+  // ドヤオープニングAI
+  opening: {
+    title: 'ドヤオープニングAI | URLからReactオープニングアニメーションを自動生成',
+    description: 'URLを入れるだけで、サイトに最適化されたReactオープニングアニメーションを6種類自動生成。カラー・ロゴ・テキスト自動抽出。プレビュー→微調整→コードエクスポートまで一気通貫。',
+    keywords: ['オープニングアニメーション', 'React', 'framer-motion', 'Webアニメーション', '自動生成', 'AI', 'モーション'],
+    ogImage: '/og/portal.png',
+    sections: {
+      dashboard: {
+        title: 'ダッシュボード | ドヤオープニングAI',
+        description: '生成済みプロジェクトの一覧。プレビュー・編集・エクスポートが可能。',
+      },
+      pricing: {
+        title: '料金プラン | ドヤオープニングAI',
+        description: '無料プランは1日3回まで（3テンプレート）。プロプランは1日30回、全6テンプレート利用可能。月額¥2,980。',
+      },
+      guide: {
+        title: '使い方ガイド | ドヤオープニングAI',
+        description: 'ドヤオープニングAIの使い方を解説。URL入力→テンプレート選択→微調整→エクスポートの流れ。',
+      },
+    },
+  },
+
   // 管理画面
   admin: {
     title: '管理画面 | ドヤAIポータル',

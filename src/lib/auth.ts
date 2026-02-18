@@ -63,6 +63,7 @@ export const authOptions: NextAuthOptions = {
             ;(session.user as any).seoPlan = byService['writing'] || byService['seo'] || undefined
             ;(session.user as any).kantanPlan = byService['kantan'] || undefined
             ;(session.user as any).interviewPlan = byService['interview'] || undefined
+            ;(session.user as any).openingPlan = byService['opening'] || undefined
             // 初回ログイン時刻（1時間生成し放題の判定用）
             ;(session.user as any).firstLoginAt = dbUser.firstLoginAt?.toISOString() || null
           }

@@ -93,6 +93,9 @@ model User {
   tenkaiUsages     TenkaiUsage[]
   tenkaiApiKeys    TenkaiApiKey[]
 
+  // ドヤオープニングAI
+  openingProjects  OpeningProject[]
+
   // Stripe関連（ポータル全体の顧客情報）
   stripeCustomerId       String?   @unique
   stripeSubscriptionId   String?   @unique
@@ -1125,4 +1128,51 @@ model TenkaiApiKey {
   @@index([userId])
   @@index([keyHash])
   @@map("tenkai_api_keys")
+}
+
+// ============================================
+// ドヤオープニングAI
+// ============================================
+
+model OpeningProject {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId   String?
+
+  inputUrl      String
+  siteAnalysis  Json?
+  status        String   @default("ANALYZING") // ANALYZING | READY | COMPLETED | ERROR
+
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  animations OpeningAnimation[]
+
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+  @@index([status])
+}
+
+model OpeningAnimation {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    OpeningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  templateId String
+  config     Json
+  reactCode  String?  @db.Text
+
+  isSelected Boolean  @default(false)
+  isFavorite Boolean  @default(false)
+
+  metadata   Json?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([templateId])
 }

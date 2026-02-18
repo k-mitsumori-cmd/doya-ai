@@ -518,6 +518,60 @@ export const SERVICES: Service[] = [
   },
 
   // ----------------------------------------
+  // ドヤオープニングAI（オープニングアニメーション生成）
+  // ----------------------------------------
+  {
+    id: 'opening',
+    name: 'ドヤオープニングAI',
+    shortName: 'オープニング',
+    description: 'URLを入れるだけで、感動のオープニングアニメーションを自動生成',
+    longDescription: 'サイトのURLを入力するだけで、カラースキーム・ロゴ・テキストを自動抽出し、6種類のReactオープニングアニメーションを提案。プレビュー→微調整→コードエクスポートまで一気通貫。',
+    icon: '🎬',
+    color: 'red',
+    gradient: 'from-red-500 to-rose-600',
+    bgGradient: 'from-red-50 to-rose-50',
+    href: '/opening',
+    dashboardHref: '/opening/dashboard',
+    pricingHref: '/opening/pricing',
+    guideHref: '/opening/guide',
+    features: [
+      'URLからカラー・ロゴ・テキスト自動抽出',
+      '6種類のアニメーションテンプレート',
+      '1クリックでフルスクリーンプレビュー',
+      'テキスト・カラー・タイミング微調整',
+      'Reactコンポーネント一発エクスポート',
+      'framer-motion ベースの美しいアニメーション',
+    ],
+    useCases: [
+      'クライアント納品用のリッチなオープニングが欲しい',
+      'ポートフォリオやLPに印象的なアニメーションを付けたい',
+      'キャンペーンLPやイベントページを差別化したい',
+      'プロダクトのローンチページにインパクトが欲しい',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '1日3回まで',
+        dailyLimit: 3,
+        price: 0,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '1日30回まで',
+        dailyLimit: 30,
+        price: 2980,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_OPENING_PRO_PRICE_ID,
+      },
+    },
+    status: 'active',
+    category: 'web',
+    order: 7,
+    requiresAuth: false,
+    isNew: true,
+    badge: 'NEW',
+  },
+
+  // ----------------------------------------
   // プレゼン資料AI（近日公開）
   // ----------------------------------------
   {

@@ -562,6 +562,71 @@ export function getShindanDailyLimitByUserPlan(plan: string | null | undefined):
   return SHINDAN_PRICING.freeLimit
 }
 
+// ========================================
+// ドヤオープニングAI 料金設定
+// ========================================
+export const OPENING_PRICING: ServicePricing = {
+  serviceId: 'opening',
+  serviceName: 'ドヤオープニングAI',
+  serviceIcon: '🎬',
+  guestLimit: 2,
+  freeLimit: 3,
+  proLimit: 30,
+  historyDays: {
+    free: 7,
+    pro: -1,
+  },
+  plans: [
+    {
+      id: 'opening-free',
+      name: '無料',
+      price: 0,
+      priceLabel: '¥0',
+      period: '',
+      description: 'まずはオープニングアニメーション生成を体験',
+      features: [
+        { text: 'ゲスト: 1日2回まで', included: true },
+        { text: 'ログイン: 1日3回まで', included: true },
+        { text: '3種類のテンプレート', included: true },
+        { text: 'テキスト編集', included: true },
+        { text: 'コードコピー', included: true },
+        { text: '履歴保存（7日間）', included: true },
+      ],
+      cta: '無料で試す',
+    },
+    {
+      id: 'opening-pro',
+      name: 'プロ',
+      price: 2980,
+      priceLabel: '¥2,980',
+      period: '/月（税込）',
+      description: 'オープニングアニメーション生成を本格活用',
+      popular: true,
+      color: 'red',
+      features: [
+        { text: '1日30回まで生成', included: true },
+        { text: '全6テンプレート利用可能', included: true },
+        { text: 'カラー・タイミング・ロゴ編集', included: true },
+        { text: 'ZIPダウンロード', included: true },
+        { text: '透かしなし', included: true },
+        { text: '履歴保存（無制限）', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+  ],
+}
+
+// Opening: user.plan から日次上限を決定
+export function getOpeningDailyLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.OPENING_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'BUNDLE') return OPENING_PRICING.proLimit
+  if (p === 'ENTERPRISE') return OPENING_PRICING.proLimit
+  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return OPENING_PRICING.proLimit
+  return OPENING_PRICING.freeLimit
+}
+
 // 30枚/日を超える利用（チーム/法人/大量生成など）の相談導線
 export const HIGH_USAGE_CONTACT_URL =
   process.env.NEXT_PUBLIC_HIGH_USAGE_CONTACT_URL ||
@@ -623,6 +688,8 @@ export function getPricingByService(serviceId: string): ServicePricing | null {
       return INTERVIEW_PRICING as any
     case 'shindan':
       return SHINDAN_PRICING
+    case 'opening':
+      return OPENING_PRICING
     default:
       return null
   }
