@@ -485,6 +485,11 @@ function BannerTestPageInner() {
     '医療・ヘルスケア': '医療・金融',
     '金融・保険': '医療・金融',
     'EC・セール': 'EC',
+    // 新ジャンル（thumbnail-gallery.net参考）
+    'スポーツ・フィットネス': 'スポーツ・趣味',
+    'エンタメ・趣味': 'スポーツ・趣味',
+    'ペット・動物': 'ライフスタイル',
+    'ライフスタイル・暮らし': 'ライフスタイル',
   }
 
   // テンプレートを取得（高速化: 最小限のデータを最初に取得）
@@ -653,7 +658,7 @@ function BannerTestPageInner() {
     }
     
     const grouped: { [key: string]: BannerTemplate[] } = {}
-    const categoryOrder = ['食品・飲料', 'イベント', '美容・ファッション', 'ビジネス', '不動産・旅行', '採用', 'IT・テクノロジー', '教育', '医療・金融', 'EC']
+    const categoryOrder = ['食品・飲料', 'イベント', '美容・ファッション', 'ビジネス', '不動産・旅行', '採用', 'IT・テクノロジー', '教育', 'スポーツ・趣味', 'ライフスタイル', '医療・金融', 'EC']
     
     // すべてのテンプレートを処理（画像URLがないものも含む）
     templates.forEach((template) => {
@@ -717,7 +722,7 @@ function BannerTestPageInner() {
   const allTemplatesByCategory = useMemo((): { [key: string]: BannerTemplate[] } => {
     if (!templates || !Array.isArray(templates) || templates.length === 0) return {}
     const grouped: { [key: string]: BannerTemplate[] } = {}
-    const categoryOrder = ['食品・飲料', 'イベント', '美容・ファッション', 'ビジネス', '不動産・旅行', '採用', 'IT・テクノロジー', '教育', '医療・金融', 'EC']
+    const categoryOrder = ['食品・飲料', 'イベント', '美容・ファッション', 'ビジネス', '不動産・旅行', '採用', 'IT・テクノロジー', '教育', 'スポーツ・趣味', 'ライフスタイル', '医療・金融', 'EC']
     templates.forEach((t) => {
       if (!t) return
       const category = categoryMapping[t.industry] || t.industry || 'その他'
@@ -743,7 +748,7 @@ function BannerTestPageInner() {
     return categoryTemplates.findIndex((t) => t.id === template.id)
   }, [allTemplatesByCategory])
 
-  const galleryFilterTabs = ['すべて', '食品・飲料', 'イベント', '美容・ファッション', 'ビジネス', '不動産・旅行', '採用', 'IT・テクノロジー', '教育', '医療・金融', 'EC']
+  const galleryFilterTabs = ['すべて', '食品・飲料', 'イベント', '美容・ファッション', 'ビジネス', '不動産・旅行', '採用', 'IT・テクノロジー', '教育', 'スポーツ・趣味', 'ライフスタイル', '医療・金融', 'EC']
 
   // カテゴリの表示数を増やす（スクロール時に呼び出し）
   const loadMoreTemplates = useCallback((category: string) => {
