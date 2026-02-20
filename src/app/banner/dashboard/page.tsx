@@ -102,9 +102,60 @@ const PLAN_LIMITS = {
   ENTERPRISE: { maxCount: 5, label: 'Enterpriseプラン' },
 }
 
+// ページ内Suspense用のスケルトン（loading.tsxと同じ構造）
+function DashboardSkeleton() {
+  return (
+    <div className="min-h-screen bg-black text-white flex">
+      <div className="hidden md:block w-[240px] bg-gray-950 border-r border-gray-800/50 flex-shrink-0">
+        <div className="p-4 space-y-4">
+          <div className="h-8 w-32 bg-gray-800 rounded animate-pulse" />
+          <div className="space-y-2">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="h-9 bg-gray-800/60 rounded-lg animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
+            ))}
+          </div>
+        </div>
+      </div>
+      <main className="flex-1 min-h-screen bg-black overflow-hidden">
+        <div className="relative h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-800/30 to-transparent animate-[shimmer_2s_infinite]" style={{ backgroundSize: '200% 100%' }} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
+          <div className="absolute bottom-6 left-4 sm:left-8 z-20 space-y-3">
+            <div className="h-4 w-20 bg-gray-700/60 rounded animate-pulse" />
+            <div className="h-8 sm:h-10 w-48 sm:w-72 bg-gray-700/40 rounded animate-pulse" />
+            <div className="h-4 w-64 sm:w-96 bg-gray-700/30 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="bg-black/90 border-b border-gray-800/50 px-2 sm:px-4 md:px-8 lg:px-12 py-2 flex gap-1">
+          {[80, 64, 56, 72, 64, 48].map((w, i) => (
+            <div key={i} className="h-7 rounded-full bg-gray-800/60 animate-pulse flex-shrink-0" style={{ width: `${w}px`, animationDelay: `${i * 80}ms` }} />
+          ))}
+        </div>
+        <div className="px-1 sm:px-2 md:px-4 lg:px-8 py-2">
+          {[1, 2].map((section) => (
+            <div key={section} className="mb-3">
+              <div className="flex items-center gap-1.5 px-1 sm:px-2 py-1.5">
+                <div className="w-2 h-2 bg-blue-400/40 rounded-sm animate-pulse" />
+                <div className="h-3.5 w-24 bg-gray-700/40 rounded animate-pulse" />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="aspect-[16/10] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-700/20 to-transparent animate-[shimmer_2s_infinite]" style={{ backgroundSize: '200% 100%', animationDelay: `${(section * 4 + i) * 100}ms` }} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  )
+}
+
 export default function BannerTestPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<DashboardSkeleton />}>
       <BannerTestPageInner />
     </Suspense>
   )
@@ -493,9 +544,24 @@ function BannerTestPageInner() {
     'ライフスタイル・暮らし': 'ライフスタイル',
   }
 
+  // ヒーロー画像のプリロード（テンプレートURL確定直後に呼び出し、ブラウザが先行取得開始）
+  const preloadHeroImage = useCallback((imageUrl: string | null | undefined) => {
+    try {
+      if (!imageUrl) return
+      const link = document.createElement('link')
+      link.rel = 'preload'
+      link.as = 'image'
+      link.href = imageUrl
+      link.setAttribute('fetchpriority', 'high')
+      document.head.appendChild(link)
+    } catch (e) {
+      // プリロード失敗してもテンプレート読み込みを止めない
+    }
+  }, [])
+
   // テンプレートを取得（高速化: 最小限のデータを最初に取得）
   useEffect(() => {
-    const CACHE_KEY = 'banner_templates_cache_v4'
+    const CACHE_KEY = 'banner_templates_cache_v5'
     const CACHE_EXPIRY = 10 * 60 * 1000 // 10分間キャッシュ（延長）
     
     const fetchTemplates = async () => {
@@ -528,13 +594,16 @@ function BannerTestPageInner() {
                 const featured = data.templates.find((t: BannerTemplate) => t.id === data.featuredTemplateId)
                 if (featured) {
                   setSelectedTemplate(featured)
+                  preloadHeroImage(featured.imageUrl)
                 } else if (data.templates.length > 0) {
                   setSelectedTemplate(data.templates[0])
+                  preloadHeroImage(data.templates[0].imageUrl)
                 }
               } else if (data.templates.length > 0) {
                 setSelectedTemplate(data.templates[0])
+                preloadHeroImage(data.templates[0].imageUrl)
               }
-              
+
               setIsLoadingTemplates(false)
               console.log(`[Templates] Loaded from cache in ${Date.now() - startTime}ms`)
               return
@@ -591,11 +660,14 @@ function BannerTestPageInner() {
                 const featured = data.templates.find((t: BannerTemplate) => t.id === data.featuredTemplateId)
                 if (featured) {
                   setSelectedTemplate(featured)
+                  preloadHeroImage(featured.imageUrl)
                 } else if (data.templates.length > 0) {
                   setSelectedTemplate(data.templates[0])
+                  preloadHeroImage(data.templates[0].imageUrl)
                 }
               } else if (data.templates.length > 0) {
                 setSelectedTemplate(data.templates[0])
+                preloadHeroImage(data.templates[0].imageUrl)
               }
 
               console.log(`[Templates] Loaded ${data.templates.length} templates in ${Date.now() - startTime}ms`)
@@ -1132,6 +1204,8 @@ function BannerTestPageInner() {
                 alt="Selected banner"
                 loading="eager"
                 decoding="async"
+                // @ts-ignore fetchpriority is valid HTML but not in React types
+                fetchpriority="high"
                 className="w-full h-full object-cover"
               />
             ) : selectedTemplate?.imageUrl && !imageErrors.has(selectedTemplate.id) ? (
@@ -1140,6 +1214,8 @@ function BannerTestPageInner() {
                 alt={selectedTemplate.prompt}
                 loading="eager"
                 decoding="async"
+                // @ts-ignore fetchpriority is valid HTML but not in React types
+                fetchpriority="high"
                 onError={() => handleImageError(selectedTemplate.id)}
                 className="w-full h-full object-cover"
               />
@@ -1382,8 +1458,22 @@ function BannerTestPageInner() {
           {/* グリッドギャラリー */}
           <div data-tour="gallery-grid" className="w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 bg-black relative z-10">
             {isLoadingTemplates ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+              <div className="space-y-3">
+                {[1, 2, 3].map((section) => (
+                  <div key={section}>
+                    <div className="flex items-center gap-1.5 px-1 sm:px-2 py-1.5">
+                      <span className="text-blue-400 text-xs">▶</span>
+                      <div className="h-3.5 w-24 bg-gray-700/40 rounded animate-pulse" style={{ animationDelay: `${section * 150}ms` }} />
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="aspect-[16/10] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative">
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-700/20 to-transparent animate-[shimmer_2s_infinite]" style={{ backgroundSize: '200% 100%', animationDelay: `${(section * 4 + i) * 100}ms` }} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : activeFilter === 'すべて' ? (
               Object.entries(allTemplatesByCategory).map(([categoryName, categoryTemplates]) => {

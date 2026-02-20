@@ -804,13 +804,21 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
     const minimal = searchParams.get('minimal') === 'true'
 
-    // DBから既存のテンプレート情報を取得（isActive=true のみ）
+    // DBから既存のテンプレート情報を取得（isActive=true かつ画像あり のみ）
     let dbTemplates: any[] = []
     let dbError: string | null = null
     try {
       dbTemplates = await prisma.bannerTemplate.findMany({
         where: {
           isActive: true,
+          imageUrl: {
+            not: null,
+          },
+          NOT: {
+            imageUrl: {
+              contains: 'placehold.co',
+            },
+          },
         },
         select: {
           templateId: true,
