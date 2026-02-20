@@ -1291,10 +1291,10 @@ export default function BannerDashboard() {
     // 上限に達している場合はプロプランへ誘導
     if (remainingCount <= 0) {
       if (isPaidUser) {
-        toast.error('本日の生成上限に達しました。', { duration: 6000 })
+        toast.error('今月の生成上限に達しました。', { duration: 6000 })
         // PROは「上限UP相談」導線を下に表示（自動遷移はしない）
       } else {
-        toast.error('本日の生成上限に達しました。プロプランにアップグレードしてください。', { duration: 6000 })
+        toast.error('今月の生成上限に達しました。プロプランにアップグレードしてください。', { duration: 6000 })
         try {
           const upgradeUrl = '/banner'
           window.open(upgradeUrl, '_self')
@@ -2326,7 +2326,7 @@ export default function BannerDashboard() {
 
               {!isGenerating && remainingCount <= 0 && (
                 <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm text-center font-medium">
-                  <div className="font-black">本日の生成上限に達しました。</div>
+                  <div className="font-black">今月の生成上限に達しました。</div>
 
                   {isGuest ? (
                     <div className="mt-2">ログインしてプランをご確認ください。</div>

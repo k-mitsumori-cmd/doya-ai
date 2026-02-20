@@ -92,7 +92,7 @@ export const SERVICE_SEO = {
       },
       pricing: {
         title: '料金プラン | ドヤバナーAI',
-        description: `無料プランはゲスト1日${BANNER_PRICING.guestLimit}回、ログイン後1日${BANNER_PRICING.freeLimit}回まで。プロプランは無制限に生成可能。月額${BANNER_PRICING.plans[1].priceLabel}。`,
+        description: `無料プランはゲスト月${BANNER_PRICING.guestLimit}枚、ログイン後月${BANNER_PRICING.freeLimit}枚まで。プロプランは月${BANNER_PRICING.proLimit}枚まで生成可能。月額${BANNER_PRICING.plans[1].priceLabel}。`,
       },
       guide: {
         title: '使い方ガイド | ドヤバナーAI',

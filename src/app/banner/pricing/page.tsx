@@ -69,7 +69,7 @@ export default function BannerPricingPage() {
             <div className="flex items-start justify-between gap-6">
               <div>
                 <h2 className="text-2xl font-black text-slate-900">{free?.name || 'おためしプラン'}</h2>
-                <p className="text-sm text-slate-600 mt-2">{free?.description || `1日${BANNER_PRICING.freeLimit}回までの生成をすることができます`}</p>
+                <p className="text-sm text-slate-600 mt-2">{free?.description || `月${BANNER_PRICING.freeLimit}枚までの生成をすることができます`}</p>
                 <div className="mt-5">
                   {bannerPlanTier === 'FREE' ? (
                     <button

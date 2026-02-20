@@ -395,7 +395,7 @@ export default function TestPortalPage() {
                 {[
                   '登録なしで今すぐ使える',
                   `SEO記事: ログイン${SEO_PRICING.freeLimit}回/月（無料）`,
-                  `バナー: ${BANNER_PRICING.guestLimit}枚/日`,
+                  `バナー: ${BANNER_PRICING.guestLimit}枚/月`,
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3 text-white/70">
                     <Check className="w-5 h-5 text-emerald-400 flex-shrink-0" />
