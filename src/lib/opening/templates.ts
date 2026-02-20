@@ -2,7 +2,7 @@
 // ドヤオープニングAI - テンプレート定義
 // ============================================
 
-import { lighten, darken, saturate, desaturate, toWarmGold } from './color-utils'
+import { lighten, darken, saturate, desaturate, shiftHue, toWarmGold } from './color-utils'
 
 export interface AnimationConfig {
   colors: {
@@ -37,7 +37,7 @@ export interface TemplateDefinition {
   name: string
   nameEn: string
   description: string
-  category: 'minimal' | 'dynamic' | 'cinematic' | 'playful' | 'corporate' | 'luxury'
+  category: 'minimal' | 'dynamic' | 'cinematic' | 'playful' | 'corporate' | 'luxury' | 'tech' | 'retro'
   isPro: boolean
   defaultTiming: {
     duration: number
@@ -107,6 +107,66 @@ export const TEMPLATES: TemplateDefinition[] = [
     isPro: true,
     defaultTiming: { duration: 4.0, stagger: 0.25, easing: 'easeInOut' },
     defaultBackgroundType: 'mesh',
+  },
+  {
+    id: 'typewriter-reveal',
+    name: 'タイプライターリビール',
+    nameEn: 'Typewriter Reveal',
+    description: 'タイプライター風に1文字ずつ表示。レトロモダンな演出',
+    category: 'tech',
+    isPro: false,
+    defaultTiming: { duration: 4.0, stagger: 0.08, easing: 'linear' },
+    defaultBackgroundType: 'solid',
+  },
+  {
+    id: 'glitch-wave',
+    name: 'グリッチウェーブ',
+    nameEn: 'Glitch Wave',
+    description: 'グリッチエフェクト＋波打つ文字。インパクト重視の演出',
+    category: 'dynamic',
+    isPro: false,
+    defaultTiming: { duration: 3.5, stagger: 0.12, easing: 'easeOut' },
+    defaultBackgroundType: 'solid',
+  },
+  {
+    id: 'zoom-rotate',
+    name: 'ズームローテート',
+    nameEn: 'Zoom Rotate',
+    description: 'ズーム＋回転で迫力のある登場。プレゼンやイベント向け',
+    category: 'playful',
+    isPro: false,
+    defaultTiming: { duration: 3.5, stagger: 0.15, easing: 'spring' },
+    defaultBackgroundType: 'solid',
+  },
+  {
+    id: 'gradient-wipe',
+    name: 'グラデーションワイプ',
+    nameEn: 'Gradient Wipe',
+    description: 'グラデーションが画面を拭うように展開するスタイリッシュな演出',
+    category: 'minimal',
+    isPro: true,
+    defaultTiming: { duration: 3.5, stagger: 0.2, easing: 'easeInOut' },
+    defaultBackgroundType: 'gradient',
+  },
+  {
+    id: 'text-scramble',
+    name: 'テキストスクランブル',
+    nameEn: 'Text Scramble',
+    description: '文字がランダムに入れ替わりながら確定。テック系に最適',
+    category: 'tech',
+    isPro: true,
+    defaultTiming: { duration: 4.0, stagger: 0.1, easing: 'linear' },
+    defaultBackgroundType: 'solid',
+  },
+  {
+    id: 'neon-glow',
+    name: 'ネオングロー',
+    nameEn: 'Neon Glow',
+    description: 'ネオン管風に光る演出。夜の雰囲気やクラブ系サイトに',
+    category: 'retro',
+    isPro: true,
+    defaultTiming: { duration: 4.0, stagger: 0.2, easing: 'easeInOut' },
+    defaultBackgroundType: 'solid',
   },
 ]
 
@@ -192,6 +252,24 @@ function generateColorVariation(
         accent: toWarmGold(base.accent),
         background: '#0A0508',
         text: '#F0E6D8',
+      }
+    case 'tech':
+      // テクノロジー：ダーク背景、シアン/グリーン寄りのアクセント
+      return {
+        primary: shiftHue(saturate(base.primary, 1.1), 180),
+        secondary: base.secondary,
+        accent: shiftHue(saturate(base.accent, 1.3), 160),
+        background: '#0A0F14',
+        text: '#C8D6E5',
+      }
+    case 'retro':
+      // レトロ/ネオン：真っ黒背景、ネオンカラー
+      return {
+        primary: saturate(lighten(base.primary, 0.2), 1.5),
+        secondary: saturate(lighten(shiftHue(base.secondary, 30), 0.15), 1.4),
+        accent: saturate(lighten(shiftHue(base.accent, -30), 0.2), 1.5),
+        background: '#0a0a0a',
+        text: '#FFFFFF',
       }
     default:
       return base

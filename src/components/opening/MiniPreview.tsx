@@ -23,6 +23,18 @@ export default function MiniPreview({ templateId, colors, nameEn }: MiniPreviewP
       return <CorporateSlideMini colors={colors} nameEn={nameEn} />
     case 'luxury-morph':
       return <LuxuryMorphMini colors={colors} nameEn={nameEn} />
+    case 'typewriter-reveal':
+      return <TypewriterMini colors={colors} nameEn={nameEn} />
+    case 'glitch-wave':
+      return <GlitchWaveMini colors={colors} nameEn={nameEn} />
+    case 'zoom-rotate':
+      return <ZoomRotateMini colors={colors} nameEn={nameEn} />
+    case 'gradient-wipe':
+      return <GradientWipeMini colors={colors} nameEn={nameEn} />
+    case 'text-scramble':
+      return <TextScrambleMini colors={colors} nameEn={nameEn} />
+    case 'neon-glow':
+      return <NeonGlowMini colors={colors} nameEn={nameEn} />
     default:
       return <DefaultMini colors={colors} nameEn={nameEn} />
   }
@@ -246,6 +258,285 @@ function LuxuryMorphMini({ colors, nameEn }: MiniProps) {
         animate={{ scaleX: [0, 1, 1, 0], opacity: [0, 0.6, 0.6, 0] }}
         transition={{ duration: 4, repeat: Infinity, times: [0, 0.35, 0.65, 1] }}
       />
+    </div>
+  )
+}
+
+/** タイプライター: カーソル付き1文字ずつ表示 */
+function TypewriterMini({ colors, nameEn }: MiniProps) {
+  const chars = nameEn.slice(0, 12)
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ background: colors.background }}>
+      {/* Top line decoration */}
+      <motion.div
+        className="h-px w-12 mb-3"
+        style={{ backgroundColor: colors.accent || colors.primary }}
+        animate={{ scaleX: [0, 1, 1, 0] }}
+        transition={{ duration: 4, repeat: Infinity, times: [0, 0.2, 0.7, 1] }}
+      />
+      <div className="flex items-center font-mono">
+        {chars.split('').map((c, i) => (
+          <motion.span
+            key={i}
+            className="text-sm font-bold"
+            style={{ color: colors.primary }}
+            animate={{ opacity: [0, 0, 1, 1, 0] }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              times: [0, 0.1 + i * 0.04, 0.12 + i * 0.04, 0.75, 1],
+            }}
+          >
+            {c}
+          </motion.span>
+        ))}
+        <motion.span
+          style={{ color: colors.accent || colors.primary }}
+          animate={{ opacity: [1, 0, 1] }}
+          transition={{ duration: 0.8, repeat: Infinity }}
+        >
+          |
+        </motion.span>
+      </div>
+      {/* Bottom line decoration */}
+      <motion.div
+        className="h-px w-8 mt-3"
+        style={{ backgroundColor: colors.secondary }}
+        animate={{ scaleX: [0, 0, 1, 1, 0] }}
+        transition={{ duration: 4, repeat: Infinity, times: [0, 0.5, 0.7, 0.85, 1] }}
+      />
+    </div>
+  )
+}
+
+/** グリッチウェーブ: スキャンライン＋文字が波打つ */
+function GlitchWaveMini({ colors, nameEn }: MiniProps) {
+  return (
+    <div className="absolute inset-0 overflow-hidden flex items-center justify-center" style={{ background: colors.background }}>
+      {/* Scan lines */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: `repeating-linear-gradient(0deg, transparent, transparent 3px, ${colors.primary}10 3px, ${colors.primary}10 4px)`,
+      }} />
+      {/* Glitch bars */}
+      <motion.div
+        className="absolute left-0 right-0 h-[2px]"
+        style={{ top: '35%', backgroundColor: colors.accent || colors.primary }}
+        animate={{ scaleX: [0, 1, 0], x: ['-50%', '0%', '50%'], opacity: [0, 0.7, 0] }}
+        transition={{ duration: 3, repeat: Infinity, delay: 0.3 }}
+      />
+      <motion.div
+        className="absolute left-0 right-0 h-[2px]"
+        style={{ top: '65%', backgroundColor: colors.primary }}
+        animate={{ scaleX: [0, 1, 0], x: ['50%', '0%', '-50%'], opacity: [0, 0.5, 0] }}
+        transition={{ duration: 3, repeat: Infinity, delay: 0.6 }}
+      />
+      {/* Text with wave */}
+      <div className="flex">
+        {nameEn.slice(0, 10).split('').map((c, i) => (
+          <motion.span
+            key={i}
+            className="text-base font-bold"
+            style={{ color: colors.primary, display: 'inline-block' }}
+            animate={{
+              y: [0, -6, 0, 6, 0],
+              opacity: [0, 1, 1, 1, 0],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              delay: i * 0.08,
+              times: [0, 0.25, 0.5, 0.75, 1],
+            }}
+          >
+            {c === ' ' ? '\u00A0' : c}
+          </motion.span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** ズームローテート: 回転しながらズームイン */
+function ZoomRotateMini({ colors, nameEn }: MiniProps) {
+  return (
+    <div className="absolute inset-0 overflow-hidden flex items-center justify-center" style={{ background: colors.background }}>
+      {/* Expanding rings */}
+      {[0, 1].map((i) => (
+        <motion.div
+          key={i}
+          className="absolute rounded-full border"
+          style={{ borderColor: i === 0 ? colors.primary : colors.accent || colors.secondary }}
+          animate={{
+            width: [0, 200],
+            height: [0, 200],
+            opacity: [0.5, 0],
+          }}
+          transition={{ duration: 2.5, repeat: Infinity, delay: i * 0.6 }}
+        />
+      ))}
+      {/* Text zooms in with rotation */}
+      <motion.span
+        className="relative z-10 text-base font-black text-center"
+        style={{ color: colors.primary }}
+        animate={{
+          scale: [3, 1, 1, 0.8],
+          rotate: [-8, 0, 0, 5],
+          opacity: [0, 1, 1, 0],
+        }}
+        transition={{ duration: 3.5, repeat: Infinity, times: [0, 0.3, 0.7, 1] }}
+      >
+        {nameEn}
+      </motion.span>
+    </div>
+  )
+}
+
+/** グラデーションワイプ: 色面がワイプ展開 */
+function GradientWipeMini({ colors, nameEn }: MiniProps) {
+  return (
+    <div className="absolute inset-0 overflow-hidden" style={{ background: colors.background }}>
+      {/* Wipe layer 1 */}
+      <motion.div
+        className="absolute inset-0"
+        style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}
+        animate={{
+          clipPath: [
+            'polygon(0 0, 0 0, 0 100%, 0 100%)',
+            'polygon(0 0, 100% 0, 100% 100%, 0 100%)',
+            'polygon(100% 0, 100% 0, 100% 100%, 100% 100%)',
+          ],
+        }}
+        transition={{ duration: 4, repeat: Infinity, times: [0, 0.3, 0.6] }}
+      />
+      {/* Bottom stripe */}
+      <motion.div
+        className="absolute bottom-0 left-0 right-0 h-[2px]"
+        style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.accent || colors.secondary})` }}
+        animate={{ scaleX: [0, 1, 1, 0] }}
+        transition={{ duration: 4, repeat: Infinity, times: [0.4, 0.6, 0.8, 1] }}
+      />
+      {/* Text with clip reveal */}
+      <div className="absolute inset-0 flex items-center justify-center z-10">
+        <motion.span
+          className="text-base font-bold"
+          style={{ color: colors.primary }}
+          animate={{
+            clipPath: ['inset(0 100% 0 0)', 'inset(0 100% 0 0)', 'inset(0 0% 0 0)', 'inset(0 0% 0 0)', 'inset(0 0 0 100%)'],
+            opacity: [0, 0, 1, 1, 0],
+          }}
+          transition={{ duration: 4, repeat: Infinity, times: [0, 0.25, 0.45, 0.75, 1] }}
+        >
+          {nameEn}
+        </motion.span>
+      </div>
+    </div>
+  )
+}
+
+/** テキストスクランブル: ランダム文字→確定 */
+function TextScrambleMini({ colors, nameEn }: MiniProps) {
+  const matrixChars = useMemo(() =>
+    Array.from({ length: 8 }, (_, i) => ({
+      id: i,
+      left: `${12 + i * 10}%`,
+      delay: Math.random() * 0.5,
+    })),
+  [])
+
+  return (
+    <div className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center" style={{ background: colors.background }}>
+      {/* Falling code lines */}
+      {matrixChars.map((m) => (
+        <motion.div
+          key={m.id}
+          className="absolute w-px"
+          style={{
+            left: m.left,
+            height: '20%',
+            background: `linear-gradient(to bottom, transparent, ${colors.primary}50, transparent)`,
+          }}
+          animate={{ top: ['-20%', '120%'], opacity: [0, 0.5, 0] }}
+          transition={{ duration: 2, repeat: Infinity, delay: m.delay }}
+        />
+      ))}
+      {/* Scramble text effect (simplified) */}
+      <motion.span
+        className="text-sm font-bold font-mono tracking-wider relative z-10"
+        style={{ color: colors.primary }}
+        animate={{
+          opacity: [0, 1, 1, 1, 0],
+          filter: ['blur(4px)', 'blur(4px)', 'blur(0px)', 'blur(0px)', 'blur(2px)'],
+        }}
+        transition={{ duration: 4, repeat: Infinity, times: [0, 0.15, 0.4, 0.75, 1] }}
+      >
+        {nameEn}
+      </motion.span>
+      {/* Accent line */}
+      <motion.div
+        className="mt-2 h-px"
+        style={{ background: `linear-gradient(to right, transparent, ${colors.accent || colors.primary}, transparent)` }}
+        animate={{ width: [0, 60, 60, 0], opacity: [0, 1, 1, 0] }}
+        transition={{ duration: 4, repeat: Infinity, times: [0.35, 0.5, 0.7, 1] }}
+      />
+    </div>
+  )
+}
+
+/** ネオングロー: ネオン管風フリッカー */
+function NeonGlowMini({ colors, nameEn }: MiniProps) {
+  const neon = (c: string) => `0 0 5px ${c}, 0 0 10px ${c}`
+  return (
+    <div className="absolute inset-0 overflow-hidden flex flex-col items-center justify-center" style={{ background: '#0a0a0a' }}>
+      {/* Grid bg */}
+      <div className="absolute inset-0" style={{
+        backgroundImage: `linear-gradient(${colors.primary}08 1px, transparent 1px), linear-gradient(90deg, ${colors.primary}08 1px, transparent 1px)`,
+        backgroundSize: '20px 20px',
+      }} />
+      {/* Glow orb */}
+      <motion.div
+        className="absolute w-24 h-24 rounded-full"
+        style={{ background: `radial-gradient(circle, ${colors.primary}25, transparent 70%)` }}
+        animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0.6, 0.3] }}
+        transition={{ duration: 3, repeat: Infinity }}
+      />
+      {/* Neon text with flicker */}
+      <motion.span
+        className="relative z-10 text-base font-bold text-center"
+        style={{ color: colors.primary }}
+        animate={{
+          opacity: [0, 0.4, 0, 0.8, 0.6, 1, 0.9, 1, 1, 0],
+          textShadow: [
+            'none', neon(colors.primary), 'none', neon(colors.primary),
+            'none', neon(colors.primary), neon(colors.primary), neon(colors.primary),
+            neon(colors.primary), 'none',
+          ],
+        }}
+        transition={{ duration: 4, repeat: Infinity, times: [0, 0.08, 0.12, 0.2, 0.24, 0.35, 0.5, 0.65, 0.8, 1] }}
+      >
+        {nameEn}
+      </motion.span>
+      {/* Neon underline */}
+      <motion.div
+        className="mt-2 h-[1px]"
+        style={{ backgroundColor: colors.accent || colors.primary, boxShadow: neon(colors.accent || colors.primary) }}
+        animate={{ width: [0, 50, 50, 0], opacity: [0, 1, 1, 0] }}
+        transition={{ duration: 4, repeat: Infinity, times: [0.3, 0.45, 0.75, 1] }}
+      />
+      {/* Corner accents */}
+      {['top-1 left-1', 'top-1 right-1', 'bottom-1 left-1', 'bottom-1 right-1'].map((pos, i) => (
+        <motion.div
+          key={i}
+          className={`absolute ${pos} w-2 h-2`}
+          style={{
+            borderTop: i < 2 ? `1px solid ${colors.primary}40` : 'none',
+            borderBottom: i >= 2 ? `1px solid ${colors.primary}40` : 'none',
+            borderLeft: i % 2 === 0 ? `1px solid ${colors.primary}40` : 'none',
+            borderRight: i % 2 === 1 ? `1px solid ${colors.primary}40` : 'none',
+          }}
+          animate={{ opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 4, repeat: Infinity, times: [0.2, 0.35, 0.7, 1] }}
+        />
+      ))}
     </div>
   )
 }

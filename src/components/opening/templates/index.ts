@@ -7,6 +7,12 @@ import CinematicReveal from './CinematicReveal'
 import ParticleBurst from './ParticleBurst'
 import CorporateSlide from './CorporateSlide'
 import LuxuryMorph from './LuxuryMorph'
+import TypewriterReveal from './TypewriterReveal'
+import GlitchWave from './GlitchWave'
+import ZoomRotate from './ZoomRotate'
+import GradientWipe from './GradientWipe'
+import TextScramble from './TextScramble'
+import NeonGlow from './NeonGlow'
 
 export interface TemplateProps {
   colors: { primary: string; secondary: string; accent: string; background: string; text: string }
@@ -27,6 +33,12 @@ const TEMPLATE_REGISTRY: Record<string, ComponentType<TemplateProps>> = {
   'particle-burst': ParticleBurst as ComponentType<TemplateProps>,
   'corporate-slide': CorporateSlide as ComponentType<TemplateProps>,
   'luxury-morph': LuxuryMorph as ComponentType<TemplateProps>,
+  'typewriter-reveal': TypewriterReveal as ComponentType<TemplateProps>,
+  'glitch-wave': GlitchWave as ComponentType<TemplateProps>,
+  'zoom-rotate': ZoomRotate as ComponentType<TemplateProps>,
+  'gradient-wipe': GradientWipe as ComponentType<TemplateProps>,
+  'text-scramble': TextScramble as ComponentType<TemplateProps>,
+  'neon-glow': NeonGlow as ComponentType<TemplateProps>,
 }
 
 export function getTemplateComponent(templateId: string): ComponentType<TemplateProps> | null {
