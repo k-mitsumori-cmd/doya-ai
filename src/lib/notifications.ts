@@ -87,12 +87,18 @@ async function getSlackWebhookUrl(): Promise<string> {
 
 async function postToSlack(text: string): Promise<void> {
   const url = await getSlackWebhookUrl()
-  if (!url) return
-  await fetch(url, {
+  if (!url) {
+    throw new Error('Slack webhook URL is not configured (slack_webhook not found in SystemSetting)')
+  }
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Slack webhook returned ${res.status}: ${body}`)
+  }
 }
 
 // ========================================
