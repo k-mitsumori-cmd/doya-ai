@@ -356,7 +356,7 @@ export default function SeoTestPage() {
                             <div className={`h-20 sm:h-24 ${colors.bg} relative flex items-center justify-center overflow-hidden`}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={`/api/seo/test/image/template/${tmpl.id}?v=3`}
+                                src={`/api/seo/test/image/template/${tmpl.id}?v=4`}
                                 alt=""
                                 className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
                                 loading="lazy"
