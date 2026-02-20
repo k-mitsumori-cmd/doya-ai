@@ -239,7 +239,7 @@ export default function SeoTestPage() {
                 SEO記事をかんたん作成
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                記事の型を選んで、3ステップでSEO記事を完成
+                テンプレートを選んで、3ステップでSEO記事を完成
               </p>
             </div>
             {selectedTemplate && (
@@ -271,16 +271,16 @@ export default function SeoTestPage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className="flex-1">
                     <h2 className="text-base sm:text-lg font-black text-slate-900 mb-1">
-                      まずは「記事の型」を選びましょう
+                      まずはテンプレートを選びましょう
                     </h2>
                     <p className="text-xs sm:text-sm text-slate-500">
-                      下の記事プランはすべて<span className="font-bold text-blue-600">テンプレート</span>です。選んだ後にキーワードや内容を自由にカスタマイズできます。
+                      下のカードはすべて<span className="font-bold text-blue-600">記事の雛形</span>です。選んだ後にキーワードや内容を自由にカスタマイズできます。
                     </p>
                   </div>
                   <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-400 flex-shrink-0">
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full">
                       <Search className="w-3 h-3" />
-                      型を選ぶ
+                      テンプレ選択
                     </span>
                     <ArrowRight className="w-3 h-3" />
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-500 rounded-full">
@@ -387,7 +387,7 @@ export default function SeoTestPage() {
                               <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
                                 <span className="text-[9px] text-slate-400 font-bold">テンプレート</span>
                                 <span className="inline-flex items-center gap-1 text-[10px] font-black text-blue-600 group-hover:text-blue-700">
-                                  この型を使う <ArrowRight className="w-3 h-3" />
+                                  このテンプレを使う <ArrowRight className="w-3 h-3" />
                                 </span>
                               </div>
                             </div>
