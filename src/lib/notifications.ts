@@ -148,10 +148,13 @@ export async function sendDailySummary(): Promise<void> {
     const now = new Date()
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
-    // 過去24時間の新規ユーザー数
-    const newUsers = await prisma.user.count({
+    // 過去24時間の新規ユーザー（名前付き）
+    const newUsersList = await prisma.user.findMany({
       where: { createdAt: { gte: yesterday } },
+      select: { name: true, email: true },
+      orderBy: { createdAt: 'desc' },
     })
+    const newUsers = newUsersList.length
 
     // 総ユーザー数
     const totalUsers = await prisma.user.count()
@@ -168,10 +171,13 @@ export async function sendDailySummary(): Promise<void> {
       _count: true,
     })
 
-    // 有料ユーザー数
-    const paidUsers = await prisma.user.count({
+    // 有料ユーザー（名前付き）
+    const paidUsersList = await prisma.user.findMany({
       where: { plan: { not: 'FREE' } },
+      select: { name: true, email: true, plan: true },
+      orderBy: { createdAt: 'desc' },
     })
+    const paidUsers = paidUsersList.length
 
     // 所感メッセージを生成
     const greeting = getDailyGreeting(newUsers, newGenerations, paidUsers)
@@ -190,8 +196,14 @@ export async function sendDailySummary(): Promise<void> {
       ``,
       `*👥 ユーザー*`,
       `- 新規登録: ${newUsers}人`,
+      ...(newUsersList.length > 0
+        ? newUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
+        : []),
       `- 総ユーザー数: ${totalUsers}人`,
       `- 有料ユーザー: ${paidUsers}人`,
+      ...(paidUsersList.length > 0
+        ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
+        : []),
       ``,
       `*⚡ 生成数（過去24時間）*`,
       `- 合計: ${newGenerations}件`,
