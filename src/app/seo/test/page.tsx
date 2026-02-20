@@ -455,10 +455,10 @@ export default function SeoTestPage() {
                             <div className={`aspect-[16/9] ${colors.bg} relative flex items-center justify-center overflow-hidden`}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={`/api/seo/test/image/template/${tmpl.id}?v=5`}
+                                src={`/api/seo/test/image/template/${tmpl.id}?v=6`}
                                 alt=""
                                 className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
-                                loading="lazy"
+                                loading={idx < 3 ? 'eager' : 'lazy'}
                                 onLoad={(e) => { (e.target as HTMLImageElement).classList.replace('opacity-0', 'opacity-100') }}
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                               />
