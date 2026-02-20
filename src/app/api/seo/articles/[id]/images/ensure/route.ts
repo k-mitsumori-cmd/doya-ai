@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateImagePng, geminiGenerateJson, GEMINI_IMAGE_MODEL_DEFAULT, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
-import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPlan'
+import { guessArticleGenreJa, pickRandomPatterns, buildBannerPromptFromPattern } from '@seo/lib/bannerPlan'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120 // 120秒のタイムアウト（複数画像生成のため）
@@ -127,15 +127,18 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
     const bannersToGenerate = Math.max(0, MAX_BANNERS - existingBanners.length)
 
     if (bannersToGenerate > 0) {
-      const bannerPrompt = buildArticleBannerPrompt({
-        title,
-        articleText: articleTextForBanner,
-        bannerSize: '1200x628（16:9、SNS/広告向け）',
-        genre,
-      })
+      // 12パターンからランダムに必要数を選択
+      const selectedPatterns = pickRandomPatterns(bannersToGenerate)
 
-      for (let bi = 0; bi < bannersToGenerate; bi++) {
+      for (let bi = 0; bi < selectedPatterns.length; bi++) {
+        const pattern = selectedPatterns[bi]
         try {
+          const bannerPrompt = buildBannerPromptFromPattern(pattern, {
+            title,
+            articleText: articleTextForBanner,
+            genre,
+          })
+
           const bannerResult = await geminiGenerateImagePng({
             prompt: bannerPrompt,
             aspectRatio: '16:9',
@@ -151,8 +154,8 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
               data: {
                 articleId,
                 kind: 'BANNER',
-                title: `記事バナー候補${existingBanners.length + bi + 1}`,
-                description: `記事「${title}」のバナー画像\nジャンル: ${genre}`,
+                title: `${pattern.label}スタイル`,
+                description: `記事「${title}」のバナー画像（${pattern.label}）`,
                 prompt: bannerPrompt,
                 filePath: saved.relativePath,
                 mimeType: 'image/png',
@@ -160,11 +163,11 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
             })
           }
 
-          if (bi < bannersToGenerate - 1) {
+          if (bi < selectedPatterns.length - 1) {
             await new Promise((r) => setTimeout(r, 500))
           }
         } catch (err: any) {
-          console.error(`Banner ${bi + 1} generation failed:`, err?.message)
+          console.error(`Banner ${bi + 1} (${pattern.label}) generation failed:`, err?.message)
         }
       }
     }

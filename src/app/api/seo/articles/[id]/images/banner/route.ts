@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPlan'
+import { guessArticleGenreJa, pickRandomPatterns, buildBannerPromptFromPattern } from '@seo/lib/bannerPlan'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 
 export const runtime = 'nodejs'
@@ -12,7 +12,7 @@ export const maxDuration = 120
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   const params = 'then' in ctx.params ? await ctx.params : ctx.params
   const articleId = params.id
-  
+
   try {
     await ensureSeoSchema()
     const article = await (prisma as any).seoArticle.findUnique({ where: { id: articleId } })
@@ -21,7 +21,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     await ensureSeoStorage()
 
     const title = String(article.title || '').trim()
-    
+
     // 記事本文を整形（マークダウンから不要要素を除去）
     const articleText = String(article.finalMarkdown || article.outline || '')
       .replace(/!\[[^\]]*?\]\([^)]+\)/g, '') // 画像を除去
@@ -35,18 +35,20 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     // ジャンルを推定
     const genre = guessArticleGenreJa([title, articleText].join(' '))
 
-    // バナー生成プロンプトを組み立て
-    const prompt = buildArticleBannerPrompt({
-      title,
-      articleText,
-      bannerSize: '1200x628（16:9、SNS/広告向け）',
-      genre,
-    })
+    // 12パターンからランダムに4つ選択
+    const selectedPatterns = pickRandomPatterns(4)
 
-    // Geminiで画像生成（4枚候補）
+    // 各パターンで1枚ずつ生成（計4枚）
     const results: any[] = []
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < selectedPatterns.length; i++) {
+      const pattern = selectedPatterns[i]
       try {
+        const prompt = buildBannerPromptFromPattern(pattern, {
+          title,
+          articleText,
+          genre,
+        })
+
         const result = await geminiGenerateImagePng({
           prompt,
           aspectRatio: '16:9',
@@ -62,8 +64,8 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
             data: {
               articleId,
               kind: 'BANNER',
-              title: `記事バナー候補${i + 1}`,
-              description: `記事「${title}」のバナー画像`,
+              title: `${pattern.label}スタイル`,
+              description: `記事「${title}」のバナー画像（${pattern.label}）`,
               prompt: prompt,
               filePath: saved.relativePath,
               mimeType: 'image/png',
@@ -72,9 +74,9 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
           results.push(rec)
         }
 
-        if (i < 3) await new Promise((r) => setTimeout(r, 500))
+        if (i < selectedPatterns.length - 1) await new Promise((r) => setTimeout(r, 500))
       } catch (err: any) {
-        console.error(`Banner ${i + 1} generation failed:`, err?.message)
+        console.error(`Banner ${i + 1} (${pattern.label}) generation failed:`, err?.message)
       }
     }
 
