@@ -144,76 +144,72 @@ export async function sendEventNotification(event: {
 // 日次サマリー通知（毎朝9時に送信）
 // ========================================
 export async function sendDailySummary(): Promise<void> {
-  try {
-    const now = new Date()
-    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  const now = new Date()
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
 
-    // 過去24時間の新規ユーザー（名前付き）
-    const newUsersList = await prisma.user.findMany({
-      where: { createdAt: { gte: yesterday } },
-      select: { name: true, email: true },
-      orderBy: { createdAt: 'desc' },
-    })
-    const newUsers = newUsersList.length
+  // 過去24時間の新規ユーザー（名前付き）
+  const newUsersList = await prisma.user.findMany({
+    where: { createdAt: { gte: yesterday } },
+    select: { name: true, email: true },
+    orderBy: { createdAt: 'desc' },
+  })
+  const newUsers = newUsersList.length
 
-    // 総ユーザー数
-    const totalUsers = await prisma.user.count()
+  // 総ユーザー数
+  const totalUsers = await prisma.user.count()
 
-    // 過去24時間の生成数（Generation テーブル）
-    const newGenerations = await prisma.generation.count({
-      where: { createdAt: { gte: yesterday } },
-    })
+  // 過去24時間の生成数（Generation テーブル）
+  const newGenerations = await prisma.generation.count({
+    where: { createdAt: { gte: yesterday } },
+  })
 
-    // サービス別の生成数
-    const generationsByService = await prisma.generation.groupBy({
-      by: ['serviceId'],
-      where: { createdAt: { gte: yesterday } },
-      _count: true,
-    })
+  // サービス別の生成数
+  const generationsByService = await prisma.generation.groupBy({
+    by: ['serviceId'],
+    where: { createdAt: { gte: yesterday } },
+    _count: { _all: true },
+  })
 
-    // 有料ユーザー（名前付き）
-    const paidUsersList = await prisma.user.findMany({
-      where: { plan: { not: 'FREE' } },
-      select: { name: true, email: true, plan: true },
-      orderBy: { createdAt: 'desc' },
-    })
-    const paidUsers = paidUsersList.length
+  // 有料ユーザー（名前付き）
+  const paidUsersList = await prisma.user.findMany({
+    where: { plan: { not: 'FREE' } },
+    select: { name: true, email: true, plan: true },
+    orderBy: { createdAt: 'desc' },
+  })
+  const paidUsers = paidUsersList.length
 
-    // 所感メッセージを生成
-    const greeting = getDailyGreeting(newUsers, newGenerations, paidUsers)
+  // 所感メッセージを生成
+  const greeting = getDailyGreeting(newUsers, newGenerations, paidUsers)
 
-    // フォーマット
-    const dateStr = now.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
-    const serviceLines = generationsByService
-      .sort((a, b) => b._count - a._count)
-      .map((s) => `  - ${s.serviceId}: ${s._count}件`)
+  // フォーマット
+  const dateStr = now.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
+  const serviceLines = generationsByService
+    .sort((a, b) => (b._count?._all ?? 0) - (a._count?._all ?? 0))
+    .map((s) => `  - ${s.serviceId}: ${s._count?._all ?? 0}件`)
 
-    const lines = [
-      `<!channel>`,
-      `📊 *[日次レポート]* ${dateStr}`,
-      ``,
-      greeting,
-      ``,
-      `*👥 ユーザー*`,
-      `- 新規登録: ${newUsers}人`,
-      ...(newUsersList.length > 0
-        ? newUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
-        : []),
-      `- 総ユーザー数: ${totalUsers}人`,
-      `- 有料ユーザー: ${paidUsers}人`,
-      ...(paidUsersList.length > 0
-        ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
-        : []),
-      ``,
-      `*⚡ 生成数（過去24時間）*`,
-      `- 合計: ${newGenerations}件`,
-      ...(serviceLines.length > 0 ? serviceLines : ['  - (なし)']),
-    ]
+  const lines = [
+    `<!channel>`,
+    `📊 *[日次レポート]* ${dateStr}`,
+    ``,
+    greeting,
+    ``,
+    `*👥 ユーザー*`,
+    `- 新規登録: ${newUsers}人`,
+    ...(newUsersList.length > 0
+      ? newUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
+      : []),
+    `- 総ユーザー数: ${totalUsers}人`,
+    `- 有料ユーザー: ${paidUsers}人`,
+    ...(paidUsersList.length > 0
+      ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
+      : []),
+    ``,
+    `*⚡ 生成数（過去24時間）*`,
+    `- 合計: ${newGenerations}件`,
+    ...(serviceLines.length > 0 ? serviceLines : ['  - (なし)']),
+  ]
 
-    await postToSlack(lines.join('\n'))
-  } catch (e) {
-    console.error('[Notification] Failed to sendDailySummary:', e)
-  }
+  await postToSlack(lines.join('\n'))
 }
 
 // 数値に応じた明るい所感メッセージ

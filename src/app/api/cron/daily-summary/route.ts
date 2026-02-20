@@ -14,8 +14,11 @@ export async function GET(request: Request) {
   try {
     await sendDailySummary()
     return NextResponse.json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Cron] daily-summary error:', error)
-    return NextResponse.json({ error: 'Failed to send daily summary' }, { status: 500 })
+    return NextResponse.json(
+      { error: error?.message || 'Failed to send daily summary', stack: error?.stack },
+      { status: 500 }
+    )
   }
 }
