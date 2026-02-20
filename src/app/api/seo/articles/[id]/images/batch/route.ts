@@ -39,7 +39,7 @@ export async function POST(
     const results: { title: string; success: boolean; imageId?: string; error?: string }[] = []
 
     // 順番に生成（並列だとレート制限に引っかかる可能性）
-    for (const diagram of diagrams.slice(0, 5)) {
+    for (const diagram of diagrams.slice(0, 10)) {
       try {
         const prompt = [
           'Create a clean monochrome-friendly diagram illustration for a Japanese business article.',

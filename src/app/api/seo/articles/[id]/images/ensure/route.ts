@@ -67,7 +67,7 @@ function applyDiagramTemplate(rawTemplate: string, vars: Record<string, string>)
 }
 
 /**
- * 1クリックで「バナー + 図解(最大10)」を生成（既存があれば不足分だけ生成）
+ * 1クリックで「バナー(4枚候補) + 図解(最大10)」を生成（既存があれば不足分だけ生成）
  * - 有料のみ
  */
 export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
@@ -121,10 +121,12 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
     
     const genre = guessArticleGenreJa([title, headingsPlain.join(' '), articleContent].join(' '))
 
-    // === バナーがなければ生成 ===
-    const hasBanner = (article.images || []).some((x: any) => x.kind === 'BANNER')
-    if (!hasBanner) {
-      // 新しいプロンプトでバナー生成
+    // === バナーが4枚未満なら不足分を生成 ===
+    const MAX_BANNERS = 4
+    const existingBanners = (article.images || []).filter((x: any) => x.kind === 'BANNER')
+    const bannersToGenerate = Math.max(0, MAX_BANNERS - existingBanners.length)
+
+    if (bannersToGenerate > 0) {
       const bannerPrompt = buildArticleBannerPrompt({
         title,
         articleText: articleTextForBanner,
@@ -132,33 +134,43 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
         genre,
       })
 
-      const bannerResult = await geminiGenerateImagePng({
-        prompt: bannerPrompt,
-        aspectRatio: '16:9',
-        imageSize: '2K',
-        model: GEMINI_IMAGE_MODEL_DEFAULT,
-      })
-
-      if (bannerResult?.dataBase64) {
-        const filename = `seo_${articleId}_${Date.now()}_banner.png`
-        const saved = await saveBase64ToFile({ base64: bannerResult.dataBase64, filename, subdir: 'images' })
-
-        await (prisma as any).seoImage.create({
-          data: {
-            articleId,
-            kind: 'BANNER',
-            title: '記事バナー',
-            description: `記事「${title}」のバナー画像\nジャンル: ${genre}`,
+      for (let bi = 0; bi < bannersToGenerate; bi++) {
+        try {
+          const bannerResult = await geminiGenerateImagePng({
             prompt: bannerPrompt,
-            filePath: saved.relativePath,
-            mimeType: 'image/png',
-          },
-        })
+            aspectRatio: '16:9',
+            imageSize: '2K',
+            model: GEMINI_IMAGE_MODEL_DEFAULT,
+          })
+
+          if (bannerResult?.dataBase64) {
+            const filename = `seo_${articleId}_${Date.now()}_banner_${bi}.png`
+            const saved = await saveBase64ToFile({ base64: bannerResult.dataBase64, filename, subdir: 'images' })
+
+            await (prisma as any).seoImage.create({
+              data: {
+                articleId,
+                kind: 'BANNER',
+                title: `記事バナー候補${existingBanners.length + bi + 1}`,
+                description: `記事「${title}」のバナー画像\nジャンル: ${genre}`,
+                prompt: bannerPrompt,
+                filePath: saved.relativePath,
+                mimeType: 'image/png',
+              },
+            })
+          }
+
+          if (bi < bannersToGenerate - 1) {
+            await new Promise((r) => setTimeout(r, 500))
+          }
+        } catch (err: any) {
+          console.error(`Banner ${bi + 1} generation failed:`, err?.message)
+        }
       }
     }
 
-    // === 図解候補を提案して最大9枚生成（既にある場合は不足分のみ）===
-    const MAX_DIAGRAMS = 9
+    // === 図解候補を提案して最大10枚生成（既にある場合は不足分のみ）===
+    const MAX_DIAGRAMS = 10
     const existingDiagrams = (article.images || []).filter((x: any) => x.kind === 'DIAGRAM')
     const remain = Math.max(0, MAX_DIAGRAMS - existingDiagrams.length)
     

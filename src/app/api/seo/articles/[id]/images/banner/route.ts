@@ -7,7 +7,7 @@ import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gem
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120
 
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   const params = 'then' in ctx.params ? await ctx.params : ctx.params
@@ -43,35 +43,46 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
       genre,
     })
 
-    // Geminiで画像生成
-    const result = await geminiGenerateImagePng({
-      prompt,
-      aspectRatio: '16:9',
-      imageSize: '2K',
-      model: GEMINI_IMAGE_MODEL_DEFAULT,
-    })
+    // Geminiで画像生成（4枚候補）
+    const results: any[] = []
+    for (let i = 0; i < 4; i++) {
+      try {
+        const result = await geminiGenerateImagePng({
+          prompt,
+          aspectRatio: '16:9',
+          imageSize: '2K',
+          model: GEMINI_IMAGE_MODEL_DEFAULT,
+        })
 
-    if (!result?.dataBase64) {
+        if (result?.dataBase64) {
+          const filename = `seo_${articleId}_${Date.now()}_banner_${i}.png`
+          const saved = await saveBase64ToFile({ base64: result.dataBase64, filename, subdir: 'images' })
+
+          const rec = await (prisma as any).seoImage.create({
+            data: {
+              articleId,
+              kind: 'BANNER',
+              title: `記事バナー候補${i + 1}`,
+              description: `記事「${title}」のバナー画像`,
+              prompt: prompt,
+              filePath: saved.relativePath,
+              mimeType: 'image/png',
+            },
+          })
+          results.push(rec)
+        }
+
+        if (i < 3) await new Promise((r) => setTimeout(r, 500))
+      } catch (err: any) {
+        console.error(`Banner ${i + 1} generation failed:`, err?.message)
+      }
+    }
+
+    if (!results.length) {
       throw new Error('バナー画像の生成に失敗しました')
     }
 
-    const filename = `seo_${articleId}_${Date.now()}_banner.png`
-    const saved = await saveBase64ToFile({ base64: result.dataBase64, filename, subdir: 'images' })
-
-    // DBに保存
-    const rec = await (prisma as any).seoImage.create({
-      data: {
-        articleId,
-        kind: 'BANNER',
-        title: '記事バナー',
-        description: `記事「${title}」のバナー画像`,
-        prompt: prompt,
-        filePath: saved.relativePath,
-        mimeType: 'image/png',
-      },
-    })
-
-    return NextResponse.json({ success: true, image: rec })
+    return NextResponse.json({ success: true, images: results, image: results[0] })
   } catch (e: any) {
     console.error('[seo banner] failed', { articleId, error: e?.message || 'unknown error', stack: e?.stack })
     return NextResponse.json(

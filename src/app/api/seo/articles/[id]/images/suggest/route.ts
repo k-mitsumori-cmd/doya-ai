@@ -48,7 +48,7 @@ export async function POST(
 
     const prompt = `
 あなたは記事のビジュアル設計者です。
-以下の記事内容を分析して、読者の理解を助ける図解を3〜5個提案してください。
+以下の記事内容を分析して、読者の理解を助ける図解を最大10個提案してください。
 
 ## 図解の提案基準
 - 複雑なプロセスやフローがある箇所
@@ -74,7 +74,7 @@ ${content.slice(0, 4000)}
 - insertAfterHeading: 挿入推奨位置の見出しテキスト
 - priority: high/medium/low
 
-最大5個まで、優先度の高い順に提案してください。
+最大10個まで、優先度の高い順に提案してください。
 `
 
     const result = await geminiGenerateJson<{ diagrams?: Array<{ title: string; description: string; insertAfterHeading?: string; priority: 'high' | 'medium' | 'low' }> }>({

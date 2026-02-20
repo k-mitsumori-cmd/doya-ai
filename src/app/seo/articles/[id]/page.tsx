@@ -1866,7 +1866,7 @@ function SeoArticleInner() {
                         <Check className="w-4 h-4" />
                         保存
                       </button>
-                      <span className="text-[10px] font-bold text-gray-400">バナー＋図解（最大10）を自動生成します（数分かかる場合があります）</span>
+                      <span className="text-[10px] font-bold text-gray-400">サムネイル4枚＋図解（最大10）を自動生成します（数分かかる場合があります）</span>
                     </div>
                   )}
 
@@ -1919,47 +1919,124 @@ function SeoArticleInner() {
                     </div>
                   )}
 
-                  {/* サムネイル（BANNER）セクション */}
+                  {/* サムネイル（BANNER）選択セクション */}
                   {(() => {
-                    const bannerImages = article.images?.filter((img) => img.kind === 'BANNER') || []
-                    return bannerImages.length > 0 ? (
+                    const bannerImages = (article.images?.filter((img) => img.kind === 'BANNER') || [])
+                      .slice()
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    if (!bannerImages.length) return null
+                    const selectedId = bannerImageId
+                    return (
                       <div className="mb-8">
-                        <h4 className="text-sm font-black text-gray-700 mb-4 flex items-center gap-2">
+                        <h4 className="text-sm font-black text-gray-700 mb-2 flex items-center gap-2">
                           <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-orange-100 text-orange-600">
                             <ImageIcon className="w-3.5 h-3.5" />
                           </span>
-                          記事バナー（サムネイル）
-                          <span className="text-xs font-bold text-gray-400 ml-1">({bannerImages.length}枚)</span>
+                          サムネイルを選択
+                          <span className="text-xs font-bold text-gray-400 ml-1">({bannerImages.length}枚から選択)</span>
                         </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                          {bannerImages.map((img) => (
-                            <ImageCard
-                              key={img.id}
-                              img={img}
-                              isMediaLocked={isMediaLocked}
-                              mediaLockLabel={mediaLockLabel}
-                              upgradeHref={upgradeHref}
-                              mediaBusy={mediaBusy}
-                              imgLoaded={imgLoaded}
-                              imgGenerating={imgGenerating}
-                              imgRetry={imgRetry}
-                              bumpRetry={bumpRetry}
-                              setImgLoaded={setImgLoaded}
-                              setImgGenerating={setImgGenerating}
-                              setImageDetail={setImageDetail}
-                              downloadImage={downloadImage}
-                              copyToClipboard={copyToClipboard}
-                              setRegenImage={setRegenImage}
-                              setRegenPrompt={setRegenPrompt}
-                              setRegenOpen={setRegenOpen}
-                              sanitizeLegacyBannerPrompt={sanitizeLegacyBannerPrompt}
-                              entitlements={entitlements}
-                              router={router}
-                            />
-                          ))}
+                        <p className="text-[10px] font-bold text-gray-400 mb-4">クリックでメインサムネイルに設定されます。記事プレビューのカバー画像に使用されます。</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {bannerImages.map((img, idx) => {
+                            const isSelected = img.id === selectedId
+                            const isLoaded = imgLoaded[img.id]
+                            const isGenerating = !isLoaded && (mediaBusy || !!imgGenerating[img.id])
+                            return (
+                              <button
+                                key={img.id}
+                                type="button"
+                                onClick={async () => {
+                                  if (isMediaLocked) { router.push(upgradeHref); return }
+                                  if (isSelected) { setImageDetail(img); return }
+                                  try {
+                                    await fetch(`/api/seo/articles/${id}/images/select-banner`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({ imageId: img.id }),
+                                    })
+                                    await load({ showLoading: false })
+                                  } catch {}
+                                }}
+                                className={`group relative rounded-xl overflow-hidden border-2 transition-all duration-200 ${
+                                  isSelected
+                                    ? 'border-blue-500 ring-2 ring-blue-200 shadow-lg'
+                                    : 'border-gray-200 hover:border-gray-400 hover:shadow-md'
+                                }`}
+                              >
+                                <div className="aspect-video relative bg-gray-50">
+                                  <img
+                                    src={`/api/seo/images/${img.id}?v=${imgRetry[img.id] || 0}`}
+                                    className="w-full h-full object-cover"
+                                    alt={img.title || `候補${idx + 1}`}
+                                    onLoad={(e) => {
+                                      const el = e.currentTarget
+                                      if (!el?.naturalWidth || !el?.naturalHeight) {
+                                        setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
+                                        setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
+                                        setTimeout(() => bumpRetry(img.id), 1200)
+                                        return
+                                      }
+                                      setImgLoaded((prev) => ({ ...prev, [img.id]: true }))
+                                      setImgGenerating((prev) => ({ ...prev, [img.id]: false }))
+                                    }}
+                                    onError={() => {
+                                      setImgLoaded((prev) => ({ ...prev, [img.id]: false }))
+                                      setImgGenerating((prev) => ({ ...prev, [img.id]: true }))
+                                      setTimeout(() => bumpRetry(img.id), 1200)
+                                    }}
+                                  />
+                                  {isGenerating && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100/80">
+                                      <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+                                    </div>
+                                  )}
+                                  {isSelected && (
+                                    <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center shadow">
+                                      <Check className="w-3.5 h-3.5 text-white" />
+                                    </div>
+                                  )}
+                                  {!isSelected && !isGenerating && (
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                      <span className="opacity-0 group-hover:opacity-100 transition-opacity text-white text-[10px] font-black bg-black/50 px-2 py-1 rounded-lg">
+                                        メインに設定
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="px-2 py-1.5 bg-white">
+                                  <p className={`text-[10px] font-black truncate ${isSelected ? 'text-blue-600' : 'text-gray-500'}`}>
+                                    {isSelected ? 'メイン' : `候補${idx + 1}`}
+                                  </p>
+                                </div>
+                              </button>
+                            )
+                          })}
                         </div>
+                        {/* 選択中バナーの操作ボタン */}
+                        {selectedId && (() => {
+                          const selectedImg = bannerImages.find((img) => img.id === selectedId)
+                          if (!selectedImg) return null
+                          return (
+                            <div className="mt-4 flex flex-wrap gap-2">
+                              <button type="button" onClick={() => setImageDetail(selectedImg)} className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50">
+                                <Eye className="w-4 h-4" /> 拡大表示
+                              </button>
+                              <button type="button" onClick={() => downloadImage(selectedImg)} className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50" disabled={isMediaLocked}>
+                                <Download className="w-4 h-4" /> ダウンロード
+                              </button>
+                              <button type="button" onClick={() => copyToClipboard(`![${selectedImg.title || 'banner'}](/api/seo/images/${selectedImg.id})`)} className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-white border border-gray-200 text-gray-800 font-black text-xs hover:bg-gray-50" disabled={isMediaLocked}>
+                                <Copy className="w-4 h-4" /> Markdownコピー
+                              </button>
+                              {entitlements?.canUseSeoImages && (
+                                <button type="button" onClick={() => { setRegenImage(selectedImg); setRegenPrompt(sanitizeLegacyBannerPrompt(String(selectedImg.prompt || ''))); setRegenOpen(true) }} className="inline-flex items-center gap-2 h-9 px-3 rounded-xl bg-blue-600 text-white font-black text-xs hover:bg-blue-700">
+                                  <Wand2 className="w-4 h-4" /> 再生成
+                                </button>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </div>
-                    ) : null
+                    )
                   })()}
 
                   {/* 図解（DIAGRAM）セクション */}
@@ -2198,7 +2275,7 @@ function SeoArticleInner() {
                           <p className="text-xs font-black text-gray-400 uppercase tracking-widest">画像生成中</p>
                           <h3 className="text-lg font-black text-gray-900 mt-2">バナー＋図解を生成しています</h3>
                           <p className="text-xs font-bold text-gray-500 mt-2 leading-relaxed">
-                            記事内容を解析して最大10枚（バナー1枚＋図解最大9枚）を作ります。内容によっては数分かかることがあります（そのまま待ってOKです）。
+                            記事内容を解析して最大14枚（サムネイル4枚＋図解最大10枚）を作ります。内容によっては数分かかることがあります（そのまま待ってOKです）。
                           </p>
                         </div>
                         <div className="p-6 flex items-center gap-3">

@@ -8,9 +8,9 @@ import {
   canUseSeoImages,
   getGuestIdFromRequest,
   isTrialActive,
-  jstDayRange,
+  jstMonthRange,
   normalizeSeoPlan,
-  seoDailyArticleLimit,
+  seoMonthlyArticleLimit,
   seoGuestTotalArticleLimit,
 } from '@/lib/seoAccess'
 
@@ -29,10 +29,10 @@ export async function GET(_req: NextRequest) {
     const trial = isTrialActive(user?.firstLoginAt || null)
     const trialActive = isLoggedIn && trial.active
 
-    const { start, end } = jstDayRange(new Date())
+    const { start, end } = jstMonthRange(new Date())
 
-    // 生成回数（記事）: GUEST=累計3、ログイン=日次上限（トライアル中は無制限）
-    let usedArticlesToday = 0
+    // 生成回数（記事）: GUEST=累計1、ログイン=月次上限（トライアル中は無制限）
+    let usedArticlesThisMonth = 0
     let usedArticlesTotal = 0
     let articleLimit = 0
     let remainingArticles = 0
@@ -43,11 +43,11 @@ export async function GET(_req: NextRequest) {
       articleLimit = -1
       remainingArticles = -1
     } else if (isLoggedIn) {
-      articleLimit = seoDailyArticleLimit(plan)
-      usedArticlesToday = await (prisma as any).seoArticle.count({
+      articleLimit = seoMonthlyArticleLimit(plan)
+      usedArticlesThisMonth = await (prisma as any).seoArticle.count({
         where: { userId: String(user.id), createdAt: { gte: start, lt: end } },
       })
-      remainingArticles = Math.max(0, articleLimit - usedArticlesToday)
+      remainingArticles = Math.max(0, articleLimit - usedArticlesThisMonth)
     } else {
       articleLimit = seoGuestTotalArticleLimit()
       if (guestId) {
@@ -73,12 +73,12 @@ export async function GET(_req: NextRequest) {
       },
       limits: {
         // -1 = unlimited
-        articlesPerDay: isLoggedIn ? articleLimit : 0,
+        articlesPerMonth: isLoggedIn ? articleLimit : 0,
         articlesTotalGuest: !isLoggedIn ? articleLimit : 0,
         imagesAllowed,
       },
       usage: {
-        articlesToday: usedArticlesToday,
+        articlesThisMonth: usedArticlesThisMonth,
         articlesTotalGuest: usedArticlesTotal,
       },
       remaining: {
@@ -98,19 +98,17 @@ export async function GET(_req: NextRequest) {
       canUseChatEdit: false,
       canUseSeoImages: false,
       limits: {
-        articlesPerDay: 0,
-        articlesTotalGuest: 3,
+        articlesPerMonth: 0,
+        articlesTotalGuest: 0,
         imagesAllowed: false,
       },
       usage: {
-        articlesToday: 0,
+        articlesThisMonth: 0,
         articlesTotalGuest: 0,
       },
       remaining: {
-        articles: 3,
+        articles: 0,
       },
     })
   }
 }
-
-

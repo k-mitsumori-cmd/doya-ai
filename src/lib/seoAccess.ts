@@ -56,17 +56,34 @@ export function jstDayRange(now = new Date()): { start: Date; end: Date } {
   }
 }
 
+export function jstMonthRange(now = new Date()): { start: Date; end: Date } {
+  // JST基準で月初〜月末の範囲を返す
+  const ms = now.getTime()
+  const jst = new Date(ms + 9 * 60 * 60 * 1000)
+  const startJst = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1, 0, 0, 0))
+  const endJst = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth() + 1, 1, 0, 0, 0))
+  return {
+    start: new Date(startJst.getTime() - 9 * 60 * 60 * 1000),
+    end: new Date(endJst.getTime() - 9 * 60 * 60 * 1000),
+  }
+}
+
+/** @deprecated 後方互換用。新コードでは seoMonthlyArticleLimit を使うこと */
 export function seoDailyArticleLimit(plan: SeoPlanCode): number {
+  return seoMonthlyArticleLimit(plan)
+}
+
+export function seoMonthlyArticleLimit(plan: SeoPlanCode): number {
   // -1 = 無制限
-  if (plan === 'PRO') return 5
-  if (plan === 'ENTERPRISE') return 30
-  if (plan === 'FREE') return 1
-  // GUESTは日次ではなく累計（別ロジック）
+  if (plan === 'PRO') return 30
+  if (plan === 'ENTERPRISE') return 200
+  if (plan === 'FREE') return 3
+  // GUESTは生成不可
   return 0
 }
 
 export function seoGuestTotalArticleLimit(): number {
-  return 1
+  return 0
 }
 
 export function canUseSeoImages(args: { isLoggedIn: boolean; plan: SeoPlanCode; trialActive: boolean }) {

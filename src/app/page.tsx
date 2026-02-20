@@ -394,7 +394,7 @@ export default function TestPortalPage() {
               <ul className="space-y-4 mb-8">
                 {[
                   '登録なしで今すぐ使える',
-                  `SEO記事: ゲスト1回 / ログイン${SEO_PRICING.freeLimit}回/日`,
+                  `SEO記事: ログイン${SEO_PRICING.freeLimit}回/月（無料）`,
                   `バナー: ${BANNER_PRICING.guestLimit}枚/日`,
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3 text-white/70">

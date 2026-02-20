@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { categories, allTemplates } from './data'
@@ -117,6 +117,15 @@ export default function SeoTestPage() {
   // 状態
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // entitlements（残り記事数）
+  const [entitlements, setEntitlements] = useState<{ remaining?: { articles?: number }; limits?: { articlesPerMonth?: number }; plan?: string } | null>(null)
+  useEffect(() => {
+    fetch('/api/seo/entitlements', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => { if (j?.success) setEntitlements(j) })
+      .catch(() => {})
+  }, [])
 
   const isLoggedIn = !!session?.user?.email
   const userPlan = useMemo(() => {
@@ -242,15 +251,42 @@ export default function SeoTestPage() {
                 テンプレートを選んで、3ステップでSEO記事を完成
               </p>
             </div>
-            {selectedTemplate && (
-              <button
-                onClick={() => { setSelectedTemplate(null); setActiveCategoryId(null) }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-all"
-              >
-                <X className="w-3.5 h-3.5" />
-                リセット
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {entitlements && (() => {
+                const remaining = entitlements.remaining?.articles
+                const limit = entitlements.limits?.articlesPerMonth
+                const plan = entitlements.plan || 'FREE'
+                if (remaining === -1) return (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-black">
+                    <Sparkles className="w-3.5 h-3.5" /> 無制限
+                  </span>
+                )
+                if (typeof remaining === 'number' && typeof limit === 'number' && limit > 0) return (
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black ${
+                    remaining > 0 ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-600'
+                  }`}>
+                    <FileText className="w-3.5 h-3.5" />
+                    残り{remaining}/{limit}回
+                    <span className="text-[10px] font-bold opacity-60">/ 月</span>
+                  </span>
+                )
+                if (!isLoggedIn) return (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-500 text-xs font-black">
+                    ログインで月{3}回無料
+                  </span>
+                )
+                return null
+              })()}
+              {selectedTemplate && (
+                <button
+                  onClick={() => { setSelectedTemplate(null); setActiveCategoryId(null) }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-all"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  リセット
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

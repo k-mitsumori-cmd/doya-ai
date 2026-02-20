@@ -8,9 +8,9 @@ import {
   ensureGuestId,
   getGuestIdFromRequest,
   isTrialActive,
-  jstDayRange,
+  jstMonthRange,
   normalizeSeoPlan,
-  seoDailyArticleLimit,
+  seoMonthlyArticleLimit,
   seoGuestTotalArticleLimit,
   setGuestCookie,
 } from '@/lib/seoAccess'
@@ -92,15 +92,15 @@ export async function POST(req: NextRequest) {
     // 使用制限（トライアル中は無制限）
     if (!trialActive) {
       if (userId) {
-        const limit = seoDailyArticleLimit(plan)
+        const limit = seoMonthlyArticleLimit(plan)
         if (limit >= 0) {
-          const { start, end } = jstDayRange(new Date())
+          const { start, end } = jstMonthRange(new Date())
           const used = await (prisma as any).seoArticle.count({
             where: { userId, createdAt: { gte: start, lt: end } },
           })
           if (used >= limit) {
             return NextResponse.json(
-              { success: false, error: `本日の生成回数の上限に達しました（${limit}回/日）。プランをアップグレードすると増やせます。` },
+              { success: false, error: `今月の生成回数の上限に達しました（${limit}回/月）。プランをアップグレードすると増やせます。` },
               { status: 429 }
             )
           }
