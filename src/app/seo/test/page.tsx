@@ -55,6 +55,9 @@ const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string
   amber: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-600' },
   emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-600' },
   purple: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', badge: 'bg-purple-600' },
+  rose: { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', badge: 'bg-rose-600' },
+  cyan: { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700', badge: 'bg-cyan-600' },
+  orange: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', badge: 'bg-orange-600' },
 }
 
 function normalizeUrlInput(raw: string): string | null {
@@ -302,7 +305,7 @@ export default function SeoTestPage() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25 }}
             >
-              {/* テンプレート説明 */}
+              {/* 生成状況 + テンプレート説明 */}
               <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 mb-6 sm:mb-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className="flex-1">
@@ -330,6 +333,66 @@ export default function SeoTestPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* 今月の生成状況（プログレスバー） */}
+                {entitlements && (() => {
+                  const remaining = entitlements.remaining?.articles
+                  const limit = entitlements.limits?.articlesPerMonth
+                  const plan = entitlements.plan || 'FREE'
+                  if (remaining === -1) return (
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-slate-500">今月の生成状況</span>
+                        <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" /> トライアル中・無制限
+                        </span>
+                      </div>
+                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-gradient-to-r from-emerald-400 to-blue-500 w-1/4 rounded-full" />
+                      </div>
+                    </div>
+                  )
+                  if (typeof remaining === 'number' && typeof limit === 'number' && limit > 0) {
+                    const used = limit - remaining
+                    const pct = Math.min((used / limit) * 100, 100)
+                    const isWarning = pct >= 80
+                    const isOver = remaining <= 0
+                    return (
+                      <div className="mt-4 pt-4 border-t border-slate-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold text-slate-500">今月の生成状況</span>
+                          <span className={`text-xs font-bold ${isOver ? 'text-red-500' : isWarning ? 'text-amber-600' : 'text-blue-600'}`}>
+                            {used} / {limit}回
+                            <span className="text-[10px] font-bold opacity-60 ml-1">（{plan}プラン）</span>
+                          </span>
+                        </div>
+                        <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${isOver ? 'bg-red-500' : isWarning ? 'bg-amber-500' : 'bg-blue-500'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1.5">
+                          残り{remaining}回生成できます
+                          {plan === 'FREE' && <span className="ml-1">/ <a href="/pricing" className="text-blue-500 hover:underline">PRO版で月30回</a></span>}
+                        </p>
+                      </div>
+                    )
+                  }
+                  if (!isLoggedIn) return (
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-bold text-slate-500">今月の生成状況</span>
+                        <span className="text-xs font-bold text-slate-400">ゲスト（生成不可）</span>
+                      </div>
+                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden" />
+                      <p className="text-[10px] text-slate-400 mt-1.5">
+                        <a href="/auth/signin" className="text-blue-500 hover:underline font-bold">ログイン</a>すると月3回まで無料で生成できます
+                      </p>
+                    </div>
+                  )
+                  return null
+                })()}
               </div>
 
               {/* カテゴリタブ */}
@@ -378,7 +441,7 @@ export default function SeoTestPage() {
                       </div>
 
                       {/* 記事プラングリッド（4列） */}
-                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
                         {cat.templates.map((tmpl, idx) => (
                           <motion.button
                             key={tmpl.id}
@@ -389,25 +452,25 @@ export default function SeoTestPage() {
                             className={`group text-left bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:border-blue-200/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200`}
                           >
                             {/* カードヘッダー（バナー画像 or グラデーション） */}
-                            <div className={`h-20 sm:h-24 ${colors.bg} relative flex items-center justify-center overflow-hidden`}>
+                            <div className={`aspect-[16/10] ${colors.bg} relative flex items-center justify-center overflow-hidden`}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={`/api/seo/test/image/template/${tmpl.id}?v=4`}
+                                src={`/api/seo/test/image/template/${tmpl.id}?v=5`}
                                 alt=""
                                 className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
                                 loading="lazy"
                                 onLoad={(e) => { (e.target as HTMLImageElement).classList.replace('opacity-0', 'opacity-100') }}
                                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                               />
-                              <span className={`absolute top-2 right-2 z-10 px-2 py-0.5 rounded-full text-[9px] font-black text-white ${colors.badge}`}>
+                              <span className={`absolute top-2.5 right-2.5 z-10 px-2.5 py-1 rounded-full text-[9px] font-black text-white ${colors.badge} shadow-sm`}>
                                 {tmpl.recommendedChars >= 15000 ? '長文' : tmpl.recommendedChars >= 10000 ? '標準' : '短文'}
                               </span>
                             </div>
 
                             {/* カードボディ */}
-                            <div className="p-3 sm:p-4">
+                            <div className="p-3.5 sm:p-4">
                               {/* 型タイプ（メイン表示） */}
-                              <div className="flex items-center gap-1.5 mb-1.5">
+                              <div className="flex items-center gap-1.5 mb-2">
                                 <span className={`px-2 py-0.5 rounded text-[9px] font-black text-white ${colors.badge}`}>
                                   {ARTICLE_TYPES.find((t) => t.id === tmpl.articleType)?.label || tmpl.articleType}
                                 </span>
@@ -415,14 +478,14 @@ export default function SeoTestPage() {
                                   {tmpl.recommendedChars.toLocaleString()}字
                                 </span>
                               </div>
-                              <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                              <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug mb-1.5 line-clamp-1 group-hover:text-blue-600 transition-colors">
                                 {tmpl.patternLabel}
                               </h3>
-                              <p className="text-[10px] sm:text-xs text-slate-500 line-clamp-2 mb-2">
+                              <p className="text-[10px] sm:text-xs text-slate-500 line-clamp-2 mb-2.5">
                                 {tmpl.description}
                               </p>
                               {/* 使用例 */}
-                              <div className="bg-slate-50 rounded-lg px-2.5 py-1.5 mb-3">
+                              <div className="bg-slate-50 rounded-lg px-2.5 py-2 mb-3">
                                 <p className="text-[9px] text-slate-400 font-bold mb-0.5">使用例</p>
                                 <p className="text-[10px] sm:text-xs text-slate-600 font-medium line-clamp-1">{tmpl.title}</p>
                               </div>
