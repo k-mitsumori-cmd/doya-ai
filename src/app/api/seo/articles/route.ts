@@ -266,7 +266,7 @@ export async function PATCH(req: NextRequest) {
     const email = String(user?.email || '').toLowerCase()
     
     // 管理者メールアドレスのチェック
-    const adminEmails = (process.env.ADMIN_EMAILS || 'k-mitsumori@surisuta.jp').split(',').map(e => e.trim().toLowerCase())
+    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase())
     if (!adminEmails.includes(email)) {
       return NextResponse.json({ success: false, error: '管理者権限が必要です' }, { status: 403 })
     }

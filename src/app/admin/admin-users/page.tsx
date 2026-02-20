@@ -32,8 +32,8 @@ export default function AdminAdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
 
-  const [email, setEmail] = useState('k-mitsumori@surisuta.jp')
-  const [name, setName] = useState('mitsumori')
+  const [email, setEmail] = useState('')
+  const [name, setName] = useState('')
   const [password, setPassword] = useState('')
 
   const load = async () => {
@@ -252,7 +252,7 @@ export default function AdminAdminUsersPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 bg-black/30 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-violet-500/50"
-                placeholder="k-mitsumori@surisuta.jp"
+                placeholder="admin@example.com"
               />
             </div>
             <div>

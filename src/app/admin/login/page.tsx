@@ -266,7 +266,7 @@ export default function AdminLoginPage() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="例: k-mitsumori@surisuta.jp"
+                  placeholder="メールアドレスまたはユーザー名"
                   required
                   disabled={isLoading || !!lockoutMessage}
                   autoComplete="username"
