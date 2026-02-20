@@ -60,6 +60,37 @@ const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string
   orange: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-700', badge: 'bg-orange-600' },
 }
 
+/** テンプレート画像：ローディングスピナー付き */
+function TemplateImage({ src }: { src: string; aspect?: string }) {
+  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading')
+
+  useEffect(() => {
+    setStatus('loading')
+  }, [src])
+
+  return (
+    <>
+      {/* スピナー */}
+      {status === 'loading' && (
+        <div className="absolute inset-0 z-[1] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-[3px] border-slate-200 border-t-blue-500 animate-spin" />
+        </div>
+      )}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+          status === 'loaded' ? 'opacity-100' : 'opacity-0'
+        }`}
+        loading="lazy"
+        onLoad={() => setStatus('loaded')}
+        onError={() => setStatus('error')}
+      />
+    </>
+  )
+}
+
 function normalizeUrlInput(raw: string): string | null {
   const s = String(raw || '').trim().replace(/[)\]】）]+$/g, '').replace(/^[「『【\[]+/g, '').replace(/[、。,\s]+$/g, '')
   if (!s) return null
@@ -453,15 +484,7 @@ export default function SeoTestPage() {
                           >
                             {/* カードヘッダー（バナー画像） */}
                             <div className={`aspect-[16/9] ${colors.bg} relative flex items-center justify-center overflow-hidden`}>
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={`/api/seo/test/image/template/${tmpl.id}?v=6`}
-                                alt=""
-                                className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
-                                loading={idx < 3 ? 'eager' : 'lazy'}
-                                onLoad={(e) => { (e.target as HTMLImageElement).classList.replace('opacity-0', 'opacity-100') }}
-                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                              />
+                              <TemplateImage src={`/api/seo/test/image/template/${tmpl.id}?v=7`} />
                               <span className={`absolute top-2.5 right-2.5 z-10 px-2.5 py-1 rounded-full text-[9px] font-black text-white ${colors.badge} shadow-sm`}>
                                 {tmpl.recommendedChars >= 15000 ? '長文' : tmpl.recommendedChars >= 10000 ? '標準' : '短文'}
                               </span>
@@ -515,15 +538,7 @@ export default function SeoTestPage() {
               <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-6">
                 {/* サムネイル画像 */}
                 <div className={`relative aspect-[3/1] ${CATEGORY_COLORS[categories.find(c => c.id === selectedTemplate.category)?.color || 'blue']?.bg || 'bg-blue-50'} overflow-hidden`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`/api/seo/test/image/template/${selectedTemplate.id}?v=6`}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
-                    loading="eager"
-                    onLoad={(e) => { (e.target as HTMLImageElement).classList.replace('opacity-0', 'opacity-100') }}
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
+                  <TemplateImage src={`/api/seo/test/image/template/${selectedTemplate.id}?v=7`} aspect="3/1" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                   <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
                     <div className="flex items-center gap-2">
