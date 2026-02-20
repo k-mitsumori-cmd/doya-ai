@@ -440,8 +440,8 @@ export default function SeoTestPage() {
                         <div className="flex-1 h-px bg-slate-200 ml-2" />
                       </div>
 
-                      {/* 記事プラングリッド（4列） */}
-                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+                      {/* 横スクロールカード */}
+                      <div className="flex gap-4 sm:gap-5 overflow-x-auto pb-3 -mx-4 sm:-mx-6 px-4 sm:px-6 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-transparent">
                         {cat.templates.map((tmpl, idx) => (
                           <motion.button
                             key={tmpl.id}
@@ -449,10 +449,10 @@ export default function SeoTestPage() {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.05, duration: 0.3 }}
                             onClick={() => handleSelectTemplate(tmpl)}
-                            className={`group text-left bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:border-blue-200/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200`}
+                            className="group text-left bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:border-blue-200/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 flex-shrink-0 w-[280px] sm:w-[300px] md:w-[calc(33.333%-14px)] snap-start"
                           >
-                            {/* カードヘッダー（バナー画像 or グラデーション） */}
-                            <div className={`aspect-[16/10] ${colors.bg} relative flex items-center justify-center overflow-hidden`}>
+                            {/* カードヘッダー（バナー画像） */}
+                            <div className={`aspect-[16/9] ${colors.bg} relative flex items-center justify-center overflow-hidden`}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
                                 src={`/api/seo/test/image/template/${tmpl.id}?v=5`}
