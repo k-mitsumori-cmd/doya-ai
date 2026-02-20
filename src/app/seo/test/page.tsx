@@ -511,25 +511,46 @@ export default function SeoTestPage() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.25 }}
             >
-              {/* 選択中の記事プラン表示 */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 mb-6 flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-xl ${CATEGORY_COLORS[categories.find(c => c.id === selectedTemplate.category)?.color || 'blue']?.bg || 'bg-blue-50'} flex items-center justify-center text-2xl flex-shrink-0`}>
-                  {selectedTemplate.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">選択中のテンプレート</p>
-                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-600 text-[9px] font-black rounded">カスタマイズ可能</span>
+              {/* 選択中の記事プラン表示（サムネ付き） */}
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-6">
+                {/* サムネイル画像 */}
+                <div className={`relative aspect-[3/1] ${CATEGORY_COLORS[categories.find(c => c.id === selectedTemplate.category)?.color || 'blue']?.bg || 'bg-blue-50'} overflow-hidden`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/seo/test/image/template/${selectedTemplate.id}?v=6`}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
+                    loading="eager"
+                    onLoad={(e) => { (e.target as HTMLImageElement).classList.replace('opacity-0', 'opacity-100') }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                  <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black text-white ${CATEGORY_COLORS[categories.find(c => c.id === selectedTemplate.category)?.color || 'blue']?.badge || 'bg-blue-600'} shadow-sm`}>
+                        {categories.find(c => c.id === selectedTemplate.category)?.label}
+                      </span>
+                      <span className="px-2 py-0.5 bg-white/90 text-blue-600 text-[10px] font-black rounded-full">カスタマイズ可能</span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedTemplate(null)}
+                      className="px-3 py-1.5 rounded-lg bg-white/90 hover:bg-white text-slate-600 text-xs font-black transition-all shadow-sm"
+                    >
+                      変更
+                    </button>
                   </div>
-                  <h3 className="text-sm sm:text-base font-black text-slate-900 truncate">{selectedTemplate.title}</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">{selectedTemplate.description}</p>
                 </div>
-                <button
-                  onClick={() => setSelectedTemplate(null)}
-                  className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 text-xs font-bold transition-all"
-                >
-                  変更
-                </button>
+                {/* テンプレート情報 */}
+                <div className="p-4 sm:p-5 flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl ${CATEGORY_COLORS[categories.find(c => c.id === selectedTemplate.category)?.color || 'blue']?.bg || 'bg-blue-50'} flex items-center justify-center text-2xl flex-shrink-0`}>
+                    {selectedTemplate.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-0.5">選択中のテンプレート</p>
+                    <h3 className="text-base font-black text-slate-900 truncate">{selectedTemplate.title}</h3>
+                    <p className="text-xs font-medium text-slate-500 mt-0.5">{selectedTemplate.description}</p>
+                  </div>
+                </div>
               </div>
 
               {/* グローバルエラー表示 */}

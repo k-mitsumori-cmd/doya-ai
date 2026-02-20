@@ -76,6 +76,16 @@ function SeoSidebarImpl({
     return 'CONSULT'
   }, [seoPlanLabel])
 
+  // 残り記事数
+  const [entitlements, setEntitlements] = useState<{ remaining?: { articles?: number }; limits?: { articlesPerMonth?: number } } | null>(null)
+  useEffect(() => {
+    if (!isLoggedIn) return
+    fetch('/api/seo/entitlements', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => { if (j?.success) setEntitlements(j) })
+      .catch(() => {})
+  }, [isLoggedIn])
+
   // 1時間生成し放題判定
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
   const [freeHourRemainingMs, setFreeHourRemainingMs] = useState(() => getFreeHourRemainingMs(firstLoginAt))
@@ -177,6 +187,35 @@ function SeoSidebarImpl({
           <p className="text-[11px] text-white font-bold leading-relaxed mb-1">
             現在：{seoPlanLabel === 'GUEST' ? 'ゲスト' : seoPlanLabel === 'FREE' ? '無料' : seoPlanLabel}
           </p>
+          {/* 残り記事数 */}
+          {entitlements && (() => {
+            const remaining = entitlements.remaining?.articles
+            const limit = entitlements.limits?.articlesPerMonth
+            if (remaining === -1) return (
+              <p className="text-[10px] text-emerald-200 font-black mb-1.5">生成し放題</p>
+            )
+            if (typeof remaining === 'number' && typeof limit === 'number' && limit > 0) {
+              const used = limit - remaining
+              const pct = Math.min((used / limit) * 100, 100)
+              return (
+                <div className="mb-1.5">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-emerald-100 font-black">
+                      残り{remaining}/{limit}回
+                    </span>
+                    <span className="text-[9px] text-emerald-200/60 font-bold">/ 月</span>
+                  </div>
+                  <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${remaining <= 0 ? 'bg-red-400' : pct >= 80 ? 'bg-amber-400' : 'bg-white'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            }
+            return null
+          })()}
           <p className="text-[10px] text-emerald-100 font-bold leading-relaxed opacity-80">
             {nextPlanLabel === 'PRO' && <>PRO: 月額¥9,980で20,000字まで</>}
             {nextPlanLabel === 'ENTERPRISE' && <>Enterprise: 月額¥49,980で50,000字まで</>}
