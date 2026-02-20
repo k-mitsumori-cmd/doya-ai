@@ -64,10 +64,10 @@ export function UsageLimitBanner() {
             </div>
             <div>
               <p className="text-sm font-medium text-amber-900">
-                残り<span className="font-bold text-lg mx-1">{remaining}</span>回のお試しが可能です
+                今月の残り<span className="font-bold text-lg mx-1">{remaining}</span>回のお試しが可能です
               </p>
               <p className="text-xs text-amber-700">
-                無料登録で1日10回まで利用可能に！
+                無料登録で月15回まで利用可能に！
               </p>
             </div>
           </div>
@@ -106,10 +106,10 @@ export function UsageLimitBanner() {
             </div>
             <div>
               <p className="text-sm font-medium text-purple-900">
-                本日の残り<span className="font-bold text-lg mx-1">{remaining}</span>回
+                今月の残り<span className="font-bold text-lg mx-1">{remaining}</span>枚
               </p>
               <p className="text-xs text-purple-700">
-                プレミアムで1日100回まで使い放題！
+                プレミアムで月100回まで使い放題！
               </p>
             </div>
           </div>
@@ -167,11 +167,11 @@ export function UsageLimitModal({
             <Zap className="w-8 h-8 text-amber-500" />
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">
-            本日の使用回数に達しました
+            今月の使用回数に達しました
           </h2>
           <p className="text-gray-600">
             {tier === 'guest'
-              ? '無料登録で1日10回まで利用できます！'
+              ? '無料登録で月15回まで利用できます！'
               : 'プレミアムプランで使用回数を増やしましょう！'}
           </p>
         </div>
@@ -183,13 +183,13 @@ export function UsageLimitModal({
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary-500 to-accent-500 text-white font-medium rounded-xl hover:opacity-90 transition-opacity"
             >
               <UserPlus className="w-5 h-5" />
-              無料で登録する（1日10回）
+              無料で登録する（月15回）
             </Link>
             <button
               onClick={onClose}
               className="w-full px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
             >
-              明日また試す
+              来月にリセット
             </button>
           </div>
         ) : (
@@ -205,7 +205,7 @@ export function UsageLimitModal({
               onClick={onClose}
               className="w-full px-4 py-3 text-gray-600 hover:bg-gray-50 rounded-xl transition-colors"
             >
-              明日また使う
+              来月にリセット
             </button>
           </div>
         )}
@@ -216,15 +216,15 @@ export function UsageLimitModal({
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
             <div className={`p-2 rounded-lg ${tier === 'guest' ? 'bg-gray-100' : 'bg-gray-50'}`}>
               <p className="font-medium text-gray-700">ゲスト</p>
-              <p className="text-gray-500">3回/日</p>
+              <p className="text-gray-500">3枚/月</p>
             </div>
             <div className={`p-2 rounded-lg ${tier === 'free' ? 'bg-primary-100' : 'bg-gray-50'}`}>
               <p className="font-medium text-gray-700">無料登録</p>
-              <p className="text-gray-500">10回/日</p>
+              <p className="text-gray-500">15枚/月</p>
             </div>
             <div className="p-2 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200">
               <p className="font-medium text-amber-700">プレミアム</p>
-              <p className="text-amber-600">100回/日</p>
+              <p className="text-amber-600">150枚/月</p>
             </div>
           </div>
         </div>
@@ -273,7 +273,7 @@ export function UsageIndicator() {
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-gray-500">本日の残り</span>
+        <span className="text-gray-500">今月の残り</span>
         <span className="font-medium text-gray-700">{remaining}/{limits.daily}</span>
       </div>
       <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">

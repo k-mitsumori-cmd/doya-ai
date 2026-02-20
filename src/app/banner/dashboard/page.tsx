@@ -56,7 +56,7 @@ type PlanType = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE'
 type PlanConfig = {
   label: string
   maxCountPerGeneration: number // 1回の生成で作れる枚数
-  dailyLimit: number // 1日の生成上限
+  monthlyLimit: number // 月間の生成上限
   imagesPerGenre: number // 各ジャンルで使える画像数（左から何枚目まで）
   allUnlocked: boolean // 全画像解放かどうか
 }
@@ -65,28 +65,28 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
   GUEST: {
     label: 'ゲスト',
     maxCountPerGeneration: 3,
-    dailyLimit: 5,
+    monthlyLimit: 3,
     imagesPerGenre: 1, // 各ジャンル左から1枚目のみ
     allUnlocked: false,
   },
   FREE: {
     label: 'ベーシック',
     maxCountPerGeneration: 3,
-    dailyLimit: 10,
+    monthlyLimit: 15,
     imagesPerGenre: 3, // 各ジャンル左から3枚目まで
     allUnlocked: false,
   },
   PRO: {
     label: 'PROプラン',
     maxCountPerGeneration: 5,
-    dailyLimit: 30,
+    monthlyLimit: 150,
     imagesPerGenre: Infinity, // 全画像
     allUnlocked: true,
   },
   ENTERPRISE: {
     label: 'Enterpriseプラン',
-    maxCountPerGeneration: 5, // 5枚に変更
-    dailyLimit: 200,
+    maxCountPerGeneration: 5,
+    monthlyLimit: 1000,
     imagesPerGenre: Infinity, // 全画像
     allUnlocked: true,
   },
@@ -173,7 +173,7 @@ function BannerTestPageInner() {
   const [selectedTemplateLockType, setSelectedTemplateLockType] = useState<LockType>(null)
   
   // 今日の生成数（ローカルストレージから取得）
-  const [todayGenerationCount, setTodayGenerationCount] = useState(0)
+  const [monthlyGenerationCount, setMonthlyGenerationCount] = useState(0)
   
   // トライアル状態（ログイン後1時間は全機能解放）
   const [isTrialActive, setIsTrialActive] = useState(false)
@@ -297,22 +297,23 @@ function BannerTestPageInner() {
   
   const planLimits = useMemo(() => PLAN_LIMITS[userPlan] || PLAN_LIMITS.FREE, [userPlan])
   
-  // 今日の生成数をローカルストレージから読み込み
+  // 今月の生成数をローカルストレージから読み込み
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
+    const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
     const stored = localStorage.getItem('bannerGenerationCount')
     if (stored) {
       try {
         const data = JSON.parse(stored)
-        if (data.date === today) {
-          setTodayGenerationCount(data.count || 0)
+        // 月次比較（旧YYYY-MM-DD形式にも対応：先頭7文字で比較）
+        if (data.date && data.date.slice(0, 7) === currentMonth) {
+          setMonthlyGenerationCount(data.count || 0)
         } else {
-          // 日付が変わったらリセット
-          localStorage.setItem('bannerGenerationCount', JSON.stringify({ date: today, count: 0 }))
-          setTodayGenerationCount(0)
+          // 月が変わったらリセット
+          localStorage.setItem('bannerGenerationCount', JSON.stringify({ date: currentMonth, count: 0 }))
+          setMonthlyGenerationCount(0)
         }
       } catch {
-        setTodayGenerationCount(0)
+        setMonthlyGenerationCount(0)
       }
     }
   }, [])
@@ -351,18 +352,18 @@ function BannerTestPageInner() {
     setShowLockModal(true)
   }, [])
   
-  // 1日の生成上限チェック
-  const isOverDailyLimit = useMemo(() => {
-    return todayGenerationCount >= planConfig.dailyLimit
-  }, [todayGenerationCount, planConfig.dailyLimit])
+  // 月間の生成上限チェック
+  const isOverMonthlyLimit = useMemo(() => {
+    return monthlyGenerationCount >= planConfig.monthlyLimit
+  }, [monthlyGenerationCount, planConfig.monthlyLimit])
   
-  // 生成数を更新する関数
+  // 生成数を更新する関数（月間）
   const incrementGenerationCount = useCallback((count: number) => {
-    const today = new Date().toISOString().split('T')[0]
-    const newCount = todayGenerationCount + count
-    setTodayGenerationCount(newCount)
-    localStorage.setItem('bannerGenerationCount', JSON.stringify({ date: today, count: newCount }))
-  }, [todayGenerationCount])
+    const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
+    const newCount = monthlyGenerationCount + count
+    setMonthlyGenerationCount(newCount)
+    localStorage.setItem('bannerGenerationCount', JSON.stringify({ date: currentMonth, count: newCount }))
+  }, [monthlyGenerationCount])
   
   // ファイルアップロードハンドラ
   const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1731,7 +1732,7 @@ function BannerTestPageInner() {
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 全画像解放</span>
-                        <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 1日200枚生成</span>
+                        <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 月1000枚生成</span>
                         <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 詳細指示</span>
                       </div>
                     </div>
@@ -1740,11 +1741,11 @@ function BannerTestPageInner() {
                   {/* 今日の生成状況 */}
                   <div className="p-3 sm:p-4 bg-gray-800/50 rounded-lg sm:rounded-xl border border-gray-700">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs sm:text-sm font-bold text-gray-300">今日の生成状況</span>
+                      <span className="text-xs sm:text-sm font-bold text-gray-300">今月の生成状況</span>
                       <span className={`text-xs sm:text-sm font-bold ${
-                        isOverDailyLimit ? 'text-red-400' : todayGenerationCount > planConfig.dailyLimit * 0.8 ? 'text-yellow-400' : 'text-green-400'
+                        isOverMonthlyLimit ? 'text-red-400' : monthlyGenerationCount > planConfig.monthlyLimit * 0.8 ? 'text-yellow-400' : 'text-green-400'
                       }`}>
-                        {todayGenerationCount} / {planConfig.dailyLimit}枚
+                        {monthlyGenerationCount} / {planConfig.monthlyLimit}枚
                         {isTrialActive && <span className="text-purple-400 ml-1">(トライアル)</span>}
                       </span>
                     </div>
@@ -1752,13 +1753,13 @@ function BannerTestPageInner() {
                       <div 
                         className={`h-full transition-all duration-300 ${
                           isTrialActive ? 'bg-gradient-to-r from-purple-500 to-pink-500' :
-                          isOverDailyLimit ? 'bg-red-500' : todayGenerationCount > planConfig.dailyLimit * 0.8 ? 'bg-yellow-500' : 'bg-green-500'
+                          isOverMonthlyLimit ? 'bg-red-500' : monthlyGenerationCount > planConfig.monthlyLimit * 0.8 ? 'bg-yellow-500' : 'bg-green-500'
                         }`}
-                        style={{ width: `${Math.min((todayGenerationCount / planConfig.dailyLimit) * 100, 100)}%` }}
+                        style={{ width: `${Math.min((monthlyGenerationCount / planConfig.monthlyLimit) * 100, 100)}%` }}
                       />
                     </div>
                     <p className="text-[10px] text-gray-500 mt-1.5">
-                      {isTrialActive ? 'トライアル' : planConfig.label}：1日{planConfig.dailyLimit}枚まで生成可能
+                      {isTrialActive ? 'トライアル' : planConfig.label}：月{planConfig.monthlyLimit}枚まで生成可能
                       {!isTrialActive && currentPlan !== 'ENTERPRISE' && (
                         <> / <a href="/banner/dashboard/plan" className="text-amber-400 hover:underline">上限を増やす</a></>
                       )}
@@ -2008,14 +2009,14 @@ function BannerTestPageInner() {
                         </div>
                       </div>
                     </div>
-                  ) : isOverDailyLimit ? (
+                  ) : isOverMonthlyLimit ? (
                     <div className="w-full py-3 sm:py-4 bg-gray-700 text-white rounded-lg sm:rounded-xl text-center">
                       <div className="flex items-center justify-center gap-2 text-red-400 font-bold text-sm sm:text-base">
                         <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
-                        本日の生成上限（{planConfig.dailyLimit}枚）に達しました
+                        今月の生成上限（{planConfig.monthlyLimit}枚）に達しました
                       </div>
                       <p className="text-xs text-gray-400 mt-1">
-                        明日0時にリセットされます
+                        来月1日にリセットされます
                         {currentPlan !== 'ENTERPRISE' && (
                           <> / <a href="/banner/dashboard/plan" className="text-amber-400 hover:underline">プランをアップグレード</a></>
                         )}

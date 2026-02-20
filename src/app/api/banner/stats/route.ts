@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { shouldResetDailyUsage } from '@/lib/pricing'
+import { shouldResetMonthlyUsage, getBannerMonthlyLimitByUserPlan } from '@/lib/pricing'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -36,20 +36,20 @@ export async function GET(request: NextRequest) {
       },
     })
 
-    // 今日の使用状況（UserServiceSubscriptionから取得）
+    // 使用状況（UserServiceSubscriptionから取得）
     const sub = await prisma.userServiceSubscription.findUnique({
       where: { userId_serviceId: { userId, serviceId: 'banner' } },
-      select: { dailyUsage: true, monthlyUsage: true, lastUsageReset: true },
+      select: { plan: true, monthlyUsage: true, lastUsageReset: true },
     })
 
-    // 日付が変わっていたら0（日本時間00:00基準）
-    const todayUsage = shouldResetDailyUsage(sub?.lastUsageReset) ? 0 : (sub?.dailyUsage || 0)
-    const monthlyUsage = sub?.monthlyUsage || 0
+    // 月が変わっていたら0（日本時間基準）
+    const monthlyUsage = shouldResetMonthlyUsage(sub?.lastUsageReset) ? 0 : (sub?.monthlyUsage || 0)
+    const monthlyLimit = getBannerMonthlyLimitByUserPlan(sub?.plan)
 
     return NextResponse.json({
       totalBanners: totalCount,
-      todayUsage,
       monthlyUsage,
+      monthlyLimit,
     })
   } catch (e: any) {
     console.error('[banner stats] failed', e)

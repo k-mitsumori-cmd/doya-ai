@@ -509,12 +509,11 @@ export const SERVICES: Service[] = [
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_TENKAI_ENTERPRISE_PRICE_ID,
       },
     },
-    status: 'active',
+    status: 'coming_soon',
     category: 'text',
     order: 3,
     requiresAuth: true,
-    isNew: true,
-    badge: 'NEW',
+    badge: '開発中',
   },
 
   // ----------------------------------------

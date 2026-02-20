@@ -238,15 +238,17 @@ export function getSeoCharLimitByUserPlan(plan: string | null | undefined, isGue
 // 画像生成はAPIコストが高いため、適正価格を設定
 // 3案同時生成 = 約25円/生成 → 月50回で約1,250円のコスト
 // 競合: Canva Pro ¥1,000/月、Adobe Express ¥1,078/月
+// NOTE: バナーAIは「月間」上限で管理（他サービスは日次のまま）
 export const BANNER_PRICING: ServicePricing = {
   serviceId: 'banner',
   serviceName: 'ドヤバナーAI',
   serviceIcon: '🎨',
   // NOTE: 生成「枚数」ベースで管理（1回の生成で複数枚作れるため）
-  guestLimit: 3,      // ゲスト: 1日3枚（= デフォルト3枚生成1回相当）
-  freeLimit: 9,       // 無料会員: 1日9枚（= デフォルト3枚生成3回相当）
-  proLimit: 30,       // PRO: 1日30枚
-  enterpriseLimit: 200, // ENTERPRISE: 1日200枚
+  // NOTE: バナーAIのみ月間上限（guestLimit/freeLimit/proLimit/enterpriseLimit は月間値）
+  guestLimit: 3,         // ゲスト: 月3枚
+  freeLimit: 15,         // 無料会員: 月15枚
+  proLimit: 150,         // PRO: 月150枚
+  enterpriseLimit: 1000, // ENTERPRISE: 月1000枚
   historyDays: {
     free: 7,
     pro: -1,
@@ -258,14 +260,14 @@ export const BANNER_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '無料',
       period: '',
-      description: '1日9枚まで生成できます（デフォルト3枚×3回相当）',
+      description: '月15枚まで生成できます',
       features: [
-        { text: 'ゲスト: 1日3枚まで', included: true },
-        { text: 'ログイン: 1日9枚まで', included: true },
+        { text: 'ゲスト: 月3枚まで', included: true },
+        { text: 'ログイン: 月15枚まで', included: true },
         { text: 'サイズ: 1080×1080固定', included: true },
         { text: '同時生成: 最大3枚', included: true },
       ],
-      cta: '3回生成',
+      cta: '無料で試す',
     },
     {
       id: 'banner-pro',
@@ -273,11 +275,11 @@ export const BANNER_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '月額 ¥9,980',
       period: '/月（税込）',
-      description: '1日30枚まで生成（PRO）',
+      description: '月150枚まで生成（PRO）',
       popular: true,
       color: 'slate',
       features: [
-        { text: '1日30枚まで生成', included: true },
+        { text: '月150枚まで生成', included: true },
         { text: 'サイズ自由指定', included: true },
         { text: '同時生成: 最大5枚', included: true },
       ],
@@ -289,10 +291,10 @@ export const BANNER_PRICING: ServicePricing = {
       price: 49800,
       priceLabel: '月額 ¥49,800',
       period: '/月（税込）',
-      description: '1日200枚まで生成（Enterprise）',
+      description: '月1000枚まで生成（Enterprise）',
       color: 'slate',
       features: [
-        { text: '1日200枚まで生成', included: true },
+        { text: '月1000枚まで生成', included: true },
         { text: '大量運用・チーム向け', included: true },
         { text: '優先サポート', included: true },
         { text: 'さらに上限UP相談可', included: true },
@@ -302,15 +304,18 @@ export const BANNER_PRICING: ServicePricing = {
   ],
 }
 
-// Banner: user.plan / user.bannerPlan から日次上限（画像枚数）を決定
-export function getBannerDailyLimitByUserPlan(plan: string | null | undefined): number {
+// Banner: user.plan / user.bannerPlan から月間上限（画像枚数）を決定
+export function getBannerMonthlyLimitByUserPlan(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.BANNER_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
   if (p === 'BUNDLE') return BANNER_PRICING.proLimit
-  if (p === 'ENTERPRISE') return BANNER_PRICING.enterpriseLimit || 200
+  if (p === 'ENTERPRISE') return BANNER_PRICING.enterpriseLimit || 1000
   if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return BANNER_PRICING.proLimit
   return BANNER_PRICING.freeLimit
 }
+
+/** @deprecated 後方互換用。新コードでは getBannerMonthlyLimitByUserPlan を使うこと */
+export const getBannerDailyLimitByUserPlan = getBannerMonthlyLimitByUserPlan
 
 // ========================================
 // ドヤペルソナAI 料金設定
@@ -736,7 +741,7 @@ export interface GuestUsage {
 
 export function getGuestUsage(serviceId: string): GuestUsage {
   if (typeof window === 'undefined') return { date: '', count: 0 }
-  
+
   try {
     const key = `doya_guest_usage_${serviceId}`
     const stored = localStorage.getItem(key)
@@ -749,23 +754,29 @@ export function getGuestUsage(serviceId: string): GuestUsage {
 
 export function setGuestUsage(serviceId: string, count: number): void {
   if (typeof window === 'undefined') return
-  
+
   const key = `doya_guest_usage_${serviceId}`
-  const today = new Date().toISOString().split('T')[0]
-  localStorage.setItem(key, JSON.stringify({ date: today, count }))
+  // バナーAIは月間管理（YYYY-MM）、他サービスは日次管理（YYYY-MM-DD）
+  const dateKey = serviceId === 'banner'
+    ? new Date().toISOString().slice(0, 7) // YYYY-MM
+    : new Date().toISOString().split('T')[0] // YYYY-MM-DD
+  localStorage.setItem(key, JSON.stringify({ date: dateKey, count }))
 }
 
 export function getGuestRemainingCount(serviceId: string): number {
   const pricing = getPricingByService(serviceId)
   if (!pricing) return 0
-  
+
   const usage = getGuestUsage(serviceId)
-  const today = new Date().toISOString().split('T')[0]
-  
-  if (usage.date !== today) {
+  // バナーAIは月間比較、他サービスは日次比較
+  const currentKey = serviceId === 'banner'
+    ? new Date().toISOString().slice(0, 7) // YYYY-MM
+    : new Date().toISOString().split('T')[0] // YYYY-MM-DD
+
+  if (usage.date !== currentKey) {
     return pricing.guestLimit
   }
-  
+
   return Math.max(0, pricing.guestLimit - usage.count)
 }
 
@@ -855,6 +866,27 @@ export function shouldResetDailyUsage(lastUsageReset: Date | null | undefined): 
   const jstOffset = 9 * 60 * 60 * 1000
   const resetDateJST = new Date(lastUsageReset.getTime() + jstOffset).toISOString().split('T')[0]
   return resetDateJST !== todayJST
+}
+
+/**
+ * 月次リセット判定（バナーAI用）
+ * lastUsageResetの年月が現在の年月（JST）と異なればリセットが必要
+ */
+export function shouldResetMonthlyUsage(lastUsageReset: Date | null | undefined): boolean {
+  if (!lastUsageReset) return true
+  const jstOffset = 9 * 60 * 60 * 1000
+  const nowJST = new Date(Date.now() + jstOffset)
+  const resetJST = new Date(lastUsageReset.getTime() + jstOffset)
+  return nowJST.getUTCFullYear() !== resetJST.getUTCFullYear() || nowJST.getUTCMonth() !== resetJST.getUTCMonth()
+}
+
+/**
+ * 現在のJST年月文字列を取得（例: "2026-02"）
+ */
+export function getCurrentMonthJST(): string {
+  const jstOffset = 9 * 60 * 60 * 1000
+  const nowJST = new Date(Date.now() + jstOffset)
+  return nowJST.toISOString().slice(0, 7)
 }
 
 // ========================================

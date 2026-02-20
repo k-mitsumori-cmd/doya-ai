@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, getGuestUsage } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, getGuestUsage } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import {
@@ -219,12 +219,13 @@ export default function BannerPlanPage() {
     
     const loadStats = async () => {
       if (isGuest) {
-        // ゲストはlocalStorageから取得
+        // ゲストはlocalStorageから取得（月次）
         try {
-          const today = new Date().toISOString().split('T')[0]
+          const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
           const u = getGuestUsage('banner')
-          setUsageCount(u.date === today ? u.count : 0)
-          
+          // 月次比較（旧YYYY-MM-DD形式にも対応）
+          setUsageCount(u.date && u.date.slice(0, 7) === currentMonth ? u.count : 0)
+
           // ゲストの累計枚数はlocalStorageから（ただしほぼ0になる）
           const stored = localStorage.getItem('banner_history')
           if (stored) {
@@ -243,7 +244,7 @@ export default function BannerPlanPage() {
           if (res.ok) {
             const data = await res.json()
             setTotalBanners(data.totalBanners || 0)
-            setUsageCount(data.todayUsage || 0)
+            setUsageCount(data.monthlyUsage || 0)
           }
         } catch {
           setTotalBanners(0)
@@ -256,9 +257,9 @@ export default function BannerPlanPage() {
     loadStats()
   }, [isGuest, status])
 
-  // ログイン時は「プラン階層」で日次上限を決める（plan文字列の揺れに強い）
-  const dailyLimit = isGuest ? BANNER_PRICING.guestLimit : getBannerDailyLimitByUserPlan(bannerPlanTier)
-  const remaining = Math.max(0, dailyLimit - usageCount)
+  // ログイン時は「プラン階層」で月間上限を決める（plan文字列の揺れに強い）
+  const monthlyLimit = isGuest ? BANNER_PRICING.guestLimit : getBannerMonthlyLimitByUserPlan(bannerPlanTier)
+  const remaining = Math.max(0, monthlyLimit - usageCount)
 
   const savedMinutes = totalBanners * ESTIMATED_TIME_SAVED_PER_BANNER_MIN
   const savedHours = Math.floor(savedMinutes / 60)
@@ -364,7 +365,7 @@ export default function BannerPlanPage() {
                       </div>
                       <h2 className="text-2xl font-black text-slate-800">{currentPlanLabel}</h2>
                       <p className="text-sm text-slate-500 mt-2 font-medium">
-                        日次上限: <span className="font-bold text-slate-800">{dailyLimit}</span> 枚 / 今日の残り: <span className="font-bold text-blue-600">{remaining}</span> 枚
+                        月間上限: <span className="font-bold text-slate-800">{monthlyLimit}</span> 枚 / 今月の残り: <span className="font-bold text-blue-600">{remaining}</span> 枚
                       </p>
                     </div>
 
@@ -577,8 +578,8 @@ export default function BannerPlanPage() {
                       <p className="text-xl font-black text-slate-900 mt-1">無料プラン</p>
                       <p className="text-2xl font-black text-slate-800 mt-2">¥0</p>
                       <ul className="mt-4 space-y-2 text-sm text-slate-600 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> ゲスト：1日{BANNER_PRICING.guestLimit}枚まで</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> ログイン：1日{BANNER_PRICING.freeLimit}枚まで</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> ゲスト：月{BANNER_PRICING.guestLimit}枚まで</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> ログイン：月{BANNER_PRICING.freeLimit}枚まで</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> サイズ：1080×1080固定</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> 同時生成：最大3枚</li>
                       </ul>
@@ -595,7 +596,7 @@ export default function BannerPlanPage() {
                       <p className="text-xl font-black mt-1">プロプラン</p>
                       <p className="text-2xl font-black mt-2">¥9,980<span className="text-sm font-bold opacity-70">/月</span></p>
                       <ul className="mt-4 space-y-2 text-sm text-white/90 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 1日{BANNER_PRICING.proLimit}枚まで生成</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 月{BANNER_PRICING.proLimit}枚まで生成</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> サイズ自由指定</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 同時生成：最大5枚</li>
                       </ul>
@@ -618,7 +619,7 @@ export default function BannerPlanPage() {
                       <p className="text-xl font-black text-slate-900 mt-1">エンタープライズ</p>
                       <p className="text-2xl font-black text-slate-800 mt-2">¥49,800<span className="text-sm font-bold text-slate-400">/月</span></p>
                       <ul className="mt-4 space-y-2 text-sm text-slate-600 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 1日{BANNER_PRICING.enterpriseLimit || 200}枚まで生成</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 月{BANNER_PRICING.enterpriseLimit || 1000}枚まで生成</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 大量運用・チーム向け</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 優先サポート</li>
                         <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> さらに上限UP相談可</li>
@@ -739,7 +740,7 @@ export default function BannerPlanPage() {
                 <ul className="text-left space-y-3 mb-8">
                   <li className="flex items-center gap-3 text-slate-700 font-bold">
                     <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                    <span className="flex-1">高品質なバナー生成（1日最大{BANNER_PRICING.proLimit}〜{BANNER_PRICING.enterpriseLimit}枚）</span>
+                    <span className="flex-1">高品質なバナー生成（月最大{BANNER_PRICING.proLimit}〜{BANNER_PRICING.enterpriseLimit}枚）</span>
                   </li>
                   <li className="flex items-center gap-3 text-slate-700 font-bold">
                     <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />

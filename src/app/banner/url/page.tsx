@@ -842,7 +842,7 @@ function BannerUrlAutoPageInner() {
                   <p className="mt-1 text-lg font-black text-slate-900">{BANNER_PRICING.plans.find((p) => p.id === 'banner-free')?.name || 'おためしプラン'}</p>
                   <p className="mt-2 text-sm font-black text-slate-900">¥0</p>
                   <p className="mt-2 text-[11px] text-slate-600 font-bold leading-relaxed">
-                    ログインで1日{BANNER_PRICING.freeLimit}枚まで（ゲストは{BANNER_PRICING.guestLimit}枚まで）
+                    ログインで月{BANNER_PRICING.freeLimit}枚まで（ゲストは月{BANNER_PRICING.guestLimit}枚まで）
                   </p>
                   <div className="mt-3">
                     {bannerPlanTier === 'FREE' ? (
@@ -871,7 +871,7 @@ function BannerUrlAutoPageInner() {
                   <p className="mt-1 text-lg font-black">プロプラン</p>
                   <p className="mt-2 text-sm font-black">月額 ¥9,980</p>
                   <p className="mt-2 text-[11px] text-white/80 font-bold leading-relaxed">
-                    1日{BANNER_PRICING.proLimit}枚まで生成 / 最大10枚生成 / サイズ指定OK
+                    月{BANNER_PRICING.proLimit}枚まで生成 / 最大10枚生成 / サイズ指定OK
                   </p>
                   <div className="mt-3">
                     {bannerPlanTier === 'PRO' ? (
@@ -892,7 +892,7 @@ function BannerUrlAutoPageInner() {
                   <p className="mt-1 text-lg font-black text-slate-900">エンタープライズ</p>
                   <p className="mt-2 text-sm font-black text-slate-900">月額 ¥49,800</p>
                   <p className="mt-2 text-[11px] text-slate-600 font-bold leading-relaxed">
-                    1日{BANNER_PRICING.enterpriseLimit || 500}枚まで生成 / 大量運用向け
+                    月{BANNER_PRICING.enterpriseLimit || 1000}枚まで生成 / 大量運用向け
                   </p>
                   <div className="mt-3 grid gap-2">
                     {bannerPlanTier === 'ENTERPRISE' ? (

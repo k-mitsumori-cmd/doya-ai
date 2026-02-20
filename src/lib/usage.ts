@@ -11,27 +11,27 @@ export interface UsageLimits {
   features: string[]
 }
 
-// 各プランの使用回数制限
+// 各プランの使用回数制限（バナーAIは月間上限）
 export const PLAN_LIMITS: Record<UserTier, UsageLimits> = {
   guest: {
     daily: 3,
     label: 'ゲスト',
-    features: ['1日3回まで無料でお試し', '基本テンプレート10種類'],
+    features: ['月3枚まで無料でお試し', '基本テンプレート'],
   },
   free: {
-    daily: 10,
+    daily: 15,
     label: '無料プラン',
-    features: ['1日10回まで生成可能', '全68テンプレート', '履歴保存'],
+    features: ['月15枚まで生成可能', '全テンプレート', '履歴保存'],
   },
   premium: {
-    daily: 100,
+    daily: 150,
     label: 'プレミアム',
-    features: ['1日100回まで生成可能', '全機能利用可能', '優先サポート'],
+    features: ['月150枚まで生成可能', '全機能利用可能', '優先サポート'],
   },
   business: {
     daily: 500,
     label: 'ビジネス',
-    features: ['1日500回まで生成可能', 'チーム共有機能', 'API連携'],
+    features: ['月500枚まで生成可能', 'チーム共有機能', 'API連携'],
   },
   enterprise: {
     daily: -1, // 無制限
@@ -40,43 +40,43 @@ export const PLAN_LIMITS: Record<UserTier, UsageLimits> = {
   },
 }
 
-// 今日の日付を取得
-function getTodayKey(): string {
-  return new Date().toISOString().split('T')[0]
+// 今月のキーを取得（YYYY-MM）
+function getCurrentMonthKey(): string {
+  return new Date().toISOString().slice(0, 7) // YYYY-MM
 }
 
-// 使用回数を取得
+// 使用回数を取得（月間）
 export function getUsageCount(): number {
   if (typeof window === 'undefined') return 0
-  
+
   const storedDate = localStorage.getItem(USAGE_DATE_KEY)
-  const today = getTodayKey()
-  
-  // 日付が変わっていたらリセット
-  if (storedDate !== today) {
-    localStorage.setItem(USAGE_DATE_KEY, today)
+  const currentMonth = getCurrentMonthKey()
+
+  // 月が変わっていたらリセット（旧YYYY-MM-DD形式にも対応）
+  if (!storedDate || storedDate.slice(0, 7) !== currentMonth) {
+    localStorage.setItem(USAGE_DATE_KEY, currentMonth)
     localStorage.setItem(USAGE_KEY, '0')
     return 0
   }
-  
+
   const count = localStorage.getItem(USAGE_KEY)
   return count ? parseInt(count, 10) : 0
 }
 
-// 使用回数を増やす
+// 使用回数を増やす（月間）
 export function incrementUsage(): number {
   if (typeof window === 'undefined') return 0
-  
-  const today = getTodayKey()
+
+  const currentMonth = getCurrentMonthKey()
   const storedDate = localStorage.getItem(USAGE_DATE_KEY)
-  
-  // 日付が変わっていたらリセット
-  if (storedDate !== today) {
-    localStorage.setItem(USAGE_DATE_KEY, today)
+
+  // 月が変わっていたらリセット
+  if (!storedDate || storedDate.slice(0, 7) !== currentMonth) {
+    localStorage.setItem(USAGE_DATE_KEY, currentMonth)
     localStorage.setItem(USAGE_KEY, '1')
     return 1
   }
-  
+
   const current = getUsageCount()
   const newCount = current + 1
   localStorage.setItem(USAGE_KEY, newCount.toString())

@@ -175,7 +175,7 @@ export default function SettingsPage() {
               {bannerPlanTier === 'ENTERPRISE' ? 'Enterprise' : bannerPlanTier === 'PRO' ? 'PRO' : isLoggedIn ? '無料' : 'ゲスト'}
             </div>
             <p className="text-sm text-slate-600 font-bold">
-              1日{bannerPlanTier === 'ENTERPRISE' ? BANNER_PRICING.enterpriseLimit || 500 : bannerPlanTier === 'PRO' ? BANNER_PRICING.proLimit : isLoggedIn ? BANNER_PRICING.freeLimit : BANNER_PRICING.guestLimit}枚まで生成可能
+              月{bannerPlanTier === 'ENTERPRISE' ? BANNER_PRICING.enterpriseLimit || 1000 : bannerPlanTier === 'PRO' ? BANNER_PRICING.proLimit : isLoggedIn ? BANNER_PRICING.freeLimit : BANNER_PRICING.guestLimit}枚まで生成可能
             </p>
           </div>
 
@@ -187,8 +187,8 @@ export default function SettingsPage() {
               <p className="text-lg font-black text-slate-900">無料プラン</p>
               <p className="text-sm font-black text-slate-700 mt-1">¥0</p>
               <p className="text-[11px] text-slate-500 font-bold mt-2 leading-relaxed">
-                ゲスト：1日{BANNER_PRICING.guestLimit}枚<br/>
-                ログイン：1日{BANNER_PRICING.freeLimit}枚<br/>
+                ゲスト：月{BANNER_PRICING.guestLimit}枚<br/>
+                ログイン：月{BANNER_PRICING.freeLimit}枚<br/>
                 サイズ：1080×1080固定
               </p>
               {bannerPlanTier === 'FREE' && (
@@ -204,7 +204,7 @@ export default function SettingsPage() {
               <p className="text-lg font-black">プロプラン</p>
               <p className="text-sm font-black mt-1">月額 ¥9,980</p>
               <p className="text-[11px] text-white/80 font-bold mt-2 leading-relaxed">
-                1日{BANNER_PRICING.proLimit}枚まで<br/>
+                月{BANNER_PRICING.proLimit}枚まで<br/>
                 サイズ指定可能<br/>
                 最大10枚同時生成
               </p>
@@ -227,7 +227,7 @@ export default function SettingsPage() {
               <p className="text-lg font-black text-slate-900">エンタープライズ</p>
               <p className="text-sm font-black text-slate-700 mt-1">月額 ¥49,800</p>
               <p className="text-[11px] text-slate-500 font-bold mt-2 leading-relaxed">
-                1日{BANNER_PRICING.enterpriseLimit || 500}枚まで<br/>
+                月{BANNER_PRICING.enterpriseLimit || 1000}枚まで<br/>
                 大量生成・チーム向け<br/>
                 優先サポート
               </p>

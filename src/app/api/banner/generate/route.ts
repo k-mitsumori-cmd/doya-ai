@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, shouldResetDailyUsage, getTodayDateJST, isWithinFreeHour } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
 import crypto from 'crypto'
 
 // Vercel上で画像生成が長引くことがあるため、実行時間上限を引き上げる
@@ -16,21 +16,22 @@ const RATE_LIMIT_WINDOW = 60 * 1000 // 1分
 const RATE_LIMIT_MAX_GUEST = 3 // ゲストは1分あたり3リクエストまで
 const RATE_LIMIT_MAX_USER = 10 // ログインユーザーは1分あたり10リクエストまで
 
-// ゲストの日次上限（Cookieで簡易管理）
+// ゲストの月次上限（Cookieで簡易管理）
 const BANNER_GUEST_USAGE_COOKIE = 'doya_banner_guest_usage'
-type GuestDailyUsage = { date: string; count: number }
+type GuestMonthlyUsage = { date: string; count: number } // date = "YYYY-MM"
 
-function readGuestDailyUsage(request: NextRequest, today: string): GuestDailyUsage {
+function readGuestMonthlyUsage(request: NextRequest, currentMonth: string): GuestMonthlyUsage {
   try {
     const raw = request.cookies.get(BANNER_GUEST_USAGE_COOKIE)?.value
-    if (!raw) return { date: today, count: 0 }
+    if (!raw) return { date: currentMonth, count: 0 }
     const parsed = JSON.parse(raw) as any
-    const date = typeof parsed?.date === 'string' ? parsed.date : today
+    const date = typeof parsed?.date === 'string' ? parsed.date : currentMonth
     const count = Number(parsed?.count)
-    if (date !== today) return { date: today, count: 0 }
-    return { date, count: Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0 }
+    // 月が変わっていたらリセット（YYYY-MM比較、旧YYYY-MM-DD形式にも対応）
+    if (date.slice(0, 7) !== currentMonth) return { date: currentMonth, count: 0 }
+    return { date: currentMonth, count: Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0 }
   } catch {
-    return { date: today, count: 0 }
+    return { date: currentMonth, count: 0 }
   }
 }
 
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     // セッションチェック
     const session = await getServerSession(authOptions)
     const isGuest = !session
-    const today = getTodayDateJST() // 日本時間00:00基準
+    const currentMonth = getCurrentMonthJST() // 月次管理用 "YYYY-MM"
 
     // IPアドレスを取得
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0] || 
@@ -180,10 +181,10 @@ export async function POST(request: NextRequest) {
     }
 
     // ==============================
-    // 日次上限（サーバ側で厳密に強制）
+    // 月次上限（サーバ側で厳密に強制）
     // ==============================
-    let usageInfo: null | { dailyLimit: number; dailyUsed: number; dailyRemaining: number } = null
-    let guestUsage: GuestDailyUsage | null = null
+    let usageInfo: null | { monthlyLimit: number; monthlyUsed: number; monthlyRemaining: number } = null
+    let guestUsage: GuestMonthlyUsage | null = null
 
     // 生成枚数（サーバ側で厳密に強制する：フロント改ざん対策）
     // - デフォルト3枚
@@ -192,18 +193,18 @@ export async function POST(request: NextRequest) {
     let desiredCount = Math.max(1, Math.min(3, requestedCount || 3))
 
     if (!disableLimits && isGuest) {
-      guestUsage = readGuestDailyUsage(request, today)
-      const dailyLimit = BANNER_PRICING.guestLimit
-      const dailyUsed = guestUsage.count
-      if (dailyLimit !== -1 && dailyUsed + desiredCount > dailyLimit) {
+      guestUsage = readGuestMonthlyUsage(request, currentMonth)
+      const monthlyLimit = BANNER_PRICING.guestLimit
+      const monthlyUsed = guestUsage.count
+      if (monthlyLimit !== -1 && monthlyUsed + desiredCount > monthlyLimit) {
         return NextResponse.json(
           {
-            error: '本日の生成上限に達しました。プロプランにアップグレードしてください。',
-            code: 'DAILY_LIMIT_REACHED',
+            error: '今月の生成上限に達しました。プロプランにアップグレードしてください。',
+            code: 'MONTHLY_LIMIT_REACHED',
             usage: {
-              dailyLimit,
-              dailyUsed,
-              dailyRemaining: Math.max(0, dailyLimit - dailyUsed),
+              monthlyLimit,
+              monthlyUsed,
+              monthlyRemaining: Math.max(0, monthlyLimit - monthlyUsed),
             },
             upgradeUrl: '/banner',
           },
@@ -211,9 +212,9 @@ export async function POST(request: NextRequest) {
         )
       }
       usageInfo = {
-        dailyLimit,
-        dailyUsed,
-        dailyRemaining: dailyLimit === -1 ? -1 : Math.max(0, dailyLimit - dailyUsed),
+        monthlyLimit,
+        monthlyUsed,
+        monthlyRemaining: monthlyLimit === -1 ? -1 : Math.max(0, monthlyLimit - monthlyUsed),
       }
     } else if (!disableLimits && !isGuest) {
       if (userId) {
@@ -238,21 +239,15 @@ export async function POST(request: NextRequest) {
             update: {},
           })
 
-          // 日付/月が変わっていたらリセット（日本時間00:00基準）
-          const needsDailyReset = shouldResetDailyUsage(current.lastUsageReset)
-          const todayJST = getTodayDateJST()
-          const thisMonthJST = todayJST.slice(0, 7)
-          const jstOffset = 9 * 60 * 60 * 1000
-          const lastMonthJST = new Date(current.lastUsageReset.getTime() + jstOffset).toISOString().slice(0, 7)
-          const needsMonthlyReset = lastMonthJST !== thisMonthJST
+          // 月が変わっていたらmonthlyUsageをリセット（日本時間基準）
+          const needsMonthlyReset = shouldResetMonthlyUsage(current.lastUsageReset)
 
-          const normalized = needsDailyReset || needsMonthlyReset
+          const normalized = needsMonthlyReset
             ? await prisma.userServiceSubscription.update({
                 where: { id: current.id },
                 data: {
-                  dailyUsage: needsDailyReset ? 0 : current.dailyUsage,
-                  monthlyUsage: needsMonthlyReset ? 0 : current.monthlyUsage,
-                  lastUsageReset: needsDailyReset || needsMonthlyReset ? new Date() : current.lastUsageReset,
+                  monthlyUsage: 0,
+                  lastUsageReset: new Date(),
                 },
               })
             : current
@@ -262,24 +257,22 @@ export async function POST(request: NextRequest) {
 
           // 1時間生成し放題中は最大10枚まで許可（有料と同等）
           desiredCount = Math.max(1, Math.min((isPaidPlan || isFreeHourActive) ? 10 : 3, requestedCount || 3))
-          // NOTE: 生成上限は「画像枚数」ベース
-          // - 有料でも1日最大50枚まで
-          // - 無料は pricing.ts の freeLimit（枚数）に従う
-          const dailyLimit = getBannerDailyLimitByUserPlan(plan)
+          // NOTE: 生成上限は「画像枚数」ベース（月間）
+          const monthlyLimit = getBannerMonthlyLimitByUserPlan(plan)
 
-          // 1時間生成し放題中は日次上限チェックをスキップ
-          if (!isFreeHourActive && dailyLimit !== -1 && normalized.dailyUsage + desiredCount > dailyLimit) {
+          // 1時間生成し放題中は月次上限チェックをスキップ
+          if (!isFreeHourActive && monthlyLimit !== -1 && normalized.monthlyUsage + desiredCount > monthlyLimit) {
             const errorMessage = isPaidPlan
-              ? '本日の生成上限に達しました。上限をさらにUPしたい場合は「マーケティング施策を丸投げする」からご相談ください。'
-              : '本日の生成上限に達しました。プロプランにアップグレードしてください。'
+              ? '今月の生成上限に達しました。上限をさらにUPしたい場合は「マーケティング施策を丸投げする」からご相談ください。'
+              : '今月の生成上限に達しました。プロプランにアップグレードしてください。'
             return NextResponse.json(
               {
                 error: errorMessage,
-                code: 'DAILY_LIMIT_REACHED',
+                code: 'MONTHLY_LIMIT_REACHED',
                 usage: {
-                  dailyLimit,
-                  dailyUsed: normalized.dailyUsage,
-                  dailyRemaining: Math.max(0, dailyLimit - normalized.dailyUsage),
+                  monthlyLimit,
+                  monthlyUsed: normalized.monthlyUsage,
+                  monthlyRemaining: Math.max(0, monthlyLimit - normalized.monthlyUsage),
                 },
                 upgradeUrl: isPaidPlan ? (HIGH_USAGE_CONTACT_URL || '/banner') : '/banner',
               },
@@ -288,9 +281,9 @@ export async function POST(request: NextRequest) {
           }
 
           usageInfo = {
-            dailyLimit: isFreeHourActive ? -1 : dailyLimit, // 1時間中は無制限扱い
-            dailyUsed: normalized.dailyUsage,
-            dailyRemaining: (isFreeHourActive || dailyLimit === -1) ? -1 : Math.max(0, dailyLimit - normalized.dailyUsage),
+            monthlyLimit: isFreeHourActive ? -1 : monthlyLimit, // 1時間中は無制限扱い
+            monthlyUsed: normalized.monthlyUsage,
+            monthlyRemaining: (isFreeHourActive || monthlyLimit === -1) ? -1 : Math.max(0, monthlyLimit - normalized.monthlyUsage),
           }
         } catch (e: any) {
           console.error('Banner usage limit check failed (Prisma error):', e)
@@ -364,15 +357,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 成功時のみ使用回数を加算（画像枚数ベース）
+    // 成功時のみ使用回数を加算（画像枚数ベース・月間）
     const chargedCount = Math.max(1, Math.min(desiredCount, Array.isArray(result.banners) ? result.banners.length : desiredCount))
     if (!disableLimits && isGuest && guestUsage) {
-      guestUsage = { date: today, count: guestUsage.date === today ? guestUsage.count + chargedCount : chargedCount }
+      guestUsage = { date: currentMonth, count: guestUsage.date === currentMonth ? guestUsage.count + chargedCount : chargedCount }
       if (usageInfo) {
         usageInfo = {
-          dailyLimit: usageInfo.dailyLimit,
-          dailyUsed: guestUsage.count,
-          dailyRemaining: usageInfo.dailyLimit === -1 ? -1 : Math.max(0, usageInfo.dailyLimit - guestUsage.count),
+          monthlyLimit: usageInfo.monthlyLimit,
+          monthlyUsed: guestUsage.count,
+          monthlyRemaining: usageInfo.monthlyLimit === -1 ? -1 : Math.max(0, usageInfo.monthlyLimit - guestUsage.count),
         }
       }
     } else if (!disableLimits && !isGuest) {
@@ -381,15 +374,14 @@ export async function POST(request: NextRequest) {
           const updated = await prisma.userServiceSubscription.update({
             where: { userId_serviceId: { userId, serviceId: 'banner' } },
             data: {
-              dailyUsage: { increment: chargedCount },
               monthlyUsage: { increment: chargedCount },
             },
           })
           if (usageInfo) {
             usageInfo = {
-              dailyLimit: usageInfo.dailyLimit,
-              dailyUsed: updated.dailyUsage,
-              dailyRemaining: Math.max(0, usageInfo.dailyLimit - updated.dailyUsage),
+              monthlyLimit: usageInfo.monthlyLimit,
+              monthlyUsed: updated.monthlyUsage,
+              monthlyRemaining: Math.max(0, usageInfo.monthlyLimit - updated.monthlyUsage),
             }
           }
         } catch (e: any) {

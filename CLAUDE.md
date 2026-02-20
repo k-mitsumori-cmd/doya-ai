@@ -1,5 +1,35 @@
 # ドヤAI プロジェクト — Claude Code ガイド
 
+## !! 最重要: プロジェクト構造の注意 !!
+
+```
+09_Cursol/          ← ★ Gitルート & Vercelデプロイ対象（こちらを編集すること）
+├── src/            ← ★ 本番で使われるソースコード
+├── seo/            ← ★ SEOモジュール（@seo/* エイリアス）
+├── prisma/
+├── public/
+├── doya-ai/        ← ⚠️ 別のNext.jsプロジェクト（編集しても本番に反映されない）
+│   ├── src/        ← ⚠️ ルートのsrc/とほぼ同内容だがデプロイされない
+│   └── seo/        ← シンボリックリンク → seo-symlink-backup/
+└── ...
+```
+
+- **ソースコード編集は必ず `09_Cursol/src/` で行う**（`doya-ai/src/` ではない）
+- Vercelは `09_Cursol/` をルートとしてビルド・デプロイする
+- `doya-ai/` は過去のサブプロジェクト。変更しても本番に反映されない
+- Git remote: `origin` = `09_Cursol.git`, `vercel` = `doya-ai.git`（デプロイ用）
+
+### デプロイ手順
+```bash
+# コミット後、Vercelへプッシュ（subtree不要、ルート直接プッシュ）
+git push vercel HEAD:main
+```
+
+### 本番URL
+- https://doya-ai.surisuta.jp
+
+---
+
 ## 詳細リファレンス
 
 タスクに取り掛かる前に、関連する reference/ ドキュメントを読むこと:
@@ -8,92 +38,167 @@
 |---------|------|
 | `reference/01-overview.md` | プロジェクト概要・ディレクトリ構成 |
 | `reference/02-architecture.md` | アーキテクチャ・データフロー |
-| `reference/03-api-reference.md` | 全APIエンドポイント一覧 |
-| `reference/04-database.md` | Prismaスキーマ・テーブル設計 (38モデル) |
+| `reference/03-api-reference.md` | 全APIエンドポイント一覧（120+） |
+| `reference/04-database.md` | Prismaスキーマ・テーブル設計（38モデル） |
 | `reference/05-auth-payments.md` | 認証・管理者認証・Stripe決済・アクセス制御 |
 | `reference/06-ui-patterns.md` | UIコンポーネント・デザインパターン |
 | `reference/07-dev-guide.md` | 開発パターン・デプロイ・トラブルシューティング |
 | `reference/08-environment.md` | 環境変数一覧・セットアップ手順 |
 | `reference/09-bootstrap.md` | バナーテンプレート一括生成 |
-| `reference/10-service-status.md` | サービスステータス一元管理 (実装・課金・ドキュメント状態) |
+| `reference/10-service-status.md` | サービスステータス一元管理 |
 | `reference/services/*.md` | 各サービスの詳細仕様 |
 
+---
+
 ## 技術スタック
-- Next.js 14 (App Router) + React 18 + TypeScript
-- Prisma ORM + PostgreSQL (Supabase)
-- NextAuth.js (Google OAuth)
-- Tailwind CSS, Framer Motion, Zustand
-- AI: Google Gemini (primary) + OpenAI (fallback)
-- Payment: Stripe
 
-## サービス一覧
+| カテゴリ | 技術 |
+|---------|------|
+| フレームワーク | Next.js 14 (App Router) + React 18 + TypeScript |
+| DB/ORM | Prisma 5.7+ + PostgreSQL (Supabase) |
+| 認証 | NextAuth.js (Google OAuth) |
+| CSS | Tailwind CSS |
+| アニメーション | Framer Motion |
+| 状態管理 | Zustand |
+| AI (テキスト) | Google Gemini API (gemini-2.0-flash) |
+| AI (画像) | Gemini 3 Pro Image Preview |
+| AI (fallback) | OpenAI (gpt-4o) |
+| 文字起こし | AssemblyAI (universal-2) |
+| 決済 | Stripe |
+| ストレージ | Supabase Storage |
+| 画像処理 | Sharp, Satori, resvg-js |
+| デプロイ | Vercel |
 
-### services.ts 登録済み (Active)
-| パス | サービス名 | 説明 | PRO月額 |
-|------|-----------|------|---------|
-| `/kantan` | カンタンマーケAI | チャット型AIマーケアシスタント | ¥4,980 |
-| `/banner` | ドヤバナーAI | A/B/C 3案同時バナー生成 | ¥9,980 |
-| `/logo` | ドヤロゴ | ロゴ3パターン生成 | 暫定無料 |
-| `/seo` | ドヤ記事作成 | SEO+LLMO長文記事生成 | 暫定無料 |
-| `/interview` | ドヤインタビュー | 音声→文字起こし→記事生成 | ¥9,980 |
+### パスエイリアス（tsconfig.json）
+- `@/*` → `./src/*`
+- `@seo/*` → `./seo/*`
 
-### ページ・API存在 (services.ts未登録)
-| パス | サービス名 | 説明 |
+---
+
+## サービス一覧と実装状況
+
+### 本番稼働中 (active)
+| パス | サービス名 | ページ数 | API数 | Stripe | PRO月額 |
+|------|-----------|---------|-------|--------|---------|
+| `/banner` | ドヤバナーAI | 16 | 17 | 完全統合 | ¥9,980 |
+| `/seo` | ドヤライティングAI | 45 | 35+ | 完全統合 | ¥9,980 |
+| `/interview` | ドヤインタビュー | 15 | 15 | レガシー | ¥9,980 |
+| `/tenkai` | ドヤ展開AI | 10 | 23 | 統合済 | ¥9,980 |
+| `/persona` | ドヤペルソナAI | 5 | 3 | 未設定 | — |
+| `/admin` | 管理画面 | 15 | 16+ | — | — |
+
+### メンテナンス/開発予定
+| パス | サービス名 | 状態 |
 |------|-----------|------|
-| `/persona` | ドヤペルソナAI | URL→ペルソナ+クリエイティブ生成 |
-| `/slide` | ドヤスライドAI | AI→Googleスライド生成 |
-| `/slashslide` | SlashSlide | スライド別ブランド |
-| `/seo` 内 swipe | ドヤSwipe | Tinder風UI→記事生成 |
+| `/kantan` | カンタンマーケAI | → `/seo` にリダイレクト |
+| `/logo` | ドヤロゴ | maintenance（暫定無料） |
+| `/shindan` | ドヤWeb診断AI | 実装ゼロ（定義のみ） |
+| `/slide` `/slashslide` | スライド系 | 基本実装のみ |
+| `/seo/swipe` | ドヤSwipe | SEO内サブ機能 |
+
+### Stripe課金統合（stripe.ts PlanId）
+```
+seo-pro / seo-enterprise        → SEO・バナー・インタビュー・展開AI共通価格
+banner-basic / banner-pro / banner-enterprise
+interview-pro / interview-enterprise
+bundle                          → セットプラン
+```
+
+---
 
 ## 重要な開発パターン
 
-### API ルート
+### API ルート定型
 ```typescript
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
+
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 ```
 
 ### Next.js 15 互換パラメータ
 ```typescript
-const p = 'then' in ctx.params ? await ctx.params : ctx.params
+type Ctx = { params: Promise<{ id: string }> | { id: string } }
+export async function GET(req: NextRequest, ctx: Ctx) {
+  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const id = p.id
+}
 ```
 
-### 認証
+### Gemini API 呼び出し（2パターン）
 ```typescript
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-const session = await getServerSession(authOptions)
-// session.user に plan/id/firstLoginAt
-```
-
-### Gemini API 直接呼出
-```typescript
+// パターン1: 直接fetch（バナー画像生成等）
 const model = process.env.DOYA_BANNER_IMAGE_MODEL || 'gemini-3-pro-image-preview'
 const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+
+// パターン2: seo/lib/gemini.ts のラッパー
+import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+// テキスト生成: GenerateContentRequest形式
+await geminiGenerateText({ model: GEMINI_TEXT_MODEL_DEFAULT, parts: [{ text: prompt }] })
+// JSON生成: { prompt } 形式（テキストのみ）
+import { geminiGenerateJson } from '@seo/lib/gemini'
+await geminiGenerateJson<T>({ prompt, model, ... })
+```
+
+### Prisma JSONフィールドの型キャスト
+```typescript
+// Prisma の Json 型フィールドは JsonValue を返すため、キャストが必要
+content: result.content as any,
+charCount: result.charCount as number,
+project.analysis as Record<string, unknown>  // or as any
 ```
 
 ### DB テーブルプレフィックス
 - interview系: `@@map("interview_xxx")`
-- Prismaスキーマ: `prisma/schema.prisma`
+- tenkai系: `@@map("tenkai_xxx")`
+- Prismaスキーマ: `prisma/schema.prisma`（38モデル）
+- Prisma再生成: `npx prisma generate`（モデル追加後に必須）
 
-### ビルド注意
-- `typescript.ignoreBuildErrors: true` — 既存の型エラーあり
-- ビルド確認: `npx next build`
+---
 
 ## ファイル構成ガイド
 
-### Interview サービス
-- `src/app/interview/` — フロントエンド (page.tsx, layout.tsx)
-- `src/app/interview/projects/` — プロジェクト管理
-- `src/app/api/interview/` — API エンドポイント
-- `src/components/interview/` — コンポーネント
-- `src/lib/interview/` — ユーティリティ (access, storage)
+### サービス共通構造
+```
+src/app/{service}/           — フロントエンド（page.tsx, layout.tsx）
+src/app/api/{service}/       — API エンドポイント
+src/components/{service}/    — コンポーネント
+src/lib/{service}/           — ユーティリティ・ビジネスロジック
+```
 
-### Persona サービス
-- `src/app/persona/` — フロントエンド
-- `src/app/api/persona/` — API (generate, portrait, banner)
-- `src/components/Persona*.tsx` — コンポーネント
+### 主要サービス詳細
+
+| サービス | ページ | API | コンポーネント | lib |
+|---------|--------|-----|-------------|-----|
+| banner | `src/app/banner/` | `src/app/api/banner/` | `DashboardSidebar.tsx` | `src/lib/banners.ts`, `banner-prompts-v2.ts` |
+| seo | `src/app/seo/` | `src/app/api/seo/` | `SeoSidebar.tsx`, `src/components/seo/` | `seo/lib/` (pipeline.ts=175KB) |
+| interview | `src/app/interview/` | `src/app/api/interview/` | `src/components/interview/` | `src/lib/interview/` |
+| tenkai | `src/app/tenkai/` | `src/app/api/tenkai/` | `src/components/tenkai/` | `src/lib/tenkai/` |
+| persona | `src/app/persona/` | `src/app/api/persona/` | `Persona*.tsx` | — |
+| admin | `src/app/admin/` | `src/app/api/admin/` | `AdminSidebar.tsx` | `src/lib/admin-auth.ts` |
+
+---
+
+## ビルド・TypeScript
+
+- `typescript.ignoreBuildErrors: true` — 型エラーがあってもビルドは通る
+- `eslint.ignoreDuringBuilds: true`
+- ビルド確認: `npx next build`
+- 型チェック: `npx tsc --noEmit`
+- 現在47件の型エラーが残存（全てUI型アノテーション。ランタイムには影響しない）
+
+### 過去に発生した型エラーパターン（修正済み）
+| パターン | 原因 | 対処法 |
+|---------|------|--------|
+| `geminiGenerateText(prompt)` | 引数はstring不可 | `geminiGenerateText({ model, parts: [{ text: prompt }] })` |
+| `geminiGenerateJson({ parts: ... })` | 引数形式が異なる | `geminiGenerateJson<T>({ prompt })` |
+| `new NextResponse(buffer, ...)` | Buffer直接渡し不可 | `new NextResponse(new Uint8Array(buffer), ...)` |
+| Stripe `apiVersion` 不一致 | 型定義と不一致 | `'2023-10-16'` に統一 |
+| Prisma JSON → 具体型 | JsonValue型の不一致 | `as any` / `as number` でキャスト |
 
 ---
 
@@ -108,21 +213,11 @@ const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${mode
 3. 各メンバーの担当範囲を明確にし、ファイル競合を防ぐ
 4. 進捗を統合し、最終的な品質を保証する
 
-**チーム構成の判断基準:**
-- **新機能開発**: UI担当 + API/ロジック担当 + テスト担当 など
-- **バグ修正**: 原因調査担当を問題領域ごとに分ける
-- **UI改善**: デザイン担当 + 実装担当
-- **リファクタリング**: 対象領域ごとに担当を分ける
-- **小規模タスク**: チーム不要、リード単独で対応
-- 上記は例示であり、実際のタスクに合わせて柔軟に構成すること
-
 **メンバー数の目安:**
 - 2〜4人程度（タスクの複雑さに応じて増減）
 - 小さなタスクはチームを組まず単独で対応
 
 ### チームメイト共通ルール
-
-チームメイトがスポーンされた時、以下のルールに従うこと:
 
 1. **ファイル競合を避ける**: 他のチームメイトが編集中のファイルを同時に編集しない
 2. **変更前に読む**: ファイルを編集する前に必ず最新の状態を読み取る
@@ -133,3 +228,4 @@ const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${mode
 7. **アイコン**: Material Symbols Outlined を使用
 8. **APIパターン遵守**: `runtime = 'nodejs'`, `dynamic = 'force-dynamic'`, `maxDuration = 300`
 9. **Next.js 15互換**: params は `'then' in ctx.params ? await ctx.params : ctx.params` で取得
+10. **編集対象の確認**: 必ず `09_Cursol/src/` 配下を編集すること（`doya-ai/src/` は不可）
