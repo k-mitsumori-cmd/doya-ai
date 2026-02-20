@@ -2,6 +2,7 @@ import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma } from './prisma';
+import { sendEventNotification } from './notifications';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -25,6 +26,19 @@ export const authOptions: NextAuthOptions = {
               where: { id: user.id },
               data: { firstLoginAt: new Date() },
             })
+            // 新規登録通知
+            sendEventNotification({
+              type: 'signup',
+              userEmail: user.email,
+              userName: user.name,
+            }).catch(() => {})
+          } else {
+            // ログイン通知
+            sendEventNotification({
+              type: 'login',
+              userEmail: user.email,
+              userName: user.name,
+            }).catch(() => {})
           }
         } catch (e) {
           console.error('Failed to set firstLoginAt:', e)

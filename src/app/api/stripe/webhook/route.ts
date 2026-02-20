@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { constructWebhookEvent, getPlanIdFromStripePriceId, stripe } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
+import { sendEventNotification } from '@/lib/notifications'
 import Stripe from 'stripe'
 
 // ========================================
@@ -133,11 +134,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   console.log(`Checkout completed for user: ${userId}`)
 
   // ユーザーにStripe Customer IDを保存
-  await prisma.user.update({
+  const user = await prisma.user.update({
     where: { id: userId },
     data: {
       stripeCustomerId: customerId,
     },
+    select: { email: true, name: true },
   })
 
   // サブスクリプション情報を取得
@@ -145,6 +147,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
     await updateUserSubscription(userId, subscription)
   }
+
+  // 課金通知
+  sendEventNotification({
+    type: 'subscription',
+    userEmail: user.email,
+    userName: user.name,
+    details: `チェックアウト完了（subscription: ${subscriptionId || 'N/A'}）`,
+  }).catch(() => {})
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
@@ -198,6 +208,14 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     },
   })
 
+  // 解約通知
+  sendEventNotification({
+    type: 'cancellation',
+    userEmail: user.email,
+    userName: user.name,
+    details: `プラン: ${user.plan} → FREE`,
+  }).catch(() => {})
+
   // 統一課金: 全サービスをFREEに戻す
   const allServiceIds = ['banner', 'seo', 'interview', 'persona', 'kantan']
   for (const serviceId of allServiceIds) {
@@ -217,12 +235,20 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log(`Payment succeeded for invoice: ${invoice.id}`)
-  // 必要に応じて通知メールなどを送信
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
   console.log(`Payment failed for invoice: ${invoice.id}`)
-  // 必要に応じてユーザーに通知
+  const customerId = invoice.customer as string
+  const user = customerId
+    ? await prisma.user.findFirst({ where: { stripeCustomerId: customerId } })
+    : null
+  sendEventNotification({
+    type: 'payment_failed',
+    userEmail: user?.email,
+    userName: user?.name,
+    details: `invoice: ${invoice.id}`,
+  }).catch(() => {})
 }
 
 // ========================================

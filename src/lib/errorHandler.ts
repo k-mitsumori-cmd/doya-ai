@@ -77,24 +77,23 @@ export async function notifyApiError(
       ? `${errorMessage}\n\n追加情報: ${JSON.stringify(additionalInfo, null, 2)}\n\nエラー詳細:\n${errorDetails}`
       : `${errorMessage}\n\nエラー詳細:\n${errorDetails}`
     
-    const notificationPromise = sendErrorNotification({
-      errorMessage: fullErrorMessage,
-      errorStack: errorStack || errorDetails,
-      pathname,
-      userId,
-      userEmail,
-      userName,
-      httpStatus: statusCode,
-      requestMethod: method,
-      requestUrl: request.url,
-      requestBody,
-      timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
-    })
-    
-    // 通知の送信を待つ（ただし、エラーが発生しても続行）
-    notificationPromise.catch((e) => {
-      console.error('[ErrorHandler] Failed to send error notification:', e)
-    })
+    try {
+      await sendErrorNotification({
+        errorMessage: fullErrorMessage,
+        errorStack: errorStack || errorDetails,
+        pathname,
+        userId,
+        userEmail,
+        userName,
+        httpStatus: statusCode,
+        requestMethod: method,
+        requestUrl: request.url,
+        requestBody,
+        timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+      })
+    } catch (notifyErr) {
+      console.error('[ErrorHandler] Failed to send error notification:', notifyErr)
+    }
     
     // 非同期で実行するが、ログを出力
     console.log('[ErrorHandler] Error notification initiated')
