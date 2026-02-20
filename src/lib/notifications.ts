@@ -218,6 +218,178 @@ export async function sendDailySummary(): Promise<void> {
   await postToSlack(lines.join('\n'))
 }
 
+// ========================================
+// 週次サマリー通知（毎週月曜 朝9時に送信）
+// ========================================
+export async function sendWeeklySummary(): Promise<void> {
+  const now = new Date()
+  // 先週の月曜 0:00 JST ～ 今週月曜 0:00 JST
+  const thisMonday = getJSTStartOfWeek(now)
+  const lastMonday = new Date(thisMonday.getTime() - 7 * 24 * 60 * 60 * 1000)
+
+  // --- 先週の数値 ---
+  const weekNewUsers = await prisma.user.findMany({
+    where: { createdAt: { gte: lastMonday, lt: thisMonday } },
+    select: { name: true, email: true },
+    orderBy: { createdAt: 'desc' },
+  })
+  const weekGenerations = await prisma.generation.count({
+    where: { createdAt: { gte: lastMonday, lt: thisMonday } },
+  })
+  const weekGenByService = await prisma.generation.groupBy({
+    by: ['serviceId'],
+    where: { createdAt: { gte: lastMonday, lt: thisMonday } },
+    _count: { _all: true },
+  })
+
+  // --- 累計 ---
+  const totalUsers = await prisma.user.count()
+  const totalGenerations = await prisma.generation.count()
+  const paidUsersList = await prisma.user.findMany({
+    where: { plan: { not: 'FREE' } },
+    select: { name: true, email: true, plan: true },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  const weekStr = `${formatJSTDate(lastMonday)} 〜 ${formatJSTDate(new Date(thisMonday.getTime() - 1))}`
+  const serviceLines = weekGenByService
+    .sort((a, b) => (b._count?._all ?? 0) - (a._count?._all ?? 0))
+    .map((s) => `  - ${s.serviceId}: ${s._count?._all ?? 0}件`)
+
+  const greeting = getWeeklyGreeting(weekNewUsers.length, weekGenerations, paidUsersList.length)
+
+  const lines = [
+    `<!channel>`,
+    `📅 *[週次レポート]* ${weekStr}`,
+    ``,
+    greeting,
+    ``,
+    `*--- 先週の結果 ---*`,
+    ``,
+    `*👥 新規ユーザー: ${weekNewUsers.length}人*`,
+    ...(weekNewUsers.length > 0
+      ? weekNewUsers.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
+      : []),
+    ``,
+    `*⚡ 生成数: ${weekGenerations}件*`,
+    ...(serviceLines.length > 0 ? serviceLines : ['  - (なし)']),
+    ``,
+    `*--- 累計 ---*`,
+    `- 総ユーザー数: ${totalUsers}人`,
+    `- 有料ユーザー: ${paidUsersList.length}人`,
+    ...(paidUsersList.length > 0
+      ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
+      : []),
+    `- 総生成数: ${totalGenerations}件`,
+  ]
+
+  await postToSlack(lines.join('\n'))
+}
+
+// ========================================
+// 月次サマリー通知（毎月1日 朝9時に送信）
+// ========================================
+export async function sendMonthlySummary(): Promise<void> {
+  const now = new Date()
+  // 先月1日 0:00 JST ～ 今月1日 0:00 JST
+  const thisMonth1st = getJSTStartOfMonth(now)
+  const lastMonth1st = getJSTStartOfMonth(new Date(thisMonth1st.getTime() - 1))
+
+  // --- 先月の数値 ---
+  const monthNewUsers = await prisma.user.findMany({
+    where: { createdAt: { gte: lastMonth1st, lt: thisMonth1st } },
+    select: { name: true, email: true },
+    orderBy: { createdAt: 'desc' },
+  })
+  const monthGenerations = await prisma.generation.count({
+    where: { createdAt: { gte: lastMonth1st, lt: thisMonth1st } },
+  })
+  const monthGenByService = await prisma.generation.groupBy({
+    by: ['serviceId'],
+    where: { createdAt: { gte: lastMonth1st, lt: thisMonth1st } },
+    _count: { _all: true },
+  })
+
+  // --- 累計 ---
+  const totalUsers = await prisma.user.count()
+  const totalGenerations = await prisma.generation.count()
+  const paidUsersList = await prisma.user.findMany({
+    where: { plan: { not: 'FREE' } },
+    select: { name: true, email: true, plan: true },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  // 先月の名前
+  const lastMonthName = lastMonth1st.toLocaleDateString('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: 'long',
+  })
+  const serviceLines = monthGenByService
+    .sort((a, b) => (b._count?._all ?? 0) - (a._count?._all ?? 0))
+    .map((s) => `  - ${s.serviceId}: ${s._count?._all ?? 0}件`)
+
+  const greeting = getMonthlyGreeting(monthNewUsers.length, monthGenerations, paidUsersList.length)
+
+  const lines = [
+    `<!channel>`,
+    `📆 *[月次レポート]* ${lastMonthName}`,
+    ``,
+    greeting,
+    ``,
+    `*--- 先月の結果 ---*`,
+    ``,
+    `*👥 新規ユーザー: ${monthNewUsers.length}人*`,
+    ...(monthNewUsers.length > 0
+      ? monthNewUsers.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
+      : []),
+    ``,
+    `*⚡ 生成数: ${monthGenerations}件*`,
+    ...(serviceLines.length > 0 ? serviceLines : ['  - (なし)']),
+    ``,
+    `*--- 累計 ---*`,
+    `- 総ユーザー数: ${totalUsers}人`,
+    `- 有料ユーザー: ${paidUsersList.length}人`,
+    ...(paidUsersList.length > 0
+      ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
+      : []),
+    `- 総生成数: ${totalGenerations}件`,
+  ]
+
+  await postToSlack(lines.join('\n'))
+}
+
+// ========================================
+// 日付ユーティリティ（JST基準）
+// ========================================
+/** 指定日時のJSTでの週の月曜日 0:00 をUTCのDateで返す */
+function getJSTStartOfWeek(date: Date): Date {
+  // JST = UTC + 9
+  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000)
+  const day = jst.getUTCDay() // 0=Sun, 1=Mon, ...
+  const diff = day === 0 ? 6 : day - 1 // 月曜からの差分
+  jst.setUTCHours(0, 0, 0, 0)
+  jst.setUTCDate(jst.getUTCDate() - diff)
+  // UTCに戻す
+  return new Date(jst.getTime() - 9 * 60 * 60 * 1000)
+}
+
+/** 指定日時のJSTでの月初 1日 0:00 をUTCのDateで返す */
+function getJSTStartOfMonth(date: Date): Date {
+  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000)
+  jst.setUTCDate(1)
+  jst.setUTCHours(0, 0, 0, 0)
+  return new Date(jst.getTime() - 9 * 60 * 60 * 1000)
+}
+
+/** DateをJST日付文字列で返す (例: 2/13) */
+function formatJSTDate(date: Date): string {
+  return date.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' })
+}
+
+// ========================================
+// 所感メッセージ
+// ========================================
 // 数値に応じた明るい所感メッセージ
 function getDailyGreeting(newUsers: number, generations: number, paidUsers: number): string {
   const greetings = [
@@ -237,6 +409,55 @@ function getDailyGreeting(newUsers: number, generations: number, paidUsers: numb
   else if (generations >= 1) highlights.push(`🚀 ${generations}件生成されました、着実に成長中！`)
 
   if (paidUsers >= 1) highlights.push(`💎 有料ユーザー ${paidUsers}人、ありがたいですね！`)
+
+  return highlights.length > 0
+    ? `${base}\n${highlights.join('\n')}`
+    : base
+}
+
+function getWeeklyGreeting(newUsers: number, generations: number, paidUsers: number): string {
+  const greetings = [
+    '今週もお疲れさまでした！先週の振り返りです 📋',
+    '新しい一週間のスタート！先週を振り返りましょう 🗓️',
+    '月曜日です！先週の成果をチェックしましょう 📊',
+  ]
+  const base = greetings[Math.floor(Math.random() * greetings.length)]
+
+  const highlights: string[] = []
+  if (newUsers >= 20) highlights.push(`🎊 先週は ${newUsers}人が新規登録！大躍進の一週間でした！`)
+  else if (newUsers >= 10) highlights.push(`🎉 先週 ${newUsers}人の新規登録、素晴らしい成長です！`)
+  else if (newUsers >= 1) highlights.push(`👋 先週 ${newUsers}人の新しい仲間が加わりました！`)
+
+  if (generations >= 500) highlights.push(`🔥 ${generations}件の生成！すごい活用度です！`)
+  else if (generations >= 100) highlights.push(`⚡ ${generations}件の生成、活発に利用されています！`)
+  else if (generations >= 1) highlights.push(`🚀 ${generations}件生成、着実に伸びています！`)
+
+  if (paidUsers >= 1) highlights.push(`💎 有料ユーザー ${paidUsers}人、頼もしいですね！`)
+
+  return highlights.length > 0
+    ? `${base}\n${highlights.join('\n')}`
+    : base
+}
+
+function getMonthlyGreeting(newUsers: number, generations: number, paidUsers: number): string {
+  const greetings = [
+    '新しい月のスタートです！先月を振り返りましょう 🌸',
+    '月初のご報告です！先月の成果をまとめました 📈',
+    'お疲れさまでした！先月の実績レポートです 🏆',
+  ]
+  const base = greetings[Math.floor(Math.random() * greetings.length)]
+
+  const highlights: string[] = []
+  if (newUsers >= 50) highlights.push(`🏅 先月は ${newUsers}人が新規登録！過去最高かも？！`)
+  else if (newUsers >= 20) highlights.push(`🎊 先月 ${newUsers}人の新規登録、好調です！`)
+  else if (newUsers >= 1) highlights.push(`👥 先月 ${newUsers}人の新しい仲間が加わりました！`)
+
+  if (generations >= 2000) highlights.push(`🔥 ${generations}件の生成！圧倒的な活用度です！`)
+  else if (generations >= 500) highlights.push(`⚡ ${generations}件の生成、しっかり使われています！`)
+  else if (generations >= 1) highlights.push(`🚀 ${generations}件生成、来月も楽しみです！`)
+
+  if (paidUsers >= 5) highlights.push(`💎 有料ユーザー ${paidUsers}人！ビジネスが育っています！`)
+  else if (paidUsers >= 1) highlights.push(`💎 有料ユーザー ${paidUsers}人、ありがたいですね！`)
 
   return highlights.length > 0
     ? `${base}\n${highlights.join('\n')}`
