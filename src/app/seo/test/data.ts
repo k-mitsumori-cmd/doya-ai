@@ -5,7 +5,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'guide-1',
     title: 'ChatGPTの使い方 完全ガイド',
-    description: '初心者向けにChatGPTの登録から活用術まで丁寧に解説',
+    patternLabel: '完全ガイド',
+    description: '初心者でもわかるように、基礎から活用術まで網羅的に解説する記事',
     category: 'guide',
     icon: '📖',
     defaultKeyword: 'ChatGPT 使い方 初心者',
@@ -19,7 +20,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'guide-2',
     title: '副業の始め方｜月5万円ロードマップ',
-    description: '会社員でも始められる副業の具体的なステップを解説',
+    patternLabel: 'ロードマップ',
+    description: 'ゴールまでの道筋をステップで示す、実践型ロードマップ記事',
     category: 'guide',
     icon: '💰',
     defaultKeyword: '副業 始め方 会社員',
@@ -33,7 +35,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'guide-3',
     title: 'マーケティングとは？基礎から実践',
-    description: 'マーケティングの基本概念から実践方法まで網羅的に解説',
+    patternLabel: '「〇〇とは」基礎解説',
+    description: '「〇〇とは？」から始まり、基礎→実践まで段階的に解説する記事',
     category: 'guide',
     icon: '📊',
     defaultKeyword: 'マーケティング とは 基礎',
@@ -47,7 +50,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'guide-4',
     title: 'DX推進の進め方｜成功する7ステップ',
-    description: 'DX推進を成功させるための具体的なステップを事例とともに解説',
+    patternLabel: '成功Nステップ',
+    description: '成功に必要なステップを番号付きで整理し、順番に解説する記事',
     category: 'guide',
     icon: '🚀',
     defaultKeyword: 'DX推進 進め方 ステップ',
@@ -63,7 +67,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'compare-1',
     title: 'プロジェクト管理ツール10選比較',
-    description: '主要なプロジェクト管理ツールを規模別に徹底比較',
+    patternLabel: 'N選 徹底比較',
+    description: '複数の製品・サービスを一覧で比較し、おすすめを紹介する記事',
     category: 'compare',
     icon: '⚖️',
     defaultKeyword: 'プロジェクト管理ツール 比較 おすすめ',
@@ -77,7 +82,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'compare-2',
     title: 'AIライティングツール比較',
-    description: 'ChatGPT・Claude・Geminiを文章品質・機能・料金で比較',
+    patternLabel: 'VS 対決比較',
+    description: '2〜3つの製品を機能・料金・品質で直接対決させる比較記事',
     category: 'compare',
     icon: '🤖',
     defaultKeyword: 'AIライティングツール 比較',
@@ -91,7 +97,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'compare-3',
     title: 'クラウド会計ソフト比較',
-    description: 'freee・マネーフォワード・弥生を機能と料金で徹底比較',
+    patternLabel: '機能×料金 比較表',
+    description: '機能と料金を表形式で整理し、用途別のおすすめを示す比較記事',
     category: 'compare',
     icon: '🧮',
     defaultKeyword: 'クラウド会計ソフト 比較',
@@ -105,7 +112,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'compare-4',
     title: 'CRMツール比較｜導入ガイド',
-    description: 'Salesforce・HubSpot・Zohoを企業規模別におすすめ',
+    patternLabel: '比較＋導入ガイド',
+    description: '比較だけでなく、導入手順や選び方のポイントまで解説する記事',
     category: 'compare',
     icon: '📋',
     defaultKeyword: 'CRM ツール 比較',
@@ -121,7 +129,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'howto-1',
     title: 'LP制作でCVRを上げる7ステップ',
-    description: '効果的なLPを制作するための手順を順を追って解説',
+    patternLabel: '改善ステップ',
+    description: '現状の課題を特定し、改善ステップを順番に解説する実践記事',
     category: 'howto',
     icon: '🎯',
     defaultKeyword: 'LP制作 手順 コンバージョン',
@@ -135,7 +144,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'howto-2',
     title: 'コンテンツマーケティングの始め方',
-    description: 'オウンドメディアの立ち上げから運営まで全手順を解説',
+    patternLabel: '始め方マニュアル',
+    description: 'ゼロから始める人向けに、立ち上げから運営まで全手順を解説する記事',
     category: 'howto',
     icon: '✍️',
     defaultKeyword: 'コンテンツマーケティング 始め方',
@@ -149,7 +159,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'howto-3',
     title: '採用ブランディング戦略',
-    description: '応募数を増やすための採用ブランディング戦略を解説',
+    patternLabel: '戦略設計 完全版',
+    description: '戦略の設計から実行まで、フレームワーク付きで解説する記事',
     category: 'howto',
     icon: '👥',
     defaultKeyword: '採用ブランディング 戦略',
@@ -163,7 +174,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'howto-4',
     title: 'ECサイトのCVR改善実践ガイド',
-    description: 'ECサイトの売上を伸ばすための最適化手法を解説',
+    patternLabel: '最適化 実践ガイド',
+    description: 'データに基づく最適化手法を、具体例付きで解説する実践記事',
     category: 'howto',
     icon: '🛒',
     defaultKeyword: 'ECサイト CVR改善',
@@ -179,7 +191,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'case-1',
     title: 'BtoB営業成功事例10選',
-    description: '実際にBtoB営業で成功した企業の事例と戦略を紹介',
+    patternLabel: '成功事例 N選',
+    description: '実際の成功事例を複数集め、共通する戦略やポイントを分析する記事',
     category: 'case',
     icon: '🏆',
     defaultKeyword: 'BtoB営業 成功事例',
@@ -193,7 +206,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'case-2',
     title: 'SNSマーケティング成功事例',
-    description: 'SNSでフォロワー10万人達成の事例と施策を紹介',
+    patternLabel: '施策レポート',
+    description: '具体的な施策とその結果をレポート形式でまとめる事例記事',
     category: 'case',
     icon: '📱',
     defaultKeyword: 'SNSマーケティング 成功事例',
@@ -207,7 +221,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'case-3',
     title: '2026年注目SaaSトレンド20選',
-    description: '2026年に注目すべきSaaSトレンドを業界別にまとめ',
+    patternLabel: 'トレンドまとめ N選',
+    description: '最新トレンドを業界別・カテゴリ別にまとめるランキング記事',
     category: 'case',
     icon: '📈',
     defaultKeyword: 'SaaS トレンド 2026',
@@ -221,7 +236,8 @@ const templates: ArticleTemplate[] = [
   {
     id: 'case-4',
     title: 'データドリブン経営 完全ガイド',
-    description: 'データに基づく意思決定の手法と導入ステップを解説',
+    patternLabel: '手法解説ガイド',
+    description: '専門的な手法や考え方を、導入ステップ付きで解説する記事',
     category: 'case',
     icon: '📊',
     defaultKeyword: 'データドリブン 経営 分析',

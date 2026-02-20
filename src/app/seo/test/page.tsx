@@ -370,22 +370,27 @@ export default function SeoTestPage() {
 
                             {/* カードボディ */}
                             <div className="p-3 sm:p-4">
-                              <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                                {tmpl.title}
-                              </h3>
-                              <p className="text-[10px] sm:text-xs text-slate-500 line-clamp-2 mb-3">
-                                {tmpl.description}
-                              </p>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${colors.text} ${colors.bg}`}>
+                              {/* 型タイプ（メイン表示） */}
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-black text-white ${colors.badge}`}>
                                   {ARTICLE_TYPES.find((t) => t.id === tmpl.articleType)?.label || tmpl.articleType}
                                 </span>
-                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold text-slate-500 bg-slate-100">
+                                <span className="px-2 py-0.5 rounded text-[9px] font-bold text-slate-500 bg-slate-100">
                                   {tmpl.recommendedChars.toLocaleString()}字
                                 </span>
                               </div>
-                              <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
-                                <span className="text-[9px] text-slate-400 font-bold">テンプレート</span>
+                              <h3 className="text-sm sm:text-base font-black text-slate-900 leading-snug mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                                {tmpl.patternLabel}
+                              </h3>
+                              <p className="text-[10px] sm:text-xs text-slate-500 line-clamp-2 mb-2">
+                                {tmpl.description}
+                              </p>
+                              {/* 使用例 */}
+                              <div className="bg-slate-50 rounded-lg px-2.5 py-1.5 mb-3">
+                                <p className="text-[9px] text-slate-400 font-bold mb-0.5">使用例</p>
+                                <p className="text-[10px] sm:text-xs text-slate-600 font-medium line-clamp-1">{tmpl.title}</p>
+                              </div>
+                              <div className="flex items-center justify-end">
                                 <span className="inline-flex items-center gap-1 text-[10px] font-black text-blue-600 group-hover:text-blue-700">
                                   このテンプレを使う <ArrowRight className="w-3 h-3" />
                                 </span>

@@ -1,6 +1,7 @@
 export interface ArticleTemplate {
   id: string
   title: string
+  patternLabel: string
   description: string
   category: string
   icon: string
