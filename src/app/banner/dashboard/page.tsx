@@ -544,106 +544,87 @@ function BannerTestPageInner() {
           }
         }
         
-        // APIから取得（完全なプロンプトを含む）
-        // minimal=falseで完全なプロンプトを取得（スタイル維持のため必須）
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:516',message:'Before API fetch',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        
-        const res = await fetch('/api/banner/test/templates?limit=100', {
-          next: { revalidate: 300 }, // Next.js ISR: 5分間キャッシュ
-        })
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:520',message:'After API fetch',data:{status:res.status,ok:res.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        
-        if (!res.ok) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:521',message:'API error',data:{status:res.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
-          
-          throw new Error(`HTTP error! status: ${res.status}`)
-        }
-        
-        const data = await res.json()
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:524',message:'API response parsed',data:{templatesCount:data.templates?.length,hasTemplates:Array.isArray(data.templates)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        
-        if (data.templates && Array.isArray(data.templates)) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:526',message:'Templates array found',data:{count:data.templates.length,hasError:!!data.error,debug:data.debug},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          
-          if (data.templates.length === 0) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:528',message:'Empty templates array',data:{error:data.error,debug:data.debug},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
-            
-            console.warn('[Templates] Empty templates array received', data)
-            toast.error(data.error || 'テンプレートが見つかりませんでした')
-            setIsLoadingTemplates(false)
-            return
-          }
-          
-          setTemplates(data.templates)
-          
-          // 各カテゴリの初期表示数を設定
-          const initialCounts: { [key: string]: number } = {}
-          data.templates.forEach((template: BannerTemplate) => {
-            const category = categoryMapping[template.industry] || template.industry
-            if (!initialCounts[category]) {
-              initialCounts[category] = INITIAL_VISIBLE_COUNT
-            }
-          })
-          setVisibleCounts(initialCounts)
-          
-          // クライアント側キャッシュに保存
+        // APIから取得（DBエラー時はリトライ）
+        const MAX_RETRIES = 3
+        let lastError: any = null
+
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           try {
-            sessionStorage.setItem(CACHE_KEY, JSON.stringify({
-              data,
-              timestamp: Date.now(),
-            }))
-          } catch (e) {
-            // sessionStorageが満杯の場合は無視
-          }
-          
-          // featuredTemplateを優先的に選択
-          if (data.featuredTemplateId) {
-            const featured = data.templates.find((t: BannerTemplate) => t.id === data.featuredTemplateId)
-            if (featured) {
-              setSelectedTemplate(featured)
-            } else if (data.templates.length > 0) {
-              setSelectedTemplate(data.templates[0])
+            const res = await fetch(`/api/banner/test/templates?limit=200&_t=${Date.now()}`)
+
+            if (!res.ok) {
+              const errorData = await res.json().catch(() => ({}))
+              // DBエラー（503）の場合はリトライ
+              if (errorData.dbError && attempt < MAX_RETRIES - 1) {
+                console.warn(`[Templates] DB error on attempt ${attempt + 1}, retrying in ${(attempt + 1) * 2}s...`)
+                await new Promise(r => setTimeout(r, (attempt + 1) * 2000))
+                continue
+              }
+              throw new Error(errorData.error || `HTTP error! status: ${res.status}`)
             }
-          } else if (data.templates.length > 0) {
-            setSelectedTemplate(data.templates[0])
+
+            const data = await res.json()
+
+            if (data.templates && Array.isArray(data.templates) && data.templates.length > 0) {
+              setTemplates(data.templates)
+
+              const initialCounts: { [key: string]: number } = {}
+              data.templates.forEach((template: BannerTemplate) => {
+                const category = categoryMapping[template.industry] || template.industry
+                if (!initialCounts[category]) {
+                  initialCounts[category] = INITIAL_VISIBLE_COUNT
+                }
+              })
+              setVisibleCounts(initialCounts)
+
+              try {
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+                  data,
+                  timestamp: Date.now(),
+                }))
+              } catch (e) {
+                // sessionStorageが満杯の場合は無視
+              }
+
+              if (data.featuredTemplateId) {
+                const featured = data.templates.find((t: BannerTemplate) => t.id === data.featuredTemplateId)
+                if (featured) {
+                  setSelectedTemplate(featured)
+                } else if (data.templates.length > 0) {
+                  setSelectedTemplate(data.templates[0])
+                }
+              } else if (data.templates.length > 0) {
+                setSelectedTemplate(data.templates[0])
+              }
+
+              console.log(`[Templates] Loaded ${data.templates.length} templates in ${Date.now() - startTime}ms`)
+              break // 成功したらループを抜ける
+            } else {
+              console.warn('[Templates] Empty templates array received')
+              if (attempt < MAX_RETRIES - 1) {
+                await new Promise(r => setTimeout(r, (attempt + 1) * 2000))
+                continue
+              }
+              toast.error('テンプレートが見つかりませんでした')
+            }
+          } catch (fetchErr: any) {
+            lastError = fetchErr
+            if (attempt < MAX_RETRIES - 1) {
+              console.warn(`[Templates] Fetch error on attempt ${attempt + 1}, retrying...`)
+              await new Promise(r => setTimeout(r, (attempt + 1) * 2000))
+              continue
+            }
           }
-          
-          console.log(`[Templates] Loaded ${data.templates.length} templates in ${Date.now() - startTime}ms (API: ${data.loadTime}ms)`)
-        } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:563',message:'Templates not array or missing',data:{hasTemplates:!!data.templates,isArray:Array.isArray(data.templates),error:data.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
-          
-          console.error('[Templates] Invalid response format:', data)
-          toast.error('テンプレートの取得に失敗しました（無効な形式）')
+        }
+
+        if (lastError && templates.length === 0) {
+          console.error('Failed to fetch templates after retries:', lastError)
+          toast.error('テンプレートの取得に失敗しました。ページを再読み込みしてください。')
         }
       } catch (err: any) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:563',message:'Fetch error caught',data:{error:err.message,stack:err.stack?.substring(0,200)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        
         console.error('Failed to fetch templates:', err)
         toast.error('テンプレートの取得に失敗しました')
       } finally {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/15de686c-5b2c-46c4-b310-69b34571ae07',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:567',message:'Setting isLoadingTemplates=false',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        
         setIsLoadingTemplates(false)
       }
     }
