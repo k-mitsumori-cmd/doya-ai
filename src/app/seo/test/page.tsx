@@ -561,7 +561,7 @@ export default function SeoTestPage() {
                       </div>
                     ))}
                   </div>
-                  <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  <p className="text-center text-sm font-black text-slate-400 uppercase tracking-widest">
                     {step === 1 && 'Step 1: キーワード・タイトル・記事タイプ'}
                     {step === 2 && 'Step 2: 読者像・ターゲット設定'}
                     {step === 3 && 'Step 3: 仕上がり調整'}
@@ -576,25 +576,25 @@ export default function SeoTestPage() {
                       <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }} className="space-y-5">
                         {/* 主キーワード */}
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-2">
+                          <label className="block text-base font-black text-slate-800 mb-2">
                             主キーワード <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text" value={mainKeyword} onChange={(e) => setMainKeyword(e.target.value)}
                             placeholder="例：AI ライティング ツール 比較"
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                             autoFocus
                           />
-                          <p className="text-[10px] text-slate-400 mt-1.5">上位表示したい検索キーワードを入力</p>
+                          <p className="text-xs font-medium text-slate-400 mt-1.5">上位表示したい検索キーワードを入力</p>
                         </div>
 
                         {/* 記事タイトル */}
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm font-bold text-slate-700">記事タイトル <span className="text-red-500">*</span></label>
+                            <label className="text-base font-black text-slate-800">記事タイトル <span className="text-red-500">*</span></label>
                             <button
                               type="button" onClick={generateTitleCandidates} disabled={titleLoading || mainKeyword.trim().length < 2}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 text-white text-[10px] font-black shadow-sm hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-blue-600 text-white text-xs font-black shadow-sm hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                             >
                               {titleLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
                               AIでタイトル生成
@@ -603,7 +603,7 @@ export default function SeoTestPage() {
                           <input
                             type="text" value={articleTitle} onChange={(e) => setArticleTitle(e.target.value)}
                             placeholder="例：AIライティングツール比較｜料金・特徴・選び方を2026年版で徹底解説"
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                            className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                           />
                           {titleError && <p className="mt-2 text-xs font-bold text-red-500">{titleError}</p>}
                           {titleCandidates.length > 0 && (
@@ -615,7 +615,7 @@ export default function SeoTestPage() {
                                   }`}
                                 >
                                   <div className="flex items-start justify-between gap-3">
-                                    <span className="text-sm font-bold text-slate-800 leading-snug">{t}</span>
+                                    <span className="text-sm font-black text-slate-800 leading-snug">{t}</span>
                                     {titleSelected === i && <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" />}
                                   </div>
                                 </button>
@@ -630,18 +630,18 @@ export default function SeoTestPage() {
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-600 text-white text-[9px] font-black">重要</span>
                             <label className="text-xs font-black text-blue-700">一次情報（経験・訴求ポイント）</label>
                           </div>
-                          <p className="text-xs text-blue-600 mb-3">ここが入るほど「あなたにしか書けない記事」になります</p>
+                          <p className="text-xs font-bold text-blue-600 mb-3">ここが入るほど「あなたにしか書けない記事」になります</p>
                           <textarea
                             value={originalContent} onChange={(e) => setOriginalContent(e.target.value)}
                             placeholder="例：実体験、現場の失敗談、数字、独自の主張、比較の結論…"
                             rows={4}
-                            className="w-full px-4 py-3 rounded-xl bg-white border border-blue-200 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            className="w-full px-4 py-3.5 rounded-xl bg-white border border-blue-200 text-base font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                           />
                         </div>
 
                         {/* 記事タイプ */}
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-3">記事タイプ</label>
+                          <label className="block text-base font-black text-slate-800 mb-3">記事タイプ</label>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {ARTICLE_TYPES.map((type) => {
                               const Icon = type.icon
@@ -653,8 +653,8 @@ export default function SeoTestPage() {
                                   }`}
                                 >
                                   <Icon className={`w-5 h-5 mb-2 ${selected ? 'text-blue-600' : 'text-slate-400'}`} />
-                                  <p className={`text-sm font-bold ${selected ? 'text-blue-700' : 'text-slate-700'}`}>{type.label}</p>
-                                  <p className="text-[10px] text-slate-400 mt-1">{type.desc}</p>
+                                  <p className={`text-base font-black ${selected ? 'text-blue-700' : 'text-slate-700'}`}>{type.label}</p>
+                                  <p className="text-xs font-medium text-slate-400 mt-1">{type.desc}</p>
                                 </button>
                               )
                             })}
@@ -667,7 +667,7 @@ export default function SeoTestPage() {
                     {step === 2 && (
                       <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }} className="space-y-5">
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-3">想定読者</label>
+                          <label className="block text-base font-black text-slate-800 mb-3">想定読者</label>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {AUDIENCE_PRESETS.map((preset) => {
                               const selected = audiencePreset === preset.id
@@ -677,19 +677,19 @@ export default function SeoTestPage() {
                                     selected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300'
                                   }`}
                                 >
-                                  <p className={`text-sm font-bold ${selected ? 'text-blue-700' : 'text-slate-700'}`}>{preset.label}</p>
-                                  {preset.desc && <p className="text-[10px] text-slate-400 mt-1">{preset.desc}</p>}
+                                  <p className={`text-base font-black ${selected ? 'text-blue-700' : 'text-slate-700'}`}>{preset.label}</p>
+                                  {preset.desc && <p className="text-xs font-medium text-slate-400 mt-1">{preset.desc}</p>}
                                 </button>
                               )
                             })}
                           </div>
                           {audiencePreset === 'custom' && (
                             <input type="text" value={customAudience} onChange={(e) => setCustomAudience(e.target.value)} placeholder="例：不動産営業3年目の担当者"
-                              className="mt-3 w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                              className="mt-3 w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
                           )}
                         </div>
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-3">文体</label>
+                          <label className="block text-base font-black text-slate-800 mb-3">文体</label>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             {TONE_OPTIONS.map((opt) => {
                               const selected = tone === opt.id
@@ -699,9 +699,9 @@ export default function SeoTestPage() {
                                     selected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300'
                                   }`}
                                 >
-                                  <span className="text-xl mb-1 block">{opt.emoji}</span>
-                                  <p className={`text-sm font-bold ${selected ? 'text-blue-700' : 'text-slate-700'}`}>{opt.label}</p>
-                                  <p className="text-[10px] text-slate-400 mt-1">{opt.desc}</p>
+                                  <span className="text-2xl mb-1 block">{opt.emoji}</span>
+                                  <p className={`text-base font-black ${selected ? 'text-blue-700' : 'text-slate-700'}`}>{opt.label}</p>
+                                  <p className="text-xs font-medium text-slate-400 mt-1">{opt.desc}</p>
                                 </button>
                               )
                             })}
@@ -715,7 +715,7 @@ export default function SeoTestPage() {
                       <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.2 }} className="space-y-5">
                         {/* 文字数 */}
                         <div>
-                          <label className="block text-sm font-bold text-slate-700 mb-3">文字数</label>
+                          <label className="block text-base font-black text-slate-800 mb-3">文字数</label>
                           <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                             {CHAR_PRESETS.map((p) => {
                               const selected = targetChars === p.value
@@ -728,8 +728,8 @@ export default function SeoTestPage() {
                                     : selected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300'
                                   }`}
                                 >
-                                  <p className={`text-sm font-black ${selected ? 'text-blue-700' : 'text-slate-700'}`}>{p.label}</p>
-                                  <p className="text-[9px] text-slate-400 mt-0.5">{p.desc}</p>
+                                  <p className={`text-base font-black ${selected ? 'text-blue-700' : 'text-slate-700'}`}>{p.label}</p>
+                                  <p className="text-xs font-medium text-slate-400 mt-0.5">{p.desc}</p>
                                 </button>
                               )
                             })}
@@ -738,7 +738,7 @@ export default function SeoTestPage() {
 
                         {/* 詳細設定 */}
                         <button type="button" onClick={() => setShowAdvanced(!showAdvanced)}
-                          className="flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors"
+                          className="flex items-center gap-1.5 text-base font-black text-slate-500 hover:text-slate-700 transition-colors"
                         >
                           {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                           詳細設定
@@ -747,23 +747,23 @@ export default function SeoTestPage() {
                         {showAdvanced && (
                           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
                             <div>
-                              <label className="block text-sm font-bold text-slate-700 mb-2">関連キーワード</label>
+                              <label className="block text-base font-black text-slate-800 mb-2">関連キーワード</label>
                               <input type="text" value={relatedKeywords} onChange={(e) => setRelatedKeywords(e.target.value)} placeholder="例：AI、ChatGPT、Claude、SEO"
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                                className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
                             </div>
                             <div>
-                              <label className="block text-sm font-bold text-slate-700 mb-2">制約・NG表現</label>
+                              <label className="block text-base font-black text-slate-800 mb-2">制約・NG表現</label>
                               <input type="text" value={constraints} onChange={(e) => setConstraints(e.target.value)} placeholder="例：競合他社名は出さない"
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
+                                className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" />
                             </div>
                             <div>
-                              <label className="block text-sm font-bold text-slate-700 mb-2">
+                              <label className="block text-base font-black text-slate-800 mb-2">
                                 参考URL（最大20件）
                                 {referenceUrlParse.urls.length > 0 && <span className="ml-2 text-blue-600 font-bold">{referenceUrlParse.urls.length}件</span>}
                               </label>
                               <textarea value={referenceUrlsText} onChange={(e) => setReferenceUrlsText(e.target.value)} placeholder="https://example.com（改行またはカンマ区切り）"
                                 rows={3}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none transition-all" />
+                                className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none transition-all" />
                               {referenceUrlParse.invalid.length > 0 && (
                                 <p className="mt-1 text-xs text-red-500">無効なURL: {referenceUrlParse.invalid.join(', ')}</p>
                               )}
@@ -773,14 +773,14 @@ export default function SeoTestPage() {
 
                         {/* プレビュー */}
                         <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-                          <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">生成プレビュー</p>
+                          <p className="text-xs font-black text-slate-400 mb-2.5 uppercase tracking-widest">生成プレビュー</p>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                            <div><p className="text-[10px] text-slate-400">タイトル</p><p className="font-bold text-slate-800 truncate">{articleTitle || '(未設定)'}</p></div>
-                            <div><p className="text-[10px] text-slate-400">記事タイプ</p><p className="font-bold text-slate-800">{ARTICLE_TYPES.find(t => t.id === articleType)?.label}</p></div>
-                            <div><p className="text-[10px] text-slate-400">読者像</p><p className="font-bold text-slate-800">{audiencePreset === 'custom' ? customAudience : AUDIENCE_PRESETS.find(a => a.id === audiencePreset)?.label}</p></div>
-                            <div><p className="text-[10px] text-slate-400">文体</p><p className="font-bold text-slate-800">{TONE_OPTIONS.find(t => t.id === tone)?.label}</p></div>
-                            <div><p className="text-[10px] text-slate-400">文字数</p><p className="font-bold text-slate-800">{targetChars.toLocaleString()}字</p></div>
-                            <div><p className="text-[10px] text-slate-400">想定見出し数</p><p className="font-bold text-slate-800">{Math.max(5, Math.floor(targetChars / 1500))}個</p></div>
+                            <div><p className="text-xs font-bold text-slate-400">タイトル</p><p className="font-black text-slate-800 truncate">{articleTitle || '(未設定)'}</p></div>
+                            <div><p className="text-xs font-bold text-slate-400">記事タイプ</p><p className="font-black text-slate-800">{ARTICLE_TYPES.find(t => t.id === articleType)?.label}</p></div>
+                            <div><p className="text-xs font-bold text-slate-400">読者像</p><p className="font-black text-slate-800">{audiencePreset === 'custom' ? customAudience : AUDIENCE_PRESETS.find(a => a.id === audiencePreset)?.label}</p></div>
+                            <div><p className="text-xs font-bold text-slate-400">文体</p><p className="font-black text-slate-800">{TONE_OPTIONS.find(t => t.id === tone)?.label}</p></div>
+                            <div><p className="text-xs font-bold text-slate-400">文字数</p><p className="font-black text-slate-800">{targetChars.toLocaleString()}字</p></div>
+                            <div><p className="text-xs font-bold text-slate-400">想定見出し数</p><p className="font-black text-slate-800">{Math.max(5, Math.floor(targetChars / 1500))}個</p></div>
                           </div>
                         </div>
 
