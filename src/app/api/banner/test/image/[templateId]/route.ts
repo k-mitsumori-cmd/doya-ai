@@ -4,26 +4,8 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// ジャンルに基づく静的フォールバック画像（publicフォルダ内）
-const STATIC_FALLBACK_IMAGES: Record<string, string> = {
-  fashion: '/banner-samples/cat-ec.png',
-  beauty: '/banner-samples/cat-beauty.png',
-  food: '/banner-samples/cat-food.png',
-  it: '/banner-samples/cat-it.png',
-  business: '/banner-samples/cat-marketing.png',
-  recruit: '/banner-samples/cat-marketing.png',
-  education: '/banner-samples/cat-education.png',
-  travel: '/banner-samples/cat-ec.png',
-  luxury: '/banner-samples/cat-beauty.png',
-  natural: '/banner-samples/cat-health.png',
-  default: '/banner-samples/cat-it.png',
-}
-
-// templateIdからジャンルを推測
-function getGenreFromTemplateId(templateId: string): string {
-  const prefix = templateId.split('-')[0]
-  return prefix || 'it'
-}
+// 静的フォールバック画像（生成中プレースホルダー）
+const FALLBACK_IMAGE = '/banner-samples/generating-placeholder.png'
 
 export async function GET(
   request: NextRequest,
@@ -35,9 +17,7 @@ export async function GET(
     return NextResponse.json({ error: 'templateId is required' }, { status: 400 })
   }
   
-  // templateIdからジャンルを推測（DBエラー時のフォールバック用）
-  const inferredGenre = getGenreFromTemplateId(templateId)
-  const staticFallbackUrl = STATIC_FALLBACK_IMAGES[inferredGenre] || STATIC_FALLBACK_IMAGES.default
+  const staticFallbackUrl = FALLBACK_IMAGE
   
   try {
     // DBから画像を取得
