@@ -1,7 +1,9 @@
+import { BANNER_PROMPTS_V3 } from './banner-prompts-v3'
+
 /**
  * デザインライブラリー（design-library.jp）を参考にした高品質バナープロンプト
- * 
- * 80パターンの厳選プロンプト
+ *
+ * 80パターンの厳選プロンプト + v3追加100パターン
  * 
  * プロンプト構造:
  * - 構図 / レイアウト
@@ -56,9 +58,9 @@ export const GENRES = [
 ] as const
 
 /**
- * 高品質バナープロンプト（80パターン）
+ * 高品質バナープロンプト（ベース）
  */
-export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
+const _BANNER_PROMPTS_V2_BASE: BannerPromptV2[] = [
   // 1. 清涼飲料水バナー（水色・爽快系）
   {
     id: 'ref-beverage-001',
@@ -634,25 +636,7 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     fullPrompt: 'A grape tea drink banner. Rich purple gradient background. A cold beverage cup with pink foam topping in center. Fresh grapes scattered around as decoration. "Overflowing Kyoho Grape" style Japanese text. "Win 100 people daily" campaign. Sweet and fruity atmosphere. Deep purple and pink color scheme.',
     tags: ['巨峰', '紫', 'フルーティー', 'ドリンク'],
   },
-  
-  // 33. お笑いイベント（青×金・エンタメ）
-  {
-    id: 'ref-entertainment-009',
-    genre: 'イベント・メディア',
-    category: 'ec',
-    name: 'お笑いイベント青金',
-    displayTitle: 'コメディアン',
-    prompt: {
-      composition: '四人の芸人、ロゴ中央',
-      subject: '芸人、カラフルな衣装',
-      colorPalette: '青、金、白',
-      designElements: 'きらめき、エンタメ',
-      typography: '番組ロゴ、配信情報',
-    },
-    fullPrompt: 'A comedy show streaming banner. Deep blue background with gold sparkle effects. Four male comedians in colorful blazers laughing together. "THE COMEDIAN 2025" style logo in center. Streaming service branding. Prime video style layout. Fun and entertaining atmosphere. Blue and gold entertainment color scheme.',
-    tags: ['お笑い', '青金', 'エンタメ', 'ストリーミング'],
-  },
-  
+
   // 34. プレミアムビール（黄×白・高級感）
   {
     id: 'ref-beverage-010',
@@ -1735,24 +1719,6 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     tags: ['商談', 'セミナー', '青', 'イラスト'],
   },
 
-  // 14. 夢を足す（白×シンプル）
-  {
-    id: 'new-dream-001',
-    genre: 'ビジネス・SaaS',
-    category: 'it',
-    name: '見積書に夢を',
-    displayTitle: '夢を足そう',
-    prompt: {
-      composition: '電卓写真右上、筆記体タイトル、大きな日本語',
-      subject: '電卓、ビジネスツール',
-      colorPalette: '白、グレー、イエローアクセント',
-      designElements: 'ミニマル、筆記体、引用符',
-      typography: '筆記体英語、大きな日本語タイトル、イエロー帯',
-    },
-    fullPrompt: 'A business philosophy banner. Clean white background with a calculator photo at top right corner. Large elegant cursive English word "Dream" in light yellow. Bold Japanese title "見積書に「夢」を足そう。" with quotation marks around key word. Yellow highlighted subtitle bar at bottom with Japanese question. Minimal sophisticated design. White, gray, and yellow accent color scheme.',
-    tags: ['ビジネス', '哲学', 'ミニマル', 'イエロー'],
-  },
-
   // 15. GA4活用方法（青グラデーション）
   {
     id: 'new-ga4-001',
@@ -1859,24 +1825,6 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     },
     fullPrompt: 'A BtoB marketing seminar archive banner. Clean white to light gray background. Professional businessman in suit at left side with arms crossed, confident pose. Green logo icon at top left. Japanese title "BtoBマーケティングの「出発点」とツール活用の考え方" with keywords in brackets. Small subheading above title. Speaker name and archive duration "30min" at bottom. Professional seminar aesthetic. White, gray, and green accent colors.',
     tags: ['BtoB', 'マーケティング', 'セミナー', 'グリーン'],
-  },
-
-  // 21. 厳選公開（黒帯×イエロー）
-  {
-    id: 'new-featured-001',
-    genre: 'ビジネス・SaaS',
-    category: 'it',
-    name: '厳選公開まとめ',
-    displayTitle: '厳選公開',
-    prompt: {
-      composition: '背景にタイポグラフィ、黒帯にタイトル',
-      subject: 'なし（テキストのみ）',
-      colorPalette: '白、黒、イエローアクセント',
-      designElements: '背景テキスト、黒帯、ハッシュタグ',
-      typography: '黒帯に白文字、イエロー強調、ハッシュタグ',
-    },
-    fullPrompt: 'A featured selection compilation banner. Light gray background with faded large typography pattern. Small yellow highlighted label "厳選公開!!" at top. Large black horizontal bands with white Japanese text "企業の7つの悩みはブランディングで改善できる". Key numbers and words in yellow highlight. Hashtag keywords at bottom like "#優良顧客 #離職率 #優秀人材". Editorial magazine style. White, black, and yellow accent color scheme.',
-    tags: ['厳選', 'まとめ', '黒帯', 'イエロー'],
   },
 
   // 22. セールス全貌（人物×青幾何学）
@@ -3872,6 +3820,14 @@ export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
     fullPrompt: 'An order-made suit fair banner. Rich charcoal gray suit fabric texture filling the background with a tailor measuring tape draped diagonally. Gold buttons and thread spool as props. Formal gold serif Japanese text about custom-made suit fair. Navy blue accent stripe. Charcoal gray, navy, and gold color scheme. Premium, sophisticated, bespoke tailoring atmosphere.',
     tags: ['スーツ', 'オーダーメイド', 'フォーマル', 'メンズ'],
   },
+]
+
+/**
+ * 全バナープロンプト（ベース + v3追加分）
+ */
+export const BANNER_PROMPTS_V2: BannerPromptV2[] = [
+  ..._BANNER_PROMPTS_V2_BASE,
+  ...BANNER_PROMPTS_V3,
 ]
 
 /**
