@@ -4,16 +4,15 @@ import React, { memo, useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  LayoutDashboard, 
-  Sparkles, 
-  Clock, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Sparkles,
+  Clock,
+  Settings,
   Palette,
   MessageSquare,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   HelpCircle,
   LogOut,
   LogIn,
@@ -22,10 +21,6 @@ import {
   Layers,
   CreditCard,
   Link2,
-  LayoutGrid,
-  Image,
-  FileText,
-  ExternalLink,
   Loader2
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'

@@ -5,20 +5,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Sparkles,
   Clock,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   HelpCircle,
   LogOut,
   LogIn,
   User,
   Zap,
-  LayoutGrid,
-  Image,
-  FileText,
-  ExternalLink,
   Target,
   Loader2,
 } from 'lucide-react'

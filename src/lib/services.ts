@@ -367,6 +367,50 @@ export const SERVICES: Service[] = [
   },
 
   // ----------------------------------------
+  // ドヤペルソナAI（ペルソナ生成）
+  // ----------------------------------------
+  {
+    id: 'persona',
+    name: 'ドヤペルソナAI',
+    shortName: 'ペルソナ',
+    description: 'ターゲットペルソナをAIで自動生成',
+    longDescription: 'ビジネスに最適なペルソナ像をAIが自動生成。年齢・職業・悩み・行動パターンまで詳細なペルソナシートを作成。',
+    icon: '🎯',
+    color: 'purple',
+    gradient: 'from-purple-500 to-purple-600',
+    bgGradient: 'from-purple-50 to-purple-100',
+    href: '/persona',
+    dashboardHref: '/persona',
+    pricingHref: '/persona',
+    guideHref: '/persona',
+    features: [
+      'AIペルソナ自動生成',
+      '詳細なペルソナシート出力',
+      '業界・商材に最適化',
+      'マーケティング施策に活用',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '1日3回まで',
+        dailyLimit: 3,
+        price: 0,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '1日30回まで',
+        dailyLimit: 30,
+        price: 9980,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PERSONA_PRO_PRICE_ID,
+      },
+    },
+    status: 'active',
+    category: 'text',
+    order: 8,
+    requiresAuth: false,
+  },
+
+  // ----------------------------------------
   // LP作成AI（近日公開）
   // ----------------------------------------
   {

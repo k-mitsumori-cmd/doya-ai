@@ -9,18 +9,11 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   HelpCircle,
   LogOut,
   LogIn,
   User,
   Zap,
-  LayoutGrid,
-  Image,
-  FileText,
-  ExternalLink,
-  Target,
-  Sparkles,
   Loader2,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
