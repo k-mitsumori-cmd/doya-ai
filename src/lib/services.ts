@@ -606,7 +606,7 @@ export const SERVICES: Service[] = [
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_OPENING_PRO_PRICE_ID,
       },
     },
-    status: 'active',
+    status: 'maintenance',
     category: 'web',
     order: 7,
     requiresAuth: false,
