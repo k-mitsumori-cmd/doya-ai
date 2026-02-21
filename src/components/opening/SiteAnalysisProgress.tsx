@@ -19,12 +19,18 @@ interface SiteAnalysisProgressProps {
 
 export default function SiteAnalysisProgress({ url, colors }: SiteAnalysisProgressProps) {
   const [currentStep, setCurrentStep] = useState(0)
+  const [showWaiting, setShowWaiting] = useState(false)
 
   useEffect(() => {
     const timers = STEPS.map((_, i) =>
       setTimeout(() => setCurrentStep(i + 1), (i + 1) * 2500)
     )
-    return () => timers.forEach(clearTimeout)
+    // 全ステップ完了後、まだ表示されている場合は待機メッセージを表示
+    const waitTimer = setTimeout(() => setShowWaiting(true), STEPS.length * 2500 + 3000)
+    return () => {
+      timers.forEach(clearTimeout)
+      clearTimeout(waitTimer)
+    }
   }, [])
 
   return (
@@ -97,6 +103,21 @@ export default function SiteAnalysisProgress({ url, colors }: SiteAnalysisProgre
           )
         })}
       </div>
+
+      {/* 全ステップ完了後の待機メッセージ */}
+      <AnimatePresence>
+        {showWaiting && (
+          <motion.div
+            className="mt-8 flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/10"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Loader2 className="h-4 w-4 animate-spin text-[#EF4343]" />
+            <p className="text-sm text-white/50">最終処理中です。もう少々お待ちください...</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Extracted colors preview */}
       {colors && colors.length > 0 && (

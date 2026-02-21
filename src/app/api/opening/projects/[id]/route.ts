@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+const STALE_THRESHOLD_MS = 5 * 60 * 1000 // 5分
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const project = await prisma.openingProject.findUnique({
@@ -16,6 +18,23 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+
+    // ANALYZINGステータスが5分以上続いている場合、ERRORに自動更新
+    if (
+      project.status === 'ANALYZING' &&
+      Date.now() - new Date(project.createdAt).getTime() > STALE_THRESHOLD_MS
+    ) {
+      const updated = await prisma.openingProject.update({
+        where: { id: params.id },
+        data: { status: 'ERROR' },
+        include: {
+          animations: {
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      })
+      return NextResponse.json({ project: updated })
     }
 
     return NextResponse.json({ project })
