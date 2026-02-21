@@ -18,6 +18,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  LayoutTemplate,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL, SEO_PRICING, isWithinFreeHour, getFreeHourRemainingMs } from '@/lib/pricing'
@@ -32,11 +33,11 @@ type NavItem = {
 }
 
 const SEO_NAV: NavItem[] = [
-  { href: '/seo/swipe', label: 'スワイプ記事作成', icon: Sparkles },
+  { href: '/seo/swipe', label: '記事作成', icon: Sparkles },
   { href: '/seo/create', label: '新規記事作成', icon: Plus },
+  { href: '/seo/test', label: 'テンプレ記事作成', icon: LayoutTemplate },
   { href: '/seo', label: '生成記事一覧', icon: FileText },
-  { href: '/seo/pricing', label: '料金/プラン', icon: CreditCard },
-  { href: '/seo/settings', label: '設定', icon: Settings },
+  { href: '/seo/pricing', label: '料金プラン設定', icon: CreditCard },
 ]
 
 interface SeoSidebarProps {
