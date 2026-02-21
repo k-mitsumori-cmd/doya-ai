@@ -318,7 +318,7 @@ function SeoSidebarImpl({
         <PlanBanner />
 
         {/* 他のAIツールも使う（共通） */}
-        <ToolSwitcherMenu currentTool="writing" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 pb-2" />
+        <ToolSwitcherMenu currentService="seo" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 pb-2" />
 
         {/* お問い合わせ */}
         <div className="px-3 pb-2">

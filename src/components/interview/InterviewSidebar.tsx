@@ -515,7 +515,7 @@ function InterviewSidebarImpl({
         <PlanBanner />
 
         {/* 他のAIツール */}
-        <ToolSwitcherMenu currentTool="interview" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 pb-2" />
+        <ToolSwitcherMenu currentService="interview" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 pb-2" />
 
         {/* User Profile */}
         <div className="p-3 border-t border-white/5 bg-[#4a0e8f]/40">

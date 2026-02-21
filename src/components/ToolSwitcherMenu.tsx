@@ -3,68 +3,46 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, ExternalLink, FileText, Image, LayoutGrid, Target, Mic } from 'lucide-react'
+import {
+  ChevronDown,
+  ExternalLink,
+  FileText,
+  Image,
+  LayoutGrid,
+  Mic,
+  Target,
+  Activity,
+  Sparkles,
+  Palette,
+  Play,
+  type LucideIcon,
+} from 'lucide-react'
+import { getActiveServices } from '@/lib/services'
 
-type ToolId = 'persona' | 'banner' | 'writing' | 'interview' | 'strategy'
+// services.ts の id → lucide アイコン & グラデーション
+const SERVICE_ICON_MAP: Record<string, { icon: LucideIcon; iconBg: string }> = {
+  kantan:    { icon: Sparkles, iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-500' },
+  banner:    { icon: Image,    iconBg: 'bg-gradient-to-br from-purple-500 to-pink-500' },
+  logo:      { icon: Palette,  iconBg: 'bg-gradient-to-br from-indigo-500 to-sky-500' },
+  seo:       { icon: FileText, iconBg: 'bg-gradient-to-br from-slate-700 to-slate-900' },
+  interview: { icon: Mic,      iconBg: 'bg-gradient-to-br from-orange-500 to-amber-500' },
+  shindan:   { icon: Activity, iconBg: 'bg-gradient-to-br from-teal-500 to-cyan-500' },
+  opening:   { icon: Play,     iconBg: 'bg-gradient-to-br from-red-500 to-rose-600' },
+  persona:   { icon: Target,   iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600' },
+}
 
 type ToolSwitcherMenuProps = {
-  currentTool: ToolId
+  currentService: string // services.ts の id
   showLabel: boolean
   isCollapsed: boolean
   isMobile?: boolean
   className?: string
 }
 
-// 注意: ベータ版サービス（lp-site等）は他サービスのサイドバーには表示しない
-// ベータ版サービス自身のサイドバーでのみ表示する（LpSiteSidebar.tsx内で独自に定義）
-
-// 注意: ベータ版サービス（lp-site等）は他サービスのサイドバーには表示しない
-// ベータ版サービス自身のサイドバーでのみ表示する（LpSiteSidebar.tsx内で独自に定義）
-
-const TOOLS: Array<{
-  id: ToolId
-  href: string
-  title: string
-  description: string
-  icon: React.ElementType
-  iconBgClassName: string
-}> = [
-  {
-    id: 'persona',
-    href: '/persona',
-    title: 'ドヤペルソナAI',
-    description: 'ペルソナ生成',
-    icon: Target,
-    iconBgClassName: 'bg-gradient-to-br from-purple-500 to-purple-600',
-  },
-  {
-    id: 'banner',
-    href: '/banner/dashboard',
-    title: 'ドヤバナーAI',
-    description: '広告バナー生成',
-    icon: Image,
-    iconBgClassName: 'bg-gradient-to-br from-blue-500 to-blue-600',
-  },
-  {
-    id: 'writing',
-    href: '/seo',
-    title: 'ドヤライティングAI',
-    description: 'SEO記事生成',
-    icon: FileText,
-    iconBgClassName: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
-  },
-  {
-    id: 'interview',
-    href: '/interview/projects',
-    title: 'ドヤインタビューAI',
-    description: 'インタビュー記事生成',
-    icon: Mic,
-    iconBgClassName: 'bg-gradient-to-br from-blue-600 to-indigo-700',
-  },
-]
-
-export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, className }: ToolSwitcherMenuProps) {
+export function ToolSwitcherMenu({ currentService, showLabel, isCollapsed, className }: ToolSwitcherMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
+
+  const activeServices = getActiveServices()
 
   return (
     <div className={className || ''}>
@@ -109,41 +87,43 @@ export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, classNam
             >
               <div className="p-2 space-y-1">
                 <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider">ツール一覧</p>
-                {TOOLS.map((tool) => {
-                  const Icon = tool.icon
-                  const isCurrent = tool.id === currentTool
+                {activeServices.map((service) => {
+                  const mapping = SERVICE_ICON_MAP[service.id]
+                  if (!mapping) return null
+                  const Icon = mapping.icon
+                  const isCurrent = service.id === currentService
                   return isCurrent ? (
                     <div
-                      key={tool.id}
+                      key={service.id}
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200"
                     >
-                      <div className={`w-8 h-8 rounded-lg ${tool.iconBgClassName} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                      <div className={`w-8 h-8 rounded-lg ${mapping.iconBg} flex items-center justify-center flex-shrink-0 shadow-sm`}>
                         <Icon className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-black text-slate-900">{tool.title}</p>
+                          <p className="text-sm font-black text-slate-900">{service.name}</p>
                         </div>
                         <p className="text-[10px] font-bold text-slate-600">
-                          {tool.description}（現在使用中）
+                          {service.description}（現在使用中）
                         </p>
                       </div>
                     </div>
                   ) : (
                     <Link
-                      key={tool.id}
-                      href={tool.href}
+                      key={service.id}
+                      href={service.dashboardHref}
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors group"
                       onClick={() => setIsOpen(false)}
                     >
-                      <div className={`w-8 h-8 rounded-lg ${tool.iconBgClassName} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                      <div className={`w-8 h-8 rounded-lg ${mapping.iconBg} flex items-center justify-center flex-shrink-0 shadow-sm`}>
                         <Icon className="w-4 h-4 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-black text-gray-900 group-hover:text-slate-900 transition-colors">{tool.title}</p>
+                          <p className="text-sm font-black text-gray-900 group-hover:text-slate-900 transition-colors">{service.name}</p>
                         </div>
-                        <p className="text-[10px] font-bold text-gray-500">{tool.description}</p>
+                        <p className="text-[10px] font-bold text-gray-500">{service.description}</p>
                       </div>
                       <ExternalLink className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400" />
                     </Link>
@@ -160,5 +140,3 @@ export function ToolSwitcherMenu({ currentTool, showLabel, isCollapsed, classNam
     </div>
   )
 }
-
-

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { SHINDAN_PRICING, SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
 interface NavItem {
   href: string
@@ -58,7 +59,6 @@ function ShindanSidebarImpl({
   const isLoggedIn = !!session?.user
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false)
 
   const planLabel = isLoggedIn ? 'FREE' : 'GUEST'
 
@@ -236,132 +236,7 @@ function ShindanSidebarImpl({
         <SidebarBanner />
 
         {/* 他のAIツールも使う */}
-        <div className="px-3 sm:px-4 pb-2">
-          <div className="relative">
-            <button
-              onClick={() => setIsToolsMenuOpen(!isToolsMenuOpen)}
-              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border border-white/20 bg-gradient-to-r from-cyan-500/20 to-teal-500/20 hover:from-cyan-500/30 hover:to-teal-500/30 transition-all text-white ${
-                !isMobile && isCollapsed ? 'justify-center' : 'justify-between'
-              }`}
-              type="button"
-            >
-              <div className="flex items-center gap-2">
-                <LayoutGrid className="w-5 h-5 sm:w-4 sm:h-4 text-white flex-shrink-0" />
-                <AnimatePresence>
-                  {showLabel && (
-                    <motion.span
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -6 }}
-                      className="text-sm sm:text-xs font-bold"
-                    >
-                      他のツールを使う
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </div>
-              {showLabel && (
-                <ChevronDown className={`w-4 h-4 text-white/70 transition-transform ${isToolsMenuOpen ? 'rotate-180' : ''}`} />
-              )}
-            </button>
-
-            <AnimatePresence>
-              {isToolsMenuOpen && showLabel && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
-                >
-                  <div className="p-2 space-y-1">
-                    <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider">ツール一覧</p>
-
-                    {/* ドヤWeb診断AI - 現在使用中 */}
-                    <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-teal-50 border border-teal-100">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Activity className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-teal-600">ドヤWeb診断AI</p>
-                        <p className="text-[10px] font-bold text-teal-500">Web診断（現在使用中）</p>
-                      </div>
-                    </div>
-
-                    {/* ドヤバナーAI */}
-                    <a
-                      href="/banner"
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-blue-50 transition-colors group"
-                      onClick={() => setIsToolsMenuOpen(false)}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Image className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-gray-900 group-hover:text-blue-600 transition-colors">ドヤバナーAI</p>
-                        <p className="text-[10px] font-bold text-gray-500">広告バナー生成</p>
-                      </div>
-                      <ExternalLink className="w-3.5 h-3.5 text-gray-300 group-hover:text-blue-400" />
-                    </a>
-
-                    {/* ドヤライティングAI */}
-                    <a
-                      href="/seo"
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-emerald-50 transition-colors group"
-                      onClick={() => setIsToolsMenuOpen(false)}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <FileText className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-gray-900 group-hover:text-emerald-600 transition-colors">ドヤライティングAI</p>
-                        <p className="text-[10px] font-bold text-gray-500">SEO記事生成</p>
-                      </div>
-                      <ExternalLink className="w-3.5 h-3.5 text-gray-300 group-hover:text-emerald-400" />
-                    </a>
-
-                    {/* カンタンマーケAI */}
-                    <a
-                      href="/kantan"
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-orange-50 transition-colors group"
-                      onClick={() => setIsToolsMenuOpen(false)}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Sparkles className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-gray-900 group-hover:text-orange-600 transition-colors">カンタンマーケAI</p>
-                        <p className="text-[10px] font-bold text-gray-500">マーケティング支援</p>
-                      </div>
-                      <ExternalLink className="w-3.5 h-3.5 text-gray-300 group-hover:text-orange-400" />
-                    </a>
-
-                    {/* ドヤペルソナAI */}
-                    <a
-                      href="/persona"
-                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-purple-50 transition-colors group"
-                      onClick={() => setIsToolsMenuOpen(false)}
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                        <Target className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-gray-900 group-hover:text-purple-600 transition-colors">ドヤペルソナAI</p>
-                        <p className="text-[10px] font-bold text-gray-500">ペルソナ生成</p>
-                      </div>
-                      <ExternalLink className="w-3.5 h-3.5 text-gray-300 group-hover:text-purple-400" />
-                    </a>
-                  </div>
-                  <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
-                    <p className="text-[10px] font-bold text-gray-400 text-center">
-                      すべて同じアカウントで利用可能
-                    </p>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
+        <ToolSwitcherMenu currentService="shindan" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />
 
         {/* Support */}
         <div className="px-3 sm:px-4 pb-2">
