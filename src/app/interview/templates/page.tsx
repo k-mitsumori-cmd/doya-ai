@@ -19,6 +19,14 @@ interface ArticleTemplate {
   estimatedLength: string
 }
 
+// カテゴリ別の静的サムネイル画像パス
+// scripts/generate-interview-category-images.mjs で事前生成
+const CATEGORY_IMAGES: Record<string, string> = {
+  'IT・テクノロジー': '/interview/templates/it-technology.png',
+  '医療・ヘルスケア': '/interview/templates/medical-healthcare.png',
+  'スタートアップ': '/interview/templates/startup.png',
+}
+
 const ARTICLE_TEMPLATES: ArticleTemplate[] = [
   {
     id: 'case-study-it',
@@ -212,52 +220,62 @@ export default function TemplatesPage() {
 
       {/* テンプレートグリッド */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredTemplates.map((template, index) => (
-          <motion.div
-            key={template.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:border-[#7f19e6]/20 transition-all group cursor-pointer"
-            onClick={() => setSelectedTemplate(template)}
-          >
-            {/* カードヘッダー（グラデーション） */}
-            <div className={`h-24 bg-gradient-to-r ${template.gradient} relative overflow-hidden`}>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-              <div className="absolute bottom-3 left-4 flex items-center gap-2">
-                <span className="material-symbols-outlined text-white text-2xl drop-shadow-lg">{template.icon}</span>
-                <div>
-                  <p className="text-white text-xs font-bold opacity-80">{template.genreLabel}</p>
-                  <p className="text-white text-sm font-black drop-shadow">{template.industry}</p>
+        {filteredTemplates.map((template, index) => {
+          const categoryImage = CATEGORY_IMAGES[template.industry]
+          return (
+            <motion.div
+              key={template.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl hover:border-[#7f19e6]/20 transition-all group cursor-pointer"
+              onClick={() => setSelectedTemplate(template)}
+            >
+              {/* カードヘッダー（画像 or グラデーション） */}
+              <div className={`${categoryImage ? 'h-36' : 'h-24'} bg-gradient-to-r ${template.gradient} relative overflow-hidden`}>
+                {categoryImage && (
+                  <img
+                    src={categoryImage}
+                    alt={template.industry}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )}
+                <div className={`absolute inset-0 ${categoryImage ? 'bg-gradient-to-t from-black/50 via-black/10 to-transparent' : 'bg-gradient-to-t from-black/20 to-transparent'}`} />
+                <div className="absolute bottom-3 left-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-white text-2xl drop-shadow-lg">{template.icon}</span>
+                  <div>
+                    <p className="text-white text-xs font-bold opacity-80 drop-shadow">{template.genreLabel}</p>
+                    <p className="text-white text-sm font-black drop-shadow-lg">{template.industry}</p>
+                  </div>
+                </div>
+                <div className="absolute top-3 right-3">
+                  <span className="px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-[10px] font-bold">{template.estimatedLength}</span>
                 </div>
               </div>
-              <div className="absolute top-3 right-3">
-                <span className="px-2 py-0.5 bg-white/20 backdrop-blur-sm rounded-full text-white text-[10px] font-bold">{template.estimatedLength}</span>
-              </div>
-            </div>
 
-            {/* カードボディ */}
-            <div className="p-4">
-              <h3 className="text-base font-black text-slate-900 mb-1 group-hover:text-[#7f19e6] transition-colors">{template.title}</h3>
-              <p className="text-xs text-slate-500 mb-3 line-clamp-2">{template.description}</p>
+              {/* カードボディ */}
+              <div className="p-4">
+                <h3 className="text-base font-black text-slate-900 mb-1 group-hover:text-[#7f19e6] transition-colors">{template.title}</h3>
+                <p className="text-xs text-slate-500 mb-3 line-clamp-2">{template.description}</p>
 
-              {/* サンプルタイトル */}
-              <div className="bg-slate-50 rounded-xl p-3 mb-3">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">サンプル記事</p>
-                <p className="text-sm font-bold text-slate-800 line-clamp-2">{template.sampleTitle}</p>
-              </div>
+                {/* サンプルタイトル */}
+                <div className="bg-slate-50 rounded-xl p-3 mb-3">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">サンプル記事</p>
+                  <p className="text-sm font-bold text-slate-800 line-clamp-2">{template.sampleTitle}</p>
+                </div>
 
-              {/* タグ */}
-              <div className="flex flex-wrap gap-1.5">
-                {template.tags.map(tag => (
-                  <span key={tag} className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-bold">
-                    {tag}
-                  </span>
-                ))}
+                {/* タグ */}
+                <div className="flex flex-wrap gap-1.5">
+                  {template.tags.map(tag => (
+                    <span key={tag} className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full text-[10px] font-bold">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          )
+        })}
       </div>
 
       {/* テンプレート詳細モーダル */}
@@ -279,24 +297,36 @@ export default function TemplatesPage() {
               onClick={(e) => e.stopPropagation()}
             >
               {/* モーダルヘッダー */}
-              <div className={`h-32 bg-gradient-to-r ${selectedTemplate.gradient} relative`}>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                <button
-                  onClick={() => setSelectedTemplate(null)}
-                  className="absolute top-4 right-4 p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-white text-[16px]">close</span>
-                </button>
-                <div className="absolute bottom-4 left-6 flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <span className="material-symbols-outlined text-white text-2xl">{selectedTemplate.icon}</span>
+              {(() => {
+                const modalImage = CATEGORY_IMAGES[selectedTemplate.industry]
+                return (
+                  <div className={`${modalImage ? 'h-40' : 'h-32'} bg-gradient-to-r ${selectedTemplate.gradient} relative overflow-hidden`}>
+                    {modalImage && (
+                      <img
+                        src={modalImage}
+                        alt={selectedTemplate.industry}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    )}
+                    <div className={`absolute inset-0 ${modalImage ? 'bg-gradient-to-t from-black/50 via-black/10 to-transparent' : 'bg-gradient-to-t from-black/30 to-transparent'}`} />
+                    <button
+                      onClick={() => setSelectedTemplate(null)}
+                      className="absolute top-4 right-4 p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-white text-[16px]">close</span>
+                    </button>
+                    <div className="absolute bottom-4 left-6 flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                        <span className="material-symbols-outlined text-white text-2xl">{selectedTemplate.icon}</span>
+                      </div>
+                      <div>
+                        <p className="text-white/80 text-xs font-bold">{selectedTemplate.genreLabel} / {selectedTemplate.industry}</p>
+                        <h2 className="text-white text-xl font-black drop-shadow">{selectedTemplate.title}</h2>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-white/80 text-xs font-bold">{selectedTemplate.genreLabel} / {selectedTemplate.industry}</p>
-                    <h2 className="text-white text-xl font-black drop-shadow">{selectedTemplate.title}</h2>
-                  </div>
-                </div>
-              </div>
+                )
+              })()}
 
               <div className="p-6 space-y-5">
                 <p className="text-sm text-slate-600">{selectedTemplate.description}</p>
