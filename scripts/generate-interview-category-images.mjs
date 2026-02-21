@@ -113,6 +113,56 @@ const CATEGORIES = [
       'rocket ship model on desk, vision board with colorful post-it notes, MacBook showing pitch deck, artisan coffee cups, motivational poster frames',
     mood: 'dynamic, ambitious, disruptive, growth-oriented',
   },
+  {
+    id: 'finance',
+    label: '金融・保険',
+    scene:
+      'A prestigious financial district office with panoramic city skyline view through floor-to-ceiling windows, polished mahogany desk with financial charts on multiple screens',
+    colors: 'deep navy blue and gold, warm amber highlights, sophisticated corporate tones',
+    elements:
+      'stock market candlestick charts on screen, premium fountain pen on leather portfolio, gold coin stack, crystal award trophy, financial newspaper',
+    mood: 'authoritative, trustworthy, premium, data-driven',
+  },
+  {
+    id: 'manufacturing',
+    label: '製造業',
+    scene:
+      'A state-of-the-art precision manufacturing facility with robotic arms and CNC machines, clean industrial environment with organized tool stations',
+    colors: 'industrial steel gray and warm orange, metallic silver accents, professional workshop palette',
+    elements:
+      'precision engineered metal parts, robotic assembly arm, digital caliper, blueprint drawings, quality control instruments',
+    mood: 'precision, reliability, craftsmanship, innovation',
+  },
+  {
+    id: 'education',
+    label: '教育',
+    scene:
+      'A beautiful modern university library with warm reading lamps, towering bookshelves, and a cozy study area with digital tablets and notebooks',
+    colors: 'warm cyan and sky blue, scholarly brown and cream, inviting warm tones',
+    elements:
+      'stacks of academic books with golden light, digital tablet showing e-learning platform, globe, vintage desk lamp, colorful sticky tabs on textbook',
+    mood: 'intellectual, inspiring, nurturing, knowledge-driven',
+  },
+  {
+    id: 'retail-ec',
+    label: '小売・EC',
+    scene:
+      'A stylish modern e-commerce fulfillment center and product photography studio, beautifully arranged product displays with professional lighting setup',
+    colors: 'vibrant coral pink and rose, modern retail aesthetic, warm commercial tones',
+    elements:
+      'elegantly packaged products, shopping bags with tissue paper, product flat lay arrangement, barcode scanner, shipping boxes with branded tape',
+    mood: 'trendy, consumer-friendly, exciting, brand-forward',
+  },
+  {
+    id: 'realestate',
+    label: '不動産',
+    scene:
+      'A luxurious modern apartment interior with floor-to-ceiling windows overlooking a city skyline at golden hour, elegant interior design with premium materials',
+    colors: 'warm green and emerald, luxurious gold accents, sophisticated earth tones',
+    elements:
+      'architectural floor plans on table, miniature building model, premium fabric swatches, key on marble countertop, aerial city view',
+    mood: 'luxurious, aspirational, stable, investment-worthy',
+  },
 ]
 
 function buildPrompt(cat) {

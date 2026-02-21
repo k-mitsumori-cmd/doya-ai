@@ -25,6 +25,11 @@ const CATEGORY_IMAGES: Record<string, string> = {
   'IT・テクノロジー': '/interview/templates/it-technology.png',
   '医療・ヘルスケア': '/interview/templates/medical-healthcare.png',
   'スタートアップ': '/interview/templates/startup.png',
+  '金融・保険': '/interview/templates/finance.png',
+  '製造業': '/interview/templates/manufacturing.png',
+  '教育': '/interview/templates/education.png',
+  '小売・EC': '/interview/templates/retail-ec.png',
+  '不動産': '/interview/templates/realestate.png',
 }
 
 const ARTICLE_TEMPLATES: ArticleTemplate[] = [
@@ -220,9 +225,7 @@ export default function TemplatesPage() {
 
       {/* テンプレートグリッド */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredTemplates.map((template, index) => {
-          const categoryImage = CATEGORY_IMAGES[template.industry]
-          return (
+        {filteredTemplates.map((template, index) => (
             <motion.div
               key={template.id}
               initial={{ opacity: 0, y: 20 }}
@@ -232,15 +235,13 @@ export default function TemplatesPage() {
               onClick={() => setSelectedTemplate(template)}
             >
               {/* カードヘッダー（画像 or グラデーション） */}
-              <div className={`${categoryImage ? 'h-36' : 'h-24'} bg-gradient-to-r ${template.gradient} relative overflow-hidden`}>
-                {categoryImage && (
-                  <img
-                    src={categoryImage}
-                    alt={template.industry}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                )}
-                <div className={`absolute inset-0 ${categoryImage ? 'bg-gradient-to-t from-black/50 via-black/10 to-transparent' : 'bg-gradient-to-t from-black/20 to-transparent'}`} />
+              <div className={`h-36 bg-gradient-to-r ${template.gradient} relative overflow-hidden`}>
+                <img
+                  src={CATEGORY_IMAGES[template.industry]}
+                  alt={template.industry}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
                 <div className="absolute bottom-3 left-4 flex items-center gap-2">
                   <span className="material-symbols-outlined text-white text-2xl drop-shadow-lg">{template.icon}</span>
                   <div>
@@ -274,8 +275,7 @@ export default function TemplatesPage() {
                 </div>
               </div>
             </motion.div>
-          )
-        })}
+        ))}
       </div>
 
       {/* テンプレート詳細モーダル */}
@@ -297,36 +297,29 @@ export default function TemplatesPage() {
               onClick={(e) => e.stopPropagation()}
             >
               {/* モーダルヘッダー */}
-              {(() => {
-                const modalImage = CATEGORY_IMAGES[selectedTemplate.industry]
-                return (
-                  <div className={`${modalImage ? 'h-40' : 'h-32'} bg-gradient-to-r ${selectedTemplate.gradient} relative overflow-hidden`}>
-                    {modalImage && (
-                      <img
-                        src={modalImage}
-                        alt={selectedTemplate.industry}
-                        className="absolute inset-0 w-full h-full object-cover"
-                      />
-                    )}
-                    <div className={`absolute inset-0 ${modalImage ? 'bg-gradient-to-t from-black/50 via-black/10 to-transparent' : 'bg-gradient-to-t from-black/30 to-transparent'}`} />
-                    <button
-                      onClick={() => setSelectedTemplate(null)}
-                      className="absolute top-4 right-4 p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-white text-[16px]">close</span>
-                    </button>
-                    <div className="absolute bottom-4 left-6 flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                        <span className="material-symbols-outlined text-white text-2xl">{selectedTemplate.icon}</span>
-                      </div>
-                      <div>
-                        <p className="text-white/80 text-xs font-bold">{selectedTemplate.genreLabel} / {selectedTemplate.industry}</p>
-                        <h2 className="text-white text-xl font-black drop-shadow">{selectedTemplate.title}</h2>
-                      </div>
-                    </div>
+              <div className={`h-40 bg-gradient-to-r ${selectedTemplate.gradient} relative overflow-hidden`}>
+                <img
+                  src={CATEGORY_IMAGES[selectedTemplate.industry]}
+                  alt={selectedTemplate.industry}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+                <button
+                  onClick={() => setSelectedTemplate(null)}
+                  className="absolute top-4 right-4 p-2 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-white text-[16px]">close</span>
+                </button>
+                <div className="absolute bottom-4 left-6 flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <span className="material-symbols-outlined text-white text-2xl">{selectedTemplate.icon}</span>
                   </div>
-                )
-              })()}
+                  <div>
+                    <p className="text-white/80 text-xs font-bold">{selectedTemplate.genreLabel} / {selectedTemplate.industry}</p>
+                    <h2 className="text-white text-xl font-black drop-shadow">{selectedTemplate.title}</h2>
+                  </div>
+                </div>
+              </div>
 
               <div className="p-6 space-y-5">
                 <p className="text-sm text-slate-600">{selectedTemplate.description}</p>
