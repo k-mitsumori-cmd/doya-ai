@@ -456,23 +456,46 @@ function BannerTestPageInner() {
   const INITIAL_VISIBLE_COUNT = 5 // 初期表示数（1列5枚）
   const LOAD_MORE_COUNT = 8 // 追加読み込み数
 
+  // 画像リトライ管理（最大3回リトライ）
+  const imageRetryRef = useRef<{ [key: string]: number }>({})
+  const MAX_IMAGE_RETRY = 3
+
   // 画像読み込み完了ハンドラ
   const handleImageLoad = useCallback((id: string) => {
     setLoadedImages(prev => new Set(prev).add(id))
+    // 成功したらリトライカウントをリセット
+    delete imageRetryRef.current[id]
   }, [])
 
-  // 画像エラーハンドラ
+  // 画像エラーハンドラ（自動リトライ付き）
   const handleImageError = useCallback((id: string) => {
+    const retryCount = imageRetryRef.current[id] || 0
+    if (retryCount < MAX_IMAGE_RETRY) {
+      imageRetryRef.current[id] = retryCount + 1
+      // 段階的に待機時間を増やしてリトライ（1秒、2秒、3秒）
+      setTimeout(() => {
+        setImageErrors(prev => {
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
+        setLoadedImages(prev => {
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
+      }, (retryCount + 1) * 1000)
+    }
     setImageErrors(prev => new Set(prev).add(id))
   }, [])
-  
+
   // IntersectionObserverで画像の遅延読み込みを管理
   useEffect(() => {
     // 既存のオブザーバーをクリーンアップ
     if (imageObserverRef.current) {
       imageObserverRef.current.disconnect()
     }
-    
+
     // 新しいオブザーバーを作成
     imageObserverRef.current = new IntersectionObserver(
       (entries) => {
@@ -484,7 +507,7 @@ function BannerTestPageInner() {
         })
       },
       {
-        rootMargin: '200px', // 200px手前から読み込み開始
+        rootMargin: '100px', // 100px手前から読み込み開始（200px→100pxに縮小で同時リクエスト削減）
         threshold: 0.01,
       }
     )
@@ -1525,7 +1548,8 @@ function BannerTestPageInner() {
                                   </div>
                                 )}
                                 <img
-                                  src={template.imageUrl!}
+                                  key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
+                                  src={`${template.imageUrl!}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
                                   alt={template.displayTitle || template.industry}
                                   loading="lazy"
                                   decoding="async"
@@ -1534,9 +1558,16 @@ function BannerTestPageInner() {
                                   className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                                 />
                               </>
+                            ) : hasError && (imageRetryRef.current[template.id] || 0) >= MAX_IMAGE_RETRY ? (
+                              <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                                <div className="text-center">
+                                  <ImageIcon className="w-4 h-4 text-gray-600 mx-auto mb-1" />
+                                  <p className="text-[8px] text-gray-600">読み込み失敗</p>
+                                </div>
+                              </div>
                             ) : (
                               <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                                <Sparkles className="w-4 h-4 text-gray-600" />
+                                <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
                               </div>
                             )}
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 sm:p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1610,7 +1641,8 @@ function BannerTestPageInner() {
                             </div>
                           )}
                           <img
-                            src={template.imageUrl!}
+                            key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
+                            src={`${template.imageUrl!}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
                             alt={template.displayTitle || template.industry}
                             loading="lazy"
                             decoding="async"
@@ -1619,9 +1651,16 @@ function BannerTestPageInner() {
                             className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
                           />
                         </>
+                      ) : hasError && (imageRetryRef.current[template.id] || 0) >= MAX_IMAGE_RETRY ? (
+                        <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                          <div className="text-center">
+                            <ImageIcon className="w-4 h-4 text-gray-600 mx-auto mb-1" />
+                            <p className="text-[8px] text-gray-600">読み込み失敗</p>
+                          </div>
+                        </div>
                       ) : (
                         <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                          <Sparkles className="w-4 h-4 text-gray-600" />
+                          <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
                         </div>
                       )}
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-1 sm:p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
