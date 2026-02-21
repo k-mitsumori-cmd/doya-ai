@@ -95,6 +95,17 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
 // ロック状態の種類
 type LockType = 'login' | 'pro' | 'enterprise' | null
 
+// テンプレートIDからPRO専用かどうかを決定論的に判定（全体の約50%がPRO専用）
+// ハッシュベースなので並び順に依存せず、常に同じ結果になる
+const isProOnlyTemplate = (templateId: string): boolean => {
+  let hash = 0
+  for (let i = 0; i < templateId.length; i++) {
+    hash = ((hash << 5) - hash) + templateId.charCodeAt(i)
+    hash |= 0
+  }
+  return (Math.abs(hash) % 2) === 0
+}
+
 // 後方互換性のためのPLAN_LIMITS
 const PLAN_LIMITS = {
   FREE: { maxCount: 3, label: '無料プラン' },
@@ -370,22 +381,23 @@ function BannerTestPageInner() {
   }, [])
   
   // 画像のロック状態を判定する関数
+  // テンプレートIDのハッシュで50%をログイン解放、50%をPRO解放に割り振り
   const getImageLockType = useCallback((template: BannerTemplate, indexInGenre: number): LockType => {
     // PRO以上は全解放
     if (planConfig.allUnlocked) return null
-    
-    // ジャンル内のインデックスで判定
-    if (indexInGenre < planConfig.imagesPerGenre) {
-      return null // 解放済み
-    }
-    
-    // ロックされている場合、どのプランで解放されるか
+
+    const proOnly = isProOnlyTemplate(template.id)
+
     if (currentPlan === 'GUEST') {
-      return 'login' // ログインで解放
+      // ゲスト: すべてロック（PRO専用→PRO表示、それ以外→ログイン表示）
+      return proOnly ? 'pro' : 'login'
     }
+
     if (currentPlan === 'FREE') {
-      return 'pro' // PROで解放
+      // ログイン済み: PRO専用テンプレートのみロック（約50%が使える）
+      return proOnly ? 'pro' : null
     }
+
     return null
   }, [currentPlan, planConfig])
   
