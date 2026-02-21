@@ -18,6 +18,8 @@ import {
   FolderOpen,
   Settings,
   LayoutTemplate,
+  FilePlus,
+  CreditCard,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL, isWithinFreeHour, getFreeHourRemainingMs, INTERVIEW_PRICING } from '@/lib/pricing'
@@ -32,10 +34,10 @@ type NavItem = {
 
 const INTERVIEW_NAV: NavItem[] = [
   { href: '/interview', label: '記事作成', icon: Mic },
-  { href: '/interview/projects', label: '記事一覧', icon: FolderOpen },
-  { href: '/interview/templates', label: 'テンプレート', icon: LayoutTemplate },
-  { href: '/interview/skills', label: 'スキル', icon: BookOpen },
-  { href: '/interview/settings', label: '設定', icon: Settings },
+  { href: '/interview/projects/new', label: '新規記事作成', icon: FilePlus },
+  { href: '/interview/templates', label: 'テンプレ記事作成', icon: LayoutTemplate },
+  { href: '/interview/projects', label: '生成記事一覧', icon: FolderOpen },
+  { href: '/interview/settings', label: '料金プラン設定', icon: CreditCard },
 ]
 
 // 利用分数表示コンポーネント
