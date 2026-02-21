@@ -1,12 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
 
 // generateBannersはPOSTでのみ使用するため、動的インポートに変更
 // これによりGETリクエスト時のsharpインポートエラーを回避
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
-export const dynamic = 'force-dynamic'
+// force-dynamic を削除 → Vercel CDN が s-maxage に従いキャッシュする
+
+// V2プロンプトMap（モジュールレベルでキャッシュ — 毎リクエストの動的importを廃止）
+type V2PromptInfo = { displayTitle?: string; name: string; fullPrompt: string; genre: string; category: string }
+let _v2PromptsMapCache: Map<string, V2PromptInfo> | null = null
+
+function getV2PromptsMap(): Map<string, V2PromptInfo> {
+  if (_v2PromptsMapCache) return _v2PromptsMapCache
+  _v2PromptsMapCache = new Map()
+  try {
+    if (Array.isArray(BANNER_PROMPTS_V2)) {
+      BANNER_PROMPTS_V2.forEach(p => {
+        if (p.id && p.fullPrompt) {
+          _v2PromptsMapCache!.set(p.id, {
+            displayTitle: p.displayTitle,
+            name: p.name,
+            fullPrompt: p.fullPrompt,
+            genre: p.genre,
+            category: p.category,
+          })
+        }
+      })
+    }
+  } catch (e: any) {
+    console.error('[Templates API] Failed to build V2 prompts map:', e.message)
+  }
+  return _v2PromptsMapCache
+}
 
 // 大量のプロンプトパターンを定義（デザイン要素のみ、テキスト内容は反映しない）
 export const BANNER_TEMPLATE_PROMPTS = [
@@ -854,30 +882,12 @@ export async function GET(request: NextRequest) {
       return errorResponse
     }
     
-    // V2プロンプトをインポート（表示タイトル・プロンプト情報の補完用）
-    let v2PromptsMap = new Map<string, { displayTitle?: string; name: string; fullPrompt: string; genre: string; category: string }>()
-    try {
-      const { BANNER_PROMPTS_V2 } = await import('@/lib/banner-prompts-v2')
-      if (Array.isArray(BANNER_PROMPTS_V2)) {
-        BANNER_PROMPTS_V2.forEach(p => {
-          if (p.id && p.fullPrompt) {
-            v2PromptsMap.set(p.id, {
-              displayTitle: p.displayTitle,
-              name: p.name,
-              fullPrompt: p.fullPrompt,
-              genre: p.genre,
-              category: p.category,
-            })
-          }
-        })
-      }
-    } catch (e: any) {
-      console.error('[Templates API] Failed to import BANNER_PROMPTS_V2:', e.message)
-    }
+    // V2プロンプトMap（モジュールレベルでキャッシュ済み）
+    const v2PromptsMap = getV2PromptsMap()
 
     // DBテンプレートをV2プロンプト情報と結合して返す
     const templates = dbTemplates.map((t) => {
-      const cacheBuster = t.updatedAt ? `?v=${new Date(t.updatedAt).getTime()}` : `?v=${Date.now()}`
+      const cacheBuster = t.updatedAt ? `?v=${new Date(t.updatedAt).getTime()}` : ''
       const imageApiUrl = `/api/banner/test/image/${t.templateId}${cacheBuster}`
       const v2Prompt = v2PromptsMap.get(t.templateId)
       const fullPrompt = v2Prompt?.fullPrompt || t.prompt || ''
@@ -908,15 +918,25 @@ export async function GET(request: NextRequest) {
     const featuredTemplate = dbTemplates.find((t) => t.isFeatured) || dbTemplates[0]
     const featuredTemplateId = featuredTemplate?.templateId || templates[0]?.id || null
 
+    const totalAvailable = getV2PromptsMap().size
+
     const response = NextResponse.json({
       templates,
       featuredTemplateId,
       count: templates.length,
       generatedCount: dbTemplates.length,
+      totalAvailable,
+      pendingCount: totalAvailable - dbTemplates.length,
       loadTime: Date.now() - startTime,
     })
 
-    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
+    // ?fresh=1 の場合はCDNキャッシュをバイパス（ポーリング用）
+    const fresh = searchParams.get('fresh') === '1'
+    if (fresh) {
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    } else {
+      response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+    }
 
     return response
   } catch (err: any) {

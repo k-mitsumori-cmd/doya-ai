@@ -250,6 +250,11 @@ function BannerTestPageInner() {
 
   // ギャラリーのジャンルフィルタ
   const [activeFilter, setActiveFilter] = useState<string>('すべて')
+
+  // 未生成テンプレートの自動生成＆ポーリング用
+  const [pendingCount, setPendingCount] = useState(0)
+  const [totalAvailable, setTotalAvailable] = useState(0)
+  const autoGenActiveRef = useRef(false)
   
   // トライアル判定（ログイン後1時間）
   useEffect(() => {
@@ -471,7 +476,7 @@ function BannerTestPageInner() {
   // 画像リトライ管理（最大3回リトライ）
   const imageRetryRef = useRef<{ [key: string]: number }>({})
   const MAX_IMAGE_RETRY = 3
-  const CACHE_KEY = 'banner_templates_cache_v5'
+  const CACHE_KEY = 'banner_templates_cache_v6'
 
   // キャッシュから失敗テンプレートを除外するヘルパー
   const removeFromCache = useCallback((failedId: string) => {
@@ -543,7 +548,7 @@ function BannerTestPageInner() {
         })
       },
       {
-        rootMargin: '100px', // 100px手前から読み込み開始（200px→100pxに縮小で同時リクエスト削減）
+        rootMargin: '300px', // 300px手前から読み込み開始（事前ロード範囲を広げてスムーズに）
         threshold: 0.01,
       }
     )
@@ -620,7 +625,7 @@ function BannerTestPageInner() {
 
   // テンプレートを取得（高速化: 最小限のデータを最初に取得）
   useEffect(() => {
-    const CACHE_EXPIRY = 10 * 60 * 1000 // 10分間キャッシュ（延長）
+    const CACHE_EXPIRY = 30 * 60 * 1000 // 30分間キャッシュ
     
     const fetchTemplates = async () => {
       const startTime = Date.now()
@@ -678,7 +683,7 @@ function BannerTestPageInner() {
 
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           try {
-            const res = await fetch(`/api/banner/test/templates?limit=200&_t=${Date.now()}`)
+            const res = await fetch('/api/banner/test/templates?limit=200')
 
             if (!res.ok) {
               const errorData = await res.json().catch(() => ({}))
@@ -728,6 +733,12 @@ function BannerTestPageInner() {
                 preloadHeroImage(data.templates[0].imageUrl)
               }
 
+              // 未生成テンプレート数を記録（自動生成ポーリング用）
+              if (typeof data.pendingCount === 'number') {
+                setPendingCount(data.pendingCount)
+                setTotalAvailable(data.totalAvailable || 0)
+              }
+
               console.log(`[Templates] Loaded ${data.templates.length} templates in ${Date.now() - startTime}ms`)
               break // 成功したらループを抜ける
             } else {
@@ -761,6 +772,98 @@ function BannerTestPageInner() {
     }
     fetchTemplates()
   }, [])
+
+  // 未生成テンプレートの自動生成＆ポーリング
+  // pendingCount > 0 の間、バックグラウンドで生成を実行しDBをポーリング
+  useEffect(() => {
+    if (isLoadingTemplates || pendingCount <= 0 || autoGenActiveRef.current) return
+    autoGenActiveRef.current = true
+
+    let cancelled = false
+    const MAX_POLL_DURATION = 60 * 60 * 1000 // 最大1時間
+    const pollStartTime = Date.now()
+
+    const runAutoGeneration = async () => {
+      let currentPending = pendingCount
+
+      while (currentPending > 0 && !cancelled) {
+        // タイムアウトチェック
+        if (Date.now() - pollStartTime > MAX_POLL_DURATION) {
+          console.log('[AutoGen] 最大ポーリング時間に達しました。停止します。')
+          break
+        }
+
+        try {
+          // バッチ生成をトリガー（3枚ずつ）
+          const genRes = await fetch('/api/banner/test/templates/generate-v2', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ batchSize: 3 }),
+          })
+
+          if (cancelled) break
+
+          if (genRes.ok) {
+            const genData = await genRes.json()
+            console.log(`[AutoGen] バッチ完了: 成功=${genData.generated}, 失敗=${genData.failed}`)
+
+            // 全て失敗した場合は長めに待機
+            if (genData.generated === 0 && genData.failed > 0) {
+              await new Promise(r => setTimeout(r, 30000))
+              if (cancelled) break
+            }
+          } else {
+            console.warn('[AutoGen] 生成バッチ失敗、30秒後にリトライ')
+            await new Promise(r => setTimeout(r, 30000))
+            if (cancelled) break
+          }
+
+          // 最新のテンプレート一覧を取得（CDNバイパス）
+          const templatesRes = await fetch('/api/banner/test/templates?limit=200&fresh=1')
+          if (cancelled) break
+
+          if (templatesRes.ok) {
+            const data = await templatesRes.json()
+            if (data.templates?.length > 0) {
+              setTemplates(data.templates)
+              currentPending = data.pendingCount ?? 0
+              setPendingCount(currentPending)
+              setTotalAvailable(data.totalAvailable ?? 0)
+
+              // セッションキャッシュも更新
+              try {
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+                  data,
+                  timestamp: Date.now(),
+                }))
+              } catch (e) { /* ignore */ }
+            }
+          }
+
+          // 次のバッチまで5秒待機
+          if (currentPending > 0 && !cancelled) {
+            await new Promise(r => setTimeout(r, 5000))
+          }
+        } catch (err) {
+          console.error('[AutoGen] エラー:', err)
+          if (cancelled) break
+          await new Promise(r => setTimeout(r, 30000))
+        }
+      }
+
+      autoGenActiveRef.current = false
+      if (currentPending <= 0) {
+        console.log('[AutoGen] 全テンプレート生成完了')
+      }
+    }
+
+    runAutoGeneration()
+
+    return () => {
+      cancelled = true
+      autoGenActiveRef.current = false
+    }
+  }, [isLoadingTemplates, pendingCount])
 
   // カテゴリごとにテンプレートをグループ化（要求に合わせて整理）
   // 遅延読み込み対応：各カテゴリの表示数を制限
@@ -1512,6 +1615,27 @@ function BannerTestPageInner() {
               ))}
             </div>
           </div>
+
+          {/* 未生成テンプレートの生成進捗バー */}
+          {pendingCount > 0 && totalAvailable > 0 && (
+            <div className="w-full px-2 sm:px-4 md:px-8 lg:px-12 py-2 bg-black relative z-10">
+              <div className="flex items-center gap-3 px-3 py-2 bg-gray-900/80 border border-gray-700/50 rounded-lg">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-400 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-gray-300">テンプレート画像を生成中...</span>
+                    <span className="text-gray-500">{totalAvailable - pendingCount}/{totalAvailable}</span>
+                  </div>
+                  <div className="w-full bg-gray-800 rounded-full h-1.5">
+                    <div
+                      className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                      style={{ width: `${((totalAvailable - pendingCount) / totalAvailable) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* グリッドギャラリー */}
           <div data-tour="gallery-grid" className="w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 bg-black relative z-10">
