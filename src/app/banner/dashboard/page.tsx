@@ -459,6 +459,27 @@ function BannerTestPageInner() {
   // 画像リトライ管理（最大3回リトライ）
   const imageRetryRef = useRef<{ [key: string]: number }>({})
   const MAX_IMAGE_RETRY = 3
+  const CACHE_KEY = 'banner_templates_cache_v5'
+
+  // キャッシュから失敗テンプレートを除外するヘルパー
+  const removeFromCache = useCallback((failedId: string) => {
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY)
+      if (!cached) return
+      const parsed = JSON.parse(cached)
+      if (!parsed.data?.templates) return
+      parsed.data.templates = parsed.data.templates.filter(
+        (t: BannerTemplate) => t.id !== failedId
+      )
+      // featuredTemplateIdが除外されたテンプレートなら更新
+      if (parsed.data.featuredTemplateId === failedId) {
+        parsed.data.featuredTemplateId = parsed.data.templates[0]?.id || null
+      }
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify(parsed))
+    } catch (e) {
+      // キャッシュ更新失敗は無視
+    }
+  }, [])
 
   // 画像読み込み完了ハンドラ
   const handleImageLoad = useCallback((id: string) => {
@@ -485,9 +506,12 @@ function BannerTestPageInner() {
           return next
         })
       }, (retryCount + 1) * 1000)
+    } else {
+      // 最終失敗 → キャッシュからも除外（次回訪問時に表示されなくなる）
+      removeFromCache(id)
     }
     setImageErrors(prev => new Set(prev).add(id))
-  }, [])
+  }, [removeFromCache])
 
   // IntersectionObserverで画像の遅延読み込みを管理
   useEffect(() => {
@@ -584,7 +608,6 @@ function BannerTestPageInner() {
 
   // テンプレートを取得（高速化: 最小限のデータを最初に取得）
   useEffect(() => {
-    const CACHE_KEY = 'banner_templates_cache_v5'
     const CACHE_EXPIRY = 10 * 60 * 1000 // 10分間キャッシュ（延長）
     
     const fetchTemplates = async () => {
