@@ -109,13 +109,13 @@ export const SERVICES: Service[] = [
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_KANTAN_PRO_PRICE_ID,
       },
     },
-    status: 'active',
+    status: 'maintenance',
     category: 'text',
     order: 1,
     requiresAuth: false,  // ゲストも一部利用可
     isNew: true,
   },
-  
+
   // ----------------------------------------
   // ドヤバナーAI（画像生成）
   // ----------------------------------------
@@ -215,7 +215,7 @@ export const SERVICES: Service[] = [
         price: 0,
       },
     },
-    status: 'active',
+    status: 'maintenance',
     category: 'image',
     order: 3,
     requiresAuth: false,
@@ -359,7 +359,7 @@ export const SERVICES: Service[] = [
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_SHINDAN_PRO_PRICE_ID,
       },
     },
-    status: 'active',
+    status: 'maintenance',
     category: 'other',
     order: 6,
     requiresAuth: false,
