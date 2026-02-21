@@ -6,6 +6,22 @@ import InterviewLayout from '@/components/interview/InterviewLayout'
 export const metadata: Metadata = {
   title: 'ドヤインタビューAI — AI記事生成',
   description: 'インタビュー音声からプロ品質の記事をAIが自動生成。文字起こし→構成→執筆→校正まで一気通貫。',
+  openGraph: {
+    title: 'ドヤインタビューAI — AI記事生成',
+    description: 'インタビュー音声からプロ品質の記事をAIが自動生成。文字起こし→構成→執筆→校正まで一気通貫。',
+    url: 'https://doya-ai.surisuta.jp/interview',
+    siteName: 'ドヤAI',
+    type: 'website',
+    locale: 'ja_JP',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ドヤインタビューAI — AI記事生成',
+    description: 'インタビュー音声からプロ品質の記事をAIが自動生成。',
+  },
+  alternates: {
+    canonical: 'https://doya-ai.surisuta.jp/interview',
+  },
 }
 
 export default async function Layout({ children }: { children: React.ReactNode }) {

@@ -170,20 +170,57 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 文字数制限バリデーション
+    const STR_LIMITS: Record<string, [string, number]> = {
+      title: ['タイトル', 200],
+      intervieweeName: ['インタビュイー名', 100],
+      intervieweeRole: ['役職', 100],
+      intervieweeCompany: ['会社名', 100],
+      intervieweeBio: ['プロフィール', 2000],
+      theme: ['テーマ', 500],
+      purpose: ['目的', 500],
+      targetAudience: ['対象読者', 200],
+    }
+    for (const [key, [label, max]] of Object.entries(STR_LIMITS)) {
+      const v = body[key]
+      if (v && typeof v === 'string' && v.length > max) {
+        return NextResponse.json(
+          { success: false, error: `${label}は${max}文字以内で入力してください` },
+          { status: 400 }
+        )
+      }
+    }
+
+    // 許可値バリデーション
+    const VALID_GENRES = ['CASE_STUDY', 'PRODUCT_INTERVIEW', 'PERSONA_INTERVIEW', 'PANEL_DISCUSSION', 'EVENT_REPORT', 'OTHER']
+    if (genre && !VALID_GENRES.includes(genre)) {
+      return NextResponse.json(
+        { success: false, error: '不正なジャンルです' },
+        { status: 400 }
+      )
+    }
+    const VALID_TONES = ['friendly', 'formal', 'casual', 'professional', 'academic']
+    if (tone && !VALID_TONES.includes(tone)) {
+      return NextResponse.json(
+        { success: false, error: '不正なトーンです' },
+        { status: 400 }
+      )
+    }
+
     const project = await prisma.interviewProject.create({
       data: {
         userId: userId || null,
         guestId: userId ? null : guestId,
-        title: title.trim(),
+        title: title.trim().slice(0, 200),
         status: 'DRAFT',
-        intervieweeName: intervieweeName || null,
-        intervieweeRole: intervieweeRole || null,
-        intervieweeCompany: intervieweeCompany || null,
-        intervieweeBio: intervieweeBio || null,
+        intervieweeName: intervieweeName ? String(intervieweeName).slice(0, 100) : null,
+        intervieweeRole: intervieweeRole ? String(intervieweeRole).slice(0, 100) : null,
+        intervieweeCompany: intervieweeCompany ? String(intervieweeCompany).slice(0, 100) : null,
+        intervieweeBio: intervieweeBio ? String(intervieweeBio).slice(0, 2000) : null,
         genre: genre || null,
-        theme: theme || null,
-        purpose: purpose || null,
-        targetAudience: targetAudience || null,
+        theme: theme ? String(theme).slice(0, 500) : null,
+        purpose: purpose ? String(purpose).slice(0, 500) : null,
+        targetAudience: targetAudience ? String(targetAudience).slice(0, 200) : null,
         tone: tone || 'friendly',
         mediaType: mediaType || null,
       },

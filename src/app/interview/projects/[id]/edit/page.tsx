@@ -341,6 +341,15 @@ export default function EditPage() {
   const [bannerGenerating, setBannerGenerating] = useState(false)
   const bannerAutoTriedRef = useRef(false)
 
+  // トースト通知
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const showToast = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    setToast({ message, type })
+    toastTimerRef.current = setTimeout(() => setToast(null), 3500)
+  }, [])
+
   // エクスポートドロップダウン外クリック閉じ
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -463,7 +472,7 @@ export default function EditPage() {
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(content)
-    alert('記事をクリップボードにコピーしました')
+    showToast('記事をクリップボードにコピーしました')
   }
 
   const handleExportMd = () => {
@@ -564,7 +573,7 @@ ${htmlBody}
     const htmlBody = markdownToHtml(content)
     const printWindow = window.open('', '_blank')
     if (!printWindow) {
-      alert('ポップアップがブロックされました。ブラウザの設定を確認してください。')
+      showToast('ポップアップがブロックされました。ブラウザの設定を確認してください。', 'error')
       return
     }
     printWindow.document.write(`<!DOCTYPE html>
@@ -607,8 +616,8 @@ ${htmlBody}
       const data = await res.json()
       if (data.success) {
         setProofResult({ score: data.score, summary: data.summary, suggestions: data.suggestions || [], checks: data.checks || {} })
-      } else { alert(data.error || '校正に失敗しました') }
-    } catch { alert('校正の実行中にエラーが発生しました') }
+      } else { showToast(data.error || '校正に失敗しました', 'error') }
+    } catch { showToast('校正の実行中にエラーが発生しました', 'error') }
     finally { setProofLoading(false) }
   }
 
@@ -678,8 +687,8 @@ ${htmlBody}
       })
       const data = await res.json()
       if (data.success) setSuggestedTitles(data.titles || [])
-      else alert(data.error || 'タイトル提案に失敗しました')
-    } catch { alert('タイトル提案中にエラーが発生しました') }
+      else showToast(data.error || 'タイトル提案に失敗しました', 'error')
+    } catch { showToast('タイトル提案中にエラーが発生しました', 'error') }
     finally { setTitlesLoading(false) }
   }
 
@@ -699,8 +708,8 @@ ${htmlBody}
       const data = await res.json()
       if (data.success) {
         setFactResult({ reliability: data.reliability, summary: data.summary, claims: data.claims || [], warnings: data.warnings || [] })
-      } else { alert(data.error || 'ファクトチェックに失敗しました') }
-    } catch { alert('ファクトチェック中にエラーが発生しました') }
+      } else { showToast(data.error || 'ファクトチェックに失敗しました', 'error') }
+    } catch { showToast('ファクトチェック中にエラーが発生しました', 'error') }
     finally { setFactLoading(false) }
   }
 
@@ -719,8 +728,8 @@ ${htmlBody}
       })
       const data = await res.json()
       if (data.success) setSnsPosts(data.posts || [])
-      else alert(data.error || 'SNS投稿生成に失敗しました')
-    } catch { alert('SNS投稿生成中にエラーが発生しました') }
+      else showToast(data.error || 'SNS投稿生成に失敗しました', 'error')
+    } catch { showToast('SNS投稿生成中にエラーが発生しました', 'error') }
     finally { setSnsLoading(false) }
   }
 
@@ -732,7 +741,7 @@ ${htmlBody}
 
   const copySnsPost = async (text: string) => {
     await navigator.clipboard.writeText(text)
-    alert('投稿文をコピーしました')
+    showToast('投稿文をコピーしました')
   }
 
   // 翻訳
@@ -756,8 +765,8 @@ ${htmlBody}
           seoTitle: data.seoTitle, seoDescription: data.seoDescription,
           wordCount: data.wordCount,
         })
-      } else { alert(data.error || '翻訳に失敗しました') }
-    } catch { alert('翻訳中にエラーが発生しました') }
+      } else { showToast(data.error || '翻訳に失敗しました', 'error') }
+    } catch { showToast('翻訳中にエラーが発生しました', 'error') }
     finally { setTranslateLoading(false) }
   }
 
@@ -765,7 +774,7 @@ ${htmlBody}
     if (!translationResult) return
     const text = `# ${translationResult.title}\n\n${translationResult.content}`
     await navigator.clipboard.writeText(text)
-    alert('翻訳をコピーしました')
+    showToast('翻訳をコピーしました')
   }
 
   const exportTranslation = () => {
@@ -1295,7 +1304,7 @@ ${htmlBody}
                         <h3 className="text-sm font-bold tracking-tight text-slate-900">Markdownソース</h3>
                       </div>
                       <button
-                        onClick={async () => { await navigator.clipboard.writeText(content); alert('Markdownをコピーしました') }}
+                        onClick={async () => { await navigator.clipboard.writeText(content); showToast('Markdownをコピーしました') }}
                         className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors font-medium"
                       >
                         <span className="material-symbols-outlined text-[14px]">content_copy</span>
@@ -2138,6 +2147,32 @@ ${htmlBody}
           </div>
         </div>
       </div>
+      {/* トースト通知 */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.25 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999]"
+          >
+            <div className={`flex items-center gap-2 px-5 py-3 rounded-xl shadow-lg text-sm font-bold ${
+              toast.type === 'error'
+                ? 'bg-red-600 text-white'
+                : 'bg-slate-800 text-white'
+            }`}>
+              <span className="material-symbols-outlined text-[18px]">
+                {toast.type === 'error' ? 'error' : 'check_circle'}
+              </span>
+              {toast.message}
+              <button onClick={() => setToast(null)} className="ml-2 opacity-60 hover:opacity-100">
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   )
 }

@@ -86,17 +86,24 @@ export function isTrialActive(firstLoginAtIso: string | null | undefined): boole
 }
 
 /**
- * 日次利用上限
+ * 日次利用上限（プロジェクト作成数/日）
+ * -1 = 無制限
  */
-export function interviewDailyLimit(_plan: InterviewPlanCode): number {
-  return -1 // 開発中: 全プラン無制限
+export function interviewDailyLimit(plan: InterviewPlanCode): number {
+  switch (plan) {
+    case 'ENTERPRISE': return -1
+    case 'PRO':        return 30
+    case 'FREE':       return 5
+    case 'GUEST':      return 3
+    default:           return 3
+  }
 }
 
 /**
- * ゲスト累計利用上限
+ * ゲスト累計利用上限（総プロジェクト数）
  */
 export function interviewGuestTotalLimit(): number {
-  return 999999 // 開発中: 実質無制限
+  return 3
 }
 
 /**
