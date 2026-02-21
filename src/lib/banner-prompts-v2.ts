@@ -1937,24 +1937,6 @@ const _BANNER_PROMPTS_V2_BASE: BannerPromptV2[] = [
     tags: ['セミナー', 'オフィス', 'オレンジ', 'ビジネス'],
   },
 
-  // 6. ホットパイキャンペーン（黒×ゴールド）
-  {
-    id: 'new-food-campaign-001',
-    genre: 'EC・セール',
-    category: 'ec',
-    name: 'フードキャンペーン',
-    displayTitle: 'ホットパイCP',
-    prompt: {
-      composition: '商品写真上下分割、キャンペーン情報中央',
-      subject: 'チョコレートパイ、溶けるチョコ',
-      colorPalette: '黒、金色、茶色',
-      designElements: '溶けるチョコ演出、期間限定バッジ、キャンペーン詳細',
-      typography: '手書き風日本語、キャンペーン条件',
-    },
-    fullPrompt: 'A hot pie food campaign banner. Rich black background split into two product photos - top shows chocolate dripping onto a dark chocolate pie creating melting effect, bottom shows golden crispy fried pie. "期間限定" badge at top. Handwritten-style Japanese title "とろけるホットパイ" in center. Campaign hashtag text. Prize information "100名様にマックカード1,000円分が当たる！" at bottom. Campaign period dates. Indulgent food photography style. Black, gold, and warm brown color scheme.',
-    tags: ['フード', 'キャンペーン', '黒', 'チョコレート'],
-  },
-
   // 7. 季節限定ドリンク（金×和風）
   {
     id: 'new-yuzu-drink-001',
