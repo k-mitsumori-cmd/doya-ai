@@ -252,6 +252,35 @@ function BannerTestPageInner() {
   // ギャラリーのジャンルフィルタ
   const [activeFilter, setActiveFilter] = useState<string>('すべて')
 
+  // ローディング画面用
+  const [loadingTipIndex, setLoadingTipIndex] = useState(0)
+  const [loadingProgress, setLoadingProgress] = useState(0)
+
+  const LOADING_TIPS = useMemo(() => [
+    { emoji: '🎨', text: 'プロデザイナー品質のテンプレートを準備中...' },
+    { emoji: '✨', text: 'テンプレートは定期的に新作が追加されます' },
+    { emoji: '🚀', text: 'AIが30秒でバナーを自動生成します' },
+    { emoji: '📐', text: '正方形・横長・縦長・ストーリーなど5サイズ対応' },
+    { emoji: '🎯', text: '12ジャンルのテンプレートから好みのスタイルを選択' },
+    { emoji: '💡', text: 'テンプレートを選んでテキストを入力するだけでOK' },
+    { emoji: '🔄', text: '気に入らなければワンクリックで再生成できます' },
+  ], [])
+
+  // ローディングTIPSのローテーション & プログレスバー
+  useEffect(() => {
+    if (!isLoadingTemplates) return
+    const tipTimer = setInterval(() => {
+      setLoadingTipIndex((prev) => (prev + 1) % 7)
+    }, 2500)
+    const progressTimer = setInterval(() => {
+      setLoadingProgress((prev) => prev >= 90 ? prev : prev + Math.random() * 8 + 2)
+    }, 400)
+    return () => { clearInterval(tipTimer); clearInterval(progressTimer) }
+  }, [isLoadingTemplates])
+
+  useEffect(() => {
+    if (!isLoadingTemplates) setLoadingProgress(100)
+  }, [isLoadingTemplates])
 
   // トライアル判定（ログイン後1時間）
   useEffect(() => {
@@ -1241,6 +1270,62 @@ function BannerTestPageInner() {
           </div>
         )}
         
+        {/* ローディング画面 */}
+        {isLoadingTemplates && (
+          <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+            {/* 回転リング */}
+            <div className="relative w-24 h-24 mb-8">
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 animate-spin" />
+              <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
+              <div className="absolute inset-4 rounded-full border-4 border-transparent border-t-pink-500 animate-spin" style={{ animationDuration: '2s' }} />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Sparkles className="w-8 h-8 text-white animate-pulse" />
+              </div>
+            </div>
+
+            {/* タイトル */}
+            <h2 className="text-2xl font-black text-white mb-2">ドヤバナーAI</h2>
+            <p className="text-sm text-white/60 font-bold mb-8">テンプレートを読み込んでいます...</p>
+
+            {/* プログレスバー */}
+            <div className="w-64 h-1.5 bg-white/10 rounded-full overflow-hidden mb-8">
+              <motion.div
+                className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
+                initial={{ width: '0%' }}
+                animate={{ width: `${loadingProgress}%` }}
+                transition={{ duration: 0.3 }}
+              />
+            </div>
+
+            {/* ローテーションTIPS */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={loadingTipIndex}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/5 border border-white/10"
+              >
+                <span className="text-2xl">{LOADING_TIPS[loadingTipIndex]?.emoji}</span>
+                <span className="text-sm text-white/80 font-bold">{LOADING_TIPS[loadingTipIndex]?.text}</span>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* バウンスドット */}
+            <div className="flex items-center gap-1.5 mt-6">
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="w-2 h-2 rounded-full bg-white/30"
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15, ease: 'easeInOut' }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Netflix風のメインコンテンツ */}
         <div className={`relative ${isTrialActive ? 'pt-20 md:pt-10' : 'pt-12 md:pt-0'}`}>
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- 固定表示、フォーム表示時は縮小 */}

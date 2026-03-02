@@ -157,7 +157,7 @@ export default function SidebarTour({
   const tooltipPos = useMemo(() => {
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1024
     const vh = typeof window !== 'undefined' ? window.innerHeight : 768
-    const tooltipW = 360
+    const tooltipW = Math.min(360, vw - 32)
 
     if (!targetRect) {
       // ターゲットが無い場合は画面中央に表示
@@ -167,13 +167,22 @@ export default function SidebarTour({
       }
     }
     const margin = 12
-    const tooltipH = 168
+    const tooltipH = 240
 
-    // ターゲットが画面幅の半分以上を占める場合（ギャラリーグリッドなど）→ 下に表示
+    // ターゲットが画面幅の半分以上を占める場合（ギャラリーグリッドなど）→ 上下で収まる方に表示
     const isWideTarget = targetRect.w > vw * 0.5
     if (isWideTarget) {
       const left = clamp(targetRect.x + targetRect.w / 2 - tooltipW / 2, 16, vw - tooltipW - 16)
-      const top = clamp(targetRect.y + targetRect.h + margin, 16, vh - tooltipH - 16)
+      const belowTop = targetRect.y + targetRect.h + margin
+      const aboveTop = targetRect.y - tooltipH - margin
+      let top: number
+      if (belowTop + tooltipH <= vh - 16) {
+        top = belowTop
+      } else if (aboveTop >= 16) {
+        top = aboveTop
+      } else {
+        top = clamp(Math.round((vh - tooltipH) / 2), 16, vh - tooltipH - 16)
+      }
       return { left, top }
     }
 
@@ -253,7 +262,7 @@ export default function SidebarTour({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute w-[360px] max-w-[calc(100vw-32px)] bg-white rounded-3xl shadow-2xl border border-white/30 p-5 pointer-events-auto"
+              className="absolute w-[360px] max-w-[calc(100vw-32px)] max-h-[calc(100vh-32px)] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-white/30 p-5 pointer-events-auto"
               style={{ left: tooltipPos.left, top: tooltipPos.top }}
               onClick={(e) => e.stopPropagation()}
             >
