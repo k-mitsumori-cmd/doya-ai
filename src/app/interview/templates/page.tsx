@@ -22,14 +22,14 @@ interface ArticleTemplate {
 // カテゴリ別の静的サムネイル画像パス
 // scripts/generate-interview-category-images.mjs で事前生成
 const CATEGORY_IMAGES: Record<string, string> = {
-  'IT・テクノロジー': '/interview/templates/it-technology.png',
-  '医療・ヘルスケア': '/interview/templates/medical-healthcare.png',
-  'スタートアップ': '/interview/templates/startup.png',
-  '金融・保険': '/interview/templates/finance.png',
-  '製造業': '/interview/templates/manufacturing.png',
-  '教育': '/interview/templates/education.png',
-  '小売・EC': '/interview/templates/retail-ec.png',
-  '不動産': '/interview/templates/realestate.png',
+  'IT・テクノロジー': '/interview/templates/it-technology.jpg',
+  '医療・ヘルスケア': '/interview/templates/medical-healthcare.jpg',
+  'スタートアップ': '/interview/templates/startup.jpg',
+  '金融・保険': '/interview/templates/finance.jpg',
+  '製造業': '/interview/templates/manufacturing.jpg',
+  '教育': '/interview/templates/education.jpg',
+  '小売・EC': '/interview/templates/retail-ec.jpg',
+  '不動産': '/interview/templates/realestate.jpg',
 }
 
 const ARTICLE_TEMPLATES: ArticleTemplate[] = [
