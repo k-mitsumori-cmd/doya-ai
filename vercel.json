@@ -1,0 +1,22 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "prisma generate && node ./scripts/db-push-if-db-url.mjs && next build",
+  "crons": [
+    {
+      "path": "/api/cron/daily-summary",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-summary",
+      "schedule": "0 0 * * 1"
+    },
+    {
+      "path": "/api/cron/monthly-summary",
+      "schedule": "0 0 1 * *"
+    },
+    {
+      "path": "/api/cron/gcp-usage",
+      "schedule": "0 1 * * *"
+    }
+  ]
+}

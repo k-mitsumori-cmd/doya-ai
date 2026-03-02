@@ -1,0 +1,145 @@
+import type { SidebarTheme } from './types'
+
+export const dashboardTheme: SidebarTheme = {
+  bgGradient: 'bg-[#2563EB]',
+  navText: 'text-blue-100/70',
+  navTextIcon: 'text-blue-200/70',
+  sectionText: 'text-blue-200/50',
+  toggleText: 'text-blue-600',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-100/30',
+  profileBg: 'bg-blue-700/30',
+  avatarBg: 'bg-blue-500',
+  loginText: 'text-[#2563EB]',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-blue-600',
+  zapColor: 'text-blue-600 fill-blue-600',
+}
+
+export const seoTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-emerald-600 via-green-600 to-teal-700',
+  navText: 'text-emerald-100/75',
+  navTextIcon: 'text-emerald-200/70',
+  sectionText: 'text-emerald-200/50',
+  toggleText: 'text-emerald-700',
+  toggleHover: 'hover:bg-emerald-50',
+  brandingText: 'text-emerald-100/35',
+  profileBg: 'bg-emerald-900/25',
+  avatarBg: 'bg-emerald-600',
+  loginText: 'text-emerald-700',
+  loginHover: 'hover:bg-emerald-50',
+  aiBubbleBg: 'bg-blue-600',
+  zapColor: 'text-emerald-700 fill-emerald-700',
+}
+
+export const personaTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-purple-600 via-purple-700 to-purple-800',
+  navText: 'text-purple-100/70',
+  navTextIcon: 'text-purple-200/70',
+  sectionText: 'text-purple-200/50',
+  toggleText: 'text-purple-600',
+  toggleHover: 'hover:bg-purple-50',
+  brandingText: 'text-purple-100/30',
+  profileBg: 'bg-purple-900/30',
+  avatarBg: 'bg-purple-500',
+  loginText: 'text-purple-600',
+  loginHover: 'hover:bg-purple-50',
+  aiBubbleBg: 'bg-purple-600',
+  zapColor: 'text-purple-600 fill-purple-600',
+}
+
+export const shindanTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-teal-600 via-teal-700 to-teal-800',
+  navText: 'text-teal-100/70',
+  navTextIcon: 'text-teal-200/70',
+  sectionText: 'text-teal-200/50',
+  toggleText: 'text-teal-600',
+  toggleHover: 'hover:bg-teal-50',
+  brandingText: 'text-teal-100/30',
+  profileBg: 'bg-teal-900/30',
+  avatarBg: 'bg-teal-500',
+  loginText: 'text-teal-600',
+  loginHover: 'hover:bg-teal-50',
+  aiBubbleBg: 'bg-teal-600',
+  zapColor: 'text-teal-600 fill-teal-600',
+}
+
+export const copyTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-amber-600 via-amber-700 to-orange-800',
+  navText: 'text-amber-100/70',
+  navTextIcon: 'text-amber-200/70',
+  sectionText: 'text-amber-200/50',
+  toggleText: 'text-amber-600',
+  toggleHover: 'hover:bg-amber-50',
+  brandingText: 'text-amber-100/30',
+  profileBg: 'bg-amber-900/30',
+  avatarBg: 'bg-amber-500',
+  loginText: 'text-amber-600',
+  loginHover: 'hover:bg-amber-50',
+  aiBubbleBg: 'bg-amber-600',
+  zapColor: 'text-amber-600 fill-amber-600',
+}
+
+export const lpTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-cyan-950 via-cyan-900 to-blue-950',
+  navText: 'text-cyan-100/70',
+  navTextIcon: 'text-cyan-300/70',
+  sectionText: 'text-cyan-400/70',
+  toggleText: 'text-cyan-600',
+  toggleHover: 'hover:bg-cyan-50',
+  brandingText: 'text-cyan-400/50',
+  profileBg: 'bg-cyan-800/30',
+  avatarBg: 'bg-cyan-700',
+  loginText: 'text-cyan-600',
+  loginHover: 'hover:bg-cyan-50',
+  aiBubbleBg: 'bg-cyan-800/40',
+  zapColor: 'text-cyan-400 fill-cyan-400',
+}
+
+export const interviewTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-[#7f19e6] via-[#6b12c9] to-[#4a0e8f]',
+  navText: 'text-purple-100/75',
+  navTextIcon: 'text-purple-200/70',
+  sectionText: 'text-purple-200/50',
+  toggleText: 'text-[#7f19e6]',
+  toggleHover: 'hover:bg-purple-50',
+  brandingText: 'text-purple-100/35',
+  profileBg: 'bg-[#4a0e8f]/40',
+  avatarBg: 'bg-[#7f19e6]',
+  loginText: 'text-[#7f19e6]',
+  loginHover: 'hover:bg-purple-50',
+  aiBubbleBg: 'bg-blue-600',
+  zapColor: 'text-[#7f19e6] fill-[#7f19e6]',
+}
+
+export const voiceTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-violet-950 via-violet-900 to-purple-950',
+  navText: 'text-violet-100',
+  navTextIcon: 'text-violet-300',
+  sectionText: 'text-violet-400/70',
+  toggleText: 'text-violet-200',
+  toggleHover: 'hover:bg-violet-800/50',
+  brandingText: 'text-violet-400/50',
+  profileBg: 'bg-violet-800/30',
+  avatarBg: 'bg-violet-700',
+  loginText: 'text-violet-200',
+  loginHover: 'hover:bg-violet-800/50',
+  aiBubbleBg: 'bg-violet-800/40',
+  zapColor: 'text-violet-400',
+}
+
+export const movieTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-rose-950 via-rose-900 to-pink-950',
+  navText: 'text-rose-100',
+  navTextIcon: 'text-rose-300',
+  sectionText: 'text-rose-400/70',
+  toggleText: 'text-rose-200',
+  toggleHover: 'hover:bg-rose-800/50',
+  brandingText: 'text-rose-400/50',
+  profileBg: 'bg-rose-800/30',
+  avatarBg: 'bg-rose-700',
+  loginText: 'text-rose-200',
+  loginHover: 'hover:bg-rose-800/50',
+  aiBubbleBg: 'bg-rose-800/40',
+  zapColor: 'text-rose-400',
+}

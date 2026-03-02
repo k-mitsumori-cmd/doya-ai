@@ -1,0 +1,70 @@
+import type { DoyaLogoInput, GeneratedPattern } from './types'
+
+export function generateGuidelineMarkdown(input: DoyaLogoInput, patterns: GeneratedPattern[]): string {
+  const lines: string[] = []
+  lines.push('# ロゴ使用ガイドライン（ドヤロゴ）')
+  lines.push('')
+  lines.push(`対象サービス: **${input.serviceName}**`)
+  lines.push('')
+  lines.push('## 1. 基本コンセプト')
+  lines.push('')
+  lines.push('本ロゴは、日本企業ロゴで重視される「余白（間）」「読みやすさ」「長期運用の強さ」を軸に設計しています。')
+  lines.push('文字が主役になれる構造と、フラットで信頼感のある配色を前提にしています。')
+  lines.push('')
+  lines.push('## 2. 生成背景・思想')
+  lines.push('')
+  lines.push('- 極端に欧米的な装飾を避け、日本のBtoB/プロダクト文脈で“ちゃんとして見える”骨格を優先')
+  lines.push('- 余白を設計し、縮小しても崩れない構造を優先')
+  lines.push('- 長期運用（Web・SNS・資料・アプリ）での展開耐性を重視')
+  lines.push('')
+  lines.push('## 3. 最小使用サイズ（推奨）')
+  lines.push('')
+  lines.push('- **横長ロゴ**: 高さ 24px 以上（Web）/ 10mm 以上（印刷）')
+  lines.push('- **正方形ロゴ（アイコン）**: 32px 以上（Web）/ 12mm 以上（印刷）')
+  lines.push('')
+  lines.push('## 4. 余白規定（クリアスペース）')
+  lines.push('')
+  lines.push('- ロゴ周囲に **ロゴマークの線幅（または文字高さ）の 0.5倍以上** の余白を確保してください。')
+  lines.push('- 余白が確保できない場合は、正方形ロゴ（アイコン）を優先してください。')
+  lines.push('')
+  lines.push('## 5. 使用OK / NG例（テキスト）')
+  lines.push('')
+  lines.push('- **OK**: 背景が単色でコントラストが高い／十分な余白／縮小しても可読性が保たれる')
+  lines.push('- **NG**: 背景が写真でコントラスト不足／ロゴを縦横比を崩して伸縮／グラデーションや影を足す／過度な縁取り')
+  lines.push('')
+  lines.push('## 6. 背景色別の推奨ロゴ')
+  lines.push('')
+  lines.push('- **白背景**: default（通常版）')
+  lines.push('- **濃色背景**: dark（ダークモード版）')
+  lines.push('- **印刷/白黒**: mono（モノクロ版）')
+  lines.push('- **反転が必要**: invert（反転版）')
+  lines.push('')
+  lines.push('## 7. SNS / Web / 資料での使い分け')
+  lines.push('')
+  lines.push('- **SNSアイコン**: 正方形ロゴ（square）を推奨（最も誤差が出にくい）')
+  lines.push('- **Webヘッダー**: 横長ロゴ（horizontal）を推奨（余白を広めに）')
+  lines.push('- **資料/名刺**: mono または default をベースに、背景とコントラスト優先')
+  lines.push('')
+  lines.push('## 8. パターン選定の目安')
+  lines.push('')
+  for (const p of patterns) {
+    lines.push(`### Pattern ${p.id}: ${p.title}`)
+    lines.push('')
+    lines.push(p.description)
+    lines.push('')
+    lines.push('- **向いている場面**:')
+    if (p.id === 'A') lines.push('  - 迷ったらこれ（汎用・運用しやすい）')
+    if (p.id === 'B') lines.push('  - 競合が多い領域で“覚えてもらう”必要がある')
+    if (p.id === 'C') lines.push('  - 長期運用 / プロダクト内UI / アイコン運用を重視')
+    lines.push('')
+  }
+  return lines.join('\n')
+}
+
+
+
+
+
+
+
+

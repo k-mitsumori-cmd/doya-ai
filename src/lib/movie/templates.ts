@@ -1,0 +1,318 @@
+// ============================================
+// ドヤムービーAI - テンプレート定義
+// ============================================
+import type { MovieTemplate } from './types'
+
+export const MOVIE_TEMPLATES: MovieTemplate[] = [
+  // ---- IT・SaaS ----
+  {
+    id: 'it-feature',
+    name: '機能紹介',
+    description: 'SaaSの主要機能を分かりやすく紹介',
+    category: 'it_saas',
+    variation: 'feature',
+    aspectRatio: '16:9',
+    duration: 30,
+    isPro: false,
+    tags: ['IT', 'SaaS', '機能紹介', 'BtoB'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #2563eb, #4338ca)', bgAnimation: 'none', texts: [{ content: '{{headline}}', x: 50, y: 45, fontSize: 48, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }, { content: '{{subheadline}}', x: 50, y: 60, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#e0e7ff', animation: 'slide-up', delay: 0.7, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 5, bgType: 'color', bgValue: '#f8fafc', bgAnimation: 'none', texts: [{ content: '{{feature1}}', x: 50, y: 40, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#1e293b', animation: 'slide-up', delay: 0.2, align: 'center' }, { content: '{{feature1_desc}}', x: 50, y: 58, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#64748b', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 5, bgType: 'color', bgValue: '#f8fafc', bgAnimation: 'none', texts: [{ content: '{{feature2}}', x: 50, y: 40, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#1e293b', animation: 'slide-up', delay: 0.2, align: 'center' }, { content: '{{feature2_desc}}', x: 50, y: 58, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#64748b', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 5, bgType: 'color', bgValue: '#f8fafc', bgAnimation: 'none', texts: [{ content: '{{feature3}}', x: 50, y: 40, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#1e293b', animation: 'slide-up', delay: 0.2, align: 'center' }, { content: '{{feature3_desc}}', x: 50, y: 58, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#64748b', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 4, duration: 7, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #2563eb, #4338ca)', bgAnimation: 'none', texts: [{ content: '{{cta}}', x: 50, y: 42, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{cta_sub}}', x: 50, y: 60, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#e0e7ff', animation: 'fade-in', delay: 0.7, align: 'center' }], transition: 'fade' },
+      { order: 5, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1d4ed8, #3730a3)', bgAnimation: 'none', texts: [{ content: '{{company}}', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  {
+    id: 'it-before-after',
+    name: 'Before/After',
+    description: '導入前後の変化を対比で訴求',
+    category: 'it_saas',
+    variation: 'before_after',
+    aspectRatio: '16:9',
+    duration: 30,
+    isPro: false,
+    tags: ['IT', 'SaaS', 'Before/After', '課題解決'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'color', bgValue: '#ef4444', bgAnimation: 'none', texts: [{ content: 'こんなお悩みありませんか？', x: 50, y: 45, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 5, bgType: 'color', bgValue: '#fef2f2', bgAnimation: 'none', texts: [{ content: '{{pain}}', x: 50, y: 50, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#dc2626', animation: 'slide-up', delay: 0.2, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 4, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #2563eb, #4f46e5)', bgAnimation: 'none', texts: [{ content: '{{product_name}}なら解決できます', x: 50, y: 50, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 3, duration: 6, bgType: 'color', bgValue: '#f0fdf4', bgAnimation: 'none', texts: [{ content: '✅ {{solution}}', x: 50, y: 45, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#15803d', animation: 'slide-up', delay: 0.2, align: 'center' }, { content: '{{solution_detail}}', x: 50, y: 62, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#166534', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'slide' },
+      { order: 4, duration: 7, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #2563eb, #4338ca)', bgAnimation: 'none', texts: [{ content: '{{cta}}', x: 50, y: 42, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{url}}', x: 50, y: 62, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#bfdbfe', animation: 'fade-in', delay: 0.7, align: 'center' }], transition: 'fade' },
+      { order: 5, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1d4ed8, #3730a3)', bgAnimation: 'none', texts: [{ content: '{{company}}', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  {
+    id: 'it-number',
+    name: '数字インパクト',
+    description: '実績・数字で信頼性を訴求',
+    category: 'it_saas',
+    variation: 'number_impact',
+    aspectRatio: '16:9',
+    duration: 15,
+    isPro: true,
+    tags: ['IT', 'SaaS', '実績', '数字'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #0f172a, #1e3a8a)', bgAnimation: 'none', texts: [{ content: '{{headline}}', x: 50, y: 50, fontSize: 44, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 4, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #0f172a, #1e3a8a)', bgAnimation: 'none', texts: [{ content: '{{number1}}', x: 50, y: 38, fontSize: 72, fontFamily: 'Noto Sans JP', color: '#60a5fa', animation: 'zoom-in', delay: 0.2, align: 'center' }, { content: '{{number1_label}}', x: 50, y: 62, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#e2e8f0', animation: 'slide-up', delay: 0.5, align: 'center' }], transition: 'fade' },
+      { order: 2, duration: 4, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #0f172a, #1e3a8a)', bgAnimation: 'none', texts: [{ content: '{{number2}}', x: 50, y: 38, fontSize: 72, fontFamily: 'Noto Sans JP', color: '#34d399', animation: 'zoom-in', delay: 0.2, align: 'center' }, { content: '{{number2_label}}', x: 50, y: 62, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#e2e8f0', animation: 'slide-up', delay: 0.5, align: 'center' }], transition: 'fade' },
+      { order: 3, duration: 4, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1d4ed8, #4338ca)', bgAnimation: 'none', texts: [{ content: '{{cta}}', x: 50, y: 45, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{url}}', x: 50, y: 62, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#bfdbfe', animation: 'fade-in', delay: 0.7, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  // ---- EC・小売 ----
+  {
+    id: 'ec-slideshow',
+    name: '商品スライドショー',
+    description: '商品を魅力的にスライドで紹介',
+    category: 'ec_retail',
+    variation: 'slideshow',
+    aspectRatio: '1:1',
+    duration: 15,
+    isPro: false,
+    tags: ['EC', '商品', 'Instagram', 'スライド'],
+    defaultScenes: [
+      { order: 0, duration: 2, bgType: 'color', bgValue: '#ffffff', bgAnimation: 'none', texts: [{ content: '{{brand}}', x: 50, y: 50, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#1a1a1a', animation: 'fade-in', delay: 0.2, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 3, bgType: 'image', bgValue: '{{product_image1}}', bgAnimation: 'ken-burns', texts: [{ content: '{{product_name}}', x: 50, y: 85, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 3, bgType: 'image', bgValue: '{{product_image2}}', bgAnimation: 'ken-burns', texts: [{ content: '{{feature}}', x: 50, y: 85, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 3, bgType: 'color', bgValue: '#f9fafb', bgAnimation: 'none', texts: [{ content: '{{price}}', x: 50, y: 45, fontSize: 48, fontFamily: 'Noto Sans JP', color: '#ef4444', animation: 'zoom-in', delay: 0.2, align: 'center' }, { content: '{{price_note}}', x: 50, y: 62, fontSize: 16, fontFamily: 'Noto Sans JP', color: '#6b7280', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'fade' },
+      { order: 4, duration: 4, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #f43f5e, #db2777)', bgAnimation: 'none', texts: [{ content: '{{cta}}', x: 50, y: 45, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{url}}', x: 50, y: 62, fontSize: 16, fontFamily: 'Noto Sans JP', color: '#fce7f3', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  {
+    id: 'ec-sale',
+    name: 'セール告知',
+    description: 'タイムセール・期間限定の緊急性を演出',
+    category: 'ec_retail',
+    variation: 'sale',
+    aspectRatio: '9:16',
+    duration: 15,
+    isPro: false,
+    tags: ['EC', 'セール', 'TikTok', 'Reels', '期間限定'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'color', bgValue: '#ef4444', bgAnimation: 'none', texts: [{ content: '⚡ SALE', x: 50, y: 35, fontSize: 72, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0, align: 'center' }, { content: '{{sale_title}}', x: 50, y: 55, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'slide-up', delay: 0.4, align: 'center' }, { content: '{{period}}', x: 50, y: 70, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#fee2e2', animation: 'fade-in', delay: 0.7, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 4, bgType: 'color', bgValue: '#fff7ed', bgAnimation: 'none', texts: [{ content: '{{discount}}OFF', x: 50, y: 40, fontSize: 80, fontFamily: 'Noto Sans JP', color: '#dc2626', animation: 'zoom-in', delay: 0.2, align: 'center' }, { content: '{{product}}', x: 50, y: 62, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#1c1917', animation: 'slide-up', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 4, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #f97316, #ef4444)', bgAnimation: 'none', texts: [{ content: '残り {{remaining}} 点！', x: 50, y: 42, fontSize: 48, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.2, align: 'center' }, { content: '{{urgency}}', x: 50, y: 62, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#fff7ed', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 4, bgType: 'color', bgValue: '#ef4444', bgAnimation: 'none', texts: [{ content: '今すぐチェック👆', x: 50, y: 45, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{url}}', x: 50, y: 62, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#fee2e2', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  {
+    id: 'ec-review',
+    name: 'レビュー紹介',
+    description: '顧客の声・レビューを動画で紹介',
+    category: 'ec_retail',
+    variation: 'review',
+    aspectRatio: '9:16',
+    duration: 30,
+    isPro: true,
+    tags: ['EC', 'レビュー', '口コミ', '信頼'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #fffbeb, #fff7ed)', bgAnimation: 'none', texts: [{ content: '★★★★★', x: 50, y: 35, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#f59e0b', animation: 'zoom-in', delay: 0.2, align: 'center' }, { content: 'お客様の声', x: 50, y: 52, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#78350f', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 7, bgType: 'color', bgValue: '#fffbeb', bgAnimation: 'none', texts: [{ content: '"{{review1}}"', x: 50, y: 42, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#1c1917', animation: 'slide-up', delay: 0.3, align: 'center' }, { content: '— {{reviewer1}}', x: 50, y: 70, fontSize: 16, fontFamily: 'Noto Sans JP', color: '#78716c', animation: 'fade-in', delay: 0.8, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 7, bgType: 'color', bgValue: '#fffbeb', bgAnimation: 'none', texts: [{ content: '"{{review2}}"', x: 50, y: 42, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#1c1917', animation: 'slide-up', delay: 0.3, align: 'center' }, { content: '— {{reviewer2}}', x: 50, y: 70, fontSize: 16, fontFamily: 'Noto Sans JP', color: '#78716c', animation: 'fade-in', delay: 0.8, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 7, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #f59e0b, #f97316)', bgAnimation: 'none', texts: [{ content: '{{product}}', x: 50, y: 38, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.2, align: 'center' }, { content: '{{cta}}', x: 50, y: 55, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.5, align: 'center' }, { content: '{{url}}', x: 50, y: 70, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#fef3c7', animation: 'fade-in', delay: 0.8, align: 'center' }], transition: 'fade' },
+      { order: 4, duration: 6, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #d97706, #ea580c)', bgAnimation: 'none', texts: [{ content: '{{company}}', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  // ---- 美容 ----
+  {
+    id: 'beauty-before-after',
+    name: 'ビフォーアフター',
+    description: '施術・商品の効果をビジュアルで訴求',
+    category: 'beauty',
+    variation: 'before_after',
+    aspectRatio: '9:16',
+    duration: 30,
+    isPro: false,
+    tags: ['美容', 'ビフォーアフター', '施術'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #fb7185, #f472b6)', bgAnimation: 'none', texts: [{ content: '{{salon_name}}', x: 50, y: 45, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 5, bgType: 'image', bgValue: '{{before_image}}', bgAnimation: 'none', texts: [{ content: 'Before', x: 50, y: 15, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 5, bgType: 'image', bgValue: '{{after_image}}', bgAnimation: 'none', texts: [{ content: 'After ✨', x: 50, y: 15, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 7, bgType: 'color', bgValue: '#fff1f2', bgAnimation: 'none', texts: [{ content: '{{treatment}}', x: 50, y: 35, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#9f1239', animation: 'slide-up', delay: 0.2, align: 'center' }, { content: '{{description}}', x: 50, y: 55, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#6b7280', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'fade' },
+      { order: 4, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #f43f5e, #ec4899)', bgAnimation: 'none', texts: [{ content: '{{price}}', x: 50, y: 38, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.2, align: 'center' }, { content: '{{cta}}', x: 50, y: 58, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#fce7f3', animation: 'slide-up', delay: 0.5, align: 'center' }, { content: '{{url}}', x: 50, y: 72, fontSize: 16, fontFamily: 'Noto Sans JP', color: '#fce7f3', animation: 'fade-in', delay: 0.8, align: 'center' }], transition: 'fade' },
+      { order: 5, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #e11d48, #db2777)', bgAnimation: 'none', texts: [{ content: '{{company}}', x: 50, y: 50, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  // ---- 飲食 ----
+  {
+    id: 'food-menu',
+    name: 'メニュー紹介',
+    description: '料理・メニューを食欲をそそる映像で紹介',
+    category: 'food',
+    variation: 'menu',
+    aspectRatio: '1:1',
+    duration: 15,
+    isPro: false,
+    tags: ['飲食', 'メニュー', '料理', 'Instagram'],
+    defaultScenes: [
+      { order: 0, duration: 2, bgType: 'color', bgValue: '#1a0a00', bgAnimation: 'none', texts: [{ content: '{{restaurant}}', x: 50, y: 50, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#fcd34d', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 4, bgType: 'image', bgValue: '{{food_image1}}', bgAnimation: 'ken-burns', texts: [{ content: '{{menu1}}', x: 50, y: 85, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'slide-up', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 4, bgType: 'image', bgValue: '{{food_image2}}', bgAnimation: 'ken-burns', texts: [{ content: '{{menu2}}', x: 50, y: 85, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'slide-up', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #78350f, #7f1d1d)', bgAnimation: 'none', texts: [{ content: '{{cta}}', x: 50, y: 42, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#fcd34d', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{tel}} / {{url}}', x: 50, y: 60, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#fde68a', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  // ---- 採用 ----
+  {
+    id: 'recruit-staff',
+    name: '社員インタビュー風',
+    description: 'テキストで社員の声を動画風に演出',
+    category: 'recruit',
+    variation: 'interview',
+    aspectRatio: '16:9',
+    duration: 30,
+    isPro: false,
+    tags: ['採用', '社員', 'インタビュー', 'HR'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #0284c7, #1d4ed8)', bgAnimation: 'none', texts: [{ content: '{{company}} 採用情報', x: 50, y: 45, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 6, bgType: 'image', bgValue: '{{office_image}}', bgAnimation: 'ken-burns', texts: [{ content: '"{{quote1}}"', x: 50, y: 55, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'slide-up', delay: 0.5, align: 'center' }, { content: '{{employee1}} / {{department1}}', x: 50, y: 75, fontSize: 16, fontFamily: 'Noto Sans JP', color: '#e0f2fe', animation: 'fade-in', delay: 0.8, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 5, bgType: 'color', bgValue: '#f0f9ff', bgAnimation: 'none', texts: [{ content: '求める人材', x: 50, y: 30, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#0c4a6e', animation: 'fade-in', delay: 0.2, align: 'center' }, { content: '✓ {{qualification1}}', x: 50, y: 48, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#0369a1', animation: 'slide-up', delay: 0.4, align: 'center' }, { content: '✓ {{qualification2}}', x: 50, y: 62, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#0369a1', animation: 'slide-up', delay: 0.6, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 5, bgType: 'color', bgValue: '#f0f9ff', bgAnimation: 'none', texts: [{ content: '待遇・福利厚生', x: 50, y: 30, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#0c4a6e', animation: 'fade-in', delay: 0.2, align: 'center' }, { content: '{{benefit1}} / {{benefit2}}', x: 50, y: 50, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#0369a1', animation: 'slide-up', delay: 0.4, align: 'center' }, { content: '{{benefit3}}', x: 50, y: 65, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#0369a1', animation: 'slide-up', delay: 0.6, align: 'center' }], transition: 'slide' },
+      { order: 4, duration: 6, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #0284c7, #1d4ed8)', bgAnimation: 'none', texts: [{ content: '一緒に働きませんか？', x: 50, y: 38, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{recruitment_url}}', x: 50, y: 58, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#bae6fd', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'fade' },
+      { order: 5, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #0369a1, #1e40af)', bgAnimation: 'none', texts: [{ content: '{{company}}', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  // ---- BtoB ----
+  {
+    id: 'btob-solution',
+    name: 'ソリューション紹介',
+    description: '課題提起からソリューション提案の流れ',
+    category: 'btob',
+    variation: 'solution',
+    aspectRatio: '16:9',
+    duration: 30,
+    isPro: false,
+    tags: ['BtoB', 'ソリューション', '課題解決'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #111827, #1e293b)', bgAnimation: 'none', texts: [{ content: '{{headline}}', x: 50, y: 45, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#f1f5f9', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 5, bgType: 'color', bgValue: '#fef2f2', bgAnimation: 'none', texts: [{ content: '課題', x: 50, y: 22, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#dc2626', animation: 'fade-in', delay: 0.2, align: 'center' }, { content: '{{challenge}}', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#1e293b', animation: 'slide-up', delay: 0.4, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #111827, #1e293b)', bgAnimation: 'none', texts: [{ content: '{{product}} が解決します', x: 50, y: 45, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#60a5fa', animation: 'zoom-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 3, duration: 5, bgType: 'color', bgValue: '#f8fafc', bgAnimation: 'none', texts: [{ content: '✅ {{solution1}}', x: 50, y: 35, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#1e293b', animation: 'slide-up', delay: 0.2, align: 'center' }, { content: '✅ {{solution2}}', x: 50, y: 52, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#1e293b', animation: 'slide-up', delay: 0.4, align: 'center' }, { content: '✅ {{solution3}}', x: 50, y: 68, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#1e293b', animation: 'slide-up', delay: 0.6, align: 'center' }], transition: 'slide' },
+      { order: 4, duration: 7, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1d4ed8, #4338ca)', bgAnimation: 'none', texts: [{ content: '無料デモ・お問い合わせ', x: 50, y: 38, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{url}}', x: 50, y: 58, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#bfdbfe', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'fade' },
+      { order: 5, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #111827, #1e293b)', bgAnimation: 'none', texts: [{ content: '{{company}}', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#f1f5f9', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  // ---- 汎用 ----
+  {
+    id: 'general-story',
+    name: 'ストーリー型',
+    description: '起承転結で感情に訴える汎用テンプレート',
+    category: 'general',
+    variation: 'story',
+    aspectRatio: '16:9',
+    duration: 30,
+    isPro: false,
+    tags: ['汎用', 'ストーリー', '感情訴求'],
+    defaultScenes: [
+      { order: 0, duration: 4, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #0f172a, #111827)', bgAnimation: 'none', texts: [{ content: '{{opening_question}}', x: 50, y: 50, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#f1f5f9', animation: 'typewriter', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 5, bgType: 'image', bgValue: '{{scene_image}}', bgAnimation: 'ken-burns', texts: [{ content: '{{problem}}', x: 50, y: 80, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'slide-up', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1d4ed8, #4f46e5)', bgAnimation: 'none', texts: [{ content: '{{turning_point}}', x: 50, y: 45, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 3, duration: 6, bgType: 'color', bgValue: '#f0fdf4', bgAnimation: 'none', texts: [{ content: '{{result}}', x: 50, y: 42, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#15803d', animation: 'slide-up', delay: 0.3, align: 'center' }, { content: '{{result_detail}}', x: 50, y: 60, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#166534', animation: 'fade-in', delay: 0.7, align: 'center' }], transition: 'slide' },
+      { order: 4, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #2563eb, #4338ca)', bgAnimation: 'none', texts: [{ content: '{{cta}}', x: 50, y: 42, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{url}}', x: 50, y: 62, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#bfdbfe', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'fade' },
+      { order: 5, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1d4ed8, #3730a3)', bgAnimation: 'none', texts: [{ content: '{{company}}', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  {
+    id: 'general-infographic',
+    name: 'インフォグラフィック',
+    description: 'テキスト＋数字で情報を視覚的に伝える',
+    category: 'general',
+    variation: 'infographic',
+    aspectRatio: '16:9',
+    duration: 15,
+    isPro: true,
+    tags: ['汎用', 'インフォグラフィック', '情報伝達'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #4f46e5, #9333ea)', bgAnimation: 'none', texts: [{ content: '{{title}}', x: 50, y: 45, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 4, bgType: 'color', bgValue: '#fafafa', bgAnimation: 'none', texts: [{ content: '{{stat1_number}}', x: 50, y: 35, fontSize: 64, fontFamily: 'Noto Sans JP', color: '#4f46e5', animation: 'zoom-in', delay: 0.2, align: 'center' }, { content: '{{stat1_label}}', x: 50, y: 60, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#374151', animation: 'slide-up', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 4, bgType: 'color', bgValue: '#fafafa', bgAnimation: 'none', texts: [{ content: '{{stat2_number}}', x: 50, y: 35, fontSize: 64, fontFamily: 'Noto Sans JP', color: '#7c3aed', animation: 'zoom-in', delay: 0.2, align: 'center' }, { content: '{{stat2_label}}', x: 50, y: 60, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#374151', animation: 'slide-up', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 4, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #4f46e5, #9333ea)', bgAnimation: 'none', texts: [{ content: '{{conclusion}}', x: 50, y: 42, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{url}}', x: 50, y: 60, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#c7d2fe', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  // ---- 教育 ----
+  {
+    id: 'education-course',
+    name: '講座紹介',
+    description: 'オンライン講座・セミナーへの申し込みを促進',
+    category: 'education',
+    variation: 'feature',
+    aspectRatio: '16:9',
+    duration: 30,
+    isPro: false,
+    tags: ['教育', '講座', 'セミナー', 'eラーニング'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #059669, #0f766e)', bgAnimation: 'none', texts: [{ content: '{{course_name}}', x: 50, y: 42, fontSize: 38, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }, { content: '{{tagline}}', x: 50, y: 60, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#a7f3d0', animation: 'slide-up', delay: 0.6, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 5, bgType: 'color', bgValue: '#f0fdf4', bgAnimation: 'none', texts: [{ content: 'こんな方に', x: 50, y: 22, fontSize: 26, fontFamily: 'Noto Sans JP', color: '#065f46', animation: 'fade-in', delay: 0.2, align: 'center' }, { content: '👤 {{target1}}', x: 50, y: 42, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#047857', animation: 'slide-up', delay: 0.4, align: 'center' }, { content: '👤 {{target2}}', x: 50, y: 56, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#047857', animation: 'slide-up', delay: 0.6, align: 'center' }, { content: '👤 {{target3}}', x: 50, y: 70, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#047857', animation: 'slide-up', delay: 0.8, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 5, bgType: 'color', bgValue: '#ecfdf5', bgAnimation: 'none', texts: [{ content: '学べること', x: 50, y: 22, fontSize: 26, fontFamily: 'Noto Sans JP', color: '#065f46', animation: 'fade-in', delay: 0.2, align: 'center' }, { content: '📖 {{curriculum1}}', x: 50, y: 42, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#047857', animation: 'slide-up', delay: 0.4, align: 'center' }, { content: '📖 {{curriculum2}}', x: 50, y: 56, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#047857', animation: 'slide-up', delay: 0.6, align: 'center' }, { content: '📖 {{curriculum3}}', x: 50, y: 70, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#047857', animation: 'slide-up', delay: 0.8, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 5, bgType: 'color', bgValue: '#f0fdf4', bgAnimation: 'none', texts: [{ content: '受講料', x: 50, y: 25, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#065f46', animation: 'fade-in', delay: 0.2, align: 'center' }, { content: '{{price}}', x: 50, y: 48, fontSize: 56, fontFamily: 'Noto Sans JP', color: '#059669', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{price_note}}', x: 50, y: 70, fontSize: 16, fontFamily: 'Noto Sans JP', color: '#6b7280', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'slide' },
+      { order: 4, duration: 7, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #059669, #0f766e)', bgAnimation: 'none', texts: [{ content: '{{cta}}', x: 50, y: 40, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{deadline}}', x: 50, y: 56, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#a7f3d0', animation: 'fade-in', delay: 0.6, align: 'center' }, { content: '{{url}}', x: 50, y: 70, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#a7f3d0', animation: 'fade-in', delay: 0.8, align: 'center' }], transition: 'fade' },
+      { order: 5, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #047857, #115e59)', bgAnimation: 'none', texts: [{ content: '{{company}}', x: 50, y: 50, fontSize: 26, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  // ---- 不動産 ----
+  {
+    id: 'realestate-property',
+    name: '物件紹介',
+    description: '物件の魅力を伝える動画',
+    category: 'real_estate',
+    variation: 'feature',
+    aspectRatio: '16:9',
+    duration: 30,
+    isPro: true,
+    tags: ['不動産', '物件', '賃貸', '売買'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #334155, #1f2937)', bgAnimation: 'none', texts: [{ content: '{{property_name}}', x: 50, y: 42, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }, { content: '{{location}}', x: 50, y: 60, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#cbd5e1', animation: 'slide-up', delay: 0.6, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 6, bgType: 'image', bgValue: '{{exterior_image}}', bgAnimation: 'ken-burns', texts: [{ content: '外観', x: 50, y: 88, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 5, bgType: 'image', bgValue: '{{interior_image}}', bgAnimation: 'ken-burns', texts: [{ content: '{{room_type}}', x: 50, y: 88, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 5, bgType: 'color', bgValue: '#f8fafc', bgAnimation: 'none', texts: [{ content: '{{spec}}', x: 50, y: 35, fontSize: 26, fontFamily: 'Noto Sans JP', color: '#1e293b', animation: 'slide-up', delay: 0.2, align: 'center' }, { content: '交通: {{access}}', x: 50, y: 52, fontSize: 20, fontFamily: 'Noto Sans JP', color: '#475569', animation: 'fade-in', delay: 0.4, align: 'center' }, { content: '築{{age}}年 / {{floor}}', x: 50, y: 67, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#64748b', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'slide' },
+      { order: 4, duration: 6, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #334155, #1f2937)', bgAnimation: 'none', texts: [{ content: '{{price}}', x: 50, y: 35, fontSize: 48, fontFamily: 'Noto Sans JP', color: '#fcd34d', animation: 'zoom-in', delay: 0.2, align: 'center' }, { content: '{{contact}}', x: 50, y: 56, fontSize: 22, fontFamily: 'Noto Sans JP', color: '#e2e8f0', animation: 'slide-up', delay: 0.5, align: 'center' }, { content: '{{url}}', x: 50, y: 70, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#94a3b8', animation: 'fade-in', delay: 0.7, align: 'center' }], transition: 'fade' },
+      { order: 5, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1e293b, #111827)', bgAnimation: 'none', texts: [{ content: '{{company}}', x: 50, y: 50, fontSize: 26, fontFamily: 'Noto Sans JP', color: '#f1f5f9', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+    ],
+  },
+  // ---- 金融 ----
+  {
+    id: 'finance-service',
+    name: 'サービス解説',
+    description: '金融サービスのメリットを信頼感ある映像で訴求',
+    category: 'finance',
+    variation: 'feature',
+    aspectRatio: '16:9',
+    duration: 30,
+    isPro: true,
+    tags: ['金融', 'サービス', '保険', '投資'],
+    defaultScenes: [
+      { order: 0, duration: 3, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1e3a8a, #0f172a)', bgAnimation: 'none', texts: [{ content: '{{service_name}}', x: 50, y: 45, fontSize: 38, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
+      { order: 1, duration: 5, bgType: 'color', bgValue: '#f8fafc', bgAnimation: 'none', texts: [{ content: '{{benefit1}}', x: 50, y: 38, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#1e40af', animation: 'slide-up', delay: 0.2, align: 'center' }, { content: '{{benefit1_detail}}', x: 50, y: 58, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#374151', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 2, duration: 5, bgType: 'color', bgValue: '#f8fafc', bgAnimation: 'none', texts: [{ content: '{{benefit2}}', x: 50, y: 38, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#1e40af', animation: 'slide-up', delay: 0.2, align: 'center' }, { content: '{{benefit2_detail}}', x: 50, y: 58, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#374151', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 3, duration: 5, bgType: 'color', bgValue: '#f8fafc', bgAnimation: 'none', texts: [{ content: '{{trust_factor}}', x: 50, y: 38, fontSize: 26, fontFamily: 'Noto Sans JP', color: '#1e40af', animation: 'fade-in', delay: 0.2, align: 'center' }, { content: '{{track_record}}', x: 50, y: 58, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#374151', animation: 'slide-up', delay: 0.5, align: 'center' }], transition: 'slide' },
+      { order: 4, duration: 7, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1e40af, #312e81)', bgAnimation: 'none', texts: [{ content: '{{cta}}', x: 50, y: 40, fontSize: 36, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'zoom-in', delay: 0.3, align: 'center' }, { content: '{{url}}', x: 50, y: 60, fontSize: 18, fontFamily: 'Noto Sans JP', color: '#bfdbfe', animation: 'fade-in', delay: 0.6, align: 'center' }], transition: 'fade' },
+      { order: 5, duration: 5, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1e3a8a, #0f172a)', bgAnimation: 'none', texts: [{ content: '{{company}}', x: 50, y: 45, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#e2e8f0', animation: 'fade-in', delay: 0.3, align: 'center' }, { content: '{{disclaimer}}', x: 50, y: 75, fontSize: 11, fontFamily: 'Noto Sans JP', color: '#64748b', animation: 'fade-in', delay: 0.5, align: 'center' }], transition: 'fade' },
+    ],
+  },
+]
+
+export function getTemplateById(id: string): MovieTemplate | undefined {
+  return MOVIE_TEMPLATES.find(t => t.id === id)
+}
+
+export function getTemplatesByCategory(category: string): MovieTemplate[] {
+  return MOVIE_TEMPLATES.filter(t => t.category === category)
+}
+
+export function getFreeTemplates(): MovieTemplate[] {
+  return MOVIE_TEMPLATES.filter(t => !t.isPro)
+}
+
+export const TEMPLATE_CATEGORY_LABELS: Record<string, string> = {
+  it_saas: 'IT・SaaS',
+  ec_retail: 'EC・小売',
+  food: '飲食',
+  real_estate: '不動産',
+  beauty: '美容',
+  education: '教育',
+  finance: '金融',
+  medical: '医療',
+  recruit: '採用',
+  btob: 'BtoB',
+  general: '汎用',
+}
