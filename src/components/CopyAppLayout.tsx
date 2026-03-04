@@ -69,7 +69,7 @@ export default function CopyAppLayout({ children }: CopyAppLayoutProps) {
         style={{ marginLeft: isMobile ? 0 : sidebarCollapsed ? 72 : 240 }}
       >
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center gap-4 p-4 border-b border-gray-200 bg-white">
+        <div className="md:hidden flex items-center gap-3 p-3 sm:p-4 border-b border-gray-200 bg-white">
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="p-2 rounded-lg hover:bg-gray-100 text-gray-700"
@@ -78,7 +78,7 @@ export default function CopyAppLayout({ children }: CopyAppLayoutProps) {
           </button>
           <div className="flex items-center gap-2">
             <span className="text-xl">✍️</span>
-            <span className="text-lg font-bold text-gray-900">ドヤコピーAI</span>
+            <span className="text-base sm:text-lg font-bold text-gray-900 whitespace-nowrap">ドヤコピーAI</span>
           </div>
         </div>
 

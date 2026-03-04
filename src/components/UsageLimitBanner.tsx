@@ -57,9 +57,9 @@ export function UsageLimitBanner() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100 px-4 py-3"
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-4 h-4 text-amber-600" />
             </div>
             <div>
@@ -71,10 +71,10 @@ export function UsageLimitBanner() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Link
               href="/auth/signin"
-              className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors flex-1 sm:flex-none justify-center"
             >
               <UserPlus className="w-4 h-4" />
               無料で登録
@@ -99,9 +99,9 @@ export function UsageLimitBanner() {
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100 px-4 py-3"
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
               <Zap className="w-4 h-4 text-purple-600" />
             </div>
             <div>
@@ -113,10 +113,10 @@ export function UsageLimitBanner() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Link
               href="/pricing"
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white text-sm font-medium rounded-lg transition-opacity"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white text-xs sm:text-sm font-medium rounded-lg transition-opacity flex-1 sm:flex-none justify-center"
             >
               <Crown className="w-4 h-4" />
               アップグレード

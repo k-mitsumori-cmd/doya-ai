@@ -113,7 +113,7 @@ export function SeoAppLayout({
           {/* trial bar */}
           {trialRemainSec != null && (
             <div className="px-4 md:px-8 pt-2">
-              <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-2 flex items-center justify-between gap-3">
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 px-3 sm:px-4 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center flex-shrink-0">
                     <Timer className="w-4 h-4" />
@@ -127,14 +127,14 @@ export function SeoAppLayout({
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   <div className="text-right">
                     <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest">残り</p>
                     <p className="text-sm font-black text-blue-900 tabular-nums">
                       {Math.floor(trialRemainSec / 60)}:{String(trialRemainSec % 60).padStart(2, '0')}
                     </p>
                   </div>
-                  <div className="w-28 h-2 rounded-full bg-blue-100 overflow-hidden">
+                  <div className="flex-1 sm:flex-none sm:w-28 h-2 rounded-full bg-blue-100 overflow-hidden">
                     <div
                       className="h-2 bg-blue-600"
                       style={{ width: `${Math.min(100, Math.max(0, (trialRemainSec / 3600) * 100))}%` }}
@@ -167,16 +167,16 @@ export function SeoAppLayout({
             </Link>
             {!isLoggedIn && (
               <Link href="/auth/signin">
-                <button className="h-10 px-4 rounded-xl bg-white border border-gray-200 text-gray-700 text-xs font-black hover:bg-gray-50 transition-colors inline-flex items-center gap-2">
+                <button className="h-10 px-3 sm:px-4 rounded-xl bg-white border border-gray-200 text-gray-700 text-xs font-black hover:bg-gray-50 transition-colors inline-flex items-center gap-1.5 sm:gap-2" title="ログイン">
                   <ExternalLink className="w-4 h-4" />
-                  ログイン
+                  <span className="hidden sm:inline">ログイン</span>
                 </button>
               </Link>
             )}
             <Link href="/seo/create">
-              <button className="h-10 px-4 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
+              <button className="h-10 px-3 sm:px-4 rounded-xl bg-[#2563EB] text-white text-xs font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-1.5 sm:gap-2" title="新規記事作成">
                 <Plus className="w-4 h-4" />
-                新規記事作成
+                <span className="hidden sm:inline">新規記事作成</span>
               </button>
             </Link>
           </div>

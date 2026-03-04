@@ -69,7 +69,7 @@ export default function LpAppLayout({ children }: LpAppLayoutProps) {
         style={{ marginLeft: isMobile ? 0 : sidebarCollapsed ? 72 : 240 }}
       >
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center gap-4 p-4 border-b border-slate-800 bg-gradient-to-r from-cyan-950/80 to-slate-900">
+        <div className="md:hidden flex items-center gap-3 p-3 sm:p-4 border-b border-slate-800 bg-gradient-to-r from-cyan-950/80 to-slate-900">
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="p-2 rounded-lg hover:bg-white/10 text-white"
@@ -78,7 +78,7 @@ export default function LpAppLayout({ children }: LpAppLayoutProps) {
           </button>
           <div className="flex items-center gap-2">
             <span className="text-xl">📄</span>
-            <span className="text-lg font-bold text-white">ドヤLP AI</span>
+            <span className="text-base sm:text-lg font-bold text-white whitespace-nowrap">ドヤLP AI</span>
           </div>
         </div>
 

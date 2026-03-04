@@ -38,11 +38,11 @@ export default function BannerLandingPage() {
               <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-200">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <span className="font-black text-slate-800 text-xl tracking-tighter uppercase">ドヤバナーAI</span>
+              <span className="font-black text-slate-800 text-base sm:text-xl tracking-tighter uppercase">ドヤバナーAI</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
             <Link href="#pricing" className="hidden md:block text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors">
               料金プラン
             </Link>
@@ -54,12 +54,12 @@ export default function BannerLandingPage() {
                     PRO MEMBER
                   </div>
                 )}
-                <Link href="/banner" className="px-5 sm:px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95">
+                <Link href="/banner" className="px-3 sm:px-5 md:px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95">
                   ダッシュボード
                 </Link>
               </div>
             ) : (
-              <Link href="/auth/doyamarke/signin?callbackUrl=%2Fbanner" className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95">
+              <Link href="/auth/doyamarke/signin?callbackUrl=%2Fbanner" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95">
                 <LogIn className="w-4 h-4" />
                 ログイン
               </Link>
@@ -348,7 +348,7 @@ export default function BannerLandingPage() {
               <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-100">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <span className="font-black text-slate-800 text-xl tracking-tighter uppercase">ドヤバナーAI</span>
+              <span className="font-black text-slate-800 text-base sm:text-xl tracking-tighter uppercase">ドヤバナーAI</span>
             </div>
             
             <div className="flex items-center gap-8">

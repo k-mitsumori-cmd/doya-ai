@@ -1260,13 +1260,14 @@ function BannerTestPageInner() {
         
         {/* トライアルバナー（ログイン後1時間） */}
         {isTrialActive && (
-          <div className="fixed top-12 md:top-0 left-0 md:left-[240px] right-0 z-40 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white py-2 px-4 flex items-center justify-center gap-2 text-sm font-medium shadow-lg">
-            <Sparkles className="w-4 h-4 animate-pulse" />
-            <span>🎉 全機能無料トライアル中！</span>
-            <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold">
+          <div className="fixed top-12 md:top-0 left-0 md:left-[240px] right-0 z-40 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white py-2 px-3 sm:px-4 flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium shadow-lg">
+            <Sparkles className="w-4 h-4 animate-pulse flex-shrink-0" />
+            <span className="hidden sm:inline">🎉 全機能無料トライアル中！</span>
+            <span className="sm:hidden">🎉 トライアル中</span>
+            <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0">
               残り {trialRemainingMinutes}分
             </span>
-            <span className="hidden sm:inline text-white/80">- エンタープライズ機能をお試しください</span>
+            <span className="hidden md:inline text-white/80">- エンタープライズ機能をお試しください</span>
           </div>
         )}
         
