@@ -18,6 +18,7 @@ type GalleryItem = {
   pattern: string
   creator: string
   creatorImage: string | null
+  lqip: string
 }
 
 const GALLERY_CACHE_KEY = 'doya-gallery-cache'
@@ -43,8 +44,8 @@ function writeGalleryCache(items: GalleryItem[], cursor: string | null) {
   }
 }
 
-// サムネイル画像コンポーネント（高速表示 + ローディング体験最適化）
-function GalleryThumb({ src, alt }: { src: string; alt: string }) {
+// サムネイル画像コンポーネント（高速表示 + LQIP + ローディング体験最適化）
+function GalleryThumb({ src, alt, lqip }: { src: string; alt: string; lqip?: string }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle')
   const [retryCount, setRetryCount] = useState(0)
   const containerRef = React.useRef<HTMLDivElement>(null)
@@ -90,6 +91,8 @@ function GalleryThumb({ src, alt }: { src: string; alt: string }) {
     animation: 'shimmer 1.5s infinite',
   }
 
+  const hasLqip = !!lqip
+
   return (
     <div ref={containerRef} className="w-full h-full relative overflow-hidden">
       <style jsx>{`
@@ -99,26 +102,38 @@ function GalleryThumb({ src, alt }: { src: string; alt: string }) {
         }
       `}</style>
 
-      {/* ローディング中/未読み込みのスケルトン（シマーアニメーション） */}
-      {(status === 'idle' || status === 'loading' || status === 'error') && (
-        <div 
+      {/* LQIP ぼかしプレースホルダー（あれば表示） */}
+      {hasLqip && status !== 'loaded' && (
+        <img
+          src={lqip}
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: 'blur(20px)', transform: 'scale(1.1)' }}
+        />
+      )}
+
+      {/* LQIPがない場合のフォールバック：シマーアニメーション */}
+      {!hasLqip && (status === 'idle' || status === 'loading' || status === 'error') && (
+        <div
           className="absolute inset-0"
           style={shimmerStyle}
         >
           {/* 淡いグラデーションオーバーレイ */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-pink-50/30" />
-          {/* 中央のアイコン */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            {status === 'loading' ? (
-              <div className="w-10 h-10 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin" />
-            ) : status === 'error' ? (
-              <div className="text-center opacity-60">
-                <ImageIcon className="w-10 h-10 text-slate-400 mx-auto" />
-              </div>
-            ) : (
-              <ImageIcon className="w-10 h-10 text-slate-300" />
-            )}
-          </div>
+        </div>
+      )}
+
+      {/* ローディングスピナー / エラーアイコン */}
+      {(status === 'loading' || status === 'error') && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          {status === 'loading' && !hasLqip ? (
+            <div className="w-10 h-10 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin" />
+          ) : status === 'error' ? (
+            <div className="text-center opacity-60">
+              <ImageIcon className="w-10 h-10 text-slate-400 mx-auto" />
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -359,7 +374,7 @@ export default function BannerGalleryPage() {
                   <div key={it.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden group">
                     <div className="relative aspect-square bg-slate-50 overflow-hidden">
                       <div className="w-full h-full transition-transform duration-500 group-hover:scale-105">
-                        <GalleryThumb src={it.thumbUrl} alt={it.keyword || 'banner'} />
+                        <GalleryThumb src={it.thumbUrl} alt={it.keyword || 'banner'} lqip={it.lqip} />
                       </div>
                       {/* ダウンロードボタン（ホバー時表示） */}
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">

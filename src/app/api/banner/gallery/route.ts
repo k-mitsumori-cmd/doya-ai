@@ -83,6 +83,7 @@ export async function GET(request: NextRequest) {
         pattern: String(meta?.pattern || ''),
         creator: shareProfile ? (g.user?.name || '匿名') : '匿名',
         creatorImage: shareProfile ? (g.user?.image || null) : null,
+        lqip: typeof meta?.lqip === 'string' ? meta.lqip : '',
       }
     })
 

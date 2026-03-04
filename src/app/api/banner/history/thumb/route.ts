@@ -21,16 +21,16 @@ function dataUrlToBuffer(dataUrl: string): Buffer | null {
   }
 }
 
-let PLACEHOLDER_JPEG: Buffer | null = null
-async function getPlaceholderJpeg(): Promise<Buffer> {
-  if (PLACEHOLDER_JPEG) return PLACEHOLDER_JPEG
+let PLACEHOLDER_WEBP: Buffer | null = null
+async function getPlaceholderWebp(): Promise<Buffer> {
+  if (PLACEHOLDER_WEBP) return PLACEHOLDER_WEBP
   // 壊れ画像でも <img> が壊れないように必ず画像を返す
-  PLACEHOLDER_JPEG = await sharp({
+  PLACEHOLDER_WEBP = await sharp({
     create: { width: 24, height: 24, channels: 3, background: '#F1F5F9' },
   })
-    .jpeg({ quality: 60, mozjpeg: true })
+    .webp({ quality: 50 })
     .toBuffer()
-  return PLACEHOLDER_JPEG
+  return PLACEHOLDER_WEBP
 }
 
 async function fetchAsBuffer(url: string, timeoutMs = 5000): Promise<Buffer | null> {
@@ -55,10 +55,12 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id') || ''
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    const w = Math.min(Math.max(Number(searchParams.get('w')) || 320, 40), 640)
 
-    const cached = THUMB_CACHE.get(id)
+    const cacheKey = `${id}-${w}`
+    const cached = THUMB_CACHE.get(cacheKey)
     if (cached && Date.now() - cached.ts < THUMB_CACHE_TTL_MS) {
-      const etag = `W/"hist-thumb-${id}"`
+      const etag = `W/"hist-thumb-${id}-${w}"`
       if (req.headers.get('if-none-match') === etag) {
         return new NextResponse(null, {
           status: 304,
@@ -71,7 +73,7 @@ export async function GET(req: NextRequest) {
       return new NextResponse(new Uint8Array(cached.buf), {
         status: 200,
         headers: {
-          'Content-Type': 'image/jpeg',
+          'Content-Type': 'image/webp',
           'Cache-Control': 'private, max-age=86400, stale-while-revalidate=604800',
           ETag: etag,
         },
@@ -93,16 +95,16 @@ export async function GET(req: NextRequest) {
     let input: Buffer | null = null
     if (out.startsWith('data:image/')) input = dataUrlToBuffer(out)
     else if (/^https?:\/\//.test(out)) input = await fetchAsBuffer(out)
-    if (!input) input = await getPlaceholderJpeg()
+    if (!input) input = await getPlaceholderWebp()
 
     const buf = await sharp(input)
-      .resize({ width: 320, height: 320, fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 35, mozjpeg: true })
+      .resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 30 })
       .toBuffer()
 
-    THUMB_CACHE.set(id, { ts: Date.now(), buf })
+    THUMB_CACHE.set(cacheKey, { ts: Date.now(), buf })
 
-    const etag = `W/"hist-thumb-${id}"`
+    const etag = `W/"hist-thumb-${id}-${w}"`
     if (req.headers.get('if-none-match') === etag) {
       return new NextResponse(null, {
         status: 304,
@@ -116,7 +118,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
-        'Content-Type': 'image/jpeg',
+        'Content-Type': 'image/webp',
         // 個人履歴だが、同一ブラウザ内では長めにキャッシュして体感速度を優先
         'Cache-Control': 'private, max-age=86400, stale-while-revalidate=604800',
         ETag: etag,
@@ -125,11 +127,11 @@ export async function GET(req: NextRequest) {
   } catch (e: any) {
     console.error('[banner history thumb] failed:', e)
     // <img> を壊さないため、エラーでも画像を返す
-    const buf = await getPlaceholderJpeg()
+    const buf = await getPlaceholderWebp()
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
       headers: {
-        'Content-Type': 'image/jpeg',
+        'Content-Type': 'image/webp',
         'Cache-Control': 'private, max-age=300',
       },
     })

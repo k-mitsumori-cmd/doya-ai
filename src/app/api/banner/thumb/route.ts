@@ -21,12 +21,12 @@ function dataUrlToBuffer(dataUrl: string): Buffer | null {
 }
 
 // sharpは動的にインポート（Vercel環境での互換性向上）
-async function resizeImage(input: Buffer): Promise<Buffer> {
+async function resizeImage(input: Buffer, w: number): Promise<Buffer> {
   try {
     const sharp = (await import('sharp')).default
     return await sharp(input)
-      .resize({ width: 320, height: 320, fit: 'inside', withoutEnlargement: true })
-      .jpeg({ quality: 35, mozjpeg: true })
+      .resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 30 })
       .toBuffer()
   } catch (e) {
     console.error('[thumb] sharp resize failed:', e)
@@ -35,10 +35,30 @@ async function resizeImage(input: Buffer): Promise<Buffer> {
   }
 }
 
+// LQIP（Low Quality Image Placeholder）を生成してmetadataに保存
+async function ensureLqip(id: string, input: Buffer, meta: Record<string, any>): Promise<void> {
+  if (meta?.lqip) return // 既に生成済み
+  try {
+    const sharp = (await import('sharp')).default
+    const lqipBuf = await sharp(input)
+      .resize(20, 20, { fit: 'inside' })
+      .webp({ quality: 10 })
+      .toBuffer()
+    const lqip = `data:image/webp;base64,${lqipBuf.toString('base64')}`
+    await prisma.generation.update({
+      where: { id },
+      data: { metadata: { ...meta, lqip } },
+    })
+  } catch {
+    // LQIP保存失敗は無視（メイン処理に影響させない）
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id') || ''
+    const w = Math.min(Math.max(Number(searchParams.get('w')) || 320, 40), 640)
     if (!id) {
       return new NextResponse(PLACEHOLDER_PNG, {
         status: 200,
@@ -84,9 +104,12 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const buf = await resizeImage(input)
+    // LQIP を非同期で生成・保存（レスポンスをブロックしない）
+    ensureLqip(id, input, meta)
 
-    const etag = `W/"thumb-${id}"`
+    const buf = await resizeImage(input, w)
+
+    const etag = `W/"thumb-${id}-${w}"`
     if (req.headers.get('if-none-match') === etag) {
       return new NextResponse(null, {
         status: 304,
@@ -97,8 +120,8 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // sharpで変換成功したらJPEG、失敗してそのままならPNG/元形式
-    const contentType = buf === input ? 'image/png' : 'image/jpeg'
+    // sharpで変換成功したらWebP、失敗してそのままなら元形式
+    const contentType = buf === input ? 'image/png' : 'image/webp'
 
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
