@@ -6,6 +6,7 @@ import { ensureSeoStorage, readFileAsBuffer, saveBase64ToFile } from '@seo/lib/s
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { getGuestIdFromRequest, isTrialActive, normalizeSeoPlan, canUseSeoImages } from '@/lib/seoAccess'
+import sharp from 'sharp'
 
 export const runtime = 'nodejs'
 
@@ -95,6 +96,27 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     })
     buf = Buffer.from(gen.dataBase64, 'base64')
   }
+  // サムネイルモード: ?thumb=1 で半分サイズのJPEGに変換（一覧表示の高速化用）
+  const isThumb = _req.nextUrl.searchParams.get('thumb') === '1'
+  if (isThumb) {
+    try {
+      const meta = await sharp(buf).metadata()
+      const thumbWidth = Math.round((meta.width || 800) / 2)
+      const thumbBuf = await sharp(buf)
+        .resize(thumbWidth)
+        .jpeg({ quality: 75 })
+        .toBuffer()
+      return new NextResponse(new Uint8Array(thumbBuf), {
+        headers: {
+          'Content-Type': 'image/jpeg',
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      })
+    } catch {
+      // sharp処理に失敗した場合はフルサイズで返す
+    }
+  }
+
   // BufferをUint8Arrayに変換してBodyInitとして渡す
   const body = new Uint8Array(buf)
   return new NextResponse(body, {

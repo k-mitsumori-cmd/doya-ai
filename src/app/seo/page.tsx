@@ -361,7 +361,7 @@ export default function SeoDashboardPage() {
                     <div className="aspect-video rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
                       {bannerId ? (
                         <img
-                          src={`/api/seo/images/${bannerId}`}
+                          src={`/api/seo/images/${bannerId}?thumb=1`}
                           alt=""
                           className="w-full h-full object-cover"
                           loading="lazy"
@@ -554,7 +554,7 @@ export default function SeoDashboardPage() {
                           <div className="aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border border-gray-100">
                             {bannerId ? (
                               <img
-                                src={`/api/seo/images/${bannerId}`}
+                                src={`/api/seo/images/${bannerId}?thumb=1`}
                                 alt=""
                                 className="w-full h-full object-cover"
                                 loading="lazy"
