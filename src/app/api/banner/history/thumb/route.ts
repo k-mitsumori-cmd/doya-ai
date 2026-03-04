@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
     if (!input) input = await getPlaceholderJpeg()
 
     const buf = await sharp(input)
-      .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
+      .resize({ width: 320, height: 320, fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 35, mozjpeg: true })
       .toBuffer()
 

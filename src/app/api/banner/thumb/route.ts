@@ -25,7 +25,7 @@ async function resizeImage(input: Buffer): Promise<Buffer> {
   try {
     const sharp = (await import('sharp')).default
     return await sharp(input)
-      .resize({ width: 640, height: 640, fit: 'inside', withoutEnlargement: true })
+      .resize({ width: 320, height: 320, fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 35, mozjpeg: true })
       .toBuffer()
   } catch (e) {
