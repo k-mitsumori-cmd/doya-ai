@@ -52,7 +52,7 @@ const LOADING_MESSAGES = [
 ]
 
 // プラン別の制約定義
-type PlanType = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE'
+type PlanType = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
 
 type PlanConfig = {
   label: string
@@ -75,6 +75,13 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
     maxCountPerGeneration: 3,
     monthlyLimit: 15,
     imagesPerGenre: 3, // 各ジャンル左から3枚目まで
+    allUnlocked: false,
+  },
+  LIGHT: {
+    label: 'ライトプラン',
+    maxCountPerGeneration: 3,
+    monthlyLimit: 50,
+    imagesPerGenre: 5, // 各ジャンル左から5枚目まで
     allUnlocked: false,
   },
   PRO: {
@@ -121,6 +128,7 @@ const isProOnlyTemplate = (templateId: string): boolean => {
 // 後方互換性のためのPLAN_LIMITS
 const PLAN_LIMITS = {
   FREE: { maxCount: 3, label: '無料プラン' },
+  LIGHT: { maxCount: 3, label: 'ライトプラン' },
   PRO: { maxCount: 5, label: 'PROプラン' },
   ENTERPRISE: { maxCount: 5, label: 'Enterpriseプラン' },
 }
@@ -388,17 +396,18 @@ function BannerTestPageInner() {
     const user = session.user as any
     const plan = user?.bannerPlan || user?.plan || 'FREE'
     const upperPlan = String(plan).toUpperCase()
-    if (upperPlan === 'PRO') return 'PRO'
     if (upperPlan === 'ENTERPRISE') return 'ENTERPRISE'
+    if (upperPlan === 'PRO') return 'PRO'
+    if (upperPlan === 'LIGHT') return 'LIGHT'
     return 'FREE'
   }, [session, isTrialActive])
-  
+
   const planConfig = useMemo(() => PLAN_CONFIG[currentPlan], [currentPlan])
-  
+
   // 後方互換性のためのuserPlan
   const userPlan = useMemo(() => {
     if (currentPlan === 'GUEST') return 'FREE'
-    return currentPlan as 'FREE' | 'PRO' | 'ENTERPRISE'
+    return currentPlan as 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
   }, [currentPlan])
   
   const planLimits = useMemo(() => PLAN_LIMITS[userPlan] || PLAN_LIMITS.FREE, [userPlan])
@@ -724,12 +733,12 @@ function BannerTestPageInner() {
 
               // キャッシュからもページネーション状態を復元
               templateOffsetRef.current = data.templates.length
-              const cachedTotal = data.dbTotalCount ?? data.totalAvailable ?? 0
-              const hasMore = cachedTotal > data.templates.length
+              // CDNキャッシュでdbTotalCountが不正になる場合があるため、件数ベースで判定
+              const hasMore = data.templates.length >= INITIAL_FETCH_LIMIT
               setHasMoreFromApi(hasMore)
 
               setIsLoadingTemplates(false)
-              console.log(`[Templates] Loaded from cache in ${Date.now() - startTime}ms (${data.templates.length}/${cachedTotal}, hasMore=${hasMore})`)
+              console.log(`[Templates] Loaded from cache in ${Date.now() - startTime}ms (${data.templates.length} items, hasMore=${hasMore})`)
               return
             }
           } catch (e) {
@@ -795,9 +804,10 @@ function BannerTestPageInner() {
               }
 
               templateOffsetRef.current = data.templates.length
-              const apiHasMore = (data.dbTotalCount ?? data.totalAvailable ?? 0) > data.templates.length
+              // CDNキャッシュでdbTotalCountが不正になる場合があるため、件数ベースで判定
+              const apiHasMore = data.templates.length >= INITIAL_FETCH_LIMIT
               setHasMoreFromApi(apiHasMore)
-              console.log(`[Templates] Loaded ${data.templates.length}/${data.totalAvailable ?? '?'} templates in ${Date.now() - startTime}ms (hasMore=${apiHasMore})`)
+              console.log(`[Templates] Loaded ${data.templates.length} templates in ${Date.now() - startTime}ms (hasMore=${apiHasMore})`)
               break // 成功したらループを抜ける
             } else {
               console.warn('[Templates] Empty templates array received')
@@ -847,7 +857,8 @@ function BannerTestPageInner() {
           return [...prev, ...newTemplates]
         })
         templateOffsetRef.current = offset + data.templates.length
-        setHasMoreFromApi((data.dbTotalCount ?? data.totalAvailable ?? 0) > templateOffsetRef.current)
+        // 取得件数がlimitと同じなら、まだ続きがある可能性
+        setHasMoreFromApi(data.templates.length >= INITIAL_FETCH_LIMIT)
         console.log(`[Templates] Loaded more: +${data.templates.length} (total offset: ${templateOffsetRef.current})`)
       } else {
         setHasMoreFromApi(false)
