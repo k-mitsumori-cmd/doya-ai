@@ -244,9 +244,9 @@ export async function GET(request: NextRequest) {
       ? parseFloat((totalGenerations / totalUsers).toFixed(1))
       : 0
 
-    // 月間売上計算（コンプリートパック: PRO=9,980円, ENTERPRISE=49,980円）
+    // 月間売上計算（コンプリートパック: PRO=9,980円, ENTERPRISE=49,800円）
     const COMPLETE_PACK_PRO_PRICE = 9980
-    const COMPLETE_PACK_ENTERPRISE_PRICE = 49980
+    const COMPLETE_PACK_ENTERPRISE_PRICE = 49800
     // PRO会員（Stripe未連携）とEnterprise会員（Stripe連携）を分けて計算
     const proOnlyUsers = Math.max(0, proUsers - stripeUsers)
     const monthlyRevenue = (proOnlyUsers * COMPLETE_PACK_PRO_PRICE) + (stripeUsers * COMPLETE_PACK_ENTERPRISE_PRICE)

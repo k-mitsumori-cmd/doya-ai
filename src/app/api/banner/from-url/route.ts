@@ -81,7 +81,25 @@ function safeTrim(v: any, max = 4000): string {
 function isValidHttpUrl(raw: string): boolean {
   try {
     const u = new URL(raw)
-    return u.protocol === 'http:' || u.protocol === 'https:'
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
+    // SSRF対策: プライベート/ローカルIPをブロック
+    const hostname = u.hostname.toLowerCase()
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '::1' ||
+      hostname === '0.0.0.0' ||
+      hostname.endsWith('.local') ||
+      hostname.endsWith('.internal') ||
+      /^10\./.test(hostname) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname) ||
+      /^192\.168\./.test(hostname) ||
+      /^169\.254\./.test(hostname) ||
+      /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(hostname)
+    ) {
+      return false
+    }
+    return true
   } catch {
     return false
   }
@@ -230,8 +248,10 @@ async function callGeminiForJson(prompt: string, apiKey: string): Promise<any> {
             const text = json?.candidates?.[0]?.content?.parts?.map((p: any) => (p?.text ? String(p.text) : '')).join('\n').trim()
             const parsed = coerceJson(text)
             if (parsed) return parsed
+            lastErr = `Gemini ${model} retry ok but parse failed`
+          } else {
+            lastErr = `Gemini ${model} error (retry): ${retry.status} - ${(await retry.text()).substring(0, 400)}`
           }
-          lastErr = `Gemini ${model} error (retry): ${retry.status} - ${(await retry.text()).substring(0, 400)}`
           continue
         }
         lastErr = `Gemini ${model} error: ${res.status} - ${t.substring(0, 400)}`
@@ -1751,7 +1771,7 @@ export async function POST(request: NextRequest) {
         sameSite: 'lax',
         secure: process.env.NODE_ENV === 'production',
         path: '/',
-        maxAge: 60 * 60 * 24 * 2, // 2日
+        maxAge: 60 * 60 * 24 * 45, // 45日（generate/route.ts と統一）
       })
     }
 

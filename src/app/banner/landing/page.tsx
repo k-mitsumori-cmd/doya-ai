@@ -360,11 +360,11 @@ export default function BannerLandingPage() {
           
           <div className="pt-8 border-t border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">
-              © 2025 ドヤバナーAI. Powered by DOYA AI.
+              © 2026 ドヤバナーAI. Powered by DOYA AI.
             </p>
             <div className="flex items-center gap-6 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-              <Link href="#" className="hover:text-slate-400">Privacy Policy</Link>
-              <Link href="#" className="hover:text-slate-400">Terms of Service</Link>
+              <Link href="/privacy" className="hover:text-slate-400">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-slate-400">Terms of Service</Link>
             </div>
           </div>
         </div>

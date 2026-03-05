@@ -861,11 +861,23 @@ export async function GET(request: NextRequest) {
         orderBy: { isFeatured: 'desc' },
       })
 
-      console.log(`[Templates API] Fetched ${dbTemplates.length} active templates in ${Date.now() - startTime}ms`)
+      console.log(`[Templates API] Fetched ${dbTemplates.length} active templates (offset=${offset}, limit=${limit}) in ${Date.now() - startTime}ms`)
     } catch (err: any) {
       console.error('[Templates API] Database error:', err.message)
       dbError = err.message
     }
+
+    // DBアクティブテンプレートの総数（ページネーション判定用）
+    let dbTotalCount = dbTemplates.length + offset // フォールバック
+    try {
+      dbTotalCount = await prisma.bannerTemplate.count({
+        where: {
+          isActive: true,
+          imageUrl: { not: null },
+          NOT: { imageUrl: { contains: 'placehold.co' } },
+        },
+      })
+    } catch { /* countエラーはフォールバック値で続行 */ }
 
     // DBエラーの場合はキャッシュなしでエラーを返す（V2プロンプトにフォールバックしない）
     if (dbError) {
@@ -933,6 +945,7 @@ export async function GET(request: NextRequest) {
       count: templates.length,
       generatedCount: dbTemplates.length,
       totalAvailable,
+      dbTotalCount,
       pendingCount: totalAvailable - dbTemplates.length,
       loadTime: Date.now() - startTime,
     })

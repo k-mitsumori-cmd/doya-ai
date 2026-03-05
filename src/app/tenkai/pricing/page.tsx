@@ -32,8 +32,8 @@ const PLANS = [
     gradient: 'from-slate-400 to-slate-500',
   },
   {
-    key: 'starter',
-    name: 'Starter',
+    key: 'light',
+    name: 'ライト',
     price: '¥2,980',
     period: '/月',
     description: '個人クリエイター向け',
@@ -55,7 +55,7 @@ const PLANS = [
   {
     key: 'pro',
     name: 'Pro',
-    price: '¥9,800',
+    price: '¥9,980',
     period: '/月',
     description: 'ビジネスで本格活用',
     features: [
@@ -76,7 +76,7 @@ const PLANS = [
   {
     key: 'enterprise',
     name: 'Enterprise',
-    price: '¥29,800〜',
+    price: '¥49,800',
     period: '/月',
     description: '大規模チーム向け',
     features: [

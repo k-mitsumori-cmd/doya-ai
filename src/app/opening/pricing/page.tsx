@@ -23,8 +23,26 @@ const PLANS = [
     popular: false,
   },
   {
-    name: 'プロ',
+    name: 'ライト',
     price: '¥2,980',
+    period: '/月（税込）',
+    features: [
+      { text: '1日15回まで生成', included: true },
+      { text: '全6テンプレート', included: true },
+      { text: 'テキスト編集', included: true },
+      { text: 'コードコピー', included: true },
+      { text: '履歴保存（無制限）', included: true },
+      { text: 'カラー・タイミング編集', included: true },
+      { text: 'ZIPダウンロード', included: false },
+      { text: '透かしなし', included: false },
+    ],
+    cta: 'ライトプランを始める',
+    href: '/opening',
+    popular: false,
+  },
+  {
+    name: 'プロ',
+    price: '¥9,980',
     period: '/月（税込）',
     features: [
       { text: '1日30回まで生成', included: true },
@@ -50,7 +68,7 @@ export default function PricingPage() {
         <p className="text-white/50">あなたに合ったプランをお選びください</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {PLANS.map((plan) => (
           <motion.div
             key={plan.name}

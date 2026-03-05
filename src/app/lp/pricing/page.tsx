@@ -27,12 +27,33 @@ const PLANS = [
     ctaColor: 'border border-cyan-600 text-cyan-400 hover:bg-cyan-500/10',
   },
   {
-    name: 'プロ',
+    name: 'ライト',
     price: '¥2,980',
     period: '/月（税込）',
     description: 'フリーランス・中小企業に',
     features: [
       { text: '1日30回までLP生成', included: true },
+      { text: 'URLから商品情報自動取得', included: true },
+      { text: '全8種類のデザインテーマ', included: true },
+      { text: 'HTMLダウンロード', included: true },
+      { text: 'セクション並べ替え', included: true },
+      { text: 'コピーブラッシュアップ', included: true },
+      { text: '全8テーマ解放', included: true },
+      { text: '生成履歴（無制限）', included: true },
+    ],
+    cta: 'ライトプランを始める',
+    href: '/lp/new/input',
+    popular: false,
+    color: 'border-blue-500 bg-blue-500/5',
+    ctaColor: 'border border-blue-500 text-blue-400 hover:bg-blue-500/10',
+  },
+  {
+    name: 'プロ',
+    price: '¥9,980',
+    period: '/月（税込）',
+    description: 'フリーランス・中小企業に',
+    features: [
+      { text: '月30ページまでLP生成', included: true },
       { text: 'URLから商品情報自動取得', included: true },
       { text: '全8種類のデザインテーマ', included: true },
       { text: 'HTMLダウンロード', included: true },
@@ -49,7 +70,7 @@ const PLANS = [
   },
   {
     name: 'エンタープライズ',
-    price: '¥9,800',
+    price: '¥49,800',
     period: '/月（税込）',
     description: '代理店・制作会社に',
     features: [
@@ -81,7 +102,7 @@ export default function LpPricingPage() {
           <p className="text-slate-400">AIでLPを自動生成。あなたに合ったプランをお選びください。</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-16">
           {PLANS.map((plan, i) => (
             <motion.div
               key={plan.name}
@@ -138,22 +159,24 @@ export default function LpPricingPage() {
                 <tr className="border-b border-slate-800">
                   <th className="text-left py-3 px-4 text-slate-400 font-medium">機能</th>
                   <th className="text-center py-3 px-4 text-slate-400 font-medium">フリー</th>
+                  <th className="text-center py-3 px-4 text-blue-400 font-medium">ライト</th>
                   <th className="text-center py-3 px-4 text-cyan-400 font-bold">プロ</th>
                   <th className="text-center py-3 px-4 text-slate-400 font-medium">エンタープライズ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/50">
                 {[
-                  ['1日の生成回数', '3回', '30回', '200回'],
-                  ['デザインテーマ数', '3種類', '8種類', '8種類'],
-                  ['コピーブラッシュアップ', '✕', '✓', '✓'],
-                  ['HTMLダウンロード', '✓', '✓', '✓'],
-                  ['URLから商品情報自動取得', '✓', '✓', '✓'],
-                  ['生成履歴保存', '30日', '無制限', '無制限'],
-                ].map(([feature, free, pro, enterprise]) => (
+                  ['月の生成回数', '3ページ', '10ページ', '30ページ', '200ページ'],
+                  ['デザインテーマ数', '3種類', '5種類', '8種類', '8種類'],
+                  ['コピーブラッシュアップ', '✕', '✕', '✓', '✓'],
+                  ['HTMLダウンロード', '✓', '✓', '✓', '✓'],
+                  ['URLから商品情報自動取得', '✓', '✓', '✓', '✓'],
+                  ['生成履歴保存', '7日', '無制限', '無制限', '無制限'],
+                ].map(([feature, free, light, pro, enterprise]) => (
                   <tr key={feature} className="hover:bg-slate-800/30 transition-colors">
                     <td className="py-3 px-4 text-slate-400">{feature}</td>
                     <td className="py-3 px-4 text-center text-slate-500">{free}</td>
+                    <td className="py-3 px-4 text-center text-blue-400">{light}</td>
                     <td className="py-3 px-4 text-center text-cyan-400 font-medium">{pro}</td>
                     <td className="py-3 px-4 text-center text-slate-400">{enterprise}</td>
                   </tr>

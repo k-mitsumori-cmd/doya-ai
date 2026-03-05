@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 function getPrimaryTextModel(): string {
@@ -476,6 +478,11 @@ function buildCopyPrompt(input: CopyRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+    }
+
     const apiKey = getGeminiKey()
     if (!apiKey) {
       return NextResponse.json(

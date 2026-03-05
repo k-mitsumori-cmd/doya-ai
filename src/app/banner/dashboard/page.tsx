@@ -520,11 +520,18 @@ function BannerTestPageInner() {
   // 画像リトライ管理（最大3回リトライ）
   const imageRetryRef = useRef<{ [key: string]: number }>({})
   const MAX_IMAGE_RETRY = 3
-  const CACHE_KEY = 'banner_templates_cache_v7'
+  const CACHE_KEY = 'banner_templates_cache_v8'
   const INITIAL_FETCH_LIMIT = 30
   const [hasMoreFromApi, setHasMoreFromApi] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const templateOffsetRef = useRef(0)
+
+  // サムネイル用URL（WebP + リサイズ）
+  const thumbUrl = useCallback((url: string) => {
+    if (!url) return url
+    const sep = url.includes('?') ? '&' : '?'
+    return `${url}${sep}w=400&fmt=webp`
+  }, [])
 
   // キャッシュから失敗テンプレートを除外するヘルパー
   const removeFromCache = useCallback((failedId: string) => {
@@ -715,8 +722,14 @@ function BannerTestPageInner() {
                 preloadHeroImage(data.templates[0].imageUrl)
               }
 
+              // キャッシュからもページネーション状態を復元
+              templateOffsetRef.current = data.templates.length
+              const cachedTotal = data.dbTotalCount ?? data.totalAvailable ?? 0
+              const hasMore = cachedTotal > data.templates.length
+              setHasMoreFromApi(hasMore)
+
               setIsLoadingTemplates(false)
-              console.log(`[Templates] Loaded from cache in ${Date.now() - startTime}ms`)
+              console.log(`[Templates] Loaded from cache in ${Date.now() - startTime}ms (${data.templates.length}/${cachedTotal}, hasMore=${hasMore})`)
               return
             }
           } catch (e) {
@@ -782,8 +795,9 @@ function BannerTestPageInner() {
               }
 
               templateOffsetRef.current = data.templates.length
-              setHasMoreFromApi((data.totalAvailable ?? 0) > data.templates.length)
-              console.log(`[Templates] Loaded ${data.templates.length}/${data.totalAvailable ?? '?'} templates in ${Date.now() - startTime}ms`)
+              const apiHasMore = (data.dbTotalCount ?? data.totalAvailable ?? 0) > data.templates.length
+              setHasMoreFromApi(apiHasMore)
+              console.log(`[Templates] Loaded ${data.templates.length}/${data.totalAvailable ?? '?'} templates in ${Date.now() - startTime}ms (hasMore=${apiHasMore})`)
               break // 成功したらループを抜ける
             } else {
               console.warn('[Templates] Empty templates array received')
@@ -816,6 +830,34 @@ function BannerTestPageInner() {
     }
     fetchTemplates()
   }, [])
+
+  // 追加テンプレートを読み込む（ページネーション）
+  const loadMoreFromApi = useCallback(async () => {
+    if (isLoadingMore || !hasMoreFromApi) return
+    setIsLoadingMore(true)
+    try {
+      const offset = templateOffsetRef.current
+      const res = await fetch(`/api/banner/test/templates?limit=${INITIAL_FETCH_LIMIT}&offset=${offset}`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      if (data.templates && Array.isArray(data.templates) && data.templates.length > 0) {
+        setTemplates(prev => {
+          const existingIds = new Set(prev.map(t => t.id))
+          const newTemplates = data.templates.filter((t: BannerTemplate) => !existingIds.has(t.id))
+          return [...prev, ...newTemplates]
+        })
+        templateOffsetRef.current = offset + data.templates.length
+        setHasMoreFromApi((data.dbTotalCount ?? data.totalAvailable ?? 0) > templateOffsetRef.current)
+        console.log(`[Templates] Loaded more: +${data.templates.length} (total offset: ${templateOffsetRef.current})`)
+      } else {
+        setHasMoreFromApi(false)
+      }
+    } catch (e) {
+      console.error('[Templates] loadMore failed:', e)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [isLoadingMore, hasMoreFromApi])
 
 
   // カテゴリごとにテンプレートをグループ化（要求に合わせて整理）
@@ -1654,6 +1696,18 @@ function BannerTestPageInner() {
 
           {/* 未生成テンプレートの生成進捗バーは管理画面でのみ表示 */}
 
+          {/* 一部表示中の案内 */}
+          {hasMoreFromApi && !isLoadingTemplates && templates.length > 0 && (
+            <div className="px-2 sm:px-4 md:px-8 lg:px-12 pt-2">
+              <div className="flex items-center gap-2 text-[11px] sm:text-xs text-blue-400/80">
+                <Sparkles className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>
+                  {templates.length}件を表示中 &mdash; 各カテゴリの「もっと見る」で追加テンプレートを読み込めます
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* グリッドギャラリー */}
           <div data-tour="gallery-grid" className="w-full px-1 sm:px-2 md:px-4 lg:px-8 py-2 bg-black relative z-10">
             {isLoadingTemplates ? (
@@ -1682,6 +1736,9 @@ function BannerTestPageInner() {
                     <h3 className="text-xs sm:text-sm font-bold text-gray-400 px-1 sm:px-2 py-1.5 flex items-center gap-1.5">
                       <span className="text-blue-400">▶</span> {categoryName}
                       <span className="text-gray-600 text-[10px]">({categoryTemplates.length})</span>
+                      {hasMoreFromApi && (
+                        <span className="text-blue-400/70 text-[10px] ml-1">+</span>
+                      )}
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
                       {categoryTemplates.map((template, index) => {
@@ -1735,7 +1792,7 @@ function BannerTestPageInner() {
                                 )}
                                 <img
                                   key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
-                                  src={`${template.imageUrl!}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
+                                  src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
                                   alt={template.displayTitle || template.industry}
                                   loading="lazy"
                                   decoding="async"
@@ -1780,6 +1837,28 @@ function BannerTestPageInner() {
                           </motion.div>
                         )
                       })}
+                      {/* カテゴリ末尾の「もっと読み込む」タイル */}
+                      {hasMoreFromApi && (
+                        <button
+                          onClick={loadMoreFromApi}
+                          disabled={isLoadingMore}
+                          className="group relative aspect-[16/10] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
+                        >
+                          {isLoadingMore ? (
+                            <div className="text-center">
+                              <Loader2 className="w-6 h-6 animate-spin text-blue-400 mx-auto mb-1.5" />
+                              <p className="text-[10px] sm:text-xs text-gray-400 font-medium">読み込み中...</p>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-gray-600 group-hover:border-blue-400 flex items-center justify-center mx-auto mb-2 transition-colors">
+                                <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                              </div>
+                              <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-blue-400 font-medium transition-colors">もっと見る</p>
+                            </div>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 )
@@ -1838,7 +1917,7 @@ function BannerTestPageInner() {
                           )}
                           <img
                             key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
-                            src={`${template.imageUrl!}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
+                            src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
                             alt={template.displayTitle || template.industry}
                             loading="lazy"
                             decoding="async"
@@ -1883,6 +1962,28 @@ function BannerTestPageInner() {
                     </motion.div>
                   )
                 })}
+                {/* フィルタ表示時の「もっと読み込む」タイル */}
+                {hasMoreFromApi && (
+                  <button
+                    onClick={loadMoreFromApi}
+                    disabled={isLoadingMore}
+                    className="group relative aspect-[16/10] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
+                  >
+                    {isLoadingMore ? (
+                      <div className="text-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-400 mx-auto mb-1.5" />
+                        <p className="text-[10px] sm:text-xs text-gray-400 font-medium">読み込み中...</p>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-gray-600 group-hover:border-blue-400 flex items-center justify-center mx-auto mb-2 transition-colors">
+                          <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                        </div>
+                        <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-blue-400 font-medium transition-colors">もっと見る</p>
+                      </div>
+                    )}
+                  </button>
+                )}
               </div>
             )}
           </div>

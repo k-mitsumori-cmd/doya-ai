@@ -30,6 +30,22 @@ type GeminiModel = {
   supportedGenerationMethods?: string[]
 } & Record<string, any>
 
+/**
+ * API送信前に画像を圧縮する（data URL → data URL）
+ * refine API 等で巨大な画像をそのまま送ると Gemini が拒否するため、
+ * 1024x1024 以内に縮小して PNG 最大圧縮で返す。
+ */
+export async function compressForApi(dataUrl: string): Promise<string> {
+  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
+  if (!m) return dataUrl // data URL でなければそのまま返す
+  const buf = Buffer.from(m[2], 'base64')
+  const compressed = await sharp(buf)
+    .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
+    .png({ compressionLevel: 9 })
+    .toBuffer()
+  return `data:image/png;base64,${compressed.toString('base64')}`
+}
+
 async function fetchAsBase64(url: string): Promise<string> {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`fileUri fetch failed: ${res.status}`)
@@ -1394,7 +1410,7 @@ function buildHardConstraintsAppendix(keyword: string, size: string, options: Ge
     options.logoImage
       ? 'LOGO PROVIDED: use ONLY the provided logo image. Do NOT invent any logo/mark.\n'
       : 'NO LOGO: do NOT invent any logo/mark.\n',
-    options.personImage || options.hasPerson
+    (Array.isArray(options.personImages) && options.personImages.length > 0) || options.personImage || options.hasPerson
       ? 'PERSON: include the provided person photo if available; otherwise generate a suitable person. Keep text readable.\n'
       : '',
     'FINAL: Return ONE PNG image with the Japanese text rendered correctly.',

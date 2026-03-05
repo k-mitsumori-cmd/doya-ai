@@ -43,7 +43,7 @@ export const STRIPE_PRICE_IDS = {
       monthly: process.env.STRIPE_PRICE_SEO_PRO_MONTHLY || BANNER_PRO_MONTHLY,
       yearly: process.env.STRIPE_PRICE_SEO_PRO_YEARLY || BANNER_PRO_YEARLY,
     },
-    // ENTERPRISE: 月額¥49,980（ドヤバナーAIと共通）
+    // ENTERPRISE: 月額¥49,800（ドヤバナーAIと共通）
     enterprise: {
       monthly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_MONTHLY || BANNER_ENTERPRISE_MONTHLY,
       yearly: process.env.STRIPE_PRICE_SEO_ENTERPRISE_YEARLY || BANNER_ENTERPRISE_YEARLY,

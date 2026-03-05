@@ -96,9 +96,14 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // 6ヶ月以上前のデータを自動削除（有料ユーザーでも180日を超えた履歴は削除）
+    // historyDays=-1 は無制限。それ以外は指定日数分だけ保存（有料ユーザーでも180日を超えた履歴は削除）
     const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - historyDays)
+    if (historyDays > 0) {
+      cutoffDate.setDate(cutoffDate.getDate() - historyDays)
+    } else {
+      // -1（無制限）: 十分に古い日付を設定して全履歴を返す
+      cutoffDate.setFullYear(2020, 0, 1)
+    }
     
     // バックグラウンドで古いデータを削除（非同期・エラーでも続行）
     const now = Date.now()

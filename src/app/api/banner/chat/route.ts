@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
@@ -408,6 +410,11 @@ async function callGemini(messages: ChatMessage[], apiKey: string): Promise<stri
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+    }
+
     const apiKey = getGeminiKey()
     if (!apiKey) {
       return NextResponse.json(

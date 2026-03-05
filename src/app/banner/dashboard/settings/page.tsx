@@ -326,8 +326,8 @@ export default function SettingsPage() {
 
         {/* フッター情報 */}
         <footer className="text-center text-xs text-slate-400 font-bold py-8">
-          <p>© 2025 株式会社スリスタ</p>
-          <p className="mt-1">お問い合わせ: 後日記載予定</p>
+          <p>© 2026 株式会社スリスタ</p>
+          <p className="mt-1">お問い合わせ: support@surisuta.jp</p>
         </footer>
       </div>
 
@@ -383,7 +383,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <p className="text-sm font-black text-slate-900">高品質なバナー生成</p>
-                      <p className="text-xs text-slate-500 font-bold">1日最大{bannerPlanTier === 'ENTERPRISE' ? '500' : '50'}枚まで生成できます</p>
+                      <p className="text-xs text-slate-500 font-bold">月間最大{bannerPlanTier === 'ENTERPRISE' ? '1000' : '150'}枚まで生成できます</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
