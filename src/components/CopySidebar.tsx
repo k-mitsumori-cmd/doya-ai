@@ -66,7 +66,8 @@ function CopySidebarImpl({
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={copyTheme}>
         <SidebarLogoSection icon={PenLine} title="ドヤコピーAI" showLabel={showLabel} />
 
-        <nav className="flex-1 overflow-y-auto py-4 sm:py-6 px-3 space-y-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <nav className="py-4 sm:py-6 px-3 space-y-1">
           <div className="space-y-1">
             <SidebarSectionTitle title="ドヤコピーAI" isCollapsed={isCollapsed} theme={copyTheme} />
             {COPY_NAV.map((item) => (
@@ -117,6 +118,7 @@ function CopySidebarImpl({
           </div>
         )}
 
+        </div>
         <ToolSwitcherMenu currentService="copy" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />
         <SidebarHelpContact showLabel={showLabel} isCollapsed={isCollapsed} isMobile={isMobile} />
         <SidebarUserProfile

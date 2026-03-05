@@ -61,7 +61,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed inset-y-0 left-0 w-[240px] shadow-2xl"
             >
-              <DashboardSidebar forceExpanded isMobile />
+              <DashboardSidebar forceExpanded isMobile onTourOpen={() => setIsSidebarOpen(false)} />
               <button 
                 className="absolute top-4 right-[-3.5rem] p-2 text-white bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md transition-colors"
                 onClick={() => setIsSidebarOpen(false)}

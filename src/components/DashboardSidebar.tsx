@@ -49,7 +49,8 @@ function DashboardSidebarImpl({
   onToggle,
   forceExpanded,
   isMobile,
-}: SidebarProps) {
+  onTourOpen,
+}: SidebarProps & { onTourOpen?: () => void }) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const { isCollapsed, showLabel, toggle, expand } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
@@ -275,6 +276,7 @@ function DashboardSidebarImpl({
         storageKey={`doya_sidebar_tour_${isBanner ? 'banner' : 'seo'}_${String((session?.user as any)?.id || 'guest')}`}
         autoStart={!!session?.user}
         onEnsureExpanded={expand}
+        onTourOpen={onTourOpen}
         items={[
           ...(isBanner
             ? [

@@ -92,7 +92,8 @@ function MovieSidebarImpl({
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={movieTheme}>
         <SidebarLogoSection icon={Film} title="ドヤムービーAI" showLabel={showLabel} />
 
-        <nav className="flex-1 overflow-y-auto py-4 sm:py-6 px-3 space-y-1 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <nav className="py-4 sm:py-6 px-3 space-y-1">
           <div className="space-y-1">
             <SidebarSectionTitle title="ドヤムービーAI" isCollapsed={isCollapsed} theme={movieTheme} />
             {MOVIE_NAV.map((item) => (
@@ -135,6 +136,7 @@ function MovieSidebarImpl({
           </div>
         )}
 
+        </div>
         <ToolSwitcherMenu currentService="movie" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />
         <SidebarHelpContact showLabel={showLabel} isCollapsed={isCollapsed} isMobile={isMobile} />
         <SidebarUserProfile

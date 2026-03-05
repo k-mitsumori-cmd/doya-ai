@@ -2293,7 +2293,7 @@ export default function BannerDashboard() {
               <button
                 onClick={handleGenerate}
                 disabled={isGenerating || !canGenerate}
-                className={`group w-full py-6 rounded-[2rem] font-black text-xl transition-all flex items-center justify-center gap-4 relative overflow-hidden active:scale-[0.98] ${
+                className={`group w-full py-4 sm:py-6 rounded-[2rem] font-black text-base sm:text-xl transition-all flex items-center justify-center gap-2 sm:gap-4 relative overflow-hidden active:scale-[0.98] ${
                   canGenerate && !isGenerating
                     ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/30 hover:shadow-blue-600/40 hover:bg-blue-600'
                     : 'bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200'
@@ -2306,20 +2306,20 @@ export default function BannerDashboard() {
                       className="absolute inset-0 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600 transition-all duration-300"
                       style={{ clipPath: `inset(0 ${100 - progress}% 0 0)` }}
                     />
-                    <div className="relative flex items-center gap-4">
-                      <Loader2 className="w-7 h-7 animate-spin text-white" />
-                      <span className="text-lg uppercase tracking-widest">{GENERATION_PHASES[phaseIndex].label}</span>
+                    <div className="relative flex items-center gap-2 sm:gap-4">
+                      <Loader2 className="w-5 h-5 sm:w-7 sm:h-7 animate-spin text-white" />
+                      <span className="text-sm sm:text-lg uppercase tracking-widest">{GENERATION_PHASES[phaseIndex].label}</span>
                       <span className="px-3 py-1 bg-white/20 rounded-full text-sm font-black tabular-nums">{Math.round(progress)}%</span>
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                    <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                      <Sparkles className="w-7 h-7" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors flex-shrink-0">
+                      <Sparkles className="w-5 h-5 sm:w-7 sm:h-7" />
                     </div>
-                    <span className="tracking-tight">プロ品質バナーを生成する</span>
-                    <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                    <span className="tracking-tight text-center">プロ品質バナーを生成する</span>
+                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-1 transition-transform flex-shrink-0" />
                   </>
                 )}
               </button>

@@ -341,7 +341,7 @@ function InterviewSidebarImpl({
             <div className="flex-1 min-w-0 text-left">
               <p className="text-[11px] font-black text-white">{nextPlanLabel}にアップグレード</p>
               <p className="text-[9px] text-white/50 font-bold">
-                {nextPlanLabel === 'PRO' ? '月額¥9,980' : '月額¥49,980'}
+                {nextPlanLabel === 'PRO' ? '月額¥9,980' : '月額¥49,800'}
               </p>
             </div>
           </button>
@@ -355,44 +355,47 @@ function InterviewSidebarImpl({
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={interviewTheme}>
         <SidebarLogoSection icon={Mic} title="ドヤインタビューAI" subtitle="AI記事生成" subtitleClassName="text-purple-100/70" showLabel={showLabel} />
 
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-          {INTERVIEW_NAV.map((item) => (
-            <SidebarNavLink
-              key={item.href}
-              item={item}
-              isActive={isActive(item.href)}
-              showLabel={showLabel}
-              theme={interviewTheme}
-              layoutId="interviewActiveIndicator"
-            />
-          ))}
-        </nav>
-
-        {/* Usage Stats */}
-        <UsageStats showLabel={showLabel} isLoggedIn={isLoggedIn} planLabel={planLabel} isCollapsed={isCollapsed} />
-
-        {/* 1時間生成し放題バナー */}
-        {isFreeHourActive && (
-          <SidebarFreeHourBanner freeHourRemainingMs={freeHourRemainingMs} isCollapsed={isCollapsed} isMobile={isMobile} />
-        )}
-
-        {/* トライアル中PRO機能バッジ */}
-        {isFreeHourActive && freeHourRemainingMs > 0 && showLabel && (
-          <div className="mx-3 mb-2 flex flex-wrap gap-1.5">
-            {['ファクトチェック', '翻訳', 'SNS生成'].map(f => (
-              <span key={f} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">
-                <span className="material-symbols-outlined text-[10px]">workspace_premium</span>
-                {f}
-              </span>
+        {/* スクロール可能な領域: ナビ + 使用量 + バナー + プロモをまとめる */}
+        <div className="flex-1 overflow-y-auto">
+          <nav className="py-4 px-3 space-y-1">
+            {INTERVIEW_NAV.map((item) => (
+              <SidebarNavLink
+                key={item.href}
+                item={item}
+                isActive={isActive(item.href)}
+                showLabel={showLabel}
+                theme={interviewTheme}
+                layoutId="interviewActiveIndicator"
+              />
             ))}
-          </div>
-        )}
+          </nav>
 
-        {/* ゲスト向け登録プロモ */}
-        <GuestPromo />
+          {/* Usage Stats */}
+          <UsageStats showLabel={showLabel} isLoggedIn={isLoggedIn} planLabel={planLabel} isCollapsed={isCollapsed} />
 
-        {/* プランアップグレード */}
-        <PlanBanner />
+          {/* 1時間生成し放題バナー */}
+          {isFreeHourActive && (
+            <SidebarFreeHourBanner freeHourRemainingMs={freeHourRemainingMs} isCollapsed={isCollapsed} isMobile={isMobile} />
+          )}
+
+          {/* トライアル中PRO機能バッジ */}
+          {isFreeHourActive && freeHourRemainingMs > 0 && showLabel && (
+            <div className="mx-3 mb-2 flex flex-wrap gap-1.5">
+              {['ファクトチェック', '翻訳', 'SNS生成'].map(f => (
+                <span key={f} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">
+                  <span className="material-symbols-outlined text-[10px]">workspace_premium</span>
+                  {f}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* ゲスト向け登録プロモ */}
+          <GuestPromo />
+
+          {/* プランアップグレード */}
+          <PlanBanner />
+        </div>
 
         <ToolSwitcherMenu currentService="interview" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 pb-2" />
         <SidebarUserProfile

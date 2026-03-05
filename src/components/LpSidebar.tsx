@@ -73,7 +73,8 @@ function LpSidebarImpl({
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={lpTheme}>
         <SidebarLogoSection icon={LayoutTemplate} title="ドヤLP AI" showLabel={showLabel} />
 
-        <nav className="flex-1 overflow-y-auto py-4 sm:py-6 px-3 space-y-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <nav className="py-4 sm:py-6 px-3 space-y-4">
           <div className="space-y-1">
             <SidebarSectionTitle title="メイン" isCollapsed={isCollapsed} theme={lpTheme} />
             {LP_NAV.map((item) => (
@@ -145,6 +146,7 @@ function LpSidebarImpl({
           </div>
         )}
 
+        </div>
         <ToolSwitcherMenu
           currentService="lp"
           showLabel={showLabel}

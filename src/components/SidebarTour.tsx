@@ -33,11 +33,14 @@ export default function SidebarTour({
   autoStart,
   items,
   onEnsureExpanded,
+  onTourOpen,
 }: {
   storageKey: string
   autoStart: boolean
   items: SidebarTourItem[]
   onEnsureExpanded?: () => void
+  /** ツアー開始時に呼ばれる（モバイルサイドバーを閉じる等） */
+  onTourOpen?: () => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [step, setStep] = useState(0)
@@ -60,6 +63,8 @@ export default function SidebarTour({
   }
 
   const open = () => {
+    // モバイルサイドバーを閉じてからツアーを開始
+    onTourOpen?.()
     // その画面に存在するステップだけに絞る（ただし allowMissing は残す）
     try {
       const filtered = items.filter((it) => it.allowMissing || !!document.querySelector(it.targetSelector))

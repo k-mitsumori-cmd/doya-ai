@@ -111,7 +111,8 @@ function VoiceSidebarImpl({
         </div>
 
         {/* ナビゲーション */}
-        <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto scrollbar-none">
+        <div className="flex-1 overflow-y-auto scrollbar-none">
+        <nav className="px-3 space-y-0.5">
           {VOICE_NAV.map((item) => (
             <SidebarNavLink
               key={item.href}
@@ -185,6 +186,7 @@ function VoiceSidebarImpl({
           </div>
         )}
 
+        </div>
         <SidebarHelpContact showLabel={showLabel} isCollapsed={isCollapsed} isMobile={isMobile} />
         <SidebarUserProfile
           session={session}

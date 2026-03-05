@@ -130,7 +130,8 @@ function SeoSidebarImpl({
         </div>
 
         {/* Navigation（SEO固有: hrefの動的書き換えがあるためNavLink共通化せず） */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+        <div className="flex-1 overflow-y-auto">
+        <nav className="py-4 px-3 space-y-1">
           {SEO_NAV.map((item) => {
             const href = item.href === '/seo/pricing' ? (isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing') : item.href
             const active = isActive(item.href)
@@ -221,7 +222,7 @@ function SeoSidebarImpl({
               })()}
               <p className="text-[10px] text-emerald-100 font-bold leading-relaxed opacity-80">
                 {nextPlanLabel === 'PRO' && <>PRO: 月額¥9,980で20,000字まで</>}
-                {nextPlanLabel === 'ENTERPRISE' && <>Enterprise: 月額¥49,980で50,000字まで</>}
+                {nextPlanLabel === 'ENTERPRISE' && <>Enterprise: 月額¥49,800で50,000字まで</>}
                 {nextPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
               </p>
               <Link
@@ -234,6 +235,7 @@ function SeoSidebarImpl({
           </div>
         )}
 
+        </div>
         <ToolSwitcherMenu currentService="seo" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 pb-2" />
         <SidebarHelpContact showLabel={showLabel} isCollapsed={isCollapsed} isMobile={isMobile} />
         <SidebarUserProfile

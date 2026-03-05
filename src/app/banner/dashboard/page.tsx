@@ -520,7 +520,11 @@ function BannerTestPageInner() {
   // 画像リトライ管理（最大3回リトライ）
   const imageRetryRef = useRef<{ [key: string]: number }>({})
   const MAX_IMAGE_RETRY = 3
-  const CACHE_KEY = 'banner_templates_cache_v6'
+  const CACHE_KEY = 'banner_templates_cache_v7'
+  const INITIAL_FETCH_LIMIT = 30
+  const [hasMoreFromApi, setHasMoreFromApi] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const templateOffsetRef = useRef(0)
 
   // キャッシュから失敗テンプレートを除外するヘルパー
   const removeFromCache = useCallback((failedId: string) => {
@@ -727,7 +731,7 @@ function BannerTestPageInner() {
 
         for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
           try {
-            const res = await fetch('/api/banner/test/templates?limit=200')
+            const res = await fetch(`/api/banner/test/templates?limit=${INITIAL_FETCH_LIMIT}`)
 
             if (!res.ok) {
               const errorData = await res.json().catch(() => ({}))
@@ -777,7 +781,9 @@ function BannerTestPageInner() {
                 preloadHeroImage(data.templates[0].imageUrl)
               }
 
-              console.log(`[Templates] Loaded ${data.templates.length} templates (pending: ${data.pendingCount ?? 0}) in ${Date.now() - startTime}ms`)
+              templateOffsetRef.current = data.templates.length
+              setHasMoreFromApi((data.totalAvailable ?? 0) > data.templates.length)
+              console.log(`[Templates] Loaded ${data.templates.length}/${data.totalAvailable ?? '?'} templates in ${Date.now() - startTime}ms`)
               break // 成功したらループを抜ける
             } else {
               console.warn('[Templates] Empty templates array received')
@@ -2149,7 +2155,7 @@ function BannerTestPageInner() {
                     <p className="text-[10px] sm:text-xs text-gray-400 mb-3">
                       バナーのメインカラーとサブカラーを指定できます。
                     </p>
-                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       {/* メインカラー */}
                       <div className="bg-gray-800/50 rounded-lg p-3 sm:p-4 border border-gray-700">
                         <p className="text-xs sm:text-sm font-bold mb-2">メインカラー</p>
@@ -2345,10 +2351,10 @@ function BannerTestPageInner() {
                     <button
                       onClick={handleGenerate}
                       disabled={!serviceName.trim()}
-                      className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-lg sm:rounded-xl transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+                      className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-lg sm:rounded-xl transition-colors flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-base"
                     >
-                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
-                      このバナーをベースに{generateCount}種類のバリエーションを生成
+                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                      <span className="text-center">このバナーをベースに{generateCount}種類のバリエーションを生成</span>
                     </button>
                   )}
                 </div>

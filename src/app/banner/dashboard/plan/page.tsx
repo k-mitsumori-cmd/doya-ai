@@ -502,86 +502,31 @@ export default function BannerPlanPage() {
                     </div>
                   )}
                 </div>
-
-                {/* Metrics */}
-                <div className="p-8">
-                  <div className="grid sm:grid-cols-3 gap-6">
-                    <div className="rounded-3xl border border-gray-100 p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <Clock className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div className="mb-1 flex items-center gap-1.5">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">推定削減時間</p>
-                        <span className="relative group/tt">
-                          <Info className="w-4 h-4 text-slate-400 cursor-help" aria-label="根拠" />
-                          <span
-                            role="tooltip"
-                            className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-[220px] sm:w-[260px] max-w-[80vw] whitespace-pre-line rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 shadow-xl opacity-0 group-hover/tt:opacity-100 transition-opacity"
-                          >
-                            {estimateBasisText}
-                          </span>
-                        </span>
-                      </div>
-                      <p className="text-3xl font-black text-slate-800 tracking-tighter">
-                        {savedHours}<span className="text-sm text-slate-400 font-bold ml-1">時間</span>
-                      </p>
-                    </div>
-                    <div className="rounded-3xl border border-gray-100 p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
-                      <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <Layers className="w-6 h-6 text-orange-500" />
-                      </div>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">累計生成枚数</p>
-                      <p className="text-3xl font-black text-slate-800 tracking-tighter">
-                        {totalBanners}<span className="text-sm text-slate-400 font-bold ml-1">枚</span>
-                      </p>
-                    </div>
-                    <div className="rounded-3xl border border-gray-100 p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
-                      <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                        <DollarSign className="w-6 h-6 text-amber-500" />
-                      </div>
-                      <div className="mb-1 flex items-center gap-1.5">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">推定コスト削減</p>
-                        <span className="relative group/tt">
-                          <Info className="w-4 h-4 text-slate-400 cursor-help" aria-label="根拠" />
-                          <span
-                            role="tooltip"
-                            className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-[220px] sm:w-[260px] max-w-[80vw] whitespace-pre-line rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 shadow-xl opacity-0 group-hover/tt:opacity-100 transition-opacity"
-                          >
-                            {estimateBasisText}
-                          </span>
-                        </span>
-                      </div>
-                      <p className="text-3xl font-black text-slate-800 tracking-tighter">
-                        ¥{savedCost.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {/* 料金プラン比較表 */}
               <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-8 border-b border-gray-100">
-                  <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                <div className="p-4 sm:p-8 border-b border-gray-100">
+                  <h3 className="text-base sm:text-lg font-black text-slate-800 flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-blue-600" />
                     料金プラン比較
                   </h3>
-                  <p className="text-sm text-slate-500 font-bold mt-1">
+                  <p className="text-xs sm:text-sm text-slate-500 font-bold mt-1">
                     用途に合わせてプランをお選びください
                   </p>
                 </div>
-                <div className="p-8">
+                <div className="p-4 sm:p-8">
                   <div className="grid md:grid-cols-3 gap-4">
                     {/* ゲスト/無料 */}
-                    <div className={`rounded-2xl border p-5 ${bannerPlanTier === 'FREE' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-slate-50'}`}>
+                    <div className={`rounded-2xl border p-4 sm:p-5 ${bannerPlanTier === 'FREE' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-slate-50'}`}>
                       <p className="text-xs font-black text-slate-500 uppercase tracking-widest">ログイン</p>
-                      <p className="text-xl font-black text-slate-900 mt-1">無料プラン</p>
-                      <p className="text-2xl font-black text-slate-800 mt-2">¥0</p>
-                      <ul className="mt-4 space-y-2 text-sm text-slate-600 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> ゲスト：月{BANNER_PRICING.guestLimit}枚まで</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> ログイン：月{BANNER_PRICING.freeLimit}枚まで</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> サイズ：1080×1080固定</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600" /> 同時生成：最大3枚</li>
+                      <p className="text-lg sm:text-xl font-black text-slate-900 mt-1">無料プラン</p>
+                      <p className="text-xl sm:text-2xl font-black text-slate-800 mt-2">¥0</p>
+                      <ul className="mt-3 sm:mt-4 space-y-2 text-xs sm:text-sm text-slate-600 font-bold">
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 flex-shrink-0" /> ゲスト：月{BANNER_PRICING.guestLimit}枚まで</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 flex-shrink-0" /> ログイン：月{BANNER_PRICING.freeLimit}枚まで</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 flex-shrink-0" /> サイズ：1080×1080固定</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 flex-shrink-0" /> 同時生成：最大3枚</li>
                       </ul>
                       {bannerPlanTier === 'FREE' && (
                         <p className="mt-4 text-xs font-black text-blue-600 flex items-center gap-1">
@@ -591,14 +536,14 @@ export default function BannerPlanPage() {
                     </div>
 
                     {/* PRO */}
-                    <div className={`rounded-2xl border p-5 ${bannerPlanTier === 'PRO' ? 'border-blue-500 bg-blue-900' : 'border-slate-900 bg-slate-900'} text-white`}>
+                    <div className={`rounded-2xl border p-4 sm:p-5 ${bannerPlanTier === 'PRO' ? 'border-blue-500 bg-blue-900' : 'border-slate-900 bg-slate-900'} text-white`}>
                       <p className="text-xs font-black text-white/70 uppercase tracking-widest">PRO</p>
-                      <p className="text-xl font-black mt-1">プロプラン</p>
-                      <p className="text-2xl font-black mt-2">¥9,980<span className="text-sm font-bold opacity-70">/月</span></p>
-                      <ul className="mt-4 space-y-2 text-sm text-white/90 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 月{BANNER_PRICING.proLimit}枚まで生成</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> サイズ自由指定</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400" /> 同時生成：最大5枚</li>
+                      <p className="text-lg sm:text-xl font-black mt-1">プロプラン</p>
+                      <p className="text-xl sm:text-2xl font-black mt-2">¥9,980<span className="text-sm font-bold opacity-70">/月</span></p>
+                      <ul className="mt-3 sm:mt-4 space-y-2 text-xs sm:text-sm text-white/90 font-bold">
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400 flex-shrink-0" /> 月{BANNER_PRICING.proLimit}枚まで生成</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400 flex-shrink-0" /> サイズ自由指定</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400 flex-shrink-0" /> 同時生成：最大5枚</li>
                       </ul>
                       {bannerPlanTier === 'PRO' ? (
                         <p className="mt-4 text-xs font-black text-blue-300 flex items-center gap-1">
@@ -614,15 +559,15 @@ export default function BannerPlanPage() {
                     </div>
 
                     {/* Enterprise */}
-                    <div className={`rounded-2xl border p-5 ${bannerPlanTier === 'ENTERPRISE' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'}`}>
+                    <div className={`rounded-2xl border p-4 sm:p-5 ${bannerPlanTier === 'ENTERPRISE' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'}`}>
                       <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Enterprise</p>
-                      <p className="text-xl font-black text-slate-900 mt-1">エンタープライズ</p>
-                      <p className="text-2xl font-black text-slate-800 mt-2">¥49,800<span className="text-sm font-bold text-slate-400">/月</span></p>
-                      <ul className="mt-4 space-y-2 text-sm text-slate-600 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 月{BANNER_PRICING.enterpriseLimit || 1000}枚まで生成</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 大量運用・チーム向け</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> 優先サポート</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600" /> さらに上限UP相談可</li>
+                      <p className="text-lg sm:text-xl font-black text-slate-900 mt-1">エンタープライズ</p>
+                      <p className="text-xl sm:text-2xl font-black text-slate-800 mt-2">¥49,800<span className="text-sm font-bold text-slate-400">/月</span></p>
+                      <ul className="mt-3 sm:mt-4 space-y-2 text-xs sm:text-sm text-slate-600 font-bold">
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600 flex-shrink-0" /> 月{BANNER_PRICING.enterpriseLimit || 1000}枚まで生成</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600 flex-shrink-0" /> 大量運用・チーム向け</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600 flex-shrink-0" /> 優先サポート</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600 flex-shrink-0" /> さらに上限UP相談可</li>
                       </ul>
                       {bannerPlanTier === 'ENTERPRISE' ? (
                         <p className="mt-4 text-xs font-black text-purple-600 flex items-center gap-1">
@@ -635,6 +580,63 @@ export default function BannerPlanPage() {
                           </CheckoutButton>
                         </div>
                       )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Metrics（累計実績） */}
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-4 sm:p-8">
+                  <div className="grid sm:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="rounded-3xl border border-gray-100 p-4 sm:p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-blue-50 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+                        <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+                      </div>
+                      <div className="mb-1 flex items-center gap-1.5">
+                        <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest">推定削減時間</p>
+                        <span className="relative group/tt">
+                          <Info className="w-4 h-4 text-slate-400 cursor-help" aria-label="根拠" />
+                          <span
+                            role="tooltip"
+                            className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-[220px] sm:w-[260px] max-w-[80vw] whitespace-pre-line rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 shadow-xl opacity-0 group-hover/tt:opacity-100 transition-opacity"
+                          >
+                            {estimateBasisText}
+                          </span>
+                        </span>
+                      </div>
+                      <p className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tighter">
+                        {savedHours}<span className="text-sm text-slate-400 font-bold ml-1">時間</span>
+                      </p>
+                    </div>
+                    <div className="rounded-3xl border border-gray-100 p-4 sm:p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-orange-50 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+                        <Layers className="w-5 h-5 sm:w-6 sm:h-6 text-orange-500" />
+                      </div>
+                      <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">累計生成枚数</p>
+                      <p className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tighter">
+                        {totalBanners}<span className="text-sm text-slate-400 font-bold ml-1">枚</span>
+                      </p>
+                    </div>
+                    <div className="rounded-3xl border border-gray-100 p-4 sm:p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-amber-50 flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform">
+                        <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-amber-500" />
+                      </div>
+                      <div className="mb-1 flex items-center gap-1.5">
+                        <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest">推定コスト削減</p>
+                        <span className="relative group/tt">
+                          <Info className="w-4 h-4 text-slate-400 cursor-help" aria-label="根拠" />
+                          <span
+                            role="tooltip"
+                            className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 w-[220px] sm:w-[260px] max-w-[80vw] whitespace-pre-line rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-700 shadow-xl opacity-0 group-hover/tt:opacity-100 transition-opacity"
+                          >
+                            {estimateBasisText}
+                          </span>
+                        </span>
+                      </div>
+                      <p className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tighter">
+                        ¥{savedCost.toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 </div>
