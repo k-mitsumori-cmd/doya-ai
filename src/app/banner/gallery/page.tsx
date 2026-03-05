@@ -45,11 +45,16 @@ function writeGalleryCache(items: GalleryItem[], cursor: string | null) {
 }
 
 // サムネイル画像コンポーネント（高速表示 + LQIP + ローディング体験最適化）
-function GalleryThumb({ src, alt, lqip }: { src: string; alt: string; lqip?: string }) {
+// index: 上から順に読み込むための優先度制御に使用
+function GalleryThumb({ src, alt, lqip, index = 0 }: { src: string; alt: string; lqip?: string; index?: number }) {
   const [status, setStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle')
   const [retryCount, setRetryCount] = useState(0)
   const containerRef = React.useRef<HTMLDivElement>(null)
   const imgRef = React.useRef<HTMLImageElement>(null)
+
+  // 上から順に読み込むため、indexに応じてディレイを入れる
+  // 最初の3件（1行目）は即座に、以降は行ごとに少しずつ遅延
+  const staggerMs = index < 3 ? 0 : Math.floor(index / 3) * 80
 
   // IntersectionObserverで画面に入ったら読み込み開始（パフォーマンス向上）
   useEffect(() => {
@@ -59,6 +64,11 @@ function GalleryThumb({ src, alt, lqip }: { src: string; alt: string; lqip?: str
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting) {
+          if (staggerMs > 0) {
+            const t = setTimeout(() => setStatus('loading'), staggerMs)
+            observer.disconnect()
+            return () => clearTimeout(t)
+          }
           setStatus('loading')
           observer.disconnect()
         }
@@ -144,6 +154,8 @@ function GalleryThumb({ src, alt, lqip }: { src: string; alt: string; lqip?: str
           src={src}
           alt={alt}
           decoding="async"
+          // @ts-expect-error fetchPriority is valid but not in React types yet
+          fetchPriority={index < 3 ? 'high' : 'auto'}
           onLoad={() => setStatus('loaded')}
           onError={handleError}
           className={`w-full h-full object-cover transition-opacity duration-300 ${
@@ -370,11 +382,11 @@ export default function BannerGalleryPage() {
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {items.map((it) => (
+                {items.map((it, idx) => (
                   <div key={it.id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden group">
                     <div className="relative aspect-square bg-slate-50 overflow-hidden">
                       <div className="w-full h-full transition-transform duration-500 group-hover:scale-105">
-                        <GalleryThumb src={it.thumbUrl} alt={it.keyword || 'banner'} lqip={it.lqip} />
+                        <GalleryThumb src={it.thumbUrl} alt={it.keyword || 'banner'} lqip={it.lqip} index={idx} />
                       </div>
                       {/* ダウンロードボタン（ホバー時表示） */}
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
