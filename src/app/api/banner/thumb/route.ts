@@ -104,8 +104,8 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    // LQIP を非同期で生成・保存（レスポンスをブロックしない）
-    ensureLqip(id, input, meta)
+    // LQIP を生成・保存（Vercelサーバーレスでは await 必須）
+    await ensureLqip(id, input, meta)
 
     const buf = await resizeImage(input, w)
 
