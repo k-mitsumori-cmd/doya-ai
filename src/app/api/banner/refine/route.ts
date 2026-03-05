@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import sharp from 'sharp'
-import { compressForApi } from '@/lib/nanobanner'
 import { sendErrorNotification } from '@/lib/notifications'
+
+/** 画像を1024x1024以内に縮小してAPIに送れるサイズにする（nanobanner.tsの巨大バンドル回避） */
+async function compressForApi(dataUrl: string): Promise<string> {
+  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/)
+  if (!m) return dataUrl
+  const buf = Buffer.from(m[2], 'base64')
+  const compressed = await sharp(buf)
+    .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
+    .png({ compressionLevel: 9 })
+    .toBuffer()
+  return `data:image/png;base64,${compressed.toString('base64')}`
+}
 
 // ========================================
 // バナー修正API
@@ -89,6 +102,11 @@ async function enforceExactSizePng(dataUrl: string, size?: string): Promise<stri
 
 export async function POST(request: NextRequest): Promise<NextResponse<RefineResponse>> {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
+    }
+
     const body: RefineRequest = await request.json()
     const { originalImage, instruction, category, size } = body
 
