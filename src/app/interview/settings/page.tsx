@@ -445,7 +445,7 @@ export default function InterviewSettingsPage() {
                         </div>
                         <div>
                           <p className="font-black text-lg sm:text-xl text-white tracking-tight">ENTERPRISEプラン</p>
-                          <p className="text-slate-300 text-xs sm:text-sm font-semibold">月額 ¥49,980 で大規模運用に対応</p>
+                          <p className="text-slate-300 text-xs sm:text-sm font-semibold">月額 ¥49,800 で大規模運用に対応</p>
                         </div>
                       </div>
                       <div className="space-y-2 mb-5">
@@ -561,10 +561,10 @@ export default function InterviewSettingsPage() {
                 </h2>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[560px]">
+                <table className="w-full text-sm min-w-[480px]">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200">
-                      <th className="text-left px-6 py-4 font-bold text-slate-600">機能</th>
+                      <th className="text-left px-3 sm:px-6 py-3 sm:py-4 font-bold text-slate-600">機能</th>
                       <th className={`text-center px-4 py-4 font-bold ${plan === 'FREE' ? 'text-[#7f19e6] bg-blue-50/80' : 'text-slate-600'}`}>
                         無料
                         {plan === 'FREE' && <span className="block text-[10px] font-black text-[#7f19e6]">現在のプラン</span>}
@@ -588,7 +588,7 @@ export default function InterviewSettingsPage() {
                   </thead>
                   <tbody>
                     {[
-                      { label: '月額料金', free: '¥0', pro: '¥9,980', enterprise: '¥49,980', isBold: true },
+                      { label: '月額料金', free: '¥0', pro: '¥9,980', enterprise: '¥49,800', isBold: true },
                       { label: '文字起こし', free: '30分/月', pro: '150分/月', enterprise: '1,000分/月' },
                       { label: '1回の上限', free: '約3時間', pro: '約3時間', enterprise: '約3時間' },
                       { label: 'アップロード上限', free: '500MB', pro: '2GB', enterprise: '5GB' },

@@ -39,7 +39,7 @@ const serviceLinks = [
   { emoji: '✍️', label: 'ドヤライティングAI', href: '/seo/dashboard', gradient: 'from-emerald-500 to-cyan-500' },
 ]
 
-export function AdminSidebar() {
+export function AdminSidebar({ isMobile }: { isMobile?: boolean } = {}) {
   const pathname = usePathname()
   const handleLogout = async () => {
     try {
@@ -51,7 +51,7 @@ export function AdminSidebar() {
   }
 
   return (
-    <aside className="w-64 bg-[#0D0D12] border-r border-white/5 h-screen sticky top-0 flex flex-col">
+    <aside className={isMobile ? 'flex w-64 bg-[#0D0D12] h-full flex-col' : 'hidden md:flex w-64 bg-[#0D0D12] border-r border-white/5 h-screen sticky top-0 flex-col'}>
       {/* Logo Section */}
       <div className="p-5 border-b border-white/5">
         <Link href="/admin" className="flex items-center gap-3 group">

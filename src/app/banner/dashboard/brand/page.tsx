@@ -1,14 +1,36 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, Palette, Save } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Palette, Save, Check } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import DashboardSidebar from '@/components/DashboardSidebar'
+
+const BRAND_STORAGE_KEY = 'doya_banner_brand'
 
 export default function BannerBrandPage() {
   const [primaryColor, setPrimaryColor] = useState('#2563EB')
   const [secondaryColor, setSecondaryColor] = useState('#F97316')
   const [brandName, setBrandName] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  // 初回読み込み
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(BRAND_STORAGE_KEY)
+      if (raw) {
+        const data = JSON.parse(raw)
+        if (data.primaryColor) setPrimaryColor(data.primaryColor)
+        if (data.secondaryColor) setSecondaryColor(data.secondaryColor)
+        if (data.brandName) setBrandName(data.brandName)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  const handleSave = () => {
+    localStorage.setItem(BRAND_STORAGE_KEY, JSON.stringify({ primaryColor, secondaryColor, brandName }))
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -55,18 +77,18 @@ export default function BannerBrandPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 プライマリカラー
               </label>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                 <input
                   type="color"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="w-16 h-16 rounded-xl cursor-pointer border-2 border-gray-200"
+                  className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl cursor-pointer border-2 border-gray-200"
                 />
                 <input
                   type="text"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none"
+                  className="flex-1 w-full sm:w-auto px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none"
                 />
               </div>
             </div>
@@ -76,18 +98,18 @@ export default function BannerBrandPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 セカンダリカラー
               </label>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                 <input
                   type="color"
                   value={secondaryColor}
                   onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="w-16 h-16 rounded-xl cursor-pointer border-2 border-gray-200"
+                  className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl cursor-pointer border-2 border-gray-200"
                 />
                 <input
                   type="text"
                   value={secondaryColor}
                   onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none"
+                  className="flex-1 w-full sm:w-auto px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 outline-none"
                 />
               </div>
             </div>
@@ -106,9 +128,12 @@ export default function BannerBrandPage() {
             </div>
 
             {/* 保存ボタン */}
-            <button className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-              <Save className="w-5 h-5" />
-              保存する
+            <button
+              onClick={handleSave}
+              className={`w-full py-4 ${saved ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2`}
+            >
+              {saved ? <Check className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+              {saved ? '保存しました' : '保存する'}
             </button>
           </div>
         </div>

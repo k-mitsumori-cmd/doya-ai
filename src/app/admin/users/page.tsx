@@ -454,7 +454,7 @@ export default function AdminUsersPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
             { label: '総ユーザー', value: users.length, icon: Users, color: 'from-blue-500 to-cyan-500' },
             { label: '有料会員', value: users.filter(u => ['PRO', 'BUSINESS', 'ENTERPRISE'].includes(u.plan)).length, icon: Crown, color: 'from-amber-500 to-orange-500' },
@@ -505,8 +505,8 @@ export default function AdminUsersPage() {
         </div>
 
         {/* User Table */}
-        <div className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 overflow-x-auto">
+          <table className="w-full min-w-[800px]">
             <thead className="border-b border-white/5">
               <tr>
                 <th className="text-left px-6 py-4">

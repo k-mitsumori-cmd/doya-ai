@@ -256,7 +256,7 @@ export default function ProjectOverviewPage() {
           プロジェクトの進捗
         </p>
         <div className="overflow-x-auto pb-2 -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="flex items-center gap-2 sm:gap-3 min-w-max md:min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {STEPS.map((step, i) => {
               const status = getStepStatus(step.key)
               const currentStep = status === 'active'

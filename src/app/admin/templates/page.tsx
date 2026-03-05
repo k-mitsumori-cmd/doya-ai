@@ -150,7 +150,7 @@ export default function AdminTemplatesPage() {
       </div>
 
       {/* 統計 */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <p className="text-sm text-gray-500">総テンプレート数</p>
           <p className="text-2xl font-bold text-gray-900">{templates.length}</p>

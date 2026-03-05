@@ -100,35 +100,37 @@ export default function PersonaHistoryPage() {
                 key={index}
                 className="bg-slate-900/80 border border-slate-700 rounded-xl p-4 hover:border-slate-600 transition-colors"
               >
-                <div className="flex items-center gap-4">
-                  {/* Portrait */}
-                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-purple-500/30 overflow-hidden flex-shrink-0">
-                    {item.portrait ? (
-                      <img src={item.portrait} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-2xl text-slate-600">
-                        👤
-                      </div>
-                    )}
-                  </div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                    {/* Portrait */}
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-purple-500/30 overflow-hidden flex-shrink-0">
+                      {item.portrait ? (
+                        <img src={item.portrait} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-2xl text-slate-600">
+                          👤
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-bold text-white truncate">
-                      {item.data?.persona?.name || '不明'}
-                    </h3>
-                    <p className="text-sm text-slate-400 truncate">
-                      {item.data?.persona?.age}歳 / {item.data?.persona?.gender} / {item.data?.persona?.occupation}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1 truncate">
-                      {item.url}
-                    </p>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm sm:text-base font-bold text-white truncate">
+                        {item.data?.persona?.name || '不明'}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-400 truncate">
+                        {item.data?.persona?.age}歳 / {item.data?.persona?.gender} / {item.data?.persona?.occupation}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1 truncate">
+                        {item.url}
+                      </p>
+                    </div>
                   </div>
 
                   {/* Meta */}
-                  <div className="text-right flex-shrink-0">
+                  <div className="flex items-center sm:flex-col sm:items-end gap-2 sm:gap-0 w-full sm:w-auto flex-shrink-0">
                     <p className="text-xs text-slate-500">{formatDate(item.timestamp)}</p>
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 sm:mt-2 ml-auto sm:ml-0">
                       <Link
                         href="/persona"
                         onClick={() => loadItem(item)}

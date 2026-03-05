@@ -29,7 +29,7 @@ export default function SeoSettingsPage() {
 
   return (
     <main className="max-w-3xl mx-auto py-6 sm:py-8 px-4 sm:px-6">
-      <div className="mb-6 sm:mb-8 flex items-start justify-between gap-4 flex-wrap">
+      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start justify-between gap-4">
         <div>
           <Link
             href="/seo"

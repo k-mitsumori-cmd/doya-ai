@@ -271,7 +271,7 @@ export default function SeoDashboardPage() {
               <span className="hidden sm:inline text-xs font-bold text-gray-400 truncate">生成記事一覧</span>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="relative hidden sm:block w-[320px]">
+              <div className="relative hidden sm:block flex-1 max-w-xs lg:max-w-sm">
                 <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-blue-500"
@@ -380,7 +380,7 @@ export default function SeoDashboardPage() {
         )}
 
       {/* 統計カード */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 flex items-center gap-4">
           <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-blue-50 flex items-center justify-center">
             <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-blue-600" />
@@ -548,8 +548,8 @@ export default function SeoDashboardPage() {
                     className="group bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:border-blue-200 hover:translate-y-[-2px] transition-all cursor-pointer"
                     title="クリックで記事詳細（本文/画像）を開く"
                   >
-                      <div className="flex items-start sm:items-center gap-4">
-                        {/* バナーサムネ（一覧で“ひと目で違いが分かる”） */}
+                      <div className="flex items-start sm:items-center gap-2 sm:gap-3 md:gap-4">
+                        {/* バナーサムネ（一覧で”ひと目で違いが分かる”） */}
                         <div className="hidden sm:block w-28">
                           <div className="aspect-video rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border border-gray-100">
                             {bannerId ? (
@@ -660,7 +660,7 @@ export default function SeoDashboardPage() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              className="relative bg-gradient-to-br from-white to-blue-50 rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-blue-100"
+              className="relative bg-gradient-to-br from-white to-blue-50 rounded-3xl p-4 sm:p-8 max-w-lg w-full shadow-2xl border border-blue-100"
               onClick={(e) => e.stopPropagation()}
             >
               <button

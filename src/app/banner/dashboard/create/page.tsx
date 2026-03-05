@@ -1546,7 +1546,7 @@ export default function BannerDashboard() {
             Main Content
             ======================================== */}
         {/* UI崩れ対策：左カラム固定幅だと日本語が1文字改行しやすいので、元の比率（右=固定）に戻す */}
-        <div className="grid lg:grid-cols-[1fr,440px] gap-6 sm:gap-10">
+        <div className="grid lg:grid-cols-[1fr,380px] xl:grid-cols-[1fr,440px] gap-6 sm:gap-10">
           
           {/* ========================================
               Left Column - Input Form
@@ -1557,7 +1557,7 @@ export default function BannerDashboard() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="relative bg-white rounded-[2rem] border border-blue-50 p-8 sm:p-10 shadow-sm overflow-hidden"
+              className="relative bg-white rounded-[2rem] border border-blue-50 p-4 sm:p-8 md:p-10 shadow-sm overflow-hidden"
             >
               <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-60" />
               <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -1587,7 +1587,7 @@ export default function BannerDashboard() {
                     { label: '修正自在', icon: Wand2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
                     { label: 'マルチサイズ', icon: Layers, color: 'text-indigo-500', bg: 'bg-indigo-50' },
                   ].map((f) => (
-                    <div key={f.label} className={`${f.bg} p-3 rounded-2xl flex flex-col items-center justify-center text-center w-24 h-24 transition-transform hover:scale-105 cursor-default`}>
+                    <div key={f.label} className={`${f.bg} p-3 rounded-2xl flex flex-col items-center justify-center text-center w-20 h-20 sm:w-24 sm:h-24 transition-transform hover:scale-105 cursor-default`}>
                       <f.icon className={`w-6 h-6 ${f.color} mb-2`} />
                       <span className="text-[10px] font-black text-slate-600 uppercase tracking-tighter">{f.label}</span>
                     </div>
@@ -1601,7 +1601,7 @@ export default function BannerDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all group"
+              className="bg-white rounded-[2rem] border border-gray-100 p-4 sm:p-8 shadow-sm hover:shadow-md transition-all group"
             >
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
@@ -1637,7 +1637,7 @@ export default function BannerDashboard() {
                 </div>
               </div>
               <div className="grid lg:grid-cols-2 gap-8">
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {PURPOSES.map((p) => {
                     const Icon = p.icon
                     const isSelected = purpose === p.value
@@ -1688,7 +1688,7 @@ export default function BannerDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all group"
+              className="bg-white rounded-[2rem] border border-gray-100 p-4 sm:p-8 shadow-sm hover:shadow-md transition-all group"
             >
               <div className="flex items-center gap-4 mb-8">
                 <div className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-black text-xl shadow-xl group-hover:rotate-3 transition-transform">
@@ -1748,7 +1748,7 @@ export default function BannerDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all group"
+              className="bg-white rounded-[2rem] border border-gray-100 p-4 sm:p-8 shadow-sm hover:shadow-md transition-all group"
             >
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">
@@ -1870,7 +1870,7 @@ export default function BannerDashboard() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.25 }}
-              className="bg-white rounded-[2rem] border border-gray-100 p-8 shadow-sm hover:shadow-md transition-all group"
+              className="bg-white rounded-[2rem] border border-gray-100 p-4 sm:p-8 shadow-sm hover:shadow-md transition-all group"
             >
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-8">
                 <div className="flex items-center gap-4">

@@ -88,18 +88,18 @@ export function SeoAppLayout({
               onClick={() => setIsSidebarOpen(false)}
             />
             <motion.div
-              initial={{ x: -280 }}
+              initial={{ x: -240 }}
               animate={{ x: 0 }}
-              exit={{ x: -280 }}
+              exit={{ x: -240 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed inset-y-0 left-0 w-[240px] shadow-2xl"
             >
               <SeoSidebar isMobile />
               <button
-                className="absolute top-4 right-[-3.5rem] p-2 text-white bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-md transition-colors"
+                className="absolute top-3 right-3 p-2 text-white/70 hover:text-white bg-black/20 hover:bg-black/40 rounded-full backdrop-blur-md transition-colors"
                 onClick={() => setIsSidebarOpen(false)}
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </motion.div>
           </div>

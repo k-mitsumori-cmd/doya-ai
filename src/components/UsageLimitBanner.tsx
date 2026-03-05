@@ -159,7 +159,7 @@ export function UsageLimitModal({
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+        className="bg-white rounded-2xl shadow-xl max-w-md w-full p-4 sm:p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center mb-6">

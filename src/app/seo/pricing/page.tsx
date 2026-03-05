@@ -113,7 +113,7 @@ export default function SeoPricingPage() {
         </Link>
       </div>
 
-      <main className="max-w-[720px] mx-auto px-6 pb-12">
+      <main className="max-w-[720px] mx-auto px-4 sm:px-6 pb-12">
         <h1 className="text-center text-3xl sm:text-4xl font-black text-slate-900 mt-6 mb-10">
           ドヤライティングAI 料金プラン
         </h1>
@@ -217,7 +217,7 @@ export default function SeoPricingPage() {
               </div>
               <div className="flex-shrink-0">
                 <div className="px-6 py-4 rounded-2xl bg-white text-slate-900 font-black text-xl">
-                  {enterprise?.priceLabel || '¥49,980'}{enterprise?.period || '/月'}
+                  {enterprise?.priceLabel || '¥49,800'}{enterprise?.period || '/月'}
                 </div>
               </div>
             </div>

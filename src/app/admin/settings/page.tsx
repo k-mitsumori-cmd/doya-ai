@@ -95,7 +95,7 @@ export default function AdminSettingsPage() {
               </div>
               <p className="text-xs text-gray-400 mt-1">※ Vercel環境変数で設定することを推奨します</p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">テキスト生成モデル</label>
                 <select
@@ -139,7 +139,7 @@ export default function AdminSettingsPage() {
               <p className="text-sm text-gray-500">プランごとの利用制限を設定します</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">フリープラン：1日の生成回数</label>
               <input
@@ -196,7 +196,7 @@ export default function AdminSettingsPage() {
               <p className="text-sm text-gray-500">プレミアムプランの料金を設定します</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">プレミアムプラン月額（円）</label>
               <input
