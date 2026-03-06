@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     const planId = (planIdFromPrice || planIdFromMeta) as any
 
     if (planId && typeof planId === 'string' && planId.includes('-')) {
-      const serviceId = getServiceIdFromPlanId(planId)
+      const serviceId = getServiceIdFromPlanId(planId as any)
       if (serviceId !== 'bundle') {
         const isBannerPaid =
           serviceId === 'banner' &&

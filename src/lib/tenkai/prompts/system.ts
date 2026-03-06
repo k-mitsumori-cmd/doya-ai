@@ -20,7 +20,7 @@ export interface PlatformPromptModule {
     maxChars: number
     recommendedChars: number
   }
-  buildSystemPrompt: (analysis: Record<string, unknown>, brandVoice?: Record<string, unknown> | null) => string
+  buildSystemPrompt: (analysis: Record<string, unknown>, brandVoice?: Record<string, unknown>) => string
   buildUserPrompt: (analysis: Record<string, unknown>, customInstructions?: string | null) => string
 }
 
@@ -28,15 +28,15 @@ export interface PlatformPromptModule {
  * プラットフォーム名 → プロンプトモジュールのマッピング
  */
 export const PLATFORM_PROMPTS: Record<string, PlatformPromptModule> = {
-  note: notePrompts,
-  blog: blogPrompts,
-  x: xPrompts,
-  instagram: instagramPrompts,
-  line: linePrompts,
-  facebook: facebookPrompts,
-  linkedin: linkedinPrompts,
-  newsletter: newsletterPrompts,
-  press_release: pressReleasePrompts,
+  note: notePrompts as PlatformPromptModule,
+  blog: blogPrompts as PlatformPromptModule,
+  x: xPrompts as PlatformPromptModule,
+  instagram: instagramPrompts as PlatformPromptModule,
+  line: linePrompts as PlatformPromptModule,
+  facebook: facebookPrompts as PlatformPromptModule,
+  linkedin: linkedinPrompts as PlatformPromptModule,
+  newsletter: newsletterPrompts as PlatformPromptModule,
+  press_release: pressReleasePrompts as PlatformPromptModule,
 }
 
 /**

@@ -92,7 +92,7 @@ export default function SettingsPage() {
     } catch { return false }
   })
 
-  const plan = session?.user?.plan || 'FREE'
+  const plan = String(session?.user?.plan || 'FREE').toUpperCase()
   const planLabel = plan === 'PRO' ? 'Pro' : plan === 'LIGHT' ? 'Light' : plan === 'STARTER' ? 'Starter' : plan === 'ENTERPRISE' ? 'Enterprise' : plan === 'PREMIUM' ? 'Premium' : 'Free'
   const isPro = plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE' || plan === 'PREMIUM'
 

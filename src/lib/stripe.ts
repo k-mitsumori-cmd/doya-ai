@@ -323,7 +323,7 @@ async function getOrCreateCustomerPortalConfigurationId(): Promise<string | null
           enabled: true,
           mode: 'at_period_end',
           // Stripeがサポートしている範囲で理由入力を有効化
-          cancellation_reason: { enabled: true },
+          cancellation_reason: { enabled: true } as any,
         },
         // サブスクのプラン変更（アップ/ダウン両方）
         subscription_update: {
@@ -332,10 +332,10 @@ async function getOrCreateCustomerPortalConfigurationId(): Promise<string | null
           // 変更候補をこのアプリの価格に絞る（他商品を誤って表示しない）
           products: [
             {
-              product: process.env.STRIPE_PRODUCT_BANNER_ID || undefined,
+              product: process.env.STRIPE_PRODUCT_BANNER_ID!,
               prices: realPriceIds,
             },
-          ].filter((p: any) => !!p.product || (p.prices?.length || 0) > 0),
+          ].filter((p) => !!p.product || (p.prices?.length || 0) > 0),
         },
       },
       metadata: {

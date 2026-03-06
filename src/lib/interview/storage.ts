@@ -66,6 +66,7 @@ export async function ensureBucket(): Promise<void> {
 
   for (const bytes of candidates) {
     const { error } = await supabase.storage.updateBucket(BUCKET_NAME, {
+      public: false,
       fileSizeLimit: bytes,
     })
     if (!error) {

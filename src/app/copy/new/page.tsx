@@ -372,10 +372,10 @@ function CopyNewPageInner() {
                     <Check className="w-4 h-4" />ペルソナ生成完了
                   </p>
                   <div className="text-gray-600 text-sm space-y-1">
-                    {persona.demographics && (
+                    {!!persona.demographics && (
                       <p><span className="text-gray-500">デモグラ：</span>{String((persona.demographics as Record<string,unknown>)?.summary || '')}</p>
                     )}
-                    {persona.painPoints && (
+                    {!!persona.painPoints && (
                       <p><span className="text-gray-500">ペイン：</span>{String((persona.painPoints as string[])?.[0] || '')}</p>
                     )}
                   </div>

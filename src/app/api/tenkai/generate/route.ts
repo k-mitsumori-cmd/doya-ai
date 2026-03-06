@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
 
                 await prisma.tenkaiOutput.create({
                   data: {
-                    projectId,
+                    projectId: projectId!,
                     platform: eventPlatform,
                     content: result.content as any,
                     charCount: result.charCount as number,

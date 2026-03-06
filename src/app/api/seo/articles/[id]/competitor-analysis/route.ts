@@ -49,7 +49,7 @@ export async function POST(
     const referenceUrls = Array.isArray(article.referenceUrls) ? article.referenceUrls : []
     const allUrls = [
       ...references.map((r: any) => ({ url: r.url, title: r.title })),
-      ...referenceUrls.map((u: string) => ({ url: u, title: '' })),
+      ...referenceUrls.map((u: any) => ({ url: String(u), title: '' })),
     ].filter((r) => r.url)
 
     // 競合記事の内容を取得（最大5記事）
@@ -98,7 +98,7 @@ export async function POST(
     // AIで比較分析
     const prompt = buildCompetitorAnalysisPrompt({
       articleTitle: article.title || '',
-      articleKeywords: Array.isArray(article.keywords) ? article.keywords : [],
+      articleKeywords: Array.isArray(article.keywords) ? (article.keywords as string[]) : [],
       articleSummary,
       competitors: competitorContents,
     })
@@ -124,7 +124,6 @@ export async function POST(
         where: { id: existingItem.id },
         data: {
           content: analysisResult,
-          updatedAt: new Date(),
         },
       })
     } else {

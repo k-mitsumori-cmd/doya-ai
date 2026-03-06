@@ -61,7 +61,8 @@ export async function renderVideo(
   format: string = 'mp4'
 ): Promise<string> {
   // ダイナミックインポートで @remotion/renderer を遅延ロード（ビルドサイズ最適化）
-  const { renderMedia, bundle } = await import('@remotion/renderer')
+  const remotion = await import('@remotion/renderer') as any
+  const { renderMedia, bundle } = remotion
   const path = await import('path')
 
   await updateRenderProgress(jobId, 5)
@@ -87,12 +88,12 @@ export async function renderVideo(
       fps,
       durationInFrames: totalFrames,
       defaultProps: { config },
-    },
+    } as any,
     serveUrl: bundled,
     codec: 'h264',
     outputLocation: outputPath,
     inputProps: { config },
-    onProgress: async ({ progress }) => {
+    onProgress: async ({ progress }: { progress: number }) => {
       const pct = Math.round(20 + progress * 70)
       await updateRenderProgress(jobId, pct)
     },

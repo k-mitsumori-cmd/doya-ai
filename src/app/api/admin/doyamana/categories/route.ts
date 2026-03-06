@@ -64,8 +64,8 @@ export async function GET(request: NextRequest) {
     // GENRES定義の順序でソート（定義されていないものは最後）
     const genreOrder = GENRES.map(g => g.name)
     categories.sort((a, b) => {
-      const aIndex = genreOrder.indexOf(a.name)
-      const bIndex = genreOrder.indexOf(b.name)
+      const aIndex = genreOrder.indexOf(a.name as any)
+      const bIndex = genreOrder.indexOf(b.name as any)
       if (aIndex === -1 && bIndex === -1) return a.name.localeCompare(b.name, 'ja')
       if (aIndex === -1) return 1
       if (bIndex === -1) return -1

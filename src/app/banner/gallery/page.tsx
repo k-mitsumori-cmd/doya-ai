@@ -154,7 +154,6 @@ function GalleryThumb({ src, alt, lqip, index = 0 }: { src: string; alt: string;
           src={src}
           alt={alt}
           decoding="async"
-          // @ts-expect-error fetchPriority is valid but not in React types yet
           fetchPriority={index < 3 ? 'high' : 'auto'}
           onLoad={() => setStatus('loaded')}
           onError={handleError}

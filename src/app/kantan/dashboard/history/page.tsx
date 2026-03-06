@@ -10,14 +10,16 @@ import {
 import toast from 'react-hot-toast'
 
 // サイドバーメニュー - AIエージェント中心に再構成
-const SIDEBAR_MENU = [
+type SidebarMenuItem = { id: string; label: string; icon: React.ReactNode; href: string; active?: boolean; badge?: string | number }
+
+const SIDEBAR_MENU: SidebarMenuItem[] = [
   { id: 'agents', label: 'AIエージェント', icon: <Cpu className="w-5 h-5" />, href: '/kantan/dashboard/text' },
   { id: 'chat', label: 'AIチャット', icon: <MessageSquare className="w-5 h-5" />, href: '/kantan/dashboard/chat' },
   { id: 'history', label: '生成履歴', icon: <Clock className="w-5 h-5" />, href: '/kantan/dashboard/history', active: true },
   { id: 'dashboard', label: 'ダッシュボード', icon: <Home className="w-5 h-5" />, href: '/kantan/dashboard' },
 ]
 
-const SIDEBAR_DATA_MENU = [
+const SIDEBAR_DATA_MENU: SidebarMenuItem[] = [
   { id: 'plan', label: 'プラン・料金', icon: <UserCircle className="w-5 h-5" />, href: '/kantan/dashboard/pricing' },
 ]
 

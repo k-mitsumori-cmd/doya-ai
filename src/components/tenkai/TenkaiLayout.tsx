@@ -28,7 +28,7 @@ export default function TenkaiLayout({ children }: TenkaiLayoutProps) {
     }
   }, [session])
 
-  const plan = session?.user?.plan || 'FREE'
+  const plan = String(session?.user?.plan || 'FREE').toUpperCase()
   const planLabel = plan === 'PRO' ? 'Pro' : plan === 'LIGHT' ? 'Light' : plan === 'STARTER' ? 'Starter' : plan === 'ENTERPRISE' ? 'Enterprise' : 'Free'
 
   return (

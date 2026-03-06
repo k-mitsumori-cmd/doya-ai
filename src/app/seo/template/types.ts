@@ -12,6 +12,15 @@ export interface ArticleTemplate {
   recommendedTone: string
   recommendedChars: number
   articleType: string
+  phase?: string
+  imageUrl?: string
+  usage?: string
+}
+
+export interface ArticleSection {
+  title: string
+  description?: string
+  templates: ArticleTemplate[]
 }
 
 export interface ArticleCategory {

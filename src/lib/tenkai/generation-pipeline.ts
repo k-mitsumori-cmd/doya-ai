@@ -42,7 +42,7 @@ export async function generateForPlatform(
     throw new Error(`未対応のプラットフォーム: ${platform}`)
   }
 
-  let systemPrompt = promptModule.buildSystemPrompt(analysis, options.brandVoice)
+  let systemPrompt = promptModule.buildSystemPrompt(analysis, (options.brandVoice ?? undefined) as Record<string, unknown> | undefined)
   if (options.brandVoice) {
     systemPrompt = injectBrandVoice(systemPrompt, options.brandVoice)
   }
@@ -128,7 +128,7 @@ export async function* generateForMultiplePlatforms(
       yield {
         type: 'generation_complete',
         platform,
-        data: result,
+        data: result as unknown as Record<string, unknown>,
         index: i,
         total,
       }
